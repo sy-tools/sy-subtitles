@@ -4469,6 +4469,12 @@ class TestSubtitleOverlaySize:
         page.set_viewport_size({"width": 1600, "height": 900})
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        # ensurePreviewResizers fires from a 400ms setTimeout AND from
+        # hashchange/resize listeners. Until it has run the no-saved-subs
+        # branch will wipe data-subs-tuned and the scale var, racing with
+        # anything the test sets. Wait for the handle to appear — that's
+        # the deterministic signal that ensurePreviewResizers finished.
+        page.wait_for_selector("#preview-subs-resize", timeout=10000)
 
     def test_width_bound_uses_15_3_divisor(self, server, page):
         """The width-bound font is `(cqw - 48px) / 15.3`. On a wide enough
@@ -4797,6 +4803,7 @@ class TestSubtitleOverlaySize:
         page.set_viewport_size({"width": 1600, "height": 400})
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.wait_for_selector("#preview-subs-resize", timeout=10000)
         font_px = self._read_fs_font_px_via_toggle(page, drag_to_h=720)
         # 22vh on 400px viewport = 88px. Allow 1px rounding slack.
         assert font_px <= 89, f"22vh cap not enforced: font {font_px}px > 88px on a 400px viewport"
