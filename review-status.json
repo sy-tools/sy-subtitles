@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-23T06:30:27.326482+00:00",
+  "updated_at": "2026-05-23T20:24:23.081081+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -145,6 +145,12 @@
       "reviewer": null,
       "issue_number": 171,
       "updated_at": "2026-05-23T06:30:20Z"
+    },
+    "1994-03-14_Mahashivaratri-Puja-Surrender": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 180,
+      "updated_at": "2026-05-23T20:24:14Z"
     }
   }
 }
