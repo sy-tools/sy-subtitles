@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1993-05-09_Sahasrara-Puja-Achieve-The-Perfect-State/Sahasrara-Puja/final/uk.srt
+  Transcript: talks/1993-05-09_Sahasrara-Puja-Achieve-The-Perfect-State/transcript_uk.txt
+  EN SRT: talks/1993-05-09_Sahasrara-Puja-Achieve-The-Perfect-State/Sahasrara-Puja/source/en.srt
+  SRT blocks: 463
+  EN SRT blocks: 461
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:06:24,739 — 00:52:23,809
+  SRT range:       00:06:24,739 — 00:52:25,809
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 463
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 463
+  CPS: avg=9.8, median=9.5, max=15.0
+  CPS > target: 15 (3.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.7, max=83
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #460: CPS=15.0 (25ch/1.7s) "З вами все цілком гаразд."
+    #366: CPS=15.0 (43ch/2.9s) "Вони подумали, що варто відіслати їх назад,"
+    #452: CPS=15.0 (43ch/2.9s) "Ви вже використовували його, доволі багато,"
+    #188: CPS=15.0 (49ch/3.3s) "нам не варто знову ставати католиками, розумієте."
+    #217: CPS=15.0 (58ch/3.9s) "Я запитала: «Чому?» «Якщо я почну виконувати якусь роботу,"
+    #365: CPS=15.0 (29ch/1.9s) "Тож вони не знали, що робити."
+    #214: CPS=15.0 (32ch/2.1s) "Була собі дружина одного лідера."
+    #461: CPS=15.0 (32ch/2.1s) "Вам не треба про це непокоїтися,"
+    #206: CPS=15.0 (76ch/5.1s) "Це були хіпі, [які] стали сахаджа йоґами, справжні хіпі прий..."
+    #456: CPS=15.0 (38ch/2.5s) "Через деякий час ви робитимете багато,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 463
+  EN SRT blocks: 461
+  Ratio UK/EN: 1.00 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.8 (target ≤15.0)
+  CPS > 15.0: 15 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
