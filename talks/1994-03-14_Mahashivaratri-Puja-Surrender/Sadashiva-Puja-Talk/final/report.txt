@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1994-03-14_Mahashivaratri-Puja-Surrender/Sadashiva-Puja-Talk/final/uk.srt
+  Transcript: talks/1994-03-14_Mahashivaratri-Puja-Surrender/transcript_uk.txt
+  EN SRT: talks/1994-03-14_Mahashivaratri-Puja-Surrender/Sadashiva-Puja-Talk/source/en.srt
+  SRT blocks: 524
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 524
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 524
+  CPS: avg=10.9, median=11.2, max=15.0
+  CPS > target: 36 (6.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #158: CPS=15.0 (73ch/4.9s) "великого?» – «Ні, але вона думає, що вона дуже велика, бо ро..."
+    #403: CPS=15.0 (22ch/1.5s) "Мій Наречений прибуває"
+    #391: CPS=15.0 (31ch/2.1s) "Але вони мають цього позбутися."
+    #131: CPS=15.0 (46ch/3.1s) "І Я дала йому Реалізацію, і одразу він сказав:"
+    #277: CPS=15.0 (46ch/3.1s) "Коли ми поклоняємося Шіві, ми вихваляємо Його."
+    #174: CPS=15.0 (49ch/3.3s) "Він і далі розповідатиме про свої безглузді речі,"
+    #194: CPS=15.0 (49ch/3.3s) "Ти ж не сам себе бачитимеш, тебе бачитимуть інші."
+    #327: CPS=15.0 (49ch/3.3s) "нам треба викликати якогось лікаря гелікоптером»."
+    #370: CPS=15.0 (49ch/3.3s) "Тож спершу за часів Аді Шанкарачар’ї говорили про"
+    #161: CPS=15.0 (52ch/3.5s) "Він настільки дурний, що, коли ви розмовляєте з ним,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 10.9 (target ≤15.0)
+  CPS > 15.0: 36 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
