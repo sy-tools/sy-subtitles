@@ -4914,3 +4914,53 @@ class TestSubtitleOverlaySize:
         font_px = self._read_fs_font_px_via_toggle(page, drag_to_h=720)
         # 22vh on 400px viewport = 88px. Allow 1px rounding slack.
         assert font_px <= 89, f"22vh cap not enforced: font {font_px}px > 88px on a 400px viewport"
+
+
+class TestRepoAutoDetect:
+    """deriveRepo() makes the SPA org-agnostic: the repo owner/name comes from
+    the GitHub Pages host in production, with explicit overrides (?repo= /
+    window.__SY_REPO) off Pages and a loud error when unresolvable.
+    """
+
+    def test_derive_repo_from_github_pages_host(self, server, page):
+        goto_spa(page, server)
+        result = page.evaluate(
+            """() => ({
+                project: deriveRepo('sy-tools.github.io', '/sy-subtitles/', ''),
+                nested: deriveRepo('sy-tools.github.io', '/sy-subtitles/index.html', ''),
+                old_owner: deriveRepo('slavasubotskiy.github.io', '/sy-subtitles/', ''),
+                user_page: deriveRepo('acme.github.io', '/', ''),
+            })"""
+        )
+        assert result["project"] == "sy-tools/sy-subtitles"
+        assert result["nested"] == "sy-tools/sy-subtitles"
+        assert result["old_owner"] == "slavasubotskiy/sy-subtitles"
+        # User/org root page (no path segment): repo is <owner>.github.io.
+        assert result["user_page"] == "acme/acme.github.io"
+
+    def test_derive_repo_explicit_overrides_off_pages(self, server, page):
+        goto_spa(page, server)
+        result = page.evaluate(
+            """() => ({
+                query: deriveRepo('localhost', '/', '?repo=acme/widgets'),
+                injected: deriveRepo('localhost', '/', ''),
+            })"""
+        )
+        # ?repo= wins; otherwise fall back to the test-injected window.__SY_REPO.
+        assert result["query"] == "acme/widgets"
+        assert result["injected"] == "sy-tools/sy-subtitles"
+
+    def test_derive_repo_throws_when_unresolvable(self, server, page):
+        goto_spa(page, server)
+        threw = page.evaluate(
+            """() => {
+                var saved = window.__SY_REPO;
+                try { delete window.__SY_REPO; } catch (e) { window.__SY_REPO = undefined; }
+                var threw = false;
+                try { deriveRepo('example.com', '/', ''); }
+                catch (e) { threw = true; }
+                window.__SY_REPO = saved;
+                return threw;
+            }"""
+        )
+        assert threw, "deriveRepo must throw (loud error) when the repo cannot be resolved"
