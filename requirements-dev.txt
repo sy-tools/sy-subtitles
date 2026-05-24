@@ -1,6 +1,6 @@
 pytest>=8.0
 pytest-xdist>=3.8
-ruff>=0.8
+ruff>=0.15.14
 pre-commit>=4.0
 playwright>=1.59.0
 hypothesis>=6.152.4
