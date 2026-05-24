@@ -1782,7 +1782,33 @@ function applyEditsToSrt(blocks, edits) {
 // ============================================================
 // Config
 // ============================================================
-var REPO = 'SlavaSubotskiy/sy-subtitles';
+// Derive owner/repo so the app is org-agnostic — a repo transfer needs no
+// code change. In production the app is served from <owner>.github.io/<repo>/
+// and the slug comes straight from the host (owner is case-insensitive for the
+// GitHub API/raw/web, so the lowercase host owner works everywhere). Off Pages
+// (local dev, tests) there is no host to read it from, so an explicit override
+// is required — ?repo=owner/name in the URL, or window.__SY_REPO for test
+// harnesses. We never hardcode an owner: an unresolvable host is a loud error.
+// Inputs default to the live `location` in production; tests pass them
+// explicitly to exercise each branch without a real host.
+function deriveRepo(hostname, pathname, search) {
+  hostname = hostname != null ? hostname : location.hostname;
+  pathname = pathname != null ? pathname : location.pathname;
+  search = search != null ? search : location.search;
+  var m = hostname.match(/^([^.]+)\.github\.io$/);
+  if (m) {
+    var owner = m[1];
+    var seg = pathname.split('/').filter(Boolean)[0];
+    // Project page: owner.github.io/<repo>/. User/org page: repo is owner.github.io.
+    return seg ? owner + '/' + seg : owner + '/' + owner + '.github.io';
+  }
+  var param = new URLSearchParams(search).get('repo');
+  if (param) return param;
+  if (typeof window !== 'undefined' && window.__SY_REPO) return window.__SY_REPO;
+  throw new Error('Cannot determine GitHub repo: serve from <owner>.github.io '
+    + 'or pass ?repo=owner/name (host was "' + hostname + '").');
+}
+var REPO = deriveRepo();
 function getBranchFromURL() {
   var params = new URLSearchParams(location.search);
   return params.get('branch') || 'main';

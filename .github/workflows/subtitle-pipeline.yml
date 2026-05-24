@@ -1100,7 +1100,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TALK_ID: ${{ inputs.talk_id }}
           REPO: ${{ github.repository }}
+          OWNER: ${{ github.repository_owner }}
         run: |
+          # Derive the Pages base from the repo context so a transfer needs no
+          # edit. GitHub Pages host is the lowercased owner.
+          OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          SPA_BASE="https://${OWNER_LC}.github.io/${REPO#*/}"
           EXISTING=$(gh issue list --search "Review: $TALK_ID in:title" --json number --jq '.[0].number')
           if [ -n "$EXISTING" ]; then
             echo "Review issue #$EXISTING already exists — resetting to pending"
@@ -1117,11 +1122,11 @@ jobs:
           | | |
           |---|---|
           | Talk | \`$TALK_ID\` |
-          | Review | [Open in SPA](https://slavasubotskiy.github.io/sy-subtitles/#/review/$TALK_ID) |
+          | Review | [Open in SPA]($SPA_BASE/#/review/$TALK_ID) |
           | Transcript | [\`transcript_uk.txt\`](https://github.com/$REPO/blob/main/talks/$TALK_ID/transcript_uk.txt) |
 
           ### How to review
-          1. Open the [SPA review page](https://slavasubotskiy.github.io/sy-subtitles/#/review/$TALK_ID)
+          1. Open the [SPA review page]($SPA_BASE/#/review/$TALK_ID)
           2. Assign yourself to this issue to claim the review
           3. Watch the video with subtitles, review the translation
           4. Report problems as comments on this issue
