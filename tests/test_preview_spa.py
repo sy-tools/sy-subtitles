@@ -1,6 +1,6 @@
 """E2E tests for the dynamic SPA preview (v2.html / index.html)."""
 
-import functools
+import contextlib
 import http.server
 import json
 import re
@@ -92,10 +92,39 @@ def spa_path():
 
 @pytest.fixture(scope="module")
 def server(spa_path):
-    """Serve the SPA HTML."""
+    """Serve the SPA HTML.
+
+    The SPA derives its owner/repo slug from the GitHub Pages host. The test
+    server is 127.0.0.1, not <owner>.github.io, so it injects the
+    window.__SY_REPO override the SPA falls back to off Pages — centralized
+    here so every browser context and navigation gets it without per-test
+    setup. Non-HTML requests fall through to the plain file handler."""
     directory = str(spa_path.parent)
-    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=directory)
-    httpd = http.server.HTTPServer(("127.0.0.1", 0), handler)
+    injected_index = (
+        spa_path.read_text()
+        .replace(
+            "<head>",
+            "<head><script>window.__SY_REPO = 'sy-tools/sy-subtitles';</script>",
+            1,
+        )
+        .encode("utf-8")
+    )
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=directory, **kwargs)
+
+        def do_GET(self):
+            if self.path.split("?", 1)[0] in ("/", "/index.html"):
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(injected_index)))
+                self.end_headers()
+                self.wfile.write(injected_index)
+                return
+            super().do_GET()
+
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     t = threading.Thread(target=httpd.serve_forever, daemon=True)
     t.start()
@@ -2945,8 +2974,7 @@ class TestPreviewEditMode:
         page.wait_for_timeout(200)
         opened = page.evaluate("window._openedUrl || ''")
         expected = (
-            "https://github.com/SlavaSubotskiy/sy-subtitles/edit/main/"
-            "talks/2001-01-01_Test-Talk/Test-Video/final/uk.srt"
+            "https://github.com/sy-tools/sy-subtitles/edit/main/talks/2001-01-01_Test-Talk/Test-Video/final/uk.srt"
         )
         assert opened == expected, f"expected exact editor URL, got: {opened}"
 
@@ -3253,8 +3281,7 @@ class TestPreviewEditMode:
         clip = page.evaluate("window._clipText || ''")
 
         expected_url = (
-            "https://github.com/SlavaSubotskiy/sy-subtitles/edit/main/"
-            "talks/2001-01-01_Test-Talk/Test-Video/final/en.srt"
+            "https://github.com/sy-tools/sy-subtitles/edit/main/talks/2001-01-01_Test-Talk/Test-Video/final/en.srt"
         )
         assert opened == expected_url, f"wrong PR target for EN: {opened}"
         expected_clip = self.EN_SRT_TIGHT.replace("First EN block", "EN_EDIT")
@@ -4620,19 +4647,47 @@ class TestSubtitleOverlaySize:
         chain after hashchange — a fixed sleep is unreliable across machines."""
         page.wait_for_selector("#preview-subs-resize", timeout=10000)
 
+    def _enter_fs(self, page):
+        """Enter REAL native fullscreen and wait until requestFullscreen has
+        actually engaged. requestFullscreen is async: without this wait a
+        following exit toggle can fire while the request is still pending,
+        leaving document.fullscreenElement set after .fs-mode is removed — the
+        next enter is then misread as an exit and the font is measured in the
+        embedded (non-fs) state. Waiting for the native state to settle keeps
+        the enter/exit probe sequence deterministic while still exercising the
+        real Fullscreen API.
+
+        Best-effort: some headless environments never grant native fullscreen,
+        in which case there is no pending request to race and the synchronous
+        .fs-mode class (added by toggleFullscreen itself) is already in effect,
+        so a timeout here is benign."""
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+        page.evaluate("SPA.toggleFullscreen()")
+        with contextlib.suppress(PlaywrightTimeoutError):
+            page.wait_for_function(
+                "document.fullscreenElement === document.getElementById('view-preview')",
+                timeout=2000,
+            )
+
+    def _exit_fs(self, page):
+        """Exit native fullscreen and wait until it has fully released, so the
+        next _enter_fs starts from a clean state. Best-effort like _enter_fs:
+        if native FS never engaged there is nothing to release."""
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+        page.evaluate("SPA.toggleFullscreen()")
+        with contextlib.suppress(PlaywrightTimeoutError):
+            page.wait_for_function("document.fullscreenElement === null", timeout=2000)
+
     def _read_fs_font_px_via_toggle(self, page, drag_to_h=None):
-        """Use SPA.toggleFullscreen — exercises the real user flow including
-        the synchronous .fs-mode class addition. Optionally drag the embedded
-        handle (which sets --preview-subs-scale via JS, mirroring fs-mode)."""
-        return page.evaluate(
-            f"""(opts) => {{
-              const setHandle = {self._SET_HANDLE_JS};
-              if (opts.h !== null) setHandle(opts.h);
-              SPA.toggleFullscreen();
-              return parseFloat(getComputedStyle(document.getElementById('subtitle-overlay')).fontSize);
-            }}""",
-            {"h": drag_to_h},
-        )
+        """Enter real fullscreen (optionally after dragging the embedded handle,
+        which sets --preview-subs-scale via JS) and read the resulting subtitle
+        overlay font size."""
+        if drag_to_h is not None:
+            page.evaluate(f"({self._SET_HANDLE_JS})({drag_to_h})")
+        self._enter_fs(page)
+        return page.evaluate("parseFloat(getComputedStyle(document.getElementById('subtitle-overlay')).fontSize)")
 
     def test_fs_mode_default_matches_baseline(self, server, page):
         """Entering fullscreen WITHOUT having dragged must give the
@@ -4655,7 +4710,7 @@ class TestSubtitleOverlaySize:
         behavior."""
         self._goto_preview(server, page)
         baseline = self._read_fs_font_px_via_toggle(page, drag_to_h=None)
-        page.evaluate("SPA.toggleFullscreen()")  # exit
+        self._exit_fs(page)
         small = self._read_fs_font_px_via_toggle(page, drag_to_h=60)
         assert small < baseline, f"Smaller block did NOT shrink fs-mode font: baseline={baseline}px, small={small}px"
         assert small >= self.FS_MODE_FLOOR_PX, (
@@ -4668,7 +4723,7 @@ class TestSubtitleOverlaySize:
         bigger fullscreen font."""
         self._goto_preview(server, page)
         baseline = self._read_fs_font_px_via_toggle(page, drag_to_h=None)
-        page.evaluate("SPA.toggleFullscreen()")
+        self._exit_fs(page)
         big = self._read_fs_font_px_via_toggle(page, drag_to_h=600)
         assert big > baseline, f"Taller block did NOT enlarge fs-mode font: baseline={baseline}px, big={big}px"
 

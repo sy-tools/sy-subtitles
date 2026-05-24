@@ -2836,7 +2836,7 @@ function renderStatusBadge(status, reviewSt) {
   var labels = { 'approved': 'approved', 'in-review': 'in review', 'ready-for-review': 'needs review', 'in-progress': 'pending' };
   var text = labels[status] || status;
   if (status === 'in-review' && reviewSt && reviewSt.reviewer) text += ' (' + reviewSt.reviewer + ')';
-  var href = reviewSt && reviewSt.issue_number ? 'https://github.com/SlavaSubotskiy/sy-subtitles/issues/' + reviewSt.issue_number : '';
+  var href = reviewSt && reviewSt.issue_number ? 'https://github.com/sy-tools/sy-subtitles/issues/' + reviewSt.issue_number : '';
   if (href) return '<a href="' + href + '" target="_blank" class="review-badge ' + status + '">' + text + '</a>';
   return '<span class="review-badge ' + status + '">' + text + '</span>';
 }
