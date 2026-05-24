@@ -806,6 +806,58 @@ class TestFullscreenMode:
         title = page.locator("#btn-fullscreen").get_attribute("title")
         assert title is not None and len(title) > 0
 
+    def test_player_iframe_not_dark_color_scheme(self, server, page):
+        """Regression: the Vimeo player iframe must not inherit color-scheme: dark.
+
+        In dark theme the page sets `color-scheme: dark`, which a Vimeo
+        <iframe> inherits. The Vimeo player reacts to a dark scheme by
+        painting an opaque WHITE letterbox — so in fullscreen the surround
+        turns white instead of black. The player iframe must override
+        color-scheme so the player stays transparent and the letterbox shows
+        the iframe's own (theme-coloured) background instead.
+        """
+        self._goto_preview(server, page)
+        color_scheme = page.evaluate(
+            """() => {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                var wrap = document.querySelector('.video-wrap');
+                var probe = document.createElement('iframe');
+                wrap.appendChild(probe);
+                var cs = getComputedStyle(probe)
+                    .getPropertyValue('color-scheme').trim();
+                probe.remove();
+                return cs;
+            }"""
+        )
+        assert color_scheme != "dark", (
+            f"player iframe inherited color-scheme '{color_scheme}' — "
+            "Vimeo paints a white letterbox in fullscreen when the scheme is dark"
+        )
+
+    def test_player_iframe_letterbox_tracks_theme(self, server, page):
+        """The player iframe's letterbox follows the theme: black in dark,
+        white in light. The Vimeo player is transparent, so the iframe's own
+        background is what shows in the fullscreen letterbox.
+        """
+        self._goto_preview(server, page)
+        colors = page.evaluate(
+            """() => {
+                var wrap = document.querySelector('.video-wrap');
+                function bgFor(theme) {
+                    document.documentElement.setAttribute('data-theme', theme);
+                    var probe = document.createElement('iframe');
+                    probe.src = 'x';  // non-empty: avoid the transparent override
+                    wrap.appendChild(probe);
+                    var bg = getComputedStyle(probe).backgroundColor;
+                    probe.remove();
+                    return bg;
+                }
+                return { dark: bgFor('dark'), light: bgFor('light') };
+            }"""
+        )
+        assert colors["dark"] == "rgb(0, 0, 0)", f"dark-theme letterbox should be black, got {colors['dark']}"
+        assert colors["light"] == "rgb(255, 255, 255)", f"light-theme letterbox should be white, got {colors['light']}"
+
 
 class TestReviewModeToggle:
     """Tests for transcript/subtitle mode toggle in review page (expert mode)."""

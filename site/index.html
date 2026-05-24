@@ -861,11 +861,26 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
 }
 
 /* Iframe sits above placeholder when loaded; hidden when no real src yet. */
-.video-wrap iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; z-index: 1; background: #000; }
+.video-wrap iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; z-index: 1; background: var(--player-letterbox, #fff); }
 .video-wrap iframe:not([src]),
 .video-wrap iframe[src=""],
 .video-wrap iframe[src="about:blank"] { visibility: hidden; background: transparent; }
-.sync-player-video iframe { background: #000; }
+.sync-player-video iframe { background: var(--player-letterbox, #fff); }
+
+/* Video-player letterbox colour (the bars around the video in fullscreen).
+   The Vimeo player itself is transparent, so the iframe's own background is
+   what shows through. We paint it per theme — black in dark, white in light;
+   Vimeo effectively only supports a black or white surround.
+   `color-scheme: normal` is REQUIRED: when the iframe inherits the page's
+   `color-scheme: dark`, the Vimeo player paints its OWN opaque white
+   letterbox on top, which overrode this and turned the dark-theme fullscreen
+   surround white. Resetting the scheme keeps the player transparent. */
+.video-wrap iframe,
+.sync-player-video iframe { color-scheme: normal; }
+[data-theme="dark"] { --player-letterbox: #000; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --player-letterbox: #000; }
+}
 
 #subtitle-overlay {
   background: var(--bg2);
