@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-24T14:33:56.022719+00:00",
+  "updated_at": "2026-05-24T14:57:00.077593+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -162,7 +162,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 188,
-      "updated_at": "2026-05-24T14:33:48Z"
+      "updated_at": "2026-05-24T14:56:52Z"
     }
   }
 }
