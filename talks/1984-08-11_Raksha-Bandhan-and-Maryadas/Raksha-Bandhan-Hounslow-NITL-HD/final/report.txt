@@ -4,19 +4,10 @@
   SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/uk.srt
   Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_uk.txt
   Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
-  SRT blocks: 766
+  SRT blocks: 755
   Whisper segments: 987
+  (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
-
-============================================================
-  CHECK 1: Text preservation
-============================================================
-  Transcript chars: 42788
-  SRT chars: 42788
-  Exact normalized match: OK
-  Transcript words: 6925
-  SRT words: 6925
-  Word-level match: OK
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -27,60 +18,59 @@
   CHECK 3: Time range (vs whisper)
 ============================================================
   whisper range: 00:00:01,040 — 00:48:50,230
-  SRT range:       00:00:01,040 — 00:48:55,990
-  WARNING: SRT ends 5760ms after whisper
-  Time range: WARNING
+  SRT range:       00:00:01,040 — 00:48:52,230
+  Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 766
+  Total blocks: 755
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 766
-  CPS: avg=16.7, median=15.0, max=999.0
-  CPS > target: 337 (44.0%)
-  CPS > hard max: 35 (4.6%)
+  Total blocks: 755
+  CPS: avg=15.1, median=15.0, max=45.6
+  CPS > target: 326 (43.2%)
+  CPS > hard max: 23 (3.0%)
   CPL: avg=54.8, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 4
+  Duration < min: 3
   Duration > max: 1
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #617: CPS=999.0 (65ch/-8.3s) "вони приходять до ашраму і починають думати, що це їхній буд..."
-    #610: CPS=53.3 (64ch/1.2s) "Тепер щодо взаємин – скажімо, у вас є ашрам; хтось придбав й..."
     #138: CPS=45.6 (72ch/1.6s) "приходите до Мене та ставите перед фактом: «Mати, ми хочемо ..."
-    #612: CPS=43.3 (52ch/1.2s) "Це найкращий спосіб позбавитися цієї ідеї власності."
-    #603: CPS=40.3 (50ch/1.2s) "Намагайтеся вдосконалюватися на цьому [матеріалі]."
-    #615: CPS=39.5 (73ch/1.9s) "Тож таких речей ніколи не слід розвивати – відчуття, що «це ..."
-    #609: CPS=32.3 (83ch/2.6s) "Інакше, які б проблеми Я не вирішувала – у вас з’являтимутьс..."
     #142: CPS=31.2 (25ch/0.8s) "не одружитися з дівчиною,"
-    #614: CPS=29.4 (73ch/2.5s) "Якщо ви скажете: «Це мій будинок», ви його отримаєте. Отрима..."
     #515: CPS=26.7 (48ch/1.8s) "тоді, якщо хтось вам і допоміг, не має значення."
+    #469: CPS=26.0 (76ch/2.9s) "Йдеться не про те, аби брати гроші, йдеться про те, що Я муш..."
+    #523: CPS=25.8 (59ch/2.3s) "такої як Сахаджа йоґи, кому ж тоді ми збираємось допомогти?"
+    #516: CPS=25.5 (57ch/2.2s) "Ви можете допомагати, коли ви забезпечені, комусь іншому."
+    #141: CPS=25.2 (79ch/3.1s) "якщо він одружився з дівчиною на двадцять років молодшою від..."
+    #703: CPS=25.0 (72ch/2.9s) "Вирішіть свої судові питання, все, а потім повертайтеся до С..."
+    #695: CPS=24.2 (27ch/1.1s) "якщо воно настільки погане,"
+    #700: CPS=23.2 (84ch/3.6s) "після того, як таке відбулося – після того, як ви припинили ..."
 
 ============================================================
   SUMMARY
 ============================================================
   [PASS] Text preservation
   [PASS] No overlaps
-  [FAIL] Time range
+  [PASS] Time range
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
   [FAIL] CPS ≤ 20.0
 
-  Avg CPS: 16.7 (target ≤15.0)
-  CPS > 15.0: 337 blocks
-  CPS > 20.0: 35 blocks
+  Avg CPS: 15.1 (target ≤15.0)
+  CPS > 15.0: 326 blocks
+  CPS > 20.0: 23 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 4 blocks
+  Duration < 1200ms: 3 blocks
   Duration > 21000ms: 1 blocks
   Gaps < 80ms: 0 blocks
 

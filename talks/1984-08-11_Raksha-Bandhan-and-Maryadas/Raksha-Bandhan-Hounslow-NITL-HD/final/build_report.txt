@@ -1,10 +1,10 @@
-Build complete: 820 blocks
-  Time range: 00:00:01,040 → 00:48:55,990
-  CPS: avg=17.2, median=15.0, max=999.0
-  CPS > 15.0: 408
-  CPS > 20.0: 56
+Build complete: 805 blocks
+  Time range: 00:00:01,040 → 00:48:52,230
+  CPS: avg=15.7, median=15.0, max=45.6
+  CPS > 15.0: 392
+  CPS > 20.0: 42
   CPL > 84: 0
-  Duration < 1200ms: 23
+  Duration < 1200ms: 19
   Duration > 21000ms: 1
   Gaps < 80ms: 0
   Overlaps: 0
