@@ -4,7 +4,7 @@
   SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/uk.srt
   Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_uk.txt
   Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
-  SRT blocks: 755
+  SRT blocks: 754
   Whisper segments: 987
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -24,16 +24,16 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 755
+  Total blocks: 754
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 755
+  Total blocks: 754
   CPS: avg=15.1, median=15.0, max=45.6
-  CPS > target: 326 (43.2%)
-  CPS > hard max: 23 (3.0%)
+  CPS > target: 323 (42.8%)
+  CPS > hard max: 23 (3.1%)
   CPL: avg=54.8, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
@@ -51,9 +51,9 @@
     #523: CPS=25.8 (59ch/2.3s) "такої як Сахаджа йоґи, кому ж тоді ми збираємось допомогти?"
     #516: CPS=25.5 (57ch/2.2s) "Ви можете допомагати, коли ви забезпечені, комусь іншому."
     #141: CPS=25.2 (79ch/3.1s) "якщо він одружився з дівчиною на двадцять років молодшою від..."
-    #703: CPS=25.0 (72ch/2.9s) "Вирішіть свої судові питання, все, а потім повертайтеся до С..."
-    #695: CPS=24.2 (27ch/1.1s) "якщо воно настільки погане,"
-    #700: CPS=23.2 (84ch/3.6s) "після того, як таке відбулося – після того, як ви припинили ..."
+    #702: CPS=25.0 (72ch/2.9s) "Вирішіть свої судові питання, все, а потім повертайтеся до С..."
+    #694: CPS=24.2 (27ch/1.1s) "якщо воно настільки погане,"
+    #699: CPS=23.2 (84ch/3.6s) "після того, як таке відбулося – після того, як ви припинили ..."
 
 ============================================================
   SUMMARY
@@ -67,7 +67,7 @@
   [FAIL] CPS ≤ 20.0
 
   Avg CPS: 15.1 (target ≤15.0)
-  CPS > 15.0: 326 blocks
+  CPS > 15.0: 323 blocks
   CPS > 20.0: 23 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 3 blocks
