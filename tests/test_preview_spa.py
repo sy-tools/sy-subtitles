@@ -4964,3 +4964,139 @@ class TestRepoAutoDetect:
             }"""
         )
         assert threw, "deriveRepo must throw (loud error) when the repo cannot be resolved"
+
+
+class TestLocalEditsSurviveReload:
+    """Regression: local review/preview edits must persist across a tab reload
+    (close-reopen). localStorage is per-origin and the SPA keys edits by talk;
+    a reload must restore them.
+    """
+
+    def test_review_edits_survive_reload(self, server, page):
+        goto_spa(page, server)
+        page.evaluate("localStorage.setItem('sy_expert_mode','1'); expertMode=true; applyExpertMode();")
+        page.evaluate("location.hash = '#/review/2001-01-01_Test-Talk'")
+        page.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
+        page.evaluate("reviewState.edits[0] = 'PERSIST_ME'; reviewState.marks[1] = 'note'; saveReview()")
+        raw = page.evaluate("localStorage.getItem('review_2001-01-01_Test-Talk')")
+        assert raw and "PERSIST_ME" in raw, f"edit not written to localStorage: {raw!r}"
+        page.reload()
+        page.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
+        state = page.evaluate("({edits: reviewState.edits, marks: reviewState.marks})")
+        assert state["edits"].get("0") == "PERSIST_ME", f"review edit lost after reload: {state}"
+        assert state["marks"].get("1") == "note", f"review mark lost after reload: {state}"
+
+    def test_preview_edits_markers_and_mode_survive_reload(self, server, page):
+        """All preview-view local changes survive a reload: text edits, markers
+        (with their comment), and the marker/edit mode."""
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.evaluate(
+            "previewState.mode = 'edit';"
+            "previewState.edits[0] = 'PREVIEW_EDIT';"
+            "previewState.markers.push({time: 12, tc: '00:00:12', text: 'blk', comment: 'note'});"
+            "savePreviewState()"
+        )
+        raw = page.evaluate("localStorage.getItem('preview_2001-01-01_Test-Talk_Test-Video')")
+        assert raw and "PREVIEW_EDIT" in raw and "00:00:12" in raw, f"preview state not written: {raw!r}"
+        page.reload()
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        state = page.evaluate("({edits: previewState.edits, markers: previewState.markers, mode: previewState.mode})")
+        assert state["edits"].get("0") == "PREVIEW_EDIT", f"preview edit lost after reload: {state}"
+        assert len(state["markers"]) == 1 and state["markers"][0]["comment"] == "note", (
+            f"preview marker lost after reload: {state}"
+        )
+        assert state["mode"] == "edit", f"preview mode lost after reload: {state}"
+
+
+class TestSrtReviewEditsPersist:
+    """Regression: edits made in SRT (subtitles) review mode must persist
+    across a reload AND across switching between transcript and SRT modes.
+
+    Transcript-mode edits already persisted; SRT-mode edits were wiped because
+    switchReviewMode / switchSrtLang reset reviewState.edits to {} after load,
+    and SRT shared the transcript storage key.
+    """
+
+    def _goto_review(self, server, page):
+        goto_spa(page, server)
+        page.evaluate("localStorage.setItem('sy_expert_mode','1'); expertMode=true; applyExpertMode();")
+        page.evaluate("location.hash = '#/review/2001-01-01_Test-Talk'")
+        page.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
+
+    def _enter_srt(self, page):
+        page.evaluate("SPA.switchReviewMode('srt', 'Test-Video')")
+        page.wait_for_function(
+            "typeof reviewState !== 'undefined' && reviewState.mode === 'srt'"
+            " && document.querySelectorAll('.cell.uk').length > 0",
+            timeout=10000,
+        )
+
+    def test_srt_edits_survive_reload(self, server, page):
+        self._goto_review(server, page)
+        self._enter_srt(page)
+        page.evaluate("reviewState.edits[0] = 'SRT_PERSIST'; reviewState.marks[1] = 'm'; saveReview()")
+        page.reload()
+        page.wait_for_function(
+            "typeof reviewState !== 'undefined' && reviewState.mode === 'srt'"
+            " && document.querySelectorAll('.cell.uk').length > 0",
+            timeout=10000,
+        )
+        state = page.evaluate("({edits: reviewState.edits, marks: reviewState.marks})")
+        assert state["edits"].get("0") == "SRT_PERSIST", f"SRT edit lost after reload: {state}"
+        assert state["marks"].get("1") == "m", f"SRT mark lost after reload: {state}"
+
+    def test_srt_edits_and_marks_survive_mode_switch(self, server, page):
+        """A full transcript→SRT→transcript→SRT round-trip keeps each mode's
+        own edits AND marks intact."""
+        self._goto_review(server, page)
+        page.evaluate("reviewState.edits[0] = 'TRANSCRIPT_EDIT'; reviewState.marks[2] = 'T_MARK'; saveReview()")
+        self._enter_srt(page)
+        page.evaluate("reviewState.edits[0] = 'SRT_EDIT'; reviewState.marks[1] = 'SRT_MARK'; saveReview()")
+        # SRT → transcript: transcript edits/marks must come back
+        page.evaluate("SPA.switchReviewMode('transcript')")
+        page.wait_for_function(
+            "reviewState.mode === 'transcript' && document.querySelectorAll('.cell.uk').length > 0",
+            timeout=10000,
+        )
+        tr = page.evaluate("({edits: reviewState.edits, marks: reviewState.marks})")
+        assert tr["edits"].get("0") == "TRANSCRIPT_EDIT", f"transcript edit lost on switch: {tr}"
+        assert tr["marks"].get("2") == "T_MARK", f"transcript mark lost on switch: {tr}"
+        # transcript → SRT: SRT edits/marks must come back
+        self._enter_srt(page)
+        sr = page.evaluate("({edits: reviewState.edits, marks: reviewState.marks})")
+        assert sr["edits"].get("0") == "SRT_EDIT", f"SRT edit lost after round-trip: {sr}"
+        assert sr["marks"].get("1") == "SRT_MARK", f"SRT mark lost after round-trip: {sr}"
+
+    def test_srt_edits_stored_under_separate_video_lang_key(self, server, page):
+        """SRT edits live under their own video+language key, not the transcript
+        key — which is what keeps them isolated across language switches too."""
+        self._goto_review(server, page)
+        page.evaluate("reviewState.edits[0] = 'TRANSCRIPT_EDIT'; saveReview()")
+        self._enter_srt(page)
+        page.evaluate("reviewState.edits[0] = 'SRT_EDIT'; saveReview()")
+        keys = page.evaluate(
+            """() => {
+                var transcript = localStorage.getItem('review_2001-01-01_Test-Talk') || '';
+                var srtKey = Object.keys(localStorage).find(
+                    k => k.indexOf('review_srt_2001-01-01_Test-Talk') === 0);
+                return { transcript, srtKey, srtVal: srtKey ? localStorage.getItem(srtKey) : null };
+            }"""
+        )
+        assert "TRANSCRIPT_EDIT" in keys["transcript"], f"transcript key missing its edit: {keys}"
+        assert "SRT_EDIT" not in keys["transcript"], f"SRT edit leaked into transcript key: {keys}"
+        assert keys["srtKey"] and "SRT_EDIT" in (keys["srtVal"] or ""), (
+            f"SRT edit not stored under a video+lang-specific key: {keys}"
+        )
+
+    def test_transcript_and_srt_edits_are_independent(self, server, page):
+        self._goto_review(server, page)
+        page.evaluate("reviewState.edits[0] = 'TRANSCRIPT_EDIT'; saveReview()")
+        self._enter_srt(page)
+        page.evaluate("reviewState.edits[0] = 'SRT_EDIT'; saveReview()")
+        page.evaluate("SPA.switchReviewMode('transcript')")
+        page.wait_for_function(
+            "reviewState.mode === 'transcript' && document.querySelectorAll('.cell.uk').length > 0",
+            timeout=10000,
+        )
+        assert page.evaluate("reviewState.edits['0']") == "TRANSCRIPT_EDIT", "transcript edit clobbered by SRT edit"
