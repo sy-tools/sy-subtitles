@@ -4301,6 +4301,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   if (mode === 'transcript') {
     reviewState.mode = 'transcript';
     reviewState.videoSlug = '';
+    loadReviewEditsForMode();
     localStorage.setItem('sy_review_mode_' + talkId, JSON.stringify({ mode: 'transcript' }));
     updateColHeaders();
     // Reload transcripts
@@ -4373,8 +4374,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     reviewState.leftParas = aligned.map(function(r) { return r.en ? r.en.text : ''; });
     reviewState.rightParas = aligned.map(function(r) { return r.uk ? r.uk.text : ''; });
     reviewState.alignedRows = aligned;
-    reviewState.edits = {};
-    reviewState.marks = {};
+    loadReviewEditsForMode();
 
     renderReview();
     statusEl.style.display = 'none';
@@ -4600,8 +4600,34 @@ function onReviewEdit(idx, el) {
   saveReview();
 }
 
+// SRT edits are keyed by aligned-row index, which depends on the video and the
+// chosen source/final languages — so they need their own storage key, separate
+// from transcript edits (keyed by paragraph index). Sharing one key let SRT and
+// transcript edits clobber each other and made SRT edits vanish on reload / mode
+// switch (switchReviewMode reset reviewState.edits to {} after each load).
+function reviewStorageKey() {
+  if (reviewState.mode === 'srt') {
+    return 'review_srt_' + reviewState.talkId + '_' + reviewState.videoSlug
+      + '_' + reviewState.srtLeftLang + '_' + reviewState.srtRightLang;
+  }
+  return 'review_' + reviewState.talkId;
+}
+
+// Restore saved marks/edits for the current mode (and, for SRT, the current
+// video + language pair) instead of discarding them.
+function loadReviewEditsForMode() {
+  try {
+    var s = JSON.parse(localStorage.getItem(reviewStorageKey()) || '{}');
+    reviewState.marks = s.marks || {};
+    reviewState.edits = s.edits || {};
+  } catch (e) {
+    reviewState.marks = {};
+    reviewState.edits = {};
+  }
+}
+
 function saveReview() {
-  localStorage.setItem('review_' + reviewState.talkId, JSON.stringify({ marks: reviewState.marks, edits: reviewState.edits }));
+  localStorage.setItem(reviewStorageKey(), JSON.stringify({ marks: reviewState.marks, edits: reviewState.edits }));
   updateRevertBtn();
 }
 
@@ -4847,8 +4873,7 @@ SPA.switchSrtLang = function(side, lang) {
     reviewState.leftParas = aligned.map(function(r) { return r.en ? r.en.text : ''; });
     reviewState.rightParas = aligned.map(function(r) { return r.uk ? r.uk.text : ''; });
     reviewState.alignedRows = aligned;
-    reviewState.edits = {};
-    reviewState.marks = {};
+    loadReviewEditsForMode();
     renderReview();
     updateColHeaders();
     statusEl.style.display = 'none';
