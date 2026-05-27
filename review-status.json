@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-24T14:57:00.077593+00:00",
+  "updated_at": "2026-05-27T22:29:58.253814+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -163,6 +163,12 @@
       "reviewer": null,
       "issue_number": 188,
       "updated_at": "2026-05-24T14:56:52Z"
+    },
+    "1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 197,
+      "updated_at": "2026-05-27T22:29:50Z"
     }
   }
 }
