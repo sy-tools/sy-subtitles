@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others/Ganesha-Puja-Talk/final/uk.srt
+  Transcript: talks/1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others/transcript_uk.txt
+  EN SRT: talks/1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others/Ganesha-Puja-Talk/source/en.srt
+  SRT blocks: 750
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 750
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 750
+  CPS: avg=11.4, median=11.9, max=15.1
+  CPS > target: 77 (10.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #585: CPS=15.1 (48ch/3.2s) "Тепер припустимо, я залишу свого батька і матір,"
+    #288: CPS=15.1 (32ch/2.1s) "Чому ви не можете цього зробити?"
+    #578: CPS=15.1 (46ch/3.1s) "але я подумав, що краще віддати її йому зараз."
+    #302: CPS=15.1 (70ch/4.6s) "Якось Я кудись їхала, і Мені сказали: «Ви повинні бути дуже ..."
+    #214: CPS=15.0 (64ch/4.3s) "Це занадто. Я не можу зрозуміти, як люди продовжують це терп..."
+    #266: CPS=15.0 (22ch/1.5s) "хоч би якою вона була,"
+    #685: CPS=15.0 (22ch/1.5s) "Ви це можете побачити."
+    #673: CPS=15.0 (25ch/1.7s) "Вони працюють увесь день."
+    #332: CPS=15.0 (31ch/2.1s) "ні, ми не хочемо в Макдональдс."
+    #574: CPS=15.0 (31ch/2.1s) "Мені не потрібно стільки землі."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.4 (target ≤15.0)
+  CPS > 15.0: 77 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
