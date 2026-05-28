@@ -76,7 +76,7 @@ permissions:
   pull-requests: write
 
 env:
-  MODEL_HEAVY: claude-opus-4-7
+  MODEL_HEAVY: claude-opus-4-8
   MODEL_LIGHT: claude-sonnet-4-6
 
 jobs:
@@ -240,7 +240,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
-          claude_args: "--max-turns 80 --dangerously-skip-permissions --effort max --model ${{ env.MODEL_HEAVY }}"
+          claude_args: "--max-turns 80 --dangerously-skip-permissions --effort xhigh --model ${{ env.MODEL_HEAVY }}"
           show_full_output: true
           prompt: |
             You are translating a Sahaja Yoga lecture from English to Ukrainian.
@@ -347,7 +347,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
-          claude_args: "--max-turns 60 --dangerously-skip-permissions --effort max --model ${{ env.MODEL_HEAVY }}"
+          claude_args: "--max-turns 60 --dangerously-skip-permissions --effort xhigh --model ${{ env.MODEL_HEAVY }}"
           show_full_output: true
           prompt: |
             Perform a 2+1 language review on the Ukrainian translation.
@@ -422,7 +422,7 @@ jobs:
             talks/${{ matrix.talk_id }}/review_report.md
             talks/${{ matrix.talk_id }}/glossary.json
 
-  # --- Build subtitles: 2-phase pipeline (prepare + single Opus 4.7 pass) ---
+  # --- Build subtitles: 2-phase pipeline (prepare + single Opus 4.8 pass) ---
 
   # Phase 1: Split UK text into subtitle blocks
   prepare-build:
@@ -552,7 +552,7 @@ jobs:
           path: |
             talks/${{ inputs.talk_id }}/*/work/uk_blocks.json
 
-  # Phase 2: Single Opus 4.7 pass — assign timecodes, build SRT
+  # Phase 2: Single Opus 4.8 pass — assign timecodes, build SRT
   build-timecodes:
     needs: prepare-build
     if: ${{ !cancelled() && needs.prepare-build.result == 'success' }}
@@ -646,7 +646,7 @@ jobs:
             --snapshot "tests/fixtures/pipeline_snapshots/${TALK_ID}/${VIDEO_SLUG}" \
             --work-dir "talks/${TALK_ID}/${VIDEO_SLUG}/work"
 
-      - name: Build timecodes (Opus 4.7)
+      - name: Build timecodes (Opus 4.8)
         if: inputs.dry_run != true
         uses: anthropics/claude-code-action@fefa07e9c665b7320f08c3b525980457f22f58aa  # v1
         env:
@@ -655,7 +655,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
-          claude_args: "--max-turns 80 --dangerously-skip-permissions --model ${{ env.MODEL_HEAVY }}"
+          claude_args: "--max-turns 80 --dangerously-skip-permissions --effort high --model ${{ env.MODEL_HEAVY }}"
           show_full_output: true
           prompt: |
             Assign timecodes to Ukrainian subtitle blocks.

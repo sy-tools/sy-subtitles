@@ -25,7 +25,7 @@ Source language: English. Target language: Ukrainian.
    - **Whisper**: speech detection → `whisper.json` (word-level timestamps)
    - **Translate**: Claude agent translates EN → UK → `transcript_uk.txt`
    - **Review**: 2+1 review (Reviewer L + Reviewer S + Critic)
-   - **Build**: single-pass Opus 4.7 agent writes `timecodes.txt` (`#N | start | end`
+   - **Build**: single-pass Opus 4.8 agent writes `timecodes.txt` (`#N | start | end`
      per block); Python merges with `uk_blocks.json` in memory → `final/uk.srt`
    - **Validate**: structural checks (text, CPL, CPS, overlaps, gaps)
    - **Commit**: pushes all results back to repo

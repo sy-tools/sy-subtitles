@@ -10,7 +10,7 @@ Usage (local):
     python -m tools.build_map prepare-timing --talk-dir TALK --video-slug VIDEO
     python -m tools.build_map assemble --talk-dir TALK --video-slug VIDEO
 
-In CI, `prepare` and `prepare-timing` run first, then a single Opus 4.7 agent
+In CI, `prepare` and `prepare-timing` run first, then a single Opus 4.8 agent
 session produces timecodes.txt, then `assemble` builds the final SRT.
 """
 
