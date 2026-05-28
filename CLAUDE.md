@@ -46,8 +46,28 @@ pip install -r requirements-dev.txt                  # for tests
 python -m pytest tests/                              # run Python tests
 python -m pytest tests/test_offset_srt.py -k detect  # run a single test
 GOLDEN_TALKS_SCOPE=all pytest tests/test_golden_talks.py  # full-corpus golden
+node --test tests/test_*.js                          # run JS (SPA) tests
 ```
 
+## Development (TDD required)
+
+**Work test-first. No production code without a failing test first.**
+This applies to every feature, bug fix, and behaviour change — Python tools
+*and* the `site/index.html` SPA.
+
+Red → Green → Refactor:
+1. **RED** — write one minimal test for the desired behaviour, run it, and
+   *watch it fail for the right reason* (feature missing / bug reproduced).
+2. **GREEN** — write the minimal code to make it pass.
+3. **REFACTOR** — clean up while keeping tests green.
+
+For bug fixes: first write a test that reproduces the bug (it must fail), then
+fix. The test proves the fix and guards against regression.
+
+SPA logic lives in `tools/*.js` modules (exercised by `node --test`) and is
+**mirrored** verbatim into `site/index.html` (the browser cannot `require`).
+Add the testable logic to the module, test it there, then mirror it into the
+SPA — see `tools/preview_state.js` / `tools/add_talk_data.js` for the pattern.
 
 ## Language Rules
 

@@ -5045,6 +5045,30 @@ document.addEventListener('click', function(e) {
   if (el) el.href = 'javascript:' + bmCode;
 })();
 
+// Mirror of tools/add_talk_data.js — the Node test suite exercises the module;
+// the browser uses this inlined copy.
+function parseAddTalkHash(hash) {
+  var qm = hash.indexOf('?');
+  if (qm === -1 || hash.indexOf('data=') === -1) {
+    return { state: 'setup', data: null };
+  }
+  var params = new URLSearchParams(hash.slice(qm));
+  var dataStr = params.get('data');
+  var data;
+  try {
+    // URLSearchParams.get() already percent-decodes. A second decodeURIComponent
+    // here threw "URI malformed" on any literal '%' in the title/transcript
+    // (e.g. "100%"), which surfaced as the misleading "Wrong site" error.
+    data = JSON.parse(dataStr);
+  } catch (e) {
+    return { state: 'error', data: null };
+  }
+  if (!data.u || data.u.indexOf('amruta.org') === -1) {
+    return { state: 'error', data: null };
+  }
+  return { state: 'form', data: data };
+}
+
 function showAddTalk(hash) {
   document.title = t('add.title') + ' — SY Subtitles';
   translatePage();
@@ -5053,31 +5077,20 @@ function showAddTalk(hash) {
   document.getElementById('add-state-error').style.display = 'none';
   document.getElementById('add-form').style.display = 'none';
 
-  var qm = hash.indexOf('?');
-  if (qm === -1 || !hash.includes('data=')) {
+  var parsed = parseAddTalkHash(hash);
+  if (parsed.state === 'setup') {
     // State 1: no data — show setup instructions
     document.getElementById('add-state-setup').style.display = 'block';
     return;
   }
-
-  var params = new URLSearchParams(hash.slice(qm));
-  var dataStr = params.get('data');
-  var data;
-  try {
-    data = JSON.parse(decodeURIComponent(dataStr));
-  } catch(e) {
-    // State 3: parse error
-    document.getElementById('add-state-error').style.display = 'block';
-    return;
-  }
-
-  if (!data.u || !data.u.includes('amruta.org')) {
-    // State 3: wrong site
+  if (parsed.state === 'error') {
+    // State 3: parse error or wrong site
     document.getElementById('add-state-error').style.display = 'block';
     return;
   }
 
   // State 2: valid data — show form
+  var data = parsed.data;
   document.getElementById('add-form').style.display = 'block';
   if (data.t) document.getElementById('add-title').value = data.t;
   if (data.d) document.getElementById('add-date').value = data.d;

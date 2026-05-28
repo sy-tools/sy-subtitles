@@ -60,4 +60,4 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
-      - run: node --test tests/test_preview_srt_parser.js
+      - run: node --test tests/test_*.js
