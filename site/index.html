@@ -1473,11 +1473,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
       <p style="color:var(--fg4);margin-bottom:24px;line-height:1.6;" data-i18n="add.bookmarklet_hint">Drag this button to your bookmarks bar, then click it on any amruta.org talk page:</p>
       <a id="bookmarklet-link" href="#" style="display:inline-block;padding:12px 24px;background:var(--primary-bg);color:var(--primary-fg);border:1px solid var(--primary-border);border-radius:8px;font-size:16px;cursor:grab;text-decoration:none;">&#x2795; SY Subtitles</a>
     </div>
-    <!-- State 3: Wrong site error -->
+    <!-- State 3a: Wrong site error -->
     <div id="add-state-error" style="display:none;text-align:center;padding:40px 20px;">
       <p style="font-size:40px;margin-bottom:12px;">&#x26A0;</p>
       <p style="font-size:18px;color:var(--accent-red);margin-bottom:12px;" data-i18n="add.wrong_site_title">Wrong site</p>
       <p style="color:var(--fg4);margin-bottom:24px;" data-i18n="add.wrong_site_hint">The bookmarklet should be used on amruta.org talk pages only.</p>
+      <a href="#/" style="color:var(--link);" data-i18n="nav.back">&larr; Home</a>
+    </div>
+    <!-- State 3b: Could not read bookmarklet data -->
+    <div id="add-state-parse-error" style="display:none;text-align:center;padding:40px 20px;">
+      <p style="font-size:40px;margin-bottom:12px;">&#x26A0;</p>
+      <p style="font-size:18px;color:var(--accent-red);margin-bottom:12px;" data-i18n="add.parse_error_title">Could not read the page data</p>
+      <p style="color:var(--fg4);margin-bottom:24px;" data-i18n="add.parse_error_hint">The bookmarklet data could not be parsed. Try clicking the bookmarklet again on the amruta.org talk page.</p>
       <a href="#/" style="color:var(--link);" data-i18n="nav.back">&larr; Home</a>
     </div>
     <!-- State 2: Form (data from bookmarklet) -->
@@ -1918,6 +1925,8 @@ var I18N = {
     'add.setup_title': '\u042F\u043A \u0434\u043E\u0434\u0430\u0442\u0438 \u043F\u0440\u043E\u043C\u043E\u0432\u0443',
     'add.wrong_site_title': '\u041D\u0435 \u0442\u043E\u0439 \u0441\u0430\u0439\u0442',
     'add.wrong_site_hint': '\u0411\u0443\u043A\u043C\u0430\u0440\u043A\u043B\u0435\u0442 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043D\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0430\u0445 \u043F\u0440\u043E\u043C\u043E\u0432 \u043D\u0430 amruta.org.',
+    'add.parse_error_title': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0434\u0430\u043D\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438',
+    'add.parse_error_hint': '\u0414\u0430\u043D\u0456 \u0437 \u0431\u0443\u043A\u043C\u0430\u0440\u043A\u043B\u0435\u0442\u0430 \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0440\u043E\u0437\u043F\u0430\u0440\u0441\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437 \u043D\u0430\u0442\u0438\u0441\u043D\u0443\u0442\u0438 \u0431\u0443\u043A\u043C\u0430\u0440\u043A\u043B\u0435\u0442 \u043D\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u0446\u0456 \u043F\u0440\u043E\u043C\u043E\u0432\u0438 amruta.org.',
     'add.submit': '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
     'add.field_transcript': '\u0422\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0442 (\u0437\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438)',
     'add.video_title': '\u041D\u0430\u0437\u0432\u0430 \u0432\u0456\u0434\u0435\u043E',
@@ -2030,6 +2039,8 @@ var I18N = {
     'add.setup_title': 'How to add a talk',
     'add.wrong_site_title': 'Wrong site',
     'add.wrong_site_hint': 'The bookmarklet should be used on amruta.org talk pages only.',
+    'add.parse_error_title': 'Could not read the page data',
+    'add.parse_error_hint': 'The bookmarklet data could not be parsed. Try clicking the bookmarklet again on the amruta.org talk page.',
     'add.submit': 'Create PR',
     'add.field_transcript': 'Transcript (from page)',
     'add.video_title': 'Video title',
@@ -5061,10 +5072,10 @@ function parseAddTalkHash(hash) {
     // (e.g. "100%"), which surfaced as the misleading "Wrong site" error.
     data = JSON.parse(dataStr);
   } catch (e) {
-    return { state: 'error', data: null };
+    return { state: 'parse_error', data: null };
   }
   if (!data.u || data.u.indexOf('amruta.org') === -1) {
-    return { state: 'error', data: null };
+    return { state: 'wrong_site', data: null };
   }
   return { state: 'form', data: data };
 }
@@ -5075,6 +5086,7 @@ function showAddTalk(hash) {
 
   document.getElementById('add-state-setup').style.display = 'none';
   document.getElementById('add-state-error').style.display = 'none';
+  document.getElementById('add-state-parse-error').style.display = 'none';
   document.getElementById('add-form').style.display = 'none';
 
   var parsed = parseAddTalkHash(hash);
@@ -5083,8 +5095,13 @@ function showAddTalk(hash) {
     document.getElementById('add-state-setup').style.display = 'block';
     return;
   }
-  if (parsed.state === 'error') {
-    // State 3: parse error or wrong site
+  if (parsed.state === 'parse_error') {
+    // State 3b: data param present but unreadable
+    document.getElementById('add-state-parse-error').style.display = 'block';
+    return;
+  }
+  if (parsed.state === 'wrong_site') {
+    // State 3a: valid payload but not an amruta.org page
     document.getElementById('add-state-error').style.display = 'block';
     return;
   }

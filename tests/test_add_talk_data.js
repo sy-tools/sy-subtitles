@@ -36,20 +36,20 @@ describe('parseAddTalkHash — routing states', () => {
     assert.deepStrictEqual(res.data, validTalk);
   });
 
-  it('returns error when the url is not amruta.org', () => {
+  it('returns wrong_site when the url is not amruta.org', () => {
     const res = parseAddTalkHash(hashFor({ ...validTalk, u: 'https://example.com/x' }));
-    assert.strictEqual(res.state, 'error');
+    assert.strictEqual(res.state, 'wrong_site');
   });
 
-  it('returns error when the url is missing', () => {
+  it('returns wrong_site when the url is missing', () => {
     const { u, ...noUrl } = validTalk;
     const res = parseAddTalkHash(hashFor(noUrl));
-    assert.strictEqual(res.state, 'error');
+    assert.strictEqual(res.state, 'wrong_site');
   });
 
-  it('returns error on a corrupted (non-JSON) data param', () => {
+  it('returns parse_error on a corrupted (non-JSON) data param', () => {
     const res = parseAddTalkHash('#/add?data=' + encodeURIComponent('{not-json'));
-    assert.strictEqual(res.state, 'error');
+    assert.strictEqual(res.state, 'parse_error');
   });
 });
 

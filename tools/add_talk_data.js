@@ -3,9 +3,10 @@
 // the Node test suite exercises this module.
 //
 // Returns one of:
-//   { state: 'setup', data: null }  — no payload present
-//   { state: 'error', data: null }  — payload missing/corrupt or not an amruta.org URL
-//   { state: 'form',  data: obj  }  — valid payload ready to populate the form
+//   { state: 'setup',       data: null }  — no payload present
+//   { state: 'parse_error', data: null }  — data param present but not valid JSON
+//   { state: 'wrong_site',  data: null }  — valid payload but not an amruta.org URL
+//   { state: 'form',        data: obj  }  — valid payload ready to populate the form
 function parseAddTalkHash(hash) {
   var qm = hash.indexOf('?');
   if (qm === -1 || hash.indexOf('data=') === -1) {
@@ -21,11 +22,11 @@ function parseAddTalkHash(hash) {
     // (e.g. "100%"), which surfaced as the misleading "Wrong site" error.
     data = JSON.parse(dataStr);
   } catch (e) {
-    return { state: 'error', data: null };
+    return { state: 'parse_error', data: null };
   }
 
   if (!data.u || data.u.indexOf('amruta.org') === -1) {
-    return { state: 'error', data: null };
+    return { state: 'wrong_site', data: null };
   }
 
   return { state: 'form', data: data };
