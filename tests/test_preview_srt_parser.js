@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { timeToMs, parseSRT, findActiveSubtitle } = require('../tools/preview_srt_parser');
+const { timeToMs, parseSRT, findActiveSubtitle } = require('../site/js/preview_srt_parser');
 
 describe('timeToMs', () => {
   it('parses zero', () => {

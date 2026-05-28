@@ -12,6 +12,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
 <script src="https://player.vimeo.com/api/player.js"></script>
+<!-- Shared app logic — single source, also exercised by the Node test suite.
+     Classic (non-deferred) scripts, so globals are defined before the inline
+     app script below runs. -->
+<script src="js/preview_srt_parser.js"></script>
+<script src="js/preview_state.js"></script>
+<script src="js/add_talk_data.js"></script>
+<script src="js/shell_version.js"></script>
 <style>
 /* --- Theme: CSS custom properties --- */
 :root {
@@ -1538,14 +1545,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 
 <script>
 // ============================================================
-// SRT Parser (from preview_srt_parser.js)
+// SRT Parser — timeToMs / parseSRT / findActiveSubtitle(Idx) live in
+// js/preview_srt_parser.js (loaded in <head>), the same module the Node
+// test suite exercises. The browser-only helpers below (matchParagraphsToSrt,
+// alignSubtitlesByTime) are not shared, so they stay inline.
 // ============================================================
-function timeToMs(t) {
-  var parts = t.split(':');
-  var secMs = parts[2].split(',');
-  return parseInt(parts[0], 10) * 3600000 + parseInt(parts[1], 10) * 60000 +
-    parseInt(secMs[0], 10) * 1000 + parseInt(secMs[1], 10);
-}
 // Map transcript paragraphs to SRT-block time spans so the review-page
 // transcript mode can piggy-back on SyncPlayer's existing seek & highlight
 // logic. Returns an array the same length as `paragraphs`; each entry is
@@ -1624,19 +1628,6 @@ function matchParagraphsToSrt(paragraphs, srtBlocks) {
   return results;
 }
 
-function parseSRT(text) {
-  text = text.replace(/^\uFEFF/, '');
-  var blocks = text.trim().split(/\n\s*\n/);
-  var result = [];
-  for (var i = 0; i < blocks.length; i++) {
-    var lines = blocks[i].trim().split('\n');
-    if (lines.length < 3) continue;
-    var match = lines[1].match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
-    if (!match) continue;
-    result.push({ index: parseInt(lines[0], 10), startMs: timeToMs(match[1]), endMs: timeToMs(match[2]), text: lines.slice(2).join('\n') });
-  }
-  return result;
-}
 // ALIGN_START
 function alignSubtitlesByTime(enBlocks, ukBlocks) {
   if (!enBlocks.length && !ukBlocks.length) return [];
@@ -1724,67 +1715,10 @@ function alignSubtitlesByTime(enBlocks, ukBlocks) {
 }
 // ALIGN_END
 
-function findActiveSubtitleIdx(subs, ms) {
-  for (var i = 0; i < subs.length; i++) {
-    if (ms >= subs[i].startMs && ms < subs[i].endMs) return i;
-  }
-  return -1;
-}
-
-// Mirror of tools/preview_state.js — the Node test suite exercises
-// the module; the browser uses this inlined copy.
-function defaultPreviewStateShape() {
-  return { mode: 'marker', markers: [], edits: {} };
-}
-function coercePreviewStateShape(raw) {
-  var out = defaultPreviewStateShape();
-  if (!raw || typeof raw !== 'object') return out;
-  if (raw.mode === 'edit' || raw.mode === 'marker') out.mode = raw.mode;
-  if (Array.isArray(raw.markers)) out.markers = raw.markers;
-  if (raw.edits && typeof raw.edits === 'object' && !Array.isArray(raw.edits)) {
-    out.edits = raw.edits;
-  }
-  return out;
-}
-function loadPreviewStateFromStorage(talkId, videoSlug) {
-  var newKey = 'preview_' + talkId + '_' + videoSlug;
-  var legacyKey = 'markers_preview_' + talkId + '_' + videoSlug;
-  var rawNew = localStorage.getItem(newKey);
-  if (rawNew != null) {
-    var parsed = null;
-    try { parsed = JSON.parse(rawNew); } catch(_) {}
-    if (localStorage.getItem(legacyKey) != null) localStorage.removeItem(legacyKey);
-    return coercePreviewStateShape(parsed);
-  }
-  var rawLegacy = localStorage.getItem(legacyKey);
-  if (rawLegacy != null) {
-    var legacyMarkers = [];
-    try {
-      var p = JSON.parse(rawLegacy);
-      if (Array.isArray(p)) legacyMarkers = p;
-    } catch(_) {}
-    var migrated = defaultPreviewStateShape();
-    migrated.markers = legacyMarkers;
-    localStorage.setItem(newKey, JSON.stringify(migrated));
-    localStorage.removeItem(legacyKey);
-    return migrated;
-  }
-  return defaultPreviewStateShape();
-}
-function applyEditsToSrt(blocks, edits) {
-  if (!blocks || !blocks.length) return '';
-  var e = edits || {};
-  var lines = [];
-  for (var i = 0; i < blocks.length; i++) {
-    var b = blocks[i];
-    var text = Object.prototype.hasOwnProperty.call(e, i) ? e[i] : b.text;
-    lines.push(String(i + 1));
-    lines.push(msToSrtTime(b.startMs) + ' --> ' + msToSrtTime(b.endMs));
-    lines.push(text);
-    lines.push('');
-  }
-  return lines.join('\n');
-}
+// findActiveSubtitleIdx lives in js/preview_srt_parser.js.
+// defaultPreviewState / loadPreviewState / applyEditsToSrt / msToSrtTime live
+// in js/preview_state.js. Both are loaded in <head> and exercised by the Node
+// test suite — no inline mirror.
 
 // ============================================================
 // Config
@@ -1828,7 +1762,7 @@ var PAGES_BASE = location.pathname.replace(/\/[^/]*$/, '');
 // ============================================================
 // Deploy info — stamped by deploy-pages.yml at build time
 // ============================================================
-var APP_DEPLOY_SHA = ''; // blob SHA of site/index.html at deploy
+var APP_DEPLOY_SHA = ''; // app-shell version (index.html + js/*.js) at deploy
 var APP_DEPLOY_DATE = ''; // deploy date YYYY-MM-DD
 
 // ============================================================
@@ -3059,11 +2993,13 @@ function buildManifest(tree) {
 
   // Extract sha for cache-busting and auto-reload
   var reviewSha = '';
-  var siteIndexSha = '';
   tree.forEach(function(entry) {
     if (entry.path === 'review-status.json') reviewSha = entry.sha || '';
-    if (entry.path === 'site/index.html') siteIndexSha = (entry.sha || '').substring(0, 7);
   });
+  // App-shell version covers index.html AND every site/js/*.js, so a fix
+  // shipped only in an external js/ file still triggers the auto-reload.
+  // Mirrors tools/compute_shell_version.sh (the deploy-time stamp).
+  var siteIndexSha = computeShellVersion(tree);
 
   return { talks: result, _reviewSha: reviewSha, _siteIndexSha: siteIndexSha };
 }
@@ -3454,7 +3390,7 @@ function showPreview(talkId, videoSlug) {
   var defaultLang = (savedSrtLang && availLangs.indexOf(savedSrtLang) !== -1) ? savedSrtLang
     : availLangs.indexOf('uk') !== -1 ? 'uk' : availLangs[0];
 
-  var persisted = loadPreviewStateFromStorage(talkId, videoSlug);
+  var persisted = loadPreviewState(talkId, videoSlug, localStorage);
   previewState = {
     talkId: talkId,
     videoSlug: videoSlug,
@@ -4446,13 +4382,7 @@ function msToTC(ms) {
   return (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
 }
 
-function msToSrtTime(ms) {
-  var ms3 = ms % 1000;
-  var s = Math.floor(ms / 1000);
-  var m = Math.floor(s / 60); s = s % 60;
-  var h = Math.floor(m / 60); m = m % 60;
-  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ',' + String(ms3).padStart(3, '0');
-}
+// msToSrtTime lives in js/preview_state.js (loaded in <head>).
 
 function renderReview() {
   var grid = document.getElementById('review-grid');
@@ -4986,11 +4916,22 @@ SPA.refreshManifest = function() {
     loadReviewStatus()
   ]).then(function(results) {
     var m = results[0];
-    // Auto-reload if site/index.html changed in repo
-    if (m._siteIndexSha && APP_DEPLOY_SHA && m._siteIndexSha !== APP_DEPLOY_SHA) {
-      console.log('SPA update detected: ' + APP_DEPLOY_SHA + ' → ' + m._siteIndexSha);
-      location.reload();
-      return;
+    // Auto-reload if the app shell (index.html or any js/*.js) changed in repo.
+    // Guard against a reload loop: if APP_DEPLOY_SHA is still stale after a
+    // reload (e.g. un-propagated Pages CDN), reload at most once per target
+    // version per session. A later, different target reloads again.
+    var target = m._siteIndexSha;
+    if (target && APP_DEPLOY_SHA && target !== APP_DEPLOY_SHA) {
+      var already = null;
+      try { already = sessionStorage.getItem('sy_reload_target'); } catch(e) {}
+      if (already !== target) {
+        try { sessionStorage.setItem('sy_reload_target', target); } catch(e) {}
+        console.log('SPA update detected: ' + APP_DEPLOY_SHA + ' → ' + target);
+        location.reload();
+        return;
+      }
+      console.warn('SPA update to ' + target + ' detected but reload already '
+        + 'attempted this session; skipping to avoid a loop.');
     }
     route();
     updateFooter();
@@ -5056,29 +4997,8 @@ document.addEventListener('click', function(e) {
   if (el) el.href = 'javascript:' + bmCode;
 })();
 
-// Mirror of tools/add_talk_data.js — the Node test suite exercises the module;
-// the browser uses this inlined copy.
-function parseAddTalkHash(hash) {
-  var qm = hash.indexOf('?');
-  if (qm === -1 || hash.indexOf('data=') === -1) {
-    return { state: 'setup', data: null };
-  }
-  var params = new URLSearchParams(hash.slice(qm));
-  var dataStr = params.get('data');
-  var data;
-  try {
-    // URLSearchParams.get() already percent-decodes. A second decodeURIComponent
-    // here threw "URI malformed" on any literal '%' in the title/transcript
-    // (e.g. "100%"), which surfaced as the misleading "Wrong site" error.
-    data = JSON.parse(dataStr);
-  } catch (e) {
-    return { state: 'parse_error', data: null };
-  }
-  if (!data.u || data.u.indexOf('amruta.org') === -1) {
-    return { state: 'wrong_site', data: null };
-  }
-  return { state: 'form', data: data };
-}
+// parseAddTalkHash() is provided by js/add_talk_data.js (loaded in <head>),
+// the same module the Node test suite exercises — no inline mirror.
 
 function showAddTalk(hash) {
   document.title = t('add.title') + ' — SY Subtitles';

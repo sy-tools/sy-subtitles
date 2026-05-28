@@ -1,5 +1,6 @@
-// Pure helpers for preview-page marker/edit state. Mirrored inline
-// into site/index.html; the browser runs the copy there.
+// Pure helpers for preview-page marker/edit state. Single source: loaded by the
+// browser via <script src="js/preview_state.js"> in site/index.html AND required
+// by the Node test suite — no inline mirror.
 
 function defaultPreviewState() {
   return { mode: 'marker', markers: [], edits: {} };

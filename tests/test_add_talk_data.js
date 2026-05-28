@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { parseAddTalkHash } = require('../tools/add_talk_data');
+const { parseAddTalkHash } = require('../site/js/add_talk_data');
 
 // The bookmarklet encodes its payload exactly like this, then opens the SPA
 // at `<base>#/add?data=<encoded>`. These helpers reproduce that round trip so

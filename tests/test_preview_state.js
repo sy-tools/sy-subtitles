@@ -4,8 +4,8 @@ const {
   defaultPreviewState,
   loadPreviewState,
   applyEditsToSrt,
-} = require('../tools/preview_state');
-const { findActiveSubtitleIdx } = require('../tools/preview_srt_parser');
+} = require('../site/js/preview_state');
+const { findActiveSubtitleIdx } = require('../site/js/preview_srt_parser');
 
 // In-memory storage double — matches just enough of localStorage
 // surface (getItem/setItem/removeItem) for loadPreviewState.

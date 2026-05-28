@@ -1,6 +1,7 @@
 // Parses the bookmarklet payload carried in the SPA hash route `#/add?data=...`
-// into a routing decision. Mirrored verbatim into site/index.html (showAddTalk);
-// the Node test suite exercises this module.
+// into a routing decision. Single source: loaded by the browser via
+// <script src="js/add_talk_data.js"> in site/index.html AND required by the
+// Node test suite (tests/test_add_talk_data.js) — no inline mirror.
 //
 // Returns one of:
 //   { state: 'setup',       data: null }  — no payload present
