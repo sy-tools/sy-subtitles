@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-27T22:29:58.253814+00:00",
+  "updated_at": "2026-05-28T22:54:07.274391+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -169,6 +169,18 @@
       "reviewer": null,
       "issue_number": 197,
       "updated_at": "2026-05-27T22:29:50Z"
+    },
+    "1978-10-02_Knots-On-The-Three-Channels": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 208,
+      "updated_at": "2026-05-28T22:53:58Z"
+    },
+    "1990-05-06_Sahasrara-Puja-You-Have-All-Become-Mahayogis-Now": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 205,
+      "updated_at": "2026-05-28T20:53:41Z"
     }
   }
 }
