@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-29T10:51:53.876206+00:00",
+  "updated_at": "2026-05-29T11:58:47.420832+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -211,6 +211,24 @@
       "reviewer": null,
       "issue_number": 235,
       "updated_at": "2026-05-29T10:51:46Z"
+    },
+    "2001-12-25_Christmas-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 244,
+      "updated_at": "2026-05-29T11:58:37Z"
+    },
+    "1982-07-11_From-Heart-to-Sahasrara": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 241,
+      "updated_at": "2026-05-29T11:20:23Z"
+    },
+    "1995-02-19_Arrival-Talk": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 238,
+      "updated_at": "2026-05-29T11:14:58Z"
     }
   }
 }
