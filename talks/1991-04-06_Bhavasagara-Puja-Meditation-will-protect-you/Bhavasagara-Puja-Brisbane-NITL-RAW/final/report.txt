@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1991-04-06_Bhavasagara-Puja-Meditation-will-protect-you/Bhavasagara-Puja-Brisbane-NITL-RAW/final/uk.srt
+  Transcript: talks/1991-04-06_Bhavasagara-Puja-Meditation-will-protect-you/transcript_uk.txt
+  EN SRT: talks/1991-04-06_Bhavasagara-Puja-Meditation-will-protect-you/Bhavasagara-Puja-Brisbane-NITL-RAW/source/en.srt
+  SRT blocks: 381
+  EN SRT blocks: 636
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:04:11,990 — 00:41:20,471
+  SRT range:       00:04:11,990 — 00:41:20,391
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 381
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 381
+  CPS: avg=10.3, median=10.0, max=15.1
+  CPS > target: 4 (1.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #377: CPS=15.1 (29ch/1.9s) "Кожен із вас може це зробити,"
+    #365: CPS=15.1 (82ch/5.4s) "Ви маєте знати значення «Сва» – це і є себелюбство – і коли ..."
+    #379: CPS=15.0 (64ch/4.3s) "Тобто, Я б не сказала «увібрати», а радше – щоб ви проявляли..."
+    #369: CPS=15.0 (77ch/5.1s) "Припустімо, ваша дружина дивна: «Нічого, вона отямиться». Це..."
+    #370: CPS=15.0 (48ch/3.2s) "Для вас це найважливіше з того, що треба робити,"
+    #341: CPS=15.0 (66ch/4.4s) "Погляньте на цих святих: вони навіть не вміли піднімати Кунд..."
+    #289: CPS=15.0 (76ch/5.1s) "Як оті рекламні оголошення, що ви їх бачите, – щодня вони пр..."
+    #59: CPS=15.0 (73ch/4.9s) "Незмінно в усіх цих ашрамах Я бачила, що люди встають о четв..."
+    #236: CPS=15.0 (73ch/4.9s) "Звісно, Я б сказала, ви не отримали свою реалізацію в той ча..."
+    #323: CPS=15.0 (73ch/4.9s) "Вони прочитали всілякі речі – просто щоб з’ясувати, наскільк..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 381
+  EN SRT blocks: 636
+  Ratio UK/EN: 0.60 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.3 (target ≤15.0)
+  CPS > 15.0: 4 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
