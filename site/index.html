@@ -19,6 +19,7 @@
 <script src="js/preview_state.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
+<script src="js/talk_actions.js"></script>
 <style>
 /* --- Theme: CSS custom properties --- */
 :root {
@@ -3152,21 +3153,22 @@ function renderIndex(el) {
       var href = st.issue_number ? 'https://github.com/' + REPO + '/issues/' + st.issue_number : '#';
       badge = '<a href="' + href + '" target="_blank" class="review-badge ' + bc + '">' + bt + '</a>';
     }
-    // Prefer the last-viewed video for this talk; fall back to the first
-    // valid one. Both must have an SRT and vimeo_url to be linkable.
-    var validVideos = (tk.videos || []).filter(function(v) { return v.hasSrt && v.vimeo_url; });
-    var lastSlug = localStorage.getItem('sy_last_video_' + tk.id);
-    var targetVideo = null;
-    if (lastSlug) {
-      targetVideo = validVideos.find(function(v) { return v.slug === lastSlug; }) || null;
-    }
-    if (!targetVideo) targetVideo = validVideos[0] || null;
+    // Which action links to show. View (preview) needs subtitles on a playable
+    // video; Review needs EN+UK transcripts and shows even with no subtitles
+    // yet (review opens in transcript mode). See js/talk_actions.js.
+    var actions = talkActionVisibility(tk);
     var videoLinks = '';
-    if (targetVideo) {
+    if (actions.preview) {
+      // Prefer the last-viewed video for this talk; fall back to the first
+      // valid one. Both must have an SRT and vimeo_url to be linkable.
+      var validVideos = (tk.videos || []).filter(function(v) { return v.hasSrt && v.vimeo_url; });
+      var lastSlug = localStorage.getItem('sy_last_video_' + tk.id);
+      var targetVideo = (lastSlug && validVideos.find(function(v) { return v.slug === lastSlug; }))
+        || validVideos[0];
       videoLinks = '<a href="#/preview/' + tk.id + '/' + targetVideo.slug + '" class="preview-link">' + esc(t('link.preview')) + '</a>';
     }
     var reviewLink = '';
-    if (tk.hasEn && tk.hasUk) {
+    if (actions.review) {
       reviewLink = '<a href="#/review/' + tk.id + '" class="review-link">&#x270E; ' + t('link.review') + '</a>';
     }
     // Assemble card (all values are escaped or from trusted i18n)
@@ -3177,7 +3179,7 @@ function renderIndex(el) {
     var statusBadge = renderStatusBadge(status, st);
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
-      + (videoLinks ? '<div class="talk-actions">' + videoLinks + reviewLink + '</div>' : '');
+      + ((videoLinks || reviewLink) ? '<div class="talk-actions">' + videoLinks + reviewLink + '</div>' : '');
 
     // Expert mode: click card to expand inline DAG detail (one at a time)
     if (expertMode) {
