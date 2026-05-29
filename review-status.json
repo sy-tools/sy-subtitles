@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-28T20:53:54.787296+00:00",
+  "updated_at": "2026-05-29T06:36:19.349205+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -175,6 +175,18 @@
       "reviewer": null,
       "issue_number": 205,
       "updated_at": "2026-05-28T20:53:41Z"
+    },
+    "1991-04-06_Bhavasagara-Puja-Meditation-will-protect-you": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 211,
+      "updated_at": "2026-05-29T06:36:08Z"
+    },
+    "1978-10-02_Knots-On-The-Three-Channels": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 208,
+      "updated_at": "2026-05-28T22:53:58Z"
     }
   }
 }
