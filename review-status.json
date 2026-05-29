@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-29T11:58:47.420832+00:00",
+  "updated_at": "2026-05-29T16:45:42.293441+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -229,6 +229,12 @@
       "reviewer": null,
       "issue_number": 238,
       "updated_at": "2026-05-29T11:14:58Z"
+    },
+    "1977-01-27_Seminar-Day-2-Attention-and-Joy": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 253,
+      "updated_at": "2026-05-29T16:45:31Z"
     }
   }
 }
