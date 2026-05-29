@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-29T10:09:45.995243+00:00",
+  "updated_at": "2026-05-29T11:20:34.146093+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -205,6 +205,24 @@
       "reviewer": null,
       "issue_number": 224,
       "updated_at": "2026-05-29T09:34:34Z"
+    },
+    "1982-07-11_From-Heart-to-Sahasrara": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 241,
+      "updated_at": "2026-05-29T11:20:23Z"
+    },
+    "1995-02-19_Arrival-Talk": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 238,
+      "updated_at": "2026-05-29T11:14:58Z"
+    },
+    "1991-12-29_Shri-Lakshmi-Puja-Sea-is-your-grandfather": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 235,
+      "updated_at": "2026-05-29T10:51:46Z"
     }
   }
 }
