@@ -1,5 +1,6 @@
-// Pure helpers for preview-page marker/edit state. Mirrored inline
-// into site/index.html; the browser runs the copy there.
+// Pure helpers for preview-page marker/edit state. Single source: loaded by the
+// browser via <script src="js/preview_state.js"> in site/index.html AND required
+// by the Node test suite — no inline mirror.
 
 function defaultPreviewState() {
   return { mode: 'marker', markers: [], edits: {} };
@@ -93,11 +94,21 @@ function applyEditsToSrt(blocks, edits) {
   return lines.join('\n');
 }
 
+// True when showPreview is re-entered for the video that is already loaded
+// (e.g. a manifest refresh that re-runs route()), so the live Vimeo player and
+// its playback position can be kept instead of rebuilding the iframe.
+// `hasIframe` is the DOM check (passed in to keep this pure).
+function canReusePreviewPlayer(prev, talkId, videoSlug, hasIframe) {
+  return !!(prev && prev.player && hasIframe
+    && prev.talkId === talkId && prev.videoSlug === videoSlug);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     defaultPreviewState: defaultPreviewState,
     loadPreviewState: loadPreviewState,
     applyEditsToSrt: applyEditsToSrt,
     msToSrtTime: msToSrtTime,
+    canReusePreviewPlayer: canReusePreviewPlayer,
   };
 }

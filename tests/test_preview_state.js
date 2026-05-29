@@ -4,8 +4,9 @@ const {
   defaultPreviewState,
   loadPreviewState,
   applyEditsToSrt,
-} = require('../tools/preview_state');
-const { findActiveSubtitleIdx } = require('../tools/preview_srt_parser');
+  canReusePreviewPlayer,
+} = require('../site/js/preview_state');
+const { findActiveSubtitleIdx } = require('../site/js/preview_srt_parser');
 
 // In-memory storage double — matches just enough of localStorage
 // surface (getItem/setItem/removeItem) for loadPreviewState.
@@ -37,6 +38,30 @@ describe('defaultPreviewState', () => {
     const b = defaultPreviewState();
     a.markers.push({ time: 1, tc: '00:00:01', text: 'x', comment: '' });
     assert.strictEqual(b.markers.length, 0);
+  });
+});
+
+describe('canReusePreviewPlayer — keep the live player on re-entry', () => {
+  const live = { talkId: 'T', videoSlug: 'v1', player: {} };
+
+  it('reuses when same talk+video, a player exists, and the iframe is present', () => {
+    assert.strictEqual(canReusePreviewPlayer(live, 'T', 'v1', true), true);
+  });
+  it('rebuilds when the video differs', () => {
+    assert.strictEqual(canReusePreviewPlayer(live, 'T', 'v2', true), false);
+  });
+  it('rebuilds when the talk differs', () => {
+    assert.strictEqual(canReusePreviewPlayer(live, 'OTHER', 'v1', true), false);
+  });
+  it('rebuilds when there is no player yet', () => {
+    assert.strictEqual(canReusePreviewPlayer({ talkId: 'T', videoSlug: 'v1' }, 'T', 'v1', true), false);
+  });
+  it('rebuilds when the iframe is gone', () => {
+    assert.strictEqual(canReusePreviewPlayer(live, 'T', 'v1', false), false);
+  });
+  it('rebuilds on first entry (empty/missing previous state)', () => {
+    assert.strictEqual(canReusePreviewPlayer({}, 'T', 'v1', true), false);
+    assert.strictEqual(canReusePreviewPlayer(null, 'T', 'v1', true), false);
   });
 });
 

@@ -30,12 +30,14 @@ jobs:
       - name: Stamp build info
         run: |
           DEPLOY_DATE=$(date -u +%Y-%m-%d)
-          # Blob SHA of site/index.html as it is in git (before sed)
-          # This matches what Trees API returns — used for auto-reload detection
-          BLOB_SHA=$(git hash-object site/index.html | head -c 7)
+          # App-shell version: combined blob SHAs of site/index.html + site/js/*.js
+          # from the committed tree (matches what the Trees API returns to the
+          # running SPA). Computed before the sed below, so the stamp is not part
+          # of the hashed input. See tools/compute_shell_version.sh.
+          SHELL_SHA=$(bash tools/compute_shell_version.sh)
           sed -i "s/var APP_DEPLOY_DATE = '';/var APP_DEPLOY_DATE = '${DEPLOY_DATE}';/" site/index.html
-          sed -i "s/var APP_DEPLOY_SHA = '';/var APP_DEPLOY_SHA = '${BLOB_SHA}';/" site/index.html
-          echo "Deploy: date=$DEPLOY_DATE sha=$BLOB_SHA"
+          sed -i "s/var APP_DEPLOY_SHA = '';/var APP_DEPLOY_SHA = '${SHELL_SHA}';/" site/index.html
+          echo "Deploy: date=$DEPLOY_DATE shell=$SHELL_SHA"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5

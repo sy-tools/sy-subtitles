@@ -1,5 +1,6 @@
-// SRT parser for subtitle preview pages.
-// This file is embedded inline by generate_preview.py and tested by Node.js.
+// SRT parser for subtitle preview pages. Single source: loaded by the browser
+// via <script src="js/preview_srt_parser.js"> in site/index.html AND required
+// by the Node test suite — no inline mirror.
 
 function timeToMs(t) {
   var parts = t.split(':');

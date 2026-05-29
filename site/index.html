@@ -12,6 +12,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js"></script>
 <script src="https://player.vimeo.com/api/player.js"></script>
+<!-- Shared app logic — single source, also exercised by the Node test suite.
+     Classic (non-deferred) scripts, so globals are defined before the inline
+     app script below runs. -->
+<script src="js/preview_srt_parser.js"></script>
+<script src="js/preview_state.js"></script>
+<script src="js/add_talk_data.js"></script>
+<script src="js/shell_version.js"></script>
+<script src="js/talk_actions.js"></script>
 <style>
 /* --- Theme: CSS custom properties --- */
 :root {
@@ -1473,11 +1481,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
       <p style="color:var(--fg4);margin-bottom:24px;line-height:1.6;" data-i18n="add.bookmarklet_hint">Drag this button to your bookmarks bar, then click it on any amruta.org talk page:</p>
       <a id="bookmarklet-link" href="#" style="display:inline-block;padding:12px 24px;background:var(--primary-bg);color:var(--primary-fg);border:1px solid var(--primary-border);border-radius:8px;font-size:16px;cursor:grab;text-decoration:none;">&#x2795; SY Subtitles</a>
     </div>
-    <!-- State 3: Wrong site error -->
+    <!-- State 3a: Wrong site error -->
     <div id="add-state-error" style="display:none;text-align:center;padding:40px 20px;">
       <p style="font-size:40px;margin-bottom:12px;">&#x26A0;</p>
       <p style="font-size:18px;color:var(--accent-red);margin-bottom:12px;" data-i18n="add.wrong_site_title">Wrong site</p>
       <p style="color:var(--fg4);margin-bottom:24px;" data-i18n="add.wrong_site_hint">The bookmarklet should be used on amruta.org talk pages only.</p>
+      <a href="#/" style="color:var(--link);" data-i18n="nav.back">&larr; Home</a>
+    </div>
+    <!-- State 3b: Could not read bookmarklet data -->
+    <div id="add-state-parse-error" style="display:none;text-align:center;padding:40px 20px;">
+      <p style="font-size:40px;margin-bottom:12px;">&#x26A0;</p>
+      <p style="font-size:18px;color:var(--accent-red);margin-bottom:12px;" data-i18n="add.parse_error_title">Could not read the page data</p>
+      <p style="color:var(--fg4);margin-bottom:24px;" data-i18n="add.parse_error_hint">The bookmarklet data could not be parsed. Try clicking the bookmarklet again on the amruta.org talk page.</p>
       <a href="#/" style="color:var(--link);" data-i18n="nav.back">&larr; Home</a>
     </div>
     <!-- State 2: Form (data from bookmarklet) -->
@@ -1531,14 +1546,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 
 <script>
 // ============================================================
-// SRT Parser (from preview_srt_parser.js)
+// SRT Parser — timeToMs / parseSRT / findActiveSubtitle(Idx) live in
+// js/preview_srt_parser.js (loaded in <head>), the same module the Node
+// test suite exercises. The browser-only helpers below (matchParagraphsToSrt,
+// alignSubtitlesByTime) are not shared, so they stay inline.
 // ============================================================
-function timeToMs(t) {
-  var parts = t.split(':');
-  var secMs = parts[2].split(',');
-  return parseInt(parts[0], 10) * 3600000 + parseInt(parts[1], 10) * 60000 +
-    parseInt(secMs[0], 10) * 1000 + parseInt(secMs[1], 10);
-}
 // Map transcript paragraphs to SRT-block time spans so the review-page
 // transcript mode can piggy-back on SyncPlayer's existing seek & highlight
 // logic. Returns an array the same length as `paragraphs`; each entry is
@@ -1617,19 +1629,6 @@ function matchParagraphsToSrt(paragraphs, srtBlocks) {
   return results;
 }
 
-function parseSRT(text) {
-  text = text.replace(/^\uFEFF/, '');
-  var blocks = text.trim().split(/\n\s*\n/);
-  var result = [];
-  for (var i = 0; i < blocks.length; i++) {
-    var lines = blocks[i].trim().split('\n');
-    if (lines.length < 3) continue;
-    var match = lines[1].match(/(\d{2}:\d{2}:\d{2},\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2},\d{3})/);
-    if (!match) continue;
-    result.push({ index: parseInt(lines[0], 10), startMs: timeToMs(match[1]), endMs: timeToMs(match[2]), text: lines.slice(2).join('\n') });
-  }
-  return result;
-}
 // ALIGN_START
 function alignSubtitlesByTime(enBlocks, ukBlocks) {
   if (!enBlocks.length && !ukBlocks.length) return [];
@@ -1717,67 +1716,10 @@ function alignSubtitlesByTime(enBlocks, ukBlocks) {
 }
 // ALIGN_END
 
-function findActiveSubtitleIdx(subs, ms) {
-  for (var i = 0; i < subs.length; i++) {
-    if (ms >= subs[i].startMs && ms < subs[i].endMs) return i;
-  }
-  return -1;
-}
-
-// Mirror of tools/preview_state.js — the Node test suite exercises
-// the module; the browser uses this inlined copy.
-function defaultPreviewStateShape() {
-  return { mode: 'marker', markers: [], edits: {} };
-}
-function coercePreviewStateShape(raw) {
-  var out = defaultPreviewStateShape();
-  if (!raw || typeof raw !== 'object') return out;
-  if (raw.mode === 'edit' || raw.mode === 'marker') out.mode = raw.mode;
-  if (Array.isArray(raw.markers)) out.markers = raw.markers;
-  if (raw.edits && typeof raw.edits === 'object' && !Array.isArray(raw.edits)) {
-    out.edits = raw.edits;
-  }
-  return out;
-}
-function loadPreviewStateFromStorage(talkId, videoSlug) {
-  var newKey = 'preview_' + talkId + '_' + videoSlug;
-  var legacyKey = 'markers_preview_' + talkId + '_' + videoSlug;
-  var rawNew = localStorage.getItem(newKey);
-  if (rawNew != null) {
-    var parsed = null;
-    try { parsed = JSON.parse(rawNew); } catch(_) {}
-    if (localStorage.getItem(legacyKey) != null) localStorage.removeItem(legacyKey);
-    return coercePreviewStateShape(parsed);
-  }
-  var rawLegacy = localStorage.getItem(legacyKey);
-  if (rawLegacy != null) {
-    var legacyMarkers = [];
-    try {
-      var p = JSON.parse(rawLegacy);
-      if (Array.isArray(p)) legacyMarkers = p;
-    } catch(_) {}
-    var migrated = defaultPreviewStateShape();
-    migrated.markers = legacyMarkers;
-    localStorage.setItem(newKey, JSON.stringify(migrated));
-    localStorage.removeItem(legacyKey);
-    return migrated;
-  }
-  return defaultPreviewStateShape();
-}
-function applyEditsToSrt(blocks, edits) {
-  if (!blocks || !blocks.length) return '';
-  var e = edits || {};
-  var lines = [];
-  for (var i = 0; i < blocks.length; i++) {
-    var b = blocks[i];
-    var text = Object.prototype.hasOwnProperty.call(e, i) ? e[i] : b.text;
-    lines.push(String(i + 1));
-    lines.push(msToSrtTime(b.startMs) + ' --> ' + msToSrtTime(b.endMs));
-    lines.push(text);
-    lines.push('');
-  }
-  return lines.join('\n');
-}
+// findActiveSubtitleIdx lives in js/preview_srt_parser.js.
+// defaultPreviewState / loadPreviewState / applyEditsToSrt / msToSrtTime live
+// in js/preview_state.js. Both are loaded in <head> and exercised by the Node
+// test suite — no inline mirror.
 
 // ============================================================
 // Config
@@ -1821,7 +1763,7 @@ var PAGES_BASE = location.pathname.replace(/\/[^/]*$/, '');
 // ============================================================
 // Deploy info — stamped by deploy-pages.yml at build time
 // ============================================================
-var APP_DEPLOY_SHA = ''; // blob SHA of site/index.html at deploy
+var APP_DEPLOY_SHA = ''; // app-shell version (index.html + js/*.js) at deploy
 var APP_DEPLOY_DATE = ''; // deploy date YYYY-MM-DD
 
 // ============================================================
@@ -1918,6 +1860,8 @@ var I18N = {
     'add.setup_title': '\u042F\u043A \u0434\u043E\u0434\u0430\u0442\u0438 \u043F\u0440\u043E\u043C\u043E\u0432\u0443',
     'add.wrong_site_title': '\u041D\u0435 \u0442\u043E\u0439 \u0441\u0430\u0439\u0442',
     'add.wrong_site_hint': '\u0411\u0443\u043A\u043C\u0430\u0440\u043A\u043B\u0435\u0442 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u043E \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0432\u0430\u0442\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 \u043D\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0430\u0445 \u043F\u0440\u043E\u043C\u043E\u0432 \u043D\u0430 amruta.org.',
+    'add.parse_error_title': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0434\u0430\u043D\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438',
+    'add.parse_error_hint': '\u0414\u0430\u043D\u0456 \u0437 \u0431\u0443\u043A\u043C\u0430\u0440\u043A\u043B\u0435\u0442\u0430 \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0440\u043E\u0437\u043F\u0430\u0440\u0441\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437 \u043D\u0430\u0442\u0438\u0441\u043D\u0443\u0442\u0438 \u0431\u0443\u043A\u043C\u0430\u0440\u043A\u043B\u0435\u0442 \u043D\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u0446\u0456 \u043F\u0440\u043E\u043C\u043E\u0432\u0438 amruta.org.',
     'add.submit': '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
     'add.field_transcript': '\u0422\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0442 (\u0437\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438)',
     'add.video_title': '\u041D\u0430\u0437\u0432\u0430 \u0432\u0456\u0434\u0435\u043E',
@@ -2030,6 +1974,8 @@ var I18N = {
     'add.setup_title': 'How to add a talk',
     'add.wrong_site_title': 'Wrong site',
     'add.wrong_site_hint': 'The bookmarklet should be used on amruta.org talk pages only.',
+    'add.parse_error_title': 'Could not read the page data',
+    'add.parse_error_hint': 'The bookmarklet data could not be parsed. Try clicking the bookmarklet again on the amruta.org talk page.',
     'add.submit': 'Create PR',
     'add.field_transcript': 'Transcript (from page)',
     'add.video_title': 'Video title',
@@ -3048,11 +2994,13 @@ function buildManifest(tree) {
 
   // Extract sha for cache-busting and auto-reload
   var reviewSha = '';
-  var siteIndexSha = '';
   tree.forEach(function(entry) {
     if (entry.path === 'review-status.json') reviewSha = entry.sha || '';
-    if (entry.path === 'site/index.html') siteIndexSha = (entry.sha || '').substring(0, 7);
   });
+  // App-shell version covers index.html AND every site/js/*.js, so a fix
+  // shipped only in an external js/ file still triggers the auto-reload.
+  // Mirrors tools/compute_shell_version.sh (the deploy-time stamp).
+  var siteIndexSha = computeShellVersion(tree);
 
   return { talks: result, _reviewSha: reviewSha, _siteIndexSha: siteIndexSha };
 }
@@ -3205,21 +3153,22 @@ function renderIndex(el) {
       var href = st.issue_number ? 'https://github.com/' + REPO + '/issues/' + st.issue_number : '#';
       badge = '<a href="' + href + '" target="_blank" class="review-badge ' + bc + '">' + bt + '</a>';
     }
-    // Prefer the last-viewed video for this talk; fall back to the first
-    // valid one. Both must have an SRT and vimeo_url to be linkable.
-    var validVideos = (tk.videos || []).filter(function(v) { return v.hasSrt && v.vimeo_url; });
-    var lastSlug = localStorage.getItem('sy_last_video_' + tk.id);
-    var targetVideo = null;
-    if (lastSlug) {
-      targetVideo = validVideos.find(function(v) { return v.slug === lastSlug; }) || null;
-    }
-    if (!targetVideo) targetVideo = validVideos[0] || null;
+    // Which action links to show. View (preview) needs subtitles on a playable
+    // video; Review needs EN+UK transcripts and shows even with no subtitles
+    // yet (review opens in transcript mode). See js/talk_actions.js.
+    var actions = talkActionVisibility(tk);
     var videoLinks = '';
-    if (targetVideo) {
+    if (actions.preview) {
+      // Prefer the last-viewed video for this talk; fall back to the first
+      // valid one. Both must have an SRT and vimeo_url to be linkable.
+      var validVideos = (tk.videos || []).filter(function(v) { return v.hasSrt && v.vimeo_url; });
+      var lastSlug = localStorage.getItem('sy_last_video_' + tk.id);
+      var targetVideo = (lastSlug && validVideos.find(function(v) { return v.slug === lastSlug; }))
+        || validVideos[0];
       videoLinks = '<a href="#/preview/' + tk.id + '/' + targetVideo.slug + '" class="preview-link">' + esc(t('link.preview')) + '</a>';
     }
     var reviewLink = '';
-    if (tk.hasEn && tk.hasUk) {
+    if (actions.review) {
       reviewLink = '<a href="#/review/' + tk.id + '" class="review-link">&#x270E; ' + t('link.review') + '</a>';
     }
     // Assemble card (all values are escaped or from trusted i18n)
@@ -3230,7 +3179,7 @@ function renderIndex(el) {
     var statusBadge = renderStatusBadge(status, st);
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
-      + (videoLinks ? '<div class="talk-actions">' + videoLinks + reviewLink + '</div>' : '');
+      + ((videoLinks || reviewLink) ? '<div class="talk-actions">' + videoLinks + reviewLink + '</div>' : '');
 
     // Expert mode: click card to expand inline DAG detail (one at a time)
     if (expertMode) {
@@ -3427,40 +3376,58 @@ function showPreview(talkId, videoSlug) {
   document.getElementById('p-title').textContent = (talk ? talk.title : talkId) + ' — ' + (video ? video.title : videoSlug);
   document.title = (video ? video.title : videoSlug) + ' – Preview';
 
-  // Setup player — replace iframe to avoid stale Vimeo SDK cache
-  var oldIframe = document.getElementById('vimeo-player');
+  // Re-entry for the already-loaded video (e.g. a manifest refresh that
+  // re-runs route()) must NOT tear down the Vimeo player — that would reset
+  // playback. Detect it and keep the live player + position; only the lighter
+  // marker/edit state below is refreshed.
   var embedUrl = video ? vimeoEmbed(video.vimeo_url) : '';
-  var iframe = document.createElement('iframe');
-  iframe.id = 'vimeo-player';
-  iframe.allow = 'autoplay; fullscreen';
-  iframe.allowFullscreen = true;
-  iframe.style.cssText = oldIframe.style.cssText || 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
-  if (embedUrl) iframe.src = embedUrl + '&texttrack=false';
-  oldIframe.parentNode.replaceChild(iframe, oldIframe);
+  var oldIframe = document.getElementById('vimeo-player');
+  var sameVideo = canReusePreviewPlayer(previewState, talkId, videoSlug, !!oldIframe);
+
+  var iframe = oldIframe;
+  if (!sameVideo) {
+    // Replace iframe to avoid stale Vimeo SDK cache when switching videos.
+    iframe = document.createElement('iframe');
+    iframe.id = 'vimeo-player';
+    iframe.allow = 'autoplay; fullscreen';
+    iframe.allowFullscreen = true;
+    iframe.style.cssText = oldIframe.style.cssText || 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
+    if (embedUrl) iframe.src = embedUrl + '&texttrack=false';
+    oldIframe.parentNode.replaceChild(iframe, oldIframe);
+  }
 
   var availLangs = (talk && talk._srtLangs && talk._srtLangs[videoSlug]) || ['uk'];
   var savedSrtLang = localStorage.getItem('sy_srt_lang_' + talkId);
   var defaultLang = (savedSrtLang && availLangs.indexOf(savedSrtLang) !== -1) ? savedSrtLang
     : availLangs.indexOf('uk') !== -1 ? 'uk' : availLangs[0];
 
-  var persisted = loadPreviewStateFromStorage(talkId, videoSlug);
-  previewState = {
-    talkId: talkId,
-    videoSlug: videoSlug,
-    subtitles: [],
-    mode: persisted.mode,
-    markers: persisted.markers,
-    edits: persisted.edits,
-    currentTime: 0,
-    lastText: '',
-    srtLang: defaultLang,
-  };
+  var persisted = loadPreviewState(talkId, videoSlug, localStorage);
+  if (sameVideo) {
+    // Keep player, playback position and loaded subtitles; refresh the
+    // persisted marker/edit state and keep the user's current language.
+    previewState.mode = persisted.mode;
+    previewState.markers = persisted.markers;
+    previewState.edits = persisted.edits;
+  } else {
+    previewState = {
+      talkId: talkId,
+      videoSlug: videoSlug,
+      subtitles: [],
+      mode: persisted.mode,
+      markers: persisted.markers,
+      edits: persisted.edits,
+      currentTime: 0,
+      lastText: '',
+      srtLang: defaultLang,
+    };
+  }
+  var curLang = previewState.srtLang || defaultLang;
 
   var langSel = document.getElementById('srt-lang-select');
   if (langSel) {
     if (availLangs.length > 1) {
       langSel.innerHTML = availLangs.map(function(l) {
-        return '<option value="' + l + '"' + (l === defaultLang ? ' selected' : '') + '>' + l.toUpperCase() + '</option>';
+        return '<option value="' + l + '"' + (l === curLang ? ' selected' : '') + '>' + l.toUpperCase() + '</option>';
       }).join('');
       langSel.style.display = 'inline-block';
       langSel.onchange = function() { SPA.switchSubLang(langSel.value); };
@@ -3503,7 +3470,7 @@ function showPreview(talkId, videoSlug) {
       && previewState.videoSlug === entryVideoSlug;
   }
 
-  var srtLoaded = loadSubtitleLang(defaultLang).then(function(ok) {
+  var srtLoaded = loadSubtitleLang(curLang).then(function(ok) {
     if (ok && stillOnSameVideo() && previewState.mode === 'edit') renderEditList();
   });
 
@@ -3512,7 +3479,7 @@ function showPreview(talkId, videoSlug) {
   var overlayEl = document.getElementById('subtitle-overlay');
   var timeEl = document.getElementById('time-display');
 
-  if (embedUrl) {
+  if (!sameVideo && embedUrl) {
     try {
       var player = new Vimeo.Player(iframe);
       previewState.player = player;
@@ -4435,13 +4402,7 @@ function msToTC(ms) {
   return (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
 }
 
-function msToSrtTime(ms) {
-  var ms3 = ms % 1000;
-  var s = Math.floor(ms / 1000);
-  var m = Math.floor(s / 60); s = s % 60;
-  var h = Math.floor(m / 60); m = m % 60;
-  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ',' + String(ms3).padStart(3, '0');
-}
+// msToSrtTime lives in js/preview_state.js (loaded in <head>).
 
 function renderReview() {
   var grid = document.getElementById('review-grid');
@@ -4975,11 +4936,22 @@ SPA.refreshManifest = function() {
     loadReviewStatus()
   ]).then(function(results) {
     var m = results[0];
-    // Auto-reload if site/index.html changed in repo
-    if (m._siteIndexSha && APP_DEPLOY_SHA && m._siteIndexSha !== APP_DEPLOY_SHA) {
-      console.log('SPA update detected: ' + APP_DEPLOY_SHA + ' → ' + m._siteIndexSha);
-      location.reload();
-      return;
+    // Auto-reload if the app shell (index.html or any js/*.js) changed in repo.
+    // Guard against a reload loop: if APP_DEPLOY_SHA is still stale after a
+    // reload (e.g. un-propagated Pages CDN), reload at most once per target
+    // version per session. A later, different target reloads again.
+    var target = m._siteIndexSha;
+    if (target && APP_DEPLOY_SHA && target !== APP_DEPLOY_SHA) {
+      var already = null;
+      try { already = sessionStorage.getItem('sy_reload_target'); } catch(e) {}
+      if (already !== target) {
+        try { sessionStorage.setItem('sy_reload_target', target); } catch(e) {}
+        console.log('SPA update detected: ' + APP_DEPLOY_SHA + ' → ' + target);
+        location.reload();
+        return;
+      }
+      console.warn('SPA update to ' + target + ' detected but reload already '
+        + 'attempted this session; skipping to avoid a loop.');
     }
     route();
     updateFooter();
@@ -5045,39 +5017,37 @@ document.addEventListener('click', function(e) {
   if (el) el.href = 'javascript:' + bmCode;
 })();
 
+// parseAddTalkHash() is provided by js/add_talk_data.js (loaded in <head>),
+// the same module the Node test suite exercises — no inline mirror.
+
 function showAddTalk(hash) {
   document.title = t('add.title') + ' — SY Subtitles';
   translatePage();
 
   document.getElementById('add-state-setup').style.display = 'none';
   document.getElementById('add-state-error').style.display = 'none';
+  document.getElementById('add-state-parse-error').style.display = 'none';
   document.getElementById('add-form').style.display = 'none';
 
-  var qm = hash.indexOf('?');
-  if (qm === -1 || !hash.includes('data=')) {
+  var parsed = parseAddTalkHash(hash);
+  if (parsed.state === 'setup') {
     // State 1: no data — show setup instructions
     document.getElementById('add-state-setup').style.display = 'block';
     return;
   }
-
-  var params = new URLSearchParams(hash.slice(qm));
-  var dataStr = params.get('data');
-  var data;
-  try {
-    data = JSON.parse(decodeURIComponent(dataStr));
-  } catch(e) {
-    // State 3: parse error
-    document.getElementById('add-state-error').style.display = 'block';
+  if (parsed.state === 'parse_error') {
+    // State 3b: data param present but unreadable
+    document.getElementById('add-state-parse-error').style.display = 'block';
     return;
   }
-
-  if (!data.u || !data.u.includes('amruta.org')) {
-    // State 3: wrong site
+  if (parsed.state === 'wrong_site') {
+    // State 3a: valid payload but not an amruta.org page
     document.getElementById('add-state-error').style.display = 'block';
     return;
   }
 
   // State 2: valid data — show form
+  var data = parsed.data;
   document.getElementById('add-form').style.display = 'block';
   if (data.t) document.getElementById('add-title').value = data.t;
   if (data.d) document.getElementById('add-date').value = data.d;
