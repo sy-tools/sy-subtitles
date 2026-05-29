@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-29T16:45:42.293441+00:00",
+  "updated_at": "2026-05-29T19:05:13.986409+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -235,6 +235,18 @@
       "reviewer": null,
       "issue_number": 253,
       "updated_at": "2026-05-29T16:45:31Z"
+    },
+    "1981-05-24_Subconscious-Supraconscious-and-Our-Correct-Ideals": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 259,
+      "updated_at": "2026-05-29T19:05:03Z"
+    },
+    "1980-07-27_Guru-Puja-The-Statutes-of-the-Lord": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 256,
+      "updated_at": "2026-05-29T17:44:34Z"
     }
   }
 }
