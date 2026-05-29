@@ -1,0 +1,1907 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "id": 0,
+      "start": 1.17,
+      "end": 5.59,
+      "text": "Jai Bihari Vipurani",
+      "words": [
+        {
+          "start": 1.17,
+          "end": 1.59,
+          "word": "Jai"
+        },
+        {
+          "start": 1.59,
+          "end": 3.37,
+          "word": "Bihari"
+        },
+        {
+          "start": 3.37,
+          "end": 5.59,
+          "word": "Vipurani"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 5.59,
+      "end": 9.45,
+      "text": "Tere Leela Prabhu Sabse Nyaali",
+      "words": [
+        {
+          "start": 5.59,
+          "end": 6.29,
+          "word": "Tere"
+        },
+        {
+          "start": 6.29,
+          "end": 6.83,
+          "word": "Leela"
+        },
+        {
+          "start": 6.83,
+          "end": 7.37,
+          "word": "Prabhu"
+        },
+        {
+          "start": 7.37,
+          "end": 8.35,
+          "word": "Sabse"
+        },
+        {
+          "start": 8.35,
+          "end": 9.45,
+          "word": "Nyaali"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 9.45,
+      "end": 11.65,
+      "text": "O Chandra Gole Wale",
+      "words": [
+        {
+          "start": 9.45,
+          "end": 10.05,
+          "word": "O"
+        },
+        {
+          "start": 10.05,
+          "end": 10.59,
+          "word": "Chandra"
+        },
+        {
+          "start": 10.59,
+          "end": 11.17,
+          "word": "Gole"
+        },
+        {
+          "start": 11.17,
+          "end": 11.65,
+          "word": "Wale"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 11.65,
+      "end": 16.27,
+      "text": "Jai Bihari Vipurani",
+      "words": [
+        {
+          "start": 11.65,
+          "end": 12.43,
+          "word": "Jai"
+        },
+        {
+          "start": 12.43,
+          "end": 14.07,
+          "word": "Bihari"
+        },
+        {
+          "start": 14.07,
+          "end": 16.27,
+          "word": "Vipurani"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 16.27,
+      "end": 18.47,
+      "text": "Tere Leela Prabhu Sabse",
+      "words": [
+        {
+          "start": 16.27,
+          "end": 16.99,
+          "word": "Tere"
+        },
+        {
+          "start": 16.99,
+          "end": 17.55,
+          "word": "Leela"
+        },
+        {
+          "start": 17.55,
+          "end": 18.17,
+          "word": "Prabhu"
+        },
+        {
+          "start": 18.17,
+          "end": 18.47,
+          "word": "Sabse"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 36.36,
+      "end": 40.42,
+      "text": "Devon mein Mahadev Tu Tuchka Sohi Kamuja",
+      "words": [
+        {
+          "start": 36.36,
+          "end": 37.14,
+          "word": "Devon"
+        },
+        {
+          "start": 37.14,
+          "end": 37.32,
+          "word": "mein"
+        },
+        {
+          "start": 37.32,
+          "end": 38.14,
+          "word": "Mahadev"
+        },
+        {
+          "start": 38.14,
+          "end": 38.44,
+          "word": "Tu"
+        },
+        {
+          "start": 38.44,
+          "end": 39.0,
+          "word": "Tuchka"
+        },
+        {
+          "start": 39.0,
+          "end": 39.44,
+          "word": "Sohi"
+        },
+        {
+          "start": 39.44,
+          "end": 40.42,
+          "word": "Kamuja"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 40.42,
+      "end": 43.12,
+      "text": "Bhakti Baav se sab karte hain",
+      "words": [
+        {
+          "start": 40.42,
+          "end": 41.22,
+          "word": "Bhakti"
+        },
+        {
+          "start": 41.22,
+          "end": 41.5,
+          "word": "Baav"
+        },
+        {
+          "start": 41.5,
+          "end": 41.74,
+          "word": "se"
+        },
+        {
+          "start": 41.74,
+          "end": 42.02,
+          "word": "sab"
+        },
+        {
+          "start": 42.02,
+          "end": 42.52,
+          "word": "karte"
+        },
+        {
+          "start": 42.52,
+          "end": 43.12,
+          "word": "hain"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 43.12,
+      "end": 46.1,
+      "text": "Bhagwan teri Pooja",
+      "words": [
+        {
+          "start": 43.12,
+          "end": 43.88,
+          "word": "Bhagwan"
+        },
+        {
+          "start": 43.88,
+          "end": 44.96,
+          "word": "teri"
+        },
+        {
+          "start": 44.96,
+          "end": 46.1,
+          "word": "Pooja"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 46.1,
+      "end": 54.35,
+      "text": "Bhagavan Teli Pooja Shiv Ji Tera Toh Hai Shiv Ji Tera Chor Khaan Gira",
+      "words": [
+        {
+          "start": 46.1,
+          "end": 47.16,
+          "word": "Bhagavan"
+        },
+        {
+          "start": 47.16,
+          "end": 48.2,
+          "word": "Teli"
+        },
+        {
+          "start": 48.2,
+          "end": 48.78,
+          "word": "Pooja"
+        },
+        {
+          "start": 48.78,
+          "end": 49.1,
+          "word": "Shiv"
+        },
+        {
+          "start": 49.1,
+          "end": 49.42,
+          "word": "Ji"
+        },
+        {
+          "start": 49.42,
+          "end": 49.9,
+          "word": "Tera"
+        },
+        {
+          "start": 49.9,
+          "end": 50.74,
+          "word": "Toh"
+        },
+        {
+          "start": 50.74,
+          "end": 50.76,
+          "word": "Hai"
+        },
+        {
+          "start": 50.76,
+          "end": 51.24,
+          "word": "Shiv"
+        },
+        {
+          "start": 51.24,
+          "end": 51.6,
+          "word": "Ji"
+        },
+        {
+          "start": 51.6,
+          "end": 52.08,
+          "word": "Tera"
+        },
+        {
+          "start": 52.08,
+          "end": 52.52,
+          "word": "Chor"
+        },
+        {
+          "start": 53.35,
+          "end": 53.75,
+          "word": "Khaan"
+        },
+        {
+          "start": 53.75,
+          "end": 54.35,
+          "word": "Gira"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 57.23,
+      "end": 67.26,
+      "text": "Tere Javi Bejati Hai Balihari Tripura",
+      "words": [
+        {
+          "start": 57.23,
+          "end": 58.05,
+          "word": "Tere"
+        },
+        {
+          "start": 58.05,
+          "end": 58.65,
+          "word": "Javi"
+        },
+        {
+          "start": 58.65,
+          "end": 59.51,
+          "word": "Bejati"
+        },
+        {
+          "start": 59.51,
+          "end": 59.83,
+          "word": "Hai"
+        },
+        {
+          "start": 59.83,
+          "end": 61.31,
+          "word": "Balihari"
+        },
+        {
+          "start": 66.14,
+          "end": 67.26,
+          "word": "Tripura"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 98.75,
+      "end": 117.46,
+      "text": "Amrit Barla Jaaye Kanta Kailaay Jo Bhi Aaya Shambho",
+      "words": [
+        {
+          "start": 98.75,
+          "end": 99.35,
+          "word": "Amrit"
+        },
+        {
+          "start": 99.35,
+          "end": 99.91,
+          "word": "Barla"
+        },
+        {
+          "start": 99.91,
+          "end": 101.43,
+          "word": "Jaaye"
+        },
+        {
+          "start": 114.32,
+          "end": 114.92,
+          "word": "Kanta"
+        },
+        {
+          "start": 114.92,
+          "end": 115.66,
+          "word": "Kailaay"
+        },
+        {
+          "start": 115.66,
+          "end": 115.98,
+          "word": "Jo"
+        },
+        {
+          "start": 115.98,
+          "end": 116.4,
+          "word": "Bhi"
+        },
+        {
+          "start": 116.4,
+          "end": 116.76,
+          "word": "Aaya"
+        },
+        {
+          "start": 116.76,
+          "end": 117.46,
+          "word": "Shambho"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 117.88,
+      "end": 123.6,
+      "text": "Jo bhi aaya shambho tuke ha",
+      "words": [
+        {
+          "start": 117.88,
+          "end": 118.2,
+          "word": "Jo"
+        },
+        {
+          "start": 118.2,
+          "end": 118.66,
+          "word": "bhi"
+        },
+        {
+          "start": 118.66,
+          "end": 119.02,
+          "word": "aaya"
+        },
+        {
+          "start": 119.02,
+          "end": 119.76,
+          "word": "shambho"
+        },
+        {
+          "start": 122.32,
+          "end": 123.02,
+          "word": "tuke"
+        },
+        {
+          "start": 123.02,
+          "end": 123.6,
+          "word": "ha"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "start": 184.69,
+      "end": 280.64,
+      "text": "Sang sang tere bhagvan te pooja",
+      "words": [
+        {
+          "start": 184.69,
+          "end": 185.13,
+          "word": "Sang"
+        },
+        {
+          "start": 185.13,
+          "end": 185.59,
+          "word": "sang"
+        },
+        {
+          "start": 185.59,
+          "end": 186.47,
+          "word": "tere"
+        },
+        {
+          "start": 277.76,
+          "end": 278.46,
+          "word": "bhagvan"
+        },
+        {
+          "start": 278.46,
+          "end": 278.8,
+          "word": "te"
+        },
+        {
+          "start": 279.7,
+          "end": 280.64,
+          "word": "pooja"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "start": 771.1,
+      "end": 895.69,
+      "text": "We also have a present for you from Russia, and",
+      "words": [
+        {
+          "start": 771.1,
+          "end": 772.14,
+          "word": "We"
+        },
+        {
+          "start": 772.14,
+          "end": 773.18,
+          "word": "also"
+        },
+        {
+          "start": 773.18,
+          "end": 776.8,
+          "word": "have"
+        },
+        {
+          "start": 873.66,
+          "end": 873.94,
+          "word": "a"
+        },
+        {
+          "start": 873.94,
+          "end": 874.1,
+          "word": "present"
+        },
+        {
+          "start": 874.1,
+          "end": 874.32,
+          "word": "for"
+        },
+        {
+          "start": 874.32,
+          "end": 874.54,
+          "word": "you"
+        },
+        {
+          "start": 874.54,
+          "end": 875.34,
+          "word": "from"
+        },
+        {
+          "start": 875.34,
+          "end": 875.86,
+          "word": "Russia,"
+        },
+        {
+          "start": 895.57,
+          "end": 895.69,
+          "word": "and"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 895.69,
+      "end": 901.2,
+      "text": "From all your children in Australia, we have something for you that was grown",
+      "words": [
+        {
+          "start": 895.69,
+          "end": 895.77,
+          "word": "From"
+        },
+        {
+          "start": 895.77,
+          "end": 895.97,
+          "word": "all"
+        },
+        {
+          "start": 895.97,
+          "end": 896.19,
+          "word": "your"
+        },
+        {
+          "start": 896.19,
+          "end": 896.55,
+          "word": "children"
+        },
+        {
+          "start": 896.55,
+          "end": 896.77,
+          "word": "in"
+        },
+        {
+          "start": 896.77,
+          "end": 897.35,
+          "word": "Australia,"
+        },
+        {
+          "start": 898.27,
+          "end": 898.33,
+          "word": "we"
+        },
+        {
+          "start": 898.33,
+          "end": 898.51,
+          "word": "have"
+        },
+        {
+          "start": 898.51,
+          "end": 898.99,
+          "word": "something"
+        },
+        {
+          "start": 898.99,
+          "end": 899.25,
+          "word": "for"
+        },
+        {
+          "start": 899.25,
+          "end": 899.51,
+          "word": "you"
+        },
+        {
+          "start": 899.51,
+          "end": 899.83,
+          "word": "that"
+        },
+        {
+          "start": 899.83,
+          "end": 900.75,
+          "word": "was"
+        },
+        {
+          "start": 900.94,
+          "end": 901.2,
+          "word": "grown"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 901.2,
+      "end": 909.44,
+      "text": "In Australia. It's about 70 years old and has been made out of a piece",
+      "words": [
+        {
+          "start": 901.2,
+          "end": 901.42,
+          "word": "In"
+        },
+        {
+          "start": 901.42,
+          "end": 901.94,
+          "word": "Australia."
+        },
+        {
+          "start": 904.32,
+          "end": 904.88,
+          "word": "It's"
+        },
+        {
+          "start": 904.88,
+          "end": 906.04,
+          "word": "about"
+        },
+        {
+          "start": 906.04,
+          "end": 906.48,
+          "word": "70"
+        },
+        {
+          "start": 906.48,
+          "end": 906.9,
+          "word": "years"
+        },
+        {
+          "start": 906.9,
+          "end": 907.22,
+          "word": "old"
+        },
+        {
+          "start": 907.22,
+          "end": 907.54,
+          "word": "and"
+        },
+        {
+          "start": 907.54,
+          "end": 907.82,
+          "word": "has"
+        },
+        {
+          "start": 907.82,
+          "end": 908.04,
+          "word": "been"
+        },
+        {
+          "start": 908.04,
+          "end": 908.34,
+          "word": "made"
+        },
+        {
+          "start": 908.34,
+          "end": 908.62,
+          "word": "out"
+        },
+        {
+          "start": 908.62,
+          "end": 909.02,
+          "word": "of"
+        },
+        {
+          "start": 909.02,
+          "end": 909.18,
+          "word": "a"
+        },
+        {
+          "start": 909.18,
+          "end": 909.44,
+          "word": "piece"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "start": 909.44,
+      "end": 911.28,
+      "text": "Of cedar which is very rare",
+      "words": [
+        {
+          "start": 909.44,
+          "end": 909.72,
+          "word": "Of"
+        },
+        {
+          "start": 909.72,
+          "end": 909.98,
+          "word": "cedar"
+        },
+        {
+          "start": 909.98,
+          "end": 910.26,
+          "word": "which"
+        },
+        {
+          "start": 910.26,
+          "end": 910.54,
+          "word": "is"
+        },
+        {
+          "start": 910.54,
+          "end": 910.84,
+          "word": "very"
+        },
+        {
+          "start": 910.84,
+          "end": 911.28,
+          "word": "rare"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "start": 911.28,
+      "end": 913.44,
+      "text": "And hard to get it in Australia these days",
+      "words": [
+        {
+          "start": 911.28,
+          "end": 911.5,
+          "word": "And"
+        },
+        {
+          "start": 911.5,
+          "end": 911.74,
+          "word": "hard"
+        },
+        {
+          "start": 911.74,
+          "end": 911.92,
+          "word": "to"
+        },
+        {
+          "start": 911.92,
+          "end": 912.08,
+          "word": "get"
+        },
+        {
+          "start": 912.08,
+          "end": 912.18,
+          "word": "it"
+        },
+        {
+          "start": 912.18,
+          "end": 912.32,
+          "word": "in"
+        },
+        {
+          "start": 912.32,
+          "end": 912.66,
+          "word": "Australia"
+        },
+        {
+          "start": 912.66,
+          "end": 913.02,
+          "word": "these"
+        },
+        {
+          "start": 913.02,
+          "end": 913.44,
+          "word": "days"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "start": 914.77,
+      "end": 916.15,
+      "text": "Would You like bring it here?",
+      "words": [
+        {
+          "start": 914.77,
+          "end": 915.05,
+          "word": "Would"
+        },
+        {
+          "start": 915.05,
+          "end": 915.17,
+          "word": "You"
+        },
+        {
+          "start": 915.17,
+          "end": 915.33,
+          "word": "like"
+        },
+        {
+          "start": 915.33,
+          "end": 915.55,
+          "word": "bring"
+        },
+        {
+          "start": 915.55,
+          "end": 915.71,
+          "word": "it"
+        },
+        {
+          "start": 915.71,
+          "end": 916.15,
+          "word": "here?"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "start": 960.9,
+      "end": 963.12,
+      "text": "We thought you had so many saris Shri Mataji",
+      "words": [
+        {
+          "start": 960.9,
+          "end": 961.0,
+          "word": "We"
+        },
+        {
+          "start": 961.0,
+          "end": 961.26,
+          "word": "thought"
+        },
+        {
+          "start": 961.26,
+          "end": 961.52,
+          "word": "you"
+        },
+        {
+          "start": 961.52,
+          "end": 961.76,
+          "word": "had"
+        },
+        {
+          "start": 961.76,
+          "end": 961.98,
+          "word": "so"
+        },
+        {
+          "start": 961.98,
+          "end": 962.28,
+          "word": "many"
+        },
+        {
+          "start": 962.28,
+          "end": 962.74,
+          "word": "saris"
+        },
+        {
+          "start": 962.74,
+          "end": 962.96,
+          "word": "Shri"
+        },
+        {
+          "start": 962.96,
+          "end": 963.12,
+          "word": "Mataji"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "start": 963.12,
+      "end": 964.76,
+      "text": "Perhaps you needed the box",
+      "words": [
+        {
+          "start": 963.12,
+          "end": 963.72,
+          "word": "Perhaps"
+        },
+        {
+          "start": 963.72,
+          "end": 964.0,
+          "word": "you"
+        },
+        {
+          "start": 964.0,
+          "end": 964.3,
+          "word": "needed"
+        },
+        {
+          "start": 964.3,
+          "end": 964.54,
+          "word": "the"
+        },
+        {
+          "start": 964.54,
+          "end": 964.76,
+          "word": "box"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "start": 964.76,
+      "end": 972.93,
+      "text": "To keep them in Australian Cedar",
+      "words": [
+        {
+          "start": 964.76,
+          "end": 964.98,
+          "word": "To"
+        },
+        {
+          "start": 964.98,
+          "end": 965.18,
+          "word": "keep"
+        },
+        {
+          "start": 965.18,
+          "end": 965.44,
+          "word": "them"
+        },
+        {
+          "start": 965.44,
+          "end": 966.24,
+          "word": "in"
+        },
+        {
+          "start": 972.07,
+          "end": 972.53,
+          "word": "Australian"
+        },
+        {
+          "start": 972.53,
+          "end": 972.93,
+          "word": "Cedar"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "start": 972.93,
+      "end": 983.17,
+      "text": "And we had it inlaid here with a...",
+      "words": [
+        {
+          "start": 972.93,
+          "end": 973.77,
+          "word": "And"
+        },
+        {
+          "start": 981.03,
+          "end": 981.53,
+          "word": "we"
+        },
+        {
+          "start": 981.53,
+          "end": 981.73,
+          "word": "had"
+        },
+        {
+          "start": 981.73,
+          "end": 982.03,
+          "word": "it"
+        },
+        {
+          "start": 982.03,
+          "end": 982.37,
+          "word": "inlaid"
+        },
+        {
+          "start": 982.37,
+          "end": 982.71,
+          "word": "here"
+        },
+        {
+          "start": 982.71,
+          "end": 982.93,
+          "word": "with"
+        },
+        {
+          "start": 982.93,
+          "end": 983.17,
+          "word": "a..."
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "start": 983.17,
+      "end": 984.21,
+      "text": "This is all cedar?",
+      "words": [
+        {
+          "start": 983.17,
+          "end": 983.43,
+          "word": "This"
+        },
+        {
+          "start": 983.43,
+          "end": 983.63,
+          "word": "is"
+        },
+        {
+          "start": 983.63,
+          "end": 983.93,
+          "word": "all"
+        },
+        {
+          "start": 983.93,
+          "end": 984.21,
+          "word": "cedar?"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "start": 984.55,
+      "end": 987.82,
+      "text": "Yes, Shri Mataji. Now this little bit of inlay",
+      "words": [
+        {
+          "start": 984.55,
+          "end": 984.83,
+          "word": "Yes,"
+        },
+        {
+          "start": 984.99,
+          "end": 985.09,
+          "word": "Shri"
+        },
+        {
+          "start": 985.09,
+          "end": 985.77,
+          "word": "Mataji."
+        },
+        {
+          "start": 985.98,
+          "end": 986.12,
+          "word": "Now"
+        },
+        {
+          "start": 986.12,
+          "end": 986.74,
+          "word": "this"
+        },
+        {
+          "start": 986.74,
+          "end": 987.14,
+          "word": "little"
+        },
+        {
+          "start": 987.14,
+          "end": 987.34,
+          "word": "bit"
+        },
+        {
+          "start": 987.34,
+          "end": 987.54,
+          "word": "of"
+        },
+        {
+          "start": 987.54,
+          "end": 987.82,
+          "word": "inlay"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "start": 987.82,
+      "end": 989.85,
+      "text": "Is not but the rest",
+      "words": [
+        {
+          "start": 987.82,
+          "end": 988.04,
+          "word": "Is"
+        },
+        {
+          "start": 988.04,
+          "end": 988.28,
+          "word": "not"
+        },
+        {
+          "start": 988.41,
+          "end": 989.41,
+          "word": "but"
+        },
+        {
+          "start": 989.41,
+          "end": 989.67,
+          "word": "the"
+        },
+        {
+          "start": 989.67,
+          "end": 989.85,
+          "word": "rest"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "start": 989.85,
+      "end": 991.07,
+      "text": "Of box is cedar",
+      "words": [
+        {
+          "start": 989.85,
+          "end": 990.01,
+          "word": "Of"
+        },
+        {
+          "start": 990.01,
+          "end": 990.31,
+          "word": "box"
+        },
+        {
+          "start": 990.31,
+          "end": 990.53,
+          "word": "is"
+        },
+        {
+          "start": 990.53,
+          "end": 991.07,
+          "word": "cedar"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "start": 993.86,
+      "end": 995.22,
+      "text": "Thank you very much",
+      "words": [
+        {
+          "start": 993.86,
+          "end": 994.62,
+          "word": "Thank"
+        },
+        {
+          "start": 994.62,
+          "end": 994.68,
+          "word": "you"
+        },
+        {
+          "start": 994.68,
+          "end": 994.9,
+          "word": "very"
+        },
+        {
+          "start": 994.9,
+          "end": 995.22,
+          "word": "much"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "start": 997.33,
+      "end": 999.29,
+      "text": "Nice for Shiva to sit on",
+      "words": [
+        {
+          "start": 997.33,
+          "end": 997.89,
+          "word": "Nice"
+        },
+        {
+          "start": 997.89,
+          "end": 998.27,
+          "word": "for"
+        },
+        {
+          "start": 998.27,
+          "end": 998.51,
+          "word": "Shiva"
+        },
+        {
+          "start": 998.51,
+          "end": 998.79,
+          "word": "to"
+        },
+        {
+          "start": 998.79,
+          "end": 998.95,
+          "word": "sit"
+        },
+        {
+          "start": 998.95,
+          "end": 999.29,
+          "word": "on"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "start": 1002.64,
+      "end": 1003.64,
+      "text": "It's nice for Shivji",
+      "words": [
+        {
+          "start": 1002.64,
+          "end": 1003.2,
+          "word": "It's"
+        },
+        {
+          "start": 1003.2,
+          "end": 1003.2,
+          "word": "nice"
+        },
+        {
+          "start": 1003.2,
+          "end": 1003.2,
+          "word": "for"
+        },
+        {
+          "start": 1003.2,
+          "end": 1003.64,
+          "word": "Shivji"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "start": 1003.64,
+      "end": 1010.62,
+      "text": "It was good present",
+      "words": [
+        {
+          "start": 1003.64,
+          "end": 1004.5,
+          "word": "It"
+        },
+        {
+          "start": 1004.5,
+          "end": 1008.2,
+          "word": "was"
+        },
+        {
+          "start": 1008.9,
+          "end": 1010.2,
+          "word": "good"
+        },
+        {
+          "start": 1010.2,
+          "end": 1010.62,
+          "word": "present"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "start": 1010.62,
+      "end": 1011.78,
+      "text": "For shiva to sit",
+      "words": [
+        {
+          "start": 1010.62,
+          "end": 1010.88,
+          "word": "For"
+        },
+        {
+          "start": 1010.88,
+          "end": 1011.28,
+          "word": "shiva"
+        },
+        {
+          "start": 1011.28,
+          "end": 1011.5,
+          "word": "to"
+        },
+        {
+          "start": 1011.5,
+          "end": 1011.78,
+          "word": "sit"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "start": 1011.78,
+      "end": 1012.72,
+      "text": "On that",
+      "words": [
+        {
+          "start": 1011.78,
+          "end": 1012.06,
+          "word": "On"
+        },
+        {
+          "start": 1012.06,
+          "end": 1012.72,
+          "word": "that"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "start": 1029.65,
+      "end": 1030.53,
+      "text": "Stay there.",
+      "words": [
+        {
+          "start": 1029.65,
+          "end": 1029.89,
+          "word": "Stay"
+        },
+        {
+          "start": 1029.89,
+          "end": 1030.53,
+          "word": "there."
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "start": 1031.63,
+      "end": 1033.39,
+      "text": "Ya, kahan jagah nahi hai ne khelne ko.",
+      "words": [
+        {
+          "start": 1031.63,
+          "end": 1031.85,
+          "word": "Ya,"
+        },
+        {
+          "start": 1032.09,
+          "end": 1032.15,
+          "word": "kahan"
+        },
+        {
+          "start": 1032.15,
+          "end": 1032.47,
+          "word": "jagah"
+        },
+        {
+          "start": 1032.47,
+          "end": 1032.67,
+          "word": "nahi"
+        },
+        {
+          "start": 1032.67,
+          "end": 1032.75,
+          "word": "hai"
+        },
+        {
+          "start": 1032.75,
+          "end": 1032.81,
+          "word": "ne"
+        },
+        {
+          "start": 1032.81,
+          "end": 1033.19,
+          "word": "khelne"
+        },
+        {
+          "start": 1033.19,
+          "end": 1033.39,
+          "word": "ko."
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "start": 1034.29,
+      "end": 1035.15,
+      "text": "Just stay here.",
+      "words": [
+        {
+          "start": 1034.29,
+          "end": 1034.39,
+          "word": "Just"
+        },
+        {
+          "start": 1034.39,
+          "end": 1034.93,
+          "word": "stay"
+        },
+        {
+          "start": 1034.93,
+          "end": 1035.15,
+          "word": "here."
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "start": 1035.51,
+      "end": 1037.33,
+      "text": "Kaisa kheli mein stick?",
+      "words": [
+        {
+          "start": 1035.51,
+          "end": 1035.95,
+          "word": "Kaisa"
+        },
+        {
+          "start": 1035.95,
+          "end": 1036.23,
+          "word": "kheli"
+        },
+        {
+          "start": 1036.23,
+          "end": 1036.51,
+          "word": "mein"
+        },
+        {
+          "start": 1036.51,
+          "end": 1037.33,
+          "word": "stick?"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "start": 1037.89,
+      "end": 1040.19,
+      "text": "You can sit on the side and I'll make a room for you.",
+      "words": [
+        {
+          "start": 1037.89,
+          "end": 1037.89,
+          "word": "You"
+        },
+        {
+          "start": 1037.89,
+          "end": 1037.89,
+          "word": "can"
+        },
+        {
+          "start": 1037.89,
+          "end": 1037.89,
+          "word": "sit"
+        },
+        {
+          "start": 1037.89,
+          "end": 1038.33,
+          "word": "on"
+        },
+        {
+          "start": 1038.33,
+          "end": 1038.33,
+          "word": "the"
+        },
+        {
+          "start": 1038.33,
+          "end": 1038.33,
+          "word": "side"
+        },
+        {
+          "start": 1038.33,
+          "end": 1039.95,
+          "word": "and"
+        },
+        {
+          "start": 1039.95,
+          "end": 1040.09,
+          "word": "I'll"
+        },
+        {
+          "start": 1040.09,
+          "end": 1040.17,
+          "word": "make"
+        },
+        {
+          "start": 1040.17,
+          "end": 1040.17,
+          "word": "a"
+        },
+        {
+          "start": 1040.17,
+          "end": 1040.19,
+          "word": "room"
+        },
+        {
+          "start": 1040.19,
+          "end": 1040.19,
+          "word": "for"
+        },
+        {
+          "start": 1040.19,
+          "end": 1040.19,
+          "word": "you."
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "start": 1040.23,
+      "end": 1040.51,
+      "text": "Side!",
+      "words": [
+        {
+          "start": 1040.23,
+          "end": 1040.51,
+          "word": "Side!"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "start": 1041.8,
+      "end": 1042.84,
+      "text": "You know...",
+      "words": [
+        {
+          "start": 1041.8,
+          "end": 1042.32,
+          "word": "You"
+        },
+        {
+          "start": 1042.32,
+          "end": 1042.84,
+          "word": "know..."
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "start": 1048.34,
+      "end": 1050.2,
+      "text": "We will have to make rooms that's all",
+      "words": [
+        {
+          "start": 1048.34,
+          "end": 1048.54,
+          "word": "We"
+        },
+        {
+          "start": 1048.54,
+          "end": 1048.68,
+          "word": "will"
+        },
+        {
+          "start": 1048.68,
+          "end": 1048.72,
+          "word": "have"
+        },
+        {
+          "start": 1048.72,
+          "end": 1048.94,
+          "word": "to"
+        },
+        {
+          "start": 1048.94,
+          "end": 1049.14,
+          "word": "make"
+        },
+        {
+          "start": 1049.14,
+          "end": 1049.44,
+          "word": "rooms"
+        },
+        {
+          "start": 1049.44,
+          "end": 1049.86,
+          "word": "that's"
+        },
+        {
+          "start": 1049.86,
+          "end": 1050.2,
+          "word": "all"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "start": 1051.48,
+      "end": 1052.14,
+      "text": "Sabra maha.",
+      "words": [
+        {
+          "start": 1051.48,
+          "end": 1052.0,
+          "word": "Sabra"
+        },
+        {
+          "start": 1052.0,
+          "end": 1052.14,
+          "word": "maha."
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "start": 1052.3,
+      "end": 1055.16,
+      "text": "Khela khela kaha malaka hain ni ye baste haan taara maha",
+      "words": [
+        {
+          "start": 1052.3,
+          "end": 1052.78,
+          "word": "Khela"
+        },
+        {
+          "start": 1052.78,
+          "end": 1053.04,
+          "word": "khela"
+        },
+        {
+          "start": 1053.04,
+          "end": 1053.2,
+          "word": "kaha"
+        },
+        {
+          "start": 1053.2,
+          "end": 1053.56,
+          "word": "malaka"
+        },
+        {
+          "start": 1053.56,
+          "end": 1053.74,
+          "word": "hain"
+        },
+        {
+          "start": 1053.74,
+          "end": 1053.98,
+          "word": "ni"
+        },
+        {
+          "start": 1053.98,
+          "end": 1054.12,
+          "word": "ye"
+        },
+        {
+          "start": 1054.12,
+          "end": 1054.42,
+          "word": "baste"
+        },
+        {
+          "start": 1054.42,
+          "end": 1054.5,
+          "word": "haan"
+        },
+        {
+          "start": 1054.5,
+          "end": 1054.8,
+          "word": "taara"
+        },
+        {
+          "start": 1054.8,
+          "end": 1055.16,
+          "word": "maha"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "start": 1055.16,
+      "end": 1056.14,
+      "text": "Maata kaab daala",
+      "words": [
+        {
+          "start": 1055.16,
+          "end": 1055.64,
+          "word": "Maata"
+        },
+        {
+          "start": 1055.64,
+          "end": 1056.14,
+          "word": "kaab"
+        },
+        {
+          "start": 1056.14,
+          "end": 1056.14,
+          "word": "daala"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "start": 1057.04,
+      "end": 1058.36,
+      "text": "Maata kaaba daalaa",
+      "words": [
+        {
+          "start": 1057.04,
+          "end": 1057.56,
+          "word": "Maata"
+        },
+        {
+          "start": 1057.56,
+          "end": 1057.82,
+          "word": "kaaba"
+        },
+        {
+          "start": 1057.82,
+          "end": 1058.36,
+          "word": "daalaa"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "start": 1061.12,
+      "end": 1063.16,
+      "text": "If anybody knows where these sticks are",
+      "words": [
+        {
+          "start": 1061.12,
+          "end": 1061.64,
+          "word": "If"
+        },
+        {
+          "start": 1061.64,
+          "end": 1062.06,
+          "word": "anybody"
+        },
+        {
+          "start": 1062.06,
+          "end": 1062.32,
+          "word": "knows"
+        },
+        {
+          "start": 1062.32,
+          "end": 1062.52,
+          "word": "where"
+        },
+        {
+          "start": 1062.52,
+          "end": 1062.66,
+          "word": "these"
+        },
+        {
+          "start": 1062.66,
+          "end": 1062.88,
+          "word": "sticks"
+        },
+        {
+          "start": 1062.88,
+          "end": 1063.16,
+          "word": "are"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "start": 1063.16,
+      "end": 1064.42,
+      "text": "could they please bring them forward?",
+      "words": [
+        {
+          "start": 1063.16,
+          "end": 1063.32,
+          "word": "could"
+        },
+        {
+          "start": 1063.32,
+          "end": 1063.54,
+          "word": "they"
+        },
+        {
+          "start": 1063.54,
+          "end": 1063.7,
+          "word": "please"
+        },
+        {
+          "start": 1063.7,
+          "end": 1063.86,
+          "word": "bring"
+        },
+        {
+          "start": 1063.86,
+          "end": 1064.08,
+          "word": "them"
+        },
+        {
+          "start": 1064.08,
+          "end": 1064.42,
+          "word": "forward?"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "start": 1075.16,
+      "end": 2109.07,
+      "text": "The people that were practicing in Sydney will give the demonstration first and then",
+      "words": [
+        {
+          "start": 1075.16,
+          "end": 1075.88,
+          "word": "The"
+        },
+        {
+          "start": 1079.24,
+          "end": 1079.62,
+          "word": "people"
+        },
+        {
+          "start": 1079.62,
+          "end": 1079.82,
+          "word": "that"
+        },
+        {
+          "start": 1079.82,
+          "end": 1080.04,
+          "word": "were"
+        },
+        {
+          "start": 1080.04,
+          "end": 1080.44,
+          "word": "practicing"
+        },
+        {
+          "start": 1080.44,
+          "end": 1080.8,
+          "word": "in"
+        },
+        {
+          "start": 1080.8,
+          "end": 1081.08,
+          "word": "Sydney"
+        },
+        {
+          "start": 1081.08,
+          "end": 1081.44,
+          "word": "will"
+        },
+        {
+          "start": 1081.44,
+          "end": 1081.58,
+          "word": "give"
+        },
+        {
+          "start": 1081.58,
+          "end": 1081.86,
+          "word": "the"
+        },
+        {
+          "start": 1081.86,
+          "end": 1082.42,
+          "word": "demonstration"
+        },
+        {
+          "start": 1082.42,
+          "end": 1082.96,
+          "word": "first"
+        },
+        {
+          "start": 2044.02,
+          "end": 2054.44,
+          "word": "and"
+        },
+        {
+          "start": 2108.71,
+          "end": 2109.07,
+          "word": "then"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "start": 2130.26,
+      "end": 2131.78,
+      "text": "He will be elected again.",
+      "words": [
+        {
+          "start": 2130.26,
+          "end": 2130.84,
+          "word": "He"
+        },
+        {
+          "start": 2130.84,
+          "end": 2131.06,
+          "word": "will"
+        },
+        {
+          "start": 2131.06,
+          "end": 2131.24,
+          "word": "be"
+        },
+        {
+          "start": 2131.24,
+          "end": 2131.42,
+          "word": "elected"
+        },
+        {
+          "start": 2131.42,
+          "end": 2131.78,
+          "word": "again."
+        }
+      ]
+    }
+  ]
+}
