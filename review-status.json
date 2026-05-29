@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-29T19:05:13.986409+00:00",
+  "updated_at": "2026-05-29T20:00:03.951343+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -247,6 +247,18 @@
       "reviewer": null,
       "issue_number": 256,
       "updated_at": "2026-05-29T17:44:34Z"
+    },
+    "1982-07-04_Guru-Puja-Establishing-the-Guru-Principle-and-Havan-After-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 271,
+      "updated_at": "2026-05-29T19:59:53Z"
+    },
+    "1982-06-22_England-has-to-become-Jerusalem": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 263,
+      "updated_at": "2026-05-29T19:32:24Z"
     }
   }
 }
