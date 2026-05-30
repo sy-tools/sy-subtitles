@@ -18,7 +18,19 @@ jobs:
       github.event_name != 'issues' ||
       contains(join(github.event.issue.labels.*.name, ','), 'review:')
     steps:
+      # Always branch off the live main tip, not the inherited SHA. When this
+      # workflow runs via `workflow_call` from subtitle-pipeline.yml, the default
+      # checkout uses the caller's `github.sha` — the pipeline's dispatch SHA,
+      # which can be ~1h stale once the long translate/build jobs finish.
+      # sync-review-status.py regenerates review-status.json by merging entries
+      # preserved from the on-disk file, so a stale base yields stale content;
+      # bot-pr.sh then opens a PR off that stale base and merges into a moved
+      # main, producing a 3-way conflict whenever another status update landed
+      # during the run. Pinning `ref: main` bases the regenerated file on the
+      # current tip and lets the PR merge cleanly.
       - uses: actions/checkout@v6
+        with:
+          ref: main
 
       - name: Auto-update labels on assign/unassign/close/reopen
         if: >
