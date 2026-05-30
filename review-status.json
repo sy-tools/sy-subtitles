@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T20:57:22.282885+00:00",
+  "updated_at": "2026-05-30T21:00:40.355274+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -427,6 +427,12 @@
       "reviewer": null,
       "issue_number": 399,
       "updated_at": "2026-05-30T20:57:13Z"
+    },
+    "1978-12-09_Our-Understanding-of-Sahaja-Yoga-Seminar": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 402,
+      "updated_at": "2026-05-30T21:00:30Z"
     }
   }
 }
