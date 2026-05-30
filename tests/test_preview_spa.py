@@ -3910,6 +3910,83 @@ class TestAddTalkForm:
         assert "transcript_en_base64" in clip, clip[:400]
 
 
+class TestBookmarkletExtraction:
+    """E2E for the add-talk bookmarklet's page scraping.
+
+    The bookmarklet is the inline `bmCode` string in site/index.html; users
+    drag it to their bookmarks bar and click it on an amruta.org talk page,
+    where it reads the DOM and opens the SPA with the extracted payload. That
+    extraction had no test (the existing 'real amruta parsing' suite asserts
+    pre-parsed JSON, not the live code), so a selector that silently stopped
+    matching a page shape would ship unnoticed — exactly what surfaced on the
+    Christmas Puja 1998 talk (empty location / video titles / transcript).
+
+    These tests read the exact shipped `bmCode` from source and run it against
+    a saved fixture of that page, so they exercise the real bookmarklet end to
+    end and lock in the structures its selectors depend on."""
+
+    FIXTURE = Path(__file__).parent / "fixtures" / "amruta_christmas_puja_1998.html"
+
+    def _bmcode_rhs(self):
+        """The right-hand side of `var bmCode = "..." + spaBase + "...";` —
+        a JS expression we can eval in the page to reconstruct the bookmarklet."""
+        html = (Path(__file__).parent.parent / "site" / "index.html").read_text()
+        m = re.search(r'var bmCode = (".*");\s*$', html, re.M)
+        assert m, "could not locate `var bmCode = ...` in site/index.html"
+        return m.group(1)
+
+    def _run_bookmarklet(self, page):
+        """Execute the shipped bookmarklet against the loaded page, capturing
+        the payload it would hand to the SPA via window.open.
+
+        eval() is intentional here: the bookmarklet *is* a string of JS our SPA
+        ships, and the test's whole purpose is to run that exact code. It is our
+        own source (read from site/index.html) executed in a throwaway test
+        page — no untrusted input."""
+        captured = page.evaluate(
+            """(rhs) => {
+                var spaBase = 'http://spa.test/';
+                var bmCode;
+                eval('bmCode = ' + rhs + ';');
+                var opened = null;
+                var orig = window.open;
+                window.open = function (u) { opened = u; return null; };
+                try { eval(bmCode); } finally { window.open = orig; }
+                return opened;
+            }""",
+            self._bmcode_rhs(),
+        )
+        assert captured and "#/add?data=" in captured, f"no payload opened: {captured}"
+        return json.loads(unquote(captured.split("#/add?data=", 1)[1]))
+
+    def test_fixture_exists(self):
+        assert self.FIXTURE.exists(), f"missing fixture: {self.FIXTURE}"
+
+    def test_extracts_nonempty_fields_from_real_page(self, browser):
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.goto(self.FIXTURE.as_uri())
+            data = self._run_bookmarklet(pg)
+        finally:
+            ctx.close()
+
+        # Talk title (h1.entry-title).
+        assert data["t"] == "Christmas Puja: Become Thoughtlessly Aware", data["t"]
+        # Location — the line before "Talk Language:" in the .entry-content h4.
+        # This was reported empty; guard it explicitly.
+        assert data["loc"] == "Ganapatipule (India)", repr(data["loc"])
+        # Both video titles (from .video-meta-info), each with a vimeo id+hash.
+        assert [v["l"] for v in data["v"]] == [
+            "Christmas Puja",
+            "Christmas Puja Talk",
+        ], data["v"]
+        assert all(v["id"] and v["h"] for v in data["v"]), data["v"]
+        # Transcript (.entry-content paragraphs) — non-empty and real content.
+        assert len(data["tx"]) > 1000, len(data["tx"])
+        assert "Christ was born" in data["tx"], data["tx"][:200]
+
+
 class TestTranscriptVideoSync:
     """Review-page transcript mode: Show Video button, video picker,
     paragraph ↔ SRT-block wiring."""
