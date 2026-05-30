@@ -5108,29 +5108,21 @@ function updateAddPreview() {
     if (vTitle || vUrl) videos.push({ title: vTitle, url: vUrl, slug: slugify(vTitle || 'Video-' + (videos.length + 1)) });
   });
 
-  var yaml = "title: '" + title.replace(/'/g, "''") + "'\n";
-  yaml += "date: '" + date + "'\n";
-  if (location) yaml += "location: " + location + "\n";
-  if (url) yaml += "amruta_url: " + url + "\n";
-  yaml += "language: " + lang + "\n";
-  if (videos.length) {
-    yaml += "videos:\n";
-    videos.forEach(function(v) {
-      yaml += "- slug: " + v.slug + "\n";
-      yaml += "  title: " + v.title + "\n";
-      yaml += "  vimeo_url: " + v.url + "\n";
-    });
-  }
-
   var transcript = document.getElementById('add-transcript').value.trim();
-  if (transcript) {
-    var b64 = btoa(unescape(encodeURIComponent(transcript)));
-    yaml += "transcript_en_base64: |\n";
-    // Split base64 into 76-char lines for readability
-    for (var i = 0; i < b64.length; i += 76) {
-      yaml += "  " + b64.substring(i, i + 76) + "\n";
-    }
-  }
+  // btoa is browser-only, so the base64 is encoded here and the pure
+  // buildMetaYaml() (site/js/add_talk_data.js) does the YAML serialization —
+  // including the quoting that keeps colons in titles/location valid.
+  var transcriptBase64 = transcript ? btoa(unescape(encodeURIComponent(transcript))) : '';
+
+  var yaml = buildMetaYaml({
+    title: title,
+    date: date,
+    location: location,
+    amruta_url: url,
+    language: lang,
+    videos: videos,
+    transcriptBase64: transcriptBase64,
+  });
 
   document.getElementById('add-preview').textContent = yaml;
 }

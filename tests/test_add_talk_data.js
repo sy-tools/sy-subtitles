@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { parseAddTalkHash } = require('../site/js/add_talk_data');
+const { parseAddTalkHash, buildMetaYaml } = require('../site/js/add_talk_data');
 
 // The bookmarklet encodes its payload exactly like this, then opens the SPA
 // at `<base>#/add?data=<encoded>`. These helpers reproduce that round trip so
@@ -76,5 +76,70 @@ describe('parseAddTalkHash — literal percent in content', () => {
     const res = parseAddTalkHash(hashFor(obj));
     assert.strictEqual(res.state, 'form');
     assert.strictEqual(res.data.tx, 'Section #1 and 50% done');
+  });
+});
+
+// Regression: the add-talk form emitted free-text scalars (per-video title,
+// location) unquoted, so a colon in a video title — e.g. "Guru Puja Talk:
+// Gurus Who Belong To The Collective" — produced invalid YAML
+// ("mapping values are not allowed here") and broke the new-talk automation
+// (sy-tools/sy-subtitles#293). All free-text scalars must be single-quoted
+// and '-escaped.
+describe('buildMetaYaml — YAML-safe quoting', () => {
+  it('quotes a per-video title containing a colon', () => {
+    const yaml = buildMetaYaml({
+      title: 'Guru Puja',
+      date: '1993-07-04',
+      language: 'en',
+      videos: [{
+        slug: 'Guru-Puja-Talk',
+        title: 'Guru Puja Talk: Gurus Who Belong To The Collective',
+        url: 'https://vimeo.com/189921224/c6fb45a3f2',
+      }],
+    });
+    assert.match(yaml, /^ {2}title: 'Guru Puja Talk: Gurus Who Belong To The Collective'$/m);
+  });
+
+  it('quotes the top-level title containing a colon', () => {
+    const yaml = buildMetaYaml({ title: 'Guru Puja: Gurus', date: '1993-07-04', language: 'en' });
+    assert.match(yaml, /^title: 'Guru Puja: Gurus'$/m);
+  });
+
+  it('quotes a location containing a colon', () => {
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1993-07-04', language: 'en',
+      location: 'Public Program: Royal Albert Hall',
+    });
+    assert.match(yaml, /^location: 'Public Program: Royal Albert Hall'$/m);
+  });
+
+  it('escapes single quotes by doubling them', () => {
+    const yaml = buildMetaYaml({ title: "Mother's love", date: '1993-07-04', language: 'en' });
+    assert.match(yaml, /^title: 'Mother''s love'$/m);
+  });
+
+  it('emits date/language, video block and base64 transcript', () => {
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1993-07-04', language: 'en',
+      amruta_url: 'https://www.amruta.org/x/',
+      videos: [{ slug: 'A', title: 'A', url: 'https://vimeo.com/1/2' }],
+      transcriptBase64: 'YWJjZA==',
+    });
+    assert.match(yaml, /^date: '1993-07-04'$/m);
+    assert.match(yaml, /^language: en$/m);
+    assert.match(yaml, /^amruta_url: https:\/\/www\.amruta\.org\/x\/$/m);
+    assert.match(yaml, /^videos:$/m);
+    assert.match(yaml, /^- slug: A$/m);
+    assert.match(yaml, /^  vimeo_url: https:\/\/vimeo\.com\/1\/2$/m);
+    assert.match(yaml, /^transcript_en_base64: \|$/m);
+    assert.match(yaml, /^ {2}YWJjZA==$/m);
+  });
+
+  it('omits optional location/amruta_url/videos/transcript when absent', () => {
+    const yaml = buildMetaYaml({ title: 'T', date: '1993-07-04', language: 'en' });
+    assert.doesNotMatch(yaml, /^location:/m);
+    assert.doesNotMatch(yaml, /^amruta_url:/m);
+    assert.doesNotMatch(yaml, /^videos:/m);
+    assert.doesNotMatch(yaml, /^transcript_en_base64:/m);
   });
 });

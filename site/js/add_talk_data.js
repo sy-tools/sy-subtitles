@@ -33,6 +33,50 @@ function parseAddTalkHash(hash) {
   return { state: 'form', data: data };
 }
 
+// Render a scalar as a single-quoted YAML string, escaping embedded quotes by
+// doubling them (the YAML single-quote escape). Quoting makes the value safe
+// regardless of content — a colon, leading symbol, etc. can no longer be
+// misread as YAML structure.
+function yamlStr(s) {
+  return "'" + String(s == null ? '' : s).replace(/'/g, "''") + "'";
+}
+
+// Build meta.yaml text from add-talk form fields. Every free-text scalar
+// (title, location, per-video title) is single-quoted via yamlStr so a colon
+// in user input cannot corrupt the file (regression: sy-tools/sy-subtitles#293,
+// "Guru Puja Talk: Gurus Who Belong To The Collective" → ScannerError). Slugs
+// are generated ([A-Za-z0-9-]) and URLs/date/language are constrained formats,
+// so they stay unquoted to match existing meta.yaml files.
+//
+// fields: { title, date, location?, amruta_url?, language,
+//           videos?: [{ slug, title, url }], transcriptBase64? }
+function buildMetaYaml(fields) {
+  var f = fields || {};
+  var yaml = "title: " + yamlStr(f.title) + "\n";
+  yaml += "date: '" + (f.date || '') + "'\n";
+  if (f.location) yaml += "location: " + yamlStr(f.location) + "\n";
+  if (f.amruta_url) yaml += "amruta_url: " + f.amruta_url + "\n";
+  yaml += "language: " + (f.language || '') + "\n";
+  var videos = f.videos || [];
+  if (videos.length) {
+    yaml += "videos:\n";
+    videos.forEach(function (v) {
+      yaml += "- slug: " + v.slug + "\n";
+      yaml += "  title: " + yamlStr(v.title) + "\n";
+      yaml += "  vimeo_url: " + v.url + "\n";
+    });
+  }
+  if (f.transcriptBase64) {
+    yaml += "transcript_en_base64: |\n";
+    var b64 = f.transcriptBase64;
+    // Split base64 into 76-char lines for readability.
+    for (var i = 0; i < b64.length; i += 76) {
+      yaml += "  " + b64.substring(i, i + 76) + "\n";
+    }
+  }
+  return yaml;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseAddTalkHash: parseAddTalkHash };
+  module.exports = { parseAddTalkHash: parseAddTalkHash, buildMetaYaml: buildMetaYaml };
 }

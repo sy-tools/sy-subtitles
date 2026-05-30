@@ -1650,28 +1650,26 @@ function slugifyTest(text) {
   return text.replace(/[^a-zA-Z0-9 -]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 }
 
+// Thin adapter over the single-source builder in site/js/add_talk_data.js so
+// these tests exercise the real serialization (incl. YAML-safe quoting) rather
+// than a drifting copy — an earlier copy here re-emitted video titles unquoted
+// and so never caught the colon bug (sy-tools/sy-subtitles#293). btoa is
+// browser-only, so raw transcript text is base64-encoded here before handing
+// off, mirroring what index.html does.
+const { buildMetaYaml: buildMetaYamlModule } = require('../site/js/add_talk_data');
+
 function buildMetaYaml(opts) {
-  var yaml = "title: '" + (opts.title || '').replace(/'/g, "''") + "'\n";
-  yaml += "date: '" + (opts.date || '') + "'\n";
-  if (opts.location) yaml += "location: " + opts.location + "\n";
-  if (opts.url) yaml += "amruta_url: " + opts.url + "\n";
-  yaml += "language: " + (opts.language || 'en') + "\n";
-  if (opts.videos && opts.videos.length) {
-    yaml += "videos:\n";
-    opts.videos.forEach(function(v) {
-      yaml += "- slug: " + v.slug + "\n";
-      yaml += "  title: " + (v.title || '') + "\n";
-      yaml += "  vimeo_url: " + (v.url || '') + "\n";
-    });
-  }
-  if (opts.transcript) {
-    var b64 = Buffer.from(opts.transcript, 'utf8').toString('base64');
-    yaml += "transcript_en_base64: |\n";
-    for (var i = 0; i < b64.length; i += 76) {
-      yaml += "  " + b64.substring(i, i + 76) + "\n";
-    }
-  }
-  return yaml;
+  return buildMetaYamlModule({
+    title: opts.title,
+    date: opts.date,
+    location: opts.location,
+    amruta_url: opts.url,
+    language: opts.language || 'en',
+    videos: opts.videos,
+    transcriptBase64: opts.transcript
+      ? Buffer.from(opts.transcript, 'utf8').toString('base64')
+      : '',
+  });
 }
 
 function parseBookmarkletData(encodedStr) {
@@ -1703,7 +1701,7 @@ describe('Add Talk: buildMetaYaml', () => {
 
   it('includes location and amruta_url', () => {
     var yaml = buildMetaYaml({ title: 'T', date: '2001-01-01', location: 'Mumbai', url: 'https://amruta.org/test' });
-    assert.ok(yaml.includes('location: Mumbai'));
+    assert.ok(yaml.includes("location: 'Mumbai'"));
     assert.ok(yaml.includes('amruta_url: https://amruta.org/test'));
   });
 
@@ -1714,7 +1712,7 @@ describe('Add Talk: buildMetaYaml', () => {
     });
     assert.ok(yaml.includes('videos:'));
     assert.ok(yaml.includes('- slug: Video-1'));
-    assert.ok(yaml.includes("title: Video 1"));
+    assert.ok(yaml.includes("title: 'Video 1'"));
     assert.ok(yaml.includes('vimeo_url: https://vimeo.com/123/abc'));
   });
 
@@ -1989,8 +1987,13 @@ describe('Add Talk: SPA code integrity', () => {
     assert.ok(matches >= 2, 'add.title should be in uk and en');
   });
 
-  it('transcript_en_base64 field generated in yaml', () => {
-    assert.ok(html.includes('transcript_en_base64'));
+  it('meta.yaml generation is single-sourced in add_talk_data.js', () => {
+    // buildMetaYaml() lives in the module (tested in test_add_talk_data.js);
+    // index.html must delegate to it rather than re-inline the serialization.
+    var mod = fs.readFileSync('site/js/add_talk_data.js', 'utf8');
+    assert.ok(mod.includes('transcript_en_base64'), 'module emits transcript_en_base64');
+    assert.ok(mod.includes('function buildMetaYaml'), 'module defines buildMetaYaml');
+    assert.ok(html.includes('buildMetaYaml('), 'index.html calls buildMetaYaml');
   });
 });
 
@@ -2120,13 +2123,13 @@ describe('Add Talk: real amruta.org page parsing', () => {
     });
     assert.ok(yaml.includes("title: 'Sahasrara Puja: How it was decided'"));
     assert.ok(yaml.includes("date: '1988-05-08'"));
-    assert.ok(yaml.includes('location: Fregene (Italy)'));
+    assert.ok(yaml.includes("location: 'Fregene (Italy)'"));
     assert.ok(yaml.includes('amruta_url: https://www.amruta.org/'));
     assert.ok(yaml.includes('language: en'));
     assert.ok(yaml.includes('videos:'));
     assert.ok(yaml.includes('- slug: Sahasrara-Puja'));
-    assert.ok(yaml.includes("title: Sahasrara Puja\n"));
-    assert.ok(yaml.includes("title: Sahasrara Puja Talk"));
+    assert.ok(yaml.includes("title: 'Sahasrara Puja'\n"));
+    assert.ok(yaml.includes("title: 'Sahasrara Puja Talk'"));
     assert.ok(yaml.includes('vimeo_url: https://vimeo.com/88490248/e956098e13'));
     assert.ok(yaml.includes('vimeo_url: https://vimeo.com/88509806/2453ea7524'));
   });
