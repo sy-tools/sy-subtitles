@@ -325,9 +325,13 @@ class AmrutaDownloader:
         for tag in content.find_all(["em", "i", "strong", "b", "span", "a", "u", "sup", "sub"]):
             tag.unwrap()
 
-        # Replace <br> with newlines
+        # Replace <br> with a sentinel (not "\n") so an *intentional* line
+        # break survives whitespace normalization and stays distinguishable
+        # from the literal newlines that hard-wrapped source posts embed inside
+        # a paragraph. NUL never appears in real transcript text.
+        BR = "\x00"
         for br in content.find_all("br"):
-            br.replace_with("\n")
+            br.replace_with(BR)
 
         HEADINGS = {"h1", "h2", "h3", "h4", "h5", "h6"}
         lines = []
@@ -337,10 +341,18 @@ class AmrutaDownloader:
             raw = el.get_text()
             # Strip WordPress Object Replacement Characters (U+FFFC)
             raw = raw.replace("\ufffc", "")
-            # Normalize: collapse spaces/tabs (but keep \n from <br>)
-            raw = re.sub(r"[^\S\n]+", " ", raw)
+            # Header blocks (date / title / location / language) keep their
+            # line structure regardless of markup: preserve literal newlines
+            # AND <br>, collapsing only horizontal whitespace. Prose collapses
+            # ALL whitespace -- including the literal newlines a hard-wrapped
+            # source embeds inside a paragraph, and non-breaking spaces
+            # (U+00A0) -- to single spaces, so each paragraph is one line; only
+            # an explicit <br> (restored next) breaks a line.
+            ws = r"[^\S\n]+" if el.name in HEADINGS else r"\s+"
+            raw = re.sub(ws, " ", raw)
+            raw = raw.replace(BR, "\n")
             # Trim each line and drop empties
-            block_lines = [ln.strip() for ln in raw.splitlines()]
+            block_lines = [ln.strip() for ln in raw.split("\n")]
             block_text = "\n".join(ln for ln in block_lines if ln)
             if block_text:
                 # Blank line after heading to separate header from body

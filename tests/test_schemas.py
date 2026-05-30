@@ -132,10 +132,17 @@ def test_meta_unknown_language(tmp_path: Path) -> None:
         validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
 
 
-def test_meta_empty_videos(tmp_path: Path) -> None:
-    bad = dict(GOOD_META, videos=[])
-    with pytest.raises(SchemaError, match="videos.* empty"):
-        validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
+def test_meta_empty_videos_allowed(tmp_path: Path) -> None:
+    """A talk may legitimately have no video (e.g. a letter / text-only
+    translation). An empty videos list is valid."""
+    meta = dict(GOOD_META, videos=[])
+    assert validate_meta_yaml(_w(tmp_path, "meta.yaml", meta)) == meta
+
+
+def test_meta_missing_videos_allowed(tmp_path: Path) -> None:
+    """videos may be omitted entirely for a text-only talk."""
+    meta = {k: v for k, v in GOOD_META.items() if k != "videos"}
+    assert validate_meta_yaml(_w(tmp_path, "meta.yaml", meta)) == meta
 
 
 def test_meta_duplicate_slug(tmp_path: Path) -> None:

@@ -146,9 +146,11 @@ def validate_meta_yaml(path: str) -> dict:
             f"language {language!r} not in allowed set {sorted(ALLOWED_LANGUAGES)}",
         )
 
-    videos = _require(data, "videos", list, "meta.yaml", "")
-    if not videos:
-        raise SchemaError("meta.yaml", path, "videos[] must not be empty")
+    # A talk may legitimately have no video — e.g. a letter or other text-only
+    # translation. videos may be absent or empty; validate whatever is present.
+    videos = data.get("videos", [])
+    if not isinstance(videos, list):
+        raise SchemaError("meta.yaml", path, f"videos must be a list, got {type(videos).__name__}")
 
     seen_slugs: set[str] = set()
     for i, video in enumerate(videos):

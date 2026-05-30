@@ -3986,6 +3986,38 @@ class TestBookmarkletExtraction:
         assert len(data["tx"]) > 1000, len(data["tx"])
         assert "Christ was born" in data["tx"], data["tx"][:200]
 
+    def test_transcript_collapses_hardwrapped_paragraphs_and_nbsp(self, browser):
+        """Older amruta posts hard-wrap paragraph text with literal newlines,
+        and stray non-breaking spaces sneak in. The bookmarklet must normalize
+        each paragraph to a single line (so the transcript is one line per
+        paragraph, joined by \\n) with no U+00A0.
+
+        Regression: the 1983 Shri Saraswati Puja transcript came through
+        bookmarklet→PR with every paragraph split across ~75-char lines and a
+        non-breaking space mid-text."""
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.set_content(
+                '<div class="entry-content">'
+                "<p>This is the first paragraph that the source HTML\n"
+                "hard-wrapped across several\nlines for readability.</p>"
+                "<p>Second paragraph with a non-breaking space sitting inside it.</p>"
+                "</div>"
+            )
+            data = self._run_bookmarklet(pg)
+        finally:
+            ctx.close()
+
+        assert data["tx"] == (
+            "This is the first paragraph that the source HTML hard-wrapped "
+            "across several lines for readability.\n"
+            "Second paragraph with a non-breaking space sitting inside it."
+        ), repr(data["tx"])
+        assert " " not in data["tx"]
+        # Exactly two lines — one per <p>, no mid-paragraph breaks.
+        assert len(data["tx"].split("\n")) == 2, data["tx"]
+
 
 class TestTranscriptVideoSync:
     """Review-page transcript mode: Show Video button, video picker,
