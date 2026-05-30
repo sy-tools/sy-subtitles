@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T06:02:23.141562+00:00",
+  "updated_at": "2026-05-30T06:50:33.050806+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -283,6 +283,12 @@
       "reviewer": null,
       "issue_number": 285,
       "updated_at": "2026-05-30T06:02:10Z"
+    },
+    "1992-09-20_Shri-Vishnumaya-Puja-Stop-Feeling-Guilty": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 288,
+      "updated_at": "2026-05-30T06:50:25Z"
     }
   }
 }
