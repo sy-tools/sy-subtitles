@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T09:24:19.150203+00:00",
+  "updated_at": "2026-05-30T09:27:41.591619+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -313,6 +313,12 @@
       "reviewer": null,
       "issue_number": 308,
       "updated_at": "2026-05-30T09:24:08Z"
+    },
+    "1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 311,
+      "updated_at": "2026-05-30T09:27:33Z"
     }
   }
 }
