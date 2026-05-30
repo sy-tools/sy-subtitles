@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T04:54:38.932967+00:00",
+  "updated_at": "2026-05-30T05:37:31.457978+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -265,6 +265,18 @@
       "reviewer": null,
       "issue_number": 276,
       "updated_at": "2026-05-30T04:54:31Z"
+    },
+    "1983-09-17_Shri-Ekadasha-Rudra-Puja-We-have-to-drop-out-many-things": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 282,
+      "updated_at": "2026-05-30T05:37:24Z"
+    },
+    "1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 279,
+      "updated_at": "2026-05-30T04:56:06Z"
     }
   }
 }
