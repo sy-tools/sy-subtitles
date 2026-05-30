@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import quote, unquote
 
 import pytest
+import yaml
 
 SAMPLE_META = """title: 'Test Talk: Subtitle Preview'
 date: '2001-01-01'
@@ -3788,12 +3789,57 @@ class TestAddTalkForm:
         yaml_text = page.locator("#add-preview").text_content()
         assert "title: 'My Test Talk'" in yaml_text
         assert "date: '2020-05-05'" in yaml_text
-        assert "location: Test City" in yaml_text
+        # Free-text scalars are single-quoted so a colon can't corrupt the YAML.
+        assert "location: 'Test City'" in yaml_text
         assert "amruta_url: https://www.amruta.org/" in yaml_text
         assert "language: en" in yaml_text
         assert "videos:" in yaml_text
         assert "vimeo_url: https://vimeo.com/1234/abcd" in yaml_text
         assert "transcript_en_base64: |" in yaml_text
+        # The preview must be valid YAML — this is the exact path the pipeline's
+        # yaml.safe_load takes; substring checks alone would miss a quoting bug.
+        parsed = yaml.safe_load(yaml_text)
+        assert parsed["location"] == "Test City"
+
+    def test_preview_yaml_valid_when_fields_contain_colons(self, server, page):
+        """Regression (sy-tools/sy-subtitles#293): a colon in a video title —
+        e.g. "Guru Puja Talk: Gurus Who Belong To The Collective" — was emitted
+        unquoted and produced YAML that failed yaml.safe_load ("mapping values
+        are not allowed here"), breaking the new-talk `detect` job. Drive the
+        real form with colons in the talk title, location, and a video title,
+        then assert the preview parses and every value round-trips intact."""
+        data = {
+            "t": "Guru Puja: Gurus who belong to the collective",
+            "d": "1993-07-04",
+            "u": "https://www.amruta.org/1993/07/04/guru-puja-1993/",
+            "loc": "Public Program: Cabella Ligure",
+            "v": [
+                {"id": "189922347", "h": "8eea76507c", "l": "Guru Puja"},
+                {
+                    "id": "189921224",
+                    "h": "c6fb45a3f2",
+                    "l": "Guru Puja Talk: Gurus Who Belong To The Collective",
+                },
+            ],
+            "tx": "He said 100% & it's done.",
+        }
+        encoded = quote(json.dumps(data), safe="")
+        page.goto(f"{server}{SPA_URL}#/add?data={encoded}")
+        page.wait_for_selector("#add-form", state="visible", timeout=5000)
+        page.wait_for_timeout(200)  # let updateAddPreview run
+
+        yaml_text = page.locator("#add-preview").text_content()
+        # The colon-bearing video title must be quoted in the rendered preview.
+        assert "title: 'Guru Puja Talk: Gurus Who Belong To The Collective'" in yaml_text, yaml_text
+
+        # Parsing is the real contract — this is what the pipeline runs.
+        parsed = yaml.safe_load(yaml_text)
+        assert parsed["title"] == "Guru Puja: Gurus who belong to the collective"
+        assert parsed["location"] == "Public Program: Cabella Ligure"
+        assert [v["title"] for v in parsed["videos"]] == [
+            "Guru Puja",
+            "Guru Puja Talk: Gurus Who Belong To The Collective",
+        ]
 
     def test_create_pr_button_generates_github_new_file_url(self, server, page):
         self._open_add_form(page, server)
