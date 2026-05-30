@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T20:19:28.003867+00:00",
+  "updated_at": "2026-05-30T20:40:29.804631+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -415,6 +415,12 @@
       "reviewer": null,
       "issue_number": 385,
       "updated_at": "2026-05-30T20:19:18Z"
+    },
+    "1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 396,
+      "updated_at": "2026-05-30T20:40:20Z"
     }
   }
 }
