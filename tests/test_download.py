@@ -142,6 +142,58 @@ def test_whitespace_collapsed():
     assert result == "Too many spaces here."
 
 
+# --- hard-wrapped source (literal newlines inside a paragraph) ---
+
+
+def test_literal_newlines_in_paragraph_collapsed():
+    """Older amruta posts hard-wrap the source: a paragraph's text carries
+    literal '\\n' line breaks (NOT <br>). Those are soft wraps, not paragraph
+    breaks, and must collapse to single spaces — one line per paragraph.
+
+    Regression: the 1983 Shri Saraswati Puja transcript downloaded with every
+    paragraph split across ~75-char lines."""
+    html = (
+        "<p>It is even in the deeper sense, if you see; people who\n"
+        "have created all the scientific things are also out of love to the masses, not\n"
+        "for themselves.</p>"
+    )
+    result = _extract(html)
+    assert result == (
+        "It is even in the deeper sense, if you see; people who have created "
+        "all the scientific things are also out of love to the masses, not for "
+        "themselves."
+    )
+
+
+def test_nbsp_in_paragraph_collapsed():
+    """A non-breaking space (U+00A0) inside paragraph text becomes a normal
+    space — it must not survive into the transcript as a non-printing char."""
+    html = "<p>ends up in love. Whichever does not end up in love.</p>"
+    result = _extract(html)
+    assert result == "ends up in love. Whichever does not end up in love."
+    assert " " not in result
+
+
+def test_prose_br_survives_newline_collapse():
+    """An intentional <br> inside a paragraph still produces a line break even
+    though literal source newlines around it are collapsed."""
+    html = "<p>Line one\nwith soft wrap<br/>Line two\nalso wrapped</p>"
+    result = _extract(html)
+    assert result == "Line one with soft wrap\nLine two also wrapped"
+
+
+def test_heading_literal_newlines_preserved():
+    """A heading's line structure is kept regardless of how it was marked up,
+    so the date/title/location/language header survives even when the source
+    used literal newlines instead of <br>."""
+    html = "<h4>14 January 1983\nSaraswati Puja\nDhule (India)\nTalk Language: English</h4><p>Body.</p>"
+    result = _extract(html)
+    lines = result.split("\n")
+    assert lines[0] == "14 January 1983"
+    assert lines[2] == "Dhule (India)"
+    assert lines[3] == "Talk Language: English"
+
+
 def test_list_items():
     html = "<ul><li>First item</li><li>Second item</li></ul>"
     result = _extract(html)
