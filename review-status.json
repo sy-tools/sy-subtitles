@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T15:19:26.101206+00:00",
+  "updated_at": "2026-05-30T16:02:37.670458+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -367,6 +367,12 @@
       "reviewer": null,
       "issue_number": 347,
       "updated_at": "2026-05-30T15:17:49Z"
+    },
+    "1977-03-22_Advice-at-Bharatiya-Vidya-Bhavan": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 354,
+      "updated_at": "2026-05-30T16:02:27Z"
     }
   }
 }
