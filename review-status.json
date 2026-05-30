@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T21:08:56.251360+00:00",
+  "updated_at": "2026-05-30T21:15:05.336049+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -439,6 +439,12 @@
       "reviewer": null,
       "issue_number": 405,
       "updated_at": "2026-05-30T21:08:46Z"
+    },
+    "1984-07-10_The-Experience-of-Truth-Part-IV": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 408,
+      "updated_at": "2026-05-30T21:14:57Z"
     }
   }
 }
