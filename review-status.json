@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-29T20:00:03.951343+00:00",
+  "updated_at": "2026-05-30T04:56:17.251252+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -259,6 +259,18 @@
       "reviewer": null,
       "issue_number": 263,
       "updated_at": "2026-05-29T19:32:24Z"
+    },
+    "1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 279,
+      "updated_at": "2026-05-30T04:56:06Z"
+    },
+    "1982-07-10_From-Mooladhara-to-Void": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 276,
+      "updated_at": "2026-05-30T04:54:31Z"
     }
   }
 }
