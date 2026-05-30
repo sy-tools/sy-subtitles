@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T20:40:29.804631+00:00",
+  "updated_at": "2026-05-30T20:57:22.282885+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -421,6 +421,12 @@
       "reviewer": null,
       "issue_number": 396,
       "updated_at": "2026-05-30T20:40:20Z"
+    },
+    "1983-03-04_Devi-Puja-Mother-you-be-in-our-brain": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 399,
+      "updated_at": "2026-05-30T20:57:13Z"
     }
   }
 }
