@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T05:37:31.457978+00:00",
+  "updated_at": "2026-05-30T06:02:23.141562+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -277,6 +277,12 @@
       "reviewer": null,
       "issue_number": 279,
       "updated_at": "2026-05-30T04:56:06Z"
+    },
+    "1986-05-23_The-Spirit-is-the-light": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 285,
+      "updated_at": "2026-05-30T06:02:10Z"
     }
   }
 }
