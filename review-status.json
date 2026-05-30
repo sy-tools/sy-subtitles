@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T12:20:25.153499+00:00",
+  "updated_at": "2026-05-30T12:24:14.526257+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -349,6 +349,12 @@
       "reviewer": null,
       "issue_number": 338,
       "updated_at": "2026-05-30T12:20:14Z"
+    },
+    "1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 341,
+      "updated_at": "2026-05-30T12:24:06Z"
     }
   }
 }
