@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-30T07:31:45.852921+00:00",
+  "updated_at": "2026-05-30T09:21:17.518301+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -301,6 +301,12 @@
       "reviewer": null,
       "issue_number": 297,
       "updated_at": "2026-05-30T07:31:36Z"
+    },
+    "1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 305,
+      "updated_at": "2026-05-30T09:21:10Z"
     }
   }
 }
