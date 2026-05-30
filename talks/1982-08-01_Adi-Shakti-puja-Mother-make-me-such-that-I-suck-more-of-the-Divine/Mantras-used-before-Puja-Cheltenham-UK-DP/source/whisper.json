@@ -1,0 +1,7382 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.08,
+      "end": 4.64,
+      "text": "First Lord Ganesha, then Maha Lakshmi, Maha Saraswati, Maha Kali",
+      "words": [
+        {
+          "start": 0.08,
+          "end": 0.72,
+          "word": "First"
+        },
+        {
+          "start": 0.72,
+          "end": 0.92,
+          "word": "Lord"
+        },
+        {
+          "start": 0.92,
+          "end": 1.76,
+          "word": "Ganesha,"
+        },
+        {
+          "start": 2.12,
+          "end": 2.36,
+          "word": "then"
+        },
+        {
+          "start": 2.36,
+          "end": 2.56,
+          "word": "Maha"
+        },
+        {
+          "start": 2.56,
+          "end": 2.94,
+          "word": "Lakshmi,"
+        },
+        {
+          "start": 3.04,
+          "end": 3.34,
+          "word": "Maha"
+        },
+        {
+          "start": 3.34,
+          "end": 3.82,
+          "word": "Saraswati,"
+        },
+        {
+          "start": 3.86,
+          "end": 4.2,
+          "word": "Maha"
+        },
+        {
+          "start": 4.2,
+          "end": 4.64,
+          "word": "Kali"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 4.64,
+      "end": 8.72,
+      "text": "Then Lord Kalki and then Lord Kalki in Sahasraya Swamini",
+      "words": [
+        {
+          "start": 4.64,
+          "end": 5.28,
+          "word": "Then"
+        },
+        {
+          "start": 5.28,
+          "end": 5.64,
+          "word": "Lord"
+        },
+        {
+          "start": 5.64,
+          "end": 6.18,
+          "word": "Kalki"
+        },
+        {
+          "start": 6.18,
+          "end": 6.38,
+          "word": "and"
+        },
+        {
+          "start": 6.38,
+          "end": 6.68,
+          "word": "then"
+        },
+        {
+          "start": 6.68,
+          "end": 6.82,
+          "word": "Lord"
+        },
+        {
+          "start": 6.82,
+          "end": 7.3,
+          "word": "Kalki"
+        },
+        {
+          "start": 7.3,
+          "end": 7.46,
+          "word": "in"
+        },
+        {
+          "start": 7.46,
+          "end": 8.06,
+          "word": "Sahasraya"
+        },
+        {
+          "start": 8.06,
+          "end": 8.72,
+          "word": "Swamini"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 8.72,
+      "end": 13.42,
+      "text": "Three times for Ganesh? How many time to go each one sir",
+      "words": [
+        {
+          "start": 8.72,
+          "end": 9.04,
+          "word": "Three"
+        },
+        {
+          "start": 9.04,
+          "end": 9.34,
+          "word": "times"
+        },
+        {
+          "start": 9.34,
+          "end": 9.52,
+          "word": "for"
+        },
+        {
+          "start": 9.52,
+          "end": 9.94,
+          "word": "Ganesh?"
+        },
+        {
+          "start": 10.5,
+          "end": 11.16,
+          "word": "How"
+        },
+        {
+          "start": 11.16,
+          "end": 11.4,
+          "word": "many"
+        },
+        {
+          "start": 11.4,
+          "end": 11.68,
+          "word": "time"
+        },
+        {
+          "start": 11.68,
+          "end": 11.86,
+          "word": "to"
+        },
+        {
+          "start": 11.86,
+          "end": 11.94,
+          "word": "go"
+        },
+        {
+          "start": 11.94,
+          "end": 12.34,
+          "word": "each"
+        },
+        {
+          "start": 12.34,
+          "end": 13.04,
+          "word": "one"
+        },
+        {
+          "start": 13.04,
+          "end": 13.42,
+          "word": "sir"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 64.9,
+      "end": 129.47,
+      "text": "Om Shri Keshavaya Nama, Om Shri Narayana Nama, Om Shri Madhava Vayanamma,",
+      "words": [
+        {
+          "start": 64.9,
+          "end": 66.06,
+          "word": "Om"
+        },
+        {
+          "start": 121.9,
+          "end": 122.1,
+          "word": "Shri"
+        },
+        {
+          "start": 122.1,
+          "end": 122.9,
+          "word": "Keshavaya"
+        },
+        {
+          "start": 122.9,
+          "end": 123.64,
+          "word": "Nama,"
+        },
+        {
+          "start": 124.08,
+          "end": 124.52,
+          "word": "Om"
+        },
+        {
+          "start": 124.52,
+          "end": 124.82,
+          "word": "Shri"
+        },
+        {
+          "start": 124.82,
+          "end": 125.54,
+          "word": "Narayana"
+        },
+        {
+          "start": 125.54,
+          "end": 126.64,
+          "word": "Nama,"
+        },
+        {
+          "start": 126.91,
+          "end": 127.49,
+          "word": "Om"
+        },
+        {
+          "start": 127.49,
+          "end": 127.75,
+          "word": "Shri"
+        },
+        {
+          "start": 127.75,
+          "end": 128.51,
+          "word": "Madhava"
+        },
+        {
+          "start": 128.51,
+          "end": 129.47,
+          "word": "Vayanamma,"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 144.88,
+      "end": 146.08,
+      "text": "Ayanama.",
+      "words": [
+        {
+          "start": 144.88,
+          "end": 146.08,
+          "word": "Ayanama."
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 146.42,
+      "end": 148.78,
+      "text": "Om Shri Hishikesh Ayanama.",
+      "words": [
+        {
+          "start": 146.42,
+          "end": 147.06,
+          "word": "Om"
+        },
+        {
+          "start": 147.06,
+          "end": 147.34,
+          "word": "Shri"
+        },
+        {
+          "start": 147.34,
+          "end": 147.94,
+          "word": "Hishikesh"
+        },
+        {
+          "start": 147.94,
+          "end": 148.78,
+          "word": "Ayanama."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 149.54,
+      "end": 151.82,
+      "text": "Om Shri Sankarsha Ayanama.",
+      "words": [
+        {
+          "start": 149.54,
+          "end": 150.02,
+          "word": "Om"
+        },
+        {
+          "start": 150.02,
+          "end": 150.28,
+          "word": "Shri"
+        },
+        {
+          "start": 150.28,
+          "end": 151.06,
+          "word": "Sankarsha"
+        },
+        {
+          "start": 151.06,
+          "end": 151.82,
+          "word": "Ayanama."
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 152.26,
+      "end": 154.8,
+      "text": "Om Shri Vasudeva Ayanama.",
+      "words": [
+        {
+          "start": 152.26,
+          "end": 152.88,
+          "word": "Om"
+        },
+        {
+          "start": 152.88,
+          "end": 153.2,
+          "word": "Shri"
+        },
+        {
+          "start": 153.2,
+          "end": 154.18,
+          "word": "Vasudeva"
+        },
+        {
+          "start": 154.18,
+          "end": 154.8,
+          "word": "Ayanama."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 155.3,
+      "end": 157.7,
+      "text": "Om Shri Pradyam Nayanama.",
+      "words": [
+        {
+          "start": 155.3,
+          "end": 155.96,
+          "word": "Om"
+        },
+        {
+          "start": 155.96,
+          "end": 156.3,
+          "word": "Shri"
+        },
+        {
+          "start": 156.3,
+          "end": 156.96,
+          "word": "Pradyam"
+        },
+        {
+          "start": 156.96,
+          "end": 157.7,
+          "word": "Nayanama."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 174.88,
+      "end": 177.64,
+      "text": "Om Shri Padmanabhaya Nama,",
+      "words": [
+        {
+          "start": 174.88,
+          "end": 175.48,
+          "word": "Om"
+        },
+        {
+          "start": 175.48,
+          "end": 175.82,
+          "word": "Shri"
+        },
+        {
+          "start": 175.82,
+          "end": 177.06,
+          "word": "Padmanabhaya"
+        },
+        {
+          "start": 177.06,
+          "end": 177.64,
+          "word": "Nama,"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 177.76,
+      "end": 180.18,
+      "text": "Om Shri Damodara Nama",
+      "words": [
+        {
+          "start": 177.76,
+          "end": 178.32,
+          "word": "Om"
+        },
+        {
+          "start": 178.32,
+          "end": 178.7,
+          "word": "Shri"
+        },
+        {
+          "start": 178.7,
+          "end": 179.48,
+          "word": "Damodara"
+        },
+        {
+          "start": 179.48,
+          "end": 180.18,
+          "word": "Nama"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 180.18,
+      "end": 182.98,
+      "text": "Om Shri Upendra Nama",
+      "words": [
+        {
+          "start": 180.18,
+          "end": 181.02,
+          "word": "Om"
+        },
+        {
+          "start": 181.02,
+          "end": 181.44,
+          "word": "Shri"
+        },
+        {
+          "start": 181.44,
+          "end": 182.06,
+          "word": "Upendra"
+        },
+        {
+          "start": 182.06,
+          "end": 182.98,
+          "word": "Nama"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "start": 182.98,
+      "end": 185.74,
+      "text": "Om Shri Harayana Nama",
+      "words": [
+        {
+          "start": 182.98,
+          "end": 183.82,
+          "word": "Om"
+        },
+        {
+          "start": 183.82,
+          "end": 184.22,
+          "word": "Shri"
+        },
+        {
+          "start": 184.22,
+          "end": 184.94,
+          "word": "Harayana"
+        },
+        {
+          "start": 184.94,
+          "end": 185.74,
+          "word": "Nama"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "start": 185.74,
+      "end": 188.4,
+      "text": "Om Shri Krishna Nama",
+      "words": [
+        {
+          "start": 185.74,
+          "end": 186.48,
+          "word": "Om"
+        },
+        {
+          "start": 186.48,
+          "end": 186.92,
+          "word": "Shri"
+        },
+        {
+          "start": 186.92,
+          "end": 187.36,
+          "word": "Krishna"
+        },
+        {
+          "start": 187.36,
+          "end": 188.4,
+          "word": "Nama"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 188.4,
+      "end": 191.14,
+      "text": "Sahakshat Shri Adi Shakti Bhagwati",
+      "words": [
+        {
+          "start": 188.4,
+          "end": 189.42,
+          "word": "Sahakshat"
+        },
+        {
+          "start": 189.42,
+          "end": 189.7,
+          "word": "Shri"
+        },
+        {
+          "start": 189.7,
+          "end": 190.04,
+          "word": "Adi"
+        },
+        {
+          "start": 190.04,
+          "end": 190.46,
+          "word": "Shakti"
+        },
+        {
+          "start": 190.46,
+          "end": 191.14,
+          "word": "Bhagwati"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 191.14,
+      "end": 193.4,
+      "text": "Mataji Shri Nirmala Devi",
+      "words": [
+        {
+          "start": 191.14,
+          "end": 191.9,
+          "word": "Mataji"
+        },
+        {
+          "start": 191.9,
+          "end": 192.26,
+          "word": "Shri"
+        },
+        {
+          "start": 192.26,
+          "end": 192.78,
+          "word": "Nirmala"
+        },
+        {
+          "start": 192.78,
+          "end": 193.4,
+          "word": "Devi"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "start": 193.4,
+      "end": 194.82,
+      "text": "Namoh Lala",
+      "words": [
+        {
+          "start": 193.4,
+          "end": 194.48,
+          "word": "Namoh"
+        },
+        {
+          "start": 194.48,
+          "end": 194.82,
+          "word": "Lala"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "start": 194.82,
+      "end": 197.86,
+      "text": "Why these twenty-one names are taken?",
+      "words": [
+        {
+          "start": 194.82,
+          "end": 195.46,
+          "word": "Why"
+        },
+        {
+          "start": 195.46,
+          "end": 196.04,
+          "word": "these"
+        },
+        {
+          "start": 196.04,
+          "end": 196.4,
+          "word": "twenty"
+        },
+        {
+          "start": 196.4,
+          "end": 196.52,
+          "word": "-one"
+        },
+        {
+          "start": 196.52,
+          "end": 196.94,
+          "word": "names"
+        },
+        {
+          "start": 196.94,
+          "end": 197.38,
+          "word": "are"
+        },
+        {
+          "start": 197.38,
+          "end": 197.86,
+          "word": "taken?"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "start": 199.38,
+      "end": 201.02,
+      "text": "Before every puja.",
+      "words": [
+        {
+          "start": 199.38,
+          "end": 199.86,
+          "word": "Before"
+        },
+        {
+          "start": 199.86,
+          "end": 200.34,
+          "word": "every"
+        },
+        {
+          "start": 200.34,
+          "end": 201.02,
+          "word": "puja."
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "start": 202.64,
+      "end": 205.79,
+      "text": "Even before the real innovation of it",
+      "words": [
+        {
+          "start": 202.64,
+          "end": 202.86,
+          "word": "Even"
+        },
+        {
+          "start": 202.86,
+          "end": 203.34,
+          "word": "before"
+        },
+        {
+          "start": 203.34,
+          "end": 204.4,
+          "word": "the"
+        },
+        {
+          "start": 204.69,
+          "end": 204.85,
+          "word": "real"
+        },
+        {
+          "start": 204.85,
+          "end": 205.37,
+          "word": "innovation"
+        },
+        {
+          "start": 205.37,
+          "end": 205.59,
+          "word": "of"
+        },
+        {
+          "start": 205.59,
+          "end": 205.79,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "start": 205.79,
+      "end": 210.82,
+      "text": "First, you have to worship Shri Ganesha.",
+      "words": [
+        {
+          "start": 205.79,
+          "end": 206.33,
+          "word": "First,"
+        },
+        {
+          "start": 207.63,
+          "end": 207.75,
+          "word": "you"
+        },
+        {
+          "start": 207.75,
+          "end": 207.99,
+          "word": "have"
+        },
+        {
+          "start": 207.99,
+          "end": 208.81,
+          "word": "to"
+        },
+        {
+          "start": 208.81,
+          "end": 209.23,
+          "word": "worship"
+        },
+        {
+          "start": 209.48,
+          "end": 210.42,
+          "word": "Shri"
+        },
+        {
+          "start": 210.42,
+          "end": 210.82,
+          "word": "Ganesha."
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "start": 210.92,
+      "end": 214.7,
+      "text": "But even before worshipping why these names are taken",
+      "words": [
+        {
+          "start": 210.92,
+          "end": 211.26,
+          "word": "But"
+        },
+        {
+          "start": 211.26,
+          "end": 211.5,
+          "word": "even"
+        },
+        {
+          "start": 211.5,
+          "end": 211.86,
+          "word": "before"
+        },
+        {
+          "start": 211.86,
+          "end": 212.64,
+          "word": "worshipping"
+        },
+        {
+          "start": 212.84,
+          "end": 213.68,
+          "word": "why"
+        },
+        {
+          "start": 213.68,
+          "end": 213.96,
+          "word": "these"
+        },
+        {
+          "start": 213.96,
+          "end": 214.18,
+          "word": "names"
+        },
+        {
+          "start": 214.18,
+          "end": 214.44,
+          "word": "are"
+        },
+        {
+          "start": 214.44,
+          "end": 214.7,
+          "word": "taken"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "start": 214.7,
+      "end": 217.32,
+      "text": "is important understand everything has a why",
+      "words": [
+        {
+          "start": 214.7,
+          "end": 214.92,
+          "word": "is"
+        },
+        {
+          "start": 214.92,
+          "end": 215.36,
+          "word": "important"
+        },
+        {
+          "start": 215.36,
+          "end": 215.86,
+          "word": "understand"
+        },
+        {
+          "start": 215.86,
+          "end": 216.44,
+          "word": "everything"
+        },
+        {
+          "start": 216.44,
+          "end": 216.8,
+          "word": "has"
+        },
+        {
+          "start": 216.8,
+          "end": 216.94,
+          "word": "a"
+        },
+        {
+          "start": 216.94,
+          "end": 217.32,
+          "word": "why"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "start": 218.38,
+      "end": 227.22,
+      "text": "because there's the twenty-one channels within your Sushumna",
+      "words": [
+        {
+          "start": 218.38,
+          "end": 218.82,
+          "word": "because"
+        },
+        {
+          "start": 218.82,
+          "end": 219.18,
+          "word": "there's"
+        },
+        {
+          "start": 219.18,
+          "end": 219.44,
+          "word": "the"
+        },
+        {
+          "start": 219.44,
+          "end": 220.0,
+          "word": "twenty"
+        },
+        {
+          "start": 220.0,
+          "end": 220.86,
+          "word": "-one"
+        },
+        {
+          "start": 221.15,
+          "end": 221.93,
+          "word": "channels"
+        },
+        {
+          "start": 221.93,
+          "end": 222.83,
+          "word": "within"
+        },
+        {
+          "start": 222.83,
+          "end": 224.11,
+          "word": "your"
+        },
+        {
+          "start": 226.44,
+          "end": 227.22,
+          "word": "Sushumna"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "start": 228.18,
+      "end": 232.98,
+      "text": "Twenty one channels we should say in this complete",
+      "words": [
+        {
+          "start": 228.18,
+          "end": 229.12,
+          "word": "Twenty"
+        },
+        {
+          "start": 229.12,
+          "end": 229.36,
+          "word": "one"
+        },
+        {
+          "start": 229.36,
+          "end": 229.94,
+          "word": "channels"
+        },
+        {
+          "start": 229.94,
+          "end": 230.26,
+          "word": "we"
+        },
+        {
+          "start": 230.26,
+          "end": 230.46,
+          "word": "should"
+        },
+        {
+          "start": 230.46,
+          "end": 231.02,
+          "word": "say"
+        },
+        {
+          "start": 231.02,
+          "end": 231.28,
+          "word": "in"
+        },
+        {
+          "start": 231.28,
+          "end": 231.88,
+          "word": "this"
+        },
+        {
+          "start": 231.88,
+          "end": 232.98,
+          "word": "complete"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "start": 232.98,
+      "end": 234.88,
+      "text": "Ida, Pingala and Sushumna Nadi",
+      "words": [
+        {
+          "start": 232.98,
+          "end": 233.62,
+          "word": "Ida,"
+        },
+        {
+          "start": 233.72,
+          "end": 234.02,
+          "word": "Pingala"
+        },
+        {
+          "start": 234.02,
+          "end": 234.16,
+          "word": "and"
+        },
+        {
+          "start": 234.16,
+          "end": 234.62,
+          "word": "Sushumna"
+        },
+        {
+          "start": 234.62,
+          "end": 234.88,
+          "word": "Nadi"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "start": 236.52,
+      "end": 246.44,
+      "text": "So to raise you absolutely,",
+      "words": [
+        {
+          "start": 236.52,
+          "end": 237.46,
+          "word": "So"
+        },
+        {
+          "start": 237.46,
+          "end": 238.36,
+          "word": "to"
+        },
+        {
+          "start": 238.36,
+          "end": 238.76,
+          "word": "raise"
+        },
+        {
+          "start": 238.76,
+          "end": 239.42,
+          "word": "you"
+        },
+        {
+          "start": 245.62,
+          "end": 246.44,
+          "word": "absolutely,"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "start": 246.94,
+      "end": 252.0,
+      "text": "To give the ascent 21 channels in Ida, Pingala and Sushumna.",
+      "words": [
+        {
+          "start": 246.94,
+          "end": 247.14,
+          "word": "To"
+        },
+        {
+          "start": 247.14,
+          "end": 247.38,
+          "word": "give"
+        },
+        {
+          "start": 247.38,
+          "end": 247.72,
+          "word": "the"
+        },
+        {
+          "start": 247.72,
+          "end": 248.46,
+          "word": "ascent"
+        },
+        {
+          "start": 248.98,
+          "end": 249.92,
+          "word": "21"
+        },
+        {
+          "start": 249.92,
+          "end": 250.54,
+          "word": "channels"
+        },
+        {
+          "start": 250.54,
+          "end": 250.92,
+          "word": "in"
+        },
+        {
+          "start": 250.92,
+          "end": 251.24,
+          "word": "Ida,"
+        },
+        {
+          "start": 251.36,
+          "end": 251.62,
+          "word": "Pingala"
+        },
+        {
+          "start": 251.62,
+          "end": 251.74,
+          "word": "and"
+        },
+        {
+          "start": 251.74,
+          "end": 252.0,
+          "word": "Sushumna."
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "start": 253.26,
+      "end": 255.2,
+      "text": "so one would say seven-channels",
+      "words": [
+        {
+          "start": 253.26,
+          "end": 253.6,
+          "word": "so"
+        },
+        {
+          "start": 253.6,
+          "end": 253.76,
+          "word": "one"
+        },
+        {
+          "start": 253.76,
+          "end": 254.02,
+          "word": "would"
+        },
+        {
+          "start": 254.02,
+          "end": 254.16,
+          "word": "say"
+        },
+        {
+          "start": 254.16,
+          "end": 254.5,
+          "word": "seven"
+        },
+        {
+          "start": 254.5,
+          "end": 255.2,
+          "word": "-channels"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "start": 255.2,
+      "end": 256.18,
+      "text": "In this Sushumnani",
+      "words": [
+        {
+          "start": 255.2,
+          "end": 255.48,
+          "word": "In"
+        },
+        {
+          "start": 255.48,
+          "end": 255.66,
+          "word": "this"
+        },
+        {
+          "start": 255.66,
+          "end": 256.18,
+          "word": "Sushumnani"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "start": 256.47,
+      "end": 259.63,
+      "text": "but these 7 channels are divided",
+      "words": [
+        {
+          "start": 256.47,
+          "end": 257.37,
+          "word": "but"
+        },
+        {
+          "start": 257.37,
+          "end": 257.77,
+          "word": "these"
+        },
+        {
+          "start": 257.77,
+          "end": 258.07,
+          "word": "7"
+        },
+        {
+          "start": 258.07,
+          "end": 258.47,
+          "word": "channels"
+        },
+        {
+          "start": 258.47,
+          "end": 258.77,
+          "word": "are"
+        },
+        {
+          "start": 258.77,
+          "end": 259.63,
+          "word": "divided"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "start": 259.63,
+      "end": 260.99,
+      "text": "multiplied by",
+      "words": [
+        {
+          "start": 259.63,
+          "end": 260.49,
+          "word": "multiplied"
+        },
+        {
+          "start": 260.49,
+          "end": 260.99,
+          "word": "by"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "start": 262.02,
+      "end": 264.57,
+      "text": "7 into 3",
+      "words": [
+        {
+          "start": 262.02,
+          "end": 262.38,
+          "word": "7"
+        },
+        {
+          "start": 262.89,
+          "end": 263.99,
+          "word": "into"
+        },
+        {
+          "start": 263.99,
+          "end": 264.57,
+          "word": "3"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "start": 265.85,
+      "end": 270.03,
+      "text": "Every channel has got 21 channels",
+      "words": [
+        {
+          "start": 265.85,
+          "end": 267.43,
+          "word": "Every"
+        },
+        {
+          "start": 267.43,
+          "end": 267.97,
+          "word": "channel"
+        },
+        {
+          "start": 267.97,
+          "end": 268.69,
+          "word": "has"
+        },
+        {
+          "start": 268.69,
+          "end": 269.01,
+          "word": "got"
+        },
+        {
+          "start": 269.01,
+          "end": 269.39,
+          "word": "21"
+        },
+        {
+          "start": 269.39,
+          "end": 270.03,
+          "word": "channels"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "start": 274.86,
+      "end": 276.52,
+      "text": "so Sushumnanari",
+      "words": [
+        {
+          "start": 274.86,
+          "end": 275.6,
+          "word": "so"
+        },
+        {
+          "start": 275.6,
+          "end": 276.52,
+          "word": "Sushumnanari"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "start": 276.52,
+      "end": 279.5,
+      "text": "Has also got 21 channels",
+      "words": [
+        {
+          "start": 276.52,
+          "end": 277.02,
+          "word": "Has"
+        },
+        {
+          "start": 277.02,
+          "end": 278.34,
+          "word": "also"
+        },
+        {
+          "start": 278.34,
+          "end": 278.34,
+          "word": "got"
+        },
+        {
+          "start": 278.34,
+          "end": 278.94,
+          "word": "21"
+        },
+        {
+          "start": 278.94,
+          "end": 279.5,
+          "word": "channels"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "start": 281.52,
+      "end": 286.94,
+      "text": "Left-hand side nadis are as you know that, perhaps I don't know if You know the names.",
+      "words": [
+        {
+          "start": 281.52,
+          "end": 282.72,
+          "word": "Left"
+        },
+        {
+          "start": 282.72,
+          "end": 282.98,
+          "word": "-hand"
+        },
+        {
+          "start": 282.98,
+          "end": 283.32,
+          "word": "side"
+        },
+        {
+          "start": 283.32,
+          "end": 283.72,
+          "word": "nadis"
+        },
+        {
+          "start": 283.72,
+          "end": 283.98,
+          "word": "are"
+        },
+        {
+          "start": 283.98,
+          "end": 284.2,
+          "word": "as"
+        },
+        {
+          "start": 284.2,
+          "end": 284.36,
+          "word": "you"
+        },
+        {
+          "start": 284.36,
+          "end": 284.54,
+          "word": "know"
+        },
+        {
+          "start": 284.54,
+          "end": 284.86,
+          "word": "that,"
+        },
+        {
+          "start": 285.0,
+          "end": 285.3,
+          "word": "perhaps"
+        },
+        {
+          "start": 285.3,
+          "end": 285.82,
+          "word": "I"
+        },
+        {
+          "start": 285.82,
+          "end": 286.0,
+          "word": "don't"
+        },
+        {
+          "start": 286.0,
+          "end": 286.18,
+          "word": "know"
+        },
+        {
+          "start": 286.18,
+          "end": 286.26,
+          "word": "if"
+        },
+        {
+          "start": 286.26,
+          "end": 286.4,
+          "word": "You"
+        },
+        {
+          "start": 286.4,
+          "end": 286.5,
+          "word": "know"
+        },
+        {
+          "start": 286.5,
+          "end": 286.66,
+          "word": "the"
+        },
+        {
+          "start": 286.66,
+          "end": 286.94,
+          "word": "names."
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "start": 289.15,
+      "end": 294.84,
+      "text": "And right hand sides also like Gayatri Parvati and all these",
+      "words": [
+        {
+          "start": 289.15,
+          "end": 289.41,
+          "word": "And"
+        },
+        {
+          "start": 289.41,
+          "end": 289.65,
+          "word": "right"
+        },
+        {
+          "start": 289.65,
+          "end": 289.95,
+          "word": "hand"
+        },
+        {
+          "start": 289.95,
+          "end": 290.19,
+          "word": "sides"
+        },
+        {
+          "start": 290.19,
+          "end": 290.55,
+          "word": "also"
+        },
+        {
+          "start": 290.55,
+          "end": 290.89,
+          "word": "like"
+        },
+        {
+          "start": 290.89,
+          "end": 291.71,
+          "word": "Gayatri"
+        },
+        {
+          "start": 292.7,
+          "end": 294.32,
+          "word": "Parvati"
+        },
+        {
+          "start": 294.32,
+          "end": 294.54,
+          "word": "and"
+        },
+        {
+          "start": 294.54,
+          "end": 294.68,
+          "word": "all"
+        },
+        {
+          "start": 294.68,
+          "end": 294.84,
+          "word": "these"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "start": 294.84,
+      "end": 295.98,
+      "text": "Are on Right Hand Side",
+      "words": [
+        {
+          "start": 294.84,
+          "end": 294.98,
+          "word": "Are"
+        },
+        {
+          "start": 294.98,
+          "end": 295.16,
+          "word": "on"
+        },
+        {
+          "start": 295.16,
+          "end": 295.38,
+          "word": "Right"
+        },
+        {
+          "start": 295.38,
+          "end": 295.64,
+          "word": "Hand"
+        },
+        {
+          "start": 295.64,
+          "end": 295.98,
+          "word": "Side"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "start": 298.7,
+      "end": 303.68,
+      "text": "The left ones are called as Chamundi",
+      "words": [
+        {
+          "start": 298.7,
+          "end": 299.3,
+          "word": "The"
+        },
+        {
+          "start": 299.56,
+          "end": 299.98,
+          "word": "left"
+        },
+        {
+          "start": 299.98,
+          "end": 300.6,
+          "word": "ones"
+        },
+        {
+          "start": 300.6,
+          "end": 301.06,
+          "word": "are"
+        },
+        {
+          "start": 301.06,
+          "end": 301.7,
+          "word": "called"
+        },
+        {
+          "start": 301.7,
+          "end": 302.86,
+          "word": "as"
+        },
+        {
+          "start": 302.86,
+          "end": 303.68,
+          "word": "Chamundi"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "start": 305.36,
+      "end": 308.98,
+      "text": "All this is left sided things there 7 of them",
+      "words": [
+        {
+          "start": 305.36,
+          "end": 305.96,
+          "word": "All"
+        },
+        {
+          "start": 305.96,
+          "end": 306.56,
+          "word": "this"
+        },
+        {
+          "start": 306.56,
+          "end": 306.78,
+          "word": "is"
+        },
+        {
+          "start": 306.78,
+          "end": 306.84,
+          "word": "left"
+        },
+        {
+          "start": 306.84,
+          "end": 307.14,
+          "word": "sided"
+        },
+        {
+          "start": 307.14,
+          "end": 307.48,
+          "word": "things"
+        },
+        {
+          "start": 307.48,
+          "end": 307.68,
+          "word": "there"
+        },
+        {
+          "start": 307.68,
+          "end": 308.1,
+          "word": "7"
+        },
+        {
+          "start": 308.1,
+          "end": 308.34,
+          "word": "of"
+        },
+        {
+          "start": 308.34,
+          "end": 308.98,
+          "word": "them"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "start": 313.5,
+      "end": 316.96,
+      "text": "Now the central path has got 21 channels",
+      "words": [
+        {
+          "start": 313.5,
+          "end": 314.1,
+          "word": "Now"
+        },
+        {
+          "start": 314.1,
+          "end": 314.7,
+          "word": "the"
+        },
+        {
+          "start": 314.7,
+          "end": 315.0,
+          "word": "central"
+        },
+        {
+          "start": 315.0,
+          "end": 315.34,
+          "word": "path"
+        },
+        {
+          "start": 315.34,
+          "end": 315.58,
+          "word": "has"
+        },
+        {
+          "start": 315.58,
+          "end": 315.84,
+          "word": "got"
+        },
+        {
+          "start": 315.84,
+          "end": 316.3,
+          "word": "21"
+        },
+        {
+          "start": 316.3,
+          "end": 316.96,
+          "word": "channels"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "start": 316.96,
+      "end": 319.8,
+      "text": "and has got twenty-one powers.",
+      "words": [
+        {
+          "start": 316.96,
+          "end": 317.58,
+          "word": "and"
+        },
+        {
+          "start": 317.58,
+          "end": 317.86,
+          "word": "has"
+        },
+        {
+          "start": 317.86,
+          "end": 318.52,
+          "word": "got"
+        },
+        {
+          "start": 318.52,
+          "end": 319.1,
+          "word": "twenty"
+        },
+        {
+          "start": 319.1,
+          "end": 319.36,
+          "word": "-one"
+        },
+        {
+          "start": 319.36,
+          "end": 319.8,
+          "word": "powers."
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "start": 321.03,
+      "end": 323.71,
+      "text": "And their deities are named",
+      "words": [
+        {
+          "start": 321.03,
+          "end": 321.31,
+          "word": "And"
+        },
+        {
+          "start": 321.31,
+          "end": 321.59,
+          "word": "their"
+        },
+        {
+          "start": 321.59,
+          "end": 321.97,
+          "word": "deities"
+        },
+        {
+          "start": 321.97,
+          "end": 323.13,
+          "word": "are"
+        },
+        {
+          "start": 323.13,
+          "end": 323.71,
+          "word": "named"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "start": 326.56,
+      "end": 330.94,
+      "text": "according to the 21 aspects of Shri Vishnu",
+      "words": [
+        {
+          "start": 326.56,
+          "end": 327.74,
+          "word": "according"
+        },
+        {
+          "start": 327.74,
+          "end": 328.0,
+          "word": "to"
+        },
+        {
+          "start": 328.0,
+          "end": 328.22,
+          "word": "the"
+        },
+        {
+          "start": 328.22,
+          "end": 328.72,
+          "word": "21"
+        },
+        {
+          "start": 328.72,
+          "end": 329.54,
+          "word": "aspects"
+        },
+        {
+          "start": 329.54,
+          "end": 330.1,
+          "word": "of"
+        },
+        {
+          "start": 330.1,
+          "end": 330.34,
+          "word": "Shri"
+        },
+        {
+          "start": 330.34,
+          "end": 330.94,
+          "word": "Vishnu"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "start": 331.77,
+      "end": 337.28,
+      "text": "–and that's why these 21 aspect sare first said",
+      "words": [
+        {
+          "start": 331.77,
+          "end": 332.31,
+          "word": "–and"
+        },
+        {
+          "start": 332.31,
+          "end": 332.57,
+          "word": "that's"
+        },
+        {
+          "start": 332.57,
+          "end": 332.75,
+          "word": "why"
+        },
+        {
+          "start": 332.75,
+          "end": 333.09,
+          "word": "these"
+        },
+        {
+          "start": 333.09,
+          "end": 333.51,
+          "word": "21"
+        },
+        {
+          "start": 333.51,
+          "end": 333.99,
+          "word": "aspect"
+        },
+        {
+          "start": 333.99,
+          "end": 334.25,
+          "word": "sare"
+        },
+        {
+          "start": 334.25,
+          "end": 335.19,
+          "word": "first"
+        },
+        {
+          "start": 336.66,
+          "end": 337.28,
+          "word": "said"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "start": 337.38,
+      "end": 340.94,
+      "text": "so, within you all this 21 channels",
+      "words": [
+        {
+          "start": 337.38,
+          "end": 338.3,
+          "word": "so,"
+        },
+        {
+          "start": 338.4,
+          "end": 338.86,
+          "word": "within"
+        },
+        {
+          "start": 338.86,
+          "end": 339.36,
+          "word": "you"
+        },
+        {
+          "start": 339.36,
+          "end": 339.8,
+          "word": "all"
+        },
+        {
+          "start": 339.8,
+          "end": 340.08,
+          "word": "this"
+        },
+        {
+          "start": 340.08,
+          "end": 340.54,
+          "word": "21"
+        },
+        {
+          "start": 340.54,
+          "end": 340.94,
+          "word": "channels"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "start": 340.94,
+      "end": 343.24,
+      "text": "are awakened —within You—first off all!",
+      "words": [
+        {
+          "start": 340.94,
+          "end": 341.34,
+          "word": "are"
+        },
+        {
+          "start": 341.34,
+          "end": 341.6,
+          "word": "awakened"
+        },
+        {
+          "start": 341.6,
+          "end": 341.98,
+          "word": "—within"
+        },
+        {
+          "start": 341.98,
+          "end": 342.56,
+          "word": "You—first"
+        },
+        {
+          "start": 342.56,
+          "end": 342.74,
+          "word": "off"
+        },
+        {
+          "start": 342.74,
+          "end": 343.24,
+          "word": "all!"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "start": 345.1,
+      "end": 346.42,
+      "text": "Pooja is a double thing",
+      "words": [
+        {
+          "start": 345.1,
+          "end": 345.3,
+          "word": "Pooja"
+        },
+        {
+          "start": 345.3,
+          "end": 345.52,
+          "word": "is"
+        },
+        {
+          "start": 345.52,
+          "end": 345.64,
+          "word": "a"
+        },
+        {
+          "start": 345.64,
+          "end": 345.86,
+          "word": "double"
+        },
+        {
+          "start": 345.86,
+          "end": 346.42,
+          "word": "thing"
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "start": 347.09,
+      "end": 350.27,
+      "text": "That cup hs to be made",
+      "words": [
+        {
+          "start": 347.09,
+          "end": 347.95,
+          "word": "That"
+        },
+        {
+          "start": 347.95,
+          "end": 349.33,
+          "word": "cup"
+        },
+        {
+          "start": 349.33,
+          "end": 349.59,
+          "word": "hs"
+        },
+        {
+          "start": 349.59,
+          "end": 349.69,
+          "word": "to"
+        },
+        {
+          "start": 349.69,
+          "end": 349.89,
+          "word": "be"
+        },
+        {
+          "start": 349.89,
+          "end": 350.27,
+          "word": "made"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "start": 351.68,
+      "end": 355.78,
+      "text": "And then this source has to be opened up.",
+      "words": [
+        {
+          "start": 351.68,
+          "end": 352.6,
+          "word": "And"
+        },
+        {
+          "start": 352.6,
+          "end": 353.48,
+          "word": "then"
+        },
+        {
+          "start": 353.54,
+          "end": 354.56,
+          "word": "this"
+        },
+        {
+          "start": 354.56,
+          "end": 354.78,
+          "word": "source"
+        },
+        {
+          "start": 354.78,
+          "end": 355.04,
+          "word": "has"
+        },
+        {
+          "start": 355.04,
+          "end": 355.18,
+          "word": "to"
+        },
+        {
+          "start": 355.18,
+          "end": 355.38,
+          "word": "be"
+        },
+        {
+          "start": 355.38,
+          "end": 355.56,
+          "word": "opened"
+        },
+        {
+          "start": 355.56,
+          "end": 355.78,
+          "word": "up."
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "start": 357.54,
+      "end": 358.52,
+      "text": "So you are the cup,",
+      "words": [
+        {
+          "start": 357.54,
+          "end": 357.72,
+          "word": "So"
+        },
+        {
+          "start": 357.72,
+          "end": 357.9,
+          "word": "you"
+        },
+        {
+          "start": 357.9,
+          "end": 358.02,
+          "word": "are"
+        },
+        {
+          "start": 358.02,
+          "end": 358.24,
+          "word": "the"
+        },
+        {
+          "start": 358.24,
+          "end": 358.52,
+          "word": "cup,"
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "start": 360.03,
+      "end": 364.09,
+      "text": "The Sushumna is channel which you have by which you suck it",
+      "words": [
+        {
+          "start": 360.03,
+          "end": 360.19,
+          "word": "The"
+        },
+        {
+          "start": 360.19,
+          "end": 360.63,
+          "word": "Sushumna"
+        },
+        {
+          "start": 360.63,
+          "end": 360.91,
+          "word": "is"
+        },
+        {
+          "start": 361.29,
+          "end": 362.57,
+          "word": "channel"
+        },
+        {
+          "start": 362.57,
+          "end": 362.85,
+          "word": "which"
+        },
+        {
+          "start": 362.85,
+          "end": 362.85,
+          "word": "you"
+        },
+        {
+          "start": 362.85,
+          "end": 362.99,
+          "word": "have"
+        },
+        {
+          "start": 362.99,
+          "end": 363.25,
+          "word": "by"
+        },
+        {
+          "start": 363.25,
+          "end": 363.45,
+          "word": "which"
+        },
+        {
+          "start": 363.45,
+          "end": 363.61,
+          "word": "you"
+        },
+        {
+          "start": 363.61,
+          "end": 363.83,
+          "word": "suck"
+        },
+        {
+          "start": 363.83,
+          "end": 364.09,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "start": 364.7,
+      "end": 367.88,
+      "text": "so that when open your Sushamnath these twenty-one names are said",
+      "words": [
+        {
+          "start": 364.7,
+          "end": 365.22,
+          "word": "so"
+        },
+        {
+          "start": 365.22,
+          "end": 365.44,
+          "word": "that"
+        },
+        {
+          "start": 365.44,
+          "end": 365.76,
+          "word": "when"
+        },
+        {
+          "start": 365.76,
+          "end": 365.86,
+          "word": "open"
+        },
+        {
+          "start": 365.86,
+          "end": 366.04,
+          "word": "your"
+        },
+        {
+          "start": 366.04,
+          "end": 366.52,
+          "word": "Sushamnath"
+        },
+        {
+          "start": 366.52,
+          "end": 366.76,
+          "word": "these"
+        },
+        {
+          "start": 366.76,
+          "end": 367.04,
+          "word": "twenty"
+        },
+        {
+          "start": 367.04,
+          "end": 367.12,
+          "word": "-one"
+        },
+        {
+          "start": 367.12,
+          "end": 367.34,
+          "word": "names"
+        },
+        {
+          "start": 367.34,
+          "end": 367.66,
+          "word": "are"
+        },
+        {
+          "start": 367.66,
+          "end": 367.88,
+          "word": "said"
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "start": 370.34,
+      "end": 373.12,
+      "text": "Now why first Shri Ganesha?",
+      "words": [
+        {
+          "start": 370.34,
+          "end": 371.2,
+          "word": "Now"
+        },
+        {
+          "start": 371.2,
+          "end": 372.08,
+          "word": "why"
+        },
+        {
+          "start": 372.08,
+          "end": 372.44,
+          "word": "first"
+        },
+        {
+          "start": 372.44,
+          "end": 372.6,
+          "word": "Shri"
+        },
+        {
+          "start": 372.6,
+          "end": 373.12,
+          "word": "Ganesha?"
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "start": 375.07,
+      "end": 377.87,
+      "text": "Because Shri Ganesa was beginning of desire",
+      "words": [
+        {
+          "start": 375.07,
+          "end": 375.59,
+          "word": "Because"
+        },
+        {
+          "start": 375.59,
+          "end": 375.93,
+          "word": "Shri"
+        },
+        {
+          "start": 375.93,
+          "end": 376.33,
+          "word": "Ganesa"
+        },
+        {
+          "start": 376.33,
+          "end": 376.61,
+          "word": "was"
+        },
+        {
+          "start": 376.61,
+          "end": 377.01,
+          "word": "beginning"
+        },
+        {
+          "start": 377.01,
+          "end": 377.29,
+          "word": "of"
+        },
+        {
+          "start": 377.29,
+          "end": 377.87,
+          "word": "desire"
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "start": 378.57,
+      "end": 380.45,
+      "text": "and end of desires",
+      "words": [
+        {
+          "start": 378.57,
+          "end": 379.49,
+          "word": "and"
+        },
+        {
+          "start": 379.49,
+          "end": 379.87,
+          "word": "end"
+        },
+        {
+          "start": 379.87,
+          "end": 380.07,
+          "word": "of"
+        },
+        {
+          "start": 380.07,
+          "end": 380.45,
+          "word": "desires"
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "start": 381.6,
+      "end": 384.02,
+      "text": "You start with Ganesh and ended up in Ganeshas",
+      "words": [
+        {
+          "start": 381.6,
+          "end": 382.14,
+          "word": "You"
+        },
+        {
+          "start": 382.14,
+          "end": 382.44,
+          "word": "start"
+        },
+        {
+          "start": 382.44,
+          "end": 382.62,
+          "word": "with"
+        },
+        {
+          "start": 382.62,
+          "end": 382.98,
+          "word": "Ganesh"
+        },
+        {
+          "start": 382.98,
+          "end": 383.08,
+          "word": "and"
+        },
+        {
+          "start": 383.08,
+          "end": 383.32,
+          "word": "ended"
+        },
+        {
+          "start": 383.32,
+          "end": 383.52,
+          "word": "up"
+        },
+        {
+          "start": 383.52,
+          "end": 383.54,
+          "word": "in"
+        },
+        {
+          "start": 383.54,
+          "end": 384.02,
+          "word": "Ganeshas"
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "start": 385.11,
+      "end": 386.95,
+      "text": "That's where Shri Ganesas worshiped",
+      "words": [
+        {
+          "start": 385.11,
+          "end": 385.63,
+          "word": "That's"
+        },
+        {
+          "start": 385.63,
+          "end": 385.75,
+          "word": "where"
+        },
+        {
+          "start": 385.75,
+          "end": 386.01,
+          "word": "Shri"
+        },
+        {
+          "start": 386.01,
+          "end": 386.49,
+          "word": "Ganesas"
+        },
+        {
+          "start": 386.49,
+          "end": 386.95,
+          "word": "worshiped"
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "start": 387.65,
+      "end": 389.21,
+      "text": "It's other way round now, the Source",
+      "words": [
+        {
+          "start": 387.65,
+          "end": 387.83,
+          "word": "It's"
+        },
+        {
+          "start": 387.83,
+          "end": 387.99,
+          "word": "other"
+        },
+        {
+          "start": 387.99,
+          "end": 388.19,
+          "word": "way"
+        },
+        {
+          "start": 388.19,
+          "end": 388.41,
+          "word": "round"
+        },
+        {
+          "start": 388.41,
+          "end": 388.63,
+          "word": "now,"
+        },
+        {
+          "start": 388.71,
+          "end": 388.87,
+          "word": "the"
+        },
+        {
+          "start": 388.87,
+          "end": 389.21,
+          "word": "Source"
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "start": 390.74,
+      "end": 394.16,
+      "text": "When you direct your attention to the source,",
+      "words": [
+        {
+          "start": 390.74,
+          "end": 391.76,
+          "word": "When"
+        },
+        {
+          "start": 391.76,
+          "end": 392.56,
+          "word": "you"
+        },
+        {
+          "start": 392.56,
+          "end": 392.94,
+          "word": "direct"
+        },
+        {
+          "start": 392.94,
+          "end": 393.2,
+          "word": "your"
+        },
+        {
+          "start": 393.2,
+          "end": 393.56,
+          "word": "attention"
+        },
+        {
+          "start": 393.56,
+          "end": 393.76,
+          "word": "to"
+        },
+        {
+          "start": 393.76,
+          "end": 393.94,
+          "word": "the"
+        },
+        {
+          "start": 393.94,
+          "end": 394.16,
+          "word": "source,"
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "start": 394.2,
+      "end": 396.35,
+      "text": "You worship it and when",
+      "words": [
+        {
+          "start": 394.2,
+          "end": 394.36,
+          "word": "You"
+        },
+        {
+          "start": 394.36,
+          "end": 394.68,
+          "word": "worship"
+        },
+        {
+          "start": 394.68,
+          "end": 395.48,
+          "word": "it"
+        },
+        {
+          "start": 395.71,
+          "end": 396.15,
+          "word": "and"
+        },
+        {
+          "start": 396.15,
+          "end": 396.35,
+          "word": "when"
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "start": 396.35,
+      "end": 399.23,
+      "text": "want insight or open out",
+      "words": [
+        {
+          "start": 396.35,
+          "end": 396.75,
+          "word": "want"
+        },
+        {
+          "start": 396.75,
+          "end": 397.61,
+          "word": "insight"
+        },
+        {
+          "start": 397.61,
+          "end": 398.55,
+          "word": "or"
+        },
+        {
+          "start": 398.55,
+          "end": 398.85,
+          "word": "open"
+        },
+        {
+          "start": 398.85,
+          "end": 399.23,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "start": 399.23,
+      "end": 401.24,
+      "text": "Your own being then",
+      "words": [
+        {
+          "start": 399.23,
+          "end": 399.65,
+          "word": "Your"
+        },
+        {
+          "start": 399.65,
+          "end": 400.47,
+          "word": "own"
+        },
+        {
+          "start": 400.47,
+          "end": 400.89,
+          "word": "being"
+        },
+        {
+          "start": 400.89,
+          "end": 401.24,
+          "word": "then"
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "start": 401.92,
+      "end": 402.54,
+      "text": "You chant.",
+      "words": [
+        {
+          "start": 401.92,
+          "end": 402.2,
+          "word": "You"
+        },
+        {
+          "start": 402.2,
+          "end": 402.54,
+          "word": "chant."
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "start": 406.17,
+      "end": 407.77,
+      "text": "This is a difference between",
+      "words": [
+        {
+          "start": 406.17,
+          "end": 406.67,
+          "word": "This"
+        },
+        {
+          "start": 406.67,
+          "end": 406.83,
+          "word": "is"
+        },
+        {
+          "start": 406.83,
+          "end": 406.91,
+          "word": "a"
+        },
+        {
+          "start": 406.91,
+          "end": 407.35,
+          "word": "difference"
+        },
+        {
+          "start": 407.35,
+          "end": 407.77,
+          "word": "between"
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "start": 407.77,
+      "end": 409.11,
+      "text": "Worship & Mantra",
+      "words": [
+        {
+          "start": 407.77,
+          "end": 408.19,
+          "word": "Worship"
+        },
+        {
+          "start": 408.19,
+          "end": 408.55,
+          "word": "&"
+        },
+        {
+          "start": 408.55,
+          "end": 409.11,
+          "word": "Mantra"
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "start": 410.1,
+      "end": 411.54,
+      "text": "If we just say mantra",
+      "words": [
+        {
+          "start": 410.1,
+          "end": 410.62,
+          "word": "If"
+        },
+        {
+          "start": 410.62,
+          "end": 410.84,
+          "word": "we"
+        },
+        {
+          "start": 410.84,
+          "end": 411.04,
+          "word": "just"
+        },
+        {
+          "start": 411.04,
+          "end": 411.2,
+          "word": "say"
+        },
+        {
+          "start": 411.2,
+          "end": 411.54,
+          "word": "mantra"
+        }
+      ]
+    },
+    {
+      "id": 68,
+      "start": 412.42,
+      "end": 413.86,
+      "text": "Open yourself up",
+      "words": [
+        {
+          "start": 412.42,
+          "end": 412.86,
+          "word": "Open"
+        },
+        {
+          "start": 412.86,
+          "end": 413.52,
+          "word": "yourself"
+        },
+        {
+          "start": 413.52,
+          "end": 413.86,
+          "word": "up"
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "start": 415.22,
+      "end": 416.61,
+      "text": "But if you worship",
+      "words": [
+        {
+          "start": 415.22,
+          "end": 415.57,
+          "word": "But"
+        },
+        {
+          "start": 415.57,
+          "end": 415.85,
+          "word": "if"
+        },
+        {
+          "start": 415.85,
+          "end": 416.03,
+          "word": "you"
+        },
+        {
+          "start": 416.03,
+          "end": 416.61,
+          "word": "worship"
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "start": 416.61,
+      "end": 417.65,
+      "text": "And chant",
+      "words": [
+        {
+          "start": 416.61,
+          "end": 417.09,
+          "word": "And"
+        },
+        {
+          "start": 417.09,
+          "end": 417.65,
+          "word": "chant"
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "start": 418.61,
+      "end": 420.42,
+      "text": "Then you tap the source",
+      "words": [
+        {
+          "start": 418.61,
+          "end": 418.96,
+          "word": "Then"
+        },
+        {
+          "start": 418.96,
+          "end": 419.56,
+          "word": "you"
+        },
+        {
+          "start": 419.56,
+          "end": 419.84,
+          "word": "tap"
+        },
+        {
+          "start": 419.84,
+          "end": 420.12,
+          "word": "the"
+        },
+        {
+          "start": 420.12,
+          "end": 420.42,
+          "word": "source"
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "start": 422.5,
+      "end": 423.5,
+      "text": "I don't know",
+      "words": [
+        {
+          "start": 422.5,
+          "end": 423.18,
+          "word": "I"
+        },
+        {
+          "start": 423.18,
+          "end": 423.36,
+          "word": "don't"
+        },
+        {
+          "start": 423.36,
+          "end": 423.5,
+          "word": "know"
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "start": 423.5,
+      "end": 424.54,
+      "text": "Have said this before",
+      "words": [
+        {
+          "start": 423.5,
+          "end": 423.7,
+          "word": "Have"
+        },
+        {
+          "start": 423.7,
+          "end": 423.92,
+          "word": "said"
+        },
+        {
+          "start": 423.92,
+          "end": 424.2,
+          "word": "this"
+        },
+        {
+          "start": 424.2,
+          "end": 424.54,
+          "word": "before"
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "start": 427.07,
+      "end": 428.43,
+      "text": "That's how",
+      "words": [
+        {
+          "start": 427.07,
+          "end": 428.33,
+          "word": "That's"
+        },
+        {
+          "start": 428.33,
+          "end": 428.43,
+          "word": "how"
+        }
+      ]
+    },
+    {
+      "id": 75,
+      "start": 428.43,
+      "end": 429.89,
+      "text": "Understand the Pooja part",
+      "words": [
+        {
+          "start": 428.43,
+          "end": 429.05,
+          "word": "Understand"
+        },
+        {
+          "start": 429.05,
+          "end": 429.29,
+          "word": "the"
+        },
+        {
+          "start": 429.29,
+          "end": 429.59,
+          "word": "Pooja"
+        },
+        {
+          "start": 429.59,
+          "end": 429.89,
+          "word": "part"
+        }
+      ]
+    },
+    {
+      "id": 76,
+      "start": 430.05,
+      "end": 436.35,
+      "text": "Now those who are newcomers, their cup is completely useless.",
+      "words": [
+        {
+          "start": 430.05,
+          "end": 430.83,
+          "word": "Now"
+        },
+        {
+          "start": 430.83,
+          "end": 431.15,
+          "word": "those"
+        },
+        {
+          "start": 431.15,
+          "end": 431.33,
+          "word": "who"
+        },
+        {
+          "start": 431.33,
+          "end": 431.49,
+          "word": "are"
+        },
+        {
+          "start": 431.49,
+          "end": 432.27,
+          "word": "newcomers,"
+        },
+        {
+          "start": 432.33,
+          "end": 433.29,
+          "word": "their"
+        },
+        {
+          "start": 433.29,
+          "end": 433.49,
+          "word": "cup"
+        },
+        {
+          "start": 433.49,
+          "end": 433.71,
+          "word": "is"
+        },
+        {
+          "start": 433.71,
+          "end": 434.59,
+          "word": "completely"
+        },
+        {
+          "start": 435.33,
+          "end": 436.35,
+          "word": "useless."
+        }
+      ]
+    },
+    {
+      "id": 77,
+      "start": 438.39,
+      "end": 441.43,
+      "text": "And when you excite the deities they get busy opening",
+      "words": [
+        {
+          "start": 438.39,
+          "end": 438.71,
+          "word": "And"
+        },
+        {
+          "start": 438.71,
+          "end": 438.89,
+          "word": "when"
+        },
+        {
+          "start": 438.89,
+          "end": 439.13,
+          "word": "you"
+        },
+        {
+          "start": 439.13,
+          "end": 439.49,
+          "word": "excite"
+        },
+        {
+          "start": 439.49,
+          "end": 439.71,
+          "word": "the"
+        },
+        {
+          "start": 439.71,
+          "end": 440.09,
+          "word": "deities"
+        },
+        {
+          "start": 440.09,
+          "end": 440.39,
+          "word": "they"
+        },
+        {
+          "start": 440.39,
+          "end": 440.63,
+          "word": "get"
+        },
+        {
+          "start": 440.63,
+          "end": 441.05,
+          "word": "busy"
+        },
+        {
+          "start": 441.05,
+          "end": 441.43,
+          "word": "opening"
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "start": 442.21,
+      "end": 444.39,
+      "text": "everybody's cups also so it' s a double bow",
+      "words": [
+        {
+          "start": 442.21,
+          "end": 442.69,
+          "word": "everybody's"
+        },
+        {
+          "start": 442.69,
+          "end": 442.83,
+          "word": "cups"
+        },
+        {
+          "start": 442.83,
+          "end": 443.27,
+          "word": "also"
+        },
+        {
+          "start": 443.27,
+          "end": 443.53,
+          "word": "so"
+        },
+        {
+          "start": 443.53,
+          "end": 443.71,
+          "word": "it'"
+        },
+        {
+          "start": 443.79,
+          "end": 443.83,
+          "word": "s"
+        },
+        {
+          "start": 443.83,
+          "end": 443.97,
+          "word": "a"
+        },
+        {
+          "start": 443.97,
+          "end": 444.21,
+          "word": "double"
+        },
+        {
+          "start": 444.21,
+          "end": 444.39,
+          "word": "bow"
+        }
+      ]
+    },
+    {
+      "id": 79,
+      "start": 444.39,
+      "end": 446.83,
+      "text": "but if your cup i ready its very easy to fill in",
+      "words": [
+        {
+          "start": 444.39,
+          "end": 444.73,
+          "word": "but"
+        },
+        {
+          "start": 444.73,
+          "end": 444.99,
+          "word": "if"
+        },
+        {
+          "start": 444.99,
+          "end": 445.13,
+          "word": "your"
+        },
+        {
+          "start": 445.13,
+          "end": 445.27,
+          "word": "cup"
+        },
+        {
+          "start": 445.27,
+          "end": 445.41,
+          "word": "i"
+        },
+        {
+          "start": 445.41,
+          "end": 445.61,
+          "word": "ready"
+        },
+        {
+          "start": 445.61,
+          "end": 445.77,
+          "word": "its"
+        },
+        {
+          "start": 445.77,
+          "end": 445.97,
+          "word": "very"
+        },
+        {
+          "start": 445.97,
+          "end": 446.13,
+          "word": "easy"
+        },
+        {
+          "start": 446.13,
+          "end": 446.33,
+          "word": "to"
+        },
+        {
+          "start": 446.33,
+          "end": 446.45,
+          "word": "fill"
+        },
+        {
+          "start": 446.45,
+          "end": 446.83,
+          "word": "in"
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "start": 451.44,
+      "end": 454.02,
+      "text": "So now these 21 names I think we should take again",
+      "words": [
+        {
+          "start": 451.44,
+          "end": 451.92,
+          "word": "So"
+        },
+        {
+          "start": 451.92,
+          "end": 452.16,
+          "word": "now"
+        },
+        {
+          "start": 452.16,
+          "end": 452.38,
+          "word": "these"
+        },
+        {
+          "start": 452.38,
+          "end": 452.7,
+          "word": "21"
+        },
+        {
+          "start": 452.7,
+          "end": 452.98,
+          "word": "names"
+        },
+        {
+          "start": 452.98,
+          "end": 453.18,
+          "word": "I"
+        },
+        {
+          "start": 453.18,
+          "end": 453.26,
+          "word": "think"
+        },
+        {
+          "start": 453.26,
+          "end": 453.42,
+          "word": "we"
+        },
+        {
+          "start": 453.42,
+          "end": 453.54,
+          "word": "should"
+        },
+        {
+          "start": 453.54,
+          "end": 453.76,
+          "word": "take"
+        },
+        {
+          "start": 453.76,
+          "end": 454.02,
+          "word": "again"
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "start": 454.02,
+      "end": 455.42,
+      "text": "with understanding this better",
+      "words": [
+        {
+          "start": 454.02,
+          "end": 454.22,
+          "word": "with"
+        },
+        {
+          "start": 454.22,
+          "end": 454.78,
+          "word": "understanding"
+        },
+        {
+          "start": 454.78,
+          "end": 455.08,
+          "word": "this"
+        },
+        {
+          "start": 455.08,
+          "end": 455.42,
+          "word": "better"
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "start": 473.87,
+      "end": 485.58,
+      "text": "Om Shri Vishnavena, Om Shri Madhusudana, Om Shri Trivikram, Om Shri Vamana,",
+      "words": [
+        {
+          "start": 473.87,
+          "end": 474.45,
+          "word": "Om"
+        },
+        {
+          "start": 474.45,
+          "end": 474.75,
+          "word": "Shri"
+        },
+        {
+          "start": 474.75,
+          "end": 476.65,
+          "word": "Vishnavena,"
+        },
+        {
+          "start": 476.78,
+          "end": 477.36,
+          "word": "Om"
+        },
+        {
+          "start": 477.36,
+          "end": 477.7,
+          "word": "Shri"
+        },
+        {
+          "start": 477.7,
+          "end": 478.86,
+          "word": "Madhusudana,"
+        },
+        {
+          "start": 479.88,
+          "end": 480.44,
+          "word": "Om"
+        },
+        {
+          "start": 480.44,
+          "end": 480.8,
+          "word": "Shri"
+        },
+        {
+          "start": 480.8,
+          "end": 481.76,
+          "word": "Trivikram,"
+        },
+        {
+          "start": 482.88,
+          "end": 483.46,
+          "word": "Om"
+        },
+        {
+          "start": 483.46,
+          "end": 483.8,
+          "word": "Shri"
+        },
+        {
+          "start": 483.8,
+          "end": 485.58,
+          "word": "Vamana,"
+        }
+      ]
+    },
+    {
+      "id": 83,
+      "start": 485.96,
+      "end": 490.98,
+      "text": "Om Shri Sridharaya, Om Shri Hirshikesha,",
+      "words": [
+        {
+          "start": 485.96,
+          "end": 486.62,
+          "word": "Om"
+        },
+        {
+          "start": 486.62,
+          "end": 486.92,
+          "word": "Shri"
+        },
+        {
+          "start": 486.92,
+          "end": 488.8,
+          "word": "Sridharaya,"
+        },
+        {
+          "start": 488.96,
+          "end": 489.62,
+          "word": "Om"
+        },
+        {
+          "start": 489.62,
+          "end": 489.8,
+          "word": "Shri"
+        },
+        {
+          "start": 489.8,
+          "end": 490.98,
+          "word": "Hirshikesha,"
+        }
+      ]
+    },
+    {
+      "id": 84,
+      "start": 490.98,
+      "end": 505.83,
+      "text": "Om Shri Vasudevaya Nama, Om Shri Pradyumnayana Nama, Om Shri Aniruddhaya Nama , Om Shri Purushottam",
+      "words": [
+        {
+          "start": 490.98,
+          "end": 492.4,
+          "word": "Om"
+        },
+        {
+          "start": 492.66,
+          "end": 492.96,
+          "word": "Shri"
+        },
+        {
+          "start": 493.24,
+          "end": 497.44,
+          "word": "Vasudevaya"
+        },
+        {
+          "start": 497.44,
+          "end": 498.44,
+          "word": "Nama,"
+        },
+        {
+          "start": 499.15,
+          "end": 499.27,
+          "word": "Om"
+        },
+        {
+          "start": 499.27,
+          "end": 499.59,
+          "word": "Shri"
+        },
+        {
+          "start": 499.59,
+          "end": 500.81,
+          "word": "Pradyumnayana"
+        },
+        {
+          "start": 500.81,
+          "end": 501.65,
+          "word": "Nama,"
+        },
+        {
+          "start": 501.91,
+          "end": 502.15,
+          "word": "Om"
+        },
+        {
+          "start": 502.15,
+          "end": 502.37,
+          "word": "Shri"
+        },
+        {
+          "start": 502.37,
+          "end": 503.29,
+          "word": "Aniruddhaya"
+        },
+        {
+          "start": 503.29,
+          "end": 503.97,
+          "word": "Nama"
+        },
+        {
+          "start": 503.97,
+          "end": 504.43,
+          "word": ","
+        },
+        {
+          "start": 504.43,
+          "end": 504.75,
+          "word": "Om"
+        },
+        {
+          "start": 504.75,
+          "end": 504.91,
+          "word": "Shri"
+        },
+        {
+          "start": 504.91,
+          "end": 505.83,
+          "word": "Purushottam"
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "start": 505.83,
+      "end": 514.21,
+      "text": "Nama, Om Shri Adhoksha Jaya Nama, Om Shri Narasimha Nama, Om Shri Achyutta Nama,",
+      "words": [
+        {
+          "start": 505.83,
+          "end": 506.37,
+          "word": "Nama,"
+        },
+        {
+          "start": 507.33,
+          "end": 507.57,
+          "word": "Om"
+        },
+        {
+          "start": 507.57,
+          "end": 507.77,
+          "word": "Shri"
+        },
+        {
+          "start": 507.77,
+          "end": 508.43,
+          "word": "Adhoksha"
+        },
+        {
+          "start": 508.43,
+          "end": 508.77,
+          "word": "Jaya"
+        },
+        {
+          "start": 508.77,
+          "end": 509.23,
+          "word": "Nama,"
+        },
+        {
+          "start": 510.13,
+          "end": 510.33,
+          "word": "Om"
+        },
+        {
+          "start": 510.33,
+          "end": 510.45,
+          "word": "Shri"
+        },
+        {
+          "start": 510.45,
+          "end": 511.51,
+          "word": "Narasimha"
+        },
+        {
+          "start": 511.51,
+          "end": 511.93,
+          "word": "Nama,"
+        },
+        {
+          "start": 512.69,
+          "end": 512.93,
+          "word": "Om"
+        },
+        {
+          "start": 512.93,
+          "end": 513.13,
+          "word": "Shri"
+        },
+        {
+          "start": 513.13,
+          "end": 513.75,
+          "word": "Achyutta"
+        },
+        {
+          "start": 513.75,
+          "end": 514.21,
+          "word": "Nama,"
+        }
+      ]
+    },
+    {
+      "id": 86,
+      "start": 543.39,
+      "end": 548.61,
+      "text": "This is the Gayatri, the right side. It's a right side and these are all the seven centers",
+      "words": [
+        {
+          "start": 543.39,
+          "end": 543.83,
+          "word": "This"
+        },
+        {
+          "start": 543.83,
+          "end": 544.27,
+          "word": "is"
+        },
+        {
+          "start": 544.27,
+          "end": 544.49,
+          "word": "the"
+        },
+        {
+          "start": 544.49,
+          "end": 544.85,
+          "word": "Gayatri,"
+        },
+        {
+          "start": 545.39,
+          "end": 545.65,
+          "word": "the"
+        },
+        {
+          "start": 545.65,
+          "end": 545.97,
+          "word": "right"
+        },
+        {
+          "start": 545.97,
+          "end": 546.11,
+          "word": "side."
+        },
+        {
+          "start": 546.51,
+          "end": 546.67,
+          "word": "It's"
+        },
+        {
+          "start": 546.67,
+          "end": 546.77,
+          "word": "a"
+        },
+        {
+          "start": 546.77,
+          "end": 547.01,
+          "word": "right"
+        },
+        {
+          "start": 547.01,
+          "end": 547.23,
+          "word": "side"
+        },
+        {
+          "start": 547.23,
+          "end": 547.41,
+          "word": "and"
+        },
+        {
+          "start": 547.41,
+          "end": 547.61,
+          "word": "these"
+        },
+        {
+          "start": 547.61,
+          "end": 547.79,
+          "word": "are"
+        },
+        {
+          "start": 547.79,
+          "end": 547.97,
+          "word": "all"
+        },
+        {
+          "start": 547.97,
+          "end": 548.17,
+          "word": "the"
+        },
+        {
+          "start": 548.17,
+          "end": 548.37,
+          "word": "seven"
+        },
+        {
+          "start": 548.37,
+          "end": 548.61,
+          "word": "centers"
+        }
+      ]
+    },
+    {
+      "id": 87,
+      "start": 548.63,
+      "end": 556.12,
+      "text": "on physical level. Pranayama is the same thing, it's called...",
+      "words": [
+        {
+          "start": 548.63,
+          "end": 548.83,
+          "word": "on"
+        },
+        {
+          "start": 548.83,
+          "end": 549.39,
+          "word": "physical"
+        },
+        {
+          "start": 549.39,
+          "end": 549.79,
+          "word": "level."
+        },
+        {
+          "start": 553.92,
+          "end": 554.3,
+          "word": "Pranayama"
+        },
+        {
+          "start": 554.3,
+          "end": 554.44,
+          "word": "is"
+        },
+        {
+          "start": 554.44,
+          "end": 554.6,
+          "word": "the"
+        },
+        {
+          "start": 554.6,
+          "end": 554.84,
+          "word": "same"
+        },
+        {
+          "start": 554.84,
+          "end": 555.08,
+          "word": "thing,"
+        },
+        {
+          "start": 555.26,
+          "end": 555.52,
+          "word": "it's"
+        },
+        {
+          "start": 555.52,
+          "end": 556.12,
+          "word": "called..."
+        }
+      ]
+    },
+    {
+      "id": 88,
+      "start": 556.12,
+      "end": 558.06,
+      "text": "prana'a is right side – this physical side",
+      "words": [
+        {
+          "start": 556.12,
+          "end": 556.32,
+          "word": "prana"
+        },
+        {
+          "start": 556.32,
+          "end": 556.38,
+          "word": "'a"
+        },
+        {
+          "start": 556.38,
+          "end": 556.48,
+          "word": "is"
+        },
+        {
+          "start": 556.48,
+          "end": 556.72,
+          "word": "right"
+        },
+        {
+          "start": 556.72,
+          "end": 556.92,
+          "word": "side"
+        },
+        {
+          "start": 556.92,
+          "end": 557.26,
+          "word": "–"
+        },
+        {
+          "start": 557.26,
+          "end": 557.44,
+          "word": "this"
+        },
+        {
+          "start": 557.44,
+          "end": 557.74,
+          "word": "physical"
+        },
+        {
+          "start": 557.74,
+          "end": 558.06,
+          "word": "side"
+        }
+      ]
+    },
+    {
+      "id": 89,
+      "start": 558.06,
+      "end": 560.1,
+      "text": "you are opening in your Right Side",
+      "words": [
+        {
+          "start": 558.06,
+          "end": 558.84,
+          "word": "you"
+        },
+        {
+          "start": 558.84,
+          "end": 559.02,
+          "word": "are"
+        },
+        {
+          "start": 559.02,
+          "end": 559.38,
+          "word": "opening"
+        },
+        {
+          "start": 559.38,
+          "end": 559.58,
+          "word": "in"
+        },
+        {
+          "start": 559.58,
+          "end": 559.62,
+          "word": "your"
+        },
+        {
+          "start": 559.62,
+          "end": 559.88,
+          "word": "Right"
+        },
+        {
+          "start": 559.88,
+          "end": 560.1,
+          "word": "Side"
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "start": 560.1,
+      "end": 561.84,
+      "text": "You see? This Gayatri mantra we say",
+      "words": [
+        {
+          "start": 560.1,
+          "end": 560.32,
+          "word": "You"
+        },
+        {
+          "start": 560.32,
+          "end": 560.46,
+          "word": "see?"
+        },
+        {
+          "start": 560.52,
+          "end": 560.72,
+          "word": "This"
+        },
+        {
+          "start": 560.72,
+          "end": 561.08,
+          "word": "Gayatri"
+        },
+        {
+          "start": 561.08,
+          "end": 561.4,
+          "word": "mantra"
+        },
+        {
+          "start": 561.4,
+          "end": 561.6,
+          "word": "we"
+        },
+        {
+          "start": 561.6,
+          "end": 561.84,
+          "word": "say"
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "start": 561.84,
+      "end": 563.6,
+      "text": "bhur bhuvah svaha and all these things",
+      "words": [
+        {
+          "start": 561.84,
+          "end": 562.22,
+          "word": "bhur"
+        },
+        {
+          "start": 562.22,
+          "end": 562.56,
+          "word": "bhuvah"
+        },
+        {
+          "start": 562.56,
+          "end": 562.92,
+          "word": "svaha"
+        },
+        {
+          "start": 562.92,
+          "end": 563.08,
+          "word": "and"
+        },
+        {
+          "start": 563.08,
+          "end": 563.22,
+          "word": "all"
+        },
+        {
+          "start": 563.22,
+          "end": 563.38,
+          "word": "these"
+        },
+        {
+          "start": 563.38,
+          "end": 563.6,
+          "word": "things"
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "start": 563.6,
+      "end": 565.32,
+      "text": "And bhur means putri",
+      "words": [
+        {
+          "start": 563.6,
+          "end": 563.74,
+          "word": "And"
+        },
+        {
+          "start": 563.74,
+          "end": 564.18,
+          "word": "bhur"
+        },
+        {
+          "start": 564.18,
+          "end": 564.54,
+          "word": "means"
+        },
+        {
+          "start": 564.54,
+          "end": 565.32,
+          "word": "putri"
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "start": 565.61,
+      "end": 567.13,
+      "text": "Bhuva is antariksha",
+      "words": [
+        {
+          "start": 565.61,
+          "end": 566.25,
+          "word": "Bhuva"
+        },
+        {
+          "start": 566.25,
+          "end": 566.43,
+          "word": "is"
+        },
+        {
+          "start": 566.43,
+          "end": 567.13,
+          "word": "antariksha"
+        }
+      ]
+    },
+    {
+      "id": 94,
+      "start": 567.13,
+      "end": 569.11,
+      "text": "Like that! It´s only centers",
+      "words": [
+        {
+          "start": 567.13,
+          "end": 567.59,
+          "word": "Like"
+        },
+        {
+          "start": 567.59,
+          "end": 567.93,
+          "word": "that!"
+        },
+        {
+          "start": 567.95,
+          "end": 568.21,
+          "word": "It´s"
+        },
+        {
+          "start": 568.21,
+          "end": 568.47,
+          "word": "only"
+        },
+        {
+          "start": 568.47,
+          "end": 569.11,
+          "word": "centers"
+        }
+      ]
+    },
+    {
+      "id": 95,
+      "start": 570.5,
+      "end": 572.04,
+      "text": "Essence of the centers",
+      "words": [
+        {
+          "start": 570.5,
+          "end": 570.98,
+          "word": "Essence"
+        },
+        {
+          "start": 570.98,
+          "end": 571.22,
+          "word": "of"
+        },
+        {
+          "start": 571.22,
+          "end": 571.44,
+          "word": "the"
+        },
+        {
+          "start": 571.44,
+          "end": 572.04,
+          "word": "centers"
+        }
+      ]
+    },
+    {
+      "id": 96,
+      "start": 574.43,
+      "end": 575.39,
+      "text": "Now antarikshya",
+      "words": [
+        {
+          "start": 574.43,
+          "end": 574.91,
+          "word": "Now"
+        },
+        {
+          "start": 574.91,
+          "end": 575.39,
+          "word": "antarikshya"
+        }
+      ]
+    },
+    {
+      "id": 97,
+      "start": 575.39,
+      "end": 576.31,
+      "text": "We will be surprised",
+      "words": [
+        {
+          "start": 575.39,
+          "end": 575.73,
+          "word": "We"
+        },
+        {
+          "start": 575.73,
+          "end": 575.91,
+          "word": "will"
+        },
+        {
+          "start": 575.91,
+          "end": 576.03,
+          "word": "be"
+        },
+        {
+          "start": 576.03,
+          "end": 576.31,
+          "word": "surprised"
+        }
+      ]
+    },
+    {
+      "id": 98,
+      "start": 576.31,
+      "end": 578.73,
+      "text": "That they have the essence of all the antarikshas",
+      "words": [
+        {
+          "start": 576.31,
+          "end": 576.49,
+          "word": "That"
+        },
+        {
+          "start": 576.49,
+          "end": 576.77,
+          "word": "they"
+        },
+        {
+          "start": 576.77,
+          "end": 576.81,
+          "word": "have"
+        },
+        {
+          "start": 576.81,
+          "end": 576.91,
+          "word": "the"
+        },
+        {
+          "start": 576.91,
+          "end": 577.15,
+          "word": "essence"
+        },
+        {
+          "start": 577.15,
+          "end": 577.39,
+          "word": "of"
+        },
+        {
+          "start": 577.39,
+          "end": 577.59,
+          "word": "all"
+        },
+        {
+          "start": 577.59,
+          "end": 577.69,
+          "word": "the"
+        },
+        {
+          "start": 577.69,
+          "end": 578.73,
+          "word": "antarikshas"
+        }
+      ]
+    },
+    {
+      "id": 99,
+      "start": 578.73,
+      "end": 579.75,
+      "text": "Your centers are",
+      "words": [
+        {
+          "start": 578.73,
+          "end": 579.09,
+          "word": "Your"
+        },
+        {
+          "start": 579.09,
+          "end": 579.43,
+          "word": "centers"
+        },
+        {
+          "start": 579.43,
+          "end": 579.75,
+          "word": "are"
+        }
+      ]
+    },
+    {
+      "id": 100,
+      "start": 586.5,
+      "end": 590.12,
+      "text": "Pranavasya Parabrahma Rishi",
+      "words": [
+        {
+          "start": 586.5,
+          "end": 588.34,
+          "word": "Pranavasya"
+        },
+        {
+          "start": 588.34,
+          "end": 589.32,
+          "word": "Parabrahma"
+        },
+        {
+          "start": 589.32,
+          "end": 590.12,
+          "word": "Rishi"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "start": 590.12,
+      "end": 594.14,
+      "text": "Paramatma Devata Devi Gayatri Chanda",
+      "words": [
+        {
+          "start": 590.12,
+          "end": 591.26,
+          "word": "Paramatma"
+        },
+        {
+          "start": 591.26,
+          "end": 592.2,
+          "word": "Devata"
+        },
+        {
+          "start": 592.2,
+          "end": 592.72,
+          "word": "Devi"
+        },
+        {
+          "start": 592.72,
+          "end": 593.5,
+          "word": "Gayatri"
+        },
+        {
+          "start": 593.5,
+          "end": 594.14,
+          "word": "Chanda"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "start": 594.14,
+      "end": 596.92,
+      "text": "Pranayam eviniyoga",
+      "words": [
+        {
+          "start": 594.14,
+          "end": 595.64,
+          "word": "Pranayam"
+        },
+        {
+          "start": 595.64,
+          "end": 596.92,
+          "word": "eviniyoga"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "start": 596.92,
+      "end": 619.18,
+      "text": "You do it only with the one nose, both the noses.",
+      "words": [
+        {
+          "start": 596.92,
+          "end": 597.74,
+          "word": "You"
+        },
+        {
+          "start": 615.56,
+          "end": 615.72,
+          "word": "do"
+        },
+        {
+          "start": 615.72,
+          "end": 615.88,
+          "word": "it"
+        },
+        {
+          "start": 615.88,
+          "end": 616.08,
+          "word": "only"
+        },
+        {
+          "start": 616.08,
+          "end": 616.3,
+          "word": "with"
+        },
+        {
+          "start": 616.3,
+          "end": 616.42,
+          "word": "the"
+        },
+        {
+          "start": 616.42,
+          "end": 616.58,
+          "word": "one"
+        },
+        {
+          "start": 616.58,
+          "end": 617.04,
+          "word": "nose,"
+        },
+        {
+          "start": 618.3,
+          "end": 618.44,
+          "word": "both"
+        },
+        {
+          "start": 618.44,
+          "end": 618.62,
+          "word": "the"
+        },
+        {
+          "start": 618.62,
+          "end": 619.18,
+          "word": "noses."
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "start": 619.36,
+      "end": 621.06,
+      "text": "Prana is right side",
+      "words": [
+        {
+          "start": 619.36,
+          "end": 619.86,
+          "word": "Prana"
+        },
+        {
+          "start": 619.86,
+          "end": 620.4,
+          "word": "is"
+        },
+        {
+          "start": 620.4,
+          "end": 620.7,
+          "word": "right"
+        },
+        {
+          "start": 620.7,
+          "end": 621.06,
+          "word": "side"
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "start": 621.54,
+      "end": 624.9,
+      "text": "pranasakti's righside, manasaktis left-sides",
+      "words": [
+        {
+          "start": 621.54,
+          "end": 622.8,
+          "word": "pranasakti's"
+        },
+        {
+          "start": 622.8,
+          "end": 623.32,
+          "word": "righside,"
+        },
+        {
+          "start": 623.48,
+          "end": 623.94,
+          "word": "manasaktis"
+        },
+        {
+          "start": 623.94,
+          "end": 624.16,
+          "word": "left"
+        },
+        {
+          "start": 624.16,
+          "end": 624.9,
+          "word": "-sides"
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "start": 624.97,
+      "end": 627.15,
+      "text": "so pranasakti you are excited",
+      "words": [
+        {
+          "start": 624.97,
+          "end": 625.59,
+          "word": "so"
+        },
+        {
+          "start": 625.59,
+          "end": 626.39,
+          "word": "pranasakti"
+        },
+        {
+          "start": 626.39,
+          "end": 626.49,
+          "word": "you"
+        },
+        {
+          "start": 626.49,
+          "end": 626.65,
+          "word": "are"
+        },
+        {
+          "start": 626.65,
+          "end": 627.15,
+          "word": "excited"
+        }
+      ]
+    },
+    {
+      "id": 107,
+      "start": 629.23,
+      "end": 632.94,
+      "text": "because this prana is a one",
+      "words": [
+        {
+          "start": 629.23,
+          "end": 631.09,
+          "word": "because"
+        },
+        {
+          "start": 631.22,
+          "end": 631.82,
+          "word": "this"
+        },
+        {
+          "start": 631.82,
+          "end": 632.12,
+          "word": "prana"
+        },
+        {
+          "start": 632.12,
+          "end": 632.32,
+          "word": "is"
+        },
+        {
+          "start": 632.32,
+          "end": 632.5,
+          "word": "a"
+        },
+        {
+          "start": 632.5,
+          "end": 632.94,
+          "word": "one"
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "start": 632.94,
+      "end": 634.68,
+      "text": "which spreads in your body",
+      "words": [
+        {
+          "start": 632.94,
+          "end": 633.66,
+          "word": "which"
+        },
+        {
+          "start": 633.66,
+          "end": 633.86,
+          "word": "spreads"
+        },
+        {
+          "start": 633.86,
+          "end": 634.06,
+          "word": "in"
+        },
+        {
+          "start": 634.06,
+          "end": 634.2,
+          "word": "your"
+        },
+        {
+          "start": 634.2,
+          "end": 634.68,
+          "word": "body"
+        }
+      ]
+    },
+    {
+      "id": 109,
+      "start": 634.68,
+      "end": 636.24,
+      "text": "gives you balance",
+      "words": [
+        {
+          "start": 634.68,
+          "end": 635.32,
+          "word": "gives"
+        },
+        {
+          "start": 635.32,
+          "end": 635.52,
+          "word": "you"
+        },
+        {
+          "start": 635.52,
+          "end": 636.24,
+          "word": "balance"
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "start": 636.24,
+      "end": 638.5,
+      "text": "which takes in and gives out.",
+      "words": [
+        {
+          "start": 636.24,
+          "end": 637.08,
+          "word": "which"
+        },
+        {
+          "start": 637.08,
+          "end": 637.32,
+          "word": "takes"
+        },
+        {
+          "start": 637.32,
+          "end": 637.6,
+          "word": "in"
+        },
+        {
+          "start": 637.6,
+          "end": 637.82,
+          "word": "and"
+        },
+        {
+          "start": 637.82,
+          "end": 638.08,
+          "word": "gives"
+        },
+        {
+          "start": 638.08,
+          "end": 638.5,
+          "word": "out."
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "start": 643.46,
+      "end": 645.0,
+      "text": "The Gayathri Mantra",
+      "words": [
+        {
+          "start": 643.46,
+          "end": 643.68,
+          "word": "The"
+        },
+        {
+          "start": 643.68,
+          "end": 644.18,
+          "word": "Gayathri"
+        },
+        {
+          "start": 644.18,
+          "end": 645.0,
+          "word": "Mantra"
+        }
+      ]
+    },
+    {
+      "id": 112,
+      "start": 697.43,
+      "end": 704.93,
+      "text": "This is all pertaining to you, Kula Devata is your dynasty from where you come.",
+      "words": [
+        {
+          "start": 697.43,
+          "end": 698.11,
+          "word": "This"
+        },
+        {
+          "start": 698.11,
+          "end": 698.33,
+          "word": "is"
+        },
+        {
+          "start": 698.33,
+          "end": 698.37,
+          "word": "all"
+        },
+        {
+          "start": 698.37,
+          "end": 698.79,
+          "word": "pertaining"
+        },
+        {
+          "start": 698.79,
+          "end": 699.01,
+          "word": "to"
+        },
+        {
+          "start": 699.01,
+          "end": 699.61,
+          "word": "you,"
+        },
+        {
+          "start": 701.55,
+          "end": 701.79,
+          "word": "Kula"
+        },
+        {
+          "start": 701.79,
+          "end": 702.19,
+          "word": "Devata"
+        },
+        {
+          "start": 702.19,
+          "end": 702.53,
+          "word": "is"
+        },
+        {
+          "start": 702.53,
+          "end": 702.79,
+          "word": "your"
+        },
+        {
+          "start": 702.79,
+          "end": 703.61,
+          "word": "dynasty"
+        },
+        {
+          "start": 703.61,
+          "end": 704.25,
+          "word": "from"
+        },
+        {
+          "start": 704.25,
+          "end": 704.49,
+          "word": "where"
+        },
+        {
+          "start": 704.49,
+          "end": 704.77,
+          "word": "you"
+        },
+        {
+          "start": 704.77,
+          "end": 704.93,
+          "word": "come."
+        }
+      ]
+    },
+    {
+      "id": 113,
+      "start": 706.04,
+      "end": 708.36,
+      "text": "There's a God who looks after that.",
+      "words": [
+        {
+          "start": 706.04,
+          "end": 706.4,
+          "word": "There's"
+        },
+        {
+          "start": 706.4,
+          "end": 706.54,
+          "word": "a"
+        },
+        {
+          "start": 706.54,
+          "end": 706.88,
+          "word": "God"
+        },
+        {
+          "start": 706.88,
+          "end": 707.42,
+          "word": "who"
+        },
+        {
+          "start": 707.42,
+          "end": 707.64,
+          "word": "looks"
+        },
+        {
+          "start": 707.64,
+          "end": 707.96,
+          "word": "after"
+        },
+        {
+          "start": 707.96,
+          "end": 708.36,
+          "word": "that."
+        }
+      ]
+    },
+    {
+      "id": 114,
+      "start": 709.2,
+      "end": 714.6,
+      "text": "Then Grama Devata of this village, there is a God who looks after these.",
+      "words": [
+        {
+          "start": 709.2,
+          "end": 710.08,
+          "word": "Then"
+        },
+        {
+          "start": 710.08,
+          "end": 710.54,
+          "word": "Grama"
+        },
+        {
+          "start": 710.54,
+          "end": 710.86,
+          "word": "Devata"
+        },
+        {
+          "start": 710.86,
+          "end": 711.1,
+          "word": "of"
+        },
+        {
+          "start": 711.1,
+          "end": 711.34,
+          "word": "this"
+        },
+        {
+          "start": 711.34,
+          "end": 711.82,
+          "word": "village,"
+        },
+        {
+          "start": 712.72,
+          "end": 712.9,
+          "word": "there"
+        },
+        {
+          "start": 712.9,
+          "end": 713.1,
+          "word": "is"
+        },
+        {
+          "start": 713.1,
+          "end": 713.24,
+          "word": "a"
+        },
+        {
+          "start": 713.24,
+          "end": 713.42,
+          "word": "God"
+        },
+        {
+          "start": 713.42,
+          "end": 713.66,
+          "word": "who"
+        },
+        {
+          "start": 713.66,
+          "end": 713.88,
+          "word": "looks"
+        },
+        {
+          "start": 713.88,
+          "end": 714.22,
+          "word": "after"
+        },
+        {
+          "start": 714.22,
+          "end": 714.6,
+          "word": "these."
+        }
+      ]
+    },
+    {
+      "id": 115,
+      "start": 715.51,
+      "end": 717.59,
+      "text": "It's all for you – pertaining to You.",
+      "words": [
+        {
+          "start": 715.51,
+          "end": 715.67,
+          "word": "It's"
+        },
+        {
+          "start": 715.67,
+          "end": 715.83,
+          "word": "all"
+        },
+        {
+          "start": 715.83,
+          "end": 716.03,
+          "word": "for"
+        },
+        {
+          "start": 716.03,
+          "end": 716.49,
+          "word": "you"
+        },
+        {
+          "start": 716.49,
+          "end": 716.61,
+          "word": "–"
+        },
+        {
+          "start": 716.61,
+          "end": 716.99,
+          "word": "pertaining"
+        },
+        {
+          "start": 716.99,
+          "end": 717.31,
+          "word": "to"
+        },
+        {
+          "start": 717.31,
+          "end": 717.59,
+          "word": "You."
+        }
+      ]
+    },
+    {
+      "id": 116,
+      "start": 719.95,
+      "end": 720.79,
+      "text": "Ishta devatah",
+      "words": [
+        {
+          "start": 719.95,
+          "end": 720.33,
+          "word": "Ishta"
+        },
+        {
+          "start": 720.33,
+          "end": 720.79,
+          "word": "devatah"
+        }
+      ]
+    },
+    {
+      "id": 117,
+      "start": 720.79,
+      "end": 724.37,
+      "text": "The one, the Ishta devatah means",
+      "words": [
+        {
+          "start": 720.79,
+          "end": 721.63,
+          "word": "The"
+        },
+        {
+          "start": 721.63,
+          "end": 722.23,
+          "word": "one,"
+        },
+        {
+          "start": 722.57,
+          "end": 722.61,
+          "word": "the"
+        },
+        {
+          "start": 722.61,
+          "end": 722.91,
+          "word": "Ishta"
+        },
+        {
+          "start": 722.91,
+          "end": 723.31,
+          "word": "devatah"
+        },
+        {
+          "start": 723.31,
+          "end": 724.37,
+          "word": "means"
+        }
+      ]
+    },
+    {
+      "id": 118,
+      "start": 726.51,
+      "end": 727.77,
+      "text": "To whom we worship",
+      "words": [
+        {
+          "start": 726.51,
+          "end": 726.87,
+          "word": "To"
+        },
+        {
+          "start": 726.87,
+          "end": 727.05,
+          "word": "whom"
+        },
+        {
+          "start": 727.05,
+          "end": 727.29,
+          "word": "we"
+        },
+        {
+          "start": 727.29,
+          "end": 727.77,
+          "word": "worship"
+        }
+      ]
+    },
+    {
+      "id": 119,
+      "start": 732.19,
+      "end": 734.95,
+      "text": "The god that resides in",
+      "words": [
+        {
+          "start": 732.19,
+          "end": 732.91,
+          "word": "The"
+        },
+        {
+          "start": 732.91,
+          "end": 733.25,
+          "word": "god"
+        },
+        {
+          "start": 733.25,
+          "end": 734.25,
+          "word": "that"
+        },
+        {
+          "start": 734.25,
+          "end": 734.65,
+          "word": "resides"
+        },
+        {
+          "start": 734.65,
+          "end": 734.95,
+          "word": "in"
+        }
+      ]
+    },
+    {
+      "id": 120,
+      "start": 734.95,
+      "end": 735.87,
+      "text": "This area",
+      "words": [
+        {
+          "start": 734.95,
+          "end": 735.31,
+          "word": "This"
+        },
+        {
+          "start": 735.31,
+          "end": 735.87,
+          "word": "area"
+        }
+      ]
+    },
+    {
+      "id": 121,
+      "start": 735.87,
+      "end": 737.51,
+      "text": "Means divine part",
+      "words": [
+        {
+          "start": 735.87,
+          "end": 736.39,
+          "word": "Means"
+        },
+        {
+          "start": 736.39,
+          "end": 736.93,
+          "word": "divine"
+        },
+        {
+          "start": 736.93,
+          "end": 737.51,
+          "word": "part"
+        }
+      ]
+    },
+    {
+      "id": 122,
+      "start": 737.51,
+      "end": 738.41,
+      "text": "That it resides",
+      "words": [
+        {
+          "start": 737.51,
+          "end": 737.95,
+          "word": "That"
+        },
+        {
+          "start": 737.95,
+          "end": 738.21,
+          "word": "it"
+        },
+        {
+          "start": 738.21,
+          "end": 738.41,
+          "word": "resides"
+        }
+      ]
+    },
+    {
+      "id": 123,
+      "start": 742.97,
+      "end": 747.05,
+      "text": "One, I don't know if they do Vastu here but in every house",
+      "words": [
+        {
+          "start": 742.97,
+          "end": 743.65,
+          "word": "One,"
+        },
+        {
+          "start": 743.99,
+          "end": 744.19,
+          "word": "I"
+        },
+        {
+          "start": 744.19,
+          "end": 744.41,
+          "word": "don't"
+        },
+        {
+          "start": 744.41,
+          "end": 744.49,
+          "word": "know"
+        },
+        {
+          "start": 744.49,
+          "end": 744.63,
+          "word": "if"
+        },
+        {
+          "start": 744.63,
+          "end": 744.75,
+          "word": "they"
+        },
+        {
+          "start": 744.75,
+          "end": 745.05,
+          "word": "do"
+        },
+        {
+          "start": 745.05,
+          "end": 745.31,
+          "word": "Vastu"
+        },
+        {
+          "start": 745.31,
+          "end": 745.45,
+          "word": "here"
+        },
+        {
+          "start": 745.45,
+          "end": 745.79,
+          "word": "but"
+        },
+        {
+          "start": 745.79,
+          "end": 746.13,
+          "word": "in"
+        },
+        {
+          "start": 746.13,
+          "end": 746.57,
+          "word": "every"
+        },
+        {
+          "start": 746.57,
+          "end": 747.05,
+          "word": "house"
+        }
+      ]
+    },
+    {
+      "id": 124,
+      "start": 747.05,
+      "end": 753.23,
+      "text": "In India. They put a kind of a vastu means",
+      "words": [
+        {
+          "start": 747.05,
+          "end": 747.33,
+          "word": "In"
+        },
+        {
+          "start": 747.33,
+          "end": 747.77,
+          "word": "India."
+        },
+        {
+          "start": 748.21,
+          "end": 748.25,
+          "word": "They"
+        },
+        {
+          "start": 748.25,
+          "end": 748.45,
+          "word": "put"
+        },
+        {
+          "start": 748.45,
+          "end": 748.67,
+          "word": "a"
+        },
+        {
+          "start": 748.67,
+          "end": 749.03,
+          "word": "kind"
+        },
+        {
+          "start": 749.03,
+          "end": 750.01,
+          "word": "of"
+        },
+        {
+          "start": 750.01,
+          "end": 751.17,
+          "word": "a"
+        },
+        {
+          "start": 752.61,
+          "end": 752.93,
+          "word": "vastu"
+        },
+        {
+          "start": 752.93,
+          "end": 753.23,
+          "word": "means"
+        }
+      ]
+    },
+    {
+      "id": 125,
+      "start": 753.91,
+      "end": 759.59,
+      "text": "certain things inside the foundation to protect",
+      "words": [
+        {
+          "start": 753.91,
+          "end": 754.59,
+          "word": "certain"
+        },
+        {
+          "start": 754.59,
+          "end": 755.11,
+          "word": "things"
+        },
+        {
+          "start": 755.11,
+          "end": 755.87,
+          "word": "inside"
+        },
+        {
+          "start": 755.87,
+          "end": 757.55,
+          "word": "the"
+        },
+        {
+          "start": 757.55,
+          "end": 758.21,
+          "word": "foundation"
+        },
+        {
+          "start": 758.21,
+          "end": 759.09,
+          "word": "to"
+        },
+        {
+          "start": 759.09,
+          "end": 759.59,
+          "word": "protect"
+        }
+      ]
+    },
+    {
+      "id": 126,
+      "start": 759.59,
+      "end": 767.12,
+      "text": "The House and your mother",
+      "words": [
+        {
+          "start": 759.59,
+          "end": 759.91,
+          "word": "The"
+        },
+        {
+          "start": 759.91,
+          "end": 760.29,
+          "word": "House"
+        },
+        {
+          "start": 763.3,
+          "end": 766.56,
+          "word": "and"
+        },
+        {
+          "start": 766.56,
+          "end": 766.8,
+          "word": "your"
+        },
+        {
+          "start": 766.8,
+          "end": 767.12,
+          "word": "mother"
+        }
+      ]
+    },
+    {
+      "id": 127,
+      "start": 767.12,
+      "end": 771.5,
+      "text": "And father there are to be worshipped to be",
+      "words": [
+        {
+          "start": 767.12,
+          "end": 767.36,
+          "word": "And"
+        },
+        {
+          "start": 767.36,
+          "end": 768.06,
+          "word": "father"
+        },
+        {
+          "start": 768.06,
+          "end": 768.82,
+          "word": "there"
+        },
+        {
+          "start": 768.82,
+          "end": 769.02,
+          "word": "are"
+        },
+        {
+          "start": 769.02,
+          "end": 769.02,
+          "word": "to"
+        },
+        {
+          "start": 769.02,
+          "end": 769.18,
+          "word": "be"
+        },
+        {
+          "start": 769.18,
+          "end": 769.8,
+          "word": "worshipped"
+        },
+        {
+          "start": 769.8,
+          "end": 770.5,
+          "word": "to"
+        },
+        {
+          "start": 770.5,
+          "end": 771.5,
+          "word": "be"
+        }
+      ]
+    },
+    {
+      "id": 128,
+      "start": 771.5,
+      "end": 773.78,
+      "text": "Because you are part of that.",
+      "words": [
+        {
+          "start": 771.5,
+          "end": 772.38,
+          "word": "Because"
+        },
+        {
+          "start": 772.38,
+          "end": 772.82,
+          "word": "you"
+        },
+        {
+          "start": 772.82,
+          "end": 772.96,
+          "word": "are"
+        },
+        {
+          "start": 772.96,
+          "end": 773.24,
+          "word": "part"
+        },
+        {
+          "start": 773.24,
+          "end": 773.46,
+          "word": "of"
+        },
+        {
+          "start": 773.46,
+          "end": 773.78,
+          "word": "that."
+        }
+      ]
+    },
+    {
+      "id": 129,
+      "start": 783.3,
+      "end": 785.96,
+      "text": "Lakshmi Narayan is why? Again see, Lakshmi Narayana",
+      "words": [
+        {
+          "start": 783.3,
+          "end": 783.76,
+          "word": "Lakshmi"
+        },
+        {
+          "start": 783.76,
+          "end": 784.08,
+          "word": "Narayan"
+        },
+        {
+          "start": 784.08,
+          "end": 784.4,
+          "word": "is"
+        },
+        {
+          "start": 784.4,
+          "end": 784.66,
+          "word": "why?"
+        },
+        {
+          "start": 784.8,
+          "end": 785.04,
+          "word": "Again"
+        },
+        {
+          "start": 785.04,
+          "end": 785.24,
+          "word": "see,"
+        },
+        {
+          "start": 785.28,
+          "end": 785.64,
+          "word": "Lakshmi"
+        },
+        {
+          "start": 785.64,
+          "end": 785.96,
+          "word": "Narayana"
+        }
+      ]
+    },
+    {
+      "id": 130,
+      "start": 788.16,
+      "end": 790.84,
+      "text": "More insistence on Lakshmi Narayana again because",
+      "words": [
+        {
+          "start": 788.16,
+          "end": 788.6,
+          "word": "More"
+        },
+        {
+          "start": 788.6,
+          "end": 789.34,
+          "word": "insistence"
+        },
+        {
+          "start": 789.34,
+          "end": 789.48,
+          "word": "on"
+        },
+        {
+          "start": 789.48,
+          "end": 789.8,
+          "word": "Lakshmi"
+        },
+        {
+          "start": 789.8,
+          "end": 790.08,
+          "word": "Narayana"
+        },
+        {
+          "start": 790.08,
+          "end": 790.38,
+          "word": "again"
+        },
+        {
+          "start": 790.38,
+          "end": 790.84,
+          "word": "because"
+        }
+      ]
+    },
+    {
+      "id": 131,
+      "start": 791.28,
+      "end": 794.4,
+      "text": "of the Sushamna – again avoid Lakshmi Narayaan",
+      "words": [
+        {
+          "start": 791.28,
+          "end": 791.6,
+          "word": "of"
+        },
+        {
+          "start": 791.6,
+          "end": 791.78,
+          "word": "the"
+        },
+        {
+          "start": 791.78,
+          "end": 792.22,
+          "word": "Sushamna"
+        },
+        {
+          "start": 792.22,
+          "end": 792.52,
+          "word": "–"
+        },
+        {
+          "start": 792.52,
+          "end": 793.02,
+          "word": "again"
+        },
+        {
+          "start": 793.02,
+          "end": 793.52,
+          "word": "avoid"
+        },
+        {
+          "start": 793.52,
+          "end": 794.08,
+          "word": "Lakshmi"
+        },
+        {
+          "start": 794.08,
+          "end": 794.4,
+          "word": "Narayaan"
+        }
+      ]
+    },
+    {
+      "id": 132,
+      "start": 795.42,
+      "end": 802.52,
+      "text": "All for your ascent! You See",
+      "words": [
+        {
+          "start": 795.42,
+          "end": 795.84,
+          "word": "All"
+        },
+        {
+          "start": 796.52,
+          "end": 801.24,
+          "word": "for"
+        },
+        {
+          "start": 801.4,
+          "end": 801.68,
+          "word": "your"
+        },
+        {
+          "start": 801.68,
+          "end": 802.0,
+          "word": "ascent!"
+        },
+        {
+          "start": 802.24,
+          "end": 802.24,
+          "word": "You"
+        },
+        {
+          "start": 802.24,
+          "end": 802.52,
+          "word": "See"
+        }
+      ]
+    },
+    {
+      "id": 133,
+      "start": 804.6,
+      "end": 808.6,
+      "text": "All those who are realized soul to be real, saluted.",
+      "words": [
+        {
+          "start": 804.6,
+          "end": 805.24,
+          "word": "All"
+        },
+        {
+          "start": 805.24,
+          "end": 805.48,
+          "word": "those"
+        },
+        {
+          "start": 805.48,
+          "end": 805.6,
+          "word": "who"
+        },
+        {
+          "start": 805.6,
+          "end": 805.76,
+          "word": "are"
+        },
+        {
+          "start": 805.76,
+          "end": 806.06,
+          "word": "realized"
+        },
+        {
+          "start": 806.06,
+          "end": 806.38,
+          "word": "soul"
+        },
+        {
+          "start": 806.38,
+          "end": 806.56,
+          "word": "to"
+        },
+        {
+          "start": 806.56,
+          "end": 806.74,
+          "word": "be"
+        },
+        {
+          "start": 806.74,
+          "end": 807.0,
+          "word": "real,"
+        },
+        {
+          "start": 808.16,
+          "end": 808.6,
+          "word": "saluted."
+        }
+      ]
+    },
+    {
+      "id": 134,
+      "start": 809.14,
+      "end": 812.92,
+      "text": "It all has do with the ascent see how clear cut it is",
+      "words": [
+        {
+          "start": 809.14,
+          "end": 809.5,
+          "word": "It"
+        },
+        {
+          "start": 809.5,
+          "end": 809.5,
+          "word": "all"
+        },
+        {
+          "start": 809.5,
+          "end": 809.82,
+          "word": "has"
+        },
+        {
+          "start": 809.82,
+          "end": 810.02,
+          "word": "do"
+        },
+        {
+          "start": 810.02,
+          "end": 810.24,
+          "word": "with"
+        },
+        {
+          "start": 810.24,
+          "end": 810.44,
+          "word": "the"
+        },
+        {
+          "start": 810.44,
+          "end": 810.74,
+          "word": "ascent"
+        },
+        {
+          "start": 810.74,
+          "end": 811.06,
+          "word": "see"
+        },
+        {
+          "start": 811.06,
+          "end": 811.84,
+          "word": "how"
+        },
+        {
+          "start": 811.84,
+          "end": 812.12,
+          "word": "clear"
+        },
+        {
+          "start": 812.12,
+          "end": 812.28,
+          "word": "cut"
+        },
+        {
+          "start": 812.28,
+          "end": 812.46,
+          "word": "it"
+        },
+        {
+          "start": 812.46,
+          "end": 812.92,
+          "word": "is"
+        }
+      ]
+    },
+    {
+      "id": 135,
+      "start": 819.54,
+      "end": 825.09,
+      "text": "Now 12 names of Ganesha because Ganesa must be awakened within you",
+      "words": [
+        {
+          "start": 819.54,
+          "end": 820.18,
+          "word": "Now"
+        },
+        {
+          "start": 820.18,
+          "end": 820.68,
+          "word": "12"
+        },
+        {
+          "start": 820.68,
+          "end": 820.9,
+          "word": "names"
+        },
+        {
+          "start": 820.9,
+          "end": 821.12,
+          "word": "of"
+        },
+        {
+          "start": 821.12,
+          "end": 821.44,
+          "word": "Ganesha"
+        },
+        {
+          "start": 821.44,
+          "end": 821.82,
+          "word": "because"
+        },
+        {
+          "start": 821.82,
+          "end": 822.36,
+          "word": "Ganesa"
+        },
+        {
+          "start": 822.36,
+          "end": 822.72,
+          "word": "must"
+        },
+        {
+          "start": 822.72,
+          "end": 823.88,
+          "word": "be"
+        },
+        {
+          "start": 824.27,
+          "end": 824.61,
+          "word": "awakened"
+        },
+        {
+          "start": 824.61,
+          "end": 824.93,
+          "word": "within"
+        },
+        {
+          "start": 824.93,
+          "end": 825.09,
+          "word": "you"
+        }
+      ]
+    },
+    {
+      "id": 136,
+      "start": 825.09,
+      "end": 829.71,
+      "text": "To begin first he must be first and then open source",
+      "words": [
+        {
+          "start": 825.09,
+          "end": 825.29,
+          "word": "To"
+        },
+        {
+          "start": 825.29,
+          "end": 825.47,
+          "word": "begin"
+        },
+        {
+          "start": 825.47,
+          "end": 826.13,
+          "word": "first"
+        },
+        {
+          "start": 826.13,
+          "end": 826.63,
+          "word": "he"
+        },
+        {
+          "start": 826.63,
+          "end": 826.95,
+          "word": "must"
+        },
+        {
+          "start": 826.95,
+          "end": 827.71,
+          "word": "be"
+        },
+        {
+          "start": 827.71,
+          "end": 828.15,
+          "word": "first"
+        },
+        {
+          "start": 828.15,
+          "end": 828.33,
+          "word": "and"
+        },
+        {
+          "start": 828.33,
+          "end": 828.79,
+          "word": "then"
+        },
+        {
+          "start": 828.79,
+          "end": 829.07,
+          "word": "open"
+        },
+        {
+          "start": 829.07,
+          "end": 829.71,
+          "word": "source"
+        }
+      ]
+    },
+    {
+      "id": 137,
+      "start": 830.34,
+      "end": 831.8,
+      "text": "Of Ganesh let's have",
+      "words": [
+        {
+          "start": 830.34,
+          "end": 830.66,
+          "word": "Of"
+        },
+        {
+          "start": 830.66,
+          "end": 831.16,
+          "word": "Ganesh"
+        },
+        {
+          "start": 831.16,
+          "end": 831.56,
+          "word": "let's"
+        },
+        {
+          "start": 831.56,
+          "end": 831.8,
+          "word": "have"
+        }
+      ]
+    },
+    {
+      "id": 138,
+      "start": 882.94,
+      "end": 890.02,
+      "text": "Vibha sarvata sādhike, śaraṇye triyambake gari, narayani namo stutte.",
+      "words": [
+        {
+          "start": 882.94,
+          "end": 883.14,
+          "word": "Vibha"
+        },
+        {
+          "start": 883.14,
+          "end": 883.98,
+          "word": "sarvata"
+        },
+        {
+          "start": 883.98,
+          "end": 884.96,
+          "word": "sādhike,"
+        },
+        {
+          "start": 885.14,
+          "end": 885.72,
+          "word": "śaraṇye"
+        },
+        {
+          "start": 885.72,
+          "end": 886.64,
+          "word": "triyambake"
+        },
+        {
+          "start": 886.64,
+          "end": 887.44,
+          "word": "gari,"
+        },
+        {
+          "start": 887.64,
+          "end": 888.5,
+          "word": "narayani"
+        },
+        {
+          "start": 888.5,
+          "end": 888.98,
+          "word": "namo"
+        },
+        {
+          "start": 888.98,
+          "end": 890.02,
+          "word": "stutte."
+        }
+      ]
+    },
+    {
+      "id": 139,
+      "start": 892.84,
+      "end": 900.72,
+      "text": "Sarvadah sarva kāryesu nāstī teṣam amaṅgalaṁ teśan hidistau bhagavān mandalaya tānaṃ hari",
+      "words": [
+        {
+          "start": 892.84,
+          "end": 893.44,
+          "word": "Sarvadah"
+        },
+        {
+          "start": 893.44,
+          "end": 893.84,
+          "word": "sarva"
+        },
+        {
+          "start": 893.84,
+          "end": 894.58,
+          "word": "kāryesu"
+        },
+        {
+          "start": 894.58,
+          "end": 895.16,
+          "word": "nāstī"
+        },
+        {
+          "start": 895.16,
+          "end": 895.64,
+          "word": "teṣam"
+        },
+        {
+          "start": 895.64,
+          "end": 896.94,
+          "word": "amaṅgalaṁ"
+        },
+        {
+          "start": 896.94,
+          "end": 897.44,
+          "word": "teśan"
+        },
+        {
+          "start": 897.44,
+          "end": 898.1,
+          "word": "hidistau"
+        },
+        {
+          "start": 898.1,
+          "end": 898.7,
+          "word": "bhagavān"
+        },
+        {
+          "start": 898.7,
+          "end": 899.62,
+          "word": "mandalaya"
+        },
+        {
+          "start": 899.62,
+          "end": 900.28,
+          "word": "tānaṃ"
+        },
+        {
+          "start": 900.28,
+          "end": 900.72,
+          "word": "hari"
+        }
+      ]
+    },
+    {
+      "id": 140,
+      "start": 902.1,
+      "end": 910.86,
+      "text": "Tadevalagnamsudinām tad eva avatāra balan chandrabalan tad eva vidya balandaiva balantad eva lakṣmipate",
+      "words": [
+        {
+          "start": 902.1,
+          "end": 903.3,
+          "word": "Tadevalagnamsudinām"
+        },
+        {
+          "start": 903.3,
+          "end": 903.56,
+          "word": "tad"
+        },
+        {
+          "start": 903.56,
+          "end": 904.08,
+          "word": "eva"
+        },
+        {
+          "start": 904.08,
+          "end": 904.68,
+          "word": "avatāra"
+        },
+        {
+          "start": 904.68,
+          "end": 905.1,
+          "word": "balan"
+        },
+        {
+          "start": 905.1,
+          "end": 906.08,
+          "word": "chandrabalan"
+        },
+        {
+          "start": 906.08,
+          "end": 906.34,
+          "word": "tad"
+        },
+        {
+          "start": 906.34,
+          "end": 907.18,
+          "word": "eva"
+        },
+        {
+          "start": 907.18,
+          "end": 907.74,
+          "word": "vidya"
+        },
+        {
+          "start": 907.74,
+          "end": 908.7,
+          "word": "balandaiva"
+        },
+        {
+          "start": 908.7,
+          "end": 909.52,
+          "word": "balantad"
+        },
+        {
+          "start": 909.52,
+          "end": 909.78,
+          "word": "eva"
+        },
+        {
+          "start": 909.78,
+          "end": 910.86,
+          "word": "lakṣmipate"
+        }
+      ]
+    },
+    {
+      "id": 141,
+      "start": 929.46,
+      "end": 935.07,
+      "text": "All about Shri Krishna, all about Shri Vishnu.",
+      "words": [
+        {
+          "start": 929.46,
+          "end": 930.42,
+          "word": "All"
+        },
+        {
+          "start": 930.71,
+          "end": 931.67,
+          "word": "about"
+        },
+        {
+          "start": 931.67,
+          "end": 932.03,
+          "word": "Shri"
+        },
+        {
+          "start": 932.03,
+          "end": 932.39,
+          "word": "Krishna,"
+        },
+        {
+          "start": 932.91,
+          "end": 933.21,
+          "word": "all"
+        },
+        {
+          "start": 933.21,
+          "end": 934.19,
+          "word": "about"
+        },
+        {
+          "start": 934.19,
+          "end": 934.63,
+          "word": "Shri"
+        },
+        {
+          "start": 934.63,
+          "end": 935.07,
+          "word": "Vishnu."
+        }
+      ]
+    },
+    {
+      "id": 142,
+      "start": 937.18,
+      "end": 944.4,
+      "text": "Vinayakam Gurumbhanum BrahmaVishnum Maheshwaran Sarasvatim Pramiyadav",
+      "words": [
+        {
+          "start": 937.18,
+          "end": 938.8,
+          "word": "Vinayakam"
+        },
+        {
+          "start": 938.8,
+          "end": 939.9,
+          "word": "Gurumbhanum"
+        },
+        {
+          "start": 939.9,
+          "end": 941.0,
+          "word": "BrahmaVishnum"
+        },
+        {
+          "start": 941.0,
+          "end": 942.58,
+          "word": "Maheshwaran"
+        },
+        {
+          "start": 942.58,
+          "end": 943.7,
+          "word": "Sarasvatim"
+        },
+        {
+          "start": 943.7,
+          "end": 944.4,
+          "word": "Pramiyadav"
+        }
+      ]
+    },
+    {
+      "id": 143,
+      "start": 945.12,
+      "end": 952.6,
+      "text": "Sarva Karyatah Siddhaye Abhibhasidata Siddhyatham Pujito Yasurahsaraya",
+      "words": [
+        {
+          "start": 945.12,
+          "end": 945.74,
+          "word": "Sarva"
+        },
+        {
+          "start": 945.74,
+          "end": 946.44,
+          "word": "Karyatah"
+        },
+        {
+          "start": 946.44,
+          "end": 947.92,
+          "word": "Siddhaye"
+        },
+        {
+          "start": 948.34,
+          "end": 950.06,
+          "word": "Abhibhasidata"
+        },
+        {
+          "start": 950.06,
+          "end": 950.86,
+          "word": "Siddhyatham"
+        },
+        {
+          "start": 950.86,
+          "end": 951.52,
+          "word": "Pujito"
+        },
+        {
+          "start": 951.52,
+          "end": 952.6,
+          "word": "Yasurahsaraya"
+        }
+      ]
+    },
+    {
+      "id": 144,
+      "start": 953.46,
+      "end": 958.02,
+      "text": "Sarvavegnaha Rastasmegana Adhipattaye Nama",
+      "words": [
+        {
+          "start": 953.46,
+          "end": 954.98,
+          "word": "Sarvavegnaha"
+        },
+        {
+          "start": 954.98,
+          "end": 956.38,
+          "word": "Rastasmegana"
+        },
+        {
+          "start": 956.38,
+          "end": 957.32,
+          "word": "Adhipattaye"
+        },
+        {
+          "start": 957.32,
+          "end": 958.02,
+          "word": "Nama"
+        }
+      ]
+    },
+    {
+      "id": 145,
+      "start": 958.4,
+      "end": 959.86,
+      "text": "Shri Ganesha",
+      "words": [
+        {
+          "start": 958.4,
+          "end": 959.36,
+          "word": "Shri"
+        },
+        {
+          "start": 959.36,
+          "end": 959.86,
+          "word": "Ganesha"
+        }
+      ]
+    },
+    {
+      "id": 146,
+      "start": 971.54,
+      "end": 980.53,
+      "text": "How we say, where this puja has been all the time is not clear.",
+      "words": [
+        {
+          "start": 971.54,
+          "end": 972.48,
+          "word": "How"
+        },
+        {
+          "start": 975.27,
+          "end": 975.57,
+          "word": "we"
+        },
+        {
+          "start": 975.57,
+          "end": 976.03,
+          "word": "say,"
+        },
+        {
+          "start": 976.51,
+          "end": 976.69,
+          "word": "where"
+        },
+        {
+          "start": 976.69,
+          "end": 977.21,
+          "word": "this"
+        },
+        {
+          "start": 977.21,
+          "end": 977.55,
+          "word": "puja"
+        },
+        {
+          "start": 977.55,
+          "end": 977.85,
+          "word": "has"
+        },
+        {
+          "start": 977.85,
+          "end": 978.37,
+          "word": "been"
+        },
+        {
+          "start": 978.59,
+          "end": 979.17,
+          "word": "all"
+        },
+        {
+          "start": 979.17,
+          "end": 979.51,
+          "word": "the"
+        },
+        {
+          "start": 979.51,
+          "end": 979.75,
+          "word": "time"
+        },
+        {
+          "start": 979.75,
+          "end": 980.53,
+          "word": "is"
+        },
+        {
+          "start": 980.53,
+          "end": 980.53,
+          "word": "not"
+        },
+        {
+          "start": 980.53,
+          "end": 980.53,
+          "word": "clear."
+        }
+      ]
+    },
+    {
+      "id": 147,
+      "start": 995.67,
+      "end": 1001.16,
+      "text": "Kripta Yuga, England Varsha, Europe Khande, Chaltanam Deshe.",
+      "words": [
+        {
+          "start": 995.67,
+          "end": 996.27,
+          "word": "Kripta"
+        },
+        {
+          "start": 996.46,
+          "end": 997.06,
+          "word": "Yuga,"
+        },
+        {
+          "start": 997.32,
+          "end": 997.32,
+          "word": "England"
+        },
+        {
+          "start": 997.32,
+          "end": 998.1,
+          "word": "Varsha,"
+        },
+        {
+          "start": 998.2,
+          "end": 998.54,
+          "word": "Europe"
+        },
+        {
+          "start": 998.54,
+          "end": 999.56,
+          "word": "Khande,"
+        },
+        {
+          "start": 999.8,
+          "end": 1000.38,
+          "word": "Chaltanam"
+        },
+        {
+          "start": 1000.38,
+          "end": 1001.16,
+          "word": "Deshe."
+        }
+      ]
+    },
+    {
+      "id": 148,
+      "start": 1001.34,
+      "end": 1002.82,
+      "text": "Now Vaivasvata?",
+      "words": [
+        {
+          "start": 1001.34,
+          "end": 1001.76,
+          "word": "Now"
+        },
+        {
+          "start": 1001.76,
+          "end": 1002.82,
+          "word": "Vaivasvata?"
+        }
+      ]
+    },
+    {
+      "id": 149,
+      "start": 1004.01,
+      "end": 1005.49,
+      "text": "Vaivasvat Manvantara Maa.",
+      "words": [
+        {
+          "start": 1004.01,
+          "end": 1004.57,
+          "word": "Vaivasvat"
+        },
+        {
+          "start": 1004.57,
+          "end": 1005.29,
+          "word": "Manvantara"
+        },
+        {
+          "start": 1005.29,
+          "end": 1005.49,
+          "word": "Maa."
+        }
+      ]
+    },
+    {
+      "id": 150,
+      "start": 1005.79,
+      "end": 1007.77,
+      "text": "Okay, now there is Vaivasvatha.",
+      "words": [
+        {
+          "start": 1005.79,
+          "end": 1006.11,
+          "word": "Okay,"
+        },
+        {
+          "start": 1006.69,
+          "end": 1006.93,
+          "word": "now"
+        },
+        {
+          "start": 1006.93,
+          "end": 1007.11,
+          "word": "there"
+        },
+        {
+          "start": 1007.11,
+          "end": 1007.23,
+          "word": "is"
+        },
+        {
+          "start": 1007.23,
+          "end": 1007.77,
+          "word": "Vaivasvatha."
+        }
+      ]
+    },
+    {
+      "id": 151,
+      "start": 1008.13,
+      "end": 1008.81,
+      "text": "Krita Yuge",
+      "words": [
+        {
+          "start": 1008.13,
+          "end": 1008.51,
+          "word": "Krita"
+        },
+        {
+          "start": 1008.51,
+          "end": 1008.81,
+          "word": "Yuge"
+        }
+      ]
+    },
+    {
+      "id": 152,
+      "start": 1008.81,
+      "end": 1011.35,
+      "text": "Krita Yuge! Is that beautiful or not?",
+      "words": [
+        {
+          "start": 1008.81,
+          "end": 1009.53,
+          "word": "Krita"
+        },
+        {
+          "start": 1009.53,
+          "end": 1009.75,
+          "word": "Yuge!"
+        },
+        {
+          "start": 1010.05,
+          "end": 1010.17,
+          "word": "Is"
+        },
+        {
+          "start": 1010.17,
+          "end": 1010.47,
+          "word": "that"
+        },
+        {
+          "start": 1010.47,
+          "end": 1010.77,
+          "word": "beautiful"
+        },
+        {
+          "start": 1010.77,
+          "end": 1010.85,
+          "word": "or"
+        },
+        {
+          "start": 1010.85,
+          "end": 1011.35,
+          "word": "not?"
+        }
+      ]
+    },
+    {
+      "id": 153,
+      "start": 1013.44,
+      "end": 1016.36,
+      "text": "It's Kruta Yuge this the time when you have to do something",
+      "words": [
+        {
+          "start": 1013.44,
+          "end": 1013.68,
+          "word": "It's"
+        },
+        {
+          "start": 1013.68,
+          "end": 1013.94,
+          "word": "Kruta"
+        },
+        {
+          "start": 1013.94,
+          "end": 1014.22,
+          "word": "Yuge"
+        },
+        {
+          "start": 1014.22,
+          "end": 1014.46,
+          "word": "this"
+        },
+        {
+          "start": 1014.46,
+          "end": 1014.76,
+          "word": "the"
+        },
+        {
+          "start": 1014.76,
+          "end": 1015.06,
+          "word": "time"
+        },
+        {
+          "start": 1015.06,
+          "end": 1015.3,
+          "word": "when"
+        },
+        {
+          "start": 1015.3,
+          "end": 1015.42,
+          "word": "you"
+        },
+        {
+          "start": 1015.42,
+          "end": 1015.58,
+          "word": "have"
+        },
+        {
+          "start": 1015.58,
+          "end": 1015.78,
+          "word": "to"
+        },
+        {
+          "start": 1015.78,
+          "end": 1015.94,
+          "word": "do"
+        },
+        {
+          "start": 1015.94,
+          "end": 1016.36,
+          "word": "something"
+        }
+      ]
+    },
+    {
+      "id": 154,
+      "start": 1016.64,
+      "end": 1018.44,
+      "text": "Something will actualize",
+      "words": [
+        {
+          "start": 1016.64,
+          "end": 1017.6,
+          "word": "Something"
+        },
+        {
+          "start": 1017.6,
+          "end": 1017.88,
+          "word": "will"
+        },
+        {
+          "start": 1017.88,
+          "end": 1018.44,
+          "word": "actualize"
+        }
+      ]
+    },
+    {
+      "id": 155,
+      "start": 1018.44,
+      "end": 1019.46,
+      "text": "some thing we'll work out",
+      "words": [
+        {
+          "start": 1018.44,
+          "end": 1018.7,
+          "word": "some"
+        },
+        {
+          "start": 1018.7,
+          "end": 1018.86,
+          "word": "thing"
+        },
+        {
+          "start": 1018.86,
+          "end": 1019.1,
+          "word": "we'll"
+        },
+        {
+          "start": 1019.1,
+          "end": 1019.32,
+          "word": "work"
+        },
+        {
+          "start": 1019.32,
+          "end": 1019.46,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 156,
+      "start": 1019.46,
+      "end": 1020.56,
+      "text": "This is Krta Yuga",
+      "words": [
+        {
+          "start": 1019.46,
+          "end": 1019.66,
+          "word": "This"
+        },
+        {
+          "start": 1019.66,
+          "end": 1019.76,
+          "word": "is"
+        },
+        {
+          "start": 1019.76,
+          "end": 1020.08,
+          "word": "Krta"
+        },
+        {
+          "start": 1020.08,
+          "end": 1020.56,
+          "word": "Yuga"
+        }
+      ]
+    },
+    {
+      "id": 157,
+      "start": 1024.13,
+      "end": 1025.33,
+      "text": "Thames Utthavartire",
+      "words": [
+        {
+          "start": 1024.13,
+          "end": 1024.73,
+          "word": "Thames"
+        },
+        {
+          "start": 1024.73,
+          "end": 1025.33,
+          "word": "Utthavartire"
+        }
+      ]
+    },
+    {
+      "id": 158,
+      "start": 1026.67,
+      "end": 1038.79,
+      "text": "Varsha Grishme Shravana Maase Shukla Pakshe Navami Ittithao Ravi Vasare Suba Devas Nakshatre",
+      "words": [
+        {
+          "start": 1026.67,
+          "end": 1027.77,
+          "word": "Varsha"
+        },
+        {
+          "start": 1027.77,
+          "end": 1028.43,
+          "word": "Grishme"
+        },
+        {
+          "start": 1028.43,
+          "end": 1029.27,
+          "word": "Shravana"
+        },
+        {
+          "start": 1029.27,
+          "end": 1030.37,
+          "word": "Maase"
+        },
+        {
+          "start": 1030.37,
+          "end": 1031.13,
+          "word": "Shukla"
+        },
+        {
+          "start": 1031.13,
+          "end": 1031.97,
+          "word": "Pakshe"
+        },
+        {
+          "start": 1031.97,
+          "end": 1032.63,
+          "word": "Navami"
+        },
+        {
+          "start": 1032.63,
+          "end": 1034.11,
+          "word": "Ittithao"
+        },
+        {
+          "start": 1036.19,
+          "end": 1036.55,
+          "word": "Ravi"
+        },
+        {
+          "start": 1036.55,
+          "end": 1037.21,
+          "word": "Vasare"
+        },
+        {
+          "start": 1037.21,
+          "end": 1037.67,
+          "word": "Suba"
+        },
+        {
+          "start": 1037.67,
+          "end": 1038.03,
+          "word": "Devas"
+        },
+        {
+          "start": 1038.03,
+          "end": 1038.79,
+          "word": "Nakshatre"
+        }
+      ]
+    },
+    {
+      "id": 159,
+      "start": 1038.79,
+      "end": 1043.84,
+      "text": "Vishnuyogae Vishnu Karne Shubhastitte Vatham Manee Chandra Shubhastitte",
+      "words": [
+        {
+          "start": 1038.79,
+          "end": 1039.75,
+          "word": "Vishnuyogae"
+        },
+        {
+          "start": 1039.75,
+          "end": 1040.15,
+          "word": "Vishnu"
+        },
+        {
+          "start": 1040.15,
+          "end": 1040.79,
+          "word": "Karne"
+        },
+        {
+          "start": 1040.79,
+          "end": 1041.71,
+          "word": "Shubhastitte"
+        },
+        {
+          "start": 1041.71,
+          "end": 1042.33,
+          "word": "Vatham"
+        },
+        {
+          "start": 1042.33,
+          "end": 1042.77,
+          "word": "Manee"
+        },
+        {
+          "start": 1042.77,
+          "end": 1043.19,
+          "word": "Chandra"
+        },
+        {
+          "start": 1043.19,
+          "end": 1043.84,
+          "word": "Shubhastitte"
+        }
+      ]
+    },
+    {
+      "id": 160,
+      "start": 1044.35,
+      "end": 1049.23,
+      "text": "Sri Suryas Shubhastitte Deva Gaurav Shesheshu Grahesho",
+      "words": [
+        {
+          "start": 1044.35,
+          "end": 1044.77,
+          "word": "Sri"
+        },
+        {
+          "start": 1044.77,
+          "end": 1045.75,
+          "word": "Suryas"
+        },
+        {
+          "start": 1045.75,
+          "end": 1046.55,
+          "word": "Shubhastitte"
+        },
+        {
+          "start": 1046.55,
+          "end": 1046.99,
+          "word": "Deva"
+        },
+        {
+          "start": 1046.99,
+          "end": 1047.39,
+          "word": "Gaurav"
+        },
+        {
+          "start": 1047.39,
+          "end": 1048.07,
+          "word": "Shesheshu"
+        },
+        {
+          "start": 1048.07,
+          "end": 1049.23,
+          "word": "Grahesho"
+        }
+      ]
+    },
+    {
+      "id": 161,
+      "start": 1049.23,
+      "end": 1055.15,
+      "text": "Yatha Yata Rashi Sthan Stitesu Satsu Shuba Nama Yoga Shubhakarane",
+      "words": [
+        {
+          "start": 1049.23,
+          "end": 1049.85,
+          "word": "Yatha"
+        },
+        {
+          "start": 1049.85,
+          "end": 1050.25,
+          "word": "Yata"
+        },
+        {
+          "start": 1050.25,
+          "end": 1050.89,
+          "word": "Rashi"
+        },
+        {
+          "start": 1050.89,
+          "end": 1051.25,
+          "word": "Sthan"
+        },
+        {
+          "start": 1051.25,
+          "end": 1052.01,
+          "word": "Stitesu"
+        },
+        {
+          "start": 1052.01,
+          "end": 1052.57,
+          "word": "Satsu"
+        },
+        {
+          "start": 1052.57,
+          "end": 1052.99,
+          "word": "Shuba"
+        },
+        {
+          "start": 1052.99,
+          "end": 1053.47,
+          "word": "Nama"
+        },
+        {
+          "start": 1053.47,
+          "end": 1053.85,
+          "word": "Yoga"
+        },
+        {
+          "start": 1053.85,
+          "end": 1055.15,
+          "word": "Shubhakarane"
+        }
+      ]
+    },
+    {
+      "id": 162,
+      "start": 1055.15,
+      "end": 1059.07,
+      "text": "EVAM GUNA VISHESHAN VISHESH STAYAM SHUBHA PUNYATITAM",
+      "words": [
+        {
+          "start": 1055.15,
+          "end": 1055.67,
+          "word": "EVAM"
+        },
+        {
+          "start": 1055.67,
+          "end": 1056.13,
+          "word": "GUNA"
+        },
+        {
+          "start": 1056.13,
+          "end": 1056.73,
+          "word": "VISHESHAN"
+        },
+        {
+          "start": 1056.73,
+          "end": 1057.23,
+          "word": "VISHESH"
+        },
+        {
+          "start": 1057.23,
+          "end": 1057.63,
+          "word": "STAYAM"
+        },
+        {
+          "start": 1057.63,
+          "end": 1058.15,
+          "word": "SHUBHA"
+        },
+        {
+          "start": 1058.15,
+          "end": 1059.07,
+          "word": "PUNYATITAM"
+        }
+      ]
+    },
+    {
+      "id": 163,
+      "start": 1060.04,
+      "end": 1064.46,
+      "text": "MAM ATMANA SHRUTI SMURTHI PURANUGAPALA PRABHATYATAM",
+      "words": [
+        {
+          "start": 1060.04,
+          "end": 1060.62,
+          "word": "MAM"
+        },
+        {
+          "start": 1060.62,
+          "end": 1061.42,
+          "word": "ATMANA"
+        },
+        {
+          "start": 1061.42,
+          "end": 1061.9,
+          "word": "SHRUTI"
+        },
+        {
+          "start": 1061.9,
+          "end": 1062.56,
+          "word": "SMURTHI"
+        },
+        {
+          "start": 1062.56,
+          "end": 1063.88,
+          "word": "PURANUGAPALA"
+        },
+        {
+          "start": 1063.88,
+          "end": 1064.46,
+          "word": "PRABHATYATAM"
+        }
+      ]
+    },
+    {
+      "id": 164,
+      "start": 1064.46,
+      "end": 1066.42,
+      "text": "SAKALA SAHAJYOGI NAM",
+      "words": [
+        {
+          "start": 1064.46,
+          "end": 1065.06,
+          "word": "SAKALA"
+        },
+        {
+          "start": 1065.06,
+          "end": 1065.94,
+          "word": "SAHAJYOGI"
+        },
+        {
+          "start": 1065.94,
+          "end": 1066.42,
+          "word": "NAM"
+        }
+      ]
+    },
+    {
+      "id": 165,
+      "start": 1066.42,
+      "end": 1070.4,
+      "text": "SAKUTAM BANAM SAPARIVARANAM CHEMASTHERYA",
+      "words": [
+        {
+          "start": 1066.42,
+          "end": 1067.22,
+          "word": "SAKUTAM"
+        },
+        {
+          "start": 1067.22,
+          "end": 1067.64,
+          "word": "BANAM"
+        },
+        {
+          "start": 1067.64,
+          "end": 1068.86,
+          "word": "SAPARIVARANAM"
+        },
+        {
+          "start": 1068.86,
+          "end": 1070.4,
+          "word": "CHEMASTHERYA"
+        }
+      ]
+    },
+    {
+      "id": 166,
+      "start": 1070.4,
+      "end": 1073.38,
+      "text": "OYORA ROGYA AISHWARA PRABHATYATAM",
+      "words": [
+        {
+          "start": 1070.4,
+          "end": 1071.16,
+          "word": "OYORA"
+        },
+        {
+          "start": 1071.16,
+          "end": 1071.66,
+          "word": "ROGYA"
+        },
+        {
+          "start": 1071.66,
+          "end": 1072.38,
+          "word": "AISHWARA"
+        },
+        {
+          "start": 1072.38,
+          "end": 1073.38,
+          "word": "PRABHATYATAM"
+        }
+      ]
+    },
+    {
+      "id": 167,
+      "start": 1073.38,
+      "end": 1076.3,
+      "text": "SAKALA PIDAPARI HARATAN MANEVSITA",
+      "words": [
+        {
+          "start": 1073.38,
+          "end": 1074.08,
+          "word": "SAKALA"
+        },
+        {
+          "start": 1074.08,
+          "end": 1074.76,
+          "word": "PIDAPARI"
+        },
+        {
+          "start": 1074.76,
+          "end": 1075.44,
+          "word": "HARATAN"
+        },
+        {
+          "start": 1075.44,
+          "end": 1076.3,
+          "word": "MANEVSITA"
+        }
+      ]
+    },
+    {
+      "id": 168,
+      "start": 1076.3,
+      "end": 1079.08,
+      "text": "SAKALA MANORATHA SIDDHITAN",
+      "words": [
+        {
+          "start": 1076.3,
+          "end": 1077.1,
+          "word": "SAKALA"
+        },
+        {
+          "start": 1077.1,
+          "end": 1078.34,
+          "word": "MANORATHA"
+        },
+        {
+          "start": 1078.34,
+          "end": 1079.08,
+          "word": "SIDDHITAN"
+        }
+      ]
+    },
+    {
+      "id": 169,
+      "start": 1079.08,
+      "end": 1082.18,
+      "text": "MATAJI SHRINILMANA DEVI PRITHYATAM",
+      "words": [
+        {
+          "start": 1079.08,
+          "end": 1079.68,
+          "word": "MATAJI"
+        },
+        {
+          "start": 1079.68,
+          "end": 1080.44,
+          "word": "SHRINILMANA"
+        },
+        {
+          "start": 1080.44,
+          "end": 1080.8,
+          "word": "DEVI"
+        },
+        {
+          "start": 1080.8,
+          "end": 1082.18,
+          "word": "PRITHYATAM"
+        }
+      ]
+    },
+    {
+      "id": 170,
+      "start": 1082.18,
+      "end": 1087.33,
+      "text": "SAVA DEVI DEVAP SAKSAD SHI ADI SHAKTI BHAGVATI",
+      "words": [
+        {
+          "start": 1082.18,
+          "end": 1083.28,
+          "word": "SAVA"
+        },
+        {
+          "start": 1083.35,
+          "end": 1084.21,
+          "word": "DEVI"
+        },
+        {
+          "start": 1084.21,
+          "end": 1085.11,
+          "word": "DEVAP"
+        },
+        {
+          "start": 1085.11,
+          "end": 1085.81,
+          "word": "SAKSAD"
+        },
+        {
+          "start": 1085.81,
+          "end": 1086.01,
+          "word": "SHI"
+        },
+        {
+          "start": 1086.01,
+          "end": 1086.27,
+          "word": "ADI"
+        },
+        {
+          "start": 1086.27,
+          "end": 1086.67,
+          "word": "SHAKTI"
+        },
+        {
+          "start": 1086.67,
+          "end": 1087.33,
+          "word": "BHAGVATI"
+        }
+      ]
+    },
+    {
+      "id": 171,
+      "start": 1087.33,
+      "end": 1090.75,
+      "text": "MATAJI SHI NIRVAN DEVI NAMO NAMAH",
+      "words": [
+        {
+          "start": 1087.33,
+          "end": 1088.05,
+          "word": "MATAJI"
+        },
+        {
+          "start": 1088.05,
+          "end": 1088.45,
+          "word": "SHI"
+        },
+        {
+          "start": 1088.45,
+          "end": 1088.87,
+          "word": "NIRVAN"
+        },
+        {
+          "start": 1088.87,
+          "end": 1089.43,
+          "word": "DEVI"
+        },
+        {
+          "start": 1089.43,
+          "end": 1090.05,
+          "word": "NAMO"
+        },
+        {
+          "start": 1090.05,
+          "end": 1090.75,
+          "word": "NAMAH"
+        }
+      ]
+    },
+    {
+      "id": 172,
+      "start": 1091.68,
+      "end": 1095.4,
+      "text": "YATAN YANETHA YATAMILITRO PACHARA DRABHYAY",
+      "words": [
+        {
+          "start": 1091.68,
+          "end": 1092.34,
+          "word": "YATAN"
+        },
+        {
+          "start": 1092.34,
+          "end": 1092.94,
+          "word": "YANETHA"
+        },
+        {
+          "start": 1092.94,
+          "end": 1093.9,
+          "word": "YATAMILITRO"
+        },
+        {
+          "start": 1093.9,
+          "end": 1094.56,
+          "word": "PACHARA"
+        },
+        {
+          "start": 1094.56,
+          "end": 1095.4,
+          "word": "DRABHYAY"
+        }
+      ]
+    },
+    {
+      "id": 173,
+      "start": 1095.4,
+      "end": 1100.18,
+      "text": "DHYANA VAHAN DISHO SHOPACCHARA POOJANAM MAHANKAR",
+      "words": [
+        {
+          "start": 1095.4,
+          "end": 1096.0,
+          "word": "DHYANA"
+        },
+        {
+          "start": 1096.0,
+          "end": 1097.1,
+          "word": "VAHAN"
+        },
+        {
+          "start": 1097.1,
+          "end": 1098.0,
+          "word": "DISHO"
+        },
+        {
+          "start": 1098.0,
+          "end": 1099.04,
+          "word": "SHOPACCHARA"
+        },
+        {
+          "start": 1099.04,
+          "end": 1099.68,
+          "word": "POOJANAM"
+        },
+        {
+          "start": 1099.68,
+          "end": 1100.18,
+          "word": "MAHANKAR"
+        }
+      ]
+    },
+    {
+      "id": 174,
+      "start": 1101.48,
+      "end": 1102.48,
+      "text": "Shodashopachara.",
+      "words": [
+        {
+          "start": 1101.48,
+          "end": 1102.48,
+          "word": "Shodashopachara."
+        }
+      ]
+    },
+    {
+      "id": 175,
+      "start": 1102.74,
+      "end": 1103.88,
+      "text": "Shoda is sixty?",
+      "words": [
+        {
+          "start": 1102.74,
+          "end": 1102.96,
+          "word": "Shoda"
+        },
+        {
+          "start": 1102.96,
+          "end": 1103.22,
+          "word": "is"
+        },
+        {
+          "start": 1103.22,
+          "end": 1103.88,
+          "word": "sixty?"
+        }
+      ]
+    },
+    {
+      "id": 176,
+      "start": 1104.18,
+      "end": 1106.82,
+      "text": "Yes, shodasho pachaar.",
+      "words": [
+        {
+          "start": 1104.18,
+          "end": 1104.46,
+          "word": "Yes,"
+        },
+        {
+          "start": 1105.96,
+          "end": 1106.4,
+          "word": "shodasho"
+        },
+        {
+          "start": 1106.4,
+          "end": 1106.82,
+          "word": "pachaar."
+        }
+      ]
+    },
+    {
+      "id": 177,
+      "start": 1107.74,
+      "end": 1109.86,
+      "text": "See whatever I have got my knowledge",
+      "words": [
+        {
+          "start": 1107.74,
+          "end": 1107.96,
+          "word": "See"
+        },
+        {
+          "start": 1107.96,
+          "end": 1108.42,
+          "word": "whatever"
+        },
+        {
+          "start": 1108.42,
+          "end": 1108.62,
+          "word": "I"
+        },
+        {
+          "start": 1108.62,
+          "end": 1108.86,
+          "word": "have"
+        },
+        {
+          "start": 1108.86,
+          "end": 1109.1,
+          "word": "got"
+        },
+        {
+          "start": 1109.1,
+          "end": 1109.38,
+          "word": "my"
+        },
+        {
+          "start": 1109.38,
+          "end": 1109.86,
+          "word": "knowledge"
+        }
+      ]
+    },
+    {
+      "id": 178,
+      "start": 1109.86,
+      "end": 1112.38,
+      "text": "and what we've got our knowledges you see",
+      "words": [
+        {
+          "start": 1109.86,
+          "end": 1110.54,
+          "word": "and"
+        },
+        {
+          "start": 1110.54,
+          "end": 1110.68,
+          "word": "what"
+        },
+        {
+          "start": 1110.68,
+          "end": 1111.06,
+          "word": "we've"
+        },
+        {
+          "start": 1111.06,
+          "end": 1111.26,
+          "word": "got"
+        },
+        {
+          "start": 1111.26,
+          "end": 1111.48,
+          "word": "our"
+        },
+        {
+          "start": 1111.48,
+          "end": 1112.02,
+          "word": "knowledges"
+        },
+        {
+          "start": 1112.02,
+          "end": 1112.26,
+          "word": "you"
+        },
+        {
+          "start": 1112.26,
+          "end": 1112.38,
+          "word": "see"
+        }
+      ]
+    },
+    {
+      "id": 179,
+      "start": 1112.38,
+      "end": 1115.4,
+      "text": "and whatever things we have got,",
+      "words": [
+        {
+          "start": 1112.38,
+          "end": 1113.08,
+          "word": "and"
+        },
+        {
+          "start": 1113.08,
+          "end": 1113.58,
+          "word": "whatever"
+        },
+        {
+          "start": 1113.58,
+          "end": 1114.58,
+          "word": "things"
+        },
+        {
+          "start": 1114.58,
+          "end": 1114.84,
+          "word": "we"
+        },
+        {
+          "start": 1114.84,
+          "end": 1115.1,
+          "word": "have"
+        },
+        {
+          "start": 1115.1,
+          "end": 1115.4,
+          "word": "got,"
+        }
+      ]
+    },
+    {
+      "id": 180,
+      "start": 1115.82,
+      "end": 1118.86,
+      "text": "what ever We've caught with us",
+      "words": [
+        {
+          "start": 1115.82,
+          "end": 1115.98,
+          "word": "what"
+        },
+        {
+          "start": 1115.98,
+          "end": 1116.22,
+          "word": "ever"
+        },
+        {
+          "start": 1116.22,
+          "end": 1117.88,
+          "word": "We've"
+        },
+        {
+          "start": 1117.88,
+          "end": 1118.32,
+          "word": "caught"
+        },
+        {
+          "start": 1118.32,
+          "end": 1118.58,
+          "word": "with"
+        },
+        {
+          "start": 1118.58,
+          "end": 1118.86,
+          "word": "us"
+        }
+      ]
+    },
+    {
+      "id": 181,
+      "start": 1119.24,
+      "end": 1121.32,
+      "text": "–we worship You over that.",
+      "words": [
+        {
+          "start": 1119.24,
+          "end": 1120.08,
+          "word": "–we"
+        },
+        {
+          "start": 1120.08,
+          "end": 1120.4,
+          "word": "worship"
+        },
+        {
+          "start": 1120.4,
+          "end": 1120.74,
+          "word": "You"
+        },
+        {
+          "start": 1120.74,
+          "end": 1121.02,
+          "word": "over"
+        },
+        {
+          "start": 1121.02,
+          "end": 1121.32,
+          "word": "that."
+        }
+      ]
+    },
+    {
+      "id": 182,
+      "start": 1122.58,
+      "end": 1125.98,
+      "text": "With our sixteen ways of worshipping",
+      "words": [
+        {
+          "start": 1122.58,
+          "end": 1122.88,
+          "word": "With"
+        },
+        {
+          "start": 1122.88,
+          "end": 1123.22,
+          "word": "our"
+        },
+        {
+          "start": 1123.22,
+          "end": 1124.14,
+          "word": "sixteen"
+        },
+        {
+          "start": 1124.4,
+          "end": 1125.28,
+          "word": "ways"
+        },
+        {
+          "start": 1125.28,
+          "end": 1125.64,
+          "word": "of"
+        },
+        {
+          "start": 1125.64,
+          "end": 1125.98,
+          "word": "worshipping"
+        }
+      ]
+    },
+    {
+      "id": 183,
+      "start": 1125.98,
+      "end": 1127.12,
+      "text": "We do tell you.",
+      "words": [
+        {
+          "start": 1125.98,
+          "end": 1126.52,
+          "word": "We"
+        },
+        {
+          "start": 1126.52,
+          "end": 1126.68,
+          "word": "do"
+        },
+        {
+          "start": 1126.68,
+          "end": 1126.9,
+          "word": "tell"
+        },
+        {
+          "start": 1126.9,
+          "end": 1127.12,
+          "word": "you."
+        }
+      ]
+    }
+  ]
+}
