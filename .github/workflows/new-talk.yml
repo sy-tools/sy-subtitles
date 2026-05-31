@@ -49,8 +49,8 @@ jobs:
               InvalidWorkflowInput,
               die,
               validate_talk_id,
+              validate_video_ref,
               validate_video_slug,
-              validate_vimeo_url,
           )
 
           base = os.environ["PR_BASE_SHA"]
@@ -84,13 +84,16 @@ jobs:
                   with open(meta_path) as f:
                       meta = yaml.safe_load(f)
                   for video in meta.get("videos", []):
-                      vimeo_url = video.get("vimeo_url", "")
-                      if not vimeo_url:
+                      # Links are stored obfuscated as video_ref; pass the ref
+                      # through the matrix (decoded at the yt-dlp step) so no
+                      # plaintext URL lands in the public Actions logs.
+                      video_ref = video.get("video_ref", "")
+                      if not video_ref:
                           continue
                       slug = video.get("slug", "")
                       try:
                           validate_video_slug(slug)
-                          validate_vimeo_url(vimeo_url)
+                          validate_video_ref(video_ref)
                       except InvalidWorkflowInput as e:
                           die(f"{meta_path}: {e}")
                       whisper_path = f"{talk_dir}/{slug}/source/whisper.json"
@@ -100,7 +103,7 @@ jobs:
                       whisper_matrix.append({
                           "talk_id": talk_id,
                           "video_slug": slug,
-                          "vimeo_url": vimeo_url,
+                          "video_ref": video_ref,
                       })
                       print(f"QUEUE whisper: {talk_id}/{slug}")
 
@@ -149,6 +152,7 @@ jobs:
           import yaml
 
           from tools.download import AmrutaDownloader
+          from tools.vimeo_codec import decode_video_ref
 
           metas = json.loads(os.environ["NEW_METAS"])
           downloader = AmrutaDownloader()
@@ -233,7 +237,8 @@ jobs:
               # 5. Download EN subtitles (Vimeo first, then YouTube search)
               for video in meta.get("videos", []):
                   slug = video["slug"]
-                  vimeo_url = video.get("vimeo_url", "")
+                  video_ref = video.get("video_ref", "")
+                  vimeo_url = decode_video_ref(video_ref) if video_ref else ""
                   source_dir = os.path.join(talk_dir, slug, "source")
                   en_srt = os.path.join(source_dir, "en.srt")
 
@@ -242,7 +247,7 @@ jobs:
                       continue
 
                   if not vimeo_url:
-                      print(f"  {slug}: no vimeo_url — skip SRT")
+                      print(f"  {slug}: no video_ref — skip SRT")
                       continue
 
                   # Use download.py's proven download method
@@ -286,7 +291,7 @@ jobs:
     env:
       TALK_ID: ${{ matrix.talk_id }}
       VIDEO_SLUG: ${{ matrix.video_slug }}
-      VIMEO_URL: ${{ matrix.vimeo_url }}
+      VIDEO_REF: ${{ matrix.video_ref }}
     steps:
       - uses: actions/checkout@v6
 
@@ -318,10 +323,14 @@ jobs:
           python3 -m tools.workflow_validation_cli \
             --talk-id "$TALK_ID" \
             --video-slug "$VIDEO_SLUG" \
-            --vimeo-url "$VIMEO_URL"
+            --video-ref "$VIDEO_REF"
 
       - name: Download video
         run: |
+          # Decode the obfuscated video_ref at the last moment and mask the
+          # plaintext URL from the logs.
+          VIMEO_URL=$(python3 -m tools.vimeo_codec decode "$VIDEO_REF")
+          echo "::add-mask::$VIMEO_URL"
           mkdir -p /tmp/whisper_work
           yt-dlp --referer "https://www.amruta.org/" -o "/tmp/whisper_work/video.mp4" "$VIMEO_URL"
 
