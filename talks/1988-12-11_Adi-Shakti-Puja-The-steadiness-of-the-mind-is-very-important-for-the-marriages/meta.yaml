@@ -6,12 +6,12 @@ language: en
 videos:
 - slug: Adi-Shakti-Puja-Cam-2
   title: Adi Shakti Puja Cam 2
-  vimeo_url: https://vimeo.com/483626043/6331b6653e
+  video_ref: r1AF9BX0IAREAeV0hcTR1XWFdbWUc
 - slug: Adi-Shakti-Puja-Cam-1
   title: Adi Shakti Puja Cam 1
-  vimeo_url: https://vimeo.com/483624293/ecb99b3c7a
+  video_ref: r1BFsXWhZbTBFOBEhcQB9VWFdbWUc
 - slug: Adi-Shakti-Puja-Talk-Detachment
   title: 'Adi Shakti Puja Talk: Detachment'
-  vimeo_url: https://vimeo.com/483617157/7407cd9b57
+  video_ref: r1UlkWUBABQkMZVkhYTBxWW1dbWUc
 other_languages:
 - mr

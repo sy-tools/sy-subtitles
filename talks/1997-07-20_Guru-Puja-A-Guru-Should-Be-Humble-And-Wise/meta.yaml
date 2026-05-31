@@ -6,7 +6,7 @@ language: en
 videos:
 - slug: Guru-Puja
   title: Guru Puja
-  vimeo_url: https://vimeo.com/286394225/7a6edc53da
+  video_ref: r1BAhHXBcGEEVMVkhaSx9VU1JeWUE
 - slug: Guru-Puja-Talk-A-Guru-Should-Be-Humble-And-Wise
   title: 'Guru Puja Talk: A Guru Should Be Humble And Wise'
-  vimeo_url: https://vimeo.com/286394429/2d90f23abe
+  video_ref: r1AA4VWkYERUpJU0hWSxlVU1JeWUE
