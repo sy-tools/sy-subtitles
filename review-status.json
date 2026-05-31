@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-31T05:31:22.032451+00:00",
+  "updated_at": "2026-05-31T05:39:52.585236+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -487,6 +487,12 @@
       "reviewer": null,
       "issue_number": 429,
       "updated_at": "2026-05-31T05:31:13Z"
+    },
+    "1990-06-03_How-to-get-the-connection-with-the-Divine-power": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 432,
+      "updated_at": "2026-05-31T05:39:41Z"
     }
   }
 }
