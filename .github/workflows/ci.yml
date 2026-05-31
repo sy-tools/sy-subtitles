@@ -19,6 +19,10 @@ on:
       - 'ruff.toml'
       - '.github/workflows/**'
 
+# Least-privilege default for every job (all are read-only lint/test jobs).
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
