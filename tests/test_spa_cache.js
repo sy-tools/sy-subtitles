@@ -1252,6 +1252,11 @@ function swIsImmutable(url) {
 function loadSwFn(name) {
   var fs = require('fs');
   var src = fs.readFileSync('site/sw.js', 'utf8');
+  // Grab the function body up to the first closing brace at column 0. This
+  // assumes top-level sw.js functions close on their own line and any inner
+  // braces stay indented (true today). It fails loud if violated — no match
+  // throws here, a truncated match throws on eval — never a wrong-but-passing
+  // function. Same extract-the-real-source approach as extractI18N below.
   var m = src.match(new RegExp('function ' + name + '\\([\\s\\S]*?\\n\\}'));
   assert.ok(m, name + '() not found in site/sw.js');
   return eval('(' + m[0] + ')');

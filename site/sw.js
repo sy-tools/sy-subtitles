@@ -39,9 +39,9 @@ function isApiOrRaw(url) {
   // must not be treated as a GitHub API/raw request.
   try {
     var h = new URL(url).hostname;
-    return h === 'api.github.com'
-      || h === 'raw.githubusercontent.com'
-      || h.endsWith('.raw.githubusercontent.com');
+    // Both hosts are used bare by the app; no subdomain form exists in GitHub's
+    // infrastructure, so exact match (symmetric for both) is correct here.
+    return h === 'api.github.com' || h === 'raw.githubusercontent.com';
   } catch (e) {
     return false;
   }
