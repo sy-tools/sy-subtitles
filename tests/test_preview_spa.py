@@ -4018,6 +4018,40 @@ class TestBookmarkletExtraction:
         # Exactly two lines — one per <p>, no mid-paragraph breaks.
         assert len(data["tx"].split("\n")) == 2, data["tx"]
 
+    def test_skips_header_p_and_spaces_br_separated_sentences(self, browser):
+        """Some pages (e.g. 1997 Sahasrara Puja) separate sentences inside a
+        paragraph with <br>, and duplicate the date/title/location/language
+        header into a <p>. textContent drops <br> (merging "end.Start") and
+        the header <p> would leak into the transcript body. The bookmarklet
+        must turn <br> into a space and skip a header-like <p> so new-talk.yml
+        synthesizes the clean header instead.
+
+        Regression: 1997 Sahasrara Puja came through with a crushed run-on
+        header line and merged sentences."""
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.set_content(
+                '<div class="entry-content">'
+                "<p>4 May 1997<br>Sahasrara Puja<br>Cabella (Italy)<br>"
+                "Talk Language: English | Transcript (English)</p>"
+                "<p>First sentence here.<br>Second sentence here.<br>Third sentence here.</p>"
+                "<p>Another paragraph with a single sentence in it here.</p>"
+                "</div>"
+            )
+            data = self._run_bookmarklet(pg)
+        finally:
+            ctx.close()
+
+        # Header <p> (has "Talk Language:") is skipped — not in the transcript.
+        assert "Talk Language:" not in data["tx"], data["tx"]
+        # <br> between sentences becomes a space (not a merge, not a line break);
+        # each <p> is one line.
+        assert data["tx"] == (
+            "First sentence here. Second sentence here. Third sentence here.\n"
+            "Another paragraph with a single sentence in it here."
+        ), repr(data["tx"])
+
 
 class TestTranscriptVideoSync:
     """Review-page transcript mode: Show Video button, video picker,

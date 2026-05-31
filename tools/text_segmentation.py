@@ -37,12 +37,15 @@ def load_transcript(path: str) -> list[str]:
 
     lines = text.split("\n")
     body_start = 0
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if re.match(r"^(Talk Language:|Language:|Мова промови:|Мова:)", stripped):
+    # Search for the language marker ANYWHERE in the first few lines, not just
+    # at the line start: a crushed header (date/title/location/language run
+    # together by <br>-via-textContent) or a single-line pipe-joined header
+    # ("… | Talk Language: …") carries the marker mid-line. Matching it still
+    # strips the header so it isn't miscounted as a body paragraph.
+    header_marker = re.compile(r"(Talk Language:|Language:|Мова промови:|Мова:)")
+    for i, line in enumerate(lines[:5]):
+        if header_marker.search(line):
             body_start = i + 1
-            break
-        if i >= 10:
             break
 
     body = "\n".join(lines[body_start:])
