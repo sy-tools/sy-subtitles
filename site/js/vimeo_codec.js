@@ -1,8 +1,9 @@
 // Reversible obfuscation codec for Vimeo links stored in meta.yaml.
 //
-// Twin of tools/vimeo_codec.py — the two MUST stay byte-identical (enforced by
-// the shared vectors in tests/fixtures/vimeo_codec_vectors.json, asserted by
-// both tests/test_vimeo_codec.js and tests/test_vimeo_codec.py).
+// Twin of tools/vimeo_codec.py — the two MUST stay behaviorally identical
+// (produce identical output for the same input), enforced by the shared vectors
+// in tests/fixtures/vimeo_codec_vectors.json, asserted from both
+// tests/test_vimeo_codec.js and tests/test_vimeo_codec.py.
 //
 // This is OBFUSCATION, NOT encryption: this file ships in the public SPA, so
 // the algorithm and KEY are public. It only breaks plaintext harvesting and

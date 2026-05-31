@@ -111,6 +111,16 @@ def test_video_ref_rejects_unknown_version() -> None:
         validate_video_ref("r9zzzz")
 
 
+@pytest.mark.parametrize("bad", ["r1zz", "r1AAAAA", "r1", "r1!!!", "r1@@@@"])
+def test_video_ref_rejects_malformed_payload(bad: str) -> None:
+    # Correctly-versioned but corrupt payloads must be rejected cleanly, never
+    # crash. decode_video_ref may raise binascii.Error / UnicodeDecodeError
+    # (both ValueError subclasses, so caught) or decode to a junk URL that the
+    # VIMEO_URL_RE re-check rejects. Either way: InvalidWorkflowInput, no crash.
+    with pytest.raises(InvalidWorkflowInput):
+        validate_video_ref(bad)
+
+
 def test_video_ref_rejects_empty() -> None:
     with pytest.raises(InvalidWorkflowInput):
         validate_video_ref("")

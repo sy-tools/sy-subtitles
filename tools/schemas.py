@@ -167,7 +167,16 @@ def validate_meta_yaml(path: str) -> dict:
         seen_slugs.add(slug)
 
         _require(video, "title", str, "meta.yaml", v_path)
-        # Links are stored obfuscated as `video_ref` (see tools/vimeo_codec.py);
+        # Links are stored obfuscated as `video_ref` (see tools/vimeo_codec.py).
+        # A leftover plaintext `vimeo_url` (stale bookmarklet / hand edit) must
+        # fail loudly here — the no-fallback reader would otherwise silently
+        # drop it, leaving the link both unplayable and exposed in plaintext.
+        if "vimeo_url" in video:
+            raise SchemaError(
+                "meta.yaml",
+                path,
+                f"{v_path}.vimeo_url is plaintext — store it obfuscated as video_ref (python -m tools.mask_video_refs)",
+            )
         # validate_video_ref decodes and re-checks against the vimeo_url
         # allowlist. A video may legitimately have no link (text-only talk).
         video_ref = video.get("video_ref", "")

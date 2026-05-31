@@ -181,6 +181,18 @@ def test_meta_bad_video_ref(tmp_path: Path) -> None:
         validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
 
 
+def test_meta_rejects_leftover_plaintext_vimeo_url(tmp_path: Path) -> None:
+    # Links must be stored obfuscated as video_ref. A stray plaintext vimeo_url
+    # (e.g. from a stale bookmarklet or hand edit) must fail loudly at validation
+    # rather than being silently dropped by the no-fallback reader.
+    bad = dict(
+        GOOD_META,
+        videos=[{"slug": "x", "title": "t", "vimeo_url": "https://vimeo.com/1/a"}],
+    )
+    with pytest.raises(SchemaError, match="vimeo_url"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
+
+
 # regression against real repo -----------------------------------------------
 
 

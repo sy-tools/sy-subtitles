@@ -10,8 +10,9 @@ only to break plaintext harvesting (GitHub code search, scrapers) and to make a
 naive ``base64 -d`` yield garbage rather than a recognizable URL. It does not
 protect against anyone who reads this file.
 
-The JS twin lives at ``site/js/vimeo_codec.js`` and must stay byte-identical —
-the shared vectors in ``tests/fixtures/vimeo_codec_vectors.json`` enforce that.
+The JS twin lives at ``site/js/vimeo_codec.js`` and must stay behaviorally
+identical (produce identical output for the same input) — the shared vectors in
+``tests/fixtures/vimeo_codec_vectors.json`` enforce that from both languages.
 
 Format::
 
@@ -19,7 +20,9 @@ Format::
 
 ``r1`` is the scheme version (also guarantees the value starts with a letter,
 so it never reads as YAML structure). The decode is the exact inverse — both
-``reverse`` and ``xor`` are their own inverse, so ``decode(encode(x)) == x``.
+``reverse`` and ``xor`` are their own inverse — so for a canonical URL
+``decode(encode(url)) == url``. Non-canonical inputs (http/www/trailing slash)
+normalize to the canonical ``https://vimeo.com/...`` form on decode.
 """
 
 import base64
