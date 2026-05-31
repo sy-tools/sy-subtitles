@@ -160,6 +160,43 @@ def test_load_transcript_all_header_markers(tmp_path: Path, marker: str) -> None
     assert paras == ["Body paragraph."]
 
 
+def test_load_transcript_single_line_header_stripped(tmp_path: Path) -> None:
+    """A crushed header — date/title/location/language concatenated on ONE line
+    (an amruta <br>-separated h4 read via textContent) — has the marker
+    mid-line, not at the start. It must still be recognized and stripped, not
+    counted as a body paragraph.
+
+    Regression: 1997 Sahasrara Puja EN transcript had this header and
+    load_transcript counted it as a 45th paragraph."""
+    f = tmp_path / "transcript.txt"
+    f.write_text(
+        "4 May 1997Sahasrara PujaCabella (Italy)Talk Language: English | Transcript (English)\n"
+        "First paragraph.\nSecond paragraph.\nThird paragraph.\n",
+        encoding="utf-8",
+    )
+    paras = load_transcript(str(f))
+    assert paras == ["First paragraph.", "Second paragraph.", "Third paragraph."]
+
+
+def test_load_transcript_pipe_header_with_blank_line(tmp_path: Path) -> None:
+    """A single-line pipe-joined header (UK style) followed by a blank line and
+    a one-paragraph-per-line body. The marker is mid-line, and the lone blank
+    after the header must NOT flip the file into double-newline mode and
+    collapse the whole body into one block.
+
+    Regression: 1997 Sahasrara Puja UK transcript counted as 2 paragraphs,
+    crashing the pipeline's 1:1 paragraph check (EN=45 vs UK=2)."""
+    f = tmp_path / "transcript.txt"
+    f.write_text(
+        "4 травня 1997 | Пуджа | Кабелла | Мова промови: англійська | Транскрипт\n"
+        "\n"
+        "Перший абзац.\nДругий абзац.\nТретій абзац.\n",
+        encoding="utf-8",
+    )
+    paras = load_transcript(str(f))
+    assert paras == ["Перший абзац.", "Другий абзац.", "Третій абзац."]
+
+
 def test_build_blocks_normalizes_embedded_newlines() -> None:
     """Paragraphs with internal \\n (e.g. stage directions glued together by
     load_transcript) must produce blocks with no embedded newlines."""
