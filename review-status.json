@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-31T05:12:47.030677+00:00",
+  "updated_at": "2026-05-31T05:27:16.103451+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -475,6 +475,12 @@
       "reviewer": null,
       "issue_number": 423,
       "updated_at": "2026-05-31T05:12:36Z"
+    },
+    "2002-03-21_Birthday-Puja-You-Can-Do-A-Lot": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 426,
+      "updated_at": "2026-05-31T05:27:05Z"
     }
   }
 }
