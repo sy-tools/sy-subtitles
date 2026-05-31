@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { parseAddTalkHash, buildMetaYaml } = require('../site/js/add_talk_data');
+const { decodeVideoRef } = require('../site/js/vimeo_codec');
 
 // The bookmarklet encodes its payload exactly like this, then opens the SPA
 // at `<base>#/add?data=<encoded>`. These helpers reproduce that round trip so
@@ -116,7 +117,7 @@ describe('buildMetaYaml — YAML-safe quoting', () => {
       videos: [{
         slug: 'Guru-Puja-Talk',
         title: 'Guru Puja Talk: Gurus Who Belong To The Collective',
-        url: 'https://vimeo.com/189921224/c6fb45a3f2',
+        url: 'https://vimeo.com/555555555/eeeeeeeeee',
       }],
     });
     assert.match(yaml, /^ {2}title: 'Guru Puja Talk: Gurus Who Belong To The Collective'$/m);
@@ -152,9 +153,23 @@ describe('buildMetaYaml — YAML-safe quoting', () => {
     assert.match(yaml, /^amruta_url: https:\/\/www\.amruta\.org\/x\/$/m);
     assert.match(yaml, /^videos:$/m);
     assert.match(yaml, /^- slug: A$/m);
-    assert.match(yaml, /^  vimeo_url: https:\/\/vimeo\.com\/1\/2$/m);
+    // The link is stored obfuscated as video_ref — no plaintext vimeo anywhere.
+    assert.doesNotMatch(yaml, /vimeo_url/);
+    assert.doesNotMatch(yaml, /vimeo\.com/);
+    const refMatch = yaml.match(/^ {2}video_ref: (r1[A-Za-z0-9_-]+)$/m);
+    assert.ok(refMatch, 'expected an obfuscated video_ref line');
+    assert.strictEqual(decodeVideoRef(refMatch[1]), 'https://vimeo.com/1/2');
     assert.match(yaml, /^transcript_en_base64: \|$/m);
     assert.match(yaml, /^ {2}YWJjZA==$/m);
+  });
+
+  it('omits video_ref for a video with no url', () => {
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1993-07-04', language: 'en',
+      videos: [{ slug: 'A', title: 'A', url: '' }],
+    });
+    assert.match(yaml, /^- slug: A$/m);
+    assert.doesNotMatch(yaml, /video_ref/);
   });
 
   it('omits optional location/amruta_url/videos/transcript when absent', () => {

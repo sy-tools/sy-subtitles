@@ -6,7 +6,7 @@ language: en
 videos:
 - slug: Guru-Puja
   title: Guru Puja
-  vimeo_url: https://vimeo.com/333511332/dd2fe19d8f
+  video_ref: r1A1QQUEUHE0FJBUhdSh5QW1RbUkA
 - slug: Guru-Puja-Talk-Gravity
   title: 'Guru Puja Talk: Gravity'
-  vimeo_url: https://vimeo.com/333504436/fdd75b4a78
+  video_ref: r1XVsVXRZXQhdJB0hZShlVWlRbUkA

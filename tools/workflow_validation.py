@@ -36,6 +36,25 @@ def validate_vimeo_url(value: str) -> str:
     return value
 
 
+def validate_video_ref(value: str) -> str:
+    """Validate an obfuscated ``video_ref`` (see tools/vimeo_codec.py).
+
+    Decodes the ref and re-checks the resulting URL against ``VIMEO_URL_RE`` so
+    the injection protection survives the obfuscation layer. Returns the ref
+    unchanged on success.
+    """
+    # Imported lazily to keep this module's import graph light for workflows.
+    from tools.vimeo_codec import decode_video_ref
+
+    try:
+        url = decode_video_ref(value)
+    except ValueError as e:
+        raise InvalidWorkflowInput(f"invalid video_ref: {value!r} ({e})") from None
+    if not VIMEO_URL_RE.fullmatch(url):
+        raise InvalidWorkflowInput(f"video_ref {value!r} decodes to invalid vimeo_url: {url!r}")
+    return value
+
+
 def die(msg: str) -> None:
     print(f"::error::{msg}", file=sys.stderr)
     sys.exit(1)

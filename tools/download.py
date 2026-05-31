@@ -24,6 +24,8 @@ import yaml
 from bs4 import BeautifulSoup, Tag
 from dotenv import load_dotenv
 
+from tools.vimeo_codec import encode_video_ref
+
 
 def parse_amruta_url(url):
     """Extract date and slug from amruta.org URL.
@@ -565,14 +567,16 @@ def setup_talk(talk_dir, url, date, slug, title, location, videos):
     }
     if other_langs:
         meta["other_languages"] = other_langs
-    meta["videos"] = [
-        {
-            "slug": v["slug"],
-            "title": v["title"],
-            "vimeo_url": v["vimeo_url"],
-        }
-        for v in videos
-    ]
+    # Links are stored obfuscated as video_ref (see tools/vimeo_codec.py) so
+    # private Vimeo URLs never appear as plaintext in the public repo.
+    meta_videos = []
+    for v in videos:
+        entry = {"slug": v["slug"], "title": v["title"]}
+        vimeo_url = v.get("vimeo_url", "")
+        if vimeo_url:
+            entry["video_ref"] = encode_video_ref(vimeo_url)
+        meta_videos.append(entry)
+    meta["videos"] = meta_videos
     meta_path = os.path.join(talk_dir, "meta.yaml")
     with open(meta_path, "w", encoding="utf-8") as f:
         yaml.dump(meta, f, allow_unicode=True, default_flow_style=False, sort_keys=False)

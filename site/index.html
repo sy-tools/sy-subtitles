@@ -17,6 +17,7 @@
      app script below runs. -->
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/vimeo_codec.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/talk_actions.js"></script>
@@ -1368,6 +1369,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
   window.addEventListener('hashchange', () => setTimeout(maybeInstallResize, 50));
   window.addEventListener('resize', () => setTimeout(maybeInstallResize, 50));
   setTimeout(maybeInstallResize, 400);
+  // Deterministic trigger: showPreview() calls this once the view is active and
+  // its DOM is rendered, so the handles don't depend on the 400ms timer winning
+  // the race against the page load (slow connections / extra <script> latency).
+  window.maybeInstallResize = maybeInstallResize;
 })();
 </script>
 
@@ -2909,7 +2914,15 @@ function loadManifest() {
                   t.date = String(meta.date || t.id.substring(0, 10));
                   t.amrutaUrl = meta.amruta_url || '';
                   t.videos = (meta.videos || []).map(function(v) {
-                    return { slug: v.slug, title: v.title || v.slug, vimeo_url: v.vimeo_url || '' };
+                    // Links are stored obfuscated as video_ref (js/vimeo_codec.js).
+                    // Decode here at the read edge so the rest of the SPA keeps
+                    // working with a plaintext vimeo_url in memory.
+                    var vimeoUrl = '';
+                    if (v.video_ref) {
+                      try { vimeoUrl = decodeVideoRef(v.video_ref); }
+                      catch (e) { console.warn('bad video_ref for ' + t.id, e); }
+                    }
+                    return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl };
                   });
                   // Mark which videos have SRT
                   var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
@@ -3472,6 +3485,11 @@ function showPreview(talkId, videoSlug) {
   renderMarkers();
   renderEditList();
   updateClearBtn();
+
+  // The view is active and its DOM is rendered — install the resize handles now
+  // rather than waiting for the 400ms timer, which can lose the race against a
+  // slow page load (and did, once an extra <script> was added to <head>).
+  if (window.maybeInstallResize) window.maybeInstallResize();
 
   // Capture the entry {talkId, videoSlug} so fetch-settled callbacks
   // from a stale entry don't mutate state for the next one if the user

@@ -104,6 +104,12 @@ If Vimeo returns 401: `--what text` first, then `--what srt`.
 # Download talk from amruta.org
 python -m tools.download --url "https://www.amruta.org/..." [--what all|srt|text]
 
+# Vimeo link obfuscation: meta.yaml stores links as `video_ref` (not plaintext
+# vimeo_url). Obfuscation only — decode ships in the public SPA.
+python -m tools.vimeo_codec encode "https://vimeo.com/<id>/<hash>"   # -> video_ref
+python -m tools.vimeo_codec decode "r1..."                          # -> vimeo url
+python -m tools.mask_video_refs [--check] [PATHS...]                 # migrate meta.yaml vimeo_url -> video_ref
+
 # Build subtitles (deterministic orchestrator; LLM writes timecodes.txt between prepare and assemble)
 python -m tools.build_map prepare        --talk-dir PATH --video-slug SLUG
 python -m tools.build_map prepare-timing --talk-dir PATH --video-slug SLUG [--timing-source whisper|en-srt]

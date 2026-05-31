@@ -1,8 +1,10 @@
 """Tests for tools.download — extract_transcript method."""
 
+import yaml
 from bs4 import BeautifulSoup
 
-from tools.download import AmrutaDownloader
+from tools.download import AmrutaDownloader, setup_talk
+from tools.vimeo_codec import decode_video_ref
 
 
 def _make_soup(body_html):
@@ -318,3 +320,29 @@ def test_three_duplicate_slugs():
     videos = _find_videos(html)
     slugs = [v["slug"] for v in videos]
     assert slugs == ["Talk", "Talk-2", "Talk-3"]
+
+
+# --- setup_talk: meta.yaml is written with obfuscated video_ref ---
+
+
+def test_setup_talk_writes_obfuscated_video_ref(tmp_path):
+    """meta.yaml must store an opaque video_ref, never a plaintext vimeo_url."""
+    talk_dir = tmp_path / "1990-01-01_test-talk"
+    talk_dir.mkdir()
+    url = "https://vimeo.com/111111111/aaaaaaaaaa"
+    setup_talk(
+        talk_dir=str(talk_dir),
+        url="https://www.amruta.org/1990/01/01/test/",
+        date="1990-01-01",
+        slug="test-talk",
+        title="Test Talk",
+        location="Somewhere",
+        videos=[{"slug": "v1", "title": "V1", "vimeo_url": url}],
+    )
+    meta = yaml.safe_load((talk_dir / "meta.yaml").read_text(encoding="utf-8"))
+    video = meta["videos"][0]
+    assert "vimeo_url" not in video
+    assert "vimeo" not in video["video_ref"].lower()
+    assert decode_video_ref(video["video_ref"]) == url
+    # And the raw file text must not leak the link.
+    assert "vimeo.com" not in (talk_dir / "meta.yaml").read_text(encoding="utf-8")

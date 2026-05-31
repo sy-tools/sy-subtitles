@@ -6,9 +6,9 @@ language: en
 videos:
 - slug: Birthday-Puja-and-Havan
   title: Birthday Puja and Havan
-  vimeo_url: https://vimeo.com/200817991/73cfd12b54
+  video_ref: r1UVkWW0UGExAeVkheQBRWW1lYUUE
 - slug: Birthday-Puja-English-Talk
   title: Birthday Puja English Talk
-  vimeo_url: https://vimeo.com/200815713/fc36788478
+  video_ref: r1XVtAUUxVQ0BOB0hcSBpUW1lYUUE
 other_languages:
 - mr

@@ -664,7 +664,7 @@ class TestButtonResetOnVideoSwitch:
         )
 
     def test_button_hidden_when_target_video_has_no_vimeo_url(self, server, page, server_fixtures=None):  # noqa: F811
-        # Swap in a meta.yaml where Test-Video-2 has an empty vimeo_url so
+        # Swap in a meta.yaml where Test-Video-2 has no video_ref (no link) so
         # that init() must hide the button even in SRT mode.
         page.route(
             "**/raw.githubusercontent.com/**/meta.yaml",
@@ -678,10 +678,9 @@ class TestButtonResetOnVideoSwitch:
                     "videos:\n"
                     "- slug: Test-Video\n"
                     "  title: Test Video\n"
-                    "  vimeo_url: https://vimeo.com/12345/abc\n"
+                    "  video_ref: r1DBtMTl9VW1NC\n"
                     "- slug: Test-Video-2\n"
                     "  title: Test Video 2\n"
-                    "  vimeo_url: ''\n"
                 ),
             ),
         )

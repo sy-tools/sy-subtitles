@@ -1674,6 +1674,7 @@ function slugifyTest(text) {
 // browser-only, so raw transcript text is base64-encoded here before handing
 // off, mirroring what index.html does.
 const { buildMetaYaml: buildMetaYamlModule } = require('../site/js/add_talk_data');
+const { decodeVideoRef } = require('../site/js/vimeo_codec');
 
 function buildMetaYaml(opts) {
   return buildMetaYamlModule({
@@ -1730,7 +1731,10 @@ describe('Add Talk: buildMetaYaml', () => {
     assert.ok(yaml.includes('videos:'));
     assert.ok(yaml.includes('- slug: Video-1'));
     assert.ok(yaml.includes("title: 'Video 1'"));
-    assert.ok(yaml.includes('vimeo_url: https://vimeo.com/123/abc'));
+    // Link is stored obfuscated as video_ref — no plaintext vimeo in the file.
+    assert.ok(!yaml.includes('vimeo_url'));
+    var ref1 = yaml.match(/video_ref: (r1\S+)/)[1];
+    assert.strictEqual(decodeVideoRef(ref1), 'https://vimeo.com/123/abc');
   });
 
   it('escapes single quotes in title', () => {
@@ -2052,12 +2056,12 @@ describe('Add Talk: real amruta.org page parsing', () => {
     assert.ok(/^[a-f0-9]+$/.test(parsed.vimeos[0].hash), 'hash: ' + parsed.vimeos[0].hash);
   });
   it('vimeo: specific IDs match expected', () => {
-    assert.strictEqual(parsed.vimeos[0].id, '88490248');
-    assert.strictEqual(parsed.vimeos[1].id, '88509806');
+    assert.strictEqual(parsed.vimeos[0].id, '111111111');
+    assert.strictEqual(parsed.vimeos[1].id, '222222222');
   });
   it('vimeo: hashes match expected', () => {
-    assert.strictEqual(parsed.vimeos[0].hash, 'e956098e13');
-    assert.strictEqual(parsed.vimeos[1].hash, '2453ea7524');
+    assert.strictEqual(parsed.vimeos[0].hash, 'aaaaaaaaaa');
+    assert.strictEqual(parsed.vimeos[1].hash, 'bbbbbbbbbb');
   });
 
   // --- Video titles ---
@@ -2125,8 +2129,12 @@ describe('Add Talk: real amruta.org page parsing', () => {
     assert.ok(yaml.includes('- slug: Sahasrara-Puja'));
     assert.ok(yaml.includes("title: 'Sahasrara Puja'\n"));
     assert.ok(yaml.includes("title: 'Sahasrara Puja Talk'"));
-    assert.ok(yaml.includes('vimeo_url: https://vimeo.com/88490248/e956098e13'));
-    assert.ok(yaml.includes('vimeo_url: https://vimeo.com/88509806/2453ea7524'));
+    // Links are obfuscated as video_ref — assert they decode back, no plaintext.
+    assert.ok(!yaml.includes('vimeo_url'));
+    var refs = (yaml.match(/video_ref: (r1\S+)/g) || []).map(function (l) { return l.split(' ')[1]; });
+    assert.strictEqual(refs.length, 2);
+    assert.strictEqual(decodeVideoRef(refs[0]), 'https://vimeo.com/111111111/aaaaaaaaaa');
+    assert.strictEqual(decodeVideoRef(refs[1]), 'https://vimeo.com/222222222/bbbbbbbbbb');
   });
 
   it('meta.yaml: with transcript base64 round-trips', () => {
