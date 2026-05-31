@@ -1246,9 +1246,17 @@ function swIsImmutable(url) {
   var patterns = ['cdn.jsdelivr.net', 'player.vimeo.com/api', '/icon.png'];
   return patterns.some(function(p) { return url.includes(p); });
 }
-function swIsApiOrRaw(url) {
-  return url.includes('api.github.com') || url.includes('raw.githubusercontent.com');
+// Exercise the REAL isApiOrRaw from site/sw.js (extracted + eval'd, like
+// extractI18N) instead of a hand-copied reimplementation that can silently
+// drift from production.
+function loadSwFn(name) {
+  var fs = require('fs');
+  var src = fs.readFileSync('site/sw.js', 'utf8');
+  var m = src.match(new RegExp('function ' + name + '\\([\\s\\S]*?\\n\\}'));
+  assert.ok(m, name + '() not found in site/sw.js');
+  return eval('(' + m[0] + ')');
 }
+var swIsApiOrRaw = loadSwFn('isApiOrRaw');
 function swIsNavigation(url) {
   return url.endsWith('/') || url.endsWith('/index.html') || url.includes('sy-subtitles/#');
 }
@@ -1274,6 +1282,10 @@ describe('SW: isApiOrRaw', () => {
   it('GitHub API', () => assert.strictEqual(swIsApiOrRaw('https://api.github.com/repos/foo'), true));
   it('raw.githubusercontent', () => assert.strictEqual(swIsApiOrRaw('https://raw.githubusercontent.com/foo/file.srt'), true));
   it('index.html is not API', () => assert.strictEqual(swIsApiOrRaw('https://site.github.io/sy-subtitles/'), false));
+  // Host must match, not merely appear as a substring of the URL.
+  it('attacker host with api.github.com in the query is not API', () => assert.strictEqual(swIsApiOrRaw('https://attacker.com/?x=api.github.com'), false));
+  it('attacker host with raw host in the fragment is not raw', () => assert.strictEqual(swIsApiOrRaw('https://attacker.com/#raw.githubusercontent.com'), false));
+  it('look-alike suffix host is not API', () => assert.strictEqual(swIsApiOrRaw('https://api.github.com.evil.com/x'), false));
 });
 
 describe('SW: isNavigation', () => {
@@ -1919,43 +1931,12 @@ describe('Preview: cleanup on navigation', () => {
   });
 });
 
-describe('Add Talk: three states logic', () => {
-  function getAddState(hash) {
-    if (!hash || !hash.includes('?data=')) return 'setup';
-    var qm = hash.indexOf('?');
-    var params = new URLSearchParams(hash.slice(qm));
-    var dataStr = params.get('data');
-    if (!dataStr) return 'setup';
-    try {
-      var data = JSON.parse(decodeURIComponent(dataStr));
-      if (!data.u) return 'error';
-      if (!data.u.includes('amruta.org')) return 'wrong-site';
-      return 'form';
-    } catch(e) { return 'error'; }
-  }
-
-  it('no data param → setup (bookmarklet instruction)', () => {
-    assert.strictEqual(getAddState('/add'), 'setup');
-  });
-  it('empty hash → setup', () => {
-    assert.strictEqual(getAddState(''), 'setup');
-  });
-  it('valid amruta data → form', () => {
-    var enc = encodeBookmarkletData({ t: 'Test', u: 'https://www.amruta.org/test', v: [] });
-    assert.strictEqual(getAddState('/add?data=' + enc), 'form');
-  });
-  it('non-amruta URL → wrong-site', () => {
-    var enc = encodeBookmarkletData({ t: 'Test', u: 'https://example.com/page', v: [] });
-    assert.strictEqual(getAddState('/add?data=' + enc), 'wrong-site');
-  });
-  it('invalid data → error', () => {
-    assert.strictEqual(getAddState('/add?data=%ZZinvalid'), 'error');
-  });
-  it('data without url field → error', () => {
-    var enc = encodeBookmarkletData({ t: 'Test' });
-    assert.strictEqual(getAddState('/add?data=' + enc), 'error');
-  });
-});
+// Add-talk routing states (setup / form / wrong_site / parse_error) are tested
+// against the REAL parseAddTalkHash in tests/test_add_talk_data.js. The former
+// getAddState reimplementation here had drifted from production (it returned
+// 'error' for a missing url where production returns 'wrong_site', and still
+// did a double decodeURIComponent that production removed), so it was dropped
+// in favour of exercising the shipped function directly.
 
 describe('Add Talk: SPA code integrity', () => {
   var fs = require('fs');
