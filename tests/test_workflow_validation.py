@@ -123,3 +123,17 @@ def test_video_ref_rejects_decoded_injection() -> None:
     malicious = encode_video_ref("https://vimeo.com/123;curl evil")
     with pytest.raises(InvalidWorkflowInput):
         validate_video_ref(malicious)
+
+
+def test_cli_accepts_valid_video_ref() -> None:
+    from tools.workflow_validation_cli import main
+
+    ref = encode_video_ref("https://vimeo.com/111111111/aaaaaaaaaa")
+    main(["--video-ref", ref])  # must not raise / exit
+
+
+def test_cli_rejects_bad_video_ref() -> None:
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit):
+        main(["--video-ref", "not-a-ref"])

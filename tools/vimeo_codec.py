@@ -66,3 +66,29 @@ def decode_video_ref(ref: str) -> str:
     raw = base64.urlsafe_b64decode(payload + padding)
     path = _xor(raw[::-1]).decode("utf-8")
     return "https://vimeo.com/" + path
+
+
+def main(argv: list[str] | None = None) -> None:
+    """CLI used by workflows: ``vimeo_codec encode <url>`` / ``decode <ref>``.
+
+    The value is taken as a positional argument (never interpolated into a
+    shell ``-c``), so it is safe to pass a PR-controlled string.
+    """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Encode/decode Vimeo video_ref values.")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    enc = sub.add_parser("encode", help="vimeo url -> video_ref")
+    enc.add_argument("url")
+    dec = sub.add_parser("decode", help="video_ref -> vimeo url")
+    dec.add_argument("ref")
+    args = parser.parse_args(argv)
+
+    if args.cmd == "encode":
+        print(encode_video_ref(args.url))
+    else:
+        print(decode_video_ref(args.ref))
+
+
+if __name__ == "__main__":
+    main()

@@ -17,10 +17,10 @@ location: Test Location
 videos:
 - slug: Test-Video
   title: Test Video
-  vimeo_url: https://vimeo.com/12345/abc
+  video_ref: r1DBtMTl9VW1NC
 - slug: Test-Video-2
   title: Test Video 2
-  vimeo_url: https://vimeo.com/67890/def
+  video_ref: r1CRxJTlpYUFZF
 """
 
 # Hostile amruta_url values (the meta.yaml / scraping-bookmarklet attacker

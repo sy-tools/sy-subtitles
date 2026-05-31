@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.vimeo_codec import decode_video_ref, encode_video_ref
+from tools.vimeo_codec import decode_video_ref, encode_video_ref, main
 
 VECTORS_PATH = Path(__file__).parent / "fixtures" / "vimeo_codec_vectors.json"
 
@@ -75,6 +75,16 @@ def test_encode_rejects_non_vimeo_url():
 def test_decode_rejects_unknown_version():
     with pytest.raises(ValueError):
         decode_video_ref("r9zzzz")
+
+
+def test_cli_encode_then_decode_round_trip(capsys):
+    # The workflows call `python -m tools.vimeo_codec decode "$VIDEO_REF"`.
+    url = "https://vimeo.com/111111111/aaaaaaaaaa"
+    main(["encode", url])
+    ref = capsys.readouterr().out.strip()
+    assert ref.startswith("r1")
+    main(["decode", ref])
+    assert capsys.readouterr().out.strip() == url
 
 
 def test_cross_language_vectors_match():

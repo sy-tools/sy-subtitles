@@ -17,6 +17,7 @@
      app script below runs. -->
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/vimeo_codec.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/talk_actions.js"></script>
@@ -2909,7 +2910,15 @@ function loadManifest() {
                   t.date = String(meta.date || t.id.substring(0, 10));
                   t.amrutaUrl = meta.amruta_url || '';
                   t.videos = (meta.videos || []).map(function(v) {
-                    return { slug: v.slug, title: v.title || v.slug, vimeo_url: v.vimeo_url || '' };
+                    // Links are stored obfuscated as video_ref (js/vimeo_codec.js).
+                    // Decode here at the read edge so the rest of the SPA keeps
+                    // working with a plaintext vimeo_url in memory.
+                    var vimeoUrl = '';
+                    if (v.video_ref) {
+                      try { vimeoUrl = decodeVideoRef(v.video_ref); }
+                      catch (e) { console.warn('bad video_ref for ' + t.id, e); }
+                    }
+                    return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl };
                   });
                   // Mark which videos have SRT
                   var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
