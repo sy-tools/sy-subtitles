@@ -9,6 +9,10 @@ name: Golden talks (full corpus)
 on:
   workflow_dispatch:
 
+# Read-only full-corpus pytest job; needs no write scopes.
+permissions:
+  contents: read
+
 jobs:
   golden:
     runs-on: ubuntu-latest
