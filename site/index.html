@@ -3539,7 +3539,10 @@ function vimeoEmbed(url) {
   if (m) return 'https://player.vimeo.com/video/' + m[1] + '?h=' + m[2];
   m = url.match(/vimeo\.com\/(\d+)(?![\/\w])/);
   if (m) return 'https://player.vimeo.com/video/' + m[1];
-  return url;
+  // Not a recognized Vimeo URL — return '' rather than the raw input, which
+  // would otherwise reach iframe.src in the preview route (a javascript:/data:/
+  // protocol-relative vimeo_url from meta.yaml would load/run in the iframe).
+  return '';
 }
 
 function savePreviewState() {
