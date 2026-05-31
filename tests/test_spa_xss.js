@@ -14,15 +14,18 @@ const fs = require('fs');
 
 const HTML = fs.readFileSync('site/index.html', 'utf8');
 
+// Match lazily to the first closing brace (esc/safeHref have no inner braces)
+// rather than to end-of-line, so a future multi-line reformat won't break
+// extraction.
 function loadEsc() {
-  const escM = HTML.match(/function esc\(s\) \{[^\n]*\}/);
-  assert.ok(escM, 'esc() one-liner not found in index.html');
+  const escM = HTML.match(/function esc\(s\) \{[\s\S]*?\}/);
+  assert.ok(escM, 'esc() not found in index.html');
   return eval('(' + escM[0] + ')');
 }
 
 function loadEscapers() {
-  const shM = HTML.match(/function safeHref\(u\) \{[^\n]*\}/);
-  assert.ok(shM, 'safeHref() one-liner not found in index.html');
+  const shM = HTML.match(/function safeHref\(u\) \{[\s\S]*?\}/);
+  assert.ok(shM, 'safeHref() not found in index.html');
   // Parenthesise so eval yields the function expression; safeHref closes over esc.
   const esc = loadEsc();
   const safeHref = eval('(' + shM[0] + ')');

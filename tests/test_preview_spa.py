@@ -23,6 +23,16 @@ videos:
   vimeo_url: https://vimeo.com/67890/def
 """
 
+# Hostile amruta_url values (the meta.yaml / scraping-bookmarklet attacker
+# vector) that try to break out of the card's href="". Two distinct vectors,
+# because esc() escapes < > independently of the quote fix:
+#   - tag injection ("><img …>) — blocked by < > escaping + safeHref wiring
+#   - attribute injection (" data-xss="…) — blocked only by the " -> &quot; fix
+_XSS_AMRUTA_TAG = 'https://www.amruta.org/x"><img src=x onerror=window.__XSS_FIRED=true>'
+_XSS_AMRUTA_ATTR = 'https://www.amruta.org/x" data-xss="pwned'
+XSS_AMRUTA_TAG_META = SAMPLE_META + "amruta_url: '" + _XSS_AMRUTA_TAG + "'\n"
+XSS_AMRUTA_ATTR_META = SAMPLE_META + "amruta_url: '" + _XSS_AMRUTA_ATTR + "'\n"
+
 SAMPLE_SRT = """1
 00:00:01,000 --> 00:00:05,000
 Перший субтитр
@@ -5333,3 +5343,57 @@ class TestExpertPipelineButton:
         page.evaluate("localStorage.setItem('sy_expert_mode','1'); expertMode=true; applyExpertMode();")
         onclick_count = page.evaluate("document.querySelectorAll('.talk-item [onclick]').length")
         assert onclick_count == 0, f"a card still uses an inline onclick handler: {onclick_count}"
+
+
+class TestIndexCardXssDefenses:
+    """A hostile amruta_url from meta.yaml (the PR / scraping-bookmarklet vector)
+    must not break out of the card's href="". esc()/safeHref() are the only
+    defense — there is no CSP — so this renders a card from a real breakout
+    payload and asserts the DOM stays clean. Complements the source-regex guards
+    in test_spa_xss.js with a behavioural, refactor-resilient check."""
+
+    def test_hostile_amruta_url_cannot_inject_a_tag(self, server, page):
+        # Override the default meta.yaml mock with a tag-injection payload.
+        page.route(
+            "**/raw.githubusercontent.com/**/meta.yaml",
+            lambda route: route.fulfill(status=200, content_type="text/plain", body=XSS_AMRUTA_TAG_META),
+        )
+        page.add_init_script("window.__XSS_FIRED = false;")
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        page.wait_for_timeout(200)
+        assert page.evaluate("window.__XSS_FIRED === true") is False, (
+            "amruta_url payload broke out of href= and fired onerror"
+        )
+        assert page.evaluate("document.querySelectorAll('.talk-item img').length") == 0, (
+            "an <img> element was injected from the amruta_url payload"
+        )
+
+    def test_hostile_amruta_url_cannot_inject_an_attribute(self, server, page):
+        # Quote-only breakout: " data-xss="pwned attempts to add a NEW attribute
+        # to the anchor. Only the esc() " -> &quot; fix blocks this (< > escaping
+        # does not), so this is the test with teeth for the attribute-sanitization
+        # alerts (#11-#17).
+        page.route(
+            "**/raw.githubusercontent.com/**/meta.yaml",
+            lambda route: route.fulfill(status=200, content_type="text/plain", body=XSS_AMRUTA_ATTR_META),
+        )
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        injected = page.evaluate("document.querySelectorAll('.talk-item [data-xss]').length")
+        assert injected == 0, "amruta_url broke out of href= and injected a data-xss attribute"
+
+    def test_javascript_scheme_amruta_url_is_dropped(self, server, page):
+        js_meta = SAMPLE_META + "amruta_url: 'javascript:window.__XSS_FIRED=true'\n"
+        page.route(
+            "**/raw.githubusercontent.com/**/meta.yaml",
+            lambda route: route.fulfill(status=200, content_type="text/plain", body=js_meta),
+        )
+        page.add_init_script("window.__XSS_FIRED = false;")
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        bad = page.evaluate(
+            "Array.from(document.querySelectorAll('.talk-item a')).filter("
+            "a => (a.getAttribute('href') || '').toLowerCase().startsWith('javascript:')).length"
+        )
+        assert bad == 0, "a javascript: amruta_url survived into an anchor href"

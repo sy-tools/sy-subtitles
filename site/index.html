@@ -3331,7 +3331,7 @@ function renderStatusBadge(status, reviewSt) {
 function renderPipelineDAG(tk, stages, st) {
   function node(label, done, href, extraCls) {
     var cls = 'pipe-node' + (done ? ' done' : '') + (extraCls ? ' ' + extraCls : '');
-    var sh = href ? safeHref(href) : '';
+    var sh = safeHref(href);
     if (sh) return '<a href="' + sh + '" class="' + cls + '">' + esc(label) + '</a>';
     return '<span class="' + cls + '">' + esc(label) + '</span>';
   }
