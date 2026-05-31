@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
     SPA_URL,
     browser,
@@ -18,6 +20,16 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
     server,
     spa_path,
 )
+
+# Every test here drives the click -> mountPlayer -> (mock) Vimeo SDK fetch ->
+# new Vimeo.Player -> #mock-player chain. The button's handler is a static
+# inline onclick (never an unbound-handler race), so a failure to reach
+# #mock-player is pure scheduling latency: on a 2-core CI runner under
+# `pytest -n auto` a worker can be starved long enough that the chain misses
+# even the widened 20s budget. Widening the timeout alone did not fully fix it,
+# so retry the (idempotent, read-only) tests; a genuine logic regression still
+# fails all attempts. Scoped to this module so it cannot mask flakes elsewhere.
+pytestmark = pytest.mark.flaky(reruns=2, reruns_delay=2)
 
 # Single timeout budget for "wait for an SPA-rendered element" probes. The
 # click→mount chain that produces #mock-player is synchronous once the page has
