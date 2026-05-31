@@ -1818,10 +1818,11 @@ describe('Add Talk: GitHub new file URL', () => {
 });
 
 describe('Add Talk: bookmarklet extracts location', () => {
+  // The scraper now lives in site/js/bookmarklet.js (the saved bookmark is a
+  // thin loader that injects it); behaviour is covered end-to-end by the
+  // Python E2E (TestBookmarkletExtraction). These are cheap source guards.
   var fs = require('fs');
-  var html = fs.readFileSync('site/index.html', 'utf8');
-  var bmMatch = html.match(/var bmCode = "(.*?)";/s);
-  var bmCode = bmMatch ? bmMatch[1] : '';
+  var bmCode = fs.readFileSync('site/js/bookmarklet.js', 'utf8');
 
   it('bookmarklet code includes location extraction', () => {
     assert.ok(bmCode.includes('loc') || bmCode.includes('location') || bmCode.includes('h4'),
@@ -1829,17 +1830,15 @@ describe('Add Talk: bookmarklet extracts location', () => {
   });
 
   it('bookmarklet data JSON includes location field', () => {
-    // The bookmarklet JSON should have a location field (l or loc)
-    assert.ok(bmCode.includes('"l"') || bmCode.includes('"loc"') || bmCode.includes(',l:') || bmCode.includes(',loc:'),
-      'bookmarklet JSON should include location field');
+    // The payload object must carry a location field (loc).
+    assert.ok(bmCode.includes('loc:') || bmCode.includes('loc :'),
+      'bookmarklet payload should include loc field');
   });
 });
 
 describe('Add Talk: bookmarklet extracts video titles', () => {
   var fs = require('fs');
-  var html = fs.readFileSync('site/index.html', 'utf8');
-  var bmMatch = html.match(/var bmCode = "(.*?)";/s);
-  var bmCode = bmMatch ? bmMatch[1] : '';
+  var bmCode = fs.readFileSync('site/js/bookmarklet.js', 'utf8');
 
   it('bookmarklet extracts video labels from video-meta-info div', () => {
     assert.ok(
@@ -1980,6 +1979,16 @@ describe('Add Talk: SPA code integrity', () => {
 
   it('bookmarklet link exists', () => {
     assert.ok(html.includes('id="bookmarklet-link"'));
+  });
+
+  it('bookmarklet is a loader that injects js/bookmarklet.js', () => {
+    // The saved bookmark must be the thin loader (so scraper fixes deploy
+    // without re-dragging), not inline scraping logic. This is the one string
+    // every user's re-dragged bookmark bakes in, and neither E2E path covers
+    // the index.html builder, so guard it here.
+    assert.ok(html.includes('js/bookmarklet.js'), 'loader must inject js/bookmarklet.js');
+    assert.ok(html.includes("'javascript:' + loader"), 'bookmarklet-link href must be the javascript: loader');
+    assert.ok(!html.includes('var bmCode'), 'inline bmCode scraper must be gone (moved to js/bookmarklet.js)');
   });
 
   it('add.title i18n key in both languages', () => {

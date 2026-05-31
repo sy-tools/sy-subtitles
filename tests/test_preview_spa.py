@@ -3913,54 +3913,63 @@ class TestAddTalkForm:
 class TestBookmarkletExtraction:
     """E2E for the add-talk bookmarklet's page scraping.
 
-    The bookmarklet is the inline `bmCode` string in site/index.html; users
-    drag it to their bookmarks bar and click it on an amruta.org talk page,
-    where it reads the DOM and opens the SPA with the extracted payload. That
-    extraction had no test (the existing 'real amruta parsing' suite asserts
+    The scraping logic lives in site/js/bookmarklet.js. The saved bookmark is a
+    thin loader that injects that file from the deployed site; on an amruta.org
+    talk page it reads the DOM and opens the SPA with the extracted payload.
+    The extraction had no test before (the 'real amruta parsing' suite asserts
     pre-parsed JSON, not the live code), so a selector that silently stopped
     matching a page shape would ship unnoticed — exactly what surfaced on the
     Christmas Puja 1998 talk (empty location / video titles / transcript).
 
-    These tests read the exact shipped `bmCode` from source and run it against
-    a saved fixture of that page, so they exercise the real bookmarklet end to
-    end and lock in the structures its selectors depend on."""
+    These tests load the exact shipped bookmarklet.js and run its
+    extractAmrutaTalk against a saved fixture, locking in the DOM structures
+    its selectors depend on."""
 
     FIXTURE = Path(__file__).parent / "fixtures" / "amruta_christmas_puja_1998.html"
-
-    def _bmcode_rhs(self):
-        """The right-hand side of `var bmCode = "..." + spaBase + "...";` —
-        a JS expression we can eval in the page to reconstruct the bookmarklet."""
-        html = (Path(__file__).parent.parent / "site" / "index.html").read_text()
-        m = re.search(r'var bmCode = (".*");\s*$', html, re.M)
-        assert m, "could not locate `var bmCode = ...` in site/index.html"
-        return m.group(1)
+    BOOKMARKLET_JS = Path(__file__).parent.parent / "site" / "js" / "bookmarklet.js"
 
     def _run_bookmarklet(self, page):
-        """Execute the shipped bookmarklet against the loaded page, capturing
-        the payload it would hand to the SPA via window.open.
+        """Load the shipped scraper (site/js/bookmarklet.js) into the page and
+        return extractAmrutaTalk(document) — the exact payload the loader
+        bookmarklet would hand to the SPA.
 
-        eval() is intentional here: the bookmarklet *is* a string of JS our SPA
-        ships, and the test's whole purpose is to run that exact code. It is our
-        own source (read from site/index.html) executed in a throwaway test
-        page — no untrusted input."""
-        captured = page.evaluate(
-            """(rhs) => {
-                var spaBase = 'http://spa.test/';
-                var bmCode;
-                eval('bmCode = ' + rhs + ';');
-                var opened = null;
-                var orig = window.open;
-                window.open = function (u) { opened = u; return null; };
-                try { eval(bmCode); } finally { window.open = orig; }
-                return opened;
-            }""",
-            self._bmcode_rhs(),
+        eval() is intentional: it loads our own shipped source into a throwaway
+        test page (no untrusted input). The file's auto-open branch is inert
+        here — document.currentScript is null under eval — so we call
+        extractAmrutaTalk directly and assert its payload."""
+        js = self.BOOKMARKLET_JS.read_text()
+        return page.evaluate(
+            "(src) => { eval(src); return window.extractAmrutaTalk(document); }",
+            js,
         )
-        assert captured and "#/add?data=" in captured, f"no payload opened: {captured}"
-        return json.loads(unquote(captured.split("#/add?data=", 1)[1]))
 
     def test_fixture_exists(self):
         assert self.FIXTURE.exists(), f"missing fixture: {self.FIXTURE}"
+        assert self.BOOKMARKLET_JS.exists(), f"missing scraper: {self.BOOKMARKLET_JS}"
+
+    def test_loader_path_injects_scraper_and_opens_spa(self, browser, server):
+        """Full production path: inject bookmarklet.js as a real <script> (as
+        the loader bookmarklet does) and confirm it scrapes the page and opens
+        the SPA add view. Exercises the auto-open branch + SPA-base derivation
+        from document.currentScript.src — which the direct extractAmrutaTalk
+        call cannot cover."""
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.goto(f"{server}/index.html")  # same-origin host for the injected <script>
+            pg.set_content(
+                '<div class="entry-content"><p>A paragraph with plenty of words so it is kept by the scraper.</p></div>'
+            )
+            pg.evaluate("() => { window.__opened = null; window.open = (u) => { window.__opened = u; }; }")
+            pg.add_script_tag(url=f"{server}/js/bookmarklet.js")
+            opened = pg.evaluate("() => window.__opened")
+        finally:
+            ctx.close()
+
+        assert opened, "bookmarklet.js did not call window.open when injected"
+        assert "/index.html#/add?data=" in opened, opened
+        data = json.loads(unquote(opened.split("#/add?data=", 1)[1]))
+        assert data["tx"] == "A paragraph with plenty of words so it is kept by the scraper."
 
     def test_extracts_nonempty_fields_from_real_page(self, browser):
         ctx = browser.new_context()
