@@ -5298,3 +5298,38 @@ class TestSrtReviewEditsPersist:
             timeout=10000,
         )
         assert page.evaluate("reviewState.edits['0']") == "TRANSCRIPT_EDIT", "transcript edit clobbered by SRT edit"
+
+
+class TestExpertPipelineButton:
+    """The expert-mode pipeline button copies the talk id to the clipboard.
+
+    The copy was reworked from an inline onclick that concatenated the raw
+    talk id into an HTML attribute (an XSS sink — CodeQL js/xss #18) to a
+    dataset-free addEventListener that reads the id from the render closure.
+    This guards that the copy behaviour survived the rework.
+    """
+
+    def test_expert_button_copies_talk_id(self, server, page):
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        page.evaluate(
+            "window._clipText = '';"
+            "navigator.clipboard.writeText = function(t){ window._clipText = t; return Promise.resolve(); };"
+        )
+        page.evaluate("localStorage.setItem('sy_expert_mode','1'); expertMode=true; applyExpertMode();")
+        # Drop the href so the anchor's default new-tab navigation doesn't open
+        # a popup during the test; the copy listener fires regardless.
+        page.evaluate("document.querySelector('.talk-item .expert-btn').removeAttribute('href')")
+        page.click(".talk-item .expert-btn")
+        clip = page.evaluate("window._clipText || ''")
+        assert clip == "2001-01-01_Test-Talk", f"expert button copied wrong id: {clip!r}"
+
+    def test_talk_id_never_appears_inside_an_inline_onclick(self, server, page):
+        """Defense-in-depth: no rendered card carries an inline onclick at all,
+        so a talk id (a directory name a malicious PR could craft with quotes)
+        can never break out of an attribute into script."""
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        page.evaluate("localStorage.setItem('sy_expert_mode','1'); expertMode=true; applyExpertMode();")
+        onclick_count = page.evaluate("document.querySelectorAll('.talk-item [onclick]').length")
+        assert onclick_count == 0, f"a card still uses an inline onclick handler: {onclick_count}"

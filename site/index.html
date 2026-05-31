@@ -3150,7 +3150,7 @@ function renderIndex(el) {
     if (st) {
       var bc = st.status === 'approved' ? 'approved' : st.status === 'in-progress' ? 'in-review' : 'needs-review';
       var bt = st.status === 'approved' ? t('badge.approved') : st.status === 'in-progress' ? t('badge.in_review') + (st.reviewer ? ' (' + esc(st.reviewer) + ')' : '') : t('badge.needs_review');
-      var href = st.issue_number ? 'https://github.com/' + REPO + '/issues/' + st.issue_number : '#';
+      var href = safeHref(st.issue_number ? 'https://github.com/' + REPO + '/issues/' + st.issue_number : '#');
       badge = '<a href="' + href + '" target="_blank" class="review-badge ' + bc + '">' + bt + '</a>';
     }
     // Which action links to show. View (preview) needs subtitles on a playable
@@ -3165,21 +3165,34 @@ function renderIndex(el) {
       var lastSlug = localStorage.getItem('sy_last_video_' + tk.id);
       var targetVideo = (lastSlug && validVideos.find(function(v) { return v.slug === lastSlug; }))
         || validVideos[0];
-      videoLinks = '<a href="#/preview/' + tk.id + '/' + targetVideo.slug + '" class="preview-link">' + esc(t('link.preview')) + '</a>';
+      videoLinks = '<a href="' + safeHref('#/preview/' + tk.id + '/' + targetVideo.slug) + '" class="preview-link">' + esc(t('link.preview')) + '</a>';
     }
     var reviewLink = '';
     if (actions.review) {
-      reviewLink = '<a href="#/review/' + tk.id + '" class="review-link">&#x270E; ' + t('link.review') + '</a>';
+      reviewLink = '<a href="' + safeHref('#/review/' + tk.id) + '" class="review-link">&#x270E; ' + t('link.review') + '</a>';
     }
-    // Assemble card (all values are escaped or from trusted i18n)
-    var dateHtml = tk.amrutaUrl
-      ? '<a href="' + tk.amrutaUrl + '" target="_blank" title="' + t('link.amruta') + '" style="color:var(--fg5);text-decoration:none;">' + dateStr + ' &#x2197;</a>'
-      : dateStr;
-    var expertHtml = ' <a href="https://github.com/' + REPO + '/actions/workflows/subtitle-pipeline.yml" target="_blank" class="expert-only expert-btn" style="display:none;" onclick="event.stopPropagation();navigator.clipboard.writeText(\'' + tk.id + '\')" title="' + t('expert.copy_and_run') + '">&#x25B6; pipeline</a>';
+    // Assemble card. amruta_url is attacker-influenceable (meta.yaml from a
+    // PR / the amruta-scraping bookmarklet) so route it through safeHref;
+    // dateStr is escaped too. The expert button's talk-id copy is bound via
+    // addEventListener below (no raw tk.id in an inline onclick string).
+    var amrutaHref = safeHref(tk.amrutaUrl);
+    var dateHtml = amrutaHref
+      ? '<a href="' + amrutaHref + '" target="_blank" title="' + esc(t('link.amruta')) + '" style="color:var(--fg5);text-decoration:none;">' + esc(dateStr) + ' &#x2197;</a>'
+      : esc(dateStr);
+    var expertHtml = ' <a href="' + safeHref('https://github.com/' + REPO + '/actions/workflows/subtitle-pipeline.yml') + '" target="_blank" class="expert-only expert-btn" style="display:none;" title="' + esc(t('expert.copy_and_run')) + '">&#x25B6; pipeline</a>';
     var statusBadge = renderStatusBadge(status, st);
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
       + ((videoLinks || reviewLink) ? '<div class="talk-actions">' + videoLinks + reviewLink + '</div>' : '');
+
+    // Copy the talk id on expert-button click (id comes from the closure, never
+    // injected into HTML). stopPropagation keeps the card from expanding; the
+    // anchor's default action still opens the pipeline workflow in a new tab.
+    var expBtn = div.querySelector('.expert-btn');
+    if (expBtn) expBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(tk.id);
+    });
 
     // Expert mode: click card to expand inline DAG detail (one at a time)
     if (expertMode) {
@@ -3310,7 +3323,7 @@ function renderStatusBadge(status, reviewSt) {
   };
   var text = labels[status] || status;
   if (status === 'in-review' && reviewSt && reviewSt.reviewer) text += ' (' + esc(reviewSt.reviewer) + ')';
-  var href = reviewSt && reviewSt.issue_number ? 'https://github.com/' + REPO + '/issues/' + reviewSt.issue_number : '';
+  var href = safeHref(reviewSt && reviewSt.issue_number ? 'https://github.com/' + REPO + '/issues/' + reviewSt.issue_number : '');
   if (href) return '<a href="' + href + '" target="_blank" class="review-badge ' + status + '">' + text + '</a>';
   return '<span class="review-badge ' + status + '">' + text + '</span>';
 }
@@ -3318,7 +3331,8 @@ function renderStatusBadge(status, reviewSt) {
 function renderPipelineDAG(tk, stages, st) {
   function node(label, done, href, extraCls) {
     var cls = 'pipe-node' + (done ? ' done' : '') + (extraCls ? ' ' + extraCls : '');
-    if (href) return '<a href="' + href + '" class="' + cls + '">' + esc(label) + '</a>';
+    var sh = href ? safeHref(href) : '';
+    if (sh) return '<a href="' + sh + '" class="' + cls + '">' + esc(label) + '</a>';
     return '<span class="' + cls + '">' + esc(label) + '</span>';
   }
   function arrow(done) {
@@ -4747,7 +4761,11 @@ SPA.openEditor = function() {
 // ============================================================
 // Helpers
 // ============================================================
-function esc(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function esc(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+// Allow only http(s)/hash-route/mailto hrefs (blocks javascript:, data:,
+// protocol-relative //host), then HTML-escape so a quote/tag cannot break out
+// of the href="" attribute. Returns '' for disallowed/empty URLs.
+function safeHref(u) { return /^(https?:\/\/|#|mailto:)/i.test(u || '') ? esc(u) : ''; }
 function showToast(msg) {
   var el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
