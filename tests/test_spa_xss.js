@@ -112,3 +112,38 @@ describe('SPA index source — XSS sinks are sanitized (regression guards)', () 
     );
   });
 });
+
+describe('SPA vimeoEmbed() — only ever yields a player.vimeo.com embed URL', () => {
+  // vimeoEmbed() feeds iframe.src in the preview route; a non-Vimeo vimeo_url
+  // from meta.yaml must not pass through raw (javascript:/data://evil would
+  // load/run in the iframe). Extract + eval the real function (extractI18N
+  // pattern); first closing brace at column 0, no inner braces.
+  function loadVimeoEmbed() {
+    const m = HTML.match(/function vimeoEmbed\(url\) \{[\s\S]*?\n\}/);
+    assert.ok(m, 'vimeoEmbed() not found in index.html');
+    return eval('(' + m[0] + ')');
+  }
+
+  it('maps a private vimeo.com/ID/HASH url to an embed url', () => {
+    assert.strictEqual(loadVimeoEmbed()('https://vimeo.com/12345/abcdef'),
+      'https://player.vimeo.com/video/12345?h=abcdef');
+  });
+  it('maps a public vimeo.com/ID url to an embed url', () => {
+    assert.strictEqual(loadVimeoEmbed()('https://vimeo.com/12345'),
+      'https://player.vimeo.com/video/12345');
+  });
+  it('returns empty for a javascript: url (no raw passthrough into iframe.src)', () => {
+    assert.strictEqual(loadVimeoEmbed()('javascript:alert(1)'), '');
+  });
+  it('returns empty for data: and protocol-relative urls', () => {
+    const f = loadVimeoEmbed();
+    assert.strictEqual(f('data:text/html,<script>alert(1)</script>'), '');
+    assert.strictEqual(f('//evil.com'), '');
+  });
+  it('returns empty for an arbitrary non-vimeo http url', () => {
+    assert.strictEqual(loadVimeoEmbed()('https://evil.com/x'), '');
+  });
+  it('returns empty for empty input', () => {
+    assert.strictEqual(loadVimeoEmbed()(''), '');
+  });
+});
