@@ -23,8 +23,8 @@ import yaml
 from .workflow_validation import (
     InvalidWorkflowInput,
     validate_talk_id,
+    validate_video_ref,
     validate_video_slug,
-    validate_vimeo_url,
 )
 
 
@@ -167,12 +167,15 @@ def validate_meta_yaml(path: str) -> dict:
         seen_slugs.add(slug)
 
         _require(video, "title", str, "meta.yaml", v_path)
-        vimeo_url = video.get("vimeo_url", "")
-        if vimeo_url:
+        # Links are stored obfuscated as `video_ref` (see tools/vimeo_codec.py);
+        # validate_video_ref decodes and re-checks against the vimeo_url
+        # allowlist. A video may legitimately have no link (text-only talk).
+        video_ref = video.get("video_ref", "")
+        if video_ref:
             try:
-                validate_vimeo_url(vimeo_url)
+                validate_video_ref(video_ref)
             except InvalidWorkflowInput as e:
-                raise SchemaError("meta.yaml", path, f"{v_path}.vimeo_url: {e}") from None
+                raise SchemaError("meta.yaml", path, f"{v_path}.video_ref: {e}") from None
 
     # The talk_id (directory name) isn't in the file but if the caller passes
     # a repo-relative path we can sanity-check it too.

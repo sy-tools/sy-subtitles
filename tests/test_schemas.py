@@ -5,6 +5,7 @@ import pytest
 import yaml
 
 from tools.schemas import SchemaError, validate_meta_yaml, validate_whisper_json
+from tools.vimeo_codec import encode_video_ref
 
 GOOD_WHISPER = {
     "language": "en",
@@ -38,7 +39,7 @@ GOOD_META = {
         {
             "slug": "Sahasrara-Puja-Talk",
             "title": "Sahasrara Puja Talk",
-            "vimeo_url": "https://vimeo.com/88509806/2453ea7524",
+            "video_ref": encode_video_ref("https://vimeo.com/111111111/aaaaaaaaaa"),
         },
     ],
 }
@@ -157,24 +158,26 @@ def test_meta_duplicate_slug(tmp_path: Path) -> None:
 def test_meta_injection_slug_rejected(tmp_path: Path) -> None:
     bad = dict(
         GOOD_META,
-        videos=[{"slug": "x;$(curl evil)", "title": "t", "vimeo_url": ""}],
+        videos=[{"slug": "x;$(curl evil)", "title": "t"}],
     )
     with pytest.raises(SchemaError, match="invalid video slug"):
         validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
 
 
-def test_meta_bad_vimeo_url(tmp_path: Path) -> None:
+def test_meta_bad_video_ref(tmp_path: Path) -> None:
+    # A video_ref that decodes to a vimeo URL with shell metacharacters must be
+    # rejected — the decoded value is re-checked against the vimeo_url allowlist.
     bad = dict(
         GOOD_META,
         videos=[
             {
                 "slug": "x",
                 "title": "t",
-                "vimeo_url": "https://evil.com/#vimeo.com/1",
+                "video_ref": encode_video_ref("https://vimeo.com/123;curl evil"),
             }
         ],
     )
-    with pytest.raises(SchemaError, match="invalid vimeo_url"):
+    with pytest.raises(SchemaError, match="video_ref"):
         validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
 
 

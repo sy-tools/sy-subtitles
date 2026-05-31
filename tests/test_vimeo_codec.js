@@ -10,9 +10,10 @@ const vectors = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'fixtures', 'vimeo_codec_vectors.json'), 'utf-8')
 );
 
+// Synthetic, obviously-fake placeholders only — never a real private link.
 const CANONICAL_URLS = [
-  'https://vimeo.com/251314562/61b5cd4a49',
-  'https://vimeo.com/88509806/2453ea7524',
+  'https://vimeo.com/111111111/aaaaaaaaaa',
+  'https://vimeo.com/222222222/bbbbbbbbbb',
   'https://vimeo.com/123456789',
 ];
 
@@ -26,7 +27,7 @@ describe('vimeo_codec — round trip', () => {
 
 describe('vimeo_codec — stored form', () => {
   it('has r1 prefix, no vimeo substring, no slash or padding', () => {
-    const ref = encodeVideoRef('https://vimeo.com/251314562/61b5cd4a49');
+    const ref = encodeVideoRef('https://vimeo.com/111111111/aaaaaaaaaa');
     assert.ok(ref.startsWith('r1'));
     assert.ok(!ref.toLowerCase().includes('vimeo'));
     assert.ok(!ref.includes('/'));

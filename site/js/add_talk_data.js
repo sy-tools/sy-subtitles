@@ -8,6 +8,17 @@
 //   { state: 'parse_error', data: null }  — data param present but not valid JSON
 //   { state: 'wrong_site',  data: null }  — valid payload but not an amruta.org URL
 //   { state: 'form',        data: obj  }  — valid payload ready to populate the form
+
+// vimeo_codec provides encodeVideoRef. In Node it is require()d; in the browser
+// it is a global set by <script src="js/vimeo_codec.js"> (loaded before this
+// file). Both resolve to the same { encodeVideoRef, decodeVideoRef } API.
+var _vimeoCodec =
+  typeof require !== 'undefined' && typeof module !== 'undefined'
+    ? require('./vimeo_codec')
+    : typeof globalThis !== 'undefined'
+      ? globalThis
+      : this;
+
 function parseAddTalkHash(hash) {
   var qm = hash.indexOf('?');
   if (qm === -1 || hash.indexOf('data=') === -1) {
@@ -75,7 +86,10 @@ function buildMetaYaml(fields) {
     videos.forEach(function (v) {
       yaml += "- slug: " + v.slug + "\n";
       yaml += "  title: " + yamlStr(v.title) + "\n";
-      yaml += "  vimeo_url: " + v.url + "\n";
+      // Store the link obfuscated as video_ref (see js/vimeo_codec.js) so the
+      // committed meta.yaml never carries a plaintext Vimeo URL. base64url is
+      // YAML-safe, so it stays unquoted.
+      if (v.url) yaml += "  video_ref: " + _vimeoCodec.encodeVideoRef(v.url) + "\n";
     });
   }
   if (f.transcriptBase64) {

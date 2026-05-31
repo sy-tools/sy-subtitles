@@ -1,8 +1,10 @@
 import pytest
 
+from tools.vimeo_codec import encode_video_ref
 from tools.workflow_validation import (
     InvalidWorkflowInput,
     validate_talk_id,
+    validate_video_ref,
     validate_video_slug,
     validate_vimeo_url,
 )
@@ -90,3 +92,34 @@ def test_vimeo_url_accepts(value: str) -> None:
 def test_vimeo_url_rejects(value: str) -> None:
     with pytest.raises(InvalidWorkflowInput):
         validate_vimeo_url(value)
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://vimeo.com/123456789",
+        "https://vimeo.com/111111111/aaaaaaaaaa",
+    ],
+)
+def test_video_ref_accepts_encoded_vimeo_url(url: str) -> None:
+    ref = encode_video_ref(url)
+    assert validate_video_ref(ref) == ref
+
+
+def test_video_ref_rejects_unknown_version() -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_video_ref("r9zzzz")
+
+
+def test_video_ref_rejects_empty() -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_video_ref("")
+
+
+def test_video_ref_rejects_decoded_injection() -> None:
+    # A ref that decodes to a vimeo.com URL with shell metacharacters must be
+    # rejected — the decoded value is re-checked against VIMEO_URL_RE, so the
+    # injection protection survives the obfuscation layer.
+    malicious = encode_video_ref("https://vimeo.com/123;curl evil")
+    with pytest.raises(InvalidWorkflowInput):
+        validate_video_ref(malicious)

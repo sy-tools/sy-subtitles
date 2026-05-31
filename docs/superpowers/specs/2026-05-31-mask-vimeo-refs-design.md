@@ -11,7 +11,7 @@ Every `talks/**/meta.yaml` stores a private Vimeo link in plaintext:
 ```yaml
 videos:
 - slug: Navaratri-Puja
-  vimeo_url: https://vimeo.com/251314562/61b5cd4a49   # numeric ID + private hash
+  vimeo_url: https://vimeo.com/<id>/<hash>   # numeric ID + private hash
 ```
 
 83 `meta.yaml` files carry such links, plus 4 real embed URLs leak through
@@ -69,7 +69,7 @@ Encode operates on the **path after `vimeo.com/`** — i.e. `ID/HASH`
 (or just `ID` for a public video without a hash), not the whole URL.
 
 ```
-payload  = "251314562/61b5cd4a49"            # UTF-8 bytes
+payload  = "<id>/<hash>"                      # UTF-8 bytes, e.g. 111111111/aaaaaaaaaa
 step 1   = xor(payload_bytes, KEY)           # KEY = fixed project constant, repeating
 step 2   = reverse(step1)                     # reverse the byte array
 step 3   = base64url(step2)                   # RFC 4648 §5, no padding (no '=')
@@ -83,8 +83,8 @@ ref      -> strip "r1" prefix (assert version == "r1")
          -> base64url_decode
          -> reverse
          -> xor(KEY)
-         -> "251314562/61b5cd4a49"
-         -> "https://vimeo.com/251314562/61b5cd4a49"
+         -> "<id>/<hash>"
+         -> "https://vimeo.com/<id>/<hash>"
 ```
 
 Correctness: `reverse` and `xor` are each their own inverse, so
@@ -108,7 +108,7 @@ Correctness: `reverse` and `xor` are each their own inverse, so
 videos:
 - slug: Navaratri-Puja
   title: Navaratri Puja
-  video_ref: r1XXXXXXXXXXXXXXXX        # encoded; no vimeo_url field
+  video_ref: r1BA0VCBUDFBJMAEheSBxQW1BZUEI   # encoded synthetic example; no vimeo_url field
 ```
 
 Videos with no link (schema allows empty `videos` / no URL) simply have no
@@ -141,6 +141,35 @@ via `<script>` and `require`d by Node tests; mirrored by a Python module):
 | 4 | `tools/download.py` yt-dlp read seams (`download_vimeo_subs`, `download_video`, the `video["vimeo_url"]` reads ~L472/L494/L611) | reads `vimeo_url` | read `video["video_ref"]` → `decode_video_ref` → real URL for yt-dlp |
 | 5 | `tools/schemas.py` `validate_meta_yaml` + `tools/workflow_validation.py` | validates `vimeo_url` via `VIMEO_URL_RE` | new `validate_video_ref(ref)`: `decode_video_ref` then run the existing `VIMEO_URL_RE` on the decoded URL (preserves injection protection) |
 
+### Workflow consumers (discovered during implementation)
+
+`whisper.yml` and `new-talk.yml` build a CI matrix by parsing `meta.yaml`
+inline and feed the link to `yt-dlp`. After migration `video["vimeo_url"]` is a
+`KeyError`, so these must change too:
+
+- **Matrix build** reads `video["video_ref"]`, validates with
+  `validate_video_ref`, and passes the **encoded ref through** the matrix
+  (`"video_ref": ...`). The ref stays encoded across job boundaries, so the
+  matrix output (visible in public Actions logs) carries no plaintext.
+- **Consumer step** decodes once, immediately before `yt-dlp`, via the codec
+  CLI, and masks it from logs:
+  ```bash
+  VIMEO_URL=$(python3 -m tools.vimeo_codec decode "$VIDEO_REF")
+  echo "::add-mask::$VIMEO_URL"
+  yt-dlp ... "$VIMEO_URL"
+  ```
+- `new-talk.yml` also has an SRT-download step (Python) that decodes
+  `video_ref` → URL before calling `download_vimeo_subs`.
+- `tools/vimeo_codec.py` gains a small `argparse` CLI:
+  `encode <url>` / `decode <ref>` (ref passed as argv, never interpolated).
+- `workflow_validation_cli.py`: `--vimeo-url` → `--video-ref`
+  (calls `validate_video_ref`); both workflows' "Validate matrix values" steps
+  updated accordingly.
+
+Note: `::add-mask::` only redacts the literal decoded string. That is
+sufficient for obfuscation — ephemeral Actions logs are a far smaller surface
+than the git history we are deliberately deferring; we do not gold-plate it.
+
 Notes:
 - `vimeoEmbed` (index.html ~L3537) is **unchanged** — it still receives a
   plaintext `vimeo_url` from the decoded in-memory object.
@@ -161,9 +190,15 @@ Notes:
    edit). Run once over the 83 files in this PR.
 2. **Fixtures:** replace the 4 real embed URLs in `tests/fixtures/amruta_*.html`
    with synthetic ones (e.g. `111111111/aaaaaaaaaa`, `222222222/bbbbbbbbbb`, …)
-   and update any test assertions that reference the old specific IDs
-   (`88509806`, `251129009`, `251129058`, `88490248`). These tests verify
-   parsing/extraction, not specific values, so synthetic data is equivalent.
+   and update any test assertions that reference those specific IDs. These tests
+   verify parsing/extraction, not specific values, so synthetic data is
+   equivalent.
+
+   The same applies to every other test/spec/doc file: only synthetic,
+   obviously-fake placeholders may appear — never a real private link. The
+   live-network integration test (`test_sync_player_integration.py`) stores its
+   real video as an **encoded** `video_ref` and decodes it at runtime, so no
+   plaintext link is committed.
 
 ## CI guard (regression prevention)
 
@@ -247,3 +282,17 @@ Write the failing test before each piece of production code.
 7. Full suite: `python -m pytest tests/`, `node --test tests/test_*.js`,
    lint. Serve the SPA locally so the user can verify playback before commit
    (per `feedback_test_app_locally_before_commit`).
+
+## Verification gate (the real done-check)
+
+The CI guard is scoped to `meta.yaml`; the true completeness check is a
+**whole-tree** scan for any real-looking private link:
+
+```bash
+git grep -nE "vimeo\.com/[0-9]+/[0-9a-f]+"
+```
+
+After the sweep, the only matches allowed are **synthetic placeholders** in
+test fixtures (e.g. `111111111/aaaaaaaaaa`). No real ID/hash may remain in any
+tracked file at HEAD. (Intermediate commits on this branch will still carry the
+originals — that is the deferred history rewrite, out of scope here.)

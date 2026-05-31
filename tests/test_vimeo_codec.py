@@ -16,9 +16,12 @@ from tools.vimeo_codec import decode_video_ref, encode_video_ref
 
 VECTORS_PATH = Path(__file__).parent / "fixtures" / "vimeo_codec_vectors.json"
 
+# Synthetic, obviously-fake placeholders only — never a real private link
+# (this is a public repo; the whole point of the module is to keep real links
+# out of plaintext).
 CANONICAL_URLS = [
-    "https://vimeo.com/251314562/61b5cd4a49",
-    "https://vimeo.com/88509806/2453ea7524",
+    "https://vimeo.com/111111111/aaaaaaaaaa",
+    "https://vimeo.com/222222222/bbbbbbbbbb",
     "https://vimeo.com/123456789",  # public, no private hash
 ]
 
@@ -45,12 +48,12 @@ def test_naive_base64_decode_does_not_reveal_url():
     # recognizable vimeo URL (that is what the xor+reverse steps buy us).
     import base64
 
-    ref = encode_video_ref("https://vimeo.com/251314562/61b5cd4a49")
+    ref = encode_video_ref("https://vimeo.com/111111111/aaaaaaaaaa")
     payload = ref[2:]
     payload += "=" * (-len(payload) % 4)
     raw = base64.urlsafe_b64decode(payload)
     assert b"vimeo" not in raw
-    assert b"251314562" not in raw
+    assert b"111111111" not in raw
 
 
 def test_encode_normalizes_non_canonical_input():
