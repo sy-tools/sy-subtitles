@@ -1369,6 +1369,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
   window.addEventListener('hashchange', () => setTimeout(maybeInstallResize, 50));
   window.addEventListener('resize', () => setTimeout(maybeInstallResize, 50));
   setTimeout(maybeInstallResize, 400);
+  // Deterministic trigger: showPreview() calls this once the view is active and
+  // its DOM is rendered, so the handles don't depend on the 400ms timer winning
+  // the race against the page load (slow connections / extra <script> latency).
+  window.maybeInstallResize = maybeInstallResize;
 })();
 </script>
 
@@ -3481,6 +3485,11 @@ function showPreview(talkId, videoSlug) {
   renderMarkers();
   renderEditList();
   updateClearBtn();
+
+  // The view is active and its DOM is rendered — install the resize handles now
+  // rather than waiting for the 400ms timer, which can lose the race against a
+  // slow page load (and did, once an extra <script> was added to <head>).
+  if (window.maybeInstallResize) window.maybeInstallResize();
 
   // Capture the entry {talkId, videoSlug} so fetch-settled callbacks
   // from a stale entry don't mutate state for the next one if the user
