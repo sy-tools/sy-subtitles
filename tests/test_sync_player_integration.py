@@ -4,12 +4,14 @@ These tests load the real player.vimeo.com SDK and embed a real Vimeo
 video inside the test harness. They require outbound network access to
 vimeo.com from the test runner.
 
-Stability policy: if the video at TEST_VIMEO_URL is removed upstream,
-replace it with another project-public talk from talks/*/meta.yaml and
-update this comment.
+Stability policy: if the video referenced by TEST_VIDEO_REF is removed
+upstream, replace it with another project-public talk from talks/*/meta.yaml
+(copy that talk's video_ref) and update this comment.
 
-Current stable video: Mahashivaratri Puja 1979, vimeo.com/916194756/a4fda18b19
-from talks/1979-02-25_Puja-In-Pune-Marathi/meta.yaml.
+Current stable video: Mahashivaratri Puja 1979, from
+talks/1979-02-25_Puja-In-Pune-Marathi/meta.yaml. The link is stored as an
+obfuscated video_ref (no plaintext URL in the repo); decode_video_ref recovers
+the real URL at runtime for the live network test.
 """
 
 from __future__ import annotations
@@ -33,9 +35,12 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
     server,
     spa_path,
 )
+from tools.vimeo_codec import decode_video_ref
 
-# Real Vimeo URL — project-public video from the existing corpus.
-TEST_VIMEO_URL = "https://vimeo.com/916194756/a4fda18b19"
+# Project-public video from the existing corpus, stored obfuscated so no
+# plaintext Vimeo link lives in the repo. Decoded at runtime for the real test.
+TEST_VIDEO_REF = "r1XF0WUUUDERUZAEhZTBpVU1BeUEo"
+TEST_VIMEO_URL = decode_video_ref(TEST_VIDEO_REF)
 
 # Gate: set SY_E2E_REAL_VIMEO=0 to skip real-network tests in environments
 # where outbound Vimeo access is blocked (e.g. restricted corporate CI).
@@ -50,10 +55,10 @@ location: Test Location
 videos:
 - slug: Test-Video
   title: Test Video
-  vimeo_url: {TEST_VIMEO_URL}
+  video_ref: {TEST_VIDEO_REF}
 - slug: Test-Video-2
   title: Test Video 2
-  vimeo_url: {TEST_VIMEO_URL}
+  video_ref: {TEST_VIDEO_REF}
 """
 
 
@@ -169,7 +174,8 @@ class TestRealVimeoIntegration:
         real_vimeo_page.wait_for_selector("#sync-player-mount iframe", state="attached", timeout=15000)
         src = real_vimeo_page.evaluate("document.querySelector('#sync-player-mount iframe').src")
         assert "player.vimeo.com/video/" in src, f"Expected player.vimeo.com URL, got {src!r}"
-        assert "916194756" in src, f"Expected video ID in iframe src, got {src!r}"
+        expected_id = TEST_VIMEO_URL.split("/")[-2]
+        assert expected_id in src, f"Expected video ID in iframe src, got {src!r}"
 
     def test_real_vimeo_player_becomes_ready(self, server, real_vimeo_page):  # noqa: F811
         """Vimeo.Player.ready() must resolve on a real embed (SDK handshake)."""

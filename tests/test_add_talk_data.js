@@ -117,7 +117,7 @@ describe('buildMetaYaml — YAML-safe quoting', () => {
       videos: [{
         slug: 'Guru-Puja-Talk',
         title: 'Guru Puja Talk: Gurus Who Belong To The Collective',
-        url: 'https://vimeo.com/189921224/c6fb45a3f2',
+        url: 'https://vimeo.com/555555555/eeeeeeeeee',
       }],
     });
     assert.match(yaml, /^ {2}title: 'Guru Puja Talk: Gurus Who Belong To The Collective'$/m);

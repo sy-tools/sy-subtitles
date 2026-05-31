@@ -41,7 +41,7 @@
 sy-subtitles/
 ├── talks/                          # Talk data (one dir per talk)
 │   └── {date}_{slug}/
-│       ├── meta.yaml               # Talk metadata (title, date, videos[])
+│       ├── meta.yaml               # Talk metadata (title, date, videos[]; links as obfuscated video_ref)
 │       ├── transcript_en.txt       # English transcript
 │       ├── transcript_uk.txt       # Ukrainian translation (pipeline output)
 │       ├── review_report.md        # AI review report

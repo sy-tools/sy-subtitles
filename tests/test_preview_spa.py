@@ -11,6 +11,8 @@ from urllib.parse import quote, unquote
 import pytest
 import yaml
 
+from tools.vimeo_codec import decode_video_ref
+
 SAMPLE_META = """title: 'Test Talk: Subtitle Preview'
 date: '2001-01-01'
 location: Test Location
@@ -3804,7 +3806,10 @@ class TestAddTalkForm:
         assert "amruta_url: https://www.amruta.org/" in yaml_text
         assert "language: en" in yaml_text
         assert "videos:" in yaml_text
-        assert "vimeo_url: https://vimeo.com/1234/abcd" in yaml_text
+        # Link stored obfuscated as video_ref — no plaintext vimeo in the preview.
+        assert "vimeo_url" not in yaml_text
+        ref = re.search(r"video_ref: (r1\S+)", yaml_text).group(1)
+        assert decode_video_ref(ref) == "https://vimeo.com/1234/abcd"
         assert "transcript_en_base64: |" in yaml_text
         # The preview must be valid YAML — this is the exact path the pipeline's
         # yaml.safe_load takes; substring checks alone would miss a quoting bug.
@@ -3824,10 +3829,10 @@ class TestAddTalkForm:
             "u": "https://www.amruta.org/1993/07/04/guru-puja-1993/",
             "loc": "Public Program: Cabella Ligure",
             "v": [
-                {"id": "189922347", "h": "8eea76507c", "l": "Guru Puja"},
+                {"id": "666666666", "h": "ffffffffff", "l": "Guru Puja"},
                 {
-                    "id": "189921224",
-                    "h": "c6fb45a3f2",
+                    "id": "555555555",
+                    "h": "eeeeeeeeee",
                     "l": "Guru Puja Talk: Gurus Who Belong To The Collective",
                 },
             ],
@@ -3871,7 +3876,9 @@ class TestAddTalkForm:
         yaml_decoded = unquote(m.group(1))
         assert "title: 'My Test Talk'" in yaml_decoded, yaml_decoded[:400]
         assert "date: '2020-05-05'" in yaml_decoded, yaml_decoded[:400]
-        assert "vimeo_url: https://vimeo.com/1234/abcd" in yaml_decoded, yaml_decoded[:400]
+        assert "vimeo_url" not in yaml_decoded, yaml_decoded[:400]
+        ref = re.search(r"video_ref: (r1\S+)", yaml_decoded).group(1)
+        assert decode_video_ref(ref) == "https://vimeo.com/1234/abcd", yaml_decoded[:400]
         assert "transcript_en_base64: |" in yaml_decoded, yaml_decoded[:400]
         assert "language: en" in yaml_decoded, yaml_decoded[:400]
         # Description carries the source amruta URL.
