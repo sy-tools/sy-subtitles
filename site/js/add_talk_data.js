@@ -26,11 +26,23 @@ function parseAddTalkHash(hash) {
     return { state: 'parse_error', data: null };
   }
 
-  if (!data.u || data.u.indexOf('amruta.org') === -1) {
+  if (!isAmrutaUrl(data.u)) {
     return { state: 'wrong_site', data: null };
   }
 
   return { state: 'form', data: data };
+}
+
+// True only when the url's HOST is amruta.org (or a subdomain like www.).
+// A substring test (indexOf('amruta.org')) wrongly accepted look-alikes such
+// as http://evil.com/#amruta.org and amruta.org.attacker.com.
+function isAmrutaUrl(u) {
+  try {
+    var h = new URL(u).hostname;
+    return h === 'amruta.org' || h.endsWith('.amruta.org');
+  } catch (e) {
+    return false;
+  }
 }
 
 // Render a scalar as a single-quoted YAML string, escaping embedded quotes by
@@ -78,5 +90,5 @@ function buildMetaYaml(fields) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseAddTalkHash: parseAddTalkHash, buildMetaYaml: buildMetaYaml };
+  module.exports = { parseAddTalkHash: parseAddTalkHash, isAmrutaUrl: isAmrutaUrl, buildMetaYaml: buildMetaYaml };
 }

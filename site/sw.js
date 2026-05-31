@@ -35,7 +35,16 @@ function isImmutable(url) {
 }
 
 function isApiOrRaw(url) {
-  return url.includes('api.github.com') || url.includes('raw.githubusercontent.com');
+  // Match on the actual host, not a substring: "https://evil.com/?x=api.github.com"
+  // must not be treated as a GitHub API/raw request.
+  try {
+    var h = new URL(url).hostname;
+    // Both hosts are used bare by the app; no subdomain form exists in GitHub's
+    // infrastructure, so exact match (symmetric for both) is correct here.
+    return h === 'api.github.com' || h === 'raw.githubusercontent.com';
+  } catch (e) {
+    return false;
+  }
 }
 
 function isNavigation(url) {

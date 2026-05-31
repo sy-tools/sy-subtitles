@@ -53,6 +53,28 @@ describe('parseAddTalkHash — routing states', () => {
   });
 });
 
+// A payload's url must be an actual amruta.org host, not merely contain the
+// string "amruta.org" somewhere — otherwise http://evil.com/#amruta.org or
+// amruta.org.attacker.com would pass (CodeQL js/incomplete-url-substring).
+describe('parseAddTalkHash — amruta host validation (not substring)', () => {
+  const stateFor = (u) => parseAddTalkHash(hashFor({ ...validTalk, u })).state;
+  it('accepts the bare amruta.org host', () => {
+    assert.strictEqual(stateFor('https://amruta.org/1978/10/02/x/'), 'form');
+  });
+  it('accepts the www.amruta.org host', () => {
+    assert.strictEqual(stateFor('https://www.amruta.org/1978/10/02/x/'), 'form');
+  });
+  it('rejects a host that only contains amruta.org in the path or fragment', () => {
+    assert.strictEqual(stateFor('http://attacker.com/#amruta.org'), 'wrong_site');
+  });
+  it('rejects a look-alike host suffixed with amruta.org', () => {
+    assert.strictEqual(stateFor('https://amruta.org.evil.com/x'), 'wrong_site');
+  });
+  it('rejects an unparseable url', () => {
+    assert.strictEqual(stateFor('not a url'), 'wrong_site');
+  });
+});
+
 // Regression: a literal '%' in the title or transcript (e.g. "100%") used to
 // trip a redundant decodeURIComponent on already-decoded text, throwing
 // "URI malformed" and surfacing the misleading "Wrong site" error.
