@@ -48,3 +48,12 @@ def test_cross_language_vectors_match():
     assert data["vectors"], "vectors file must not be empty"
     for vec in data["vectors"]:
         assert derive_hash(vec["phrase"], data["salt"], data["iterations"]) == vec["hash"]
+
+
+def test_js_module_constants_match_vectors():
+    """The JS twin's GATE_SALT/GATE_ITERATIONS must match the fixture, so the
+    deploy workflow (which greps them out of the JS) computes the right hash."""
+    js = (Path(__file__).parent.parent / "site" / "js" / "passphrase_gate.js").read_text()
+    data = json.loads(VECTORS_PATH.read_text(encoding="utf-8"))
+    assert f"GATE_SALT = '{data['salt']}'" in js
+    assert f"GATE_ITERATIONS = {data['iterations']}" in js
