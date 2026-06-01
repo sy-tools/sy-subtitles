@@ -57,3 +57,11 @@ def test_js_module_constants_match_vectors():
     data = json.loads(VECTORS_PATH.read_text(encoding="utf-8"))
     assert f"GATE_SALT = '{data['salt']}'" in js
     assert f"GATE_ITERATIONS = {data['iterations']}" in js
+
+
+def test_index_html_has_gate_hash_placeholder():
+    """The deploy workflow seds this exact line; if it ever changes, the deploy
+    silently ships an empty (disabled) gate. Pin the sed target."""
+    idx = (Path(__file__).parent.parent / "site" / "index.html").read_text()
+    assert "var APP_GATE_HASH = '';" in idx
+    assert "js/passphrase_gate.js" in idx

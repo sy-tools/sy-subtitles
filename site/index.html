@@ -21,6 +21,7 @@
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/talk_actions.js"></script>
+<script src="js/passphrase_gate.js"></script>
 <style>
 /* --- Theme: CSS custom properties --- */
 :root {
@@ -1050,6 +1051,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
   justify-content: flex-end;
   gap: 8px;
 }
+    .sy-modal-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-top: 6px; font-size: 15px; border: 1px solid var(--border, #cccccc); border-radius: 6px; background: var(--bg, #ffffff); color: var(--fg, #111111); }
+    .sy-modal-error { color: #c0392b; font-size: 13px; margin-top: 6px; }
 .sy-modal-btn {
   background: var(--bg4);
   color: var(--fg);
@@ -1770,6 +1773,8 @@ var PAGES_BASE = location.pathname.replace(/\/[^/]*$/, '');
 // ============================================================
 var APP_DEPLOY_SHA = ''; // app-shell version (index.html + js/*.js) at deploy
 var APP_DEPLOY_DATE = ''; // deploy date YYYY-MM-DD
+var APP_GATE_HASH = ''; // passphrase-gate PBKDF2 hash, injected at deploy from the GATE_PASSPHRASE secret (empty => gate disabled / fail-open)
+var GATE_COPY = 'Введіть пароль для доступу'; // passphrase prompt heading
 
 // ============================================================
 // Cache — schema versioned, auto-migrates on format change
