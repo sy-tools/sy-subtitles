@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-31T07:50:05.612792+00:00",
+  "updated_at": "2026-06-01T11:51:49.986693+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -165,10 +165,10 @@
       "updated_at": "2026-05-24T14:56:52Z"
     },
     "1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
       "issue_number": 197,
-      "updated_at": "2026-05-27T22:29:50Z"
+      "updated_at": "2026-06-01T11:51:48Z"
     },
     "1990-05-06_Sahasrara-Puja-You-Have-All-Become-Mahayogis-Now": {
       "status": "pending",
