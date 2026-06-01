@@ -3455,7 +3455,9 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
     // through t()/I18N so it can be localized. A bare `el.textContent = '...'`
     // (as the passphrase gate originally had) is invisible to the showToast /
     // data-i18n scanners above — this catches it everywhere.
-    var script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+    // Case-insensitive (i) so CodeQL's bad-tag-filter query is satisfied; our
+    // index.html uses a lowercase <script>, so matching is unchanged in practice.
+    var script = html.match(/<script>([\s\S]*)<\/script>/i)[1];
     // The I18N dictionary is the one place Cyrillic literals legitimately live.
     var i18nMatch = script.match(/var I18N\s*=\s*\{[\s\S]*?\n\s*\};/);
     var scanned = i18nMatch ? script.replace(i18nMatch[0], '') : script;
