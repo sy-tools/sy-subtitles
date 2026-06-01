@@ -101,8 +101,10 @@ If Vimeo returns 401: `--what text` first, then `--what srt`.
 ## Tools
 
 ```bash
-# Download talk from amruta.org
-python -m tools.download --url "https://www.amruta.org/..." [--what all|srt|text]
+# Download talk from amruta.org (folder named {date}_{slugify(title)} — same as
+# the SPA; see tools/talk_slug.py. amruta auth/cookie: docs/amruta-auth.md)
+python -m tools.download --url "https://www.amruta.org/..." [--what all|srt|text] [--langs en,uk]
+#   --langs en,uk fetches EN + Ukrainian (/uk/) transcripts; folder/meta from EN
 
 # Vimeo link obfuscation: meta.yaml stores links as `video_ref` (not plaintext
 # vimeo_url). Obfuscation only — decode ships in the public SPA.

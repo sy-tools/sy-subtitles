@@ -57,16 +57,26 @@ glossary/                       SY terminology dictionary (EN → UK, see glossa
 python -m tools.download \
   --url "https://www.amruta.org/1993/09/19/ganesha-puja-cabella-1993/"
 
+# English + Ukrainian transcripts in one go (folder/meta come from the EN page):
+python -m tools.download \
+  --url "https://www.amruta.org/1984/08/11/raksha-bandhan-and-maryadas-hounslow-1984/" \
+  --langs en,uk
+
 # Batch mode:
 python -m tools.download --manifest queue.yaml
 ```
 
 The downloader automatically:
-- Extracts date and slug from the URL
+- Names the folder `{date}_{slugify(page_title)}` — the same convention as the
+  SPA add-talk flow (single-source slugify in `tools/talk_slug.py`)
 - Finds all Vimeo videos on the page
 - Creates named subdirectories per video (e.g., `Talk/`, `Bhajan/`)
 - Downloads SRTs per video from Vimeo
-- Saves `transcript_en.txt` and `meta.yaml`
+- Saves `transcript_<lang>.txt` (one per `--langs`, default the URL's language)
+  and `meta.yaml`
+
+amruta.org auth (the WordPress session cookie) is documented in
+[`docs/amruta-auth.md`](docs/amruta-auth.md).
 
 ### 2. Push and run pipeline
 

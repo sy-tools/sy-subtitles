@@ -4,11 +4,18 @@ Fetches SRT subtitles, transcript text, and extracts Vimeo video URLs
 from amruta.org talk pages using WordPress session cookie authentication.
 Supports multiple videos per page and batch processing.
 
+The talk folder is named {date}_{slugify(page_title)} — the same convention as
+the SPA add-talk flow (see tools/talk_slug.py). Translations are fetched from
+amruta's /{lang}/ URL variants into transcript_{lang}.txt.
+
 Usage:
     # Single talk (date/slug auto-extracted from URL):
     python -m tools.download --url URL [--what srt,text] [--cookie COOKIE]
 
-    # Batch mode:
+    # English + Ukrainian transcripts (folder/meta come from the EN page):
+    python -m tools.download --url URL --langs en,uk
+
+    # Batch mode (queue entries may carry a per-talk `langs:`):
     python -m tools.download --manifest queue.yaml [--what srt,text] [--cookie COOKIE]
 """
 
@@ -18,6 +25,7 @@ import os
 import re
 import shutil
 import subprocess
+from urllib.parse import urlsplit, urlunsplit
 
 import requests
 import yaml
@@ -65,6 +73,42 @@ def resolve_talk_slug(title, url, slug_override=None):
         return slug
     _, url_slug = parse_amruta_url(url)
     return url_slug
+
+
+# amruta serves translations under a 2-letter language path prefix, e.g.
+# https://www.amruta.org/uk/1984/08/11/slug/ ; the English page has no prefix.
+_LANG_PREFIX_RE = re.compile(r"^/([a-z]{2})(/.*)$")
+
+
+def detect_url_lang(url):
+    """Language code from an amruta URL's path prefix; 'en' when there is none.
+
+    /uk/1984/08/11/slug/ -> 'uk' ; /1984/08/11/slug/ -> 'en'. The date segment
+    is digits, so it never matches the 2-letter prefix.
+    """
+    m = _LANG_PREFIX_RE.match(urlsplit(url).path)
+    return m.group(1) if m else "en"
+
+
+def strip_lang_prefix(url):
+    """Return the base (English) URL with any /xx language prefix removed."""
+    parts = urlsplit(url)
+    m = _LANG_PREFIX_RE.match(parts.path)
+    if m:
+        parts = parts._replace(path=m.group(2))
+    return urlunsplit(parts)
+
+
+def to_lang_url(url, lang):
+    """Build the URL for ``lang`` from any amruta talk URL.
+
+    'en' -> the base URL (no prefix); any other code -> a /{lang} prefix on the
+    base path. Idempotent for a URL already in the target language.
+    """
+    base = urlsplit(strip_lang_prefix(url))
+    if lang == "en":
+        return urlunsplit(base)
+    return urlunsplit(base._replace(path="/" + lang + base.path))
 
 
 def normalize_vimeo_url(url):
@@ -452,10 +496,12 @@ class AmrutaDownloader:
         return output_path
 
     def download_talk_all(self, url, talk_dir, what="srt,text", soup=None):
-        """Download all videos from a talk page.
+        """Download videos and per-video SRTs from a talk page.
 
-        Creates named subdirectories per video. Downloads SRTs per video
-        from Vimeo. Transcript goes to talk root.
+        Creates named subdirectories per video and downloads SRTs per video
+        from Vimeo. Transcript text is NOT written here — process_single_url
+        handles it per language so one EN fetch can drive transcript_en while
+        /uk/, /ru/, ... drive the translations.
 
         Args:
             url: amruta.org talk page URL
@@ -498,16 +544,9 @@ class AmrutaDownloader:
                 for f in srt_files:
                     print(f"    Downloaded: {os.path.basename(f)}")
 
-        # Extract transcript text (talk-level, save at talk root)
-        if do_all or "text" in what_set:
-            transcript = self.extract_transcript(soup)
-            if transcript:
-                os.makedirs(talk_dir, exist_ok=True)
-                path = os.path.join(talk_dir, "transcript_en.txt")
-                with open(path, "w", encoding="utf-8") as f:
-                    f.write(transcript)
-                result["transcript_path"] = path
-                print("  Saved transcript: transcript_en.txt")
+        # Transcript text is handled per-language by the caller
+        # (process_single_url) so a single EN page fetch can drive transcript_en
+        # while /uk/, /ru/, ... pages drive transcript_uk, transcript_ru, etc.
 
         # Download videos
         if do_all or "video" in what_set:
@@ -605,31 +644,67 @@ def setup_talk(talk_dir, url, date, slug, title, location, videos):
     print("  Created: meta.yaml")
 
 
-def process_single_url(downloader, url, what, slug_override=None):
-    """Process a single amruta.org URL."""
-    date, _url_slug = parse_amruta_url(url)
+def process_single_url(downloader, url, what, slug_override=None, langs=None):
+    """Process a single amruta.org URL.
 
-    # Fetch once, then name the folder from the page title (like the SPA) — the
-    # URL slug is lowercased and keeps the location suffix, so it can't
+    ``langs`` is the list of transcript languages to fetch (e.g. ["en", "uk"]).
+    When omitted it defaults to the language of ``url`` itself (so a /uk/ URL
+    fetches UK). The folder, meta.yaml, videos and SRTs always come from the
+    English page — the EN title is what names the folder (the SPA's convention),
+    and a translation's page title is in its own script.
+    """
+    en_url = strip_lang_prefix(url)
+    date, _url_slug = parse_amruta_url(en_url)
+    if not langs:
+        langs = [detect_url_lang(url)]
+    what_set = set(what.split(","))
+    want_text = "all" in what_set or "text" in what_set
+
+    # Fetch the EN page once, then name the folder from its title (like the SPA)
+    # — the URL slug is lowercased and keeps the location suffix, so it can't
     # reproduce the SPA's folder name. resolve_talk_slug falls back to the URL
     # slug if the title is unusable. The soup is reused by download_talk_all.
-    soup = downloader.fetch_talk_page(url)
-    title = downloader.extract_title(soup)
-    slug = resolve_talk_slug(title, url, slug_override)
+    en_soup = downloader.fetch_talk_page(en_url)
+    title = downloader.extract_title(en_soup)
+    slug = resolve_talk_slug(title, en_url, slug_override)
     talk_id = f"{date}_{slug}"
     talk_dir = os.path.join("talks", talk_id)
 
     print(f"\nDownloading talk: {talk_id}")
-    print(f"  URL: {url}")
+    print(f"  URL: {en_url}   langs: {', '.join(langs)}")
 
-    result = downloader.download_talk_all(url, talk_dir, what, soup=soup)
+    # Videos, SRTs and video downloads come from the EN page.
+    result = downloader.download_talk_all(en_url, talk_dir, what, soup=en_soup)
 
-    # Only create meta.yaml + dirs on full setup (not text-only re-downloads)
-    what_set = set(what.split(","))
+    # One transcript per requested language -> transcript_{lang}.txt. The EN page
+    # is already fetched; other languages live at /{lang}/... with the same DOM.
+    transcripts = {}
+    if want_text:
+        for lang in langs:
+            if lang == "en":
+                soup = en_soup
+            else:
+                lang_url = to_lang_url(en_url, lang)
+                print(f"  Fetching {lang} transcript: {lang_url}")
+                soup = downloader.fetch_talk_page(lang_url)
+            text = downloader.extract_transcript(soup)
+            if not text:
+                print(f"  WARNING: no {lang} transcript found")
+                continue
+            os.makedirs(talk_dir, exist_ok=True)
+            path = os.path.join(talk_dir, f"transcript_{lang}.txt")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(text)
+            transcripts[lang] = path
+            print(f"  Saved transcript: transcript_{lang}.txt")
+
+    # Only create meta.yaml + dirs on full setup (not text-only re-downloads).
+    # _detect_talk_language reads transcript_en.txt, so this runs after the
+    # transcript loop above.
     if "all" in what_set or "srt" in what_set or "video" in what_set:
         setup_talk(
             talk_dir=talk_dir,
-            url=url,
+            url=en_url,
             date=date,
             slug=slug,
             title=result["title"],
@@ -642,8 +717,8 @@ def process_single_url(downloader, url, what, slug_override=None):
     print(f"  Videos: {len(result['videos'])}")
     for v in result["videos"]:
         print(f"    - {v['slug']}: {v['vimeo_url']}")
-    if result["transcript_path"]:
-        print(f"  Transcript: {result['transcript_path']}")
+    for lang, path in transcripts.items():
+        print(f"  Transcript ({lang}): {path}")
 
     return talk_id
 
@@ -655,13 +730,20 @@ def main():
     group.add_argument("--manifest", help="Batch manifest YAML file (e.g. queue.yaml)")
     parser.add_argument("--slug", help="Override slug (single URL mode only)")
     parser.add_argument("--what", default="srt,text", help="What to download: all,srt,text,video")
+    parser.add_argument(
+        "--langs",
+        help="Comma-separated transcript languages, e.g. 'en,uk' "
+        "(default: the language of the URL). Folder/meta come from EN.",
+    )
     parser.add_argument("--cookie", help="Session cookie (overrides env)")
     args = parser.parse_args()
+
+    langs = [s.strip() for s in args.langs.split(",") if s.strip()] if args.langs else None
 
     downloader = AmrutaDownloader(session_cookie=args.cookie)
 
     if args.url:
-        process_single_url(downloader, args.url, args.what, args.slug)
+        process_single_url(downloader, args.url, args.what, args.slug, langs=langs)
     else:
         with open(args.manifest, encoding="utf-8") as f:
             manifest = yaml.safe_load(f)
@@ -670,8 +752,13 @@ def main():
         for entry in talks:
             url = entry["url"]
             slug_override = entry.get("slug")
+            entry_langs = (
+                [s.strip() for s in entry["langs"].split(",") if s.strip()]
+                if isinstance(entry.get("langs"), str)
+                else entry.get("langs", langs)
+            )
             try:
-                process_single_url(downloader, url, args.what, slug_override)
+                process_single_url(downloader, url, args.what, slug_override, langs=entry_langs)
             except Exception as e:
                 print(f"\nERROR processing {url}: {e}")
                 continue
