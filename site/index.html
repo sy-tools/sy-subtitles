@@ -2952,6 +2952,22 @@ function ensureManifest() {
 function route() {
   var hash = location.hash.slice(1) || '/';
 
+  // Soft passphrase gate: a gated route reached while locked (e.g. a pasted
+  // deep link) redirects to the index and prompts there; only a correct
+  // passphrase proceeds to the original target.
+  if (hash.startsWith('/preview/') || hash.startsWith('/review/')) {
+    var gateHash = gateExpectedHash();
+    if (PassphraseGate.isGateEnabled(gateHash) && !PassphraseGate.isUnlocked(gateHash, localStorage)) {
+      var target = hash;
+      if (previewState && previewState.player) { try { previewState.player.pause(); } catch(e) {} }
+      document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+      history.replaceState(null, '', location.pathname + location.search);
+      showIndex();
+      ensureUnlocked().then(function(ok) { if (ok) location.hash = target; });
+      return;
+    }
+  }
+
   // Pause video when leaving preview
   if (previewState && previewState.player) {
     try { previewState.player.pause(); } catch(e) {}

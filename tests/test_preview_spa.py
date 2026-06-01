@@ -5460,3 +5460,28 @@ class TestPassphraseGate:
         page.click(".sy-modal-btn:not(.primary)")
         page.wait_for_selector(".sy-modal", state="detached", timeout=2000)
         assert "active" in page.locator("#view-index").get_attribute("class")
+
+    def test_deep_link_to_review_while_locked_redirects_and_prompts(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server, "#/review/2001-01-01_Test-Talk")
+        page.wait_for_selector("#sy-gate-input", timeout=4000)
+        # Redirected to the index; review NOT rendered.
+        assert "active" in page.locator("#view-index").get_attribute("class")
+        assert "active" not in page.locator("#view-review").get_attribute("class")
+        # Correct phrase -> proceeds to the originally-requested review.
+        page.fill("#sy-gate-input", GATE_TEST_PHRASE)
+        page.press("#sy-gate-input", "Enter")
+        page.wait_for_selector("#view-review.active", timeout=6000)
+
+    def test_already_unlocked_browser_skips_prompt(self, server, page):
+        _enable_gate(page)
+        page.add_init_script(f"localStorage.setItem('sy_gate', '{GATE_TEST_HASH}');")
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#view-preview.active", timeout=6000)
+        assert page.locator("#sy-gate-input").count() == 0
+
+    def test_gate_disabled_opens_without_prompt(self, server, page):
+        # No _enable_gate(): APP_GATE_HASH is empty -> fail-open.
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#view-preview.active", timeout=6000)
+        assert page.locator("#sy-gate-input").count() == 0
