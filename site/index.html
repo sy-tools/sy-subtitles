@@ -1052,7 +1052,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
   gap: 8px;
   margin-top: 16px;
 }
-    .sy-modal-input { width: 100%; box-sizing: border-box; padding: 8px 10px; margin-top: 6px; font-size: 15px; border: 1px solid var(--border, #cccccc); border-radius: 6px; background: var(--bg, #ffffff); color: var(--fg, #111111); }
+    .sy-modal-input-wrap { position: relative; margin-top: 6px; }
+    .sy-modal-input { display: block; width: 100%; box-sizing: border-box; padding: 8px 38px 8px 10px; font-size: 15px; border: 1px solid var(--border, #cccccc); border-radius: 6px; background: var(--bg, #ffffff); color: var(--fg, #111111); }
+    .sy-gate-reveal { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; margin: 0; padding: 4px 6px; font-size: 16px; line-height: 1; cursor: pointer; opacity: .55; }
+    .sy-gate-reveal:hover, .sy-gate-reveal.revealed { opacity: 1; }
     .sy-modal-error { color: #c0392b; font-size: 13px; margin-top: 6px; }
 .sy-modal-btn {
   background: var(--bg4);
@@ -1804,6 +1807,8 @@ var I18N = {
     'gate.title': '\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043F\u0430\u0440\u043E\u043B\u044C \u0434\u043B\u044F \u0434\u043E\u0441\u0442\u0443\u043F\u0443',
     'gate.error': '\u041D\u0435\u0432\u0456\u0440\u043D\u0438\u0439 \u043F\u0430\u0440\u043E\u043B\u044C',
     'gate.submit': '\u0423\u0432\u0456\u0439\u0442\u0438',
+    'gate.reveal': '\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043F\u0430\u0440\u043E\u043B\u044C',
+    'gate.hide': '\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043F\u0430\u0440\u043E\u043B\u044C',
     'preview.resize_player': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432\u0438\u0441\u043E\u0442\u0443 \u043F\u043B\u0435\u0454\u0440\u0430',
     'preview.resize_subs': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432\u0438\u0441\u043E\u0442\u0443 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432',
     'search.placeholder': '\u041F\u043E\u0448\u0443\u043A \u043F\u0440\u043E\u043C\u043E\u0432...',
@@ -1923,6 +1928,8 @@ var I18N = {
     'gate.title': 'Enter the password to continue',
     'gate.error': 'Wrong password',
     'gate.submit': 'Enter',
+    'gate.reveal': 'Show password',
+    'gate.hide': 'Hide password',
     'preview.resize_player': 'Drag to resize the player',
     'preview.resize_subs': 'Drag to resize the subtitles',
     'search.placeholder': 'Search talks...',
@@ -2819,12 +2826,30 @@ SPA.passphrasePrompt = function(expectedHash) {
     h.textContent = t('gate.title');
     modal.appendChild(h);
 
+    var inputWrap = document.createElement('div');
+    inputWrap.className = 'sy-modal-input-wrap';
     var input = document.createElement('input');
     input.type = 'password';
     input.id = 'sy-gate-input';
     input.className = 'sy-modal-input';
     input.setAttribute('autocomplete', 'current-password');
-    modal.appendChild(input);
+    inputWrap.appendChild(input);
+    var reveal = document.createElement('button');
+    reveal.type = 'button';
+    reveal.className = 'sy-gate-reveal';
+    reveal.textContent = '\u{1F441}'; // eye
+    reveal.setAttribute('aria-label', t('gate.reveal'));
+    reveal.title = t('gate.reveal');
+    reveal.addEventListener('click', function() {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      reveal.classList.toggle('revealed', show);
+      reveal.setAttribute('aria-label', show ? t('gate.hide') : t('gate.reveal'));
+      reveal.title = show ? t('gate.hide') : t('gate.reveal');
+      input.focus();
+    });
+    inputWrap.appendChild(reveal);
+    modal.appendChild(inputWrap);
 
     var err = document.createElement('div');
     err.className = 'sy-modal-error';

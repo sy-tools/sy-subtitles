@@ -5498,3 +5498,23 @@ class TestPassphraseGate:
         # as the buttons crowding (and visually overlapping) the field.
         gap = okb["y"] - (inp["y"] + inp["height"])
         assert gap >= 10, f"buttons crowd the input: gap={gap:.1f}px (want >= 10)"
+
+    def test_gate_password_reveal_toggle(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.wait_for_selector("#sy-gate-input", timeout=2000)
+        inp = page.locator("#sy-gate-input")
+        page.fill("#sy-gate-input", "secret123")
+        assert inp.get_attribute("type") == "password"  # masked by default
+        # The reveal toggle sits inside the field, on the right.
+        reveal = page.locator(".sy-gate-reveal")
+        rb = reveal.bounding_box()
+        ib = inp.bounding_box()
+        assert rb["x"] > ib["x"] + ib["width"] / 2  # right half of the field
+        reveal.click()
+        assert inp.get_attribute("type") == "text"  # revealed
+        assert inp.input_value() == "secret123"  # value preserved
+        reveal.click()
+        assert inp.get_attribute("type") == "password"  # masked again
