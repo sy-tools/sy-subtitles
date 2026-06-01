@@ -39,6 +39,31 @@ jobs:
           sed -i "s/var APP_DEPLOY_SHA = '';/var APP_DEPLOY_SHA = '${SHELL_SHA}';/" site/index.html
           echo "Deploy: date=$DEPLOY_DATE shell=$SHELL_SHA"
 
+      - name: Inject passphrase-gate hash
+        env:
+          GATE_PASSPHRASE: ${{ secrets.GATE_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GATE_PASSPHRASE:-}" ]; then
+            echo "::error::GATE_PASSPHRASE secret is empty/unset — refusing to ship an open gate"
+            exit 1
+          fi
+          # GATE_SALT / GATE_ITERATIONS are the single source of truth in the JS module.
+          SALT=$(grep -oE "GATE_SALT = '[0-9a-f]+'" site/js/passphrase_gate.js | grep -oE "[0-9a-f]{8,}")
+          ITERS=$(grep -oE "GATE_ITERATIONS = [0-9]+" site/js/passphrase_gate.js | grep -oE "[0-9]+")
+          if [ -z "$SALT" ] || [ -z "$ITERS" ]; then
+            echo "::error::could not read GATE_SALT/GATE_ITERATIONS from site/js/passphrase_gate.js"
+            exit 1
+          fi
+          HASH=$(python3 -m tools.passphrase_gate hash --salt "$SALT" --iterations "$ITERS" "$GATE_PASSPHRASE")
+          sed -i "s/var APP_GATE_HASH = '';/var APP_GATE_HASH = '${HASH}';/" site/index.html
+          # Assert the injection landed — never silently ship an empty (disabled) gate.
+          grep -q "var APP_GATE_HASH = '${HASH}';" site/index.html || {
+            echo "::error::gate hash injection failed (placeholder not found?)"
+            exit 1
+          }
+          echo "Gate hash injected (length=${#HASH})"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
