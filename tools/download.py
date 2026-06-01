@@ -24,6 +24,7 @@ import yaml
 from bs4 import BeautifulSoup, Tag
 from dotenv import load_dotenv
 
+from tools.talk_slug import slugify
 from tools.vimeo_codec import encode_video_ref
 
 
@@ -46,6 +47,24 @@ def parse_amruta_url(url):
     # Title-case: ganesha-puja-cabella → Ganesha-Puja-Cabella
     slug = "-".join(part.capitalize() for part in raw_slug.split("-"))
     return date, slug
+
+
+def resolve_talk_slug(title, url, slug_override=None):
+    """Resolve the talk-folder slug, matching the SPA add-talk flow.
+
+    The SPA names a folder ``{date}_{slugify(title)}`` from the h1 page title
+    (case preserved, no location suffix). download.py uses the SAME slugify
+    (tools/talk_slug.py) so both paths produce identical folders for the same
+    talk. Falls back to the URL slug (parse_amruta_url) when the title is
+    missing or slugifies to empty. An explicit override always wins.
+    """
+    if slug_override:
+        return slug_override
+    slug = slugify(title or "")
+    if slug:
+        return slug
+    _, url_slug = parse_amruta_url(url)
+    return url_slug
 
 
 def normalize_vimeo_url(url):
@@ -432,7 +451,7 @@ class AmrutaDownloader:
         subprocess.run(cmd, check=True)
         return output_path
 
-    def download_talk_all(self, url, talk_dir, what="srt,text"):
+    def download_talk_all(self, url, talk_dir, what="srt,text", soup=None):
         """Download all videos from a talk page.
 
         Creates named subdirectories per video. Downloads SRTs per video
@@ -442,6 +461,8 @@ class AmrutaDownloader:
             url: amruta.org talk page URL
             talk_dir: talk root directory (e.g. talks/1993-09-19_ganesha-puja)
             what: comma-separated list of {all,srt,text,video}
+            soup: pre-fetched BeautifulSoup of the page (avoids a second GET
+                when the caller already fetched it to derive the folder slug)
 
         Returns:
             dict with keys: title, videos, transcript_path
@@ -449,7 +470,8 @@ class AmrutaDownloader:
         what_set = set(what.split(","))
         do_all = "all" in what_set
 
-        soup = self.fetch_talk_page(url)
+        if soup is None:
+            soup = self.fetch_talk_page(url)
         title = self.extract_title(soup)
         videos = self.extract_video_labels(soup)
 
@@ -585,15 +607,22 @@ def setup_talk(talk_dir, url, date, slug, title, location, videos):
 
 def process_single_url(downloader, url, what, slug_override=None):
     """Process a single amruta.org URL."""
-    date, url_slug = parse_amruta_url(url)
-    slug = slug_override or url_slug
+    date, _url_slug = parse_amruta_url(url)
+
+    # Fetch once, then name the folder from the page title (like the SPA) — the
+    # URL slug is lowercased and keeps the location suffix, so it can't
+    # reproduce the SPA's folder name. resolve_talk_slug falls back to the URL
+    # slug if the title is unusable. The soup is reused by download_talk_all.
+    soup = downloader.fetch_talk_page(url)
+    title = downloader.extract_title(soup)
+    slug = resolve_talk_slug(title, url, slug_override)
     talk_id = f"{date}_{slug}"
     talk_dir = os.path.join("talks", talk_id)
 
     print(f"\nDownloading talk: {talk_id}")
     print(f"  URL: {url}")
 
-    result = downloader.download_talk_all(url, talk_dir, what)
+    result = downloader.download_talk_all(url, talk_dir, what, soup=soup)
 
     # Only create meta.yaml + dirs on full setup (not text-only re-downloads)
     what_set = set(what.split(","))
