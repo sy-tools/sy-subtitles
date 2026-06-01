@@ -1,0 +1,14 @@
+{
+  "salt": "a3f1c92e6b4d80571e2c9f3a6d8b0e47",
+  "iterations": 200000,
+  "vectors": [
+    {
+      "phrase": "test-passphrase",
+      "hash": "289fa9ee16cb75d517736c68cd7d9a646fde31efead2e17b59c3219bd1548f5f"
+    },
+    {
+      "phrase": "correct-horse-battery",
+      "hash": "f3267b29331e95b8d025040f16559d2744232110081a3cf1fe8a38592bebd3c7"
+    }
+  ]
+}
