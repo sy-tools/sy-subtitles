@@ -5485,3 +5485,16 @@ class TestPassphraseGate:
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#view-preview.active", timeout=6000)
         assert page.locator("#sy-gate-input").count() == 0
+
+    def test_gate_modal_buttons_do_not_overlap_input(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.wait_for_selector("#sy-gate-input", timeout=2000)
+        inp = page.locator("#sy-gate-input").bounding_box()
+        okb = page.locator(".sy-modal-btn.primary").bounding_box()
+        # The buttons must sit clearly BELOW the input — a flush/zero gap renders
+        # as the buttons crowding (and visually overlapping) the field.
+        gap = okb["y"] - (inp["y"] + inp["height"])
+        assert gap >= 10, f"buttons crowd the input: gap={gap:.1f}px (want >= 10)"
