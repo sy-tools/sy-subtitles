@@ -1931,7 +1931,11 @@ describe('Preview: cleanup on navigation', () => {
   it('player paused in route() when navigating away from preview', () => {
     var idx = html.indexOf('function route()');
     assert.ok(idx > -1, 'route function not found');
-    var chunk = html.substring(idx, idx + 500);
+    // Slice the whole route() body (up to the next top-level function) rather
+    // than a fixed-width window, so code inserted at the top of route() (e.g.
+    // the passphrase-gate deep-link guard) can't push the pause out of view.
+    var after = html.indexOf('\nfunction ', idx + 1);
+    var chunk = html.substring(idx, after > -1 ? after : idx + 2000);
     assert.ok(chunk.includes('.pause()'), 'route should pause player when leaving preview');
   });
 
