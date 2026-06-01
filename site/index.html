@@ -2774,6 +2774,117 @@ SPA.toast = function(msg) {
   stack.appendChild(t);
   setTimeout(function() { if (t.parentNode) t.parentNode.removeChild(t); }, 3000);
 };
+
+// ----- Passphrase gate (soft, client-side) -----
+// Expected hash: test/dev override first, then the deploy-injected value.
+// Empty => gate disabled (fail-open). See site/js/passphrase_gate.js.
+function gateExpectedHash() {
+  if (typeof window !== 'undefined' && typeof window.__SY_GATE_HASH === 'string') {
+    return window.__SY_GATE_HASH;
+  }
+  return APP_GATE_HASH || '';
+}
+
+// Resolves true if access is allowed (gate disabled, already unlocked, or a
+// correct passphrase was just entered); false if the user cancelled.
+function ensureUnlocked() {
+  var expected = gateExpectedHash();
+  if (!PassphraseGate.isGateEnabled(expected)) return Promise.resolve(true);
+  if (PassphraseGate.isUnlocked(expected, localStorage)) return Promise.resolve(true);
+  return SPA.passphrasePrompt(expected);
+}
+
+SPA.passphrasePrompt = function(expectedHash) {
+  return new Promise(function(resolve) {
+    var prev = document.activeElement;
+    var backdrop = document.createElement('div');
+    backdrop.className = 'sy-modal-backdrop';
+    var modal = document.createElement('div');
+    modal.className = 'sy-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
+    var h = document.createElement('h3');
+    h.className = 'sy-modal-title';
+    h.textContent = GATE_COPY;
+    modal.appendChild(h);
+
+    var input = document.createElement('input');
+    input.type = 'password';
+    input.id = 'sy-gate-input';
+    input.className = 'sy-modal-input';
+    input.setAttribute('autocomplete', 'current-password');
+    modal.appendChild(input);
+
+    var err = document.createElement('div');
+    err.className = 'sy-modal-error';
+    err.style.display = 'none';
+    err.textContent = 'Невірний пароль';
+    modal.appendChild(err);
+
+    var actions = document.createElement('div');
+    actions.className = 'sy-modal-actions';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'sy-modal-btn';
+    cancelBtn.type = 'button';
+    cancelBtn.textContent = 'Скасувати';
+    var okBtn = document.createElement('button');
+    okBtn.className = 'sy-modal-btn primary';
+    okBtn.type = 'button';
+    okBtn.textContent = 'Увійти';
+    actions.appendChild(cancelBtn);
+    actions.appendChild(okBtn);
+    modal.appendChild(actions);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+
+    var done = false;
+    function close(val) {
+      if (done) return; done = true;
+      backdrop.style.animation = 'sy-fade-in .12s reverse';
+      setTimeout(function() { if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop); }, 120);
+      document.removeEventListener('keydown', onKey, true);
+      if (prev && prev.focus) try { prev.focus(); } catch(_){}
+      resolve(val);
+    }
+    function submit() {
+      PassphraseGate.verifyPassphrase(input.value, expectedHash).then(function(ok) {
+        if (ok) {
+          PassphraseGate.recordUnlock(expectedHash, localStorage);
+          close(true);
+        } else {
+          err.style.display = '';
+          input.value = '';
+          input.focus();
+        }
+      });
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(false); }
+      if (e.key === 'Enter')  { e.preventDefault(); submit(); }
+    }
+    backdrop.addEventListener('click', function(e) { if (e.target === backdrop) close(false); });
+    cancelBtn.addEventListener('click', function() { close(false); });
+    okBtn.addEventListener('click', submit);
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(function() { input.focus(); }, 20);
+  });
+};
+
+// Intercept clicks on gated links from the index so the prompt appears BEFORE
+// navigation. Correct phrase -> navigate; cancel -> stay put (no navigation).
+document.addEventListener('click', function(e) {
+  var a = e.target && e.target.closest ? e.target.closest('a') : null;
+  if (!a) return;
+  var href = a.getAttribute('href') || '';
+  if (!/^#\/(preview|review)\//.test(href)) return;
+  var expected = gateExpectedHash();
+  if (!PassphraseGate.isGateEnabled(expected)) return;          // gate off -> normal nav
+  if (PassphraseGate.isUnlocked(expected, localStorage)) return; // already unlocked
+  e.preventDefault();
+  ensureUnlocked().then(function(ok) { if (ok) location.hash = href; });
+});
+
 var manifest = null;
 var reviewStatus = null;
 
