@@ -5513,8 +5513,13 @@ class TestPassphraseGate:
         rb = reveal.bounding_box()
         ib = inp.bounding_box()
         assert rb["x"] > ib["x"] + ib["width"] / 2  # right half of the field
+        # An <svg> icon (not an emoji glyph), and a state that flips on click.
+        assert reveal.locator("svg").count() == 1
+        assert reveal.get_attribute("aria-pressed") == "false"
         reveal.click()
         assert inp.get_attribute("type") == "text"  # revealed
         assert inp.input_value() == "secret123"  # value preserved
+        assert reveal.get_attribute("aria-pressed") == "true"  # state visibly flips
         reveal.click()
         assert inp.get_attribute("type") == "password"  # masked again
+        assert reveal.get_attribute("aria-pressed") == "false"

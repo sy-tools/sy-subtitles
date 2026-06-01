@@ -1054,8 +1054,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 }
     .sy-modal-input-wrap { position: relative; margin-top: 6px; }
     .sy-modal-input { display: block; width: 100%; box-sizing: border-box; padding: 8px 38px 8px 10px; font-size: 15px; border: 1px solid var(--border, #cccccc); border-radius: 6px; background: var(--bg, #ffffff); color: var(--fg, #111111); }
-    .sy-gate-reveal { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: 0; margin: 0; padding: 4px 6px; font-size: 16px; line-height: 1; cursor: pointer; opacity: .55; }
-    .sy-gate-reveal:hover, .sy-gate-reveal.revealed { opacity: 1; }
+    .sy-gate-reveal { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; margin: 0; background: none; border: 0; border-radius: 6px; color: var(--fg5); cursor: pointer; transition: color .12s ease, background-color .12s ease; }
+    .sy-gate-reveal svg { width: 18px; height: 18px; display: block; }
+    .sy-gate-reveal:hover { color: var(--fg2); background: var(--bg4); }
+    .sy-gate-reveal:active { transform: translateY(-50%) scale(.9); }
+    .sy-gate-reveal:focus-visible { outline: 2px solid var(--border3); outline-offset: 1px; color: var(--fg2); }
     .sy-modal-error { color: #c0392b; font-size: 13px; margin-top: 6px; }
 .sy-modal-btn {
   background: var(--bg4);
@@ -2834,16 +2837,20 @@ SPA.passphrasePrompt = function(expectedHash) {
     input.className = 'sy-modal-input';
     input.setAttribute('autocomplete', 'current-password');
     inputWrap.appendChild(input);
+    var EYE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.6 12S5.1 5.2 12 5.2 22.4 12 22.4 12 18.9 18.8 12 18.8 1.6 12 1.6 12Z"/><circle cx="12" cy="12" r="3.1"/></svg>';
+    var EYE_OFF_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 5.4A10.6 10.6 0 0 1 12 5.2c6.9 0 10.4 6.8 10.4 6.8a18.3 18.3 0 0 1-2.4 3.4M6 6A18 18 0 0 0 1.6 12S5.1 18.8 12 18.8a10.2 10.2 0 0 0 4-.8"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><line x1="3.2" y1="3.2" x2="20.8" y2="20.8"/></svg>';
     var reveal = document.createElement('button');
     reveal.type = 'button';
     reveal.className = 'sy-gate-reveal';
-    reveal.textContent = '\u{1F441}'; // eye
+    reveal.innerHTML = EYE_SVG;
     reveal.setAttribute('aria-label', t('gate.reveal'));
+    reveal.setAttribute('aria-pressed', 'false');
     reveal.title = t('gate.reveal');
     reveal.addEventListener('click', function() {
       var show = input.type === 'password';
       input.type = show ? 'text' : 'password';
-      reveal.classList.toggle('revealed', show);
+      reveal.innerHTML = show ? EYE_OFF_SVG : EYE_SVG;
+      reveal.setAttribute('aria-pressed', show ? 'true' : 'false');
       reveal.setAttribute('aria-label', show ? t('gate.hide') : t('gate.reveal'));
       reveal.title = show ? t('gate.hide') : t('gate.reveal');
       input.focus();
