@@ -2839,6 +2839,7 @@ SPA.passphrasePrompt = function(expectedHash) {
     document.body.appendChild(backdrop);
 
     var done = false;
+    var submitting = false;
     function close(val) {
       if (done) return; done = true;
       backdrop.style.animation = 'sy-fade-in .12s reverse';
@@ -2848,7 +2849,11 @@ SPA.passphrasePrompt = function(expectedHash) {
       resolve(val);
     }
     function submit() {
+      if (submitting || done) return; // ignore re-entry while a verify is in flight
+      submitting = true;
       PassphraseGate.verifyPassphrase(input.value, expectedHash).then(function(ok) {
+        submitting = false;
+        if (done) return; // cancelled mid-verify -> don't unlock or mutate the modal
         if (ok) {
           PassphraseGate.recordUnlock(expectedHash, localStorage);
           close(true);
