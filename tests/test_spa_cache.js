@@ -1663,9 +1663,10 @@ describe('issue URL: i18n keys exist', () => {
 // ============================================================
 // Tests: Add Talk feature
 // ============================================================
-function slugifyTest(text) {
-  return text.replace(/[^a-zA-Z0-9 -]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-}
+// slugify is single-sourced in site/js/talk_slug.js (Python twin: tools/talk_slug.py;
+// shared parity fixture: tests/fixtures/slug_cases.json). Use the real module here so
+// this suite can't drift from production — an earlier copy was a silent divergence risk.
+const slugifyTest = require('../site/js/talk_slug.js').slugify;
 
 // Thin adapter over the single-source builder in site/js/add_talk_data.js so
 // these tests exercise the real serialization (incl. YAML-safe quoting) rather
