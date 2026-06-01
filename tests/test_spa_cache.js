@@ -3449,4 +3449,27 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
     errors = errors.filter(e => !e.startsWith('t('));
     assert.strictEqual(errors.length, 0, 'Hardcoded toast messages: ' + errors.join(', '));
   });
+
+  it('passphrase gate modal uses i18n, not hardcoded strings', () => {
+    var idx = html.indexOf('SPA.passphrasePrompt');
+    assert.ok(idx > -1, 'SPA.passphrasePrompt not found');
+    var end = html.indexOf('// Intercept clicks on gated links', idx);
+    assert.ok(end > idx, 'gate click-interceptor boundary not found');
+    var fn = html.substring(idx, end);
+    ['Введіть пароль для доступу', 'Невірний пароль', 'Скасувати', 'Увійти'].forEach((lit) => {
+      assert.ok(!fn.includes(lit), 'gate modal must not hardcode "' + lit + '"; use t()');
+    });
+    ["t('gate.title')", "t('gate.error')", "t('gate.submit')", "t('modal.cancel')"].forEach((call) => {
+      assert.ok(fn.includes(call), 'gate modal must use ' + call);
+    });
+  });
+
+  it('gate i18n keys are defined in both locales (uk + en)', () => {
+    var script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+    var i18n = script.match(/var I18N\s*=\s*\{([\s\S]*?)\n\};/)[1];
+    ['gate.title', 'gate.error', 'gate.submit'].forEach((k) => {
+      var count = (i18n.match(new RegExp("'" + k.replace('.', '\\.') + "'\\s*:", 'g')) || []).length;
+      assert.strictEqual(count, 2, k + ' should be defined in both locales (found ' + count + ')');
+    });
+  });
 });
