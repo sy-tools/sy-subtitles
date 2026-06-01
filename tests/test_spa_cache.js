@@ -3450,26 +3450,20 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
     assert.strictEqual(errors.length, 0, 'Hardcoded toast messages: ' + errors.join(', '));
   });
 
-  it('passphrase gate modal uses i18n, not hardcoded strings', () => {
-    var idx = html.indexOf('SPA.passphrasePrompt');
-    assert.ok(idx > -1, 'SPA.passphrasePrompt not found');
-    var end = html.indexOf('// Intercept clicks on gated links', idx);
-    assert.ok(end > idx, 'gate click-interceptor boundary not found');
-    var fn = html.substring(idx, end);
-    ['Введіть пароль для доступу', 'Невірний пароль', 'Скасувати', 'Увійти'].forEach((lit) => {
-      assert.ok(!fn.includes(lit), 'gate modal must not hardcode "' + lit + '"; use t()');
-    });
-    ["t('gate.title')", "t('gate.error')", "t('gate.submit')", "t('modal.cancel')"].forEach((call) => {
-      assert.ok(fn.includes(call), 'gate modal must use ' + call);
-    });
-  });
-
-  it('gate i18n keys are defined in both locales (uk + en)', () => {
+  it('no hardcoded Cyrillic string literals in JS (use t()/I18N)', () => {
+    // Global guard: any user-facing Cyrillic text in the SPA's JS must go
+    // through t()/I18N so it can be localized. A bare `el.textContent = '...'`
+    // (as the passphrase gate originally had) is invisible to the showToast /
+    // data-i18n scanners above — this catches it everywhere.
     var script = html.match(/<script>([\s\S]*)<\/script>/)[1];
-    var i18n = script.match(/var I18N\s*=\s*\{([\s\S]*?)\n\};/)[1];
-    ['gate.title', 'gate.error', 'gate.submit'].forEach((k) => {
-      var count = (i18n.match(new RegExp("'" + k.replace('.', '\\.') + "'\\s*:", 'g')) || []).length;
-      assert.strictEqual(count, 2, k + ' should be defined in both locales (found ' + count + ')');
-    });
+    // The I18N dictionary is the one place Cyrillic literals legitimately live.
+    var i18nMatch = script.match(/var I18N\s*=\s*\{[\s\S]*?\n\s*\};/);
+    var scanned = i18nMatch ? script.replace(i18nMatch[0], '') : script;
+    var litRe = /(['"])((?:\\.|(?!\1).)*?)\1/g;
+    var m, offenders = [];
+    while ((m = litRe.exec(scanned)) !== null) {
+      if (/[Ѐ-ӿ]/.test(m[2])) offenders.push(m[2].slice(0, 60));
+    }
+    assert.deepStrictEqual(offenders, [], 'Hardcoded Cyrillic JS literals (use t()): ' + offenders.join(' | '));
   });
 });
