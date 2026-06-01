@@ -1931,7 +1931,11 @@ describe('Preview: cleanup on navigation', () => {
   it('player paused in route() when navigating away from preview', () => {
     var idx = html.indexOf('function route()');
     assert.ok(idx > -1, 'route function not found');
-    var chunk = html.substring(idx, idx + 500);
+    // Slice the whole route() body (up to the next top-level function) rather
+    // than a fixed-width window, so code inserted at the top of route() (e.g.
+    // the passphrase-gate deep-link guard) can't push the pause out of view.
+    var after = html.indexOf('\nfunction ', idx + 1);
+    var chunk = html.substring(idx, after > -1 ? after : idx + 2000);
     assert.ok(chunk.includes('.pause()'), 'route should pause player when leaving preview');
   });
 
@@ -3444,5 +3448,24 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
     // Filter out ones that are inside t() calls
     errors = errors.filter(e => !e.startsWith('t('));
     assert.strictEqual(errors.length, 0, 'Hardcoded toast messages: ' + errors.join(', '));
+  });
+
+  it('no hardcoded Cyrillic string literals in JS (use t()/I18N)', () => {
+    // Global guard: any user-facing Cyrillic text in the SPA's JS must go
+    // through t()/I18N so it can be localized. A bare `el.textContent = '...'`
+    // (as the passphrase gate originally had) is invisible to the showToast /
+    // data-i18n scanners above — this catches it everywhere.
+    // Case-insensitive (i) so CodeQL's bad-tag-filter query is satisfied; our
+    // index.html uses a lowercase <script>, so matching is unchanged in practice.
+    var script = html.match(/<script>([\s\S]*)<\/script>/i)[1];
+    // The I18N dictionary is the one place Cyrillic literals legitimately live.
+    var i18nMatch = script.match(/var I18N\s*=\s*\{[\s\S]*?\n\s*\};/);
+    var scanned = i18nMatch ? script.replace(i18nMatch[0], '') : script;
+    var litRe = /(['"])((?:\\.|(?!\1).)*?)\1/g;
+    var m, offenders = [];
+    while ((m = litRe.exec(scanned)) !== null) {
+      if (/[Ѐ-ӿ]/.test(m[2])) offenders.push(m[2].slice(0, 60));
+    }
+    assert.deepStrictEqual(offenders, [], 'Hardcoded Cyrillic JS literals (use t()): ' + offenders.join(' | '));
   });
 });

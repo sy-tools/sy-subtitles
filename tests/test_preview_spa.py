@@ -5404,3 +5404,122 @@ class TestIndexCardXssDefenses:
             "a => (a.getAttribute('href') || '').toLowerCase().startsWith('javascript:')).length"
         )
         assert bad == 0, "a javascript: amruta_url survived into an anchor href"
+
+
+GATE_TEST_PHRASE = "test-passphrase"
+GATE_TEST_HASH = "289fa9ee16cb75d517736c68cd7d9a646fde31efead2e17b59c3219bd1548f5f"
+
+
+def _enable_gate(pg):
+    """Inject the expected hash so the gate is active (set BEFORE goto)."""
+    pg.add_init_script(f"window.__SY_GATE_HASH = '{GATE_TEST_HASH}';")
+
+
+class TestPassphraseGate:
+    def test_clicking_preview_link_prompts_on_index(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.wait_for_selector("#sy-gate-input", timeout=2000)
+        # Still on the index; preview NOT rendered.
+        assert "active" in page.locator("#view-index").get_attribute("class")
+        assert "active" not in page.locator("#view-preview").get_attribute("class")
+
+    def test_wrong_passphrase_shows_error_no_nav(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.fill("#sy-gate-input", "wrong-phrase")
+        page.click(".sy-modal-btn.primary")
+        page.wait_for_selector(".sy-modal-error", state="visible", timeout=2000)
+        assert "active" not in page.locator("#view-preview").get_attribute("class")
+        assert page.locator("#sy-gate-input").count() == 1  # modal still open
+
+    def test_correct_passphrase_navigates_to_preview(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.fill("#sy-gate-input", GATE_TEST_PHRASE)
+        page.press("#sy-gate-input", "Enter")
+        # 6000ms: PBKDF2(200k) verify + preview render can be slow on CI.
+        page.wait_for_selector("#view-preview.active", timeout=6000)
+        # close() removes the backdrop on a 120ms animation timer; wait it out
+        # before asserting (same pattern as test_cancel_stays_on_index).
+        page.wait_for_selector(".sy-modal", state="detached", timeout=2000)
+        assert page.locator(".sy-modal").count() == 0
+
+    def test_cancel_stays_on_index(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.wait_for_selector("#sy-gate-input", timeout=2000)
+        page.click(".sy-modal-btn:not(.primary)")
+        page.wait_for_selector(".sy-modal", state="detached", timeout=2000)
+        assert "active" in page.locator("#view-index").get_attribute("class")
+
+    def test_deep_link_to_review_while_locked_redirects_and_prompts(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server, "#/review/2001-01-01_Test-Talk")
+        page.wait_for_selector("#sy-gate-input", timeout=4000)
+        # Redirected to the index; review NOT rendered.
+        assert "active" in page.locator("#view-index").get_attribute("class")
+        assert "active" not in page.locator("#view-review").get_attribute("class")
+        # Correct phrase -> proceeds to the originally-requested review.
+        page.fill("#sy-gate-input", GATE_TEST_PHRASE)
+        page.press("#sy-gate-input", "Enter")
+        page.wait_for_selector("#view-review.active", timeout=6000)
+
+    def test_already_unlocked_browser_skips_prompt(self, server, page):
+        _enable_gate(page)
+        page.add_init_script(f"localStorage.setItem('sy_gate', '{GATE_TEST_HASH}');")
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#view-preview.active", timeout=6000)
+        assert page.locator("#sy-gate-input").count() == 0
+
+    def test_gate_disabled_opens_without_prompt(self, server, page):
+        # No _enable_gate(): APP_GATE_HASH is empty -> fail-open.
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#view-preview.active", timeout=6000)
+        assert page.locator("#sy-gate-input").count() == 0
+
+    def test_gate_modal_buttons_do_not_overlap_input(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.wait_for_selector("#sy-gate-input", timeout=2000)
+        inp = page.locator("#sy-gate-input").bounding_box()
+        okb = page.locator(".sy-modal-btn.primary").bounding_box()
+        # The buttons must sit clearly BELOW the input — a flush/zero gap renders
+        # as the buttons crowding (and visually overlapping) the field.
+        gap = okb["y"] - (inp["y"] + inp["height"])
+        assert gap >= 10, f"buttons crowd the input: gap={gap:.1f}px (want >= 10)"
+
+    def test_gate_password_reveal_toggle(self, server, page):
+        _enable_gate(page)
+        goto_spa(page, server)
+        page.wait_for_selector("a.preview-link", timeout=10000)
+        page.click("a.preview-link")
+        page.wait_for_selector("#sy-gate-input", timeout=2000)
+        inp = page.locator("#sy-gate-input")
+        page.fill("#sy-gate-input", "secret123")
+        assert inp.get_attribute("type") == "password"  # masked by default
+        # The reveal toggle sits inside the field, on the right.
+        reveal = page.locator(".sy-gate-reveal")
+        rb = reveal.bounding_box()
+        ib = inp.bounding_box()
+        assert rb["x"] > ib["x"] + ib["width"] / 2  # right half of the field
+        # An <svg> icon (not an emoji glyph), and a state that flips on click.
+        assert reveal.locator("svg").count() == 1
+        assert reveal.get_attribute("aria-pressed") == "false"
+        reveal.click()
+        assert inp.get_attribute("type") == "text"  # revealed
+        assert inp.input_value() == "secret123"  # value preserved
+        assert reveal.get_attribute("aria-pressed") == "true"  # state visibly flips
+        reveal.click()
+        assert inp.get_attribute("type") == "password"  # masked again
+        assert reveal.get_attribute("aria-pressed") == "false"

@@ -110,6 +110,10 @@ python -m tools.vimeo_codec encode "https://vimeo.com/<id>/<hash>"   # -> video_
 python -m tools.vimeo_codec decode "r1..."                          # -> vimeo url
 python -m tools.mask_video_refs [--check] [PATHS...]                 # migrate meta.yaml vimeo_url -> video_ref
 
+# Passphrase-gate hash (used by deploy-pages.yml to inject APP_GATE_HASH from the
+# GATE_PASSPHRASE secret). Twin of site/js/passphrase_gate.js.
+python -m tools.passphrase_gate hash --salt <hex> --iterations <n> "<phrase>"
+
 # Build subtitles (deterministic orchestrator; LLM writes timecodes.txt between prepare and assemble)
 python -m tools.build_map prepare        --talk-dir PATH --video-slug SLUG
 python -m tools.build_map prepare-timing --talk-dir PATH --video-slug SLUG [--timing-source whisper|en-srt]
