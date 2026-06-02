@@ -44,8 +44,8 @@
   SUBTITLE STATISTICS
 ============================================================
   Total blocks: 774
-  CPS: avg=15.8, median=15.5, max=25.2
-  CPS > target: 415 (53.6%)
+  CPS: avg=15.8, median=15.5, max=27.2
+  CPS > target: 414 (53.5%)
   CPS > hard max: 31 (4.0%)
   CPL: avg=55.0, max=84
   CPL > max: 0 (0.0%)
@@ -57,16 +57,16 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #528: CPS=25.2 (60ch/2.4s) "he got married and then he got lost, you see, he misbehaved,"
-    #211: CPS=25.0 (77ch/3.1s) "so many things are there that people just try to force on Me..."
-    #279: CPS=25.0 (70ch/2.8s) "Immediately I said, “He is a realised soul.” He would not sa..."
-    #486: CPS=25.0 (50ch/2.0s) "because [it’s] very embarrassing to talk about it."
-    #543: CPS=25.0 (46ch/1.8s) "if somebody’s helping you out, doesn’t matter."
-    #605: CPS=25.0 (78ch/3.1s) "he did not know what Realisation is – he studied. He’s even ..."
-    #718: CPS=25.0 (50ch/2.0s) "you should give up Sahaja Yoga for the time being."
-    #720: CPS=24.6 (64ch/2.6s) "Solve your court problems, everything, then come to Sahaja Y..."
-    #526: CPS=24.3 (68ch/2.8s) "for the time being?” You see because they helped; now suppos..."
-    #479: CPS=24.3 (39ch/1.6s) "You take mine.” Food also – same thing."
+    #605: CPS=27.2 (78ch/2.9s) "he did not know what Realisation is – he studied. He’s even ..."
+    #718: CPS=27.0 (50ch/1.9s) "you should give up Sahaja Yoga for the time being."
+    #543: CPS=27.0 (46ch/1.7s) "if somebody’s helping you out, doesn’t matter."
+    #211: CPS=27.0 (77ch/2.9s) "so many things are there that people just try to force on Me..."
+    #279: CPS=27.0 (70ch/2.6s) "Immediately I said, “He is a realised soul.” He would not sa..."
+    #528: CPS=27.0 (60ch/2.2s) "he got married and then he got lost, you see, he misbehaved,"
+    #486: CPS=26.0 (50ch/1.9s) "because [it’s] very embarrassing to talk about it."
+    #527: CPS=26.0 (57ch/2.2s) "have helped somebody – he had no money, he went to India,"
+    #604: CPS=25.4 (35ch/1.4s) "mythology, he didn’t know anything,"
+    #278: CPS=25.2 (58ch/2.3s) "And I tell you, his gestures and things were so beautiful."
 
 ============================================================
   SUMMARY
@@ -82,7 +82,7 @@
   [FAIL] CPS ≤ 20.0
 
   Avg CPS: 15.8 (target ≤15.0)
-  CPS > 15.0: 415 blocks
+  CPS > 15.0: 414 blocks
   CPS > 20.0: 31 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 1 blocks
