@@ -1,5 +1,6 @@
 """Tests for download.py folder-slug-from-title (task 3) and multi-language (task 2)."""
 
+import pytest
 from bs4 import BeautifulSoup
 
 from tools.download import (
@@ -118,6 +119,18 @@ def test_to_lang_url_uk_to_en_strips_prefix():
 
 def test_to_lang_url_uk_to_uk_idempotent():
     assert to_lang_url("https://www.amruta.org/uk/1984/08/11/x/", "uk") == "https://www.amruta.org/uk/1984/08/11/x/"
+
+
+@pytest.mark.parametrize("lang", ["ru", "hi", "fr", "de", "it", "es"])
+def test_lang_helpers_are_generic_not_uk_only(lang):
+    """The prefix logic is a generic 2-letter code, not hardcoded to uk."""
+    en = "https://www.amruta.org/1984/08/11/x/"
+    pref = f"https://www.amruta.org/{lang}/1984/08/11/x/"
+    assert detect_url_lang(pref) == lang
+    assert detect_url_lang(en) == "en"
+    assert strip_lang_prefix(pref) == en
+    assert to_lang_url(en, lang) == pref
+    assert to_lang_url(pref, "en") == en
 
 
 # --- task 2: per-language transcript download ---

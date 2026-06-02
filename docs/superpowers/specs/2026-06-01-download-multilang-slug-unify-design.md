@@ -101,6 +101,14 @@ Four related issues around `tools/download.py` and the SPA add-talk flow:
 RED first for every behavior change: slug parity (shared fixture), `detect_lang_from_url`,
 `--langs` → `transcript_{lang}.txt`, folder-slug-from-title.
 
+## Execution notes (task 4, as built)
+
+- **Folder unification:** `download.py` now produces `1984-08-11_Raksha-Bandhan-and-Maryadas` (matches the SPA). Untracked download.py duplicate `…-And-Maryadas-Hounslow/` deleted.
+- **Header:** kept the EN page `<h4>` ("Talk to Sahaja Yogis … – VERIFIED"). The `/uk/` page's `<h4>` is malformed (mixed EN/UK, no "Talk Language:" line) and carries a video-description preamble ("Audio with Ukrainian subtitles", "2 ч.:…", "3 ч.:…"); for this talk the canonical 4-line Ukrainian header was restored and the preamble dropped (per user).
+- **Glue:** amruta's own in-sentence run-ons in EN ("see?So", "Yoga.And", "you.TIE") are real in the source — left untouched, the downloader is not changed to "de-glue".
+- **EN↔UK paragraph counts do NOT match** (EN 102 vs UK 126): amruta authors the EN and `/uk/` pages with different `<p>`/`<br>` structure (EN 35 `<p>`/68 `<br>`; UK 81/51). Not a downloader bug; `build_map prepare` reads only `transcript_uk.txt`, so uk.srt is unaffected. Not pursued.
+- **uk.srt rebuild:** Opus builder aligned 831 UK blocks to whisper word timestamps. The video is abridged vs the transcript — 11 audio-absent blocks at the ~39:37 edit and 3 trailing blocks past the last spoken word were dropped (same content the previous SRT skipped). Optimized with `--target-cps 19` (dense talk) → CPS>20: 0, matching the previous SRT (768 blocks, ends 00:48:52,230, avg CPS 15.4); glue 27 → 0.
+
 ## Risks / notes
 - `gh` active account must be **SlavaSubotskiy** before any push (`.claude/CLAUDE.md`).
 - amruta is behind Cloudflare; the WP cookie may be needed for `/uk/` fetches too.
