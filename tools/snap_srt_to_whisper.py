@@ -121,27 +121,40 @@ def align_blocks_to_words(blocks, wwords):
     return {bi: span[bi] for bi in span if bi in has_anchor}
 
 
-def _extend_into_silence(blocks, i, min_duration_ms, min_gap_ms, target_cps):
-    """Grow a block into the adjacent pauses (silence only) toward a comfortable
-    reading time, bounded by the neighbours' speech so it never covers another
-    block's words. Extends the tail first (linger), then the lead-in."""
-    b = blocks[i]
-    chars = len(b["text"].replace("\n", ""))
-    desired = max(min_duration_ms, int(chars / target_cps * 1000) if target_cps > 0 else 0)
-    need = desired - (b["end_ms"] - b["start_ms"])
-    if need <= 0:
-        return
-    next_start = blocks[i + 1]["start_ms"] if i + 1 < len(blocks) else b["end_ms"] + need + min_gap_ms
-    room_after = next_start - min_gap_ms - b["end_ms"]
-    if room_after > 0:
-        grow = min(need, room_after)
-        b["end_ms"] += grow
-        need -= grow
-    if need > 0 and i > 0:
-        prev_end = blocks[i - 1]["end_ms"]
-        room_before = b["start_ms"] - (prev_end + min_gap_ms)
-        if room_before > 0:
-            b["start_ms"] -= min(need, room_before)
+def _want(block, target_cps):
+    """ms a block would still like, to read at target_cps (0 if already comfy)."""
+    if target_cps <= 0:
+        return 0
+    return max(0, int(len(block["text"].replace("\n", "")) / target_cps * 1000) - (block["end_ms"] - block["start_ms"]))
+
+
+def distribute_pauses(blocks, matched_idx, target_cps, min_gap_ms):
+    """Hand each inter-speech pause to the neighbour(s) that need the reading
+    time: the previous block lingers into it and/or the next block starts early
+    into it (lead-in), split by how dense each is. So a dense block gets a
+    lead-in from the pause before it instead of that pause being eaten by the
+    previous block. Only matched blocks move; the silence is never crossed into
+    a neighbour's speech (bounded by the snapped word edges)."""
+    for i in range(len(blocks) - 1):
+        a, b = blocks[i], blocks[i + 1]
+        avail = b["start_ms"] - a["end_ms"] - min_gap_ms
+        if avail <= 0:
+            continue
+        wa = _want(a, target_cps) if a["idx"] in matched_idx else 0
+        wb = _want(b, target_cps) if b["idx"] in matched_idx else 0
+        if wa + wb == 0:
+            continue
+        # Lead-in priority: the NEXT block claims the pause first (appearing on
+        # time matters more than the previous subtitle lingering — and whisper
+        # marks word onsets late, so a lead-in keeps the subtitle from coming up
+        # after its words). The previous block lingers with whatever is left.
+        gb = min(avail, wb)
+        ga = min(avail - gb, wa)
+        if a["idx"] in matched_idx:
+            a["end_ms"] += ga
+        if b["idx"] in matched_idx:
+            b["start_ms"] -= gb
+    return blocks
 
 
 def _word_gaps(wwords, min_sil_ms=150):
@@ -154,39 +167,42 @@ def _word_gaps(wwords, min_sil_ms=150):
     return out
 
 
-def rebalance_short_blocks(blocks, wwords, target_cps=15, hard_cps=22, min_gap_ms=80):
-    """A too-short (unreadable) block borrows time from the next block by moving
-    their shared boundary later to a real whisper pause — so the short block
-    stays up until the next phrase actually begins, instead of the next subtitle
-    flashing up while the short one is still being heard. Bounded: never push the
-    next block's display below its own readable time (hard_cps)."""
-    gaps = _word_gaps(wwords)
-    gstarts = [g[0] for g in gaps]
+def rebalance_short_blocks(blocks, wwords, target_cps=15, min_gap_ms=80, min_dur_ms=700):
+    """When a block reads too fast (CPS above target), move its boundary with the
+    next block to even out the reading rate, so the next subtitle doesn't flash
+    up while the dense phrase is still being heard. The boundary lands on a real
+    whisper word edge (preferring an actual pause), never mid-silence guessing,
+    and only when it lowers the pair's worst CPS. The two blocks' outer edges
+    (this block's first word, the next block's last word) stay put, so neither
+    is pushed off its own speech — only the shared hand-off moves."""
+    # candidate boundaries = every whisper word edge; pauses are naturally included
+    edges = sorted({w[0] for w in wwords} | {w[1] for w in wwords})
+    pauses = {ge for _gs, ge in _word_gaps(wwords)} | {gs for gs, _ge in _word_gaps(wwords)}
     for i in range(len(blocks) - 1):
         b, n = blocks[i], blocks[i + 1]
-        chars = len(b["text"].replace("\n", ""))
-        desired = int(chars / target_cps * 1000) if target_cps else 0
-        if b["end_ms"] - b["start_ms"] >= desired:
+        cb = len(b["text"].replace("\n", ""))
+        cn = len(n["text"].replace("\n", ""))
+        dur_b = b["end_ms"] - b["start_ms"]
+        cps_b = cb / (dur_b / 1000) if dur_b > 0 else 999
+        if cps_b <= target_cps:
             continue
-        nchars = len(n["text"].replace("\n", ""))
-        n_floor = int(nchars / hard_cps * 1000) if hard_cps else 0
-        k = bisect.bisect_right(gstarts, b["end_ms"])
-        boundary = None
-        for j in range(k, len(gaps)):
-            gs, ge = gaps[j]
-            mid = (gs + ge) // 2
-            if mid >= n["end_ms"]:
-                break
-            if n["end_ms"] - mid < n_floor:  # next would get too dense
-                break
-            if mid <= b["start_ms"] + min_gap_ms:
-                continue
-            boundary = mid
-            if mid - b["start_ms"] >= desired:  # enough; stop at first sufficient pause
-                break
-        if boundary:
-            b["end_ms"] = boundary - min_gap_ms // 2
-            n["start_ms"] = boundary + min_gap_ms // 2
+        win_s, win_e = b["start_ms"], n["end_ms"]
+        if win_e - win_s < 2 * min_dur_ms:
+            continue
+        target = win_s + (win_e - win_s) * cb / (cb + cn)  # equal-CPS split point
+        lo, hi = win_s + min_dur_ms, win_e - min_dur_ms
+        cands = [e for e in edges if lo <= e <= hi]
+        if not cands:
+            continue
+        # prefer the closest real pause to the balance point; else closest word edge
+        near_pause = [e for e in cands if e in pauses]
+        pool = near_pause if near_pause else cands
+        boundary = min(pool, key=lambda e: abs(e - target))
+        new_cps_b = cb / ((boundary - win_s) / 1000)
+        new_cps_n = cn / ((win_e - boundary) / 1000)
+        if max(new_cps_b, new_cps_n) < cps_b - 1:  # only if it genuinely helps
+            b["end_ms"] = boundary - min_gap_ms
+            n["start_ms"] = boundary
     return blocks
 
 
@@ -211,15 +227,25 @@ def snap_to_whisper(blocks, segments, min_gap_ms=80, min_duration_ms=1000, targe
             if prev["end_ms"] < prev["start_ms"]:
                 prev["end_ms"] = prev["start_ms"]
 
-    # Readability: stretch too-short blocks into surrounding silence only.
     matched_idx = {b["idx"] for b in blocks if b["idx"] not in unmatched}
-    for i, b in enumerate(blocks):
-        if b["idx"] in matched_idx:
-            _extend_into_silence(blocks, i, min_duration_ms, min_gap_ms, target_cps)
 
-    # A short block borrows from the next one's lead at a real pause, so the next
-    # subtitle never flashes up while the short phrase is still being spoken.
+    # Readability without breaking sync, in two steps:
+    # 1) hand each inter-speech pause to the neighbour(s) that need reading time
+    #    (lead-in for a dense block, linger for the previous one);
+    # 2) where speech is continuous (no pause) but a block still reads too fast,
+    #    even out the shared boundary with the next block at a real word edge.
+    distribute_pauses(blocks, matched_idx, target_cps, min_gap_ms)
     rebalance_short_blocks(blocks, wwords, target_cps=target_cps, min_gap_ms=min_gap_ms)
+
+    # Floor: keep any block at least min_duration_ms, borrowing only from a
+    # following pause (never over the next block's speech).
+    for i, b in enumerate(blocks):
+        if b["idx"] not in matched_idx:
+            continue
+        short = min_duration_ms - (b["end_ms"] - b["start_ms"])
+        if short > 0:
+            nxt = blocks[i + 1]["start_ms"] if i + 1 < len(blocks) else b["end_ms"] + short + min_gap_ms
+            b["end_ms"] += max(0, min(short, nxt - min_gap_ms - b["end_ms"]))
 
     return blocks, unmatched
 

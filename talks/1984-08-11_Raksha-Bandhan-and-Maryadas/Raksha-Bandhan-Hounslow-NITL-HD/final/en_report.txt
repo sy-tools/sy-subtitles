@@ -44,29 +44,29 @@
   SUBTITLE STATISTICS
 ============================================================
   Total blocks: 774
-  CPS: avg=16.3, median=15.5, max=46.6
-  CPS > target: 473 (61.1%)
-  CPS > hard max: 128 (16.5%)
+  CPS: avg=16.0, median=15.6, max=33.3
+  CPS > target: 466 (60.2%)
+  CPS > hard max: 102 (13.2%)
   CPL: avg=55.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 16
+  Duration < min: 14
   Duration > max: 0
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #243: CPS=46.6 (27ch/0.6s) "I mean, that’s not England."
-    #478: CPS=37.8 (31ch/0.8s) "All right… You want this thing?"
-    #770: CPS=33.9 (38ch/1.1s) "Which ever way you like you choose it."
-    #143: CPS=33.9 (63ch/1.9s) "but I have to say “Yes.” But [it] creates a very bad precede..."
-    #197: CPS=32.8 (40ch/1.2s) "Try to bring down your egos, super egos."
-    #473: CPS=31.7 (38ch/1.2s) "They’ll say, “I’ll get it, I’ll do it,"
-    #152: CPS=30.2 (26ch/0.9s) "They will say, “All right."
-    #185: CPS=29.4 (57ch/1.9s) "you will come, you will bring the person on My head, “Oh,"
-    #227: CPS=29.2 (21ch/0.7s) "for the sahaja yogis,"
-    #486: CPS=29.1 (50ch/1.7s) "because [it’s] very embarrassing to talk about it."
+    #196: CPS=33.3 (28ch/0.8s) "How can people do like that?"
+    #473: CPS=29.2 (38ch/1.3s) "They’ll say, “I’ll get it, I’ll do it,"
+    #655: CPS=26.2 (53ch/2.0s) "Unless and until you are detached, you cannot ascend."
+    #242: CPS=26.1 (46ch/1.8s) "the women went and took out all their clothes."
+    #279: CPS=26.1 (70ch/2.7s) "Immediately I said, “He is a realised soul.” He would not sa..."
+    #444: CPS=25.9 (83ch/3.2s) "mother in the presence of the child, the child will have no ..."
+    #543: CPS=25.6 (46ch/1.8s) "if somebody’s helping you out, doesn’t matter."
+    #248: CPS=25.5 (54ch/2.1s) "I mean, they were shocked, so much shocked that three,"
+    #472: CPS=25.4 (31ch/1.2s) "Mostly, children are like that."
+    #305: CPS=25.4 (69ch/2.7s) "“They are very beautiful people, you can see they are very b..."
 
 ============================================================
   SUMMARY
@@ -81,11 +81,11 @@
   [PASS] Duration ≤ 21000ms
   [FAIL] CPS ≤ 20.0
 
-  Avg CPS: 16.3 (target ≤15.0)
-  CPS > 15.0: 473 blocks
-  CPS > 20.0: 128 blocks
+  Avg CPS: 16.0 (target ≤15.0)
+  CPS > 15.0: 466 blocks
+  CPS > 20.0: 102 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 16 blocks
+  Duration < 1200ms: 14 blocks
   Duration > 21000ms: 0 blocks
   Gaps < 80ms: 0 blocks
 
