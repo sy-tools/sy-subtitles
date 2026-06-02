@@ -144,6 +144,52 @@ def _extend_into_silence(blocks, i, min_duration_ms, min_gap_ms, target_cps):
             b["start_ms"] -= min(need, room_before)
 
 
+def _word_gaps(wwords, min_sil_ms=150):
+    """Silences between consecutive whisper words: [(gap_start, gap_end), ...]."""
+    out = []
+    for i in range(len(wwords) - 1):
+        a, b = wwords[i][1], wwords[i + 1][0]
+        if b - a >= min_sil_ms:
+            out.append((a, b))
+    return out
+
+
+def rebalance_short_blocks(blocks, wwords, target_cps=15, hard_cps=22, min_gap_ms=80):
+    """A too-short (unreadable) block borrows time from the next block by moving
+    their shared boundary later to a real whisper pause — so the short block
+    stays up until the next phrase actually begins, instead of the next subtitle
+    flashing up while the short one is still being heard. Bounded: never push the
+    next block's display below its own readable time (hard_cps)."""
+    gaps = _word_gaps(wwords)
+    gstarts = [g[0] for g in gaps]
+    for i in range(len(blocks) - 1):
+        b, n = blocks[i], blocks[i + 1]
+        chars = len(b["text"].replace("\n", ""))
+        desired = int(chars / target_cps * 1000) if target_cps else 0
+        if b["end_ms"] - b["start_ms"] >= desired:
+            continue
+        nchars = len(n["text"].replace("\n", ""))
+        n_floor = int(nchars / hard_cps * 1000) if hard_cps else 0
+        k = bisect.bisect_right(gstarts, b["end_ms"])
+        boundary = None
+        for j in range(k, len(gaps)):
+            gs, ge = gaps[j]
+            mid = (gs + ge) // 2
+            if mid >= n["end_ms"]:
+                break
+            if n["end_ms"] - mid < n_floor:  # next would get too dense
+                break
+            if mid <= b["start_ms"] + min_gap_ms:
+                continue
+            boundary = mid
+            if mid - b["start_ms"] >= desired:  # enough; stop at first sufficient pause
+                break
+        if boundary:
+            b["end_ms"] = boundary - min_gap_ms // 2
+            n["start_ms"] = boundary + min_gap_ms // 2
+    return blocks
+
+
 def snap_to_whisper(blocks, segments, min_gap_ms=80, min_duration_ms=1000, target_cps=15):
     """Re-time blocks onto whisper words. Returns (blocks, unmatched_idx_list)."""
     wwords = whisper_words(segments)
@@ -170,6 +216,10 @@ def snap_to_whisper(blocks, segments, min_gap_ms=80, min_duration_ms=1000, targe
     for i, b in enumerate(blocks):
         if b["idx"] in matched_idx:
             _extend_into_silence(blocks, i, min_duration_ms, min_gap_ms, target_cps)
+
+    # A short block borrows from the next one's lead at a real pause, so the next
+    # subtitle never flashes up while the short phrase is still being spoken.
+    rebalance_short_blocks(blocks, wwords, target_cps=target_cps, min_gap_ms=min_gap_ms)
 
     return blocks, unmatched
 

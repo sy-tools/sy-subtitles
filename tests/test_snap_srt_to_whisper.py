@@ -78,6 +78,29 @@ def test_no_overlap_after_snap():
     assert out[0]["end_ms"] + 80 <= out[1]["start_ms"]
 
 
+def test_short_paraphrase_block_borrows_next_lead_at_pause():
+    """A short paraphrase block (only its first word is in the audio, the next
+    block's speech starts immediately) borrows time by moving the boundary to
+    the next real pause, so the next subtitle doesn't flash up over it."""
+    segs = _segs(
+        [
+            ("ok", 1000, 1200),
+            ("you", 1250, 1400),
+            ("take", 1450, 1600),  # PAUSE 1600..3000
+            ("mine", 3000, 3400),
+            ("food", 3500, 4000),
+        ]
+    )
+    blocks = [
+        {"idx": 1, "start_ms": 1000, "end_ms": 1200, "text": "ok plus some paraphrase here"},
+        {"idx": 2, "start_ms": 1250, "end_ms": 4000, "text": "you take mine food"},
+    ]
+    out, _ = snap_to_whisper(blocks, segs, min_gap_ms=80, min_duration_ms=1000, target_cps=15)
+    assert out[0]["end_ms"] > 2000  # block 1 extended into the take→mine pause
+    assert out[1]["start_ms"] > 2000  # block 2 pushed to after the pause
+    assert out[0]["end_ms"] < out[1]["start_ms"]  # no overlap
+
+
 def test_align_blocks_to_words_monotonic_with_repeats():
     """Repeated common words must not cause back-jumps (monotonic alignment)."""
     segs = _segs(
