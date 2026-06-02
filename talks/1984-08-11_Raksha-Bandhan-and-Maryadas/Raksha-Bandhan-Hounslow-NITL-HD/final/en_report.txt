@@ -4,17 +4,17 @@
   SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/en.srt
   Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_en.txt
   Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
-  SRT blocks: 770
+  SRT blocks: 772
   Whisper segments: 987
 
 ============================================================
   CHECK 1: Text preservation
 ============================================================
   Transcript chars: 51871
-  SRT chars: 43296
+  SRT chars: 43362
   Exact normalized match: MISMATCH
   Transcript words: 9800
-  SRT words: 8174
+  SRT words: 8188
   Word-level match: MISMATCH
 
   First difference at word 5140:
@@ -30,23 +30,24 @@
   CHECK 3: Time range (vs whisper)
 ============================================================
   whisper range: 00:00:01,040 — 00:48:50,230
-  SRT range:       00:00:01,040 — 00:48:52,550
-  Time range: OK
+  SRT range:       00:00:01,040 — 00:48:59,000
+  WARNING: SRT ends 8770ms after whisper
+  Time range: WARNING
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 770
+  Total blocks: 772
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 770
+  Total blocks: 772
   CPS: avg=15.7, median=15.9, max=19.5
-  CPS > target: 433 (56.2%)
+  CPS > target: 434 (56.2%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=55.2, max=84
+  CPL: avg=55.1, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -72,7 +73,7 @@
 ============================================================
   [FAIL] Text preservation
   [PASS] No overlaps
-  [PASS] Time range
+  [FAIL] Time range
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
@@ -81,7 +82,7 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 15.7 (target ≤15.0)
-  CPS > 15.0: 433 blocks
+  CPS > 15.0: 434 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 2 blocks

@@ -4,22 +4,22 @@
   SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/uk.srt
   Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_uk.txt
   Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
-  SRT blocks: 768
+  SRT blocks: 770
   Whisper segments: 987
 
 ============================================================
   CHECK 1: Text preservation
 ============================================================
-  Transcript chars: 42837
-  SRT chars: 42202
+  Transcript chars: 42838
+  SRT chars: 42275
   Exact normalized match: MISMATCH
   Transcript words: 6974
-  SRT words: 6871
+  SRT words: 6882
   Word-level match: MISMATCH
 
-  First difference at word 5608:
-    Transcript: ...з власним сходженням. Це дуже важливо. Вам...
-    SRT:        ...з власним сходженням. вони приходять до ашраму...
+  First difference at word 5540:
+    Transcript: ...зійти на них?! (сміх) Вам треба прочитати...
+    SRT:        ...зійти на них?! Вам треба прочитати принаймні...
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -30,21 +30,22 @@
   CHECK 3: Time range (vs whisper)
 ============================================================
   whisper range: 00:00:01,040 — 00:48:50,230
-  SRT range:       00:00:01,040 — 00:48:52,230
-  Time range: OK
+  SRT range:       00:00:01,040 — 00:48:59,000
+  WARNING: SRT ends 8770ms after whisper
+  Time range: WARNING
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 768
+  Total blocks: 770
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 768
-  CPS: avg=15.4, median=15.6, max=19.4
-  CPS > target: 412 (53.6%)
+  Total blocks: 770
+  CPS: avg=15.4, median=15.5, max=19.4
+  CPS > target: 413 (53.6%)
   CPS > hard max: 0 (0.0%)
   CPL: avg=53.9, max=84
   CPL > max: 0 (0.0%)
@@ -72,7 +73,7 @@
 ============================================================
   [FAIL] Text preservation
   [PASS] No overlaps
-  [PASS] Time range
+  [FAIL] Time range
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
@@ -81,7 +82,7 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 15.4 (target ≤15.0)
-  CPS > 15.0: 412 blocks
+  CPS > 15.0: 413 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 1 blocks
