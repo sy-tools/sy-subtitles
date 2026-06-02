@@ -44,25 +44,25 @@
   SUBTITLE STATISTICS
 ============================================================
   Total blocks: 774
-  CPS: avg=16.6, median=15.6, max=129.2
-  CPS > target: 483 (62.4%)
+  CPS: avg=16.5, median=15.6, max=129.2
+  CPS > target: 484 (62.5%)
   CPS > hard max: 131 (16.9%)
   CPL: avg=55.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 18
+  Duration < min: 17
   Duration > max: 0
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
     #478: CPS=129.2 (31ch/0.2s) "All right… You want this thing?"
-    #196: CPS=60.9 (28ch/0.5s) "How can people do like that?"
     #243: CPS=46.6 (27ch/0.6s) "I mean, that’s not England."
     #150: CPS=40.8 (49ch/1.2s) "“Mother, we want to marry.” Now what am I to say?"
     #770: CPS=33.9 (38ch/1.1s) "Which ever way you like you choose it."
     #143: CPS=33.9 (63ch/1.9s) "but I have to say “Yes.” But [it] creates a very bad precede..."
+    #197: CPS=32.8 (40ch/1.2s) "Try to bring down your egos, super egos."
     #473: CPS=31.7 (38ch/1.2s) "They’ll say, “I’ll get it, I’ll do it,"
     #152: CPS=30.2 (26ch/0.9s) "They will say, “All right."
     #185: CPS=29.4 (57ch/1.9s) "you will come, you will bring the person on My head, “Oh,"
@@ -81,11 +81,11 @@
   [PASS] Duration ≤ 21000ms
   [FAIL] CPS ≤ 20.0
 
-  Avg CPS: 16.6 (target ≤15.0)
-  CPS > 15.0: 483 blocks
+  Avg CPS: 16.5 (target ≤15.0)
+  CPS > 15.0: 484 blocks
   CPS > 20.0: 131 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 18 blocks
+  Duration < 1200ms: 17 blocks
   Duration > 21000ms: 0 blocks
   Gaps < 80ms: 0 blocks
 
