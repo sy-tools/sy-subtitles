@@ -4,7 +4,7 @@
   SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/en.srt
   Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_en.txt
   Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
-  SRT blocks: 772
+  SRT blocks: 774
   Whisper segments: 987
 
 ============================================================
@@ -37,36 +37,36 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 772
+  Total blocks: 774
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 772
-  CPS: avg=15.7, median=15.9, max=19.5
-  CPS > target: 434 (56.2%)
-  CPS > hard max: 0 (0.0%)
-  CPL: avg=55.1, max=84
+  Total blocks: 774
+  CPS: avg=15.8, median=15.5, max=25.2
+  CPS > target: 415 (53.6%)
+  CPS > hard max: 31 (4.0%)
+  CPL: avg=55.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 2
+  Duration < min: 1
   Duration > max: 0
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #561: CPS=19.5 (79ch/4.1s) "You must know that the system of Sahaja Yoga today has worke..."
-    #669: CPS=19.4 (24ch/1.2s) "Is it pure relationship?"
-    #415: CPS=19.4 (28ch/1.4s) "and their chances of ascent."
-    #411: CPS=19.3 (27ch/1.4s) "So keep them at that point."
-    #306: CPS=19.2 (25ch/1.3s) "It’s something different."
-    #153: CPS=19.2 (53ch/2.8s) "If he has married a girl who is twenty years younger,"
-    #683: CPS=19.2 (48ch/2.5s) "and shout at her and spoil all the relationship?"
-    #223: CPS=19.2 (23ch/1.2s) "Try to help each other."
-    #235: CPS=19.2 (23ch/1.2s) "That is very important."
-    #292: CPS=19.2 (23ch/1.2s) "You have to be a saint."
+    #528: CPS=25.2 (60ch/2.4s) "he got married and then he got lost, you see, he misbehaved,"
+    #211: CPS=25.0 (77ch/3.1s) "so many things are there that people just try to force on Me..."
+    #279: CPS=25.0 (70ch/2.8s) "Immediately I said, “He is a realised soul.” He would not sa..."
+    #486: CPS=25.0 (50ch/2.0s) "because [it’s] very embarrassing to talk about it."
+    #543: CPS=25.0 (46ch/1.8s) "if somebody’s helping you out, doesn’t matter."
+    #605: CPS=25.0 (78ch/3.1s) "he did not know what Realisation is – he studied. He’s even ..."
+    #718: CPS=25.0 (50ch/2.0s) "you should give up Sahaja Yoga for the time being."
+    #720: CPS=24.6 (64ch/2.6s) "Solve your court problems, everything, then come to Sahaja Y..."
+    #526: CPS=24.3 (68ch/2.8s) "for the time being?” You see because they helped; now suppos..."
+    #479: CPS=24.3 (39ch/1.6s) "You take mine.” Food also – same thing."
 
 ============================================================
   SUMMARY
@@ -79,13 +79,13 @@
   [PASS] Gap ≥ 80ms
   [FAIL] Duration ≥ 1200ms
   [PASS] Duration ≤ 21000ms
-  [PASS] CPS ≤ 20.0
+  [FAIL] CPS ≤ 20.0
 
-  Avg CPS: 15.7 (target ≤15.0)
-  CPS > 15.0: 434 blocks
-  CPS > 20.0: 0 blocks
+  Avg CPS: 15.8 (target ≤15.0)
+  CPS > 15.0: 415 blocks
+  CPS > 20.0: 31 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 2 blocks
+  Duration < 1200ms: 1 blocks
   Duration > 21000ms: 0 blocks
   Gaps < 80ms: 0 blocks
 
