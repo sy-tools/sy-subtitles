@@ -1,0 +1,91 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/en.srt
+  Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_en.txt
+  Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
+  SRT blocks: 770
+  Whisper segments: 987
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 51871
+  SRT chars: 43296
+  Exact normalized match: MISMATCH
+  Transcript words: 9800
+  SRT words: 8174
+  Word-level match: MISMATCH
+
+  First difference at word 5140:
+    Transcript: ...should you do? Just wait. At the...
+    SRT:        ...should you do? At the time, now,...
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:01,040 — 00:48:50,230
+  SRT range:       00:00:01,040 — 00:48:52,550
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 770
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 770
+  CPS: avg=15.7, median=15.9, max=19.5
+  CPS > target: 433 (56.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=55.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 2
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #561: CPS=19.5 (79ch/4.1s) "You must know that the system of Sahaja Yoga today has worke..."
+    #669: CPS=19.4 (24ch/1.2s) "Is it pure relationship?"
+    #415: CPS=19.4 (28ch/1.4s) "and their chances of ascent."
+    #411: CPS=19.3 (27ch/1.4s) "So keep them at that point."
+    #306: CPS=19.2 (25ch/1.3s) "It’s something different."
+    #153: CPS=19.2 (53ch/2.8s) "If he has married a girl who is twenty years younger,"
+    #683: CPS=19.2 (48ch/2.5s) "and shout at her and spoil all the relationship?"
+    #223: CPS=19.2 (23ch/1.2s) "Try to help each other."
+    #235: CPS=19.2 (23ch/1.2s) "That is very important."
+    #292: CPS=19.2 (23ch/1.2s) "You have to be a saint."
+
+============================================================
+  SUMMARY
+============================================================
+  [FAIL] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [FAIL] Duration ≥ 1200ms
+  [PASS] Duration ≤ 21000ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 15.7 (target ≤15.0)
+  CPS > 15.0: 433 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 2 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: FAILED
