@@ -17,6 +17,7 @@
      app script below runs. -->
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/talk_slug.js"></script>
 <script src="js/vimeo_codec.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
@@ -5315,9 +5316,9 @@ SPA.addVideoRow = function() {
   updateAddPreview();
 };
 
-function slugify(text) {
-  return text.replace(/[^a-zA-Z0-9 -]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-}
+// slugify() is provided by the global from js/talk_slug.js (loaded above),
+// the single source shared with tools/talk_slug.py (Python twin). Do not
+// re-inline it here — that copy was the folder-name divergence root cause.
 
 function updateAddPreview() {
   var title = document.getElementById('add-title').value.trim();

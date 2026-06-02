@@ -4,10 +4,22 @@
   SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/uk.srt
   Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_uk.txt
   Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
-  SRT blocks: 754
+  SRT blocks: 768
   Whisper segments: 987
-  (text preservation check skipped — offset video)
-  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 42837
+  SRT chars: 42202
+  Exact normalized match: MISMATCH
+  Transcript words: 6974
+  SRT words: 6871
+  Word-level match: MISMATCH
+
+  First difference at word 5608:
+    Transcript: ...з власним сходженням. Це дуже важливо. Вам...
+    SRT:        ...з власним сходженням. вони приходять до ашраму...
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -24,54 +36,56 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 754
+  Total blocks: 768
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 754
-  CPS: avg=15.4, median=15.3, max=19.4
-  CPS > target: 395 (52.4%)
+  Total blocks: 768
+  CPS: avg=15.4, median=15.6, max=19.4
+  CPS > target: 412 (53.6%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=54.8, max=84
+  CPL: avg=53.9, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
   Duration < min: 1
-  Duration > max: 1
+  Duration > max: 0
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #209: CPS=19.4 (26ch/1.3s) "– це не для Сахаджа йоґів,"
-    #386: CPS=19.4 (24ch/1.2s) "Тож тримайте їх в межах."
-    #478: CPS=19.3 (29ch/1.5s) "Я сказала: «А як щодо Христа?"
-    #196: CPS=19.2 (53ch/2.8s) "Продовжуйте!» Ось таким чином, є так багато ситуацій,"
-    #457: CPS=19.2 (33ch/1.7s) "Бо говорити про це дуже незручно."
-    #690: CPS=19.2 (61ch/3.2s) "Якщо вони абсолютно нестерпні, якщо вони псують їхню чистоту..."
-    #600: CPS=19.2 (23ch/1.2s) "вклоняються Їй – і все."
-    #644: CPS=19.2 (67ch/3.5s) "вчіться жити з усіма, ділитися з іншими й робити [разом інші..."
-    #345: CPS=19.1 (54ch/2.8s) "Будь-хто, хто робить таке, має знати, що він – підлий."
-    #539: CPS=19.1 (53ch/2.8s) "Бачите, якщо хтось надто агресивний, тоді все гаразд,"
+    #218: CPS=19.4 (26ch/1.3s) "– це не для Сахаджа йоґів,"
+    #645: CPS=19.4 (30ch/1.5s) "Чи існує якийсь вихід з цього?"
+    #396: CPS=19.4 (24ch/1.2s) "Тож тримайте їх в межах."
+    #489: CPS=19.3 (29ch/1.5s) "Я сказала: «А як щодо Христа?"
+    #203: CPS=19.2 (53ch/2.8s) "Продовжуйте!» Ось таким чином, є так багато ситуацій,"
+    #468: CPS=19.2 (33ch/1.7s) "Бо говорити про це дуже незручно."
+    #611: CPS=19.2 (23ch/1.2s) "вклоняються Їй – і все."
+    #354: CPS=19.1 (54ch/2.8s) "Будь-хто, хто робить таке, має знати, що він – підлий."
+    #550: CPS=19.1 (53ch/2.8s) "Бачите, якщо хтось надто агресивний, тоді все гаразд,"
+    #646: CPS=19.1 (31ch/1.6s) "Це дуже важливо в Сахаджа Йозі."
 
 ============================================================
   SUMMARY
 ============================================================
-  [PASS] Text preservation
+  [FAIL] Text preservation
   [PASS] No overlaps
   [PASS] Time range
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
+  [FAIL] Duration ≥ 1200ms
+  [PASS] Duration ≤ 21000ms
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 15.4 (target ≤15.0)
-  CPS > 15.0: 395 blocks
+  CPS > 15.0: 412 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 1 blocks
-  Duration > 21000ms: 1 blocks
+  Duration > 21000ms: 0 blocks
   Gaps < 80ms: 0 blocks
 
-  Overall: PASSED
+  Overall: FAILED

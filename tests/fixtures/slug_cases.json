@@ -1,0 +1,18 @@
+{
+  "_comment": "Shared golden fixture for the canonical talk slugify(). Consumed by BOTH tests/test_talk_slug.py (tools/talk_slug.py) and tests/test_talk_slug.js (site/js/talk_slug.js) so the Python and JS implementations cannot diverge silently. Algorithm: strip [^a-zA-Z0-9 -], whitespace -> '-', collapse '-+' -> '-', trim leading/trailing '-'. Case is preserved (NOT title-cased).",
+  "cases": [
+    { "input": "Birthday Puja", "expected": "Birthday-Puja" },
+    { "input": "Guru Puja: Gravity", "expected": "Guru-Puja-Gravity" },
+    { "input": "It's a test", "expected": "Its-a-test" },
+    { "input": "A   B", "expected": "A-B" },
+    { "input": "-Test-", "expected": "Test" },
+    { "input": "", "expected": "" },
+    { "input": "Пуджа Test", "expected": "Test" },
+    { "input": "Sahasrara Puja: How it was decided", "expected": "Sahasrara-Puja-How-it-was-decided" },
+    { "input": "Raksha Bandhan and Maryadas", "expected": "Raksha-Bandhan-and-Maryadas" },
+    { "input": "  Hello World  ", "expected": "Hello-World" },
+    { "input": "A--B", "expected": "A-B" },
+    { "input": "Shri Mataji's Puja!", "expected": "Shri-Matajis-Puja" },
+    { "input": "Talk to Sahaja Yogis", "expected": "Talk-to-Sahaja-Yogis" }
+  ]
+}
