@@ -35,6 +35,14 @@ def test_talk_id_accepts_valid(value: str) -> None:
         "1988-05-08_slug with spaces",
         "../escape",
         "1988-05-08_" + "x" * 200,
+        # Surrounding whitespace is rejected by the anchored regex. The pipeline
+        # therefore MUST strip before validating (the discover job does), and —
+        # the real lesson of run #447 — must use that same stripped value
+        # downstream, never the raw input. See test_pipeline_talk_id_normalization.
+        "  1988-05-08_slug",
+        "1988-05-08_slug  ",
+        "\t1988-05-08_slug",
+        "1988-05-08_slug\n",
     ],
 )
 def test_talk_id_rejects_invalid(value: str) -> None:

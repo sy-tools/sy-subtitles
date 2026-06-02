@@ -87,6 +87,12 @@ jobs:
       talk_matrix: ${{ steps.find.outputs.talk_matrix }}
       whisper_matrix: ${{ steps.find.outputs.whisper_matrix }}
       needs_whisper: ${{ steps.find.outputs.needs_whisper }}
+      # Normalized (whitespace-stripped) talk_id — the single source of truth
+      # for downstream artifact names/paths. Using raw inputs.talk_id there let
+      # a stray space diverge upload names (built from the stripped
+      # matrix.talk_id) from download names and break commit ("Artifact not
+      # found"). Empty when the run was triggered without a talk_id input.
+      talk_id: ${{ steps.find.outputs.talk_id }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -110,7 +116,13 @@ jobs:
               validate_video_slug,
           )
 
-          talk_id_input = os.environ.get("INPUT_TALK_ID", "").strip()
+          raw_talk_id = os.environ.get("INPUT_TALK_ID", "")
+          talk_id_input = raw_talk_id.strip()
+          if talk_id_input and raw_talk_id != talk_id_input:
+              print(
+                  "::warning::talk_id had surrounding whitespace; "
+                  f"normalized to {talk_id_input!r}"
+              )
           if talk_id_input:
               try:
                   validate_talk_id(talk_id_input)
@@ -175,6 +187,7 @@ jobs:
               f.write(f"talk_matrix={talk_matrix}\n")
               f.write(f"whisper_matrix={whisper_matrix}\n")
               f.write(f"needs_whisper={needs_whisper}\n")
+              f.write(f"talk_id={talk_id_input}\n")
           PYEOF
 
   # Run Whisper for talks that don't have whisper.json yet
@@ -447,13 +460,13 @@ jobs:
         if: needs.translate-and-review.result == 'success'
         uses: actions/download-artifact@v8
         with:
-          name: translation__${{ inputs.talk_id }}${{ inputs.dry_run_tag }}
-          path: translation__${{ inputs.talk_id }}${{ inputs.dry_run_tag }}
+          name: translation__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: translation__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
 
       - name: Place translation artifacts
         if: needs.translate-and-review.result == 'success'
         env:
-          TALK_ID: ${{ inputs.talk_id }}
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
           echo "=== Artifact directories ==="
           ls -la translation__*/ 2>/dev/null || echo "No translation__* dirs found"
@@ -491,7 +504,7 @@ jobs:
       - name: Prepare UK blocks
         id: prepare
         run: |
-          TALK_ID="${{ inputs.talk_id }}"
+          TALK_ID="${{ needs.discover.outputs.talk_id }}"
           TALK="talks/$TALK_ID"
 
           # Find video with most spoken words (not longest duration — puja videos are long but silent)
@@ -548,9 +561,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           retention-days: 7
-          name: chunks__${{ inputs.talk_id }}${{ inputs.dry_run_tag }}
+          name: chunks__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
           path: |
-            talks/${{ inputs.talk_id }}/*/work/uk_blocks.json
+            talks/${{ needs.discover.outputs.talk_id }}/*/work/uk_blocks.json
 
   # Phase 2: Single Opus 4.8 pass — assign timecodes, build SRT
   build-timecodes:
@@ -923,7 +936,7 @@ jobs:
   # Dry-run verifier — replaces the commit job when inputs.dry_run is true.
   # Asserts produced artifacts match the snapshot baseline but does NOT push.
   verify-dryrun:
-    needs: [translate-and-review, build-timecodes]
+    needs: [discover, translate-and-review, build-timecodes]
     if: |
       inputs.dry_run == true && always() && !cancelled() &&
       needs.build-timecodes.result == 'success' &&
@@ -939,12 +952,12 @@ jobs:
       - name: Download subtitle artifacts
         uses: actions/download-artifact@v8
         with:
-          name: subtitles__${{ inputs.talk_id }}${{ inputs.dry_run_tag }}
+          name: subtitles__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
           path: /tmp/subtitles
 
       - name: Stage artifacts back under talks/
         env:
-          TALK_ID: ${{ inputs.talk_id }}
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
           find /tmp/subtitles \( -name 'uk.srt' -o -name 'timecodes.txt' \) | while read src; do
             rel=$(echo "$src" | grep -o '[^/]*/\(work\|final\)/[^/]*$' || true)
@@ -958,7 +971,7 @@ jobs:
 
       - name: Verify against snapshot
         env:
-          TALK_ID: ${{ inputs.talk_id }}
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
           # The pipeline builds only the PRIMARY video (most whisper words)
           # and generates offset-video SRTs via offset_srt apply. Verify only
@@ -994,7 +1007,7 @@ jobs:
 
   # Single commit job – collects all artifacts and pushes
   commit:
-    needs: [translate-and-review, build-timecodes]
+    needs: [discover, translate-and-review, build-timecodes]
     # commit runs after any build path completes; skipped for dry-runs.
     if: |
       inputs.dry_run != true && always() &&
@@ -1012,7 +1025,7 @@ jobs:
         if: needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'failure'
         uses: actions/download-artifact@v8
         with:
-          name: translation__${{ inputs.talk_id }}${{ inputs.dry_run_tag }}
+          name: translation__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
           path: /tmp/translation
 
       - name: Download subtitle artifacts
@@ -1022,7 +1035,7 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          name: subtitles__${{ inputs.talk_id }}${{ inputs.dry_run_tag }}
+          name: subtitles__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
           path: /tmp/subtitles
 
       - name: Verify subtitle artifacts present
@@ -1047,7 +1060,7 @@ jobs:
         # not user input — using `env:` anyway as the safe default.
         env:
           BUILD_RESULT: ${{ needs.build-timecodes.result }}
-          TALK_ID: ${{ inputs.talk_id }}
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
           # Translation
           if [ -d /tmp/translation ]; then
@@ -1098,7 +1111,7 @@ jobs:
         if: success()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TALK_ID: ${{ inputs.talk_id }}
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
         run: |
