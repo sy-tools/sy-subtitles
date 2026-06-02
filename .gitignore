@@ -33,7 +33,7 @@ queue.yaml
 # Build intermediates (regenerable from committed sources)
 talks/*/*/work/chunk_*.txt
 talks/*/*/work/build_meta.json
-talks/*/*/work/uk_blocks.json
+talks/*/*/work/*_blocks.json
 talks/*/*/work/timing.json
 talks/*/*/work/uk.map
 
