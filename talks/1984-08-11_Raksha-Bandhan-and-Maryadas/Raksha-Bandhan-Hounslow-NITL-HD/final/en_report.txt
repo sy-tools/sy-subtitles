@@ -1,25 +1,25 @@
 ============================================================
   SUBTITLE VALIDATION REPORT
 ============================================================
-  SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/uk.srt
-  Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_uk.txt
+  SRT: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/final/en.srt
+  Transcript: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/transcript_en.txt
   Whisper: talks/1984-08-11_Raksha-Bandhan-and-Maryadas/Raksha-Bandhan-Hounslow-NITL-HD/source/whisper.json
-  SRT blocks: 770
+  SRT blocks: 774
   Whisper segments: 987
 
 ============================================================
   CHECK 1: Text preservation
 ============================================================
-  Transcript chars: 42838
-  SRT chars: 42275
+  Transcript chars: 51871
+  SRT chars: 43362
   Exact normalized match: MISMATCH
-  Transcript words: 6974
-  SRT words: 6882
+  Transcript words: 9800
+  SRT words: 8188
   Word-level match: MISMATCH
 
-  First difference at word 5540:
-    Transcript: ...зійти на них?! (сміх) Вам треба прочитати...
-    SRT:        ...зійти на них?! Вам треба прочитати принаймні...
+  First difference at word 5140:
+    Transcript: ...should you do? Just wait. At the...
+    SRT:        ...should you do? At the time, now,...
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -37,36 +37,36 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 770
+  Total blocks: 774
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 770
-  CPS: avg=15.4, median=15.5, max=19.4
-  CPS > target: 413 (53.6%)
-  CPS > hard max: 0 (0.0%)
-  CPL: avg=53.9, max=84
+  Total blocks: 774
+  CPS: avg=16.0, median=15.6, max=33.3
+  CPS > target: 466 (60.2%)
+  CPS > hard max: 102 (13.2%)
+  CPL: avg=55.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 1
+  Duration < min: 14
   Duration > max: 0
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #218: CPS=19.4 (26ch/1.3s) "– це не для Сахаджа йоґів,"
-    #645: CPS=19.4 (30ch/1.5s) "Чи існує якийсь вихід з цього?"
-    #396: CPS=19.4 (24ch/1.2s) "Тож тримайте їх в межах."
-    #489: CPS=19.3 (29ch/1.5s) "Я сказала: «А як щодо Христа?"
-    #203: CPS=19.2 (53ch/2.8s) "Продовжуйте!» Ось таким чином, є так багато ситуацій,"
-    #468: CPS=19.2 (33ch/1.7s) "Бо говорити про це дуже незручно."
-    #611: CPS=19.2 (23ch/1.2s) "вклоняються Їй – і все."
-    #354: CPS=19.1 (54ch/2.8s) "Будь-хто, хто робить таке, має знати, що він – підлий."
-    #550: CPS=19.1 (53ch/2.8s) "Бачите, якщо хтось надто агресивний, тоді все гаразд,"
-    #646: CPS=19.1 (31ch/1.6s) "Це дуже важливо в Сахаджа Йозі."
+    #196: CPS=33.3 (28ch/0.8s) "How can people do like that?"
+    #473: CPS=29.2 (38ch/1.3s) "They’ll say, “I’ll get it, I’ll do it,"
+    #655: CPS=26.2 (53ch/2.0s) "Unless and until you are detached, you cannot ascend."
+    #242: CPS=26.1 (46ch/1.8s) "the women went and took out all their clothes."
+    #279: CPS=26.1 (70ch/2.7s) "Immediately I said, “He is a realised soul.” He would not sa..."
+    #444: CPS=25.9 (83ch/3.2s) "mother in the presence of the child, the child will have no ..."
+    #543: CPS=25.6 (46ch/1.8s) "if somebody’s helping you out, doesn’t matter."
+    #248: CPS=25.5 (54ch/2.1s) "I mean, they were shocked, so much shocked that three,"
+    #472: CPS=25.4 (31ch/1.2s) "Mostly, children are like that."
+    #305: CPS=25.4 (69ch/2.7s) "“They are very beautiful people, you can see they are very b..."
 
 ============================================================
   SUMMARY
@@ -79,13 +79,13 @@
   [PASS] Gap ≥ 80ms
   [FAIL] Duration ≥ 1200ms
   [PASS] Duration ≤ 21000ms
-  [PASS] CPS ≤ 20.0
+  [FAIL] CPS ≤ 20.0
 
-  Avg CPS: 15.4 (target ≤15.0)
-  CPS > 15.0: 413 blocks
-  CPS > 20.0: 0 blocks
+  Avg CPS: 16.0 (target ≤15.0)
+  CPS > 15.0: 466 blocks
+  CPS > 20.0: 102 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 1 blocks
+  Duration < 1200ms: 14 blocks
   Duration > 21000ms: 0 blocks
   Gaps < 80ms: 0 blocks
 

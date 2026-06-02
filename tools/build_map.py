@@ -37,21 +37,35 @@ def _normalize(word):
 # ---------------------------------------------------------------------------
 
 
+def _timecodes_name(lang):
+    """LLM timecodes filename. uk keeps the canonical name for pipeline
+    back-compat; other languages get a per-language file so an en.srt build
+    never clobbers the uk timecodes (and vice versa)."""
+    return "timecodes.txt" if lang == "uk" else f"timecodes_{lang}.txt"
+
+
+def _build_report_name(lang):
+    """Build report filename, matching the existing per-language convention
+    (uk → build_report.txt; hi → hi_build_report.txt; en → en_build_report.txt)."""
+    return "build_report.txt" if lang == "uk" else f"{lang}_build_report.txt"
+
+
 def cmd_prepare(args):
-    """Split UK transcript into subtitle blocks, save uk_blocks.json."""
+    """Split the {lang} transcript into subtitle blocks, save {lang}_blocks.json."""
+    lang = getattr(args, "lang", "uk")
     talk = Path(args.talk_dir)
     video = talk / args.video_slug
     work = video / "work"
     work.mkdir(parents=True, exist_ok=True)
 
-    uk_paras = load_transcript(str(talk / "transcript_uk.txt"))
-    uk_blocks = build_blocks_from_paragraphs(uk_paras)
+    paras = load_transcript(str(talk / f"transcript_{lang}.txt"))
+    blocks = build_blocks_from_paragraphs(paras)
 
-    blocks_file = work / "uk_blocks.json"
+    blocks_file = work / f"{lang}_blocks.json"
     with open(blocks_file, "w", encoding="utf-8") as f:
-        json.dump(uk_blocks, f, ensure_ascii=False, indent=2)
+        json.dump(blocks, f, ensure_ascii=False, indent=2)
 
-    print(f"  {len(uk_blocks)} blocks → {blocks_file}", file=sys.stderr)
+    print(f"  {len(blocks)} blocks → {blocks_file}", file=sys.stderr)
     # Emit empty matrix (no chunks needed) — kept for workflow compatibility
     print("{}")
 
@@ -108,15 +122,16 @@ def cmd_prepare_timing(args):
 
 
 def cmd_assemble(args):
-    """Merge LLM timecodes with UK blocks in memory, run build_srt."""
+    """Merge LLM timecodes with the {lang} blocks in memory, run build_srt."""
+    lang = getattr(args, "lang", "uk")
     talk = Path(args.talk_dir)
     video = talk / args.video_slug
     work = video / "work"
 
-    with open(work / "uk_blocks.json", encoding="utf-8") as f:
+    with open(work / f"{lang}_blocks.json", encoding="utf-8") as f:
         uk_blocks = json.load(f)
 
-    timecodes_file = work / "timecodes.txt"
+    timecodes_file = work / _timecodes_name(lang)
     if not timecodes_file.exists():
         print(f"ERROR: {timecodes_file} not found", file=sys.stderr)
         sys.exit(1)
@@ -157,8 +172,8 @@ def cmd_assemble(args):
 
     print(f"  {len(blocks)}/{len(uk_blocks)} blocks merged", file=sys.stderr)
 
-    output_srt = str(video / "final" / "uk.srt")
-    report = str(video / "final" / "build_report.txt")
+    output_srt = str(video / "final" / f"{lang}.srt")
+    report = str(video / "final" / _build_report_name(lang))
     Path(output_srt).parent.mkdir(parents=True, exist_ok=True)
     build_srt_from_blocks(blocks, output_srt, report)
 
@@ -172,9 +187,14 @@ def main():
     p = argparse.ArgumentParser(description="Build Ukrainian subtitle mapping")
     sub = p.add_subparsers(dest="command", required=True)
 
-    prep = sub.add_parser("prepare", help="Split UK text into subtitle blocks")
+    prep = sub.add_parser("prepare", help="Split transcript text into subtitle blocks")
     prep.add_argument("--talk-dir", required=True)
     prep.add_argument("--video-slug", required=True)
+    prep.add_argument(
+        "--lang",
+        default="uk",
+        help="Transcript language to split: uk (default), en, etc. → {lang}_blocks.json",
+    )
     prep.add_argument(
         "--timing-source",
         choices=["whisper", "en-srt"],
@@ -191,9 +211,14 @@ def main():
         default="whisper",
     )
 
-    asm = sub.add_parser("assemble", help="Build uk.map from timecodes.txt + uk_blocks.json")
+    asm = sub.add_parser("assemble", help="Build {lang}.srt from timecodes + {lang}_blocks.json")
     asm.add_argument("--talk-dir", required=True)
     asm.add_argument("--video-slug", required=True)
+    asm.add_argument(
+        "--lang",
+        default="uk",
+        help="Subtitle language to assemble: uk (default), en, etc. → final/{lang}.srt",
+    )
 
     args = p.parse_args()
     if args.command == "prepare":

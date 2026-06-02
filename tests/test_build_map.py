@@ -396,6 +396,55 @@ class TestCmdAssemble:
 # ---------------------------------------------------------------------------
 
 
+class TestLangEn:
+    """build_map --lang en builds English subtitles (parallel to the default uk)."""
+
+    def _setup(self, tmp_path):
+        talk = tmp_path / "talk"
+        (talk / "video1" / "source").mkdir(parents=True)
+        (talk / "transcript_uk.txt").write_text("Перший абзац.\n\nДругий абзац.", encoding="utf-8")
+        (talk / "transcript_en.txt").write_text("First paragraph.\nSecond paragraph.", encoding="utf-8")
+        return talk
+
+    def test_prepare_en_creates_en_blocks_only(self, tmp_path):
+        talk = self._setup(tmp_path)
+        args = argparse.Namespace(talk_dir=str(talk), video_slug="video1", timing_source="whisper", lang="en")
+        cmd_prepare(args)
+        work = talk / "video1" / "work"
+        assert (work / "en_blocks.json").exists(), "en_blocks.json not created"
+        assert not (work / "uk_blocks.json").exists(), "lang=en must not touch uk_blocks.json"
+        blocks = json.loads((work / "en_blocks.json").read_text(encoding="utf-8"))
+        all_text = " ".join(b["text"] for b in blocks)
+        assert "First paragraph." in all_text and "Second paragraph." in all_text
+
+    def test_prepare_defaults_to_uk_when_no_lang(self, tmp_path):
+        """Backward compatibility: a Namespace without `lang` still builds uk."""
+        talk = self._setup(tmp_path)
+        args = argparse.Namespace(talk_dir=str(talk), video_slug="video1", timing_source="whisper")
+        cmd_prepare(args)
+        assert (talk / "video1" / "work" / "uk_blocks.json").exists()
+
+    def test_assemble_en_writes_en_srt_and_report(self, tmp_path):
+        talk = self._setup(tmp_path)
+        work = talk / "video1" / "work"
+        work.mkdir(parents=True, exist_ok=True)
+        (talk / "video1" / "final").mkdir(parents=True, exist_ok=True)
+        blocks = [{"id": i + 1, "text": f"Block {i + 1}.", "para_idx": 0} for i in range(3)]
+        (work / "en_blocks.json").write_text(json.dumps(blocks), encoding="utf-8")
+        lines = [f"#{b} | 00:00:{b * 2:02d},000 | 00:00:{b * 2 + 1:02d},000" for b in range(1, 4)]
+        (work / "timecodes_en.txt").write_text("\n".join(lines), encoding="utf-8")
+
+        args = argparse.Namespace(talk_dir=str(talk), video_slug="video1", lang="en")
+        cmd_assemble(args)
+
+        final = talk / "video1" / "final"
+        assert (final / "en.srt").exists(), "en.srt not created"
+        assert not (final / "uk.srt").exists(), "lang=en must not write uk.srt"
+        assert (final / "en_build_report.txt").exists(), "en_build_report.txt not created"
+        content = (final / "en.srt").read_text(encoding="utf-8")
+        assert "Block 1." in content and "Block 3." in content
+
+
 class TestEdgeCases:
     def test_punctuation_only_normalize(self):
         assert _normalize("!!!") == ""
