@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-01T22:39:07.932379+00:00",
+  "updated_at": "2026-06-02T20:08:27.415944+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -159,10 +159,10 @@
       "updated_at": "2026-05-24T05:54:56Z"
     },
     "1984-08-11_Raksha-Bandhan-and-Maryadas": {
-      "status": "in-progress",
+      "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 188,
-      "updated_at": "2026-06-01T11:53:04Z"
+      "updated_at": "2026-06-02T20:08:25Z"
     },
     "1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others": {
       "status": "in-progress",
@@ -499,6 +499,12 @@
       "reviewer": null,
       "issue_number": 435,
       "updated_at": "2026-05-31T07:49:57Z"
+    },
+    "1988-07-20_How-to-become-a-realized-soul": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 456,
+      "updated_at": "2026-06-01T22:38:59Z"
     }
   }
 }
