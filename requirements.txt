@@ -1,5 +1,5 @@
 pyyaml>=6.0.3
 requests>=2.33.1
-beautifulsoup4>=4.12
+beautifulsoup4>=4.14.3
 python-dotenv>=1.2.2
 yt-dlp>=2026.3.17
