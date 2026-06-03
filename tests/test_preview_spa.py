@@ -363,6 +363,145 @@ class TestPreviewView:
         }""")
         assert text == "Перший субтитр"
 
+    def test_overlay_tracks_playhead_into_gap_without_timeupdate(self, server, page):
+        # The deliberate gap between subtitles (here 5.0s..6.0s) must show as a
+        # blank overlay. The overlay is driven by polling the player position
+        # (getCurrentTime) every animation frame, NOT by the ~4x/sec timeupdate
+        # event — so a playhead resting in the gap blanks the overlay even though
+        # no timeupdate sample landed there. Moving _currentTime WITHOUT firing a
+        # timeupdate reproduces exactly that case; the old event-driven overlay
+        # would stay stuck on the previous subtitle.
+        self._goto_preview(server, page)
+        # Precondition: block 1 (1.0s..5.0s) is showing, so a later blank is a
+        # real transition, not the empty overlay the page starts with.
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        # Move the playhead into the gap without emitting a timeupdate.
+        page.evaluate("window._vimeoPlayer._currentTime = 5.5")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === ''",
+            timeout=2000,
+        )
+
+    def test_overlay_height_held_through_gap(self, server, page):
+        # During the brief 80ms gaps the overlay must not collapse its height —
+        # a multi-line subtitle dropping to an empty (1-line) box and back is a
+        # jarring vertical bounce. The overlay holds the prior subtitle's height
+        # while blank, so the background stays put through the pause.
+        self._goto_preview(server, page)
+        # Force the (short) subtitle text to wrap to several lines so a collapse
+        # to an empty 1-line box would be unmistakable.
+        page.evaluate("document.getElementById('subtitle-overlay').style.maxWidth = '70px'")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.wait_for_timeout(300)  # let the height settle
+        h_text = page.evaluate("document.getElementById('subtitle-overlay').offsetHeight")
+        # Into the gap (no timeupdate) — overlay blanks but must keep its height.
+        page.evaluate("window._vimeoPlayer._currentTime = 5.5")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === ''",
+            timeout=2000,
+        )
+        page.wait_for_timeout(300)  # past any height transition
+        h_gap = page.evaluate("document.getElementById('subtitle-overlay').offsetHeight")
+        assert h_text > 90, f"expected a multi-line subtitle, got {h_text}px"
+        assert h_gap >= h_text - 5, f"overlay collapsed in gap: {h_text} -> {h_gap}"
+
+    def test_overlay_fullscreen_pins_explicit_height(self, server, page):
+        # Fullscreen eases size changes between subtitles, which needs an explicit
+        # px height every frame (CSS cannot transition to/from `auto`). So in
+        # fs-mode each subtitle pins a measured px height; embedded does not.
+        self._goto_preview(server, page)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        h = page.evaluate("document.getElementById('subtitle-overlay').style.getPropertyValue('height')")
+        assert h.endswith("px"), f"fullscreen should pin an explicit px height, got {h!r}"
+
+    def test_overlay_embedded_does_not_pin_height(self, server, page):
+        # Embedded keeps the default sizing (const + auto-expand, or the user's
+        # resized height): no explicit height pinned for a shown subtitle.
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        h = page.evaluate("document.getElementById('subtitle-overlay').style.getPropertyValue('height')")
+        assert h == "", f"embedded should not pin a height, got {h!r}"
+
+    # NOTE: the fullscreen tests below simulate fs via the `.fs-mode` class —
+    # they cover the CSS/JS behaviour, NOT the native requestFullscreen path.
+
+    def test_overlay_height_held_through_gap_fullscreen(self, server, page):
+        # The reported bug was the fullscreen gradient band collapsing on gaps.
+        # The hold uses inline `height:!important` specifically because fs sets
+        # `height: auto !important` and forces min-height to 0 — a "cleaner"
+        # min-height refactor would pass the embedded hold test but silently
+        # re-break fullscreen. This is the guard for that.
+        self._goto_preview(server, page)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.evaluate("document.getElementById('subtitle-overlay').style.maxWidth = '70px'")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.wait_for_timeout(300)
+        h_text = page.evaluate("document.getElementById('subtitle-overlay').offsetHeight")
+        page.evaluate("window._vimeoPlayer._currentTime = 5.5")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === ''",
+            timeout=2000,
+        )
+        page.wait_for_timeout(300)
+        h_gap = page.evaluate("document.getElementById('subtitle-overlay').offsetHeight")
+        assert h_text > 90, f"expected a multi-line subtitle, got {h_text}px"
+        assert h_gap >= h_text - 5, f"fullscreen overlay collapsed in gap: {h_text} -> {h_gap}"
+
+    def test_overlay_releases_pinned_height_on_exit_fullscreen(self, server, page):
+        # Exiting fullscreen (even while paused) must release the pinned px height
+        # so embedded returns to its default/auto sizing. The render loop's
+        # mode-change branch is the only thing that does this; nothing else covers it.
+        self._goto_preview(server, page)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').style.getPropertyValue('height').endsWith('px')",
+            timeout=2000,
+        )
+        page.evaluate("document.getElementById('view-preview').classList.remove('fs-mode')")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').style.getPropertyValue('height') === ''",
+            timeout=2000,
+        )
+
+    def test_overlay_follows_scrub_while_paused(self, server, page):
+        # Polling getCurrentTime each frame means a scrub updates the overlay with
+        # no play/seeked event — a behaviour gained by dropping the event handlers.
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        # Scrub into block 2 (6..10s) by setting the raw field — no event fired.
+        page.evaluate("window._vimeoPlayer._currentTime = 7")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent !== 'Перший субтитр'"
+            " && document.getElementById('subtitle-overlay').textContent !== ''",
+            timeout=2000,
+        )
+
     def test_marker_add(self, server, page):
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer._setTime(2)")
@@ -370,6 +509,20 @@ class TestPreviewView:
         page.click("#btn-mark")
         count = page.locator("#marker-count").text_content()
         assert count == "1"
+
+    def test_vimeo_embed_handles_missing_url(self, server, page):
+        # showPreview calls vimeoEmbed(video.vimeo_url) for a link-less video
+        # reached by deep link; a falsy URL must return '' rather than throwing
+        # on undefined.match() and aborting the whole preview render.
+        self._goto_preview(server, page)
+        res = page.evaluate(
+            "() => { try { return {ok: true, v: vimeoEmbed(undefined)}; }"
+            " catch (e) { return {ok: false, err: String(e)}; } }"
+        )
+        assert res["ok"], f"vimeoEmbed threw on undefined: {res.get('err')}"
+        assert res["v"] == ""
+        assert page.evaluate("vimeoEmbed(null)") == ""
+        assert page.evaluate("vimeoEmbed('not a url')") == ""
 
 
 class TestReviewView:
@@ -553,6 +706,9 @@ class TestMarkers:
         assert markers is not None
         assert len(markers) == 1
         assert markers[0]["text"] == "Перший субтитр"
+        # Time comes from the polled position (previewState.currentTime), so it
+        # must match where we set the player, not stay at 0.
+        assert abs(markers[0]["time"] - 2) < 0.5, f"marker time off: {markers[0]['time']}"
 
     def test_marker_count_increments(self, server, page):
         """Adding multiple markers updates the count."""

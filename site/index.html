@@ -182,6 +182,14 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
   position: relative; width: 100%; min-height: 60px; padding: 12px 16px;
   background: var(--overlay-bg); color: #fff; font-size: 40px;
   line-height: 1.4; text-align: center; border-radius: 0 0 4px 4px;
+  /* box-sizing so the JS-pinned height (offsetHeight, a border-box value) is
+     interpreted consistently across modes. The hold through gaps is applied as
+     an inline `height` with `important` priority (see the render loop): only
+     that beats the fullscreen `height: auto !important` (min-height is forced to
+     0 there and does not work). On release the inline height is removed, so the
+     resized embedded mode (height: var(--preview-subs-h)) and fullscreen keep
+     their own sizing — no resize regression. */
+  box-sizing: border-box;
 }
 #subtitle-overlay:empty { min-height: 20px; }
 #subtitle-overlay:empty::after { content: '\200B'; }
@@ -925,6 +933,11 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   height: auto !important;
   max-height: 60vh;
   overflow: hidden;
+  /* Fullscreen only: the render loop pins an explicit px height every frame
+     (measured from content), so subtitle-to-subtitle size changes are px→px and
+     ease here instead of snapping. Embedded has no transition (instant), per
+     design. The inline `height: Npx !important` set by JS beats the auto above. */
+  transition: height 0.2s ease;
 }
 /* Fullscreen mirrors the embedded resize handle: --preview-subs-scale is
    set by JS as a unitless number; if absent (no drag yet) the fallback 1
@@ -3686,41 +3699,93 @@ function showPreview(talkId, videoSlug) {
     if (ok && stillOnSameVideo() && previewState.mode === 'edit') renderEditList();
   });
 
-  // Cache the two hot-path DOM nodes written from timeupdate so the
-  // ~4Hz tick doesn't re-query the tree on every frame.
+  // Hot-path DOM nodes, cached once: the overlay is rewritten from a
+  // requestAnimationFrame loop (~60fps) that polls the player's true position,
+  // NOT the Vimeo `timeupdate` event. timeupdate fires only ~4×/sec (~250ms) —
+  // too coarse to render the deliberate 80ms gaps between subtitles, so the
+  // overlay jumped block-to-block and never went blank. player.getCurrentTime()
+  // is a local page↔iframe postMessage (~0.5ms, monotonic), so reading it every
+  // frame gives smooth, flicker-free sync that shows the gaps.
   var overlayEl = document.getElementById('subtitle-overlay');
   var timeEl = document.getElementById('time-display');
+  var viewEl = document.getElementById('view-preview');
+
+  // Sole writer of the overlay + time display, called every animation frame.
+  function renderOverlayAt(sec) {
+    previewState.currentTime = sec;
+    var ms = Math.round(sec * 1000);
+    var idx = findActiveSubtitleIdx(previewState.subtitles, ms);
+    var text = '';
+    if (idx !== -1) {
+      var lang = previewState.srtLang || 'uk';
+      var langEdits = (previewState.edits && previewState.edits[lang]) || {};
+      text = Object.prototype.hasOwnProperty.call(langEdits, idx)
+        ? langEdits[idx]
+        : previewState.subtitles[idx].text;
+    }
+    // Re-run the height logic on a fullscreen toggle too (not just text changes),
+    // so a toggle while paused re-pins correctly for the new mode.
+    var fs = !!(viewEl && viewEl.classList.contains('fs-mode'));
+    var modeChanged = fs !== previewState.lastFsMode;
+    previewState.lastFsMode = fs;
+    if (text !== previewState.lastText || modeChanged) {
+      if (text === '') {
+        // Entering a gap: pin the box to the height of the subtitle that is
+        // still showing so the background holds through the 80ms pause instead
+        // of collapsing and bouncing. Inline `height` with `important` priority
+        // — fullscreen sets `height: auto !important` and forces min-height to
+        // 0, so only this wins in every mode.
+        overlayEl.style.setProperty('height', overlayEl.offsetHeight + 'px', 'important');
+        overlayEl.textContent = '';
+      } else if (fs) {
+        // Fullscreen: keep an explicit measured px height every subtitle so the
+        // change is px→px and the CSS height transition eases it (interpolating
+        // to/from `auto` is impossible). Measure natural height, then pin it.
+        overlayEl.textContent = text;
+        overlayEl.style.removeProperty('height');
+        overlayEl.style.setProperty('height', overlayEl.offsetHeight + 'px', 'important');
+      } else {
+        // Embedded: release to the natural content (auto-expand) or the user's
+        // resized height (var) — instant, no transition, per design.
+        overlayEl.style.removeProperty('height');
+        overlayEl.textContent = text;
+      }
+      previewState.lastText = text;
+    }
+    var s = Math.floor(sec);
+    if (s !== previewState.lastSec) {
+      timeEl.textContent =
+        String(Math.floor(s/3600)).padStart(2,'0') + ':' + String(Math.floor((s%3600)/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+      previewState.lastSec = s;
+    }
+  }
 
   if (!sameVideo && embedUrl) {
     try {
       var player = new Vimeo.Player(iframe);
       previewState.player = player;
+      // Token guarding the rAF loop: a fresh entry for the same video (player
+      // rebuilt) installs a new token, so the prior loop sees the mismatch and
+      // stops. Navigating to a different video stops it via stillOnSameVideo().
+      var rafToken = {};
+      previewState._rafToken = rafToken;
+      var pollInFlight = false;
+      function overlayLoop() {
+        if (!stillOnSameVideo() || previewState._rafToken !== rafToken) return;
+        // In-flight guard: at most one getCurrentTime() outstanding. It resolves
+        // in well under a frame, so most frames still get a fresh position.
+        if (!pollInFlight) {
+          pollInFlight = true;
+          player.getCurrentTime().then(function(sec) {
+            pollInFlight = false;
+            if (stillOnSameVideo() && previewState._rafToken === rafToken) renderOverlayAt(sec);
+          }).catch(function() { pollInFlight = false; });
+        }
+        requestAnimationFrame(overlayLoop);
+      }
       player.ready().then(function() {
         console.log('[SPA] Vimeo player ready');
-        player.on('timeupdate', function(data) {
-          if (!stillOnSameVideo()) return;
-          previewState.currentTime = data.seconds;
-          var ms = Math.round(data.seconds * 1000);
-          var idx = findActiveSubtitleIdx(previewState.subtitles, ms);
-          var text = '';
-          if (idx !== -1) {
-            var lang = previewState.srtLang || 'uk';
-            var langEdits = (previewState.edits && previewState.edits[lang]) || {};
-            text = Object.prototype.hasOwnProperty.call(langEdits, idx)
-              ? langEdits[idx]
-              : previewState.subtitles[idx].text;
-          }
-          if (text !== previewState.lastText) {
-            overlayEl.textContent = text;
-            previewState.lastText = text;
-          }
-          var s = Math.floor(data.seconds);
-          if (s !== previewState.lastSec) {
-            timeEl.textContent =
-              String(Math.floor(s/3600)).padStart(2,'0') + ':' + String(Math.floor((s%3600)/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
-            previewState.lastSec = s;
-          }
-        });
+        requestAnimationFrame(overlayLoop);
       }).catch(function(err) {
         console.warn('[SPA] Vimeo player error:', err);
       });
@@ -3733,6 +3798,10 @@ function showPreview(talkId, videoSlug) {
 }
 
 function vimeoEmbed(url) {
+  // A video with no/undecodable link (video.vimeo_url undefined) must not crash
+  // the caller — showPreview reaches here for a link-less video opened by deep
+  // link, and `undefined.match(...)` would throw and abort the whole preview.
+  if (!url) return '';
   var m = url.match(/vimeo\.com\/(\d+)\/([a-f0-9]+)/);
   if (m) return 'https://player.vimeo.com/video/' + m[1] + '?h=' + m[2];
   m = url.match(/vimeo\.com\/(\d+)(?![\/\w])/);
