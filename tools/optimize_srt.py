@@ -703,8 +703,10 @@ def merge_short_blocks(blocks, config):
     return blocks, total_merged
 
 
-def cascade_redistribute(blocks, config, report):
-    """Steal time from neighbor blocks (up to 8 blocks away) to reduce CPS."""
+def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
+    """One redistribution pass: blocks with CPS above ``recipient_min_cps``
+    receive time (aiming at ``level_cps``) from neighbors whose CPS stays
+    below ``level_cps`` after donating. Returns (blocks, count)."""
     SEARCH_RADIUS = 8
     redistributed = 0
 
@@ -715,10 +717,10 @@ def cascade_redistribute(blocks, config, report):
             dur = b["end_ms"] - b["start_ms"]
             cps = chars / (dur / 1000.0) if dur > 0 else 999
 
-            if cps <= config.target_cps:
+            if cps <= recipient_min_cps:
                 continue
 
-            needed_dur = int((chars / config.target_cps) * 1000)
+            needed_dur = int((chars / level_cps) * 1000)
             extra_needed = needed_dur - dur
             if extra_needed <= 0:
                 continue
@@ -732,8 +734,8 @@ def cascade_redistribute(blocks, config, report):
                 nb_dur = nb["end_ms"] - nb["start_ms"]
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
-                if nb_cps < config.target_cps:
-                    nb_min_dur = int((nb_chars / config.target_cps) * 1000)
+                if nb_cps < level_cps:
+                    nb_min_dur = int((nb_chars / level_cps) * 1000)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
                     give = min(extra_needed, nb_can_give)
                     if give > 30:
@@ -754,8 +756,8 @@ def cascade_redistribute(blocks, config, report):
                 nb_dur = nb["end_ms"] - nb["start_ms"]
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
-                if nb_cps < config.target_cps:
-                    nb_min_dur = int((nb_chars / config.target_cps) * 1000)
+                if nb_cps < level_cps:
+                    nb_min_dur = int((nb_chars / level_cps) * 1000)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
                     give = min(extra_needed, nb_can_give)
                     if give > 30:
@@ -772,8 +774,32 @@ def cascade_redistribute(blocks, config, report):
         if iter_redis == 0:
             break
 
+    return blocks, redistributed
+
+
+def cascade_redistribute(blocks, config, report):
+    """Steal time from neighbor blocks (up to 8 blocks away) to reduce CPS.
+
+    Two tiers:
+    1. Gentle leveling toward ``target_cps`` — donors only below target, so
+       normal talks get comfortable padding without densifying anyone.
+    2. Hard-max rescue — dense passages (neighbors all above target) have no
+       sub-target donors, so tier 1 leaves blocks above ``hard_max_cps``.
+       Re-run the pass for those violators only, leveling recipient and
+       donors to just below the hard ceiling (5% margin keeps int-truncated
+       durations safely under the validator's strict ``> hard_max`` check).
+    """
+    blocks, redistributed = _cascade_pass(blocks, config, config.target_cps, config.target_cps)
+
+    rescue_level = config.hard_max_cps * 0.95
+    rescued = 0
+    if rescue_level > config.target_cps:
+        blocks, rescued = _cascade_pass(blocks, config, config.hard_max_cps, rescue_level)
+
     if redistributed:
         report.append(f"  Phase 7 - Cascade time redistribution: {redistributed}")
+    if rescued:
+        report.append(f"  Phase 7 - Hard-max rescue redistribution: {rescued}")
 
     return blocks
 

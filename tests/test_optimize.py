@@ -5,6 +5,7 @@ import json
 from tools.config import OptimizeConfig
 from tools.optimize_srt import (
     build_blocks_from_uk_whisper,
+    cascade_redistribute,
     find_best_split_point,
     find_block_split_point,
     merge_short_blocks,
@@ -225,3 +226,41 @@ def test_optimize_without_whisper_json(sample_srt_path, tmp_srt):
 
     blocks = parse_srt(tmp_srt)
     assert len(blocks) > 0
+
+
+# --- cascade_redistribute ---
+
+
+def _cps(block):
+    chars = len(block["text"].replace("\n", ""))
+    return chars / ((block["end_ms"] - block["start_ms"]) / 1000.0)
+
+
+def test_cascade_redistribute_hard_max_rescue_uses_dense_donors():
+    """A block above hard_max_cps surrounded only by above-target neighbors
+    must still be rescued: donors with slack up to (just below) hard_max_cps
+    are eligible, not only sub-target ones."""
+    config = OptimizeConfig()  # target 15, hard max 20
+    blocks = [
+        {"idx": 1, "start_ms": 0, "end_ms": 3200, "text": "a" * 50},  # CPS 15.6
+        {"idx": 2, "start_ms": 3280, "end_ms": 6480, "text": "b" * 50},  # CPS 15.6
+        {"idx": 3, "start_ms": 6560, "end_ms": 8760, "text": "c" * 62},  # CPS 28.2
+        {"idx": 4, "start_ms": 8840, "end_ms": 12040, "text": "d" * 50},  # CPS 15.6
+        {"idx": 5, "start_ms": 12120, "end_ms": 15320, "text": "e" * 50},  # CPS 15.6
+    ]
+    result = cascade_redistribute(blocks, config, [])
+    assert all(_cps(b) <= config.hard_max_cps for b in result), [round(_cps(b), 1) for b in result]
+
+
+def test_cascade_redistribute_leaves_soft_blocks_untouched():
+    """Blocks between target and hard max must NOT be densified by the
+    hard-max rescue tier — it only fixes hard violations."""
+    config = OptimizeConfig()
+    blocks = [
+        {"idx": 1, "start_ms": 0, "end_ms": 3400, "text": "a" * 55},  # CPS 16.2
+        {"idx": 2, "start_ms": 3480, "end_ms": 6980, "text": "b" * 60},  # CPS 17.1
+        {"idx": 3, "start_ms": 7060, "end_ms": 10460, "text": "c" * 55},  # CPS 16.2
+    ]
+    before = [(b["start_ms"], b["end_ms"]) for b in blocks]
+    result = cascade_redistribute(blocks, config, [])
+    assert [(b["start_ms"], b["end_ms"]) for b in result] == before
