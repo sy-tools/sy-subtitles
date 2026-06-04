@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-02T20:08:27.415944+00:00",
+  "updated_at": "2026-06-04T14:33:45.773264+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -294,7 +294,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 291,
-      "updated_at": "2026-05-30T06:51:06Z"
+      "updated_at": "2026-06-04T14:33:34Z"
     },
     "1993-04-26_Shri-Pallas-Athena-Puja-You-have-to-be-sincere-and-honest": {
       "status": "pending",
