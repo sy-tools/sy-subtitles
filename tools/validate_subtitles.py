@@ -16,7 +16,10 @@ Usage:
 import argparse
 import re
 import unicodedata
+from pathlib import Path
 from typing import Literal, NamedTuple
+
+import yaml
 
 from .config import OptimizeConfig
 from .srt_utils import (
@@ -321,6 +324,48 @@ def check_statistics(srt_blocks, config, report):
         report.append(f'    #{idx}: CPS={cps:.1f} ({chars}ch/{dur:.1f}s) "{text_short}"')
 
     return stats
+
+
+def manifest_validate_flags(srt_path) -> dict:
+    """Return validate() kwargs matching how the pipeline validated this video.
+
+    Reads `final/build_manifest.yaml` next to the SRT (written during
+    pipeline commit). The manifest tells us which mode produced the SRT so
+    re-validation mirrors the pipeline's `--skip-*` flags exactly — running
+    stricter than production would flag legitimate pipeline outputs as
+    broken. Legacy talks built before the manifest landed get {} (strict).
+    """
+    srt_path = Path(srt_path)
+    manifest_path = srt_path.parent / "build_manifest.yaml"
+    if not manifest_path.is_file():
+        return {}  # legacy: strict validate
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest = yaml.safe_load(f) or {}
+    role = manifest.get("role")
+    mode = manifest.get("mode")
+    # All manifest-aware calls share the pipeline's --skip-duration-check:
+    # long title blocks and short interjection blocks are tolerated by the
+    # pipeline's primary+secondary validates, so re-checks must not be
+    # stricter.
+    flags: dict = {"skip_duration_check": True}
+    if role == "secondary":
+        # Secondary = derivative (offset / resync from primary). Text came
+        # from primary (already validated); timing is shifted/warped, CPS
+        # may spike in a few places where primary's silences collapse.
+        flags.update(skip_text_check=True, skip_time_check=True, skip_cps_check=True)
+        return flags
+    if role == "primary" and mode == "en-srt":
+        # En-srt primary: transcript-only content is legitimately dropped
+        # by Opus (no EN counterpart), so text preservation is replaced by
+        # a block-count sanity against the EN SRT.
+        flags["skip_text_check"] = True
+        en_srt = srt_path.parent.parent / "source" / "en.srt"
+        if en_srt.is_file():
+            flags["en_srt_path"] = str(en_srt)
+            flags["compare_block_count"] = True
+        return flags
+    # Primary + whisper mode: only duration-skip (matches pipeline).
+    return flags
 
 
 def validate(

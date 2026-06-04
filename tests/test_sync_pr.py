@@ -209,3 +209,40 @@ class TestSyncPrIntegration:
 
         transcript = (repo_path / "talks" / "test" / "transcript_uk.txt").read_text(encoding="utf-8")
         assert transcript == BASE_TRANSCRIPT
+
+    def test_new_en_srt_mode_srt_validates_with_manifest_flags(self, repo):
+        """A PR that ADDS a final/uk.srt built in en-srt mode (transcript
+        already on main, e.g. from an earlier failed pipeline run) must be
+        validated with the build_manifest.yaml mode flags: en-srt primaries
+        legitimately drop transcript-only blocks (closing signatures), so
+        text preservation is replaced by a block-count sanity vs
+        source/en.srt — exactly like the pipeline and golden tests do.
+        Reproduces the 1982-08-06 salvage PR failing the sync check."""
+        repo_path, _ = repo
+        talk = repo_path / "talks" / "ensrt"
+        (talk / "Video1" / "final").mkdir(parents=True)
+        (talk / "Video1" / "source").mkdir(parents=True)
+        (talk / "meta.yaml").write_text("videos:\n  - slug: Video1\n    title: V\n", encoding="utf-8")
+        # Transcript carries a closing signature paragraph that the en-srt
+        # build drops (no EN counterpart).
+        (talk / "transcript_uk.txt").write_text(BASE_TRANSCRIPT + "\nВічно люблячa вас Мати.\n", encoding="utf-8")
+        _git(repo_path, "add", "talks")
+        _git(repo_path, "commit", "-q", "-m", "ensrt talk: transcript only")
+        base_sha = _git(repo_path, "rev-parse", "HEAD").strip()
+
+        # PR: pipeline-built artifacts — SRT without the signature block,
+        # the EN SRT timing source, and the manifest recording the mode.
+        (talk / "Video1" / "final" / "uk.srt").write_text(BASE_SRT, encoding="utf-8")
+        (talk / "Video1" / "source" / "en.srt").write_text(BASE_SRT, encoding="utf-8")
+        (talk / "Video1" / "final" / "build_manifest.yaml").write_text(
+            "role: primary\nmode: en-srt\n", encoding="utf-8"
+        )
+        _git(repo_path, "add", "talks")
+        _git(repo_path, "commit", "-q", "-m", "add built uk.srt (en-srt mode)")
+
+        exit_code = run(base_sha)
+        assert exit_code == 0
+
+        # Untouched by sync — the SRT is already final.
+        srt_after = (talk / "Video1" / "final" / "uk.srt").read_text(encoding="utf-8")
+        assert srt_after == BASE_SRT
