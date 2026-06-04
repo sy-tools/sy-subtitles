@@ -44,6 +44,7 @@ import yaml
 from .sync_common import load_base_from_git
 from .sync_srt_to_transcript import sync_srt_to_transcript
 from .sync_transcript_to_srt import sync_transcript
+from .validate_subtitles import manifest_validate_flags
 from .validate_subtitles import validate as validate_subtitles
 
 
@@ -213,14 +214,18 @@ def _process_talk(
         # Validate the updated SRT against the updated transcript. Matches
         # the old bash step's flags: we skip time/duration checks because
         # Step B doesn't touch timecodes (except via optimize, which
-        # recomputes them safely).
+        # recomputes them safely). On top of that, apply the build mode
+        # flags from build_manifest.yaml — en-srt primaries legitimately
+        # drop transcript-only blocks and secondaries are derivative, so
+        # validating stricter than the pipeline would reject its outputs.
         print(f"  [{talk_id}/{slug}] validate", file=sys.stderr)
+        flags = {"skip_time_check": True, "skip_duration_check": True}
+        flags.update(manifest_validate_flags(srt_file))
         try:
             passed, _report = validate_subtitles(
                 srt_path=str(srt_file),
                 transcript_path=str(transcript_path),
-                skip_time_check=True,
-                skip_duration_check=True,
+                **flags,
             )
         except Exception as exc:  # noqa: BLE001
             _gha_error(f"{talk_id}/{slug}: validate raised: {exc}")
