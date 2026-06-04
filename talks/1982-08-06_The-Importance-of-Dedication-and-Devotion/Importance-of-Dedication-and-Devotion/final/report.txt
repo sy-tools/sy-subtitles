@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-08-06_The-Importance-of-Dedication-and-Devotion/Importance-of-Dedication-and-Devotion/final/uk.srt
+  Transcript: talks/1982-08-06_The-Importance-of-Dedication-and-Devotion/transcript_uk.txt
+  EN SRT: talks/1982-08-06_The-Importance-of-Dedication-and-Devotion/Importance-of-Dedication-and-Devotion/source/en.srt
+  SRT blocks: 1613
+  EN SRT blocks: 1924
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:01:09,040 — 01:59:25,840
+  SRT range:       00:01:09,040 — 01:59:27,840
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 1613
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 1613
+  CPS: avg=12.9, median=14.5, max=20.0
+  CPS > target: 225 (13.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #1368: CPS=20.0 (71ch/3.6s) "Розітріть те місце на Вішуддхі, попрацюйте над Вішуддхі, про..."
+    #1235: CPS=20.0 (58ch/2.9s) "якого вона дуже любила, і… Шрі Матаджі: Про це Я вже чула."
+    #1367: CPS=20.0 (57ch/2.9s) "то це означає, що вони гаразд, тільки Вішуддхі не гаразд."
+    #1117: CPS=20.0 (56ch/2.8s) "Вона скаже: «Займайся Сахаджа Йоґою у сто разів більше»."
+    #1388: CPS=20.0 (56ch/2.8s) "вони мають багато разів переводити своє ліве до правого."
+    #1121: CPS=20.0 (51ch/2.6s) "Ти маєш узяти на себе відповідальність піклуватися."
+    #1376: CPS=20.0 (50ch/2.5s) "Припустімо, він його не відчуває, а ви відчуваєте,"
+    #1202: CPS=20.0 (24ch/1.2s) "Ти не можеш її залишити."
+    #1192: CPS=19.9 (51ch/2.6s) "Ти маєш сказати: «Дихни тричі важко — і ти заснеш»."
+    #1377: CPS=19.9 (61ch/3.1s) "тоді він реалізований; тільки от його чакри треба прочистити..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 1613
+  EN SRT blocks: 1924
+  Ratio UK/EN: 0.84 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.9 (target ≤15.0)
+  CPS > 15.0: 225 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
