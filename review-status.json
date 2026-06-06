@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-04T14:33:45.773264+00:00",
+  "updated_at": "2026-06-06T21:41:58.589619+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -505,6 +505,12 @@
       "reviewer": null,
       "issue_number": 456,
       "updated_at": "2026-06-01T22:38:59Z"
+    },
+    "2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 471,
+      "updated_at": "2026-06-06T21:41:47Z"
     }
   }
 }
