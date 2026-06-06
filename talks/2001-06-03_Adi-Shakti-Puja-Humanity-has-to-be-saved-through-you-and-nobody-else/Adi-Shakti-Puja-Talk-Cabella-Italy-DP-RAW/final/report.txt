@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else/Adi-Shakti-Puja-Talk-Cabella-Italy-DP-RAW/final/uk.srt
+  Transcript: talks/2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else/transcript_uk.txt
+  EN SRT: talks/2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else/Adi-Shakti-Puja-Talk-Cabella-Italy-DP-RAW/source/en.srt
+  SRT blocks: 349
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 349
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 349
+  CPS: avg=7.5, median=7.0, max=14.8
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 5
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #313: CPS=14.8 (79ch/5.3s) "Ніколи ви не відчули б такої радості, навіть якби ви отримал..."
+    #14: CPS=14.8 (76ch/5.1s) "І вони погодилися скуштувати плід знання, бо інакше вони зал..."
+    #246: CPS=14.7 (64ch/4.3s) "Якщо вони хворі, їм слід узяти фотографію й попрацювати над ..."
+    #221: CPS=14.6 (47ch/3.2s) "І погляньте самі, що ви зробили, що ви зробили."
+    #323: CPS=14.6 (42ch/2.9s) "Погляньте на ці маленькі, маленькі свічки."
+    #40: CPS=14.4 (58ch/4.0s) "Коли ви народжуєтесь, ви приходите зі стиснутими кулаками,"
+    #264: CPS=14.3 (55ch/3.8s) "Бо ті, хто народжений, у будь-якому разі мають померти."
+    #342: CPS=14.0 (58ch/4.1s) "мушу сказати, у тому сенсі, що Мені доводилося мати справу"
+    #88: CPS=14.0 (57ch/4.1s) "ніхто не зміг також цього зробити, бо, можливо, більшість"
+    #127: CPS=13.9 (40ch/2.9s) "ви не змогли б отримати свою Реалізацію."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 7.5 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 5 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
