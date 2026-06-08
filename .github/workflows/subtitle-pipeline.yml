@@ -248,7 +248,7 @@ jobs:
 
       - name: Translate to Ukrainian
         if: inputs.translate != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@787c5a0ce96a9a6cfb050ea0c8f4c05f2447c251  # v1.0.133
+        uses: anthropics/claude-code-action@fbda2eb1bdc90d319b8d853f5deb53bca199a7c1  # v1.0.140
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -355,7 +355,7 @@ jobs:
 
       - name: Review translation (2+1)
         if: inputs.review != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@787c5a0ce96a9a6cfb050ea0c8f4c05f2447c251  # v1.0.133
+        uses: anthropics/claude-code-action@fbda2eb1bdc90d319b8d853f5deb53bca199a7c1  # v1.0.140
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -661,7 +661,7 @@ jobs:
 
       - name: Build timecodes (Opus 4.8)
         if: inputs.dry_run != true
-        uses: anthropics/claude-code-action@787c5a0ce96a9a6cfb050ea0c8f4c05f2447c251  # v1.0.133
+        uses: anthropics/claude-code-action@fbda2eb1bdc90d319b8d853f5deb53bca199a7c1  # v1.0.140
         env:
           CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
         with:
