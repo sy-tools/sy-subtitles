@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-06T21:41:58.589619+00:00",
+  "updated_at": "2026-06-08T13:35:58.827575+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -111,10 +111,10 @@
       "updated_at": "2026-04-22T22:08:32Z"
     },
     "1979-04-22_Give-up-Misidentifications": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
       "issue_number": 118,
-      "updated_at": "2026-04-23T09:32:22Z"
+      "updated_at": "2026-06-08T13:35:56Z"
     },
     "1988-12-11_Adi-Shakti-Puja-The-steadiness-of-the-mind-is-very-important-for-the-marriages": {
       "status": "pending",
