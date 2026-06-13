@@ -4,7 +4,7 @@
   SRT: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Day-Talk-The-Will-of-God/final/uk.srt
   Transcript: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/transcript_uk.txt
   EN SRT: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Day-Talk-The-Will-of-God/source/en.srt
-  SRT blocks: 598
+  SRT blocks: 599
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,13 +22,13 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 598
+  Total blocks: 599
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 598
+  Total blocks: 599
   CPS: avg=11.0, median=11.1, max=15.1
   CPS > target: 9 (1.5%)
   CPS > hard max: 0 (0.0%)

@@ -4,7 +4,7 @@
   SRT: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Puja/final/uk.srt
   Transcript: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/transcript_uk.txt
   EN SRT: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Puja/source/en.srt
-  SRT blocks: 598
+  SRT blocks: 599
   EN SRT blocks: 673
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -18,19 +18,19 @@
   CHECK 3: Time range (vs EN SRT)
 ============================================================
   EN SRT range: 00:02:10,526 — 00:57:58,030
-  SRT range:       00:02:48,292 — 00:57:53,771
+  SRT range:       00:02:48,292 — 00:57:58,030
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 598
+  Total blocks: 599
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 598
+  Total blocks: 599
   CPS: avg=11.0, median=11.1, max=15.1
   CPS > target: 9 (1.5%)
   CPS > hard max: 0 (0.0%)
@@ -58,7 +58,7 @@
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 598
+  UK SRT blocks: 599
   EN SRT blocks: 673
   Ratio UK/EN: 0.89 (max allowed 2.0)
   Block count: OK
