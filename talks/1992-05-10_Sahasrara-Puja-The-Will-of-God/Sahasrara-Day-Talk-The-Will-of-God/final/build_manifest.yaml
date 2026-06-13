@@ -1,0 +1,6 @@
+role: secondary
+mode: secondary-offset
+primary_slug: Sahasrara-Puja
+offset_ms: -166800
+run_id: 27455522256
+note: constant offset from primary UK (primary-EN<->Day-EN median, IQR=0ms)

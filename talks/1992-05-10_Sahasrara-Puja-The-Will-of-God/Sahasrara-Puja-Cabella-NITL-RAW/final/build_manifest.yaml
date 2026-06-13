@@ -1,0 +1,6 @@
+role: secondary
+mode: secondary-linear-shift
+primary_slug: Sahasrara-Puja
+transform: raw_ms = -142977.3 + 0.994113*primary_ms
+basis: primary-EN <-> RAW-whisper word anchors (4820); RAW runs -0.6% rate vs primary
+run_id: 27455522256

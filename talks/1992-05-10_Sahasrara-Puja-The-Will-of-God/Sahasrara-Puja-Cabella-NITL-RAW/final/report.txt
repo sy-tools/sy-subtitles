@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Puja-Cabella-NITL-RAW/final/uk.srt
+  Transcript: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/transcript_uk.txt
+  Whisper: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Puja-Cabella-NITL-RAW/source/whisper.json
+  SRT blocks: 598
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 598
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 598
+  CPS: avg=11.0, median=11.2, max=15.2
+  CPS > target: 82 (13.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #113: CPS=15.2 (58ch/3.8s) "і не лише це, – щоб воно стало вашою невід’ємною частиною."
+    #350: CPS=15.2 (35ch/2.3s) "як ви самі себе такими облаштували,"
+    #355: CPS=15.1 (44ch/2.9s) "ви маєте індивідуальність у Сахаджа Йозі, ви"
+    #442: CPS=15.1 (28ch/1.9s) "Тож тепер ви стали лотосами,"
+    #525: CPS=15.1 (47ch/3.1s) "Таким людям справді варто піти із Сахаджа Йоґи,"
+    #68: CPS=15.1 (54ch/3.6s) "Стільки всього спрацьовує саме собою після Реалізації,"
+    #526: CPS=15.1 (54ch/3.6s) "тому що вони ще не зрозуміли, що таке ця Сахаджа Йоґа."
+    #72: CPS=15.1 (77ch/5.1s) "Одну теорію знову ставлять під сумнів, іншу теорію знову ста..."
+    #77: CPS=15.1 (50ch/3.3s) "що Бог є, але й те, що все – створення цієї Землі,"
+    #351: CPS=15.1 (73ch/4.8s) "що ви теж починаєте іноді робити із Сахаджа Йоґи щось фундам..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.0 (target ≤15.0)
+  CPS > 15.0: 82 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

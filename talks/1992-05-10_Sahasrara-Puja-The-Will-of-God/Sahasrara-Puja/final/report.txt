@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Puja/final/uk.srt
+  Transcript: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/transcript_uk.txt
+  EN SRT: talks/1992-05-10_Sahasrara-Puja-The-Will-of-God/Sahasrara-Puja/source/en.srt
+  SRT blocks: 598
+  EN SRT blocks: 673
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:02:10,526 — 00:57:58,030
+  SRT range:       00:02:48,292 — 00:57:53,771
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 598
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 598
+  CPS: avg=11.0, median=11.1, max=15.1
+  CPS > target: 9 (1.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #113: CPS=15.1 (58ch/3.8s) "і не лише це, – щоб воно стало вашою невід’ємною частиною."
+    #350: CPS=15.1 (35ch/2.3s) "як ви самі себе такими облаштували,"
+    #351: CPS=15.0 (73ch/4.9s) "що ви теж починаєте іноді робити із Сахаджа Йоґи щось фундам..."
+    #524: CPS=15.0 (38ch/2.5s) "що життя в ашрамі – то нічого доброго."
+    #355: CPS=15.0 (44ch/2.9s) "ви маєте індивідуальність у Сахаджа Йозі, ви"
+    #525: CPS=15.0 (47ch/3.1s) "Таким людям справді варто піти із Сахаджа Йоґи,"
+    #77: CPS=15.0 (50ch/3.3s) "що Бог є, але й те, що все – створення цієї Землі,"
+    #72: CPS=15.0 (77ch/5.1s) "Одну теорію знову ставлять під сумнів, іншу теорію знову ста..."
+    #346: CPS=15.0 (80ch/5.3s) "Так само, я б сказала, у Сахаджа Йозі люди не повинні стават..."
+    #68: CPS=15.0 (54ch/3.6s) "Стільки всього спрацьовує саме собою після Реалізації,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 598
+  EN SRT blocks: 673
+  Ratio UK/EN: 0.89 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.0 (target ≤15.0)
+  CPS > 15.0: 9 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
