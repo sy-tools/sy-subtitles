@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-13T05:55:33.036977+00:00",
+  "updated_at": "2026-06-13T08:01:13.039802+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -517,6 +517,12 @@
       "reviewer": null,
       "issue_number": 490,
       "updated_at": "2026-06-13T05:55:22Z"
+    },
+    "1983-10-14_After-Self-Realization-You-Must-Master-It": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 493,
+      "updated_at": "2026-06-13T08:01:03Z"
     }
   }
 }
