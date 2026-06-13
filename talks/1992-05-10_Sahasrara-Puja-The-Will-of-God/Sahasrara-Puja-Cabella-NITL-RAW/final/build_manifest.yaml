@@ -1,6 +1,8 @@
 role: secondary
-mode: secondary-linear-shift
+mode: secondary-warp
 primary_slug: Sahasrara-Puja
-transform: raw_ms = -142977.3 + 0.994113*primary_ms
-basis: primary-EN <-> RAW-whisper word anchors (4820); RAW runs -0.6% rate vs primary
+method: 'robust piecewise-linear warp: primary-EN<->RAW-whisper word anchors, 12s-binned
+  medians (273), monotonic; interpolate primary UK onto RAW timeline'
+basis: RAW has no source/en.srt; offset drifts -138s (start) to -163s (end), RAW ~0.6%
+  slower than primary
 run_id: 27455522256
