@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1983-10-14_After-Self-Realization-You-Must-Master-It/Public-Program-Boston-USA-DP-RAW/final/uk.srt
+  Transcript: talks/1983-10-14_After-Self-Realization-You-Must-Master-It/transcript_uk.txt
+  EN SRT: talks/1983-10-14_After-Self-Realization-You-Must-Master-It/Public-Program-Boston-USA-DP-RAW/source/en.srt
+  SRT blocks: 918
+  EN SRT blocks: 2020
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:00,280 — 01:11:42,830
+  SRT range:       00:00:00,280 — 01:11:44,830
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 918
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 918
+  CPS: avg=13.4, median=14.8, max=20.0
+  CPS > target: 159 (17.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #598: CPS=20.0 (28ch/1.4s) "Це так мило й так прекрасно."
+    #690: CPS=20.0 (84ch/4.2s) "людина може бути сварливою, якась людина – схильною до бійки..."
+    #652: CPS=20.0 (75ch/3.8s) "Щойно ви це виявляєте, ви почуваєтеся такими захищеними й та..."
+    #639: CPS=20.0 (73ch/3.7s) "казатиме: «Цього не слід робити», – а інший скаже: «Ні, це с..."
+    #686: CPS=20.0 (71ch/3.6s) "Як-от Я не можу зв’язатися з кожним із вас, тож призначена о..."
+    #683: CPS=20.0 (63ch/3.2s) "Не повинно бути жодної сварки, не повинно бути жодної бороть..."
+    #602: CPS=20.0 (55ch/2.8s) "вони найгірші люди з усіх, які будь-коли народжувалися."
+    #673: CPS=20.0 (52ch/2.6s) "а також насолоджуєтеся помилками, яких припустилися."
+    #537: CPS=20.0 (47ch/2.4s) "що може вийти заміж, а тоді чоловік не захотів."
+    #688: CPS=20.0 (45ch/2.3s) "Ви побачите, що вони надзвичайно хороші люди."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 918
+  EN SRT blocks: 2020
+  Ratio UK/EN: 0.45 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.4 (target ≤15.0)
+  CPS > 15.0: 159 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
