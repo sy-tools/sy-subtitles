@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1988-06-08_Shri-Ekadasha-Rudra-Puja-Ekadasha-Principle-is-built-in-the-Void/Ekadasha-Rudra-Puja-Talk/final/uk.srt
+  Transcript: talks/1988-06-08_Shri-Ekadasha-Rudra-Puja-Ekadasha-Principle-is-built-in-the-Void/transcript_uk.txt
+  EN SRT: talks/1988-06-08_Shri-Ekadasha-Rudra-Puja-Ekadasha-Principle-is-built-in-the-Void/Ekadasha-Rudra-Puja-Talk/source/en.srt
+  SRT blocks: 348
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 348
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 348
+  CPS: avg=9.0, median=8.5, max=15.0
+  CPS > target: 2 (0.6%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 2
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #202: CPS=15.0 (79ch/5.3s) "Навіть тоді, якщо в них немає якоїсь фізичної проблеми на Ві..."
+    #301: CPS=15.0 (50ch/3.3s) "Такі одержимі люди мають цілком нормальний вигляд."
+    #200: CPS=15.0 (78ch/5.2s) "Тепер, у деяких людей немає належних вібрацій, можливо, їхні..."
+    #276: CPS=15.0 (64ch/4.3s) "Отже, з лівого боку воно піднімається, переходить на правий ..."
+    #308: CPS=15.0 (52ch/3.5s) "на все каже «А що такого?», на все – «А що такого?»,"
+    #179: CPS=15.0 (49ch/3.3s) "ми прийшли застерегти Тебе щодо одного чоловіка»."
+    #192: CPS=15.0 (49ch/3.3s) "Вони повернулися і потім доповіли Мені: «Матінко,"
+    #269: CPS=15.0 (49ch/3.3s) "прямо над Аґією), і тут у вас з’являється набряк."
+    #345: CPS=15.0 (77ch/5.1s) "Якщо будь-де в нашому характері і в нашому розумінні є будь-..."
+    #93: CPS=15.0 (37ch/2.5s) "Ми повинні стежити за своїми кроками."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.0 (target ≤15.0)
+  CPS > 15.0: 2 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 2 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
