@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1985-04-20_Seminar-Mahamaya-Shakti-Morning/Mahamaya-Shakti-Birmingham-NITL-HD/final/uk.srt
+  Transcript: talks/1985-04-20_Seminar-Mahamaya-Shakti-Morning/transcript_uk.txt
+  EN SRT: talks/1985-04-20_Seminar-Mahamaya-Shakti-Morning/Mahamaya-Shakti-Birmingham-NITL-HD/source/en.srt
+  SRT blocks: 1175
+  EN SRT blocks: 1304
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:00,799 — 01:45:51,949
+  SRT range:       00:00:00,799 — 01:45:53,949
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 1175
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 1175
+  CPS: avg=11.4, median=12.1, max=19.0
+  CPS > target: 238 (20.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #1111: CPS=19.0 (41ch/2.2s) "Сахаджа йоґ: Фонтан. Шрі Матаджі: Ні, ні."
+    #1114: CPS=19.0 (74ch/3.9s) "Щось справді безмежне, що ви можете побачити. Сахаджа йоґ: Н..."
+    #1109: CPS=19.0 (82ch/4.3s) "Це має бути дуже грубий приклад. Це має бути для грубих люде..."
+    #1110: CPS=19.0 (61ch/3.2s) "Сахаджа йоґиня: Блакитне небо, Мати. Шрі Матаджі: Ні, ні, ні..."
+    #1101: CPS=19.0 (80ch/4.2s) "Але тим, хто на грубому рівні, чи можеш ти навести їм якийсь..."
+    #1108: CPS=19.0 (56ch/2.9s) "Шрі Матаджі: Це вже інше… [Сміх] Ні, ні, ні, ні, ні, ні!"
+    #1103: CPS=19.0 (67ch/3.5s) "Шрі Матаджі: Ні, не можна казати «всесвіти», вони ж його не ..."
+    #1115: CPS=19.0 (51ch/2.7s) "Інший сахаджа йоґ: Як? Сахаджа йоґ: Нескінченність."
+    #1102: CPS=19.0 (54ch/2.8s) "Сахаджа йоґ: Всесвіт, Мати. Сахаджа йоґиня: Мати, Дух."
+    #1098: CPS=18.6 (80ch/4.3s) "замкнена система, яку можна вичерпати, як ми знаємо, через г..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 1175
+  EN SRT blocks: 1304
+  Ratio UK/EN: 0.90 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.4 (target ≤15.0)
+  CPS > 15.0: 238 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
