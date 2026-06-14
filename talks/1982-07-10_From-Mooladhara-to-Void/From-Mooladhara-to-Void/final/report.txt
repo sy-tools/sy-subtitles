@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-07-10_From-Mooladhara-to-Void/From-Mooladhara-to-Void/final/uk.srt
+  Transcript: talks/1982-07-10_From-Mooladhara-to-Void/transcript_uk.txt
+  EN SRT: talks/1982-07-10_From-Mooladhara-to-Void/From-Mooladhara-to-Void/source/en.srt
+  SRT blocks: 942
+  EN SRT blocks: 1207
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:01:16,040 — 01:16:01,280
+  SRT range:       00:01:16,040 — 01:15:55,720
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 942
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 942
+  CPS: avg=12.4, median=13.6, max=20.0
+  CPS > target: 124 (13.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #483: CPS=20.0 (74ch/3.7s) "як перебрати на себе владу трону, повірити в неї, то, наче х..."
+    #484: CPS=18.9 (53ch/2.8s) "якого ви посадите на трон, він усе одно бачить людей,"
+    #479: CPS=18.1 (67ch/3.7s) "Тепер ти став цим – прийми це!» Ви маєте перебрати на себе ц..."
+    #482: CPS=17.7 (59ch/3.3s) "Розумієте, навіть якщо ви – Я дала трон, якщо ви не знаєте,"
+    #443: CPS=16.5 (39ch/2.4s) "І ось якось ці люди зв’язалися зі Мною,"
+    #426: CPS=15.1 (53ch/3.5s) "зуби, видаляють очі, і на той час, коли ви закінчите,"
+    #562: CPS=15.1 (63ch/4.2s) "Ми ніколи не кажемо: «Не пийте», ніколи не кажемо жодного «н..."
+    #537: CPS=15.1 (64ch/4.2s) "Але тоді ви можете запитати: чому всі ці люди в релігіях каз..."
+    #477: CPS=15.1 (77ch/5.1s) "Його запалення легень повністю зцілилося, і цей капітан не м..."
+    #371: CPS=15.1 (56ch/3.7s) "які ми використовуємо неправильно, які ми використовуємо"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 942
+  EN SRT blocks: 1207
+  Ratio UK/EN: 0.78 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.4 (target ≤15.0)
+  CPS > 15.0: 124 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
