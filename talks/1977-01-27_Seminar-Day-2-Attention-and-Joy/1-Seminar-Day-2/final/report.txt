@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1977-01-27_Seminar-Day-2-Attention-and-Joy/1-Seminar-Day-2/final/uk.srt
+  Transcript: talks/1977-01-27_Seminar-Day-2-Attention-and-Joy/transcript_uk.txt
+  EN SRT: talks/1977-01-27_Seminar-Day-2-Attention-and-Joy/1-Seminar-Day-2/source/en.srt
+  SRT blocks: 436
+  EN SRT blocks: 565
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:01,867 — 00:47:39,013
+  SRT range:       00:00:01,867 — 00:47:41,013
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 436
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 436
+  CPS: avg=10.4, median=10.4, max=15.2
+  CPS > target: 9 (2.1%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=55.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 2
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #280: CPS=15.2 (28ch/1.8s) "Але чому б не стати своїм Я?"
+    #185: CPS=15.1 (50ch/3.3s) "І все ж, розумієте, вона не могла цього припинити!"
+    #180: CPS=15.0 (25ch/1.7s) "Я сказала: «Що тут вдієш?"
+    #279: CPS=15.0 (55ch/3.7s) "Доки ви не станете Сахаджа, воно й далі діятиме на вас."
+    #175: CPS=15.0 (79ch/5.3s) "тут, потім тут, а волосся відростало з цього боку, потім у н..."
+    #178: CPS=15.0 (47ch/3.1s) "І Я сказала їй: «Чому ти так робиш?» Вона каже:"
+    #190: CPS=15.0 (47ch/3.1s) "Тобто деякі люди, щоб позбутися звичок, знаєте,"
+    #193: CPS=15.0 (47ch/3.1s) "Тобто вам не потрібно робити такої нісенітниці."
+    #192: CPS=15.0 (83ch/5.5s) "де ж ви сидітимете?» – «Ми сидітимемо в сидячій позі й практ..."
+    #181: CPS=15.0 (30ch/2.0s) "Така в тебе увага!» І, знаєте,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 436
+  EN SRT blocks: 565
+  Ratio UK/EN: 0.77 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.4 (target ≤15.0)
+  CPS > 15.0: 9 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 2 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
