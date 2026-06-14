@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Adi-Shakti-Puja-Cheltenham-UK-DP/final/uk.srt
+  Transcript: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/transcript_uk.txt
+  EN SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Adi-Shakti-Puja-Cheltenham-UK-DP/source/en.srt
+  SRT blocks: 842
+  EN SRT blocks: 867
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:17,297 — 01:42:19,047
+  SRT range:       00:01:58,447 — 01:42:21,047
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 842
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 842
+  CPS: avg=11.0, median=11.7, max=20.0
+  CPS > target: 27 (3.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 4
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #841: CPS=20.0 (44ch/2.2s) "Шрі Матаджі: Ах, метал… (нерозбірливі слова,"
+    #840: CPS=19.1 (66ch/3.5s) "Йоґ: Я думаю, це металевий сплав… металевий сплав – суміш ме..."
+    #822: CPS=16.1 (41ch/2.6s) "Йоґ: …перед пуджею. Шрі Матаджі: Що таке?"
+    #820: CPS=15.1 (68ch/4.5s) "Або о чверть на другу, о чверть на другу було б краще. Або о..."
+    #141: CPS=15.1 (83ch/5.5s) "Ще не прийшла?] Гаразд, тепер ви маєте дати Мені квіти зараз..."
+    #139: CPS=15.0 (31ch/2.1s) "[Гінді: «Де сестра? Де сестра?»"
+    #711: CPS=15.0 (49ch/3.3s) "Твоєю милістю, о Деві, благословенна людина щодня"
+    #740: CPS=15.0 (49ch/3.3s) "сила нищить тих, хто відібрав у Дев їхню звитягу,"
+    #730: CPS=15.0 (52ch/3.5s) "очищені цими снарядами, могли досягти вищих світів»."
+    #737: CPS=15.0 (52ch/3.5s) "подібне до місяця, що випромінює прохолодні промені."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 842
+  EN SRT blocks: 867
+  Ratio UK/EN: 0.97 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.0 (target ≤15.0)
+  CPS > 15.0: 27 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 4 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

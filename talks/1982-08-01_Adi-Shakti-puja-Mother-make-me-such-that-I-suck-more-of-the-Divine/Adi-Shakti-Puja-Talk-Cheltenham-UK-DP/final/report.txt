@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Adi-Shakti-Puja-Talk-Cheltenham-UK-DP/final/uk.srt
+  Transcript: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/transcript_uk.txt
+  EN SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Adi-Shakti-Puja-Talk-Cheltenham-UK-DP/source/en.srt
+  SRT blocks: 127
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 127
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 127
+  CPS: avg=11.9, median=12.7, max=15.0
+  CPS > target: 1 (0.8%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #12: CPS=15.0 (58ch/3.9s) "Шрі Матаджі: Якщо ви познайомили їх із пуджею, Я не проти."
+    #84: CPS=15.0 (73ch/4.9s) "але вони були долучені до пудж, тож це піде їм на користь, а..."
+    #50: CPS=15.0 (64ch/4.3s) "До того ж довкола вас ці жахливі люди, яких ви маєте перекон..."
+    #86: CPS=15.0 (52ch/3.5s) "Будь-яку роботу, яку ви почали б робити в ім’я Бога,"
+    #108: CPS=15.0 (46ch/3.1s) "щоб випромінювати вібрації, щоб врятувати вас,"
+    #51: CPS=15.0 (40ch/2.7s) "Якщо їх не переконано, то чому вони тут?"
+    #48: CPS=15.0 (77ch/5.1s) "Але тут, у нове місце, куди ми приходимо, ми маємо боротися ..."
+    #124: CPS=15.0 (77ch/5.1s) "Вони кладуть обидві руки на серце ось так (Шрі Матаджі кладе..."
+    #61: CPS=15.0 (37ch/2.5s) "Вчора було надто важко, ви це знаєте."
+    #116: CPS=15.0 (71ch/4.7s) "Воно спрямоване до вас, а ви його не берете; то куди ж воно ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.9 (target ≤15.0)
+  CPS > 15.0: 1 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
