@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1984-07-10_The-Experience-of-Truth-Part-IV/The-Experience-of-Truth-Part-4/final/uk.srt
+  Transcript: talks/1984-07-10_The-Experience-of-Truth-Part-IV/transcript_uk.txt
+  EN SRT: talks/1984-07-10_The-Experience-of-Truth-Part-IV/The-Experience-of-Truth-Part-4/source/en.srt
+  SRT blocks: 701
+  EN SRT blocks: 607
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:08,000 — 00:51:48,000
+  SRT range:       00:00:04,348 — 00:51:47,892
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 701
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 701
+  CPS: avg=13.9, median=14.8, max=19.8
+  CPS > target: 235 (33.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=58.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #541: CPS=19.8 (37ch/1.9s) "О ні, ні, Матінко, ми насолоджуємося."
+    #633: CPS=19.5 (76ch/3.9s) "Тож ми оглянули весь Непал, ми так і не побачили жодних ерот..."
+    #512: CPS=19.2 (47ch/2.4s) "нехай собі, Я насолоджуюся, – тож вона сказала:"
+    #504: CPS=19.0 (49ch/2.6s) "чим це ви насолоджуєтеся, справді насолоджуєтеся?"
+    #508: CPS=19.0 (49ch/2.6s) "яку вони вели; ця пані так розлютилася й сказала:"
+    #529: CPS=19.0 (75ch/3.9s) "ми просто насолоджуємося людиною, яка є реалізованою душею, ..."
+    #548: CPS=19.0 (68ch/3.6s) "Але одного разу в нас було четверо американців, і троє з них..."
+    #549: CPS=19.0 (55ch/2.9s) "вони не могли цього стерпіти, вони сказали: Матінко, це"
+    #534: CPS=19.0 (74ch/3.9s) "вони не розмовляють, ніхто не розмовляє, просто насолоджують..."
+    #505: CPS=19.0 (45ch/2.4s) "– Я відчуваю, ніби повернулася Моя молодість,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 701
+  EN SRT blocks: 607
+  Ratio UK/EN: 1.15 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.9 (target ≤15.0)
+  CPS > 15.0: 235 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
