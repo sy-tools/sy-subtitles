@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1978-12-09_Our-Understanding-of-Sahaja-Yoga-Seminar/Our-Understanding-of-SY/final/uk.srt
+  Transcript: talks/1978-12-09_Our-Understanding-of-Sahaja-Yoga-Seminar/transcript_uk.txt
+  Whisper: talks/1978-12-09_Our-Understanding-of-Sahaja-Yoga-Seminar/Our-Understanding-of-SY/source/whisper.json
+  SRT blocks: 1190
+  Whisper segments: 1737
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 65161
+  SRT chars: 65161
+  Exact normalized match: OK
+  Transcript words: 11028
+  SRT words: 11028
+  Word-level match: OK
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:07,170 — 01:25:39,510
+  SRT range:       00:00:07,170 — 01:25:41,950
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 1190
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 1190
+  CPS: avg=13.7, median=15.0, max=20.0
+  CPS > target: 198 (16.6%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.7, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 2
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #596: CPS=20.0 (82ch/4.1s) "із Джеремі Торпом?» (британський депутат-гомосексуаліст, зви..."
+    #687: CPS=20.0 (67ch/3.4s) "це дає набагато більше радості, ніж якщо це робиться для вас..."
+    #685: CPS=20.0 (66ch/3.3s) "Насправді, як Я почуваюся щасливою, так і ви повинні бути ща..."
+    #760: CPS=20.0 (65ch/3.3s) "Але в повсякденному житті ми цього не робимо, ми цього не ро..."
+    #664: CPS=20.0 (52ch/2.6s) "і того дня в нього було багато людей, і Я знітилася."
+    #597: CPS=20.0 (51ch/2.6s) "Вони сказали: «Матінко, ми цього зараз не читаємо»."
+    #665: CPS=20.0 (46ch/2.3s) "Я сказала: «От Ґевін запросив людей на вечерю,"
+    #677: CPS=20.0 (45ch/2.3s) "заради цієї радості, яку Я отримала, справді."
+    #671: CPS=20.0 (39ch/2.0s) "Наступного дня він прокинувся й сказав:"
+    #734: CPS=20.0 (38ch/1.9s) "дуже гнівається й викидає геть усе те."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.7 (target ≤15.0)
+  CPS > 15.0: 198 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 2 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
