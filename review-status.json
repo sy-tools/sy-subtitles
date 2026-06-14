@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-14T05:09:19.634414+00:00",
+  "updated_at": "2026-06-14T05:23:33.459228+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -240,7 +240,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 259,
-      "updated_at": "2026-05-29T19:05:03Z"
+      "updated_at": "2026-06-14T05:23:21Z"
     },
     "1980-07-27_Guru-Puja-The-Statutes-of-the-Lord": {
       "status": "pending",
