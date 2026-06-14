@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1978-10-02_Knots-On-The-Three-Channels/Knots-In-The-3-Channels-London-NITL-HD/final/uk.srt
+  Transcript: talks/1978-10-02_Knots-On-The-Three-Channels/transcript_uk.txt
+  EN SRT: talks/1978-10-02_Knots-On-The-Three-Channels/Knots-In-The-3-Channels-London-NITL-HD/source/en.srt
+  SRT blocks: 1285
+  EN SRT blocks: 1259
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:01,104 — 01:31:09,671
+  SRT range:       00:00:01,104 — 01:31:11,671
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 1285
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 1285
+  CPS: avg=13.7, median=14.8, max=20.0
+  CPS > target: 397 (30.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #539: CPS=20.0 (78ch/3.9s) "яка стає мертвою у вашому розумі, і відбувається не що інше,..."
+    #538: CPS=20.0 (73ch/3.7s) "Вони просто говоритимуть, говоритимуть, говоритимуть, що є м..."
+    #345: CPS=19.9 (55ch/2.8s) "Коли ці лайми біля голів людей, вони нічого не роблять,"
+    #348: CPS=19.7 (39ch/2.0s) "Вони розуміють набагато більше, ніж ви."
+    #346: CPS=19.7 (77ch/3.9s) "але ці вібрації виходять і починають це опрацьовувати. Це бе..."
+    #574: CPS=19.7 (30ch/1.5s) "Вони стали цілковито мертвими."
+    #1193: CPS=19.7 (26ch/1.3s) "Ось що справді традиційне."
+    #575: CPS=19.6 (33ch/1.7s) "Ви не повірите, якими вони стали."
+    #566: CPS=19.6 (64ch/3.3s) "до шостої години медитували й промовляли якусь мантру, цілко..."
+    #151: CPS=19.5 (60ch/3.1s) "Але те, що він садовить на стілець, – це чергова мертва річ."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 1285
+  EN SRT blocks: 1259
+  Ratio UK/EN: 1.02 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.7 (target ≤15.0)
+  CPS > 15.0: 397 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
