@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-14T04:49:57.369579+00:00",
+  "updated_at": "2026-06-14T04:51:22.942542+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -246,7 +246,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 256,
-      "updated_at": "2026-05-29T17:44:34Z"
+      "updated_at": "2026-06-14T04:51:04Z"
     },
     "1982-07-04_Guru-Puja-Establishing-the-Guru-Principle-and-Havan-After-Puja": {
       "status": "pending",
