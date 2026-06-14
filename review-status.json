@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-14T19:43:53.673621+00:00",
+  "updated_at": "2026-06-14T19:44:56.251882+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -396,7 +396,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 368,
-      "updated_at": "2026-05-30T16:52:54Z"
+      "updated_at": "2026-06-14T19:44:40Z"
     },
     "1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head": {
       "status": "pending",
