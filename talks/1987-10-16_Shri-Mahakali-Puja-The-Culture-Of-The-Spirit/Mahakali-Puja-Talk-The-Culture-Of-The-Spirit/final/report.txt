@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit/Mahakali-Puja-Talk-The-Culture-Of-The-Spirit/final/uk.srt
+  Transcript: talks/1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit/transcript_uk.txt
+  EN SRT: talks/1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit/Mahakali-Puja-Talk-The-Culture-Of-The-Spirit/source/en.srt
+  SRT blocks: 344
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 344
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 344
+  CPS: avg=12.0, median=13.1, max=15.1
+  CPS > target: 65 (18.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #190: CPS=15.1 (52ch/3.4s) "Але спочатку ви маєте розвинутися, ви маєте дозріти."
+    #280: CPS=15.1 (48ch/3.2s) "щоб знищити цей світ, – поважають звичайні люди."
+    #180: CPS=15.1 (52ch/3.5s) "Ні, у її свідомості вбудовано, що щойно вас укололи,"
+    #200: CPS=15.0 (28ch/1.9s) "Тож вони казали: «Але, Мати,"
+    #215: CPS=15.0 (20ch/1.3s) "Ви кажете: «Гаразд»."
+    #302: CPS=15.0 (40ch/2.7s) "Скажімо, сахаджа йоґ повинен думати: «О,"
+    #48: CPS=15.0 (43ch/2.9s) "де є проблема, а потім знову піднімається»."
+    #104: CPS=15.0 (46ch/3.1s) "Я сказала: «Тепер ідіть, дайте їм Реалізацію»."
+    #222: CPS=15.0 (46ch/3.1s) "Потім ви хочете провести свою Пуджу – «Гаразд,"
+    #68: CPS=15.0 (49ch/3.3s) "І ви кажете: «Мати, вона не піднімається, бачите,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 12.0 (target ≤15.0)
+  CPS > 15.0: 65 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
