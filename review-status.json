@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-14T19:13:29.439375+00:00",
+  "updated_at": "2026-06-14T19:43:53.673621+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -444,7 +444,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 408,
-      "updated_at": "2026-06-14T17:35:36Z"
+      "updated_at": "2026-06-14T19:43:43Z"
     },
     "1987-04-19_Easter-Puja-Materialism": {
       "status": "pending",
