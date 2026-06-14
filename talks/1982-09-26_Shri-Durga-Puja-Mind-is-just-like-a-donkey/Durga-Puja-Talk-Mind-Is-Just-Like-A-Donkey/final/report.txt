@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-Talk-Mind-Is-Just-Like-A-Donkey/final/uk.srt
+  Transcript: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/transcript_uk.txt
+  EN SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-Talk-Mind-Is-Just-Like-A-Donkey/source/en.srt
+  SRT blocks: 532
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 532
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 532
+  CPS: avg=12.0, median=13.8, max=20.0
+  CPS > target: 79 (14.8%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #269: CPS=20.0 (82ch/4.1s) "Гаразд, він ходить навколо, їсть траву, усілякий бруд, нечис..."
+    #368: CPS=20.0 (64ch/3.2s) "Коли вони отримують якісь благословення матеріального багатс..."
+    #270: CPS=19.7 (64ch/3.2s) "Що б ви не дозволили, він їсть, продовжує їсти, усі брудні р..."
+    #264: CPS=19.3 (31ch/1.6s) "Ґреґуар: Я можу за дві хвилини."
+    #265: CPS=18.2 (52ch/2.9s) "Шрі Матаджі: Я думаю, пізніше, Ґреґуаре, буде краще,"
+    #268: CPS=16.6 (43ch/2.6s) "Він знає, що ви не проти, щоб він їв траву."
+    #369: CPS=16.2 (43ch/2.7s) "станеться те, що було – знову те саме – той"
+    #367: CPS=15.8 (55ch/3.5s) "коли вони отримують комфорт, вони просто знову сідають."
+    #279: CPS=15.2 (32ch/2.1s) "Лише ці ворота відкриті для вас."
+    #161: CPS=15.1 (65ch/4.3s) "Гаразд, користуйтеся так, як вам подобається, це не має знач..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 12.0 (target ≤15.0)
+  CPS > 15.0: 79 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
