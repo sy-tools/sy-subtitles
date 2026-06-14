@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-07-11_From-Heart-to-Sahasrara/From-Heart-to-Sahasrara/final/uk.srt
+  Transcript: talks/1982-07-11_From-Heart-to-Sahasrara/transcript_uk.txt
+  EN SRT: talks/1982-07-11_From-Heart-to-Sahasrara/From-Heart-to-Sahasrara/source/en.srt
+  SRT blocks: 1270
+  EN SRT blocks: 1810
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:06,100 — 01:33:48,220
+  SRT range:       00:00:06,100 — 01:33:50,240
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 1270
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 1270
+  CPS: avg=13.2, median=14.6, max=20.0
+  CPS > target: 170 (13.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #678: CPS=20.0 (48ch/2.4s) "Власне, Я б сказала, що уряд має ухвалити закон,"
+    #731: CPS=20.0 (48ch/2.4s) "Тож Він сказав: «Гаразд, одружуйтеся з п’ятьма»."
+    #243: CPS=20.0 (41ch/2.1s) "Уявіть собі, він був головним господарем,"
+    #242: CPS=19.5 (37ch/1.9s) "футбольний матч, певно, уже почався»."
+    #674: CPS=19.3 (58ch/3.0s) "це той час, коли вони справді потребують цілковитої уваги,"
+    #244: CPS=19.2 (54ch/2.8s) "і там було стільки людей, а він просто не міг усидіти."
+    #734: CPS=19.2 (80ch/4.2s) "б із молодими дівчатами, старі чоловіки не одружувалися б із..."
+    #736: CPS=19.0 (68ch/3.6s) "Тож Він сказав: «Ні, гаразд, Я одружуся з однією, бо куди по..."
+    #672: CPS=19.0 (58ch/3.1s) "Те, чим вони користуються, ви ніколи не користувалися цим,"
+    #722: CPS=19.0 (61ch/3.2s) "що із суспільством треба бути прагматичним, – тож Він сказав..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 1270
+  EN SRT blocks: 1810
+  Ratio UK/EN: 0.70 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.2 (target ≤15.0)
+  CPS > 15.0: 170 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
