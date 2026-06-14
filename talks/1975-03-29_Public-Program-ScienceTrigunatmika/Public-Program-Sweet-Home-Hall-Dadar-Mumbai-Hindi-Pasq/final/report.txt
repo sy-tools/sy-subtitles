@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1975-03-29_Public-Program-ScienceTrigunatmika/Public-Program-Sweet-Home-Hall-Dadar-Mumbai-Hindi-Pasq/final/uk.srt
+  Transcript: talks/1975-03-29_Public-Program-ScienceTrigunatmika/transcript_uk.txt
+  Whisper: talks/1975-03-29_Public-Program-ScienceTrigunatmika/Public-Program-Sweet-Home-Hall-Dadar-Mumbai-Hindi-Pasq/source/whisper.json
+  SRT blocks: 327
+  Whisper segments: 197
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 17673
+  SRT chars: 17673
+  Exact normalized match: OK
+  Transcript words: 2940
+  SRT words: 2940
+  Word-level match: OK
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:00,000 — 00:24:47,240
+  SRT range:       00:00:00,000 — 00:24:49,240
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 327
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 327
+  CPS: avg=12.9, median=14.7, max=20.0
+  CPS > target: 81 (24.8%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #121: CPS=20.0 (42ch/2.1s) "Як сказав Христос: «Я – Світло, Я – Шлях»,"
+    #130: CPS=20.0 (67ch/3.4s) "що їхній розум усе ще затверділий від такого его – почуття, ..."
+    #133: CPS=20.0 (62ch/3.1s) "Але ви, люди, розпізнали Мене – і тоді ви отримали Реалізаці..."
+    #141: CPS=20.0 (56ch/2.8s) "цього, що б ви не робили чи якою б роботою не займалися,"
+    #122: CPS=20.0 (52ch/2.6s) "– те саме стверджую і Я: «Я – Мета, а не лише Шлях»."
+    #137: CPS=20.0 (50ch/2.5s) "Навіть у Всепроникному – звідки походять вібрації?"
+    #140: CPS=20.0 (38ch/1.9s) "ваші вібрації будуть втрачені, і після"
+    #136: CPS=20.0 (32ch/1.6s) "то як же вібрації покинули вас?»"
+    #138: CPS=20.0 (26ch/1.3s) "Над цим треба замислитися."
+    #249: CPS=19.0 (71ch/3.7s) "Гнатися за мертвими об’єктами [джада васту] – це свого роду ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.9 (target ≤15.0)
+  CPS > 15.0: 81 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
