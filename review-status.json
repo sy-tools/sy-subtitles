@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-14T20:41:59.197608+00:00",
+  "updated_at": "2026-06-14T20:50:01.894568+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -204,7 +204,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 224,
-      "updated_at": "2026-05-29T09:34:34Z"
+      "updated_at": "2026-06-14T20:49:49Z"
     },
     "1991-12-29_Shri-Lakshmi-Puja-Sea-is-your-grandfather": {
       "status": "pending",
