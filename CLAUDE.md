@@ -140,6 +140,10 @@ python -m tools.sync_pr --base SHA --paths "talks/.../transcript_uk.txt ..."
 python -m tools.resync_srt --primary-uk PATH --primary-en PATH \
   --secondary-en PATH --output PATH
 
+# Build UK SRTs for a talk's secondary videos (offset/resync from primary).
+# Needs source/en.srt on BOTH primary and secondary; skips videos without it.
+python -m tools.build_secondary_srts --talk-dir PATH --primary-slug SLUG [--run-id ID]
+
 # Validate artifact contracts at pipeline phase boundaries
 python -m tools.validate_artifacts [--whisper PATH | --meta PATH |
   --timecodes PATH | --talk-dir PATH]

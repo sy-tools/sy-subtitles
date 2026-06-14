@@ -805,67 +805,21 @@ jobs:
 
       - name: Build secondary-video SRTs
         # Secondary videos (same talk, different recording) get their uk.srt
-        # from primary's output — by simple time offset when the two en.srt
-        # files are identical-text-different-timing, or by word-level
-        # re-alignment (resync_srt) when the secondary covers a SUBSET of
-        # primary's content (e.g. only the English speech portion of a puja).
+        # from the primary's output — a simple time offset when the two en.srt
+        # files are identical-text-different-timing, or word-level re-alignment
+        # (resync_srt) when the secondary covers a SUBSET of the primary's
+        # content (e.g. only the English speech portion of a puja). This needs
+        # source/en.srt on BOTH the primary and the secondary; a secondary
+        # without en.srt (raw recording, no English subtitles) is skipped, not
+        # a failure. See tools/build_secondary_srts.py.
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
           VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
         run: |
-          TALK="talks/${TALK_ID}"
-          FIRST="${VIDEO_SLUG}"
-
-          python3 -c "
-          import yaml
-          with open('${TALK}/meta.yaml') as f:
-            meta = yaml.safe_load(f)
-          for v in meta['videos']:
-            if v['slug'] != '${FIRST}':
-              print(v['slug'])
-          " | while read slug; do
-            echo "=== Secondary video: $slug ==="
-            mkdir -p "${TALK}/${slug}/final"
-
-            OFFSET=$(python -m tools.offset_srt detect \
-              --srt1 "${TALK}/${FIRST}/source/en.srt" \
-              --srt2 "${TALK}/${slug}/source/en.srt" 2>/dev/null | grep -oE '[-0-9]+' | head -1)
-
-            if [ -n "$OFFSET" ]; then
-              echo "  offset match → offset_srt apply (${OFFSET}ms)"
-              python -m tools.offset_srt apply \
-                --srt "${TALK}/${FIRST}/final/uk.srt" \
-                --offset-ms "$OFFSET" \
-                --output "${TALK}/${slug}/final/uk.srt"
-              SUB_MODE="secondary-offset"
-            else
-              echo "  no offset → resync via EN SRT word alignment"
-              python -m tools.resync_srt \
-                --primary-uk "${TALK}/${FIRST}/final/uk.srt" \
-                --primary-en "${TALK}/${FIRST}/source/en.srt" \
-                --secondary-en "${TALK}/${slug}/source/en.srt" \
-                --output "${TALK}/${slug}/final/uk.srt"
-              SUB_MODE="secondary-resync"
-            fi
-
-            # Mirror the primary's build_manifest so golden tests know to
-            # apply secondary-relaxed validation (skip text/time/cps —
-            # derivative output from primary).
-            python3 <<PYEOF
-          import yaml
-          from datetime import datetime, timezone
-          manifest = {
-              "role": "secondary",
-              "mode": "${SUB_MODE}",
-              "primary_slug": "${FIRST}",
-              "built_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-              "run_id": ${{ github.run_id }},
-          }
-          with open("${TALK}/${slug}/final/build_manifest.yaml", "w") as f:
-              yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
-          print("  wrote ${TALK}/${slug}/final/build_manifest.yaml (mode=${SUB_MODE})")
-          PYEOF
-          done
+          python -m tools.build_secondary_srts \
+            --talk-dir "talks/${TALK_ID}" \
+            --primary-slug "${VIDEO_SLUG}" \
+            --run-id "${{ github.run_id }}"
 
       - name: Validate subtitles
         env:
