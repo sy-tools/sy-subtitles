@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head/Feel-The-Cool-Breeze-Of-The-Holy-Ghost-Coming-Out-Of-Your-Head/final/uk.srt
+  Transcript: talks/1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head/transcript_uk.txt
+  Whisper: talks/1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head/Feel-The-Cool-Breeze-Of-The-Holy-Ghost-Coming-Out-Of-Your-Head/source/whisper.json
+  SRT blocks: 781
+  Whisper segments: 1571
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 35356
+  SRT chars: 35356
+  Exact normalized match: OK
+  Transcript words: 5783
+  SRT words: 5783
+  Word-level match: OK
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:02:07,500 — 03:09:19,800
+  SRT range:       00:06:05,000 — 02:23:56,120
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 781
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 781
+  CPS: avg=8.1, median=6.5, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=44.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #327: CPS=15.0 (82ch/5.5s) "маківці своєї голови, і ви можете відчути прохолодний вітере..."
+    #318: CPS=15.0 (79ch/5.3s) "Сахаджа йоґ: Він каже, що в нього є два, у нього є два запит..."
+    #299: CPS=15.0 (76ch/5.1s) "сказати: «Що зі мною не так?» – і раптом ви починаєте відчув..."
+    #233: CPS=15.0 (73ch/4.9s) "Чи Ти намагаєшся надати Богові стать, чи чому Ти не називаєш..."
+    #549: CPS=15.0 (73ch/4.9s) "Тепер просто поставте запитання: «Мати, чи Ти Первинна Мати?..."
+    #332: CPS=15.0 (70ch/4.7s) "отримали докторський ступінь за проведення дослідження в Сах..."
+    #323: CPS=15.0 (64ch/4.3s) "Перше поставлене запитання, яке ви запитали, було про ставле..."
+    #780: CPS=15.0 (64ch/4.3s) "Шрі Матаджі: Він із Франко, гадаю, ось чому вони відчувають ..."
+    #184: CPS=15.0 (58ch/3.9s) "Англія – у вас є люди, які є гіпі, які вживають наркотики."
+    #528: CPS=15.0 (58ch/3.9s) "Пане, погляньте на цю жінку, цей пан, ви маєте це відчути."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 8.1 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
