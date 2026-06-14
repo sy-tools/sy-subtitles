@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-14T09:57:18.003478+00:00",
+  "updated_at": "2026-06-14T09:59:01.419858+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -252,7 +252,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 271,
-      "updated_at": "2026-05-29T19:59:53Z"
+      "updated_at": "2026-06-14T09:58:51Z"
     },
     "1982-06-22_England-has-to-become-Jerusalem": {
       "status": "pending",
