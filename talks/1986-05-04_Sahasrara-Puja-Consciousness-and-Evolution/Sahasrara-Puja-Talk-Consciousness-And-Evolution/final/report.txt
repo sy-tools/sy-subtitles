@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1986-05-04_Sahasrara-Puja-Consciousness-and-Evolution/Sahasrara-Puja-Talk-Consciousness-And-Evolution/final/uk.srt
+  Transcript: talks/1986-05-04_Sahasrara-Puja-Consciousness-and-Evolution/transcript_uk.txt
+  EN SRT: talks/1986-05-04_Sahasrara-Puja-Consciousness-and-Evolution/Sahasrara-Puja-Talk-Consciousness-And-Evolution/source/en.srt
+  SRT blocks: 438
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 438
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 438
+  CPS: avg=6.8, median=5.7, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #139: CPS=15.0 (58ch/3.9s) "навпаки – Вона витрачає, а ви всі від цього отримали зиск."
+    #419: CPS=15.0 (83ch/5.5s) "За деякими календарями Я мала б прийти на дві тисячі років п..."
+    #174: CPS=15.0 (40ch/2.7s) "Я бачу на прикладі Своєї власної країни:"
+    #277: CPS=15.0 (38ch/2.5s) "Шрі Матаджі: Ніхто поки що не є таким."
+    #176: CPS=15.0 (57ch/3.8s) "від усієї своєї власності, відмовився від своєї практики,"
+    #134: CPS=15.0 (54ch/3.6s) "Вони змінювали свій одяг, змінювали свій спосіб життя,"
+    #297: CPS=15.0 (29ch/1.9s) "вона ретельно добирає костюм,"
+    #279: CPS=15.0 (33ch/2.2s) "Бо деякі люди справді відчувають:"
+    #349: CPS=15.0 (33ch/2.2s) "Я сказала: «Це негарно виглядає»."
+    #278: CPS=15.0 (27ch/1.8s) "Тож Я хотіла б вам сказати."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 6.8 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
