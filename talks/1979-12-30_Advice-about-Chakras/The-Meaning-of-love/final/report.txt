@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1979-12-30_Advice-about-Chakras/The-Meaning-of-love/final/uk.srt
+  Transcript: talks/1979-12-30_Advice-about-Chakras/transcript_uk.txt
+  EN SRT: talks/1979-12-30_Advice-about-Chakras/The-Meaning-of-love/source/en.srt
+  SRT blocks: 729
+  EN SRT blocks: 743
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:01,865 — 01:23:15,547
+  SRT range:       00:00:01,865 — 01:23:17,547
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 729
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 729
+  CPS: avg=10.0, median=10.0, max=15.0
+  CPS > target: 2 (0.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #568: CPS=15.0 (64ch/4.3s) "І вона відчинила двері й була здивована, і він вирішив пробл..."
+    #569: CPS=15.0 (69ch/4.6s) "Вона сказала: «Як ти тут опинився?» Він сказав: «Не знаю чом..."
+    #623: CPS=15.0 (51ch/3.4s) "він може тремтіти, але зі Мною нічого не станеться."
+    #501: CPS=15.0 (82ch/5.5s) "Потім у вас розвивається почуття провини, потім ви маєте гов..."
+    #293: CPS=15.0 (79ch/5.3s) "Вони можуть сказати, що таке релігія, але вони не можуть вкл..."
+    #520: CPS=15.0 (79ch/5.3s) "протилежність цього – мовою мараті це краще сказано: [Мати г..."
+    #214: CPS=15.0 (76ch/5.1s) "Тепер ми переходимо до Войду, хоча в семи шарах його дещо пл..."
+    #330: CPS=15.0 (76ch/5.1s) "що в тієї людини так багато такого роду вібрацій, я почуваюс..."
+    #241: CPS=15.0 (70ch/4.7s) "Чому ти сильно мене вдарив?» – «Бо ти не повинен робити свій..."
+    #489: CPS=15.0 (64ch/4.3s) "Відчувайте ту людину з тією солодкістю, як ви відчуваєте кві..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 729
+  EN SRT blocks: 743
+  Ratio UK/EN: 0.98 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.0 (target ≤15.0)
+  CPS > 15.0: 2 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
