@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Babies-receive-names-Cheltenham-UK-DP/final/uk.srt
+  Transcript: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/transcript_uk.txt
+  EN SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Babies-receive-names-Cheltenham-UK-DP/source/en.srt
+  SRT blocks: 189
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 189
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 189
+  CPS: avg=105.0, median=40.0, max=1846.2
+  CPS > target: 163 (86.2%)
+  CPS > hard max: 149 (78.8%)
+  CPL: avg=50.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 28
+  Duration > max: 5
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #125: CPS=1846.2 (72ch/0.0s) "на центральне серце) і просто притискають, схиляючи голову, ..."
+    #129: CPS=1363.6 (30ch/0.0s) "Тож нехай діти підійдуть сюди."
+    #61: CPS=999.0 (37ch/-15.3s) "Вчора було надто важко, ви це знаєте."
+    #83: CPS=999.0 (45ch/-22.5s) "Їх треба виправити, гаразд, нічого страшного,"
+    #112: CPS=999.0 (73ch/-19.1s) "у своїй тривозі, розумієте – Мені подобається бачити, як вон..."
+    #127: CPS=999.0 (52ch/-0.6s) "Ось так вони вклоняються. [Довга тиша] Це прекрасно!"
+    #161: CPS=999.0 (41ch/-20.3s) "О, тепер сідай тут. Сідай, сідай, гаразд."
+    #179: CPS=999.0 (82ch/-16.2s) "Аді Шакті Сакшат, Шрі Бхаґаваті Сакшат, Шрі Матаджі, Шрі Нір..."
+    #144: CPS=555.6 (30ch/0.1s) "Бідолашний Ріші не має жодної."
+    #123: CPS=444.4 (72ch/0.2s) "Є ще один прекрасний жест, який я бачила в Узбекистані, він ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 105.0 (target ≤15.0)
+  CPS > 15.0: 163 blocks
+  CPS > 20.0: 149 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 28 blocks
+  Duration > 21000ms: 5 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

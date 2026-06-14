@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Mantras-used-before-Puja-Cheltenham-UK-DP/final/uk.srt
+  Transcript: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/transcript_uk.txt
+  EN SRT: talks/1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine/Mantras-used-before-Puja-Cheltenham-UK-DP/source/en.srt
+  SRT blocks: 223
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 223
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 223
+  CPS: avg=19.1, median=10.4, max=999.0
+  CPS > target: 35 (15.7%)
+  CPS > hard max: 33 (14.8%)
+  CPL: avg=50.4, max=83
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #36: CPS=999.0 (65ch/-37.0s) "Потім Господь Калькі і потім Господь Калькі та Сахасрара Сва..."
+    #18: CPS=69.2 (83ch/1.2s) "Рустом: Для початку ми спершу зробимо закликання пуджі, поті..."
+    #29: CPS=68.3 (82ch/1.2s) "Аді Шакті Сакшат, Шрі Бхаґаваті Сакшат, Шрі Матаджі, Шрі Нір..."
+    #30: CPS=67.5 (81ch/1.2s) "Шрі Матаджі: Одна людина має промовляти, а тоді ви можете по..."
+    #28: CPS=65.8 (79ch/1.2s) "Пуджарі починає, і йоґи приєднуються: Ом Твамева Сакшат, Шрі..."
+    #14: CPS=63.3 (76ch/1.2s) "Зніміть взуття, усі зняли взуття, знімайте, знімайте – зніма..."
+    #20: CPS=63.3 (76ch/1.2s) "У Деві Бхаґават Пурані написано, що пуджа Аді Шакті – це най..."
+    #35: CPS=54.2 (65ch/1.2s) "Спершу Господь Ґанеша, потім Махалакшмі, Махасарасваті, Маха..."
+    #27: CPS=52.5 (63ch/1.2s) "[Тихо, до маленької дівчинки – ред.] Дуже добре. Гаразд, сід..."
+    #5: CPS=51.7 (62ch/1.2s) "Ні, не став каджал. (Сміх) Він буде як Бхаїрава! (Сміх) Добр..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 19.1 (target ≤15.0)
+  CPS > 15.0: 35 blocks
+  CPS > 20.0: 33 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
