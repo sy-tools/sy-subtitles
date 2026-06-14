@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-14T04:19:48.397835+00:00",
+  "updated_at": "2026-06-14T04:42:55.002025+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -186,7 +186,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 208,
-      "updated_at": "2026-05-28T22:53:58Z"
+      "updated_at": "2026-06-14T04:42:45Z"
     },
     "1992-03-01_Evening-Program-and-Talk-to-Sahaja-Yogis-The-Day-after-Mahashivaratri-Puja": {
       "status": "pending",
