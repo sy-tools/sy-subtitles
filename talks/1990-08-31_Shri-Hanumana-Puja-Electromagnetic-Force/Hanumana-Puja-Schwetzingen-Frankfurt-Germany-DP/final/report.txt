@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force/Hanumana-Puja-Schwetzingen-Frankfurt-Germany-DP/final/uk.srt
+  Transcript: talks/1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force/transcript_uk.txt
+  EN SRT: talks/1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force/Hanumana-Puja-Schwetzingen-Frankfurt-Germany-DP/source/en.srt
+  SRT blocks: 541
+  EN SRT blocks: 812
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:02:14,360 — 02:58:11,781
+  SRT range:       00:02:14,360 — 02:58:13,781
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 541
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 541
+  CPS: avg=11.1, median=11.3, max=15.1
+  CPS > target: 22 (4.1%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #105: CPS=15.1 (47ch/3.1s) "Також сполучення – ми знаємо про це сполучення,"
+    #410: CPS=15.0 (31ch/2.1s) "То й що – ви помрете, що ж іще?"
+    #106: CPS=15.0 (37ch/2.5s) "яке ми маємо, можливо, можна сказати,"
+    #409: CPS=15.0 (37ch/2.5s) "Вони кажуть: «Ми не віримо, то й що»."
+    #288: CPS=15.0 (40ch/2.7s) "вибери, яку справу Ти хочеш виконувати»."
+    #379: CPS=15.0 (43ch/2.9s) "усі ці послання – звідки вони їх отримують?"
+    #507: CPS=15.0 (43ch/2.9s) "Тож хай би що Він носить, це доволі багато,"
+    #508: CPS=15.0 (46ch/3.1s) "і це зовсім не викликає у вас відчуття, що Він"
+    #387: CPS=15.0 (52ch/3.5s) "І негайно, ви здивуєтеся, упродовж трьох днів жінка,"
+    #506: CPS=15.0 (52ch/3.5s) "До того ж Він – мавпа: мавпи не повинні носити одяг."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 541
+  EN SRT blocks: 812
+  Ratio UK/EN: 0.67 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.1 (target ≤15.0)
+  CPS > 15.0: 22 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
