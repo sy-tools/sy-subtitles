@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-03-01_Evening-Program-and-Talk-to-Sahaja-Yogis-The-Day-after-Mahashivaratri-Puja/Advice-to-Yogis/final/uk.srt
+  Transcript: talks/1992-03-01_Evening-Program-and-Talk-to-Sahaja-Yogis-The-Day-after-Mahashivaratri-Puja/transcript_uk.txt
+  EN SRT: talks/1992-03-01_Evening-Program-and-Talk-to-Sahaja-Yogis-The-Day-after-Mahashivaratri-Puja/Advice-to-Yogis/source/en.srt
+  SRT blocks: 669
+  EN SRT blocks: 638
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:52,788 — 01:03:26,944
+  SRT range:       00:00:52,788 — 01:03:29,065
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 669
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 669
+  CPS: avg=10.5, median=10.5, max=15.0
+  CPS > target: 8 (1.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #577: CPS=15.0 (25ch/1.7s) "Тепер ви достатньо зрілі."
+    #569: CPS=15.0 (31ch/2.1s) "Чому б не виправити цю частину?"
+    #576: CPS=15.0 (37ch/2.5s) "Але яким повинно бути ваше ставлення?"
+    #414: CPS=15.0 (38ch/2.5s) "Тепер подивимося, у кого біліші, отак."
+    #494: CPS=15.0 (76ch/5.1s) "Але Я сказала: «Цього разу ви можете утриматися, приїжджає т..."
+    #408: CPS=15.0 (50ch/3.3s) "Я маю на увазі, нам не треба нікому такого казати,"
+    #413: CPS=15.0 (42ch/2.8s) "Ти почистиш свої зуби, я почищу свої зуби."
+    #448: CPS=15.0 (69ch/4.6s) "і одна сторона належала одній із сахаджа йоґинь, одна сторон..."
+    #495: CPS=15.0 (78ch/5.2s) "Якщо в нас буде забагато людей...» – бо приблизно сто п’ятде..."
+    #579: CPS=15.0 (66ch/4.4s) "Так само ви повинні піклуватися про Сахаджа Йоґу, а не щоб С..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 669
+  EN SRT blocks: 638
+  Ratio UK/EN: 1.05 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.5 (target ≤15.0)
+  CPS > 15.0: 8 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
