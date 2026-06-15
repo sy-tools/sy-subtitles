@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2000-07-02_Adi-Shakti-Puja-Women-Emotional-Intelligence/Adi-Shakti-Puja-Talk-Emotional-Intelligence/final/uk.srt
+  Transcript: talks/2000-07-02_Adi-Shakti-Puja-Women-Emotional-Intelligence/transcript_uk.txt
+  EN SRT: talks/2000-07-02_Adi-Shakti-Puja-Women-Emotional-Intelligence/Adi-Shakti-Puja-Talk-Emotional-Intelligence/source/en.srt
+  SRT blocks: 361
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 361
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 361
+  CPS: avg=9.7, median=9.7, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #312: CPS=15.0 (73ch/4.9s) "Що іноді дуже вражає Мене, бо яка була потреба Мені об’їжджа..."
+    #333: CPS=15.0 (67ch/4.5s) "Якщо вони такі ж, як усі інші звичайні шлюби, то яка з них к..."
+    #360: CPS=15.0 (64ch/4.3s) "Я хочу сказати вам, що ви повинні мати почуття власної гідно..."
+    #245: CPS=15.0 (60ch/4.0s) "Як, наприклад, у такій країні, як Бенін, усі там мусульмани,"
+    #99: CPS=15.0 (54ch/3.6s) "це, але всі сахаджа йоґи повинні шанувати таких жінок,"
+    #227: CPS=15.0 (32ch/2.1s) "Яка була потреба Йому це робити?"
+    #281: CPS=15.0 (48ch/3.2s) "Але якщо ви емоційно прив’язані до своєї країни,"
+    #278: CPS=15.0 (33ch/2.2s) "– а це вже більше питання, – тоді"
+    #248: CPS=15.0 (24ch/1.6s) "Тільки подумайте про це."
+    #132: CPS=15.0 (53ch/3.5s) "Принаймні щодо тих, хто вирішує проблеми своїх дітей,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.7 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
