@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1991-02-16_Mahashivaratri-Puja-Four-Nadis-of-the-Heart/Mahashivaratri-Puja/final/uk.srt
+  Transcript: talks/1991-02-16_Mahashivaratri-Puja-Four-Nadis-of-the-Heart/transcript_uk.txt
+  EN SRT: talks/1991-02-16_Mahashivaratri-Puja-Four-Nadis-of-the-Heart/Mahashivaratri-Puja/source/en.srt
+  SRT blocks: 549
+  EN SRT blocks: 874
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:05:23,125 — 01:04:40,666
+  SRT range:       00:05:23,125 — 01:04:38,208
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 549
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 549
+  CPS: avg=9.4, median=9.0, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #398: CPS=15.0 (73ch/4.9s) "Вона має проникнути в суспільство, у політичне життя, в екон..."
+    #482: CPS=15.0 (70ch/4.7s) "Ви перебуваєте в стані тур’я, це четвертий, «тур’я» означає ..."
+    #508: CPS=15.0 (70ch/4.7s) "«Саундар’я Лахарі» – не що інше, як усі мантри, що прославля..."
+    #249: CPS=15.0 (61ch/4.1s) "Вони нормальні, як ви, вони стали, розумієте, сахаджа йоґами..."
+    #394: CPS=15.0 (55ch/3.7s) "Щойно ти починаєш говорити про когось зі своїх родичів,"
+    #529: CPS=15.0 (52ch/3.5s) "мати може бути не дуже хорошою чи хай би що це було."
+    #352: CPS=15.0 (49ch/3.3s) "Єдине, що Я відчуваю, якщо взагалі щось відчуваю,"
+    #504: CPS=15.0 (46ch/3.1s) "Але був один жахливий чолов’яга на ім’я Сарма,"
+    #244: CPS=15.0 (43ch/2.9s) "Коли Я озираюся, то виявляю, що там є люди,"
+    #34: CPS=15.0 (80ch/5.3s) "Власне, ти й так отримуєш нірвану, бо з тобою покінчено й ти..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 549
+  EN SRT blocks: 874
+  Ratio UK/EN: 0.63 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.4 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
