@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children/Ganesha-Puja-Talk/final/uk.srt
+  Transcript: talks/1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children/transcript_uk.txt
+  EN SRT: talks/1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children/Ganesha-Puja-Talk/source/en.srt
+  SRT blocks: 575
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 575
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 575
+  CPS: avg=11.9, median=13.0, max=15.3
+  CPS > target: 77 (13.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #567: CPS=15.3 (20ch/1.3s) "Але для вашого дому,"
+    #318: CPS=15.1 (37ch/2.5s) "Вони закінчили свою виставу, скажімо,"
+    #432: CPS=15.1 (58ch/3.9s) "де всі ідентичності втрачено – де втрачено матір, втрачено"
+    #193: CPS=15.0 (79ch/5.3s) "Не прив’язаність до речі, а прив’язаність до того, як люди п..."
+    #338: CPS=15.0 (46ch/3.1s) "чи ні, але якщо є, будь ласка, дістаньте його."
+    #355: CPS=15.0 (46ch/3.1s) "Вони так сильно захоплювалися тим, що ці люди,"
+    #492: CPS=15.0 (46ch/3.1s) "ми можемо керувати місяцем – бо існує зв’язок."
+    #267: CPS=15.0 (49ch/3.3s) "ґани здивовані: «Що це за нові створіння звідкись"
+    #314: CPS=15.0 (52ch/3.5s) "Я сказала: «Це дуже важко, бо ви будете так далеко»."
+    #352: CPS=15.0 (26ch/1.7s) "адже в нас були деякі дуже"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.9 (target ≤15.0)
+  CPS > 15.0: 77 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
