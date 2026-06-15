@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-15T17:00:24.746040+00:00",
+  "updated_at": "2026-06-15T17:14:01.314804+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -192,7 +192,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 221,
-      "updated_at": "2026-05-29T10:09:35Z"
+      "updated_at": "2026-06-15T17:13:46Z"
     },
     "1979-12-30_Advice-about-Chakras": {
       "status": "pending",
