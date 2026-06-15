@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1991-09-15_Shri-Ganesha-Puja-Shri-Ganesha-and-His-Qualities/Ganesha-Puja-Talk/final/uk.srt
+  Transcript: talks/1991-09-15_Shri-Ganesha-Puja-Shri-Ganesha-and-His-Qualities/transcript_uk.txt
+  EN SRT: talks/1991-09-15_Shri-Ganesha-Puja-Shri-Ganesha-and-His-Qualities/Ganesha-Puja-Talk/source/en.srt
+  SRT blocks: 388
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 388
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 388
+  CPS: avg=9.1, median=8.6, max=15.1
+  CPS > target: 23 (5.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #75: CPS=15.1 (28ch/1.9s) "Вам не треба ставати чимось."
+    #148: CPS=15.0 (25ch/1.7s) "Тож я маю вирушати зараз."
+    #149: CPS=15.0 (37ch/2.5s) "Я навіть не можу поговорити з Тобою»."
+    #302: CPS=15.0 (37ch/2.5s) "І ось так ви оцінюватимете свій стан."
+    #158: CPS=15.0 (52ch/3.5s) "Потім друга стадія, як Я казала, що є багато стадій,"
+    #328: CPS=15.0 (55ch/3.7s) "І багато разів, Я бачила, люди намагаються робити речі,"
+    #122: CPS=15.0 (35ch/2.3s) "ви... ваші пальці можуть обпектися."
+    #171: CPS=15.0 (73ch/4.9s) "Гаразд; ви повинні мати роботу; Я не кажу, що ви маєте бути ..."
+    #218: CPS=15.0 (38ch/2.5s) "Але Я казала їм: «Підіть і погляньте»."
+    #383: CPS=15.0 (38ch/2.5s) "– нічим, вам не треба нічим страждати."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.1 (target ≤15.0)
+  CPS > 15.0: 23 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
