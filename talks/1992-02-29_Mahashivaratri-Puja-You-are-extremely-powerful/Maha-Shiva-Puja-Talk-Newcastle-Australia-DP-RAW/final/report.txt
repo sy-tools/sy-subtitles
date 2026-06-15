@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-02-29_Mahashivaratri-Puja-You-are-extremely-powerful/Maha-Shiva-Puja-Talk-Newcastle-Australia-DP-RAW/final/uk.srt
+  Transcript: talks/1992-02-29_Mahashivaratri-Puja-You-are-extremely-powerful/transcript_uk.txt
+  EN SRT: talks/1992-02-29_Mahashivaratri-Puja-You-are-extremely-powerful/Maha-Shiva-Puja-Talk-Newcastle-Australia-DP-RAW/source/en.srt
+  SRT blocks: 600
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 600
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 600
+  CPS: avg=10.3, median=10.4, max=15.0
+  CPS > target: 2 (0.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=55.7, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #428: CPS=15.0 (58ch/3.9s) "Ви починаєте весь час судити себе й хочете виправити себе,"
+    #426: CPS=15.0 (71ch/4.7s) "Ви одразу дізнаєтеся, і, якщо ви пильні, ви одразу спробуєте..."
+    #128: CPS=15.0 (73ch/4.9s) "Вони просто самі виступали вперед: «Матінко, ми якось маємо ..."
+    #367: CPS=15.0 (73ch/4.9s) "лише уявіть усе це, що ви зробили, тобто лише уявіть, як вон..."
+    #380: CPS=15.0 (73ch/4.9s) "Вони залишаються такими самими, а після цього йдуть до пабу,..."
+    #155: CPS=15.0 (70ch/4.7s) "Тож оце – допомагати людям, які не мають, можна назвати їх с..."
+    #150: CPS=15.0 (67ch/4.5s) "Тож Я запитала: «Де ви збираєтеся ночувати?» «Ми залишимося ..."
+    #493: CPS=15.0 (64ch/4.3s) "могли цього влаштувати, вони намагалися знайти якесь інше мі..."
+    #146: CPS=15.0 (58ch/3.9s) "«Справді?» Там не було жодного француза, нікого з Франції."
+    #431: CPS=15.0 (58ch/3.9s) "полягають у тому, бачте, що має бути «дружина, яка повинна"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 10.3 (target ≤15.0)
+  CPS > 15.0: 2 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
