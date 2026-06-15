@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1990-06-03_How-to-get-the-connection-with-the-Divine-power/How-to-get-the-connection-with-the-Divine-power/final/uk.srt
+  Transcript: talks/1990-06-03_How-to-get-the-connection-with-the-Divine-power/transcript_uk.txt
+  Whisper: talks/1990-06-03_How-to-get-the-connection-with-the-Divine-power/How-to-get-the-connection-with-the-Divine-power/source/whisper.json
+  SRT blocks: 1157
+  Whisper segments: 1680
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 65166
+  SRT chars: 65166
+  Exact normalized match: OK
+  Transcript words: 10720
+  SRT words: 10720
+  Word-level match: OK
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:01,010 — 01:32:39,190
+  SRT range:       00:00:01,010 — 01:32:42,091
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 1157
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 1157
+  CPS: avg=13.1, median=14.7, max=20.0
+  CPS > target: 154 (13.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=55.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #154: CPS=20.0 (50ch/2.5s) "Але для вас, людей, це було чимось таким величним,"
+    #454: CPS=19.4 (57ch/2.9s) "Якщо у вас є справжній ґуру, як ви можете бути продажним?"
+    #489: CPS=19.0 (49ch/2.6s) "даю раду з рахунками [ШРІ МАТАДЖІ ТИХО СМІЄТЬСЯ],"
+    #420: CPS=19.0 (44ch/2.3s) "– це означає, що той чоловік нічого не знає,"
+    #418: CPS=19.0 (54ch/2.8s) "Уявіть, що хтось хоче, щоб ви вставили руки в розетку,"
+    #488: CPS=18.8 (47ch/2.5s) "куди їх витрачають, Я не дивлюся, Я дуже погано"
+    #449: CPS=18.7 (80ch/4.3s) "Як ви можете вірити, – а індійці, знаєте, вони думають, що о..."
+    #417: CPS=18.6 (69ch/3.7s) "А ті люди, що говорять про небезпеку, не мають повноважень ц..."
+    #423: CPS=18.5 (79ch/4.3s) "Ось чому вони так говорять і відвертають людей від отримання..."
+    #487: CPS=18.5 (51ch/2.8s) "Я не знаю, що вони роблять, як вони збирають гроші,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.1 (target ≤15.0)
+  CPS > 15.0: 154 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
