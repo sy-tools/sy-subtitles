@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1990-05-06_Sahasrara-Puja-You-Have-All-Become-Mahayogis-Now/Sahasrara-Puja-1/final/uk.srt
+  Transcript: talks/1990-05-06_Sahasrara-Puja-You-Have-All-Become-Mahayogis-Now/transcript_uk.txt
+  EN SRT: talks/1990-05-06_Sahasrara-Puja-You-Have-All-Become-Mahayogis-Now/Sahasrara-Puja-1/source/en.srt
+  SRT blocks: 282
+  EN SRT blocks: 291
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:08:01,072 — 00:32:27,949
+  SRT range:       00:08:01,072 — 00:32:29,949
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 282
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 282
+  CPS: avg=11.6, median=12.3, max=15.1
+  CPS > target: 29 (10.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #135: CPS=15.1 (42ch/2.8s) "Але тепер має прозвучати нове оголошення —"
+    #133: CPS=15.0 (25ch/1.7s) "Ви можете публікувати це."
+    #126: CPS=15.0 (31ch/2.1s) "Ви нічого не знаєте про Істину."
+    #128: CPS=15.0 (34ch/2.3s) "Ви не знаєте, що є Сила, яка діє»."
+    #251: CPS=15.0 (40ch/2.7s) "Ви можете робити те, що вам подобається."
+    #224: CPS=15.0 (23ch/1.5s) "Яку роль Вона відіграє?"
+    #240: CPS=15.0 (23ch/1.5s) "Просто експериментуйте."
+    #153: CPS=15.0 (55ch/3.7s) "що люди досі не розуміють, що таке шлюб у Сахаджа Йозі."
+    #194: CPS=15.0 (55ch/3.7s) "почали співати, які не вміли малювати, почали малювати."
+    #204: CPS=15.0 (58ch/3.9s) "Інакше ви справді марні для Сахаджа Йоґи, абсолютно марні."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 282
+  EN SRT blocks: 291
+  Ratio UK/EN: 0.97 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.6 (target ≤15.0)
+  CPS > 15.0: 29 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
