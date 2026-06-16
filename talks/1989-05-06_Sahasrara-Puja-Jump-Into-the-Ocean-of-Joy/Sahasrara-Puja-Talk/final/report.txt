@@ -7,7 +7,6 @@
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
-  (duration hard fail skipped — builder mode)
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -28,7 +27,7 @@
   SUBTITLE STATISTICS
 ============================================================
   Total blocks: 357
-  CPS: avg=11.5, median=12.9, max=15.1
+  CPS: avg=10.3, median=10.3, max=15.1
   CPS > target: 36 (10.1%)
   CPS > hard max: 0 (0.0%)
   CPL: avg=53.5, max=84
@@ -61,8 +60,10 @@
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
+  [PASS] Duration ≥ 1200ms
+  [PASS] Duration ≤ 21000ms
 
-  Avg CPS: 11.5 (target ≤15.0)
+  Avg CPS: 10.3 (target ≤15.0)
   CPS > 15.0: 36 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
