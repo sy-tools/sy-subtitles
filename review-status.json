@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-16T06:43:45.793466+00:00",
+  "updated_at": "2026-06-16T07:34:20.579752+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -288,7 +288,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 288,
-      "updated_at": "2026-05-30T06:50:25Z"
+      "updated_at": "2026-06-16T07:34:07Z"
     },
     "1982-08-06_The-Importance-of-Dedication-and-Devotion": {
       "status": "pending",
