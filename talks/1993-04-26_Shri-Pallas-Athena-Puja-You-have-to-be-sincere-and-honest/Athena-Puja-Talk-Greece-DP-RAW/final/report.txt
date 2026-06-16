@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1993-04-26_Shri-Pallas-Athena-Puja-You-have-to-be-sincere-and-honest/Athena-Puja-Talk-Greece-DP-RAW/final/uk.srt
+  Transcript: talks/1993-04-26_Shri-Pallas-Athena-Puja-You-have-to-be-sincere-and-honest/transcript_uk.txt
+  EN SRT: talks/1993-04-26_Shri-Pallas-Athena-Puja-You-have-to-be-sincere-and-honest/Athena-Puja-Talk-Greece-DP-RAW/source/en.srt
+  SRT blocks: 451
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 451
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 451
+  CPS: avg=12.8, median=14.2, max=18.5
+  CPS > target: 63 (14.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #414: CPS=18.5 (76ch/4.1s) "вони виглядають так прекрасно, і люди можуть розпізнати, що ..."
+    #406: CPS=17.4 (74ch/4.2s) "якщо щось не виходить, вам треба просто зробити бандхан – і ..."
+    #408: CPS=17.3 (73ch/4.2s) "ви святі і що ви можете робити багато чого, і вам не слід ць..."
+    #377: CPS=15.1 (31ch/2.1s) "Ви можете вдатися до речей его."
+    #250: CPS=15.1 (44ch/2.9s) "Я впевнена, що ваша країна теж буде викрита."
+    #422: CPS=15.0 (46ch/3.1s) "Передусім ви маєте утвердитися в Сахаджа Йозі,"
+    #193: CPS=15.0 (69ch/4.6s) "але раптом Я приїхала туди, і – не знаю, – вони раптом упізн..."
+    #207: CPS=15.0 (28ch/1.9s) "Я сказала: «Ну, що ж робити?"
+    #331: CPS=15.0 (28ch/1.9s) "що Мені не дуже сподобалося."
+    #125: CPS=15.0 (34ch/2.3s) "Вам не треба платити за це знання."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 12.8 (target ≤15.0)
+  CPS > 15.0: 63 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
