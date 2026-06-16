@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-09-20_Shri-Vishnumaya-Puja-Stop-Feeling-Guilty/Vishnumaya-Puja-Pennsylvania-USA-DP-RAW/final/uk.srt
+  Transcript: talks/1992-09-20_Shri-Vishnumaya-Puja-Stop-Feeling-Guilty/transcript_uk.txt
+  EN SRT: talks/1992-09-20_Shri-Vishnumaya-Puja-Stop-Feeling-Guilty/Vishnumaya-Puja-Pennsylvania-USA-DP-RAW/source/en.srt
+  SRT blocks: 613
+  EN SRT blocks: 421
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:11:26,702 — 01:04:33,082
+  SRT range:       00:11:26,702 — 01:04:32,922
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 613
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 613
+  CPS: avg=11.7, median=13.3, max=15.1
+  CPS > target: 130 (21.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #370: CPS=15.1 (52ch/3.4s) "Тож вони не хотіли, вони казали: «Ви паїнки», те-се."
+    #531: CPS=15.1 (47ch/3.1s) "Якщо ви чините погано, це падає на вашу голову,"
+    #515: CPS=15.1 (65ch/4.3s) "Вона знає вас наскрізь, і якщо ви спробуєте всі ці хитрощі з..."
+    #249: CPS=15.1 (73ch/4.8s) "що ваша традиція була дуже коротка чи щось таке – це лише ва..."
+    #534: CPS=15.1 (44ch/2.9s) "мені доведеться подивитися цьому в обличчя»."
+    #538: CPS=15.0 (47ch/3.1s) "немає де зберігати, і тут хтось щось приносить."
+    #425: CPS=15.0 (77ch/5.1s) "І того ж самого дня вона спускалася сходами і впала – згори ..."
+    #248: CPS=15.0 (25ch/1.7s) "Неправда, що це через те,"
+    #546: CPS=15.0 (34ch/2.3s) "Ви перестанете робити погані речі."
+    #426: CPS=15.0 (37ch/2.5s) "і вся її права сторона [постраждала]."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 613
+  EN SRT blocks: 421
+  Ratio UK/EN: 1.46 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.7 (target ≤15.0)
+  CPS > 15.0: 130 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
