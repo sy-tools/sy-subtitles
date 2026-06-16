@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective/Guru-Puja-Talk-Gurus-Who-Belong-To-The-Collective/final/uk.srt
+  Transcript: talks/1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective/transcript_uk.txt
+  EN SRT: talks/1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective/Guru-Puja-Talk-Gurus-Who-Belong-To-The-Collective/source/en.srt
+  SRT blocks: 501
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 501
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 501
+  CPS: avg=8.6, median=8.1, max=15.0
+  CPS > target: 1 (0.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=48.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #259: CPS=15.0 (60ch/4.0s) "припустимо, цей вентилятор зіпсований, – він не працюватиме."
+    #413: CPS=15.0 (30ch/2.0s) "Можливо, вони, мабуть, думали,"
+    #417: CPS=15.0 (27ch/1.8s) "Вони прийшли на цю Землю..."
+    #263: CPS=15.0 (73ch/4.9s) "Припустимо, ви не користуєтеся своєю машиною, вона може бути..."
+    #40: CPS=15.0 (55ch/3.7s) "Він нахилився й почав висмоктувати його з-під пов’язки,"
+    #323: CPS=15.0 (46ch/3.1s) "Але якщо є одна крапля, яка каже: «Ні, ні, ні!"
+    #465: CPS=15.0 (46ch/3.1s) "А турбота, як ви знаєте, – це дуже проста річ,"
+    #216: CPS=15.0 (34ch/2.3s) "Але коли ви починаєте сумніватися,"
+    #220: CPS=15.0 (34ch/2.3s) "Інакше ніхто не може вас покарати,"
+    #231: CPS=15.0 (28ch/1.9s) "Ніхто не може вам зашкодити."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 8.6 (target ≤15.0)
+  CPS > 15.0: 1 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
