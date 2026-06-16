@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-16T06:18:01.045736+00:00",
+  "updated_at": "2026-06-16T06:19:15.162701+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -306,7 +306,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 305,
-      "updated_at": "2026-05-30T09:21:10Z"
+      "updated_at": "2026-06-16T06:18:58Z"
     },
     "1998-12-14_The-Revival-of-Indian-Spirituality": {
       "status": "pending",
