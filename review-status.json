@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-20T05:34:10.762753+00:00",
+  "updated_at": "2026-06-20T10:32:14.020740+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -324,7 +324,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 314,
-      "updated_at": "2026-05-30T10:02:56Z"
+      "updated_at": "2026-06-20T10:32:04Z"
     },
     "1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga": {
       "status": "pending",
