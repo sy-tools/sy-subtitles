@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2001-12-25_Christmas-Puja/Christmas-Puja-Ganapatipule-NITL-RAW/final/uk.srt
+  Transcript: talks/2001-12-25_Christmas-Puja/transcript_uk.txt
+  Whisper: talks/2001-12-25_Christmas-Puja/Christmas-Puja-Ganapatipule-NITL-RAW/source/whisper.json
+  SRT blocks: 406
+  Whisper segments: 391
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 20654
+  SRT chars: 20654
+  Exact normalized match: OK
+  Transcript words: 3463
+  SRT words: 3463
+  Word-level match: OK
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:23,540 — 01:22:45,570
+  SRT range:       00:05:44,100 — 00:46:59,200
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 406
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 406
+  CPS: avg=9.2, median=8.8, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #106: CPS=15.0 (52ch/3.5s) "Так багато всього було виправлено за час Мого життя,"
+    #155: CPS=15.0 (43ch/2.9s) "Це не означає, що Я люблю, коли люди п’ють."
+    #280: CPS=15.0 (43ch/2.9s) "Вони турбуються лише про когось із родичів,"
+    #201: CPS=15.0 (71ch/4.7s) "Тепер вам треба зрозуміти: чи відмовилися ви від усієї цієї ..."
+    #299: CPS=15.0 (31ch/2.1s) "Є багато дівчат, які заявляють:"
+    #140: CPS=15.0 (56ch/3.7s) "Один священник прийшов у Сахаджа Йоґу, Я була дуже рада."
+    #227: CPS=15.0 (56ch/3.7s) "Що ви знаєте про те, що може статися з духовною людиною,"
+    #277: CPS=15.0 (28ch/1.9s) "вам не слід думати: «Що буде"
+    #383: CPS=15.0 (47ch/3.1s) "Навіть у вашій родині люди не є сахаджа йоґами."
+    #281: CPS=15.0 (66ch/4.4s) "вони не турбуються про тих родичів, яких ви маєте по всьому ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.2 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

@@ -1,4 +1,83 @@
-# Language Review – 2001-12-25_Christmas-Puja, 2026-05-29
+# Language Review – 2001-12-25_Christmas-Puja, 2026-06-20
+
+> Second review pass. The first pass (2026-05-29, preserved at the bottom of this
+> file) applied 43 corrections, mainly Shri Mataji's `я→Я` / `мені→Мені`.
+> Those are confirmed present in the current text. This pass re-checked the whole
+> transcript and found 5 further corrections the first pass missed.
+
+## Process
+
+Reviewed `transcript_uk.txt` (full paragraphed Ukrainian translation) against
+`transcript_en.txt` using 2 parallel reviewers (L – Language, S – SY Domain)
+plus 1 Critic filter, per `templates/language_review_template.md`.
+
+Paragraph references use file line numbers (content paragraphs are lines 6–19).
+
+Mechanical pre-check (script-verified) was **clean**:
+- Quotation marks: all `«»`, balanced per line, nested quotes also `«»` (e.g. L12 `«…«Тікайте!» …»`)
+- Apostrophe: single character `’` (U+2019) throughout (30×)
+- Dashes: en-dash ` – ` only (no em-dash, no hyphen-minus used as dash)
+- No straight quotes, no German `„“`, no double spaces, no `..`, no space-before-punctuation
+- No mixed Latin/Cyrillic tokens
+
+## Results
+
+### L. Language (Orthography + Grammar + Punctuation)
+
+| # | Paragraph | Error | Context | Fix |
+|---|-----------|-------|---------|-----|
+| L1 | L6 | Predicate after relative pronoun «хто» should be singular (normative agreement); also internally inconsistent with «Ті, хто береться … мають бути» (L10) | «І ті, хто **йдуть** за Ним, мають бути зовсім іншими людьми.» | «І ті, хто **йде** за Ним, мають бути…» |
+| L2 | L12 | «зазнати» connotes undergoing/suffering; for the inner light of Truth «відчули/пережили» reads more naturally | «Ви всі його **зазнали**.» (EN: "You all have experienced.") | (candidate) «Ви всі його **відчули**.» |
+
+### S. SY Domain (Capitalization + Terminology + Consistency)
+
+| # | Paragraph | Error | Context | Fix |
+|---|-----------|-------|---------|-----|
+| S1 | L15 (×4) | Genitive of «Сахаджа Йоґа» written with plain **г**; Sanskrit *g* must be **ґ** (glossary rule), and ґ is kept before -и. Inconsistent with every other form in the text (Йоґа/Йоґу/Йозі). Missed by the first pass, which listed «Йоги» as verified-correct. | «роботу Сахаджа **Йоги**», «поширення Сахаджа **Йоги**» (×2), «заковика Сахаджа **Йоги**» | «Сахаджа **Йоґи**» |
+| S2 | L6/L7/L12/L15 | «на цю Землю» / «приходу на цю Землю» — EN uses lowercase "earth" (= this world, not the planet name) | «прийшла на цю **Землю**», «приходу на цю **Землю**» | (considered) «землю» |
+| S3 | L11 | «Самою Реалізацією» — intensifier pronoun «сам» capitalized | «але й **Самою** Реалізацією!» (EN: "Realisation himself") | (considered) «самою» |
+
+### Critic Filter
+
+| Source | # | Verdict | Reason |
+|--------|---|---------|--------|
+| S | S1 | **Keep** | Genuine transliteration error against an explicit glossary rule (Sanskrit *g* → ґ; «Сахаджа Йоґа» declines as Йоґи). 4 occurrences, all clearly genitive, all inconsistent with the rest of the document. |
+| L | L1 | **Keep** | Normative subject–predicate agreement after «хто» is singular; the document itself uses the singular in the parallel «Ті, хто береться навчати… мають бути». Fixing restores both norm and internal consistency. |
+| L | L2 | **Remove** | «зазнати + род. відмінок» is attested with positive abstractions (зазнати радості/щастя) and «зазнали його» is grammatically valid. A stylistic preference, not an error. |
+| S | S2 | **Remove** | Capitalized «Земля» (Earth as God's creation) is applied consistently across all instances; EN casing does not govern Ukrainian reverential capitalization. Rewriting 4 instances would impose a style choice, not correct an error. |
+| S | S3 | **Remove** | The translation consistently capitalizes the reverential «сам-» (cf. «Я бачила це **Сама**», L10, for Shri Mataji). Capital «Самою» for "Realisation himself" is the same intentional convention, applied to Christ. |
+
+### Approved Corrections
+
+| # | Paragraph | Error | Fix |
+|---|-----------|-------|-----|
+| 1 | L6 | «ті, хто **йдуть** за Ним» | «ті, хто **йде** за Ним» |
+| 2 | L15 | «роботу Сахаджа **Йоги**» | «роботу Сахаджа **Йоґи**» |
+| 3 | L15 | «поширення Сахаджа **Йоги**» (1st) | «поширення Сахаджа **Йоґи**» |
+| 4 | L15 | «поширення Сахаджа **Йоги**» (2nd) | «поширення Сахаджа **Йоґи**» |
+| 5 | L15 | «заковика Сахаджа **Йоги**» | «заковика Сахаджа **Йоґи**» |
+
+## Summary
+
+- Language (L): 2 issues found, 1 approved by Critic
+- SY Domain (S): 3 issues found (1 covering 4 occurrences), 1 approved by Critic
+- Total corrections applied this pass: **5** (1 grammar + 4 transliteration occurrences)
+
+### Notes on overall quality
+
+The translation is of high quality and required minimal correction. Deity-pronoun
+capitalization (Я/Мені/Мій for Shri Mataji; Він/Його/Йому for Christ, Socrates,
+Guru Nanak; Богиня/Вона/Неї for the Goddess), spiritual-term capitalization
+(Істина, Дух, Дхарма, Пуджа, Реалізація, Інкарнація), and language-name
+lowercasing (англійська, українська, іврит) are all correct and consistent.
+Glossary terms (Кундаліні, Аґія, Сахасрара, вібрації, прохолодний вітерець,
+мар’яди, Дівалі, Парамчайтанья, Омкара, Шрі Ґанеша) are rendered per
+`terms_lookup.yaml`. The fixed closing blessing «Нехай Бог благословить вас»
+correctly matches the EN "May God bless you" (no "all" in the source).
+
+---
+
+# Language Review – 2001-12-25_Christmas-Puja, 2026-05-29 (first pass)
 
 ## Process
 
@@ -47,6 +126,8 @@ capitalization (S)**.
 Nanak's/Socrates's «Його» correctly uppercase; the lady, the priest, Shalivahana,
 the war, the water, the lotus and Sahaja Yoga itself correctly take lowercase
 third-person pronouns.
+> Note (2026-06-20): the «Йоги» genitive form listed above as verified-correct
+> was in fact mis-spelled with plain «г»; corrected to «Йоґи» in the second pass.
 
 ### Critic Filter
 
