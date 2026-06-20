@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-20T05:14:36.466735+00:00",
+  "updated_at": "2026-06-20T05:18:41.059818+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -318,7 +318,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 311,
-      "updated_at": "2026-05-30T09:27:33Z"
+      "updated_at": "2026-06-20T05:18:30Z"
     },
     "1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware": {
       "status": "pending",
