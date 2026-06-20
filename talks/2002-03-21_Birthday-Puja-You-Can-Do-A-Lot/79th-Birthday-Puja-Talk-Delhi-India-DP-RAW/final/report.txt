@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2002-03-21_Birthday-Puja-You-Can-Do-A-Lot/79th-Birthday-Puja-Talk-Delhi-India-DP-RAW/final/uk.srt
+  Transcript: talks/2002-03-21_Birthday-Puja-You-Can-Do-A-Lot/transcript_uk.txt
+  EN SRT: talks/2002-03-21_Birthday-Puja-You-Can-Do-A-Lot/79th-Birthday-Puja-Talk-Delhi-India-DP-RAW/source/en.srt
+  SRT blocks: 320
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 320
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 320
+  CPS: avg=9.9, median=9.9, max=15.0
+  CPS > target: 15 (4.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #115: CPS=15.0 (28ch/1.9s) "У них ніколи немає вібрацій."
+    #317: CPS=15.0 (31ch/2.1s) "Що вам потрібно – це розуміння."
+    #191: CPS=15.0 (34ch/2.3s) "Ми ніколи не зможемо прогресувати."
+    #278: CPS=15.0 (20ch/1.3s) "– якесь угруповання."
+    #45: CPS=15.0 (23ch/1.5s) "Ви не робитимете цього."
+    #116: CPS=15.0 (46ch/3.1s) "Тож Я зазвичай дивувалася, звідки вони знають,"
+    #117: CPS=15.0 (46ch/3.1s) "що це Джанмабхумі [місце народження] Шрі Рами."
+    #48: CPS=15.0 (52ch/3.5s) "тому що якщо Я говорю з ними, їм це не сподобається."
+    #61: CPS=15.0 (52ch/3.5s) "Тож ми повинні віддавати повну шану Його Інкарнації."
+    #219: CPS=15.0 (29ch/1.9s) "В Індії це найгірше, Я думаю."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.9 (target ≤15.0)
+  CPS > 15.0: 15 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
