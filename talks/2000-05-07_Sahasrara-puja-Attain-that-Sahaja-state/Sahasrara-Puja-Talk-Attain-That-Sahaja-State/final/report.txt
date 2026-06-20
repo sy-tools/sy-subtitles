@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state/Sahasrara-Puja-Talk-Attain-That-Sahaja-State/final/uk.srt
+  Transcript: talks/2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state/transcript_uk.txt
+  EN SRT: talks/2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state/Sahasrara-Puja-Talk-Attain-That-Sahaja-State/source/en.srt
+  SRT blocks: 532
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 532
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 532
+  CPS: avg=10.3, median=10.0, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #142: CPS=15.0 (70ch/4.7s) "Я ніколи й слова не казала: «Відмовся від цього чи відмовся ..."
+    #501: CPS=15.0 (64ch/4.3s) "Але, можливо, через те, що вони надзвичайно високо себе ціну..."
+    #517: CPS=15.0 (55ch/3.7s) "Це наче спрямування каналами: доки у вас немає каналів,"
+    #397: CPS=15.0 (83ch/5.5s) "Воно дає вам радість, воно дає вам спокій, воно дає вам здіб..."
+    #524: CPS=15.0 (83ch/5.5s) "І Я благословляю вас від усього серця, щоб тепер ви взяли на..."
+    #486: CPS=15.0 (74ch/4.9s) "(що означає) «Коли я увійшов у той стан радості, навіщо мені..."
+    #422: CPS=15.0 (34ch/2.3s) "Якщо хтось намагається кривлятися,"
+    #467: CPS=15.0 (34ch/2.3s) "Ви просто переключаєте свій розум."
+    #57: CPS=15.0 (62ch/4.1s) "А потім вони прийшли і запитали Мене: «Мати, те, що вона каж..."
+    #298: CPS=15.0 (59ch/3.9s) "Ви можете думати, що інші отримують набагато більшу платню,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 10.3 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

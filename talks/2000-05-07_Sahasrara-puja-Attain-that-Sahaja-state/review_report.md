@@ -1,71 +1,76 @@
-# Language Review – 2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state, 2026-05-30
+# Language Review – 2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state, 2026-06-20
 
 ## Process
 
-Reviewed `transcript_uk.txt` (full paragraphed Ukrainian text) against `transcript_en.txt`
-using 2 parallel reviewers (L – Language, S – SY Domain) + 1 Critic filter, per
-`templates/language_review_template.md`, `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`,
-and `glossary/terms_context.yaml`.
+2 parallel reviewers (L – Language, S – SY Domain) + 1 Critic filter, run on the
+full paragraphed `transcript_uk.txt` against `transcript_en.txt`, the glossary
+(`terms_lookup.yaml`, `terms_context.yaml`) and `glossary/CLAUDE.md`, per
+`templates/language_review_template.md`.
 
-Punctuation/character audit (programmatic): quotes `«»` 70/70 balanced (no `„"`/`""`);
-apostrophes all `’` (U+2019, 22×); ellipsis `...` (1×, no space before); no Latin/Cyrillic
-mixing inside words; no double spaces. Dash audit: 41× em-dash `—` (U+2014), 0× en-dash.
+This is a follow-up pass; an earlier review (2026-05-30) already applied
+character-level fixes (em→en dashes, `Сахаджа Йоґа` transliteration, a ¶8 quote
+restructure). Those are re-verified below and confirmed in place.
+
+**Programmatic character audit (current file):**
+em-dash `—` (U+2014): **0** · en-dash `–` (U+2013): **41** · `«` 69 / `»` 69
+(balanced, no `„"`/`“”`/`""`) · apostrophes `’` (U+2019): 22, no straight `'` ·
+ellipsis `...`: 1 (no space before, no `…` char) · double spaces: 0 · space
+before `,`/`.`: 0 · Latin/Cyrillic-mixed tokens: none.
+
+The translation is of very high quality: Shri Mataji's deity pronouns are
+consistently uppercase (Я/Мені/Мій/Моя/Мене and others' «Вона»/«Ти»/«Мамо»),
+SY terminology matches the glossary, and orthography/punctuation is clean. The
+findings below are mostly borderline; one is a hard grammatical error.
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | all (41×) | Em-dash `—` (U+2014) used for interjections; glossary mandates en-dash `–` (U+2013) with spaces. Corpus-wide convention is en-dash (5886 vs 696). This file is an outlier (0 en / 41 em). | `…невігласними людьми — щодо самих себе…` | Replace `—` → `–` (keep surrounding spaces) |
-| L2 | 8 | Non-standard close/reopen of `«»` around an author interjection within continuous direct speech; first part ends with `!` so author's words take a period and continuation is capitalised. Inconsistent with the correct pattern used in ¶23 (`«…, — сказала Я, — …»`). | `«О Боже мій!» — сказала Я, — «як же Я дам їй Реалізацію?»` | `«О Боже мій! – сказала Я. – Як же Я дам їй Реалізацію?»` |
-| L3 | 21 | Lexical calque `слідувати цьому`; more idiomatic Ukrainian `дотримуватися цього`. | `…вони намагатимуться слідувати цьому.` | `…дотримуватися цього` |
-| L4 | 31 | Attributive active present participle `переважаюча` (`-юч-`), non-normative in standard Ukrainian. | `Він наче переважаюча своєю любов’ю людина.` | rephrase, e.g. `…людина, що перемагає своєю любов’ю` |
-| L5 | 11 | Question mark on a reported-speech clause (`про те, як…`). | `…говорили … про те, як вони можуть отримати Самореалізацію?` | `…Самореалізацію.` |
+| L1 | 44 | Wrong genitive form. «хіть» is a 3rd-declension feminine noun with і→о alternation in open syllables (gen. «хоті»; instr. keeps і: «хіттю») — cf. ніч→ночі→ніччю, сіль→солі→сіллю. | «без жодної **хіті** чи жадібності» | «без жодної **хоті** чи жадібності» |
+| L2 | 31 | Attributive active present participle in -юч- (calque, dispreferred in standard Ukrainian). | «Він наче **переважаюча** своєю любов'ю людина» | «…людина, що **переважає** своєю любов'ю» |
+| L3 | 11 | Question mark closing an indirect clause («про те, як…»). | «…про те, як вони можуть отримати Самореалізацію**?**» | «…Самореалізацію**.**» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 13, 22, 35 | Proper noun *Sahaja Yoga* spelled with plain `г` (`Йоги`/`Йогою`) instead of `ґ` (Sanskrit `g` → `ґ`, glossary `Сахаджа Йоґа`). Inconsistent with `сахаджа йоґи`/`йоґів`/`йоґам` (with `ґ`) used elsewhere in the same text and with locative `Йозі`. | `…диво Сахаджа Йоги.` / `…незадоволені Сахаджа Йогою.` / `…подорожі Сахаджа Йоги` | `Сахаджа Йоґи` / `Сахаджа Йоґою` / `Сахаджа Йоґи` |
-| S2 | 13 | `пуджа мурті` lowercase vs glossary `Пуджа` (uppercase ceremony name); all other instances in text are uppercase (`Пуджу Дурґи`, `Сахасрара Пуджа`). | `Це не якась там пуджа мурті (статуї)…` | `Пуджа мурті` (?) |
-| S3 | 18 | `Страшний Суд` — second word capitalised; conventional Ukrainian is `Страшний суд`. | `Це Страшний Суд.` | `Страшний суд` (?) |
-| S4 | 8 | `мій` lowercase in Shri Mataji's own utterance (`О Боже мій!`). | `«О Боже мій! …` | `Мій` (?) |
+| S1 | 18 | Over-capitalization of the second word; the orthographic norm capitalizes only the first word of the event name. | «Це **Страшний Суд**.» | «Це **Страшний суд**.» |
+| S2 | 13 | Puja-capitalization consistency vs. named pujas (Сахасрара Пуджа, Пуджу Дурґи). | «**пуджа** мурті (статуї)» | «**Пуджа** мурті (статуї)» |
 
 ### Critic Filter
+
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Explicit glossary orthography rule (`En-dash: ` – ` (U+2013)`) + overwhelming corpus convention. Genuine systematic error. |
-| L | L2 | **Keep** | Genuine punctuation error; closing/reopening `«»` mid-utterance is non-standard, and the same transcript (¶23) shows the correct continuous pattern. |
-| L | L3 | Remove | `слідувати` is dictionary-attested; correction is a style preference, not a clear error. |
-| L | L4 | Remove | Active participle is tolerated in transcribed spoken text; rephrasing risks altering the "over-powering" sense. Not a clear-cut error. |
-| L | L5 | Remove | The `?` faithfully mirrors the source's own idiosyncratic phrasing (`…how they can get Self-realisation?`). |
-| S | S1 | **Keep** | Transliteration rule (`g` → `ґ`) + internal inconsistency with `йоґи`/`йоґів` in the same text. Genuine terminology error. |
-| S | S2 | Remove | Dismissive generic context (`якась там пуджа мурті` = mere statue-worship, explicitly contrasted with a living deity) justifies lowercase; uppercasing here would be incongruous. |
-| S | S3 | Remove | `Страшний Суд` is an accepted religious-capitalisation variant; not a definitive error. |
-| S | S4 | Remove | `О Боже мій!` is an idiomatic exclamation; capitalising `Мій` would look unnatural. `Боже` is already capitalised. Not an error. |
+| L | L1 | **Keep** | Genuine grammatical error. «хіть» → gen. «хоті» is dictionary-normative (і↔о alternation, mirrored by instr. «хіттю» retaining і). Apply. |
+| L | L2 | Remove | The -юч- participle is dispreferred stylistically but grammatically valid and clear; rephrasing alters the "over-powering" sense and the spoken register. Style preference, not an error. |
+| L | L3 | Remove | Faithfully mirrors the source's own free-indirect rhetorical question ("…as to: how they can get Self-realisation?"). Defensible in a spoken transcript. |
+| S | S1 | Remove | «Страшний Суд» mirrors the source («Last Judgment») and is an accepted religious-capitalization variant; it is also consistent with the translation's reverential capitalization of sacred concepts (Океан Вічності, Царство Боже, Абсолютне Знання). Lowercasing only «Суд» would be internally inconsistent. |
+| S | S2 | Remove | Here "puja" is a generic common noun used dismissively ("It's not some sort of statue puja"), matching the source's lowercase. The glossary's uppercase rule targets named ceremonies, which are already correctly capitalized in the text. |
 
 ### Approved Corrections
+
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | all (41×) | Em-dash `—` instead of en-dash `–` | `—` → `–` |
-| 2 | 13 | `Сахаджа Йоги` (plain `г`) | `Сахаджа Йоґи` |
-| 3 | 22 | `Сахаджа Йогою` (plain `г`) | `Сахаджа Йоґою` |
-| 4 | 35 | `Сахаджа Йоги` (plain `г`) | `Сахаджа Йоґи` |
-| 5 | 8 | Close/reopen `«»` around author interjection | `«О Боже мій! – сказала Я. – Як же Я дам їй Реалізацію?»` |
+| 1 | 44 | «без жодної хіті чи жадібності» (wrong genitive of «хіть») | «без жодної хоті чи жадібності» |
 
 ## Summary
 
-- Language (L): 5 issues found, 2 approved by Critic
-- SY Domain (S): 4 issues found, 1 approved by Critic (covering 3 text instances)
-- Total corrections applied: 45 edits (41 em→en dashes, 3 `Йоґа` transliterations, 1 quote restructure) across 5 approved correction types
+- Language (L): 3 issues found, 1 approved by Critic
+- SY Domain (S): 2 issues found, 0 approved by Critic
+- Total corrections applied: **1**
 
 ### Notes (verified correct — no change)
-- Deity pronoun capitalization for Shri Mataji is consistent throughout (`Я/Мені/Мій/Моя`,
-  and `Вона`/`Ти`/`Мамо` when others address Her, e.g. ¶12 `хто Вона!`, ¶46 `Мамо, як Ти могла…`).
-- Spiritual terms correctly capitalised: `Дух/Духа/Дусі`, `Істина/Істину`, `Реалізація/Самореалізація`,
-  `Пуджа` (ceremony), `Інкарнації`, `Абсолютне Знання`.
-- `Реальність`/`реальність` correctly tracks the source's case (capital where EN capitalises, lower in ¶30).
-- Language names lowercase (`англійська`, `санскритом`); sentence-initial `Санскритом` (¶28) correctly capitalised.
-- Practitioner term `сахаджа йоґ/йоґи/йоґів` correctly lowercase with `ґ`; `Сахаджа Йоґа`/`Йозі`
-  (organisation) correctly capitalised; locative `Йозі` (ґ→з alternation) correct.
+
+- Character audit clean (see above): dashes en-dash `–`, quotes `«»`, apostrophes `’`.
+- Deity-pronoun capitalization for Shri Mataji is consistent throughout, including
+  others addressing Her: ¶12 «хто **Вона**!», ¶13 «**Мати**, дозволь…», ¶46 «**Мамо**, як **Ти** могла…».
+- Spiritual terms correctly capitalized: Дух/Духа/Духом/Дусі, Істина/Істину/Істини,
+  Самореалізація/Реалізація, Інкарнації, Пуджа (named ceremonies), Абсолютне Знання, Реальність.
+- Glossary terms match: Сахасрара, Кундаліні, Сахаджа Йоґа (`ґ`)/Йозі (ґ→з locative),
+  сахаджа йоґи/йоґів/йоґам (lowercase practitioner, `ґ`), Дурґа, Аді Шакті, Калі Юга,
+  Тур'я, Кабір, прохолодний вітерець, его, ґуру.
+- Language names lowercase (англійська, санскритом); sentence-initial «Санскритом» (¶28) correct.
 - Kabir's first-person quote (¶49) kept lowercase — saint-poet, not in the deity/Incarnation list.
-- Closing blessing matches the fixed phrase: `Нехай Бог благословить усіх вас.`
+- Closing blessing matches the fixed phrase: «Нехай Бог благословить усіх вас.»
