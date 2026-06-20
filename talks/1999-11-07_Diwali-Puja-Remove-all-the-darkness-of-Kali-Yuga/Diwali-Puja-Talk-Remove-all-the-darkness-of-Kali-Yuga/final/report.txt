@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga/Diwali-Puja-Talk-Remove-all-the-darkness-of-Kali-Yuga/final/uk.srt
+  Transcript: talks/1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga/transcript_uk.txt
+  EN SRT: talks/1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga/Diwali-Puja-Talk-Remove-all-the-darkness-of-Kali-Yuga/source/en.srt
+  SRT blocks: 513
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 513
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 513
+  CPS: avg=10.4, median=10.2, max=15.0
+  CPS > target: 6 (1.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=55.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #482: CPS=15.0 (28ch/1.9s) "що є надія для всього світу,"
+    #298: CPS=15.0 (61ch/4.1s) "Ви відчиняєте одні двері – не зайде повітря, нічого не зайде..."
+    #407: CPS=15.0 (67ch/4.5s) "Тепер люди думають: «Тепер ми дали гроші ґуру, як ми можемо ..."
+    #411: CPS=15.0 (38ch/2.5s) "Дуже поширено; це дуже, дуже поширено,"
+    #408: CPS=15.0 (47ch/3.1s) "Можливо, вони й далі дають гроші та тримаються."
+    #97: CPS=15.0 (53ch/3.5s) "щоб дізнатися: «хто ця спокійна пані, яка приїхала?»."
+    #99: CPS=15.0 (39ch/2.6s) "Але Я не забуваю, як вони сказали Мені,"
+    #406: CPS=15.0 (63ch/4.2s) "вони беруть гроші і – «бас» [слово гінді, «досить»], ось і в..."
+    #480: CPS=15.0 (66ch/4.4s) "Це не спрацює. Тож сьогодні день, щоб святкувати й бути щасл..."
+    #14: CPS=15.0 (82ch/5.5s) "Тобто, як вони могли це знати – можливо, через торсіонну обл..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 10.4 (target ≤15.0)
+  CPS > 15.0: 6 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
