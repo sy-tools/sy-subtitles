@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-20T10:37:49.213852+00:00",
+  "updated_at": "2026-06-20T10:41:17.766513+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -408,7 +408,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 374,
-      "updated_at": "2026-05-30T20:11:12Z"
+      "updated_at": "2026-06-20T10:41:06Z"
     },
     "1975-03-29_Public-Program-ScienceTrigunatmika": {
       "status": "pending",
