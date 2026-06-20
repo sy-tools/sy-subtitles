@@ -1,60 +1,65 @@
-# Language Review – 1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga, 2026-05-30
+# Language Review – 1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga, 2026-06-20
 
 ## Process
 
-Review `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter.
-The file contains the main talk (paras 6–116) plus a marked alternate partial transcript, "ВЕРСІЯ 2" (paras 117–137).
+2 parallel reviewers (L = Language, S = SY Domain) + 1 Critic filter, run on
+`transcript_uk.txt` (full paragraphed Ukrainian text), with the English original
+`transcript_en.txt` for reference and `glossary/` for terminology/capitalization rules.
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 19 | Non-normative active participle (дієприкметник активного стану) | «Греція була дуже **процвітаючою**, надзвичайно красивою державою» | квітучою |
-| L2 | 34 | Calque of рос. «следовать моде»; «слідувати» in this sense is non-normative | «бо вони **слідують моді, слідують стилю**» | йдуть за модою, йдуть за стилем |
-| L3 | 42 | Wrong voice — EN «trees who are nourished well» (passive); active «живлять» = "which nourish (others)" distorts meaning and breaks parallelism with «які отримують» | «є дерева, які добре **живлять**, які отримують багато води та любові» | живляться |
-| L4 | 83 | Non-normative active participle | «таким гострим, таким чітким, таким **розуміючим**» | проникливим |
-| L5 | 122 (V2) | Non-normative active participle | «таким гострим, таким вправним, таким **розуміючим**» | проникливим |
-| L6 | 86 / 124 | Non-idiomatic preposition with «момент» | «ми тепер **на такому переломному моменті**» | (proposed: на переломному етапі) |
+| L1 | 39 | Negative pronoun after a preposition must be split by the particle «ні» | «де ми не прив’язані **до нічого**, що може нас принизити» | «де ми не прив’язані **ні до чого**, що може нас принизити» |
+| L2 | 63, 100, 118, 119, 122 | Ellipsis uses the single character «…» (U+2026) rather than the three-dot «...» mentioned in `glossary/CLAUDE.md` | «Я не працювала, як**…**», «це спостерігає**…** це спостерігає», «**…**Мета, яка є вашою», «Їх цікавите не**…**», «використовувати щось**…** [??]» | «...» (three dots) |
+
+**Punctuation sweep (no issues found):** quotation marks are «» at all levels
+(no `"`, `""`, `„"`); apostrophe is consistently `’` (U+2019); dashes are en-dash
+` – ` with spaces (no `—`); no double spaces; no spaces before `,.;!?`; no
+mixed Latin/Cyrillic letters. Language names lowercase (англійська, гінді, санскрит).
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 128 (V2) | «реалізована душа» must be lowercase (glossary `realized soul: реалізована душа`); V1 (paras 103–104) uses lowercase | «ви одразу стаєте повною **Реалізованою** душею» | реалізованою |
-| S2 | 129 (V2) | Same — uppercase deviates from glossary & V1 | «ми маємо знати, що ми **Реалізовані** душі» | реалізовані |
-| S3 | 129 (V2) | Same | «Чому ми **Реалізовані** душі?» | реалізовані |
-| S4 | 124 (V2) | «сахадж йоґи» deviates from canonical «Сахаджа Йоґа» (consistency) | «не прийшли до **сахадж йоґи**» / «приходять до **сахадж йоґи**» | Сахаджа Йоги |
-| S5 | 100 | EN capitalizes "Reality"; «Істина» is capitalized, but «реальності» is lowercase | «Ви вклали свою руку в руку **реальності**» | Реальності? |
+| S1 | 56, 86, 89, 108, 130 | Genitive of «Сахаджа Йоґа» written with **г** («Йоги»), inconsistent with the glossary canonical «Йоґа» (ґ) and with every other inflected form in this same text (Йоґу, Йоґою, Йозі ← ґ→з) | «прийдуть до Сахаджа **Йоги**», «не прийшли до Сахаджа **Йоги**», «приходять до Сахаджа **Йоги**», «речі з Сахаджа **Йоги**» (×2) | «Сахаджа **Йоґи**» |
+| S2 | 124 (Version 2) | «Sahaja Yoga» as the name of the practice must always be capitalized (glossary: «Завжди з великої літери»); here lowercase, while the very same paragraph capitalizes «Сахаджа Йоґу» / «Сахаджа Йозі» | «не прийшли до **сахадж йоґи**», «приходять до **сахадж йоґи** на короткий час» | «**Сахадж Йоґи**» (capitalized; short form kept per EN «Sahaj Yog») |
+
+**Capitalization / terminology sweep (no issues found):**
+- Shri Mataji pronouns always uppercase: Я/Мене/Мені/Мій/Моя/Своєму/Своїм (lines 10, 26, 27, 28, 29, 53, 62–66, 76, 86, 94, 102, 108, 111, 114, 115). The generic ego-speaker «я» at line 75 is correctly lowercase.
+- Deity pronouns for Athena / Primordial Mother / Lakshmi uppercase: Вона/Себе/Свою/Неї/Та, Хто (lines 11–15, 25, 69, 72, 73, 82, 95–96).
+- «Калі Юга» (era) pronouns correctly lowercase (line 31); «Калі» (demon in the Nala story, lines 47–49) correctly takes lowercase pronouns я/мене/ти.
+- Glossary terms correct and consistent: Дівалі, Калі Юга, Сатья Юга, Набхі / Набхі чакра, Кундаліні, Махакалі, Махасарасваті, Махалакшмі, Лакшмі, Афіна, Аді Шакті, Ґанеша (ґ; declension Ґанешу/Ґанеші), сваямбху, Пурани, Маніпур двіпа, Самореалізація/Реалізація, Дух, Істина, Пуджа, бхрама/бхранті, ґуру (ґ).
+- Spiritual terms capitalized per rule: Дух (50, 74), Істина/Істини (39, 41, 46, 50, 57, 71, 106), Пуджа (24, 102), Самореалізація/Реалізація. Generic «боги й богині», «християнство», «Біблія/Коран» handled correctly.
 
 ### Critic Filter
+
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | Keep | Active present participles used attributively are non-normative in standard Ukrainian; clean one-word replacement, no meaning loss. |
-| L | L2 | Keep | «слідувати моді/стилю» is a recognised calque; «йти за модою/стилем» is the idiomatic equivalent. |
-| L | L3 | Keep | Genuine grammar/meaning error: EN is passive ("are nourished"); reflexive «живляться» restores the intended sense and parallels the next two relative clauses. |
-| L | L4 | Keep | Non-normative active participle; «проникливим» fits EN "so understanding". |
-| L | L5 | Keep | Same as L4 (V2 mirror of the same sentence). |
-| L | L6 | Remove | Understandable; an idiomatic fix requires rephrasing (момент→етап shifts nuance). Not a clear-cut error. |
-| S | S1 | Keep | Glossary mandates lowercase «реалізована душа»; matches V1 usage. |
-| S | S2 | Keep | Same as S1. |
-| S | S3 | Keep | Same as S1. |
-| S | S4 | Remove | Faithfully mirrors the source's informal "sahaj yoga / Sahaj Yog" in the V2 partial; V2 is a marked alternate transcription. Leave as-is. |
-| S | S5 | Remove | «Реальність» is not an established capitalized SY term in the glossary; lowercase is acceptable. |
+| L | L1 | **Keep** | Genuine grammar error. Ukrainian negative pronouns governed by a preposition must be split: «ні до чого», not «до нічого». Real, unambiguous. |
+| L | L2 | **Remove** | `…` (U+2026) is a typographically valid Ukrainian ellipsis; the `...` in the style note illustrates *spacing* («no space before»), which is already satisfied. Changing 5 instances is churn with no correctness benefit — a style preference, not an error. |
+| S | S1 | **Keep** | Real consistency/transliteration error. Canonical lemma is «Йоґа» (ґ, per glossary + «Sanskrit g → ґ» convention); the genitive «Йоги» (г) clashes with Йоґу/Йоґою/Йозі used everywhere else in the text. Normalizing to «Йоґи» makes the whole paradigm consistent. |
+| S | S2 | **Keep** | Real capitalization error against a firm SY rule. The proper name of the practice is always capitalized in Ukrainian regardless of EN casing (cf. language names always lowercase). Reinforced by internal inconsistency within the same paragraph. |
+
+No conflicts between L and S. No false positives among the kept items.
 
 ### Approved Corrections
+
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 19 | процвітаючою (active participle) | квітучою |
-| 2 | 34 | слідують моді, слідують стилю (calque) | йдуть за модою, йдуть за стилем |
-| 3 | 42 | живлять (wrong voice) | живляться |
-| 4 | 83 | розуміючим (active participle) | проникливим |
-| 5 | 122 | розуміючим (active participle) | проникливим |
-| 6 | 128 | Реалізованою (capitalization) | реалізованою |
-| 7 | 129 | Реалізовані (capitalization) | реалізовані |
-| 8 | 129 | Реалізовані (capitalization) | реалізовані |
+| 1 | 39 | «не прив’язані до нічого» | «не прив’язані ні до чого» |
+| 2 | 56 | «до Сахаджа Йоги» (г) | «до Сахаджа Йоґи» (ґ) |
+| 3 | 86 | «до Сахаджа Йоги» (г) | «до Сахаджа Йоґи» (ґ) |
+| 4 | 89 | «до Сахаджа Йоги» (г) | «до Сахаджа Йоґи» (ґ) |
+| 5 | 108 | «речі з Сахаджа Йоги» (г) | «речі з Сахаджа Йоґи» (ґ) |
+| 6 | 130 | «речі з Сахаджа Йоги» (г) | «речі з Сахаджа Йоґи» (ґ) |
+| 7 | 124 | «не прийшли до сахадж йоґи» | «не прийшли до Сахадж Йоґи» |
+| 8 | 124 | «приходять до сахадж йоґи» | «приходять до Сахадж Йоґи» |
 
 ## Summary
 
-- Language (L): 6 issues found, 5 approved by Critic
-- SY Domain (S): 5 issues found, 3 approved by Critic
-- Total corrections applied: 8
+- Language (L): 2 issues found, 1 approved by Critic
+- SY Domain (S): 2 issue-types found (7 occurrences), both approved by Critic
+- Total corrections applied: 8 (1 grammar + 7 terminology/capitalization across 6 paragraphs)
