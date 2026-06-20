@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha/Navaratri-Puja-Talk/final/uk.srt
+  Transcript: talks/2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha/transcript_uk.txt
+  EN SRT: talks/2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha/Navaratri-Puja-Talk/source/en.srt
+  SRT blocks: 489
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 489
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 489
+  CPS: avg=11.1, median=10.8, max=20.9
+  CPS > target: 55 (11.2%)
+  CPS > hard max: 3 (0.6%)
+  CPL: avg=56.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #323: CPS=20.9 (46ch/2.2s) "як його називають, це святий, як це називають."
+    #61: CPS=20.8 (47ch/2.3s) "– що ви ніколи не повинні сприймати як належне!"
+    #350: CPS=20.7 (40ch/1.9s) "[тільки] через дев’ять років Я приїхала."
+    #152: CPS=20.0 (37ch/1.9s) "що божевільна людина не має мудрості."
+    #45: CPS=19.9 (42ch/2.1s) "і Я бачила, що люди не можуть їх подолати."
+    #356: CPS=19.6 (33ch/1.7s) "Тож ось що таке частина мудрості."
+    #421: CPS=19.1 (51ch/2.7s) "Для цього також, знову-таки, вам потрібна мудрість."
+    #148: CPS=19.0 (55ch/2.9s) "роблять неправильні речі й неправильний вид поклоніння."
+    #413: CPS=18.9 (47ch/2.5s) "що Він є Тим, Хто сказав на хресті: «Ось Мати»."
+    #424: CPS=18.8 (54ch/2.9s) "чи ви маєте благословення Матері, – це між цими двома."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.1 (target ≤15.0)
+  CPS > 15.0: 55 blocks
+  CPS > 20.0: 3 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
