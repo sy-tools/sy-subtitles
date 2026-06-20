@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya/Navaratri-Puja-Talk/final/uk.srt
+  Transcript: talks/1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya/transcript_uk.txt
+  EN SRT: talks/1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya/Navaratri-Puja-Talk/source/en.srt
+  SRT blocks: 602
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 602
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 602
+  CPS: avg=11.5, median=11.8, max=15.1
+  CPS > target: 39 (6.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #243: CPS=15.1 (60ch/4.0s) "вони приходять і кажуть: «Матінко, як нам отримати мудрість?"
+    #590: CPS=15.1 (82ch/5.4s) "Погляньте на себе самих, з’ясуйте про себе самих – і ви пови..."
+    #409: CPS=15.0 (28ch/1.9s) "я підняла голову, я виявила,"
+    #491: CPS=15.0 (31ch/2.1s) "Ось у чому річ: просто знаю це."
+    #407: CPS=15.0 (37ch/2.5s) "І ось, через те, що вона так сказала,"
+    #227: CPS=15.0 (43ch/2.9s) "Чому я маю це робити?» – ви будете вражені,"
+    #506: CPS=15.0 (43ch/2.9s) "Тож ви повинні використовувати своє знання,"
+    #586: CPS=15.0 (46ch/3.1s) "Як-от: «Я підхопив блокування від цієї людини,"
+    #109: CPS=15.0 (49ch/3.3s) "Тепер припустімо, як Я сказала, Я бачу ці килими,"
+    #597: CPS=15.0 (49ch/3.3s) "впевнена, щось велике може статися в цьому світі,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.5 (target ≤15.0)
+  CPS > 15.0: 39 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
