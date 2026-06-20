@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware/Christmas-Puja/final/uk.srt
+  Transcript: talks/1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware/transcript_uk.txt
+  EN SRT: talks/1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware/Christmas-Puja/source/en.srt
+  SRT blocks: 405
+  EN SRT blocks: 626
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:07:20,520 — 00:56:40,640
+  SRT range:       00:07:20,520 — 00:56:42,640
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 405
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 405
+  CPS: avg=8.1, median=7.5, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #132: CPS=15.0 (40ch/2.7s) "«Як ви можете пити?» — запитала Я в них."
+    #326: CPS=15.0 (40ch/2.7s) "Ви не можете займатися самоспогляданням."
+    #310: CPS=15.0 (59ch/3.9s) "Вони ментально абсолютно там, як, Я не знаю, як це назвати,"
+    #308: CPS=15.0 (56ch/3.7s) "До того ж Я здивована, що ті, хто сповідує християнство,"
+    #134: CPS=15.0 (57ch/3.8s) "Христос створив вино.» Я сказала: «Коли?» — «На весіллі.»"
+    #346: CPS=15.0 (54ch/3.6s) "Просто щоб приголомшити вас, Я сказала це не для того,"
+    #327: CPS=15.0 (27ch/1.8s) "Ви не можете побачити себе."
+    #376: CPS=14.7 (33ch/2.2s) "Вона працює, просто увага працює."
+    #357: CPS=14.6 (60ch/4.1s) "як брижі думок у вашому розумі, Я казала вам це сотні разів."
+    #236: CPS=14.5 (58ch/4.0s) "Через его, яке, мушу сказати, Христос намагався перемогти,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 405
+  EN SRT blocks: 626
+  Ratio UK/EN: 0.65 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 8.1 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
