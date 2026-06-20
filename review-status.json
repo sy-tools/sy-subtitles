@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-20T10:41:17.766513+00:00",
+  "updated_at": "2026-06-20T11:52:07.127517+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -480,7 +480,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 426,
-      "updated_at": "2026-05-31T05:27:05Z"
+      "updated_at": "2026-06-20T11:51:56Z"
     },
     "1992-02-29_Mahashivaratri-Puja-You-are-extremely-powerful": {
       "status": "pending",
