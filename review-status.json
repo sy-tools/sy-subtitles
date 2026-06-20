@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-16T07:34:20.579752+00:00",
+  "updated_at": "2026-06-20T05:14:36.466735+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -360,7 +360,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 344,
-      "updated_at": "2026-05-30T12:33:30Z"
+      "updated_at": "2026-06-20T05:14:27Z"
     },
     "1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children": {
       "status": "pending",
