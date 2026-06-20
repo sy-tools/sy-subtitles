@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise/Guru-Puja-Talk-A-Guru-Should-Be-Humble-And-Wise/final/uk.srt
+  Transcript: talks/1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise/transcript_uk.txt
+  EN SRT: talks/1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise/Guru-Puja-Talk-A-Guru-Should-Be-Humble-And-Wise/source/en.srt
+  SRT blocks: 527
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 527
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 527
+  CPS: avg=10.4, median=10.2, max=15.2
+  CPS > target: 62 (11.8%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #432: CPS=15.2 (21ch/1.4s) "Хіба це має значення?"
+    #409: CPS=15.1 (58ch/3.9s) "що це сталося зі мною, цього не мало статися» і таке інше."
+    #350: CPS=15.0 (34ch/2.3s) "Тоді немає радості, немає радості."
+    #380: CPS=15.0 (34ch/2.3s) "Як вони можуть бути божественними?"
+    #85: CPS=15.0 (37ch/2.5s) "дасть вам урок, який ви запам’ятаєте,"
+    #124: CPS=15.0 (40ch/2.7s) "полягала в тому, щоб ти могла допомогти,"
+    #190: CPS=15.0 (40ch/2.7s) "ставити вам безглузді й дурні запитання."
+    #182: CPS=15.0 (43ch/2.9s) "роблять із них дурнів, – а ті вихваляються:"
+    #243: CPS=15.0 (43ch/2.9s) "Усе це лише тому, що ви в цьому народилися."
+    #329: CPS=15.0 (43ch/2.9s) "Я сказала: «У чому річ? Я ж маю це з’їсти»."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 10.4 (target ≤15.0)
+  CPS > 15.0: 62 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
