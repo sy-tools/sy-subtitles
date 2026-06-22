@@ -94,7 +94,7 @@ jobs:
       # found"). Empty when the run was triggered without a talk_id input.
       talk_id: ${{ steps.find.outputs.talk_id }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -211,7 +211,7 @@ jobs:
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2
@@ -453,7 +453,7 @@ jobs:
       video_slug: ${{ steps.prepare.outputs.video_slug }}
       timing_source: ${{ steps.timing.outputs.timing_source }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git pull --rebase
 
       - name: Download translation artifacts
@@ -572,7 +572,7 @@ jobs:
     environment: ${{ inputs.dry_run && 'dry-run' || 'main' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: git pull --rebase
 
       - name: Download UK blocks artifact
@@ -897,7 +897,7 @@ jobs:
       (needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -970,7 +970,7 @@ jobs:
       (needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'failure' || needs.translate-and-review.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Pull latest
         run: git pull --rebase

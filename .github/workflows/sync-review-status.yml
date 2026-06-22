@@ -28,7 +28,7 @@ jobs:
       # main, producing a 3-way conflict whenever another status update landed
       # during the run. Pinning `ref: main` bases the regenerated file on the
       # current tip and lets the PR merge cleanly.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: main
 
