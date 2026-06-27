@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-23T18:31:59.162707+00:00",
+  "updated_at": "2026-06-27T06:30:13.335809+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -525,10 +525,10 @@
       "updated_at": "2026-06-13T12:18:51Z"
     },
     "2000-07-02_Adi-Shakti-Puja-Women-Emotional-Intelligence": {
-      "status": "pending",
+      "status": "approved",
       "reviewer": "IrynaFilSY",
       "issue_number": 577,
-      "updated_at": "2026-06-23T18:31:46Z"
+      "updated_at": "2026-06-27T06:30:12Z"
     }
   }
 }
