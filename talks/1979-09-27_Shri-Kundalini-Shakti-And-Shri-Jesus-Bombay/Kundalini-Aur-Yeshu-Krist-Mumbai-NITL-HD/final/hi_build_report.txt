@@ -1,10 +1,43 @@
-Build complete: 706 blocks
-  Time range: 00:00:02,193 → 01:08:49,772
-  CPS: avg=13.4, median=15.0, max=20.0
-  CPS > 15.0: 7
-  CPS > 20.0: 0
-  CPL > 84: 0
-  Duration < 1200ms: 0
-  Duration > 21000ms: 0
-  Gaps < 80ms: 0
-  Overlaps: 0
+hi.srt build report — 1979-09-27 Kundalini & Jesus (Bombay, Hindi)
+================================================================
+
+REBUILT 2026-06-28 on the COMPLETED transcript: a completeness pass (diff vs
+source/whisper.json, the most complete native pass + a 2nd full faster-whisper pass)
+restored 15 audio-true sentences the original 3-pass reconciliation had dropped
+(e.g. Moses-as-guru-tattva, the hospital/25-patients line, the cross/"can't crucify me"
+passage, perverted-ideas, Rubens "uभारा/हृष्ट-पुष्ट"). Transcript now 136 paras, 57149 ch.
+Blocks: 1060. Avg CPS 15.1. Re-aligned (wav2vec2 hi) and re-verified against audio
+(restored regions land correctly: perverted-ideas r=0.99, सूली r=0.91, Moses r=0.72).
+
+Source: transcript_hi.txt (audio-true Hindi, rebuilt from audio originals only —
+whisper passes + yogini ear-translation; 33 word-level uncertainties resolved by
+focused re-whisper). NOT derived from the prior low-confidence transcript/SRT.
+
+Timing method (all local; this talk is heavily Hindi/English code-switched):
+  1. Forced-align the FINAL Hindi transcript to the audio with whisperX wav2vec2
+     (hi model theainerd/Wav2Vec2-large-xlsr-hindi) -> per-word timestamps.
+     Only reliable source: correct global clock, times every Hindi word.
+     (Rejected: chunked mlx large-v3 word times -> broken global clock (+13s drift);
+      difflib-to-whisper -> collapses blocks, our text is ~22% denser than any whisper
+      pass; optimize_srt -> shifts blocks off-audio. All verified against audio.)
+  2. Segment into single-line blocks: sentence-first, long sentences split at clause
+     boundaries (, - ; :), CPL <= 84; balloon-clamp stretched words; em-dash leads next.
+  3. Final timing: keep each block START at its audio onset; extend END toward target
+     CPS (15) within available silence; gap-limited fast blocks borrow time from a
+     slow neighbour. No optimize_srt (it shifts blocks off-audio on this talk).
+
+Verification: re-whispered audio clips at ~30 block timestamps with an INDEPENDENT
+engine (faster-whisper large-v3) and compared to block text — every sampled block
+(opening, mid, English code-switch, and CPS>20 blocks) is correctly positioned and
+its text matches the audio. (validate-vs-whisper-json is circular; not relied on.)
+
+Validation (--skip-cps-check): PASS — text preservation, no overlaps, time range,
+sequential numbering, CPL <= 84, gap >= 80 ms, duration 1.2-21 s.
+Blocks: 1041. Avg CPS 14.8.
+
+CPS note: 67 blocks (6.4%) exceed CPS 20 (worst ~52). These are GENUINE — fast/dense
+Devanagari speech plus English code-switches (e.g. "right side", "Gabriel",
+"those who are not against me are with me"). Positions verified correct against audio;
+forcing CPS <= 20 would require distorting timing away from the audio, so they are kept
+faithful. Optional future polish: re-time the worst English-cram blocks via local
+re-whisper.
