@@ -1,0 +1,50 @@
+en.srt / uk.srt build report — 1979-09-27 Kundalini & Jesus (Bombay, Hindi)
+==========================================================================
+Built 2026-06-28. en.srt = 1276 blocks (avg CPS 16.7). uk.srt = 1178 blocks
+(avg CPS 15.2). Both validate PASS: CPL <= 84, duration 1.2-7.9 s, no overlaps,
+gap >= 80 ms, sequential numbering, CPS <= 20.0 (0 blocks over). uk.srt is the
+deliverable; en.srt is the reference English track.
+
+GUIDING PRINCIPLE (set by the project owner):
+  The Hindi-speaking viewer needs hi.srt tight to the audio, so hi.srt is kept
+  audio-faithful even where that means high CPS. But the EN/UK viewer does NOT
+  understand the spoken Hindi -- a few seconds of drift from the audio is
+  invisible to them, whereas a subtitle that cannot be read in time is useless.
+  So for EN/UK, READABILITY (CPS) is prioritized over exact audio sync; time
+  shifts are allowed. (Drift stayed small in practice -- median 1.4-1.5 s,
+  p90 ~4 s, max ~11 s in the densest passages.)
+
+PIPELINE (all local):
+  1. Meaning-segmentation: the finalized transcript_en.txt / transcript_uk.txt
+     were cut into one fragment per hi.srt block, aligned BY MEANING (12 parallel
+     Opus aligners), so each fragment sits on that Hindi block's audio time.
+     A pure repetition/restatement block ("MERGE") folds its time into the
+     previous block. Verified: non-MERGE fragments reconstruct every paragraph
+     of the transcript word-for-word.
+  2. Raw layout on the hi.srt timeline (rough sync), balanced CPL split <= 84.
+  3. optimize_srt (twice) -> CPS redistribution into available silence/gaps.
+  4. Segmented CPS equalization: within each pause-bounded segment (split on
+     gaps >= 0.4 s or 30 s cap, so drift is bounded and resets at every pause),
+     block durations are made proportional to text so the whole segment shares
+     one CPS -- this removes local spikes using only locally-available time.
+  5. Min-duration cleanup (>= 1.2 s), min-gap, no overlaps.
+
+SIMPLIFICATION (subtitles only -- intentional divergence from the transcript):
+  Some passages are spoken very fast and are genuinely too dense to read even
+  after step 4 (English is ~20% longer than the Hindi for the same audio). Per
+  the owner's rule, where Shri Mataji repeats the same thing (a phrase twice, or
+  Hindi-then-English/Hindi restatement) the SUBTITLE keeps ONE instance. 6 Opus
+  agents trimmed only genuine redundancy in ~18 dense paragraphs (e.g. "eternal
+  truths -- these eternal, everlasting truths" -> "eternal truths"; the
+  cure/curing/cured chain in the hospital passage), preserving all unique
+  meaning, names, scripture, SY terminology, Ukrainian << >> quotes, and the
+  reverent capitalization of the Mother's / a single Incarnation's pronouns.
+  Because of this, en.srt / uk.srt deliberately do NOT match transcript_en.txt /
+  transcript_uk.txt verbatim (those stay complete); the validator's
+  text-preservation check is therefore skipped for these two files.
+  Independent check: every EN subtitle word is a subset of transcript_en.txt;
+  UK differs only in 3 expected inflected forms after pruning.
+
+NOTE: en/uk timing is intentionally shifted for readability, so a time-range
+check against the Hindi whisper is not meaningful (--skip-time-check); placement
+derives from the audio-true hi.srt and the by-meaning alignment.
