@@ -1,6 +1,9 @@
 """Tests for tools.optimize_srt."""
 
 import json
+import sys
+
+import pytest
 
 from tools.config import OptimizeConfig
 from tools.optimize_srt import (
@@ -8,11 +11,13 @@ from tools.optimize_srt import (
     cascade_redistribute,
     find_best_split_point,
     find_block_split_point,
+    main,
     merge_short_blocks,
     optimize,
     split_blocks_by_duration,
     split_blocks_by_size,
 )
+from tools.srt_utils import parse_srt
 
 # --- find_best_split_point ---
 
@@ -264,3 +269,28 @@ def test_cascade_redistribute_leaves_soft_blocks_untouched():
     before = [(b["start_ms"], b["end_ms"]) for b in blocks]
     result = cascade_redistribute(blocks, config, [])
     assert [(b["start_ms"], b["end_ms"]) for b in result] == before
+
+
+# --- CLI entry point ---
+
+
+def test_main_requires_srt_or_uk_json(monkeypatch, tmp_path):
+    monkeypatch.setattr(sys, "argv", ["optimize_srt", "--output", str(tmp_path / "o.srt")])
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2  # argparse parser.error
+
+
+def test_main_optimizes_srt_file(monkeypatch, tmp_path):
+    src = tmp_path / "in.srt"
+    src.write_text(
+        "1\n00:00:01,000 --> 00:00:05,000\nHello world this is a sample subtitle line\n\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.srt"
+    monkeypatch.setattr(sys, "argv", ["optimize_srt", "--srt", str(src), "--output", str(out)])
+    main()
+    assert out.is_file()
+    blocks = parse_srt(str(out))
+    assert len(blocks) >= 1
+    assert all(b["start_ms"] < b["end_ms"] for b in blocks)
