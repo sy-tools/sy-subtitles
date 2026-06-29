@@ -1409,6 +1409,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
     <div class="branch-dropdown" id="branch-dropdown"></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
+    <span id="stale-indicator" style="display:none;align-items:center;gap:6px;background:var(--bg4);color:var(--fg3);border:1px solid var(--border3);border-radius:10px;padding:1px 4px 1px 8px;font-size:11px;">
+      <span class="stale-text"></span>
+      <button class="stale-x" onclick="SPA.dismissStale()" data-i18n-title="stale.dismiss" style="background:none;border:none;color:var(--fg5);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;">&#x00D7;</button>
+    </span>
     <span id="last-updated"></span>
     <button id="refresh-btn" onclick="SPA.refreshManifest()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;display:none;" data-i18n-title="title.refresh">&#x21bb;</button>
     <button id="lang-btn" onclick="SPA.toggleLang()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;" data-i18n-title="title.lang">UK</button>
@@ -1911,6 +1915,9 @@ var I18N = {
     'error.rate_limit': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u041F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u043A\u0435\u0448; \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0430 {min} \u0445\u0432',
     'error.rate_limit_nocache': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0437\u0430 {min} \u0445\u0432',
     'error.stale_cache': '\u041D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u2014 \u043F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0443 \u0432\u0435\u0440\u0441\u0456\u044E',
+    'stale.offline': '\u041A\u0435\u0448 \u00B7 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443',
+    'stale.rate_limit': '\u041A\u0435\u0448 \u00B7 \u043B\u0456\u043C\u0456\u0442 GitHub ({min} \u0445\u0432)',
+    'stale.dismiss': '\u0421\u0445\u043E\u0432\u0430\u0442\u0438',
     'review.load_error': 'Не вдалося завантажити транскрипт: {err}',
     'review.srt_load_error': 'Не вдалося завантажити субтитри: {err}',
     'badge.needs_review': '\u043F\u043E\u0442\u0440\u0435\u0431\u0443\u0454 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438',
@@ -2035,6 +2042,9 @@ var I18N = {
     'error.rate_limit': 'GitHub rate limit reached. Showing cached data; refresh in {min} min',
     'error.rate_limit_nocache': 'GitHub rate limit reached. Try again in {min} min',
     'error.stale_cache': 'Offline — showing the cached version',
+    'stale.offline': 'Cached · offline',
+    'stale.rate_limit': 'Cached · GitHub limit ({min} min)',
+    'stale.dismiss': 'Dismiss',
     'review.load_error': 'Failed to load transcript: {err}',
     'review.srt_load_error': 'Failed to load subtitles: {err}',
     'badge.needs_review': 'needs review',
@@ -5388,7 +5398,31 @@ function updateLastModifiedUI() {
   } else {
     el.textContent = '';
   }
+  updateStaleIndicator();
 }
+
+// Persistent companion to the one-time stale toast: a small pill in the freshness
+// bar that lingers while the manifest is stale (offline / rate-limited), since the
+// 2s toast is a weak signal for an outage that can last up to an hour. staleNotice
+// (js/manifest_fetch.js) computes the message; dismissal hides it until the
+// manifest goes fresh again (then re-arms).
+var _staleDismissed = false;
+function updateStaleIndicator() {
+  var el = document.getElementById('stale-indicator');
+  if (!el) return;
+  var notice = staleNotice(manifest, Date.now());
+  if (!notice) { _staleDismissed = false; el.style.display = 'none'; return; }
+  if (_staleDismissed) { el.style.display = 'none'; return; }
+  var msg = t(notice.key);
+  if (notice.min != null) msg = msg.replace('{min}', notice.min);
+  var txt = el.querySelector('.stale-text');
+  if (txt) txt.textContent = msg;
+  el.style.display = 'inline-flex';
+}
+SPA.dismissStale = function() {
+  _staleDismissed = true;
+  updateStaleIndicator();
+};
 
 SPA.refreshManifest = function() {
   var el = document.getElementById('last-updated');

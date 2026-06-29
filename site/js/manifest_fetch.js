@@ -47,6 +47,18 @@ function reviewStatusFallback(current, cached) {
   return { talks: {} };
 }
 
+// Content for the persistent stale banner, or null when the manifest is fresh.
+// Returns an i18n key + `min` (minutes until a rate-limit reset, or null). A
+// rate-limit with no known/future reset degrades to the generic offline message.
+function staleNotice(manifest, nowMs) {
+  if (!manifest || !manifest._stale) return null;
+  if (manifest._staleReason === 'rate_limit') {
+    var min = minutesUntilReset(manifest._rlReset, nowMs);
+    if (min) return { key: 'stale.rate_limit', min: min };
+  }
+  return { key: 'stale.offline', min: null };
+}
+
 // Minutes (rounded up) until an epoch-seconds reset, 0 if already past, null if
 // no reset is known.
 function minutesUntilReset(rlReset, nowMs) {
@@ -62,5 +74,6 @@ if (typeof module !== 'undefined' && module.exports) {
     makeManifestError: makeManifestError,
     minutesUntilReset: minutesUntilReset,
     reviewStatusFallback: reviewStatusFallback,
+    staleNotice: staleNotice,
   };
 }

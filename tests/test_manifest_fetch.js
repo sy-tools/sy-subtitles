@@ -5,6 +5,7 @@ const {
   makeManifestError,
   minutesUntilReset,
   reviewStatusFallback,
+  staleNotice,
 } = require('../site/js/manifest_fetch');
 
 // header getter double — case-sensitive exact map (production passes a
@@ -86,6 +87,29 @@ describe('reviewStatusFallback — never clobber good statuses with empties', ()
   it('ignores a cached object that lacks a talks map', () => {
     assert.deepStrictEqual(reviewStatusFallback(empty, {}), { talks: {} });
     assert.deepStrictEqual(reviewStatusFallback(null, {}), { talks: {} });
+  });
+});
+
+describe('staleNotice — persistent stale-banner content', () => {
+  const now = 1700000000 * 1000;
+  it('returns null for a fresh (or missing) manifest', () => {
+    assert.strictEqual(staleNotice(null, now), null);
+    assert.strictEqual(staleNotice({ talks: [] }, now), null);
+    assert.strictEqual(staleNotice({ _stale: false }, now), null);
+  });
+  it('reports offline for a network/http stale reason', () => {
+    assert.deepStrictEqual(staleNotice({ _stale: true, _staleReason: 'network' }, now), { key: 'stale.offline', min: null });
+    assert.deepStrictEqual(staleNotice({ _stale: true, _staleReason: 'http' }, now), { key: 'stale.offline', min: null });
+  });
+  it('reports a rate-limit with minutes when a future reset is known', () => {
+    assert.deepStrictEqual(
+      staleNotice({ _stale: true, _staleReason: 'rate_limit', _rlReset: 1700000000 + 600 }, now),
+      { key: 'stale.rate_limit', min: 10 },
+    );
+  });
+  it('falls back to offline when a rate-limit reset is absent or already past', () => {
+    assert.deepStrictEqual(staleNotice({ _stale: true, _staleReason: 'rate_limit', _rlReset: null }, now), { key: 'stale.offline', min: null });
+    assert.deepStrictEqual(staleNotice({ _stale: true, _staleReason: 'rate_limit', _rlReset: 1700000000 - 100 }, now), { key: 'stale.offline', min: null });
   });
 });
 
