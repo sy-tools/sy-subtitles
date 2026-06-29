@@ -2,26 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
+from tests.srt_helpers import write_srt_timecodes as _write_srt
 from tools.resync_srt import _build_anchor_map, _remap, resync
 from tools.srt_utils import parse_srt
 
 
 def _ms(h: int, m: int, s: int, ms: int = 0) -> str:
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
-
-
-def _write_srt(path: Path, rows: list[tuple[int, str, str, str]]) -> None:
-    lines = []
-    for idx, start, end, text in rows:
-        lines.append(str(idx))
-        lines.append(f"{start} --> {end}")
-        lines.append(text)
-        lines.append("")
-    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------

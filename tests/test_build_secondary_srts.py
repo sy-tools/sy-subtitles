@@ -14,27 +14,9 @@ from pathlib import Path
 
 import yaml
 
+from tests.srt_helpers import write_srt_ms as _write_srt
 from tools.build_secondary_srts import build_secondary_srts
 from tools.srt_utils import parse_srt
-
-
-def _tc(ms: int) -> str:
-    h = ms // 3600000
-    ms %= 3600000
-    m = ms // 60000
-    ms %= 60000
-    s = ms // 1000
-    ms %= 1000
-    return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
-
-
-def _write_srt(path: Path, blocks: list[tuple[int, int, str]]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    lines: list[str] = []
-    for i, (start, end, text) in enumerate(blocks, 1):
-        lines += [str(i), f"{_tc(start)} --> {_tc(end)}", text, ""]
-    path.write_text("\n".join(lines), encoding="utf-8")
-
 
 _EN_TEXT = [f"This is sentence number {i} of the talk today." for i in range(1, 13)]
 _UK_TEXT = [f"Це речення номер {i} сьогоднішньої промови." for i in range(1, 13)]

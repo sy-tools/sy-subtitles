@@ -1,29 +1,8 @@
 """Tests for offset_srt.py — detect and apply time offsets between SRT files."""
 
+from tests.srt_helpers import write_srt_ms as _write_srt
 from tools.offset_srt import apply_offset, detect_offset, normalize_text, text_similarity
 from tools.srt_utils import parse_srt
-
-
-def _write_srt(path, blocks):
-    """Helper: write a list of (start_ms, end_ms, text) tuples as an SRT file."""
-    lines = []
-    for i, (start_ms, end_ms, text) in enumerate(blocks, 1):
-
-        def _fmt(ms):
-            h = ms // 3600000
-            ms %= 3600000
-            m = ms // 60000
-            ms %= 60000
-            s = ms // 1000
-            ms %= 1000
-            return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
-
-        lines.append(str(i))
-        lines.append(f"{_fmt(start_ms)} --> {_fmt(end_ms)}")
-        lines.append(text)
-        lines.append("")
-    path.write_text("\n".join(lines), encoding="utf-8")
-
 
 # ---------------------------------------------------------------------------
 # Unit tests for helper functions
