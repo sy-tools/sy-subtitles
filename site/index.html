@@ -1889,6 +1889,7 @@ var I18N = {
     'freshness.refreshing': '\u041E\u043D\u043E\u0432\u043B\u044E\u044E...',
     'freshness.refreshed': '\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E!',
     'freshness.up_to_date': '\u2713 \u0412\u0436\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E',
+    'freshness.offline': '\u26A0 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u043A\u0435\u0448',
     'freshness.error': '\u2717 \u041F\u043E\u043C\u0438\u043B\u043A\u0430:',
     'link.review': '\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434',
     'link.amruta': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043D\u0430 amruta.org',
@@ -2016,6 +2017,7 @@ var I18N = {
     'freshness.refreshing': 'Refreshing...',
     'freshness.refreshed': '\u2713 Refreshed!',
     'freshness.up_to_date': '\u2713 Up to date',
+    'freshness.offline': '\u26a0 Offline \u2014 cached',
     'freshness.error': '\u2717 Error:',
     'link.review': 'Review translation',
     'link.amruta': 'Open on amruta.org',
@@ -5462,13 +5464,26 @@ SPA.refreshManifest = function() {
       console.warn('SPA update to ' + target + ' detected but reload already '
         + 'attempted this session; skipping to avoid a loop.');
     }
+    // A manual refresh is an explicit retry: if it came back stale (offline /
+    // rate-limited) give feedback on EVERY click, not just the first. Re-arm the
+    // one-time toast + un-dismiss the pill BEFORE route() (which runs the guarded
+    // maybeStaleToast + updateStaleIndicator), so the signal fires once per click.
+    if (m && m._stale) { _staleToastShown = false; _staleDismissed = false; }
     route();
     updateFooter();
-    var changed = m.etag !== oldEtag;
     if (el) {
-      el.textContent = changed ? t('freshness.refreshed') : t('freshness.up_to_date');
-      el.style.color = 'var(--accent-green)';
+      if (m && m._stale) {
+        // loadManifest resolved with a stale cache, not fresh data — don't claim
+        // "up to date".
+        el.textContent = t('freshness.offline');
+        el.style.color = 'var(--accent-red)';
+      } else {
+        var changed = m.etag !== oldEtag;
+        el.textContent = changed ? t('freshness.refreshed') : t('freshness.up_to_date');
+        el.style.color = 'var(--accent-green)';
+      }
     }
+    updateStaleIndicator();
     setTimeout(function() { updateLastModifiedUI(); }, 3000);
   }).catch(function(err) {
     if (el) { el.textContent = t('freshness.error') + ' ' + err; el.style.color = 'var(--accent-red)'; }
