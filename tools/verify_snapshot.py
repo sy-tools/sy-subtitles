@@ -77,7 +77,7 @@ def verify_build(talk_dir: Path, video_slug: str, snapshot: Path) -> None:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     baseline = manifest.get("baseline")
     if baseline is None:
-        _fail("verify build: snapshot manifest lacks 'baseline' — re-run bootstrap_snapshot")
+        _fail("verify build: snapshot manifest lacks 'baseline' — regenerate the snapshot (see TESTING.md)")
 
     blocks = parse_srt(str(srt))
     report: list[str] = []
