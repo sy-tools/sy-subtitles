@@ -63,7 +63,8 @@ def _discover_cases() -> list[DryrunCase]:
 CASES = _discover_cases()
 
 # The dry-run corpus is a strict subset of shipped talks that already pass
-# validate_subtitles end-to-end — see tools.bootstrap_snapshot.KNOWN_GOOD_TALKS.
+# validate_subtitles end-to-end. The snapshots are committed fixtures; their
+# generator (tools.bootstrap_snapshot) was removed in c72e1b53 — see TESTING.md.
 # No xfails here: anything in the corpus must always be green.
 
 
@@ -72,7 +73,7 @@ def _case_params():
 
 
 def test_dryrun_corpus_nonempty() -> None:
-    assert CASES, "No pipeline_snapshots bootstrapped yet — run `python -m tools.bootstrap_snapshot --all`"
+    assert CASES, "No pipeline_snapshots found under tests/fixtures (committed fixtures; see TESTING.md)"
 
 
 def _run(cmd: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
