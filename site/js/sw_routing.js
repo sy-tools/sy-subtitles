@@ -28,13 +28,13 @@ function isApiOrRaw(url) {
 }
 
 function isApiHost(url) {
-  // The GitHub REST API (the Trees manifest), as opposed to raw content. Routed
-  // network-only so the worker NEVER caches it: offline, the app's fetch then
-  // genuinely fails and falls back to its own localStorage manifest while
-  // flagging staleness — which is what surfaces the "offline" badge. If the SW
-  // cached the Trees response instead, the app would get a cached 200 and wrongly
-  // believe it is online (navigator.onLine is unreliable when the link is up but
-  // the internet is not).
+  // The whole GitHub REST API host (the Trees manifest, the branch list), as
+  // opposed to raw content. Routed network-only so the worker NEVER caches it:
+  // offline, the app's fetch then genuinely fails and falls back to its own
+  // localStorage manifest while flagging staleness — which is what surfaces the
+  // "offline" badge. If the SW cached the Trees response instead, the app would
+  // get a cached 200 and wrongly believe it is online (navigator.onLine is
+  // unreliable when the link is up but the internet is not).
   try {
     return new URL(url).hostname === 'api.github.com';
   } catch (e) {
@@ -71,6 +71,10 @@ function hasImmutableVersion(url) {
 //  - truly-immutable CDN/static assets → cache-first.
 //  - everything else (app js/css, the Vimeo iframe) → network-first.
 function pickStrategy(url) {
+  // MUST stay ahead of the isApiOrRaw branch below: isApiOrRaw still matches
+  // api.github.com too, so removing this check would silently route the API
+  // network-first again and reintroduce the offline-shadowing bug (a cached
+  // 200 making the app believe it is online).
   if (isApiHost(url)) return 'network-only';
   if (hasImmutableVersion(url)) return 'cache-first';
   if (isNavigation(url) || isApiOrRaw(url)) return 'network-first';

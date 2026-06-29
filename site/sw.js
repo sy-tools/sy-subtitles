@@ -48,16 +48,29 @@ var SHELL_ASSETS = [
 var SHELL_CDN = ['https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'];
 
 self.addEventListener('install', function(e) {
+  // Activate the new worker regardless of whether the precache below succeeds.
+  // Precaching is a best-effort enhancement, not a prerequisite: gating
+  // skipWaiting on it would let a single failed asset (a 404, a storage-quota
+  // error, or a Cache-API-restricted private window) leave the user stuck on the
+  // old controller with the new routing/version never shipping.
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(c) {
       return c.addAll(SHELL_ASSETS).then(function() {
         return Promise.all(SHELL_CDN.map(function(u) {
-          return c.add(u).catch(function() {});
+          // Best-effort: a CDN hiccup must not fail the install — but log it, so a
+          // silently-missing js-yaml (which parses every meta.yaml) is diagnosable.
+          return c.add(u).catch(function(err) {
+            console.warn('[SW] CDN precache skipped:', u, err);
+          });
         }));
       });
-    }).then(function() {
-      // Activate immediately so the new version (and its precache) take effect.
-      return self.skipWaiting();
+    }).catch(function(err) {
+      // Shell precache failed (an asset 404'd, or the Cache API is unavailable).
+      // Swallow so install still succeeds and the worker activates with live
+      // network routing — only offline boot is degraded, not the whole worker —
+      // and log which/why instead of surfacing a bare "SW install failed".
+      console.error('[SW] shell precache failed — offline boot degraded:', err);
     })
   );
 });
@@ -85,8 +98,9 @@ function networkFirst(request) {
     }
     return response;
   }).catch(function() {
-    // ignoreSearch so a navigation like /index.html?sw=1 or /?branch=x resolves
-    // to the precached shell (stored without the query).
+    // ignoreSearch so an offline fallback matches the precached copy even when the
+    // request carries a query the cache key lacks — applies to every network-first
+    // miss, most visibly a navigation like /index.html?sw=1 or /?branch=x.
     return caches.match(request, { ignoreSearch: true }).then(function(hit) {
       if (hit) return hit;
       // A navigation that still missed (any path/query) boots the SPA from the
@@ -96,7 +110,10 @@ function networkFirst(request) {
           return root || caches.match('index.html', { ignoreSearch: true });
         });
       }
-      return undefined;
+      // Non-navigation offline miss: fail explicitly. Response.error() yields the
+      // same network error the page's fetch().catch() already handles, but states
+      // the intent rather than letting respondWith synthesize it from undefined.
+      return Response.error();
     });
   });
 }
@@ -121,8 +138,9 @@ self.addEventListener('fetch', function(e) {
     // CDN libs, icon, and sha-pinned ?v= content (SRT/transcripts): cache-first
     e.respondWith(cacheFirst(e.request));
   } else if (strategy === 'network-only') {
-    // GitHub Trees API: passthrough, never cached. Offline this rejects, so the
-    // app falls back to its localStorage manifest and shows the offline badge.
+    // GitHub REST API (the Trees manifest, the branch list): passthrough, never
+    // cached. Offline this rejects, so the app falls back to its localStorage
+    // manifest and shows the offline badge.
     e.respondWith(fetch(e.request));
   } else {
     // HTML shell + meta.yaml + everything else: network-first
