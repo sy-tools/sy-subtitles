@@ -17,6 +17,8 @@
      app script below runs. -->
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/index_url_state.js"></script>
+<script src="js/manifest_fetch.js"></script>
 <script src="js/talk_slug.js"></script>
 <script src="js/vimeo_codec.js"></script>
 <script src="js/add_talk_data.js"></script>
@@ -1407,6 +1409,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
     <div class="branch-dropdown" id="branch-dropdown"></div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
+    <span id="stale-indicator" style="display:none;align-items:center;gap:6px;background:var(--bg4);color:var(--fg3);border:1px solid var(--border3);border-radius:10px;padding:1px 4px 1px 8px;font-size:11px;">
+      <span class="stale-text"></span>
+      <button class="stale-x" onclick="SPA.dismissStale()" data-i18n-title="stale.dismiss" style="background:none;border:none;color:var(--fg5);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;">&#x00D7;</button>
+    </span>
     <span id="last-updated"></span>
     <button id="refresh-btn" onclick="SPA.refreshManifest()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;display:none;" data-i18n-title="title.refresh">&#x21bb;</button>
     <button id="lang-btn" onclick="SPA.toggleLang()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;" data-i18n-title="title.lang">UK</button>
@@ -1883,6 +1889,7 @@ var I18N = {
     'freshness.refreshing': '\u041E\u043D\u043E\u0432\u043B\u044E\u044E...',
     'freshness.refreshed': '\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E!',
     'freshness.up_to_date': '\u2713 \u0412\u0436\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E',
+    'freshness.offline': '\u26A0 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u043A\u0435\u0448',
     'freshness.error': '\u2717 \u041F\u043E\u043C\u0438\u043B\u043A\u0430:',
     'link.review': '\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434',
     'link.amruta': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043D\u0430 amruta.org',
@@ -1906,6 +1913,12 @@ var I18N = {
 
     'add.link': '+ \u0414\u043E\u0434\u0430\u0442\u0438',
     'error.srt': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432',
+    'error.rate_limit': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u041F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u043A\u0435\u0448; \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0430 {min} \u0445\u0432',
+    'error.rate_limit_nocache': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0437\u0430 {min} \u0445\u0432',
+    'error.stale_cache': '\u041D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u2014 \u043F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0443 \u0432\u0435\u0440\u0441\u0456\u044E',
+    'stale.offline': '\u041A\u0435\u0448 \u00B7 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443',
+    'stale.rate_limit': '\u041A\u0435\u0448 \u00B7 \u043B\u0456\u043C\u0456\u0442 GitHub ({min} \u0445\u0432)',
+    'stale.dismiss': '\u0421\u0445\u043E\u0432\u0430\u0442\u0438',
     'review.load_error': 'Не вдалося завантажити транскрипт: {err}',
     'review.srt_load_error': 'Не вдалося завантажити субтитри: {err}',
     'badge.needs_review': '\u043F\u043E\u0442\u0440\u0435\u0431\u0443\u0454 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438',
@@ -2004,6 +2017,7 @@ var I18N = {
     'freshness.refreshing': 'Refreshing...',
     'freshness.refreshed': '\u2713 Refreshed!',
     'freshness.up_to_date': '\u2713 Up to date',
+    'freshness.offline': '\u26a0 Offline \u2014 cached',
     'freshness.error': '\u2717 Error:',
     'link.review': 'Review translation',
     'link.amruta': 'Open on amruta.org',
@@ -2027,6 +2041,12 @@ var I18N = {
 
     'add.link': '+ Add Talk',
     'error.srt': 'Error loading subtitles',
+    'error.rate_limit': 'GitHub rate limit reached. Showing cached data; refresh in {min} min',
+    'error.rate_limit_nocache': 'GitHub rate limit reached. Try again in {min} min',
+    'error.stale_cache': 'Offline — showing the cached version',
+    'stale.offline': 'Cached · offline',
+    'stale.rate_limit': 'Cached · GitHub limit ({min} min)',
+    'stale.dismiss': 'Dismiss',
     'review.load_error': 'Failed to load transcript: {err}',
     'review.srt_load_error': 'Failed to load subtitles: {err}',
     'badge.needs_review': 'needs review',
@@ -2952,6 +2972,13 @@ var reviewStatus = null;
 window.addEventListener('hashchange', route);
 window.addEventListener('load', route);
 
+// Persist the preview playback position when the tab is hidden or unloaded —
+// the throttled writer may have a pending tick that would otherwise be lost.
+window.addEventListener('pagehide', flushPreviewPos);
+document.addEventListener('visibilitychange', function() {
+  if (document.visibilityState === 'hidden') flushPreviewPos();
+});
+
 window.addEventListener('hashchange', function() {
   if (!/^#\/review\//.test(location.hash)) {
     SyncPlayer.destroy();
@@ -3007,6 +3034,10 @@ function ensureManifest() {
 
 function route() {
   var hash = location.hash.slice(1) || '/';
+
+  // Persist the preview playback position before any navigation tears down or
+  // pauses the player. No-op when not on a preview (guards on talkId).
+  flushPreviewPos();
 
   // Soft passphrase gate: a gated route reached while locked (e.g. a pasted
   // deep link) redirects to the index and prompts there; only a correct
@@ -3069,15 +3100,33 @@ function loadManifest() {
   var headers = {};
   if (cache && cache.etag) headers['If-None-Match'] = cache.etag;
 
+  // Serve the cached manifest (flagged stale) instead of a blank index when the
+  // API is rate-limited (unauthenticated REST is ~60 req/h) or unreachable.
+  // rateLimitInfo/makeManifestError live in js/manifest_fetch.js (Node-tested).
+  function staleCache(reason, rlReset) {
+    cache._stale = true;
+    cache._staleReason = reason;
+    cache._rlReset = rlReset || null;
+    return cache;
+  }
+
   return fetch(API + '/git/trees/' + BRANCH + '?recursive=1', { headers: headers })
     .then(function(r) {
       if (r.status === 304 && cache) {
         // On 304, Last-Modified header is still returned
         var lm304 = r.headers.get('Last-Modified');
         if (lm304) cache.lastModified = lm304;
-        return cache;
+        // Defensive: stale flags live only on the in-memory object today (never
+        // persisted), but clear them on revalidation so a future persisted-stale
+        // cache couldn't leak a stale marker into a fresh 304.
+        delete cache._stale; delete cache._staleReason; delete cache._rlReset;
+        return hydrateManifestMeta(cache);
       }
-      if (!r.ok) throw 'API ' + r.status;
+      if (!r.ok) {
+        var info = rateLimitInfo(r.status, function(n) { return r.headers.get(n); });
+        if (cache) return staleCache(info.rateLimited ? 'rate_limit' : 'http', info.rlReset);
+        throw makeManifestError(r.status, info);
+      }
       var etag = r.headers.get('ETag');
       var lastMod = r.headers.get('Last-Modified');
       return r.json().then(function(data) {
@@ -3088,57 +3137,81 @@ function loadManifest() {
         m.timestamp = Date.now();
         m._schema = CACHE_SCHEMA;
         localStorage.setItem(CACHE_KEY, JSON.stringify(m));
-        return m;
+        return hydrateManifestMeta(m);
       });
+    }, function(networkErr) {
+      // Only the fetch() promise's OWN rejection reaches this handler: offline /
+      // DNS / CORS. A TypeError thrown later in the chain (e.g. a bug in
+      // buildManifest) cannot land here, so we never misclassify a code defect as
+      // "offline". Degrade to the stale cache if we have one, else surface it.
+      if (cache) return staleCache('network', null);
+      throw networkErr;
     })
-    .then(function(m) {
-      // Fetch meta.yaml for talks that aren't cached yet
-      var fetches = [];
-      m.talks.forEach(function(t) {
-        if (!t.title) {
-          fetches.push(
-            fetch(RAW + '/talks/' + t.id + '/meta.yaml')
-              .then(function(r) { return r.ok ? r.text() : ''; })
-              .then(function(text) {
-                if (!text) return;
-                try {
-                  var meta = jsyaml.load(text);
-                  t.title = meta.title || t.id;
-                  t.date = String(meta.date || t.id.substring(0, 10));
-                  t.amrutaUrl = meta.amruta_url || '';
-                  t.videos = (meta.videos || []).map(function(v) {
-                    // Links are stored obfuscated as video_ref (js/vimeo_codec.js).
-                    // Decode here at the read edge so the rest of the SPA keeps
-                    // working with a plaintext vimeo_url in memory.
-                    var vimeoUrl = '';
-                    if (v.video_ref) {
-                      try { vimeoUrl = decodeVideoRef(v.video_ref); }
-                      catch (e) { console.warn('bad video_ref for ' + t.id, e); }
-                    }
-                    return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl };
-                  });
-                  // Mark which videos have SRT
-                  var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
-                  t.videos.forEach(function(v) {
-                    v.hasSrt = srtSet.indexOf(v.slug) !== -1;
-                  });
-                } catch(e) { console.warn('YAML parse error for ' + t.id, e); }
-              })
-          );
-        }
-      });
-      return Promise.all(fetches).then(function() {
-        // Always sync hasSrt from _srtSlugs (covers both fresh and cached)
-        m.talks.forEach(function(t) {
-          var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
-          (t.videos || []).forEach(function(v) {
-            v.hasSrt = srtSet.indexOf(v.slug) !== -1;
-          });
-        });
-        localStorage.setItem(CACHE_KEY, JSON.stringify(m));
-        return m;
+    .catch(function(err) {
+      // Reached only for errors AFTER a response arrived: a surfaced rate-limit/
+      // HTTP error (re-throw as-is), or a genuine processing failure (malformed
+      // JSON, a throw in buildManifest). Log loudly and surface it — never
+      // disguise a code/data defect as a benign "offline" fallback.
+      if (err && err.status) throw err;
+      console.error('[SPA] loadManifest processing error:', err);
+      throw err;
+    });
+}
+
+// Fetch meta.yaml for any talk still missing its title, re-sync hasSrt and
+// persist. Runs for freshly-built and 304-revalidated manifests. The stale/
+// offline fallbacks bypass it: their per-talk meta refetches would also fail, and
+// the cached manifest they return is already hydrated.
+function hydrateManifestMeta(m) {
+  var fetches = [];
+  m.talks.forEach(function(t) {
+    if (!t.title) {
+      fetches.push(
+        fetch(RAW + '/talks/' + t.id + '/meta.yaml')
+          .then(function(r) { return r.ok ? r.text() : ''; })
+          .then(function(text) {
+            if (!text) return;
+            try {
+              var meta = jsyaml.load(text);
+              t.title = meta.title || t.id;
+              t.date = String(meta.date || t.id.substring(0, 10));
+              t.amrutaUrl = meta.amruta_url || '';
+              t.videos = (meta.videos || []).map(function(v) {
+                // Links are stored obfuscated as video_ref (js/vimeo_codec.js).
+                // Decode here at the read edge so the rest of the SPA keeps
+                // working with a plaintext vimeo_url in memory.
+                var vimeoUrl = '';
+                if (v.video_ref) {
+                  try { vimeoUrl = decodeVideoRef(v.video_ref); }
+                  catch (e) { console.warn('bad video_ref for ' + t.id, e); }
+                }
+                return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl };
+              });
+              // Mark which videos have SRT
+              var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
+              t.videos.forEach(function(v) {
+                v.hasSrt = srtSet.indexOf(v.slug) !== -1;
+              });
+            } catch(e) { console.warn('YAML parse error for ' + t.id, e); }
+          })
+          // Keep one talk's transient fetch failure from rejecting Promise.all and
+          // throwing away the whole (already-persisted) refresh — degrade to "no
+          // title" for that talk instead.
+          .catch(function(e) { console.warn('meta.yaml load failed for ' + t.id, e); })
+      );
+    }
+  });
+  return Promise.all(fetches).then(function() {
+    // Always sync hasSrt from _srtSlugs (covers both fresh and cached)
+    m.talks.forEach(function(t) {
+      var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
+      (t.videos || []).forEach(function(v) {
+        v.hasSrt = srtSet.indexOf(v.slug) !== -1;
       });
     });
+    localStorage.setItem(CACHE_KEY, JSON.stringify(m));
+    return m;
+  });
 }
 
 function buildManifest(tree) {
@@ -3276,25 +3349,82 @@ function renderStats() {
   bar.style.display = 'flex';
 }
 
+var REVIEW_STATUS_CACHE_KEY = 'sy_review_status__' + BRANCH;
 function loadReviewStatus() {
   var sha = (manifest && manifest._reviewSha) || '';
   var url = RAW + '/review-status.json' + (sha ? '?v=' + sha.substring(0, 8) : '');
+  // On any failure (offline / rate-limited refresh / HTTP error) fall back to the
+  // current or last-persisted statuses instead of an empty set — empties zero the
+  // whole index (filters + stat counts key off review status). reviewStatusFallback
+  // lives in js/manifest_fetch.js (Node-tested).
+  function onFail(err) {
+    console.warn('[SPA] review-status refresh failed, keeping cached statuses:', err);
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem(REVIEW_STATUS_CACHE_KEY)); } catch (e) {}
+    reviewStatus = reviewStatusFallback(reviewStatus, cached);
+    return reviewStatus;
+  }
   return fetch(url)
-    .then(function(r) { return r.ok ? r.json() : { talks: {} }; })
-    .then(function(data) { reviewStatus = data; return data; })
-    .catch(function() { reviewStatus = { talks: {} }; return reviewStatus; });
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function(data) {
+      reviewStatus = data;
+      try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+      return data;
+    })
+    .catch(onFail);
 }
 
 // ============================================================
 // INDEX VIEW
 // ============================================================
+// Reflect / restore the index search + filter in real URL query params (?q=, ?f=).
+// readIndexQuery/readIndexFilter/buildIndexSearch live in js/index_url_state.js
+// (single source, Node-tested). branch and any other params are preserved.
+function applyIndexUrlState() {
+  var searchEl = document.getElementById('search-input');
+  var urlQuery = readIndexQuery(location.search);
+  // Don't clobber a value the user has already typed; URL only seeds an empty box.
+  if (searchEl && urlQuery && !searchEl.value) searchEl.value = urlQuery;
+  var urlFilter = readIndexFilter(location.search);
+  if (urlFilter) activeFilter = urlFilter;
+}
+
+function syncIndexUrl() {
+  var searchEl = document.getElementById('search-input');
+  var qs = buildIndexSearch(location.search, {
+    query: searchEl ? (searchEl.value || '') : '',
+    filter: activeFilter,
+    defaultFilter: loadSavedFilter(expertMode),
+  });
+  // replaceState only — never touch the hash (the index has none; a fresh hash
+  // would re-trigger the router). Keep any existing hash just in case.
+  history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
+}
+
+// When loadManifest served a stale cache (rate-limit / offline), tell the user
+// once — quietly, since the index still renders from cache. Re-arms when the
+// manifest goes fresh again so a later outage re-notifies.
+var _staleToastShown = false;
+function maybeStaleToast() {
+  if (!manifest || !manifest._stale) { _staleToastShown = false; return; }
+  if (_staleToastShown || typeof showToast !== 'function') return;
+  _staleToastShown = true;
+  var msg = t('error.stale_cache');
+  if (manifest._staleReason === 'rate_limit') {
+    var min = minutesUntilReset(manifest._rlReset, Date.now());
+    if (min) msg = t('error.rate_limit').replace('{min}', min);
+  }
+  showToast(msg);
+}
+
 function showIndex() {
   document.getElementById('view-index').classList.add('active');
   document.title = 'SY Subtitles — Index';
+  applyIndexUrlState();
   var statusEl = document.getElementById('index-status');
   var contentEl = document.getElementById('index-content');
 
-  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); statusEl.style.display = 'none'; return; }
+  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); maybeStaleToast(); statusEl.style.display = 'none'; return; }
 
   statusEl.textContent = t('index.loading');
   statusEl.style.display = 'block';
@@ -3305,10 +3435,21 @@ function showIndex() {
   ]).then(function() {
     renderStats();
     renderIndex(contentEl);
+    maybeStaleToast();
     statusEl.style.display = 'none';
     statusEl.classList.remove('status-error');
   }).catch(function(err) {
-    statusEl.textContent = t('review.load_error').replace('{err}', err);
+    // No cache to fall back on. Phrase rate-limit failures helpfully instead of
+    // dumping a raw "API 403".
+    var msg;
+    if (err && err.rateLimited) {
+      var min = minutesUntilReset(err.rlReset, Date.now());
+      msg = min ? t('error.rate_limit_nocache').replace('{min}', min)
+                : t('review.load_error').replace('{err}', 'rate limit');
+    } else {
+      msg = t('review.load_error').replace('{err}', (err && err.message) || err);
+    }
+    statusEl.textContent = msg;
     statusEl.classList.add('status-error');
   });
 }
@@ -3449,6 +3590,7 @@ SPA.filterTalks = function(filter) {
     c.classList.toggle('active', c.dataset.filter === activeFilter);
   });
   renderIndex(document.getElementById('index-content'));
+  syncIndexUrl();
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -3457,7 +3599,11 @@ document.addEventListener('DOMContentLoaded', function() {
     var debounce;
     searchEl.addEventListener('input', function() {
       clearTimeout(debounce);
-      debounce = setTimeout(function() { renderStats(); renderIndex(document.getElementById('index-content')); }, 200);
+      debounce = setTimeout(function() {
+        renderStats();
+        renderIndex(document.getElementById('index-content'));
+        syncIndexUrl();
+      }, 200);
     });
   }
   // Sticky view-headers sit directly under #freshness-bar; keep --freshness-h
@@ -3582,6 +3728,13 @@ function showPreview(talkId, videoSlug) {
   document.getElementById('view-preview').classList.add('active');
 
   document.getElementById('subtitle-overlay').textContent = '';
+  // We just blanked the overlay; clear the renderOverlayAt change-detector cache
+  // too, otherwise a sameVideo re-entry (e.g. the freshness-bar refresh re-running
+  // showPreview) keeps lastText === the current subtitle, so the rAF loop sees "no
+  // change" and never repaints — the subtitle stays blank until the next one's
+  // time comes. (Fresh entries replace previewState below, so this only matters on
+  // re-entry.)
+  if (previewState) { previewState.lastText = ''; previewState.lastSec = null; }
   if (previewState && previewState.player) {
     try { previewState.player.pause(); } catch(e) {}
   }
@@ -3713,6 +3866,7 @@ function showPreview(talkId, videoSlug) {
   // Sole writer of the overlay + time display, called every animation frame.
   function renderOverlayAt(sec) {
     previewState.currentTime = sec;
+    throttlePreviewPos();
     var ms = Math.round(sec * 1000);
     var idx = findActiveSubtitleIdx(previewState.subtitles, ms);
     var text = '';
@@ -3769,6 +3923,20 @@ function showPreview(talkId, videoSlug) {
       // stops. Navigating to a different video stops it via stillOnSameVideo().
       var rafToken = {};
       previewState._rafToken = rafToken;
+      // Reaching the end clears the saved position so the next visit starts
+      // fresh. The overlay loop keeps polling after 'ended' and reports ~duration,
+      // so we must (a) cancel the pending throttled write and (b) set _ended — both
+      // stop writePreviewPosNow from resurrecting the end position. Cleared on the
+      // next play so a replay re-persists normally.
+      player.on('ended', function() {
+        if (!stillOnSameVideo()) return;
+        if (_previewPosTimer) { clearTimeout(_previewPosTimer); _previewPosTimer = null; }
+        previewState._ended = true;
+        savePreviewPos(previewState.talkId, previewState.videoSlug, localStorage, 0);
+      });
+      player.on('play', function() {
+        if (stillOnSameVideo()) previewState._ended = false;
+      });
       var pollInFlight = false;
       function overlayLoop() {
         if (!stillOnSameVideo() || previewState._rafToken !== rafToken) return;
@@ -3785,6 +3953,15 @@ function showPreview(talkId, videoSlug) {
       }
       player.ready().then(function() {
         console.log('[SPA] Vimeo player ready');
+        // Resume where the user left off on this video. Only fresh entries reach
+        // here (sameVideo re-entry keeps the live player + position); trivial
+        // near-start positions are skipped by shouldResumePreviewPos.
+        var resumeSec = loadPreviewPos(talkId, videoSlug, localStorage);
+        if (shouldResumePreviewPos(resumeSec)) {
+          player.setCurrentTime(resumeSec).catch(function(e) {
+            console.warn('[SPA] preview resume setCurrentTime failed:', e);
+          });
+        }
         requestAnimationFrame(overlayLoop);
       }).catch(function(err) {
         console.warn('[SPA] Vimeo player error:', err);
@@ -3821,6 +3998,28 @@ function savePreviewState() {
     edits: previewState.edits || {},
   };
   localStorage.setItem(key, JSON.stringify(payload));
+}
+
+// Playback position is persisted under its own key (sy.preview_pos.*) on a 2s
+// throttle so the ~60fps overlay loop doesn't thrash storage. flush writes
+// immediately (tab hide / route leave); both swallow quota errors via the
+// module helper. previewPosKey/loadPreviewPos/savePreviewPos live in
+// js/preview_state.js (single source, Node-tested).
+var _previewPosTimer = null;
+function writePreviewPosNow() {
+  // previewPosToPersist (js/preview_state.js) gates out the sentinels — the
+  // fresh-load 0 (would wipe a saved resume) and the post-`ended` end position.
+  var pos = previewPosToPersist(previewState);
+  if (pos === null) return;
+  savePreviewPos(previewState.talkId, previewState.videoSlug, localStorage, pos);
+}
+function throttlePreviewPos() {
+  if (_previewPosTimer) return;
+  _previewPosTimer = setTimeout(function() { _previewPosTimer = null; writePreviewPosNow(); }, 2000);
+}
+function flushPreviewPos() {
+  if (_previewPosTimer) { clearTimeout(_previewPosTimer); _previewPosTimer = null; }
+  writePreviewPosNow();
 }
 
 function applyPreviewMode() {
@@ -5208,7 +5407,31 @@ function updateLastModifiedUI() {
   } else {
     el.textContent = '';
   }
+  updateStaleIndicator();
 }
+
+// Persistent companion to the one-time stale toast: a small pill in the freshness
+// bar that lingers while the manifest is stale (offline / rate-limited), since the
+// 2s toast is a weak signal for an outage that can last up to an hour. staleNotice
+// (js/manifest_fetch.js) computes the message; dismissal hides it until the
+// manifest goes fresh again (then re-arms).
+var _staleDismissed = false;
+function updateStaleIndicator() {
+  var el = document.getElementById('stale-indicator');
+  if (!el) return;
+  var notice = staleNotice(manifest, Date.now());
+  if (!notice) { _staleDismissed = false; el.style.display = 'none'; return; }
+  if (_staleDismissed) { el.style.display = 'none'; return; }
+  var msg = t(notice.key);
+  if (notice.min != null) msg = msg.replace('{min}', notice.min);
+  var txt = el.querySelector('.stale-text');
+  if (txt) txt.textContent = msg;
+  el.style.display = 'inline-flex';
+}
+SPA.dismissStale = function() {
+  _staleDismissed = true;
+  updateStaleIndicator();
+};
 
 SPA.refreshManifest = function() {
   var el = document.getElementById('last-updated');
@@ -5241,13 +5464,26 @@ SPA.refreshManifest = function() {
       console.warn('SPA update to ' + target + ' detected but reload already '
         + 'attempted this session; skipping to avoid a loop.');
     }
+    // A manual refresh is an explicit retry: if it came back stale (offline /
+    // rate-limited) give feedback on EVERY click, not just the first. Re-arm the
+    // one-time toast + un-dismiss the pill BEFORE route() (which runs the guarded
+    // maybeStaleToast + updateStaleIndicator), so the signal fires once per click.
+    if (m && m._stale) { _staleToastShown = false; _staleDismissed = false; }
     route();
     updateFooter();
-    var changed = m.etag !== oldEtag;
     if (el) {
-      el.textContent = changed ? t('freshness.refreshed') : t('freshness.up_to_date');
-      el.style.color = 'var(--accent-green)';
+      if (m && m._stale) {
+        // loadManifest resolved with a stale cache, not fresh data — don't claim
+        // "up to date".
+        el.textContent = t('freshness.offline');
+        el.style.color = 'var(--accent-red)';
+      } else {
+        var changed = m.etag !== oldEtag;
+        el.textContent = changed ? t('freshness.refreshed') : t('freshness.up_to_date');
+        el.style.color = 'var(--accent-green)';
+      }
     }
+    updateStaleIndicator();
     setTimeout(function() { updateLastModifiedUI(); }, 3000);
   }).catch(function(err) {
     if (el) { el.textContent = t('freshness.error') + ' ' + err; el.style.color = 'var(--accent-red)'; }

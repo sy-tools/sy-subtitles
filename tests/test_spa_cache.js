@@ -1925,7 +1925,11 @@ describe('Preview: cleanup on navigation', () => {
 
   it('player paused when entering showPreview (switching videos)', () => {
     var idx = html.indexOf('function showPreview');
-    var chunk = html.substring(idx, idx + 500);
+    // Slice the function body (to the next top-level function) rather than a
+    // fixed-width window, so comments/edits near the top (e.g. the change-detector
+    // cache reset) can't push the pause() out of view.
+    var after = html.indexOf('\nfunction ', idx + 1);
+    var chunk = html.substring(idx, after > -1 ? after : idx + 2000);
     assert.ok(chunk.includes('.pause()'), 'showPreview should pause previous player');
   });
 
