@@ -5006,12 +5006,25 @@ class TestSubtitleOverlaySize:
     # by every "set the handle to h, read the resulting font" probe so a
     # constant change in the production formula doesn't silently leave the
     # tests asserting against stale numbers.
+    #
+    # It must also PERSIST the height (localStorage keySubs), exactly as a real
+    # drag's onCommit does. Without that, the tuned state is unsaved: the resize
+    # that fires when this probe toggles native fullscreen re-runs
+    # ensurePreviewResizers, which — seeing no saved subs — wipes data-subs-tuned
+    # and --preview-subs-scale, dropping the fs-mode font back to the un-tuned
+    # baseline. That race is the long-standing `big == baseline` flake. Saving
+    # makes ensurePreviewResizers RE-APPLY the height (the real-usage path) so the
+    # scale survives the toggle deterministically. Key mirrors production:
+    # 'sy.preview_subs_h.' + previewTalkKey() where previewTalkKey = talk '.' video
+    # parsed from the #/preview/<talk>/<video> hash.
     _SET_HANDLE_JS = """
       (h) => {
         const scale = Math.max(0.5, Math.min(4, h / 120));
         document.documentElement.style.setProperty('--preview-subs-h', h + 'px');
         document.documentElement.style.setProperty('--preview-subs-scale', String(scale));
         document.getElementById('view-preview').setAttribute('data-subs-tuned', '1');
+        const m = (location.hash || '').match(/^#\\/preview\\/([^/]+)\\/([^/?#]+)/);
+        if (m) localStorage.setItem('sy.preview_subs_h.' + m[1] + '.' + m[2], String(h));
       }
     """
 
