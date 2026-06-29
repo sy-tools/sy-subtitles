@@ -3104,7 +3104,9 @@ function loadManifest() {
         // On 304, Last-Modified header is still returned
         var lm304 = r.headers.get('Last-Modified');
         if (lm304) cache.lastModified = lm304;
-        // Revalidated: the cache is current again, so drop any stale flags.
+        // Defensive: stale flags live only on the in-memory object today (never
+        // persisted), but clear them on revalidation so a future persisted-stale
+        // cache couldn't leak a stale marker into a fresh 304.
         delete cache._stale; delete cache._staleReason; delete cache._rlReset;
         return hydrateManifestMeta(cache);
       }
@@ -3125,20 +3127,29 @@ function loadManifest() {
         localStorage.setItem(CACHE_KEY, JSON.stringify(m));
         return hydrateManifestMeta(m);
       });
+    }, function(networkErr) {
+      // Only the fetch() promise's OWN rejection reaches this handler: offline /
+      // DNS / CORS. A TypeError thrown later in the chain (e.g. a bug in
+      // buildManifest) cannot land here, so we never misclassify a code defect as
+      // "offline". Degrade to the stale cache if we have one, else surface it.
+      if (cache) return staleCache('network', null);
+      throw networkErr;
     })
     .catch(function(err) {
-      // A rich HTTP/rate-limit error already has .status — it's final, re-throw.
-      // A network rejection (offline/DNS) has no .status: fall back to the stale
-      // cache if present, otherwise surface the failure to the caller.
+      // Reached only for errors AFTER a response arrived: a surfaced rate-limit/
+      // HTTP error (re-throw as-is), or a genuine processing failure (malformed
+      // JSON, a throw in buildManifest). Log loudly and surface it — never
+      // disguise a code/data defect as a benign "offline" fallback.
       if (err && err.status) throw err;
-      if (cache) return staleCache('network', null);
+      console.error('[SPA] loadManifest processing error:', err);
       throw err;
     });
 }
 
 // Fetch meta.yaml for any talk still missing its title, re-sync hasSrt and
-// persist. Runs for both freshly-built and 304-revalidated manifests; the
-// stale/offline fallbacks bypass it (the tree is unchanged — nothing to refresh).
+// persist. Runs for freshly-built and 304-revalidated manifests. The stale/
+// offline fallbacks bypass it: their per-talk meta refetches would also fail, and
+// the cached manifest they return is already hydrated.
 function hydrateManifestMeta(m) {
   var fetches = [];
   m.talks.forEach(function(t) {
@@ -3171,6 +3182,10 @@ function hydrateManifestMeta(m) {
               });
             } catch(e) { console.warn('YAML parse error for ' + t.id, e); }
           })
+          // Keep one talk's transient fetch failure from rejecting Promise.all and
+          // throwing away the whole (already-persisted) refresh — degrade to "no
+          // title" for that talk instead.
+          .catch(function(e) { console.warn('meta.yaml load failed for ' + t.id, e); })
       );
     }
   });
@@ -3330,7 +3345,8 @@ function loadReviewStatus() {
   // current or last-persisted statuses instead of an empty set — empties zero the
   // whole index (filters + stat counts key off review status). reviewStatusFallback
   // lives in js/manifest_fetch.js (Node-tested).
-  function onFail() {
+  function onFail(err) {
+    console.warn('[SPA] review-status refresh failed, keeping cached statuses:', err);
     var cached = null;
     try { cached = JSON.parse(localStorage.getItem(REVIEW_STATUS_CACHE_KEY)); } catch (e) {}
     reviewStatus = reviewStatusFallback(reviewStatus, cached);
@@ -3889,9 +3905,18 @@ function showPreview(talkId, videoSlug) {
       var rafToken = {};
       previewState._rafToken = rafToken;
       // Reaching the end clears the saved position so the next visit starts
-      // fresh instead of resuming one frame from the end.
+      // fresh. The overlay loop keeps polling after 'ended' and reports ~duration,
+      // so we must (a) cancel the pending throttled write and (b) set _ended — both
+      // stop writePreviewPosNow from resurrecting the end position. Cleared on the
+      // next play so a replay re-persists normally.
       player.on('ended', function() {
-        if (stillOnSameVideo()) savePreviewPos(previewState.talkId, previewState.videoSlug, localStorage, 0);
+        if (!stillOnSameVideo()) return;
+        if (_previewPosTimer) { clearTimeout(_previewPosTimer); _previewPosTimer = null; }
+        previewState._ended = true;
+        savePreviewPos(previewState.talkId, previewState.videoSlug, localStorage, 0);
+      });
+      player.on('play', function() {
+        if (stillOnSameVideo()) previewState._ended = false;
       });
       var pollInFlight = false;
       function overlayLoop() {
@@ -3963,9 +3988,11 @@ function savePreviewState() {
 // js/preview_state.js (single source, Node-tested).
 var _previewPosTimer = null;
 function writePreviewPosNow() {
-  if (previewState && previewState.talkId && typeof previewState.currentTime === 'number') {
-    savePreviewPos(previewState.talkId, previewState.videoSlug, localStorage, previewState.currentTime);
-  }
+  // previewPosToPersist (js/preview_state.js) gates out the sentinels — the
+  // fresh-load 0 (would wipe a saved resume) and the post-`ended` end position.
+  var pos = previewPosToPersist(previewState);
+  if (pos === null) return;
+  savePreviewPos(previewState.talkId, previewState.videoSlug, localStorage, pos);
 }
 function throttlePreviewPos() {
   if (_previewPosTimer) return;

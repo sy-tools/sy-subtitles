@@ -104,12 +104,14 @@ function canReusePreviewPlayer(prev, talkId, videoSlug, hasIframe) {
 }
 
 // --- Preview playback position (#7) ---------------------------------------
-// The live overlay loop (renderOverlayAt) already tracks previewState.currentTime
-// in SECONDS, but it is reset to 0 on every fresh entry so a refresh restarts
-// the video. We persist the position under its own key — NOT inside the
-// marker/edit payload — because the overlay loop ticks ~60fps and writing the
-// whole {mode,markers,edits} blob that often would thrash storage. Mirrors the
-// review sync player's `sy.sync_player.*` convention.
+// The live overlay loop (renderOverlayAt) tracks previewState.currentTime in
+// SECONDS, but it resets to 0 on every fresh entry, so a refresh restarts the
+// video. We persist the position under its OWN key, not inside the marker/edit
+// payload: that keeps each write tiny and isolates position writes (driven by
+// the overlay loop, throttled in index.html) from clobbering the marker/edit
+// blob. Key-naming mirrors the review sync player's `sy.sync_player.*` convention;
+// the stored VALUE differs (bare seconds here vs the sync player's JSON
+// `{open,lastTime(ms),...}`).
 var RESUME_THRESHOLD_SEC = 3; // don't bother resuming a near-start position
 
 function previewPosKey(talkId, videoSlug) {
@@ -142,6 +144,19 @@ function shouldResumePreviewPos(seconds) {
   return typeof seconds === 'number' && isFinite(seconds) && seconds > RESUME_THRESHOLD_SEC;
 }
 
+// Decide what the index.html flushers should persist for the live position, or
+// null to skip. Two sentinels must never be written: the fresh-entry 0 (the
+// resume seek hasn't landed yet — persisting it would wipe a saved point) and
+// the end-of-video time (we want a clean restart, flagged by state._ended; the
+// 'ended' handler stores 0 directly). Persisting only resumable positions
+// (> threshold) means we store exactly what we'd resume, which also drops the
+// load-window 0 and any sub-threshold time for free.
+function previewPosToPersist(state) {
+  if (!state || !state.talkId) return null;
+  if (state._ended) return null;
+  return shouldResumePreviewPos(state.currentTime) ? state.currentTime : null;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     defaultPreviewState: defaultPreviewState,
@@ -153,5 +168,6 @@ if (typeof module !== 'undefined' && module.exports) {
     loadPreviewPos: loadPreviewPos,
     savePreviewPos: savePreviewPos,
     shouldResumePreviewPos: shouldResumePreviewPos,
+    previewPosToPersist: previewPosToPersist,
   };
 }

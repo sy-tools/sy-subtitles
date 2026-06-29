@@ -41,6 +41,10 @@ describe('readIndexFilter', () => {
       assert.strictEqual(readIndexFilter('?f=' + f), f);
     });
   });
+  it('is case-sensitive — only exact lowercase values match', () => {
+    assert.strictEqual(readIndexFilter('?f=Approved'), null);
+    assert.strictEqual(readIndexFilter('?f=ALL'), null);
+  });
 });
 
 describe('buildIndexSearch', () => {
@@ -85,5 +89,13 @@ describe('buildIndexSearch', () => {
     const qs = buildIndexSearch('', { query: 'shri mataji', filter: 'in-review', defaultFilter: 'all' });
     assert.strictEqual(readIndexQuery('?' + qs), 'shri mataji');
     assert.strictEqual(readIndexFilter('?' + qs), 'in-review');
+  });
+  it('tolerates a null/undefined state (drops q/f, keeps other params)', () => {
+    assert.strictEqual(buildIndexSearch('?branch=dev', undefined), 'branch=dev');
+    assert.strictEqual(buildIndexSearch('', null), '');
+  });
+  it('safely round-trips a query that needs URL-encoding', () => {
+    const qs = buildIndexSearch('', { query: 'a b&c=d', filter: 'all', defaultFilter: 'all' });
+    assert.strictEqual(readIndexQuery('?' + qs), 'a b&c=d');
   });
 });

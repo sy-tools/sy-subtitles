@@ -9,6 +9,7 @@ const {
   loadPreviewPos,
   savePreviewPos,
   shouldResumePreviewPos,
+  previewPosToPersist,
 } = require('../site/js/preview_state');
 const { findActiveSubtitleIdx } = require('../site/js/preview_srt_parser');
 
@@ -210,6 +211,41 @@ describe('preview playback position — persist & resume (#7)', () => {
     assert.strictEqual(shouldResumePreviewPos(3), false);
     assert.strictEqual(shouldResumePreviewPos(3.5), true);
     assert.strictEqual(shouldResumePreviewPos(120), true);
+  });
+  it('shouldResumePreviewPos rejects non-finite / non-number inputs', () => {
+    assert.strictEqual(shouldResumePreviewPos(NaN), false);
+    assert.strictEqual(shouldResumePreviewPos(Infinity), false);
+    assert.strictEqual(shouldResumePreviewPos('5'), false);
+    assert.strictEqual(shouldResumePreviewPos(null), false);
+    assert.strictEqual(shouldResumePreviewPos(undefined), false);
+  });
+});
+
+describe('previewPosToPersist — gate the live position write (#7 fix)', () => {
+  // Centralizes the "what to persist" decision so the index.html flushers never
+  // write a sentinel: the fresh-entry 0 (resume seek not yet landed) or the
+  // end-of-video position (we want a clean restart, signalled by _ended).
+  it('returns null without a talk (nothing to key on)', () => {
+    assert.strictEqual(previewPosToPersist(null), null);
+    assert.strictEqual(previewPosToPersist({}), null);
+    assert.strictEqual(previewPosToPersist({ currentTime: 120 }), null);
+  });
+  it('returns the position for a resumable mid-video time', () => {
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: 3.5 }), 3.5);
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: 600 }), 600);
+  });
+  it('returns null for the fresh-load sentinel 0 and any <=3s (would clobber a saved point)', () => {
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: 0 }), null);
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: 2 }), null);
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: 3 }), null);
+  });
+  it('returns null once the video has ended, even at a large time (clean restart)', () => {
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: 600, _ended: true }), null);
+  });
+  it('returns null for a non-finite / non-number currentTime', () => {
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: NaN }), null);
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v', currentTime: Infinity }), null);
+    assert.strictEqual(previewPosToPersist({ talkId: 'T', videoSlug: 'v' }), null);
   });
 });
 

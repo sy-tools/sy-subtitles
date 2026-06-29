@@ -13,6 +13,9 @@
 function rateLimitInfo(status, headerGet) {
   var get = typeof headerGet === 'function' ? headerGet : function () { return null; };
   var remaining = get('X-RateLimit-Remaining');
+  // String compare — header values are strings. Detects GitHub's PRIMARY rate
+  // limit only; secondary/abuse limits return 403 with Retry-After and no
+  // X-RateLimit-Remaining: 0, so they fall through to the generic 'http' path.
   var limited = (status === 403 || status === 429) && remaining === '0';
   var rlReset = null;
   if (limited) {

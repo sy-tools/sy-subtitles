@@ -83,6 +83,10 @@ describe('reviewStatusFallback — never clobber good statuses with empties', ()
   it('treats a current without a talks map as empty', () => {
     assert.strictEqual(reviewStatusFallback({}, cached), cached);
   });
+  it('ignores a cached object that lacks a talks map', () => {
+    assert.deepStrictEqual(reviewStatusFallback(empty, {}), { talks: {} });
+    assert.deepStrictEqual(reviewStatusFallback(null, {}), { talks: {} });
+  });
 });
 
 describe('minutesUntilReset', () => {
