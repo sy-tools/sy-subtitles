@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-06-27T06:31:25.050383+00:00",
+  "updated_at": "2026-06-29T22:25:57.079146+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -529,6 +529,12 @@
       "reviewer": "IrynaFilSY",
       "issue_number": 577,
       "updated_at": "2026-06-27T06:30:12Z"
+    },
+    "1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 652,
+      "updated_at": "2026-06-29T22:25:45Z"
     }
   }
 }
