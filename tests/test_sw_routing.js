@@ -12,6 +12,7 @@ const assert = require('node:assert');
 const {
   isImmutable,
   isApiOrRaw,
+  isApiHost,
   isNavigation,
   hasImmutableVersion,
   pickStrategy,
@@ -86,11 +87,23 @@ describe('hasImmutableVersion — sha-pinned (?v=) content is immutable by URL',
   });
 });
 
+describe('isApiHost — the GitHub Trees API, routed network-only', () => {
+  it('matches api.github.com only (not raw, not other hosts)', () => {
+    assert.strictEqual(isApiHost('https://api.github.com/git/trees/main?recursive=1'), true);
+    assert.strictEqual(isApiHost('https://raw.githubusercontent.com/o/r/main/x.srt'), false);
+    assert.strictEqual(isApiHost('https://github.com/o/r'), false);
+    assert.strictEqual(isApiHost('https://api.github.com.evil.com/x'), false);
+    assert.strictEqual(isApiHost('not a url'), false);
+  });
+});
+
 describe('pickStrategy — the routing the fetch handler applies', () => {
-  it('navigation, API and raw are network-first', () => {
+  it('the Trees API is network-only (never cached, so offline is detectable)', () => {
+    assert.strictEqual(pickStrategy('https://api.github.com/git/trees/main?recursive=1'), 'network-only');
+  });
+  it('navigation and raw (meta.yaml) are network-first', () => {
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/'), 'network-first');
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/index.html'), 'network-first');
-    assert.strictEqual(pickStrategy('https://api.github.com/git/trees/main?recursive=1'), 'network-first');
     // raw WITHOUT ?v= (meta.yaml) stays network-first
     assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml'), 'network-first');
   });

@@ -27,6 +27,21 @@ function isApiOrRaw(url) {
   }
 }
 
+function isApiHost(url) {
+  // The GitHub REST API (the Trees manifest), as opposed to raw content. Routed
+  // network-only so the worker NEVER caches it: offline, the app's fetch then
+  // genuinely fails and falls back to its own localStorage manifest while
+  // flagging staleness — which is what surfaces the "offline" badge. If the SW
+  // cached the Trees response instead, the app would get a cached 200 and wrongly
+  // believe it is online (navigator.onLine is unreliable when the link is up but
+  // the internet is not).
+  try {
+    return new URL(url).hostname === 'api.github.com';
+  } catch (e) {
+    return false;
+  }
+}
+
 function isNavigation(url) {
   // The HTML document: directory root, index.html, or a hash deep-link.
   return url.endsWith('/') || url.endsWith('/index.html') || url.indexOf('sy-subtitles/#') !== -1;
@@ -46,14 +61,17 @@ function hasImmutableVersion(url) {
 }
 
 // The single source of truth for the fetch handler's branch.
+//  - the GitHub Trees API → network-only: never cached, so offline the app sees a
+//    real failure and shows its cached-manifest + offline badge (checked FIRST).
 //  - sha-pinned content (?v=) → cache-first: instant offline + zero redundant
 //    refetch; a new build changes the sha → the URL, so a cache miss on the new
-//    key still fetches fresh. Checked FIRST so it wins over the raw network-first.
-//  - navigation + the GitHub API/raw endpoints → network-first (prefer fresh,
-//    fall back to cache offline).
+//    key still fetches fresh. Wins over the raw network-first.
+//  - navigation + raw (meta.yaml etc.) → network-first (prefer fresh, fall back
+//    to cache offline).
 //  - truly-immutable CDN/static assets → cache-first.
 //  - everything else (app js/css, the Vimeo iframe) → network-first.
 function pickStrategy(url) {
+  if (isApiHost(url)) return 'network-only';
   if (hasImmutableVersion(url)) return 'cache-first';
   if (isNavigation(url) || isApiOrRaw(url)) return 'network-first';
   if (isImmutable(url)) return 'cache-first';
@@ -65,6 +83,7 @@ if (typeof module !== 'undefined' && module.exports) {
     IMMUTABLE_PATTERNS: IMMUTABLE_PATTERNS,
     isImmutable: isImmutable,
     isApiOrRaw: isApiOrRaw,
+    isApiHost: isApiHost,
     isNavigation: isNavigation,
     hasImmutableVersion: hasImmutableVersion,
     pickStrategy: pickStrategy,

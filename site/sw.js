@@ -1,7 +1,7 @@
 // Service Worker for SPA caching
 // Browser detects changes by comparing sw.js byte-for-byte.
 // CACHE_VERSION: bump when cache format changes or to force purge.
-var CACHE_VERSION = 4;
+var CACHE_VERSION = 5;
 var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 
 // Routing predicates (isImmutable / isApiOrRaw / isNavigation / pickStrategy) are
@@ -116,11 +116,16 @@ function cacheFirst(request) {
 }
 
 self.addEventListener('fetch', function(e) {
-  if (pickStrategy(e.request.url) === 'cache-first') {
+  var strategy = pickStrategy(e.request.url);
+  if (strategy === 'cache-first') {
     // CDN libs, icon, and sha-pinned ?v= content (SRT/transcripts): cache-first
     e.respondWith(cacheFirst(e.request));
+  } else if (strategy === 'network-only') {
+    // GitHub Trees API: passthrough, never cached. Offline this rejects, so the
+    // app falls back to its localStorage manifest and shows the offline badge.
+    e.respondWith(fetch(e.request));
   } else {
-    // HTML shell + Trees API + meta.yaml + everything else: network-first
+    // HTML shell + meta.yaml + everything else: network-first
     e.respondWith(networkFirst(e.request));
   }
 });
