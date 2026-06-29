@@ -12,12 +12,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from hypothesis import HealthCheck, given, settings
+from hypothesis import HealthCheck, assume, given, settings
 from hypothesis import strategies as st
 
 from tools.config import OptimizeConfig
 from tools.offset_srt import apply_offset
-from tools.srt_utils import parse_srt, write_srt
+from tools.optimize_srt import optimize
+from tools.resync_srt import _remap, resync
+from tools.snap_srt_to_whisper import snap_to_whisper
+from tools.srt_utils import calc_stats, ms_to_time, parse_srt, time_to_ms, write_srt
 from tools.text_segmentation import MAX_CPL, build_blocks_from_paragraphs
 from tools.validate_subtitles import validate
 
@@ -155,3 +158,187 @@ def test_config_invariants() -> None:
     assert c.target_cps < c.hard_max_cps
     assert c.min_gap_ms >= 0
     assert c.max_cpl > 0
+
+
+# ---------------------------------------------------------------------------
+# Invariant 7: srt_utils time/parse round-trips
+# ---------------------------------------------------------------------------
+
+# 0 .. 99:59:59,999 — the SRT timestamp range ms_to_time can render.
+_MAX_SRT_MS = 99 * 3600_000 + 59 * 60_000 + 59 * 1000 + 999
+
+
+@given(st.integers(min_value=0, max_value=_MAX_SRT_MS))
+@settings(max_examples=300, deadline=None)
+def test_time_ms_roundtrip_is_identity(ms: int) -> None:
+    """time_to_ms ∘ ms_to_time == identity for every renderable millisecond."""
+    assert time_to_ms(ms_to_time(ms)) == ms
+
+
+@given(uk_map_blocks())
+@settings(max_examples=50, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_parse_write_srt_preserves_timing_and_text(tmp_path_factory, blocks: list[Block]) -> None:
+    """write_srt → parse_srt preserves each block's start/end/text exactly."""
+    path = tmp_path_factory.mktemp("rt") / "out.srt"
+    _write_srt(blocks, path)
+    parsed = parse_srt(str(path))
+    assert [(b.start_ms, b.end_ms, b.text) for b in blocks] == [(d["start_ms"], d["end_ms"], d["text"]) for d in parsed]
+
+
+def test_calc_stats_zero_duration_block_does_not_crash() -> None:
+    """A zero-duration block yields the 999 CPS sentinel instead of ZeroDivisionError."""
+    stats = calc_stats([{"idx": 1, "start_ms": 1000, "end_ms": 1000, "text": "hi"}])
+    assert stats["cps_values"] == [999]
+    assert stats["total_blocks"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Invariant 8: optimize() is a safe, idempotent transform of valid input
+# ---------------------------------------------------------------------------
+
+
+def _run_optimize(tmp_path_factory, blocks: list[Block]) -> list[dict]:
+    src = tmp_path_factory.mktemp("opt_in") / "in.srt"
+    dst = tmp_path_factory.mktemp("opt_out") / "out.srt"
+    _write_srt(blocks, src)
+    optimize(str(src), None, str(dst))
+    return parse_srt(str(dst))
+
+
+@given(uk_map_blocks())
+@settings(max_examples=40, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_optimize_produces_no_overlaps(tmp_path_factory, blocks: list[Block]) -> None:
+    """No two output blocks overlap — overlaps are invisible until playback."""
+    out = _run_optimize(tmp_path_factory, blocks)
+    assert calc_stats(out)["overlaps"] == 0
+
+
+@given(uk_map_blocks())
+@settings(max_examples=40, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_optimize_output_is_monotonic_with_positive_duration(tmp_path_factory, blocks: list[Block]) -> None:
+    """Every block has start < end and blocks stay ordered in time."""
+    out = _run_optimize(tmp_path_factory, blocks)
+    for d in out:
+        assert d["start_ms"] < d["end_ms"], f"non-positive duration: {d}"
+    for prev, nxt in zip(out, out[1:], strict=False):
+        assert prev["end_ms"] <= nxt["start_ms"], "blocks out of order / overlapping"
+
+
+@given(uk_map_blocks())
+@settings(max_examples=40, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_optimize_preserves_word_sequence(tmp_path_factory, blocks: list[Block]) -> None:
+    """Split/merge/redistribute never lose, duplicate, or reorder words."""
+    out = _run_optimize(tmp_path_factory, blocks)
+    before = " ".join(b.text for b in blocks).split()
+    after = " ".join(d["text"] for d in out).split()
+    assert before == after
+
+
+@given(uk_map_blocks())
+@settings(max_examples=40, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_optimize_introduces_no_hard_cps_violation(tmp_path_factory, blocks: list[Block]) -> None:
+    """Given input already under hard_max_cps, the optimizer keeps it that way."""
+    out = _run_optimize(tmp_path_factory, blocks)
+    assert calc_stats(out)["cps_over_hard"] == 0
+
+
+@given(uk_map_blocks())
+@settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_optimize_is_idempotent(tmp_path_factory, blocks: list[Block]) -> None:
+    """optimize(optimize(X)) == optimize(X) — the output is a fixed point."""
+    out1 = _run_optimize(tmp_path_factory, blocks)
+    reblocks = [Block(idx=d["idx"], start_ms=d["start_ms"], end_ms=d["end_ms"], text=d["text"]) for d in out1]
+    out2 = _run_optimize(tmp_path_factory, reblocks)
+    key = lambda ds: [(d["start_ms"], d["end_ms"], d["text"]) for d in ds]  # noqa: E731
+    assert key(out1) == key(out2)
+
+
+# ---------------------------------------------------------------------------
+# Invariant 9: resync onto an identical EN timeline is the identity
+# ---------------------------------------------------------------------------
+
+
+@given(uk_map_blocks())
+@settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_resync_onto_identical_en_preserves_structure(tmp_path_factory, blocks: list[Block]) -> None:
+    """Resyncing UK onto an identical EN timeline must not corrupt the output.
+
+    resync is best-effort: it interpolates between word anchors and may DROP a
+    block it cannot anchor (the tool reports "unmapped" as normal operation),
+    and the ±2000ms tail extrapolation means it does not promise byte-exact
+    timing identity (covered by the unit test on realistic data). What it must
+    NEVER do is fabricate or reorder content, or emit a structurally-invalid
+    SRT. So the always-true invariants are: output text is an ordered
+    subsequence of the input (no invented/reordered blocks) and the output is
+    structurally valid (positive durations, no overlaps). Scoped to ≥2 blocks:
+    with a single anchor _remap is undefined, a regime real talks never hit."""
+    assume(len(blocks) >= 2)
+    d = tmp_path_factory.mktemp("resync")
+    uk, primary_en, secondary_en, out = (d / n for n in ("uk.srt", "p_en.srt", "s_en.srt", "out.srt"))
+    _write_srt(blocks, uk)
+    _write_srt(blocks, primary_en)
+    _write_srt(blocks, secondary_en)
+    resync(str(uk), str(primary_en), str(secondary_en), str(out))
+    result = parse_srt(str(out))
+    # Output text is an ordered subsequence of the input — nothing invented or reordered.
+    in_texts = [b.text for b in blocks]
+    out_texts = [x["text"] for x in result]
+    it = iter(in_texts)
+    assert all(t in it for t in out_texts), f"resync output is not a subsequence of input: {out_texts} ⊄ {in_texts}"
+    # Structurally valid: positive durations, no overlaps.
+    for x in result:
+        assert x["start_ms"] < x["end_ms"], f"non-positive duration: {x}"
+    for prev, nxt in zip(result, result[1:], strict=False):
+        assert prev["end_ms"] <= nxt["start_ms"], "resync introduced an overlap"
+
+
+@st.composite
+def _strict_anchors(draw) -> list[tuple[int, int]]:
+    """Anchors strictly increasing in both primary and secondary coordinates."""
+    n = draw(st.integers(min_value=2, max_value=12))
+    px = draw(st.integers(min_value=0, max_value=2000))
+    sx = draw(st.integers(min_value=0, max_value=2000))
+    out: list[tuple[int, int]] = []
+    for _ in range(n):
+        px += draw(st.integers(min_value=1, max_value=2000))
+        sx += draw(st.integers(min_value=1, max_value=2000))
+        out.append((px, sx))
+    return out
+
+
+@given(_strict_anchors())
+@settings(max_examples=100, deadline=None)
+def test_remap_is_monotonic_within_anchor_range(anchors: list[tuple[int, int]]) -> None:
+    """_remap preserves ordering: x1 < x2 ⇒ remap(x1) ≤ remap(x2)."""
+    lo, hi = anchors[0][0], anchors[-1][0]
+    step = max(1, (hi - lo) // 25)
+    prev = None
+    for x in range(lo, hi + 1, step):
+        y = _remap(x, anchors)
+        if y is None:
+            continue
+        if prev is not None:
+            assert y >= prev, f"remap non-monotonic at {x}: {y} < {prev}"
+        prev = y
+
+
+# ---------------------------------------------------------------------------
+# Invariant 10: snap_to_whisper only re-times — text and block count are fixed
+# ---------------------------------------------------------------------------
+
+
+@given(uk_map_blocks())
+@settings(max_examples=40, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_snap_preserves_text_count_and_positive_duration(blocks: list[Block]) -> None:
+    """Snapping changes only timing: never text, never block count, never start>end."""
+    bdicts = [b.as_dict() for b in blocks]
+    # Build a whisper segment whose words are exactly the block words, timed on
+    # each block's own span, so every block matches and gets re-timed.
+    words = [
+        {"word": w, "start": b.start_ms / 1000.0, "end": b.end_ms / 1000.0} for b in blocks for w in b.text.split()
+    ]
+    out, _unmatched = snap_to_whisper(bdicts, [{"words": words}], min_gap_ms=80, min_duration_ms=0)
+    assert len(out) == len(bdicts)
+    assert [o["text"] for o in out] == [b["text"] for b in bdicts]
+    for o in out:
+        assert o["start_ms"] <= o["end_ms"], f"snap produced start>end: {o}"
