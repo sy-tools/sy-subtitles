@@ -45,6 +45,10 @@ glossary/corpus/
 .superpowers/
 .playwright-mcp/
 
+# Local scratch / design-spec drafts (not committed)
+_scratch/
+docs/superpowers/
+
 # OS
 .DS_Store
 Thumbs.db

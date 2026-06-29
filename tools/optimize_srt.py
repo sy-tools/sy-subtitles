@@ -119,7 +119,7 @@ def find_best_split_point(text, max_cpl):
     return candidates[0][1]
 
 
-def split_long_line(text):
+def join_to_single_line(text):
     """Single-line mode: join all lines into one."""
     return text.replace("\n", " ")
 
@@ -478,13 +478,13 @@ def split_blocks_by_size(blocks, config):
                     "idx": b["idx"],
                     "start_ms": b["start_ms"],
                     "end_ms": mid_time - config.min_gap_ms // 2,
-                    "text": split_long_line(text1),
+                    "text": join_to_single_line(text1),
                 }
                 block2 = {
                     "idx": b["idx"],
                     "start_ms": mid_time + config.min_gap_ms // 2,
                     "end_ms": b["end_ms"],
-                    "text": split_long_line(text2),
+                    "text": join_to_single_line(text2),
                 }
                 if words1:
                     block1["_words"] = words1
@@ -523,13 +523,13 @@ def split_blocks_by_cps(blocks, config):
                     "idx": b["idx"],
                     "start_ms": b["start_ms"],
                     "end_ms": mid_time - config.min_gap_ms // 2,
-                    "text": split_long_line(text1),
+                    "text": join_to_single_line(text1),
                 }
                 block2 = {
                     "idx": b["idx"],
                     "start_ms": mid_time + config.min_gap_ms // 2,
                     "end_ms": b["end_ms"],
-                    "text": split_long_line(text2),
+                    "text": join_to_single_line(text2),
                 }
                 if words1:
                     block1["_words"] = words1
@@ -681,7 +681,7 @@ def merge_short_blocks(blocks, config):
                 ):
                     combined_text = b["text"].replace("\n", " ") + " " + next_b["text"].replace("\n", " ")
                     b["end_ms"] = next_b["end_ms"]
-                    b["text"] = split_long_line(combined_text)
+                    b["text"] = join_to_single_line(combined_text)
                     # Concatenate _words metadata
                     w1 = b.get("_words", [])
                     w2 = next_b.get("_words", [])

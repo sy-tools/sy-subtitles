@@ -64,10 +64,12 @@ Red → Green → Refactor:
 For bug fixes: first write a test that reproduces the bug (it must fail), then
 fix. The test proves the fix and guards against regression.
 
-SPA logic lives in `tools/*.js` modules (exercised by `node --test`) and is
-**mirrored** verbatim into `site/index.html` (the browser cannot `require`).
-Add the testable logic to the module, test it there, then mirror it into the
-SPA — see `tools/preview_state.js` / `tools/add_talk_data.js` for the pattern.
+SPA logic lives in `site/js/*.js` modules (exercised by `node --test`) and is
+loaded into `site/index.html` as plain `<script src="js/…">` tags — a **single
+source, no inline copy**: the very same files are `require`d by the Node test
+suite, so browser and tests can never drift. Add the testable logic to the
+module, test it there, then wire it into the SPA — see
+`site/js/preview_state.js` / `site/js/add_talk_data.js` for the pattern.
 
 ## Language Rules
 
@@ -103,8 +105,11 @@ If Vimeo returns 401: `--what text` first, then `--what srt`.
 ```bash
 # Download talk from amruta.org (folder named {date}_{slugify(title)} — same as
 # the SPA; see tools/talk_slug.py. amruta auth/cookie: docs/amruta-auth.md)
-python -m tools.download --url "https://www.amruta.org/..." [--what all|srt|text] [--langs en,uk]
-#   --langs en,uk fetches EN + Ukrainian (/uk/) transcripts; folder/meta from EN
+python -m tools.download --url "https://www.amruta.org/..." [--what srt,text|all|video] \
+  [--langs en,uk] [--slug SLUG] [--cookie COOKIE]
+#   --what is comma-separated (default srt,text); --langs en,uk fetches EN +
+#   Ukrainian (/uk/) transcripts; folder/meta from EN. Batch mode: replace
+#   --url with --manifest queue.yaml.
 
 # Vimeo link obfuscation: meta.yaml stores links as `video_ref` (not plaintext
 # vimeo_url). Obfuscation only — decode ships in the public SPA.
@@ -117,13 +122,15 @@ python -m tools.mask_video_refs [--check] [PATHS...]                 # migrate m
 python -m tools.passphrase_gate hash --salt <hex> --iterations <n> "<phrase>"
 
 # Build subtitles (deterministic orchestrator; LLM writes timecodes.txt between prepare and assemble)
-python -m tools.build_map prepare        --talk-dir PATH --video-slug SLUG
+python -m tools.build_map prepare        --talk-dir PATH --video-slug SLUG [--lang uk]
 python -m tools.build_map prepare-timing --talk-dir PATH --video-slug SLUG [--timing-source whisper|en-srt]
-python -m tools.build_map assemble       --talk-dir PATH --video-slug SLUG
+python -m tools.build_map assemble       --talk-dir PATH --video-slug SLUG [--lang uk]
 
-# Validate SRT subtitles
-python -m tools.validate_subtitles --srt PATH --transcript PATH [--whisper-json PATH] --report PATH \
-  [--skip-text-check] [--skip-time-check] [--skip-cps-check] [--skip-duration-check]
+# Validate SRT subtitles (timing source: --whisper-json OR --en-srt, en-srt preferred)
+python -m tools.validate_subtitles --srt PATH --transcript PATH \
+  [--whisper-json PATH | --en-srt PATH] --report PATH \
+  [--skip-text-check] [--skip-time-check] [--skip-cps-check] [--skip-duration-check] \
+  [--compare-block-count]   # en-srt + --skip-text-check: guard UK block count vs EN
 
 # Sync transcript edits into existing SRT (for PR workflow)
 python -m tools.sync_transcript_to_srt --talk-dir PATH --video-slug SLUG \
@@ -133,8 +140,9 @@ python -m tools.sync_transcript_to_srt --talk-dir PATH --video-slug SLUG \
 python -m tools.sync_srt_to_transcript --old-srt OLD --new-srt NEW \
   --transcript transcript_uk.txt
 
-# Two-pass sync driver for sync-subtitles PR workflow (used by Actions)
-python -m tools.sync_pr --base SHA --paths "talks/.../transcript_uk.txt ..."
+# Two-pass sync driver for sync-subtitles PR workflow (used by Actions).
+# Discovers changed files itself via `git diff --name-only $BASE_SHA HEAD`.
+python -m tools.sync_pr --base-sha SHA
 
 # Resync UK SRT from primary video timeline onto secondary video timeline
 python -m tools.resync_srt --primary-uk PATH --primary-en PATH \
@@ -144,17 +152,23 @@ python -m tools.resync_srt --primary-uk PATH --primary-en PATH \
 # Needs source/en.srt on BOTH primary and secondary; skips videos without it.
 python -m tools.build_secondary_srts --talk-dir PATH --primary-slug SLUG [--run-id ID]
 
+# Snap an English SRT onto whisper word timestamps (EN-subtitle timing; forced word-align)
+python -m tools.snap_srt_to_whisper --srt PATH --whisper-json PATH --output PATH \
+  [--min-gap 80] [--min-duration 1000]
+
 # Validate artifact contracts at pipeline phase boundaries
 python -m tools.validate_artifacts [--whisper PATH | --meta PATH |
-  --timecodes PATH | --talk-dir PATH]
+  --timecodes PATH | --talk-dir PATH] \
+  [--expected-blocks N] [--max-blocks N] [--allow-skipped-ids]   # block-count bounds (en-srt mode)
 
 # Detect and apply timecode offset between videos
 python -m tools.offset_srt detect --srt1 PATH --srt2 PATH
 python -m tools.offset_srt apply --srt PATH --offset-ms N --output PATH
 
-# Optimize SRT timing
-python -m tools.optimize_srt --srt PATH [--json PATH] --output PATH \
-  [--skip-duration-split] [--skip-cps-split]
+# Optimize SRT timing (input: --srt OR --uk-json)
+python -m tools.optimize_srt (--srt PATH | --uk-json PATH) --output PATH [--json PATH] [--report PATH] \
+  [--target-cps 15.0] [--hard-max-cps 20.0] [--min-duration 1200] [--max-duration 7000] \
+  [--min-gap 80] [--fps 24] [--skip-duration-split] [--skip-cps-split]
 
 # Export SRT to plain text
 python -m tools.text_export --srt PATH --output PATH [--meta PATH] [--double-spacing]
@@ -177,6 +191,12 @@ python -m tools.scrape_listing [--output PATH] [--cookie COOKIE] [--url URL]
 
 # Run Whisper speech detection
 python -m tools.whisper_run --video PATH --output PATH [--model MODEL] [--language LANG]
+
+# Internal / pipeline-support CLIs (run by workflows, rarely by hand):
+#   tools.builder_data            — query EN SRT blocks + whisper word timestamps for the builder agent
+#   tools.fake_llm                — fake LLM responder for dry-run pipeline (replays snapshots)
+#   tools.verify_snapshot         — verify a dry-run result against a recorded snapshot
+#   tools.workflow_validation_cli — guard step validating talk-id / video-slug / video-ref inputs
 ```
 
 ## Glossary
