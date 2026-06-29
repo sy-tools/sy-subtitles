@@ -1,7 +1,7 @@
 // Service Worker for SPA caching
 // Browser detects changes by comparing sw.js byte-for-byte.
 // CACHE_VERSION: bump when cache format changes or to force purge.
-var CACHE_VERSION = 3;
+var CACHE_VERSION = 4;
 var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 
 // Routing predicates (isImmutable / isApiOrRaw / isNavigation / pickStrategy) are
@@ -17,9 +17,49 @@ var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 // re-fetches fresh routing logic — so routing changes must bump CACHE_VERSION.
 importScripts('js/sw_routing.js?v=' + CACHE_VERSION);
 
+// App shell, precached on install. Without this the FIRST visit cannot work
+// offline: the worker only caches what it intercepts, and on the first load the
+// page + all its <script src> ran before the worker was controlling — so an
+// offline reload right after the first visit would request an uncached
+// index.html and get a blank page. Precaching makes offline boot work from
+// visit #1. The js list is kept in lockstep with index.html's <script src="js/…">
+// tags by tests/test_sw_precache.js. './' and 'index.html' are both precached so
+// either navigation form (the bare directory root or /index.html?query) resolves.
+var SHELL_ASSETS = [
+  './',
+  'index.html',
+  'icon.png',
+  'js/preview_srt_parser.js',
+  'js/preview_state.js',
+  'js/index_url_state.js',
+  'js/manifest_fetch.js',
+  'js/offline_fallback.js',
+  'js/talk_slug.js',
+  'js/vimeo_codec.js',
+  'js/add_talk_data.js',
+  'js/shell_version.js',
+  'js/talk_actions.js',
+  'js/passphrase_gate.js'
+];
+
+// Cross-origin libs the shell needs to boot (js-yaml parses every meta.yaml).
+// Best-effort: a CDN hiccup must not fail the whole install, so each is added
+// individually and swallows its own error.
+var SHELL_CDN = ['https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'];
+
 self.addEventListener('install', function(e) {
-  // Skip waiting — activate immediately so new version takes effect
-  self.skipWaiting();
+  e.waitUntil(
+    caches.open(CACHE_NAME).then(function(c) {
+      return c.addAll(SHELL_ASSETS).then(function() {
+        return Promise.all(SHELL_CDN.map(function(u) {
+          return c.add(u).catch(function() {});
+        }));
+      });
+    }).then(function() {
+      // Activate immediately so the new version (and its precache) take effect.
+      return self.skipWaiting();
+    })
+  );
 });
 
 self.addEventListener('activate', function(e) {
@@ -45,7 +85,19 @@ function networkFirst(request) {
     }
     return response;
   }).catch(function() {
-    return caches.match(request);
+    // ignoreSearch so a navigation like /index.html?sw=1 or /?branch=x resolves
+    // to the precached shell (stored without the query).
+    return caches.match(request, { ignoreSearch: true }).then(function(hit) {
+      if (hit) return hit;
+      // A navigation that still missed (any path/query) boots the SPA from the
+      // precached shell rather than failing with a blank page.
+      if (request.mode === 'navigate') {
+        return caches.match('./', { ignoreSearch: true }).then(function(root) {
+          return root || caches.match('index.html', { ignoreSearch: true });
+        });
+      }
+      return undefined;
+    });
   });
 }
 
