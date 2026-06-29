@@ -3322,13 +3322,28 @@ function renderStats() {
   bar.style.display = 'flex';
 }
 
+var REVIEW_STATUS_CACHE_KEY = 'sy_review_status__' + BRANCH;
 function loadReviewStatus() {
   var sha = (manifest && manifest._reviewSha) || '';
   var url = RAW + '/review-status.json' + (sha ? '?v=' + sha.substring(0, 8) : '');
+  // On any failure (offline / rate-limited refresh / HTTP error) fall back to the
+  // current or last-persisted statuses instead of an empty set — empties zero the
+  // whole index (filters + stat counts key off review status). reviewStatusFallback
+  // lives in js/manifest_fetch.js (Node-tested).
+  function onFail() {
+    var cached = null;
+    try { cached = JSON.parse(localStorage.getItem(REVIEW_STATUS_CACHE_KEY)); } catch (e) {}
+    reviewStatus = reviewStatusFallback(reviewStatus, cached);
+    return reviewStatus;
+  }
   return fetch(url)
-    .then(function(r) { return r.ok ? r.json() : { talks: {} }; })
-    .then(function(data) { reviewStatus = data; return data; })
-    .catch(function() { reviewStatus = { talks: {} }; return reviewStatus; });
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function(data) {
+      reviewStatus = data;
+      try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+      return data;
+    })
+    .catch(onFail);
 }
 
 // ============================================================

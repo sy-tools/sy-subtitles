@@ -33,6 +33,17 @@ function makeManifestError(status, info) {
   return e;
 }
 
+// review-status.json shares the manifest's resilience need: a failed/offline
+// refetch must NOT replace good statuses with an empty set (that zeros the whole
+// index — filters and stat counts key off review status). Pick, in order: the
+// current in-memory statuses if non-empty, else the last persisted copy, else an
+// empty set. Returns the chosen object by reference so the caller can reuse it.
+function reviewStatusFallback(current, cached) {
+  if (current && current.talks && Object.keys(current.talks).length) return current;
+  if (cached && cached.talks) return cached;
+  return { talks: {} };
+}
+
 // Minutes (rounded up) until an epoch-seconds reset, 0 if already past, null if
 // no reset is known.
 function minutesUntilReset(rlReset, nowMs) {
@@ -47,5 +58,6 @@ if (typeof module !== 'undefined' && module.exports) {
     rateLimitInfo: rateLimitInfo,
     makeManifestError: makeManifestError,
     minutesUntilReset: minutesUntilReset,
+    reviewStatusFallback: reviewStatusFallback,
   };
 }

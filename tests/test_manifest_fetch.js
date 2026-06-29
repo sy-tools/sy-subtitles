@@ -4,6 +4,7 @@ const {
   rateLimitInfo,
   makeManifestError,
   minutesUntilReset,
+  reviewStatusFallback,
 } = require('../site/js/manifest_fetch');
 
 // header getter double — case-sensitive exact map (production passes a
@@ -58,6 +59,29 @@ describe('makeManifestError', () => {
     assert.strictEqual(e.status, 500);
     assert.strictEqual(e.rateLimited, false);
     assert.strictEqual(e.rlReset, null);
+  });
+});
+
+describe('reviewStatusFallback — never clobber good statuses with empties', () => {
+  const good = { talks: { a: { status: 'approved' }, b: { status: 'in-progress' } } };
+  const cached = { talks: { a: { status: 'approved' } } };
+  const empty = { talks: {} };
+
+  it('keeps the current in-memory status when it has entries (ignores cache)', () => {
+    assert.strictEqual(reviewStatusFallback(good, cached), good);
+  });
+  it('falls back to the cached copy when current is empty', () => {
+    assert.strictEqual(reviewStatusFallback(empty, cached), cached);
+  });
+  it('falls back to the cached copy when current is null', () => {
+    assert.strictEqual(reviewStatusFallback(null, cached), cached);
+  });
+  it('returns an empty status set when neither current nor cache has data', () => {
+    assert.deepStrictEqual(reviewStatusFallback(empty, empty), { talks: {} });
+    assert.deepStrictEqual(reviewStatusFallback(null, null), { talks: {} });
+  });
+  it('treats a current without a talks map as empty', () => {
+    assert.strictEqual(reviewStatusFallback({}, cached), cached);
   });
 });
 
