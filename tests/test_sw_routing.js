@@ -13,6 +13,7 @@ const {
   isImmutable,
   isApiOrRaw,
   isNavigation,
+  hasImmutableVersion,
   pickStrategy,
 } = require('../site/js/sw_routing');
 
@@ -67,12 +68,36 @@ describe('isNavigation — the app shell / HTML document', () => {
   });
 });
 
+describe('hasImmutableVersion — sha-pinned (?v=) content is immutable by URL', () => {
+  it('detects a non-empty v query param', () => {
+    assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/talks/x/uk/final/uk.srt?v=ab12cd34'), true);
+    assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/talks/x/transcript_uk.txt?v=deadbee'), true);
+    assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/review-status.json?v=cafe123'), true);
+  });
+  it('is false when there is no v param (meta.yaml, the Trees API, the shell)', () => {
+    assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml'), false);
+    // the Trees API uses ?recursive=1, never ?v= — must stay network-first
+    assert.strictEqual(hasImmutableVersion('https://api.github.com/git/trees/main?recursive=1'), false);
+    assert.strictEqual(hasImmutableVersion('https://sy-tools.github.io/sy-subtitles/index.html'), false);
+  });
+  it('is false for an empty v param and tolerates a malformed URL', () => {
+    assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/x.srt?v='), false);
+    assert.strictEqual(hasImmutableVersion('not a url'), false);
+  });
+});
+
 describe('pickStrategy — the routing the fetch handler applies', () => {
   it('navigation, API and raw are network-first', () => {
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/'), 'network-first');
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/index.html'), 'network-first');
     assert.strictEqual(pickStrategy('https://api.github.com/git/trees/main?recursive=1'), 'network-first');
-    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/review-status.json'), 'network-first');
+    // raw WITHOUT ?v= (meta.yaml) stays network-first
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml'), 'network-first');
+  });
+  it('sha-pinned (?v=) raw content is cache-first — instant offline, no redundant refetch', () => {
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/uk/final/uk.srt?v=ab12cd34'), 'cache-first');
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/transcript_uk.txt?v=deadbee'), 'cache-first');
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/review-status.json?v=cafe123'), 'cache-first');
   });
   it('immutable assets are cache-first', () => {
     assert.strictEqual(pickStrategy('https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'), 'cache-first');

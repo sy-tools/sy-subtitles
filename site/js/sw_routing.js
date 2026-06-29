@@ -32,11 +32,29 @@ function isNavigation(url) {
   return url.endsWith('/') || url.endsWith('/index.html') || url.indexOf('sy-subtitles/#') !== -1;
 }
 
-// The single source of truth for the fetch handler's branch. Navigation + the
-// GitHub API/raw endpoints are network-first (always prefer fresh, fall back to
-// cache offline); truly-immutable assets are cache-first; everything else
-// (app js/css, the Vimeo iframe) is network-first.
+// Subtitle/transcript content is fetched with a ?v=<blob sha> cache-buster
+// (final/<lang>.srt, transcript_<lang>.txt, source/<lang>.srt, review-status.json):
+// the URL is content-addressed, so its bytes never change. A non-empty v param
+// marks such an immutable-by-URL resource. meta.yaml (no ?v=) and the Trees API
+// (?recursive=1) carry no v and stay network-first.
+function hasImmutableVersion(url) {
+  try {
+    return !!new URL(url).searchParams.get('v');
+  } catch (e) {
+    return false;
+  }
+}
+
+// The single source of truth for the fetch handler's branch.
+//  - sha-pinned content (?v=) → cache-first: instant offline + zero redundant
+//    refetch; a new build changes the sha → the URL, so a cache miss on the new
+//    key still fetches fresh. Checked FIRST so it wins over the raw network-first.
+//  - navigation + the GitHub API/raw endpoints → network-first (prefer fresh,
+//    fall back to cache offline).
+//  - truly-immutable CDN/static assets → cache-first.
+//  - everything else (app js/css, the Vimeo iframe) → network-first.
 function pickStrategy(url) {
+  if (hasImmutableVersion(url)) return 'cache-first';
   if (isNavigation(url) || isApiOrRaw(url)) return 'network-first';
   if (isImmutable(url)) return 'cache-first';
   return 'network-first';
@@ -48,6 +66,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isImmutable: isImmutable,
     isApiOrRaw: isApiOrRaw,
     isNavigation: isNavigation,
+    hasImmutableVersion: hasImmutableVersion,
     pickStrategy: pickStrategy,
   };
 }

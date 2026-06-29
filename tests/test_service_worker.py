@@ -230,6 +230,23 @@ class TestServiceWorkerOffline:
         finally:
             self._go_online(page)
 
+    def test_sha_versioned_content_is_served_cache_first(self, server, page):  # noqa: F811
+        # Subtitle/transcript URLs carry a ?v=<blob sha> cache-buster, so they are
+        # immutable by URL → cache-first. Proof: seed a sentinel under the key and
+        # fetch it WHILE ONLINE — cache-first returns the cached copy without ever
+        # hitting the network (a network-first route would try the network first).
+        _register_sw(page, server)
+        srt_url = "https://raw.githubusercontent.com/o/r/main/talks/x/uk/final/uk.srt?v=ab12cd34"
+        page.evaluate(
+            "async (u) => { const c = await caches.open('sy-subtitles-c3');"
+            " await c.put(u, new Response('CACHED-SRT',"
+            " {status: 200, headers: {'content-type': 'text/plain'}})); }",
+            srt_url,
+        )
+        # Online (no set_offline): cache-first must still serve the cached bytes.
+        body = page.evaluate("async (u) => (await (await fetch(u)).text())", srt_url)
+        assert body == "CACHED-SRT", f"sha-versioned content not served cache-first: {body[:60]!r}"
+
     def test_github_api_and_raw_are_network_first_with_cache_fallback(self, server, page):  # noqa: F811
         # api.github.com + raw.githubusercontent.com are routed network-first, so
         # an OFFLINE request falls back to whatever the SW previously cached. This

@@ -65,10 +65,10 @@ function cacheFirst(request) {
 
 self.addEventListener('fetch', function(e) {
   if (pickStrategy(e.request.url) === 'cache-first') {
-    // CDN libs, icon: cache-first (immutable, versioned)
+    // CDN libs, icon, and sha-pinned ?v= content (SRT/transcripts): cache-first
     e.respondWith(cacheFirst(e.request));
   } else {
-    // HTML shell + API + raw + everything else: network-first
+    // HTML shell + Trees API + meta.yaml + everything else: network-first
     e.respondWith(networkFirst(e.request));
   }
 });

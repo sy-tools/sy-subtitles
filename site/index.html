@@ -19,6 +19,7 @@
 <script src="js/preview_state.js"></script>
 <script src="js/index_url_state.js"></script>
 <script src="js/manifest_fetch.js"></script>
+<script src="js/offline_fallback.js"></script>
 <script src="js/talk_slug.js"></script>
 <script src="js/vimeo_codec.js"></script>
 <script src="js/add_talk_data.js"></script>
@@ -1913,6 +1914,7 @@ var I18N = {
 
     'add.link': '+ \u0414\u043E\u0434\u0430\u0442\u0438',
     'error.srt': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432',
+    'error.offline_content': '\u041D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u043E\u0444\u043B\u0430\u0439\u043D \u2014 \u0432\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 \u043E\u043D\u043B\u0430\u0439\u043D, \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0432 \u043A\u0435\u0448',
     'error.rate_limit': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u041F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u043A\u0435\u0448; \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0430 {min} \u0445\u0432',
     'error.rate_limit_nocache': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0437\u0430 {min} \u0445\u0432',
     'error.stale_cache': '\u041D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u2014 \u043F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0443 \u0432\u0435\u0440\u0441\u0456\u044E',
@@ -2041,6 +2043,7 @@ var I18N = {
 
     'add.link': '+ Add Talk',
     'error.srt': 'Error loading subtitles',
+    'error.offline_content': 'Unavailable offline — open it online once to cache it',
     'error.rate_limit': 'GitHub rate limit reached. Showing cached data; refresh in {min} min',
     'error.rate_limit_nocache': 'GitHub rate limit reached. Try again in {min} min',
     'error.stale_cache': 'Offline — showing the cached version',
@@ -3008,7 +3011,10 @@ function loadSubtitleLang(lang) {
     })
     .catch(function(err) {
       console.warn('[SPA] SRT error:', err);
-      document.getElementById('subtitle-overlay').textContent = t('error.srt');
+      // Non-blocking: keep the page usable. Offline gets a clearer note than the
+      // generic load error; the freshness-bar offline badge is the global signal.
+      document.getElementById('subtitle-overlay').textContent =
+        isOfflineError(err, navigator.onLine) ? t('error.offline_content') : t('error.srt');
       return false;
     });
 }
@@ -4609,7 +4615,8 @@ function showReview(talkId) {
       SPA.openTranscriptVideo(savedSlug);
     }
   }).catch(function(err) {
-    statusEl.textContent = t('review.load_error').replace('{err}', err);
+    statusEl.textContent = isOfflineError(err, navigator.onLine)
+      ? t('error.offline_content') : t('review.load_error').replace('{err}', err);
     statusEl.classList.add('status-error');
   });
 }
@@ -4830,7 +4837,8 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     statusEl.style.display = 'none';
     statusEl.classList.remove('status-error');
   }).catch(function(err) {
-    statusEl.textContent = t('review.srt_load_error').replace('{err}', err);
+    statusEl.textContent = isOfflineError(err, navigator.onLine)
+      ? t('error.offline_content') : t('review.srt_load_error').replace('{err}', err);
     statusEl.classList.add('status-error');
   });
 };
@@ -5419,15 +5427,36 @@ var _staleDismissed = false;
 function updateStaleIndicator() {
   var el = document.getElementById('stale-indicator');
   if (!el) return;
+  var txt = el.querySelector('.stale-text');
+  var x = el.querySelector('.stale-x');
+  // Live device offline takes priority over manifest staleness and is NOT
+  // dismissable — it is real connectivity state, refreshed by the online/offline
+  // listeners below. Visible on every view (the freshness bar is sticky), so the
+  // user always knows they are offline while they keep working with cached data.
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    if (txt) txt.textContent = t('freshness.offline');
+    // No dismiss × on a live offline state — it can't be dismissed; drop it and
+    // keep the padding symmetric. The × stays for the dismissable stale notice.
+    if (x) x.style.display = 'none';
+    el.style.paddingRight = '8px';
+    el.style.display = 'inline-flex';
+    return;
+  }
+  if (x) x.style.display = '';
+  el.style.paddingRight = '';
   var notice = staleNotice(manifest, Date.now());
   if (!notice) { _staleDismissed = false; el.style.display = 'none'; return; }
   if (_staleDismissed) { el.style.display = 'none'; return; }
   var msg = t(notice.key);
   if (notice.min != null) msg = msg.replace('{min}', notice.min);
-  var txt = el.querySelector('.stale-text');
   if (txt) txt.textContent = msg;
   el.style.display = 'inline-flex';
 }
+
+// Reflect real connectivity in the freshness-bar badge the moment it changes —
+// not only when a manifest refresh happens to detect staleness.
+window.addEventListener('online', updateStaleIndicator);
+window.addEventListener('offline', updateStaleIndicator);
 SPA.dismissStale = function() {
   _staleDismissed = true;
   updateStaleIndicator();
@@ -5800,11 +5829,22 @@ function applyExpertMode() {
 }
 applyExpertMode();
 
-// Service Worker registration (skip on localhost for dev/test)
-// Browser auto-detects sw.js changes by comparing byte-for-byte
-if ('serviceWorker' in navigator && location.hostname !== '127.0.0.1' && location.hostname !== 'localhost') {
-  navigator.serviceWorker.register('sw.js').catch(function() {});
-}
+// Reflect an offline-at-load state in the freshness bar immediately, before any
+// manifest fetch resolves.
+updateStaleIndicator();
+
+// Service Worker registration. Skipped on localhost by default (so dev edits are
+// never served from a stale SW cache), but ?sw=1 opts in locally to exercise the
+// real offline / cache-first flow that only the SW provides. Browser auto-detects
+// sw.js changes by comparing byte-for-byte.
+(function() {
+  if (!('serviceWorker' in navigator)) return;
+  var isLocal = location.hostname === '127.0.0.1' || location.hostname === 'localhost';
+  var swOptIn = /[?&]sw=1(&|$)/.test(location.search);
+  if (!isLocal || swOptIn) {
+    navigator.serviceWorker.register('sw.js').catch(function() {});
+  }
+})();
 </script>
 </body>
 </html>
