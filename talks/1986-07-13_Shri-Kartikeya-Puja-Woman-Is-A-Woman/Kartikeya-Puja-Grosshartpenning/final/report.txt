@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/Kartikeya-Puja-Grosshartpenning/final/uk.srt
+  Transcript: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/transcript_uk.txt
+  EN SRT: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/Kartikeya-Puja-Grosshartpenning/source/en.srt
+  SRT blocks: 583
+  EN SRT blocks: 688
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:38,959 — 01:50:55,619
+  SRT range:       00:00:38,959 — 01:50:57,619
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 583
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 583
+  CPS: avg=10.6, median=10.8, max=15.0
+  CPS > target: 3 (0.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #422: CPS=15.0 (44ch/2.9s) "тобто «той, хто весь час у домі», розумієш»."
+    #127: CPS=15.0 (65ch/4.3s) "Тож усе було готове, так само, як ми робимо для приготування..."
+    #376: CPS=15.0 (68ch/4.5s) "Лише жінки можуть заощаджувати, але якщо вони мають більший ..."
+    #125: CPS=15.0 (39ch/2.6s) "А готівкою треба заплатити стільки-то»."
+    #378: CPS=15.0 (81ch/5.4s) "пішовши в крамницю купити чоловікові сорочку, а накуплять ус..."
+    #182: CPS=15.0 (82ch/5.5s) "у Моїх – рахунках, вони не могли знайти ні в чому жодних огр..."
+    #452: CPS=15.0 (79ch/5.3s) "бути блокувань, той, хто має блокування, не є добрим учителе..."
+    #144: CPS=15.0 (67ch/4.5s) "Я сказала: «Дивіться, тепер ви можете жити зі Мною в цьому б..."
+    #235: CPS=15.0 (67ch/4.5s) "Я сказала: «Чому ти не дозволиш їй сісти?» Він сказав: «Чому..."
+    #256: CPS=15.0 (67ch/4.5s) "Але здебільшого жінки турбуються про себе: «О Боже, мені дов..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 583
+  EN SRT blocks: 688
+  Ratio UK/EN: 0.85 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.6 (target ≤15.0)
+  CPS > 15.0: 3 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

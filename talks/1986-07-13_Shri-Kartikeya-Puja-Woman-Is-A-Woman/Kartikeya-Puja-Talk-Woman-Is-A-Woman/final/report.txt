@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/Kartikeya-Puja-Talk-Woman-Is-A-Woman/final/uk.srt
+  Transcript: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/transcript_uk.txt
+  EN SRT: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/Kartikeya-Puja-Talk-Woman-Is-A-Woman/source/en.srt
+  SRT blocks: 482
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 482
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 482
+  CPS: avg=11.0, median=11.3, max=18.3
+  CPS > target: 55 (11.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #447: CPS=18.3 (41ch/2.2s) "Ми – навіщо нам брати якесь таке вбрання?"
+    #219: CPS=17.5 (36ch/2.1s) "Але вона проектує будинки для інших,"
+    #254: CPS=17.5 (42ch/2.4s) "Вона сказала: «Я шизофренічка з дитинства."
+    #421: CPS=17.2 (40ch/2.3s) "«ґхар-ґхусна» [слово на гінді, домосід],"
+    #268: CPS=17.2 (45ch/2.6s) "що вони сахаджа йоґині і Мати подбає про них."
+    #104: CPS=17.1 (28ch/1.6s) "Я сказала: «Не має значення."
+    #276: CPS=17.0 (43ch/2.5s) "«Ким ви хочете бути?» Вони зовсім маленькі."
+    #246: CPS=17.0 (56ch/3.3s) "Тепер вона дуже сильно заблокована й має певні проблеми."
+    #374: CPS=16.9 (39ch/2.3s) "Чоловіки ніколи не можуть заощаджувати."
+    #431: CPS=16.7 (64ch/3.8s) "що навіть удома ви насолоджуєтеся, і назовні теж насолоджуєт..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.0 (target ≤15.0)
+  CPS > 15.0: 55 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
