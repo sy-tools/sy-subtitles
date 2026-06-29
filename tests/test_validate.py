@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from tests.srt_helpers import write_srt_timecodes as _write_srt
 from tools.config import OptimizeConfig
 from tools.validate_subtitles import (
     TimeAnchor,
@@ -69,20 +70,6 @@ def test_strip_header_header_beyond_10_lines():
 # ---------------------------------------------------------------------------
 #  Helpers for building test SRT / transcript files
 # ---------------------------------------------------------------------------
-
-
-def _write_srt(path, blocks):
-    """Write a minimal SRT file from a list of (idx, start, end, text) tuples.
-
-    *start* and *end* are SRT timecodes like ``"00:00:01,000"``.
-    """
-    lines = []
-    for idx, start, end, text in blocks:
-        lines.append(str(idx))
-        lines.append(f"{start} --> {end}")
-        lines.append(text)
-        lines.append("")
-    path.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _write_transcript(path, text):
