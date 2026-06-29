@@ -300,7 +300,7 @@ jobs:
           python-version: '3.12'
 
       - name: Cache pip packages
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pip
           key: pip-whisper-${{ hashFiles('requirements.txt') }}
@@ -313,7 +313,7 @@ jobs:
           pip install faster-whisper>=1.2.1 yt-dlp
 
       - name: Cache Whisper model
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cache/huggingface/hub
           key: faster-whisper-medium
