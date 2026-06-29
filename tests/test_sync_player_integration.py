@@ -49,6 +49,8 @@ TEST_VIMEO_URL = decode_video_ref(TEST_VIDEO_REF)
 _SKIP_REAL = os.environ.get("SY_E2E_REAL_VIMEO", "1") == "0"
 _SKIP_REASON = "SY_E2E_REAL_VIMEO=0 — real Vimeo network access disabled"
 
+pytestmark = pytest.mark.e2e
+
 REAL_VIMEO_META = f"""title: 'Test Talk: Subtitle Preview'
 date: '2001-01-01'
 location: Test Location
@@ -158,6 +160,10 @@ def _goto_review_srt_real(page, server):  # noqa: F811
     page.wait_for_selector(".cell.uk", timeout=15000)
 
 
+# These run live in CI (Vimeo is a stable platform). reruns absorbs a rare
+# transient network blip so it cannot red-fail an unrelated PR — a genuine
+# Vimeo SDK/embed breakage still fails all attempts.
+@pytest.mark.flaky(reruns=2, reruns_delay=2)
 @pytest.mark.skipif(_SKIP_REAL, reason=_SKIP_REASON)
 class TestRealVimeoIntegration:
     def test_real_vimeo_sdk_loads(self, server, real_vimeo_page):  # noqa: F811

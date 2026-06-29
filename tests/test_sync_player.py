@@ -29,7 +29,7 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
 # even the widened 20s budget. Widening the timeout alone did not fully fix it,
 # so retry the (idempotent, read-only) tests; a genuine logic regression still
 # fails all attempts. Scoped to this module so it cannot mask flakes elsewhere.
-pytestmark = pytest.mark.flaky(reruns=2, reruns_delay=2)
+pytestmark = [pytest.mark.e2e, pytest.mark.flaky(reruns=2, reruns_delay=2)]
 
 # Single timeout budget for "wait for an SPA-rendered element" probes. The
 # click→mount chain that produces #mock-player is synchronous once the page has

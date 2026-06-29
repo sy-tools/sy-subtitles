@@ -13,6 +13,8 @@ import yaml
 
 from tools.vimeo_codec import decode_video_ref
 
+pytestmark = pytest.mark.e2e
+
 SAMPLE_META = """title: 'Test Talk: Subtitle Preview'
 date: '2001-01-01'
 location: Test Location

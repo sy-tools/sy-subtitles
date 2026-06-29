@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+# Project lint/format config lives in ruff.toml (authoritative); this file only
+# carries pytest settings. Markers are registered here so `-m` selection works
+# and unknown-marker warnings stay quiet. See TESTING.md for how to run subsets.
+testpaths = ["tests"]
+addopts = "--tb=short"
+markers = [
+    "e2e: browser/Playwright end-to-end tests — slow, need chromium. Deselect with -m 'not e2e'.",
+    "integration: multi-component or subprocess tests, slower than a unit test.",
+    "golden: regression checks over shipped talk corpora (see GOLDEN_TALKS_SCOPE).",
+    "slow: wall-clock heavy (>1s) tests.",
+    "flaky: known-flaky tests retried via pytest-rerunfailures.",
+]

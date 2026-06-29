@@ -1,6 +1,8 @@
 pytest>=9.1.1
 pytest-xdist>=3.8
 pytest-rerunfailures>=16.3
+pytest-cov>=7.1
+coverage>=7.13
 ruff>=0.15.18
 pre-commit>=4.6.0
 playwright>=1.60.0

@@ -26,6 +26,8 @@ from tools.srt_utils import parse_srt
 from tools.validate_subtitles import manifest_validate_flags as _mode_flags
 from tools.validate_subtitles import validate
 
+pytestmark = pytest.mark.golden
+
 ROOT = Path(__file__).resolve().parent.parent
 TALKS = ROOT / "talks"
 
