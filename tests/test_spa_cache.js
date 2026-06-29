@@ -1242,75 +1242,14 @@ describe('refresh: no hardcoded colors in status messages', () => {
 // Tests: Service Worker caching strategy
 // ============================================================
 
-function swIsImmutable(url) {
-  var patterns = ['cdn.jsdelivr.net', 'player.vimeo.com/api', '/icon.png'];
-  return patterns.some(function(p) { return url.includes(p); });
-}
-// Exercise the REAL isApiOrRaw from site/sw.js (extracted + eval'd, like
-// extractI18N) instead of a hand-copied reimplementation that can silently
-// drift from production.
-function loadSwFn(name) {
-  var fs = require('fs');
-  var src = fs.readFileSync('site/sw.js', 'utf8');
-  // Grab the function body up to the first closing brace at column 0. This
-  // assumes top-level sw.js functions close on their own line and any inner
-  // braces stay indented (true today). It fails loud if violated — no match
-  // throws here, a truncated match throws on eval — never a wrong-but-passing
-  // function. Same extract-the-real-source approach as extractI18N below.
-  var m = src.match(new RegExp('function ' + name + '\\([\\s\\S]*?\\n\\}'));
-  assert.ok(m, name + '() not found in site/sw.js');
-  return eval('(' + m[0] + ')');
-}
-var swIsApiOrRaw = loadSwFn('isApiOrRaw');
-function swIsNavigation(url) {
-  return url.endsWith('/') || url.endsWith('/index.html') || url.includes('sy-subtitles/#');
-}
-function swGetStrategy(url) {
-  if (swIsNavigation(url) || swIsApiOrRaw(url)) return 'network-first';
-  if (swIsImmutable(url)) return 'cache-first';
-  return 'network-first';
-}
+// The SW routing predicates (isImmutable / isApiOrRaw / isNavigation /
+// pickStrategy) are now single-sourced in site/js/sw_routing.js — the module
+// site/sw.js loads via importScripts — and unit-tested there
+// (tests/test_sw_routing.js), so they can never drift from production. This file
+// keeps only the cache-name versioning helper used by the version-sync tests.
 function swCacheName(version) {
   return 'sy-subtitles-v' + (version || '0');
 }
-
-describe('SW: isImmutable', () => {
-  it('CDN js-yaml is immutable', () => assert.strictEqual(swIsImmutable('https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'), true));
-  it('Vimeo player API is immutable', () => assert.strictEqual(swIsImmutable('https://player.vimeo.com/api/player.js'), true));
-  it('icon.png is immutable', () => assert.strictEqual(swIsImmutable('https://site.github.io/sy-subtitles/icon.png'), true));
-  it('index.html is NOT immutable', () => assert.strictEqual(swIsImmutable('https://site.github.io/sy-subtitles/index.html'), false));
-  it('API is NOT immutable', () => assert.strictEqual(swIsImmutable('https://api.github.com/repos/foo'), false));
-  it('raw content is NOT immutable', () => assert.strictEqual(swIsImmutable('https://raw.githubusercontent.com/foo/uk.srt'), false));
-});
-
-describe('SW: isApiOrRaw', () => {
-  it('GitHub API', () => assert.strictEqual(swIsApiOrRaw('https://api.github.com/repos/foo'), true));
-  it('raw.githubusercontent', () => assert.strictEqual(swIsApiOrRaw('https://raw.githubusercontent.com/foo/file.srt'), true));
-  it('index.html is not API', () => assert.strictEqual(swIsApiOrRaw('https://site.github.io/sy-subtitles/'), false));
-  // Host must match, not merely appear as a substring of the URL.
-  it('attacker host with api.github.com in the query is not API', () => assert.strictEqual(swIsApiOrRaw('https://attacker.com/?x=api.github.com'), false));
-  it('attacker host with raw host in the fragment is not raw', () => assert.strictEqual(swIsApiOrRaw('https://attacker.com/#raw.githubusercontent.com'), false));
-  it('look-alike suffix host is not API', () => assert.strictEqual(swIsApiOrRaw('https://api.github.com.evil.com/x'), false));
-});
-
-describe('SW: isNavigation', () => {
-  it('root path', () => assert.strictEqual(swIsNavigation('https://site.github.io/sy-subtitles/'), true));
-  it('index.html', () => assert.strictEqual(swIsNavigation('https://site.github.io/sy-subtitles/index.html'), true));
-  it('hash route', () => assert.strictEqual(swIsNavigation('https://site.github.io/sy-subtitles/#/preview/talk/vid'), true));
-  it('icon is NOT navigation', () => assert.strictEqual(swIsNavigation('https://site.github.io/sy-subtitles/icon.png'), false));
-  it('CDN is NOT navigation', () => assert.strictEqual(swIsNavigation('https://cdn.jsdelivr.net/npm/js-yaml@4'), false));
-});
-
-describe('SW: caching strategy per URL', () => {
-  it('index.html → network-first', () => assert.strictEqual(swGetStrategy('https://site.github.io/sy-subtitles/index.html'), 'network-first'));
-  it('root → network-first', () => assert.strictEqual(swGetStrategy('https://site.github.io/sy-subtitles/'), 'network-first'));
-  it('API → network-first', () => assert.strictEqual(swGetStrategy('https://api.github.com/repos/foo/git/trees/main'), 'network-first'));
-  it('raw SRT → network-first', () => assert.strictEqual(swGetStrategy('https://raw.githubusercontent.com/foo/uk.srt'), 'network-first'));
-  it('CDN lib → cache-first', () => assert.strictEqual(swGetStrategy('https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'), 'cache-first'));
-  it('icon → cache-first', () => assert.strictEqual(swGetStrategy('https://site.github.io/sy-subtitles/icon.png'), 'cache-first'));
-  it('Vimeo embed → network-first', () => assert.strictEqual(swGetStrategy('https://player.vimeo.com/video/12345'), 'network-first'));
-  it('Vimeo player API → cache-first', () => assert.strictEqual(swGetStrategy('https://player.vimeo.com/api/player.js'), 'cache-first'));
-});
 
 describe('SW: cache name versioning', () => {
   it('derives from version param', () => assert.strictEqual(swCacheName('10'), 'sy-subtitles-v10'));
