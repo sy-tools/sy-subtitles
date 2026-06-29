@@ -315,8 +315,7 @@ class TestServiceWorkerOffline:
         self._go_offline(page)
         try:
             outcome = page.evaluate(
-                "async (u) => { try { await fetch(u); return 'resolved'; }"
-                " catch (e) { return 'rejected'; } }",
+                "async (u) => { try { await fetch(u); return 'resolved'; } catch (e) { return 'rejected'; } }",
                 api,
             )
             assert outcome == "rejected", "Trees API offline should reject (network-only), not be served from cache"
