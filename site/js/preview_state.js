@@ -103,6 +103,45 @@ function canReusePreviewPlayer(prev, talkId, videoSlug, hasIframe) {
     && prev.talkId === talkId && prev.videoSlug === videoSlug);
 }
 
+// --- Preview playback position (#7) ---------------------------------------
+// The live overlay loop (renderOverlayAt) already tracks previewState.currentTime
+// in SECONDS, but it is reset to 0 on every fresh entry so a refresh restarts
+// the video. We persist the position under its own key — NOT inside the
+// marker/edit payload — because the overlay loop ticks ~60fps and writing the
+// whole {mode,markers,edits} blob that often would thrash storage. Mirrors the
+// review sync player's `sy.sync_player.*` convention.
+var RESUME_THRESHOLD_SEC = 3; // don't bother resuming a near-start position
+
+function previewPosKey(talkId, videoSlug) {
+  return 'sy.preview_pos.' + talkId + '.' + videoSlug;
+}
+
+function loadPreviewPos(talkId, videoSlug, storage) {
+  try {
+    var raw = storage.getItem(previewPosKey(talkId, videoSlug));
+    if (raw == null) return 0;
+    var v = parseFloat(raw);
+    if (!isFinite(v) || v < 0) return 0;
+    return v;
+  } catch (_) {
+    return 0;
+  }
+}
+
+function savePreviewPos(talkId, videoSlug, storage, seconds) {
+  if (typeof seconds !== 'number' || !isFinite(seconds)) return;
+  var v = seconds < 0 ? 0 : seconds;
+  try {
+    storage.setItem(previewPosKey(talkId, videoSlug), String(v));
+  } catch (_) {
+    /* quota / private mode — ignore */
+  }
+}
+
+function shouldResumePreviewPos(seconds) {
+  return typeof seconds === 'number' && isFinite(seconds) && seconds > RESUME_THRESHOLD_SEC;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     defaultPreviewState: defaultPreviewState,
@@ -110,5 +149,9 @@ if (typeof module !== 'undefined' && module.exports) {
     applyEditsToSrt: applyEditsToSrt,
     msToSrtTime: msToSrtTime,
     canReusePreviewPlayer: canReusePreviewPlayer,
+    previewPosKey: previewPosKey,
+    loadPreviewPos: loadPreviewPos,
+    savePreviewPos: savePreviewPos,
+    shouldResumePreviewPos: shouldResumePreviewPos,
   };
 }

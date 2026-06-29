@@ -5,6 +5,10 @@ const {
   loadPreviewState,
   applyEditsToSrt,
   canReusePreviewPlayer,
+  previewPosKey,
+  loadPreviewPos,
+  savePreviewPos,
+  shouldResumePreviewPos,
 } = require('../site/js/preview_state');
 const { findActiveSubtitleIdx } = require('../site/js/preview_srt_parser');
 
@@ -142,6 +146,70 @@ describe('loadPreviewState — migration and precedence', () => {
     assert.strictEqual(state.mode, 'edit');
     assert.deepStrictEqual(state.markers, []);
     assert.deepStrictEqual(state.edits, {});
+  });
+});
+
+describe('preview playback position — persist & resume (#7)', () => {
+  const talkId = '2001-01-01_Test';
+  const videoSlug = 'v1';
+  const key = 'sy.preview_pos.' + talkId + '.' + videoSlug;
+
+  it('previewPosKey builds the namespaced key (its own, not the marker/edit key)', () => {
+    assert.strictEqual(previewPosKey(talkId, videoSlug), key);
+  });
+
+  it('loadPreviewPos returns 0 when nothing is stored', () => {
+    const storage = makeStorage();
+    assert.strictEqual(loadPreviewPos(talkId, videoSlug, storage), 0);
+  });
+
+  it('round-trips a saved position as float seconds', () => {
+    const storage = makeStorage();
+    savePreviewPos(talkId, videoSlug, storage, 123.45);
+    assert.strictEqual(storage.getItem(key), '123.45');
+    assert.strictEqual(loadPreviewPos(talkId, videoSlug, storage), 123.45);
+  });
+
+  it('does NOT touch the marker/edit payload key', () => {
+    const storage = makeStorage();
+    savePreviewPos(talkId, videoSlug, storage, 42);
+    assert.strictEqual(storage.getItem('preview_' + talkId + '_' + videoSlug), null);
+  });
+
+  it('loadPreviewPos returns 0 for a non-numeric / corrupt value', () => {
+    const storage = makeStorage({ [key]: 'not-a-number' });
+    assert.strictEqual(loadPreviewPos(talkId, videoSlug, storage), 0);
+  });
+
+  it('loadPreviewPos returns 0 for a negative stored value', () => {
+    const storage = makeStorage({ [key]: '-12' });
+    assert.strictEqual(loadPreviewPos(talkId, videoSlug, storage), 0);
+  });
+
+  it('savePreviewPos clamps a negative position to 0', () => {
+    const storage = makeStorage();
+    savePreviewPos(talkId, videoSlug, storage, -5);
+    assert.strictEqual(loadPreviewPos(talkId, videoSlug, storage), 0);
+  });
+
+  it('savePreviewPos ignores NaN / non-finite and leaves the prior value', () => {
+    const storage = makeStorage();
+    savePreviewPos(talkId, videoSlug, storage, 50);
+    savePreviewPos(talkId, videoSlug, storage, NaN);
+    savePreviewPos(talkId, videoSlug, storage, Infinity);
+    assert.strictEqual(loadPreviewPos(talkId, videoSlug, storage), 50);
+  });
+
+  it('savePreviewPos swallows storage exceptions (quota / private mode)', () => {
+    const throwing = { setItem() { throw new Error('quota'); }, getItem() { return null; } };
+    assert.doesNotThrow(() => savePreviewPos(talkId, videoSlug, throwing, 10));
+  });
+
+  it('shouldResumePreviewPos skips trivial near-start positions, resumes deeper ones', () => {
+    assert.strictEqual(shouldResumePreviewPos(0), false);
+    assert.strictEqual(shouldResumePreviewPos(3), false);
+    assert.strictEqual(shouldResumePreviewPos(3.5), true);
+    assert.strictEqual(shouldResumePreviewPos(120), true);
   });
 });
 
