@@ -25,7 +25,7 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
 # SW install/activate/claim and the fetch chain are timing-sensitive under
 # `pytest -n auto` on a 2-core CI runner. The assertions are deterministic;
 # only the scheduling is not — so retry rather than widen the timeout forever.
-pytestmark = pytest.mark.flaky(reruns=2, reruns_delay=2)
+pytestmark = [pytest.mark.e2e, pytest.mark.flaky(reruns=2, reruns_delay=2)]
 
 CACHE = "sy-subtitles-c3"  # CACHE_NAME in sw.js (CACHE_VERSION = 3)
 SW_WAIT_MS = 15000

@@ -44,10 +44,15 @@ See `ARCHITECTURE.md` for full descriptions. In short:
 pip install -r requirements.txt
 pip install -r requirements-dev.txt                  # for tests
 python -m pytest tests/                              # run Python tests
+python -m pytest tests/ -m "not e2e"                 # fast lane (skip browser E2E)
 python -m pytest tests/test_offset_srt.py -k detect  # run a single test
+python -m pytest tests/ --cov=tools --cov-report=term-missing  # coverage
 GOLDEN_TALKS_SCOPE=all pytest tests/test_golden_talks.py  # full-corpus golden
 node --test tests/test_*.js                          # run JS (SPA) tests
 ```
+
+See `TESTING.md` for the full guide: markers, golden corpus, property tests,
+snapshots, and the `SY_E2E_REAL_VIMEO` network gate.
 
 ## Development (TDD required)
 

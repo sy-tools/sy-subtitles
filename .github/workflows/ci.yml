@@ -31,6 +31,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: 'pip'
       - run: pip install ruff==0.15.18
       - run: ruff check tools/ tests/
       - run: ruff format --check tools/ tests/
@@ -53,9 +54,12 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: 'pip'
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: playwright install chromium --with-deps
-      - run: pytest tests/ -n auto --tb=short
+        # Coverage is report-only (no enforced floor yet) — surfaces the tools/
+        # coverage trend in the job log; see TESTING.md for local usage.
+      - run: pytest tests/ -n auto --tb=short --cov=tools --cov-report=term-missing
 
   test-js:
     runs-on: ubuntu-latest

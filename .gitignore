@@ -23,6 +23,12 @@ dist/
 build/
 .hypothesis/
 
+# Coverage artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
 # IDE
 .idea/
 .vscode/
