@@ -3726,6 +3726,13 @@ function showPreview(talkId, videoSlug) {
   document.getElementById('view-preview').classList.add('active');
 
   document.getElementById('subtitle-overlay').textContent = '';
+  // We just blanked the overlay; clear the renderOverlayAt change-detector cache
+  // too, otherwise a sameVideo re-entry (e.g. the freshness-bar refresh re-running
+  // showPreview) keeps lastText === the current subtitle, so the rAF loop sees "no
+  // change" and never repaints — the subtitle stays blank until the next one's
+  // time comes. (Fresh entries replace previewState below, so this only matters on
+  // re-entry.)
+  if (previewState) { previewState.lastText = ''; previewState.lastSec = null; }
   if (previewState && previewState.player) {
     try { previewState.player.pause(); } catch(e) {}
   }
