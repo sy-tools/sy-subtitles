@@ -17,6 +17,20 @@ describe('computeShellVersion — pure logic', () => {
     assert.strictEqual(computeShellVersion(entries), 'aaaaaaa' + 'ccccccc' + 'bbbbbbb');
   });
 
+  it('keeps site/css/*.css (direct only), sorted into the path order', () => {
+    // CSS moved out of index.html into site/css/*.css must also drive the shell
+    // version — otherwise a CSS-only deploy would not trigger the SPA auto-reload
+    // and users would keep stale styling. Nested css is excluded like nested js.
+    const entries = [
+      { path: 'site/css/components.css', sha: 'dddddddddd' },
+      { path: 'site/index.html', sha: 'aaaaaaaaaa' },
+      { path: 'site/css/tokens.css', sha: 'eeeeeeeeee' },
+      { path: 'site/css/sub/nested.css', sha: 'ffffffffff' }, // nested → excluded
+    ];
+    // path order: site/css/components.css < site/css/tokens.css < site/index.html
+    assert.strictEqual(computeShellVersion(entries), 'ddddddd' + 'eeeeeee' + 'aaaaaaa');
+  });
+
   it('ignores non-shell paths (talks, other dirs, nested js)', () => {
     const entries = [
       { path: 'site/index.html', sha: '1111111111' },
@@ -40,7 +54,7 @@ describe('computeShellVersion matches the deploy script', () => {
     // asserts the two implementations agree byte-for-byte (sort, 7-char, join).
     const lsTree = execFileSync(
       'git',
-      ['ls-tree', '-r', 'HEAD', '--', 'site/index.html', 'site/js'],
+      ['ls-tree', '-r', 'HEAD', '--', 'site/index.html', 'site/js', 'site/css'],
       { cwd: REPO_ROOT, encoding: 'utf8' },
     );
     const entries = lsTree

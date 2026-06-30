@@ -24,6 +24,22 @@ function pageJs() {
   return extractPageJs(fs.readFileSync('site/index.html', 'utf8'));
 }
 
+// Extract the local stylesheets index.html links. Tolerant of attribute order so
+// <link rel="stylesheet" href="css/x.css"> and <link href="css/x.css" rel=…> both
+// match — a sheet on the page but missing from the precache would leave offline
+// boot unstyled, exactly the failure the js lockstep below guards against.
+function extractPageCss(html) {
+  const out = [];
+  const re = /<link\b[^>]*\bhref="(css\/[^"]+\.css)"/g;
+  let m;
+  while ((m = re.exec(html)) !== null) out.push(m[1]);
+  return out;
+}
+
+function pageCss() {
+  return extractPageCss(fs.readFileSync('site/index.html', 'utf8'));
+}
+
 function swArray(name) {
   const sw = fs.readFileSync('site/sw.js', 'utf8');
   const m = sw.match(new RegExp('var ' + name + ' = \\[([\\s\\S]*?)\\];'));
@@ -51,6 +67,25 @@ describe('SW shell precache', () => {
       page,
       'sw.js SHELL_ASSETS js list drifted from index.html <script src="js/…"> tags',
     );
+  });
+
+  it('precaches exactly the css index.html links (no drift)', () => {
+    const page = pageCss().sort();
+    const precached = shellAssets().filter((a) => a.startsWith('css/')).sort();
+    assert.ok(page.length > 0, 'expected <link rel="stylesheet" href="css/…"> in index.html');
+    assert.deepStrictEqual(
+      precached,
+      page,
+      'sw.js SHELL_ASSETS css list drifted from index.html <link href="css/…"> tags',
+    );
+  });
+
+  it('extracts stylesheets regardless of attribute order (rel before/after href)', () => {
+    const html = [
+      '<link rel="stylesheet" href="css/tokens.css">',
+      '<link href="css/components.css" rel="stylesheet">',
+    ].join('\n');
+    assert.deepStrictEqual(extractPageCss(html).sort(), ['css/components.css', 'css/tokens.css']);
   });
 
   it('extracts js modules regardless of attribute order (defer/type before src)', () => {

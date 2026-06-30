@@ -22,13 +22,15 @@ importScripts('js/sw_routing.js?v=' + CACHE_VERSION);
 // page + all its <script src> ran before the worker was controlling — so an
 // offline reload right after the first visit would request an uncached
 // index.html and get a blank page. Precaching makes offline boot work from
-// visit #1. The js list is kept in lockstep with index.html's <script src="js/…">
-// tags by tests/test_sw_precache.js. './' and 'index.html' are both precached so
-// either navigation form (the bare directory root or /index.html?query) resolves.
+// visit #1. The js and css lists are kept in lockstep with index.html's
+// <script src="js/…"> and <link href="css/…"> tags by tests/test_sw_precache.js.
+// './' and 'index.html' are both precached so either navigation form (the bare
+// directory root or /index.html?query) resolves.
 var SHELL_ASSETS = [
   './',
   'index.html',
   'icon.png',
+  'css/app.css',
   'js/preview_srt_parser.js',
   'js/preview_state.js',
   'js/index_url_state.js',

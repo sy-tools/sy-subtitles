@@ -666,9 +666,9 @@ describe('Fullscreen mode', () => {
   });
 
   it('subtitle overlay has fixed position in fs-mode', () => {
-    // Check CSS contains position: fixed for subtitle-overlay in fs-mode context
-    var styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-    var css = styleMatch ? styleMatch[1] : '';
+    // Check CSS contains position: fixed for subtitle-overlay in fs-mode context.
+    // CSS is externalized to site/css/app.css (no inline <style> in index.html).
+    var css = fs.readFileSync('site/css/app.css', 'utf8');
     assert.ok(css.includes('fs-mode') && css.includes('#subtitle-overlay') && css.includes('position') && css.includes('fixed'),
       'subtitle-overlay should be position:fixed in .fs-mode');
   });
@@ -1042,9 +1042,15 @@ describe('Theme: CSS variables coverage', () => {
   var fs = require('fs');
   var html = fs.readFileSync('site/index.html', 'utf8');
 
-  // Extract <style> block
-  var styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-  var css = styleMatch ? styleMatch[1] : '';
+  // CSS now lives in the externalized stylesheet (site/css/app.css), not inline.
+  // This check historically saw only the FIRST inline <style> (the base theme
+  // block) via the old /<style>…<\/style>/ regex, so it never reached the
+  // warm/tweaks layers — which intentionally carry a few hardcoded accent
+  // colors (bookmarklet cream/ink, modal-error red). Preserve that scope here so
+  // PR-1 stays behaviour-equivalent; PR-2 (consolidation) revisits var()
+  // discipline across the whole sheet.
+  var fullCss = fs.readFileSync('site/css/app.css', 'utf8');
+  var css = fullCss.split('SY Subtitles — warm paper theme override')[0];
 
   // Remove :root variable declarations (they legitimately have hex colors)
   var cssWithoutVars = css.replace(/:root\s*\{[^}]*\}/g, '')
@@ -1122,37 +1128,43 @@ describe('Theme: toggle logic', () => {
 describe('Theme: CSS variable completeness', () => {
   var fs = require('fs');
   var html = fs.readFileSync('site/index.html', 'utf8');
+  // CSS is externalized to site/css/app.css; palette/token rules live there now.
+  var css = fs.readFileSync('site/css/app.css', 'utf8');
 
   it('dark theme variables defined in :root', () => {
-    assert.ok(html.includes('--bg: #1a1a1a'), 'dark --bg missing');
-    assert.ok(html.includes('--fg: #fff'), 'dark --fg missing');
-    assert.ok(html.includes('--link: #6af'), 'dark --link missing');
+    assert.ok(css.includes('--bg: #1a1a1a'), 'dark --bg missing');
+    assert.ok(css.includes('--fg: #fff'), 'dark --fg missing');
+    assert.ok(css.includes('--link: #6af'), 'dark --link missing');
   });
 
   it('light theme variables defined', () => {
-    assert.ok(html.includes('--bg: #f5f5f5'), 'light --bg missing');
-    assert.ok(html.includes('--fg: #111'), 'light --fg missing');
-    assert.ok(html.includes('--link: #0066cc'), 'light --link missing');
+    assert.ok(css.includes('--bg: #f5f5f5'), 'light --bg missing');
+    assert.ok(css.includes('--fg: #111'), 'light --fg missing');
+    assert.ok(css.includes('--link: #0066cc'), 'light --link missing');
   });
 
   it('light theme defined both in @media and [data-theme="light"]', () => {
-    assert.ok(html.includes('prefers-color-scheme: light'), '@media query missing');
-    assert.ok(html.includes('[data-theme="light"]'), 'explicit light theme missing');
+    assert.ok(css.includes('prefers-color-scheme: light'), '@media query missing');
+    assert.ok(css.includes('[data-theme="light"]'), 'explicit light theme missing');
   });
 
   it('dark override prevents light @media from applying', () => {
-    assert.ok(html.includes(':root:not([data-theme="dark"])'), 'dark override guard missing');
+    assert.ok(css.includes(':root:not([data-theme="dark"])'), 'dark override guard missing');
   });
 
   it('all var() references have matching definitions', () => {
+    // Usages span both the stylesheet and any inline style="" in the HTML;
+    // definitions live in the stylesheet. Check the union so an inline var()
+    // usage with no definition is still caught.
+    var src = html + '\n' + css;
     var varUsages = new Set();
     var varDefs = new Set();
     // Find var(--xxx)
-    (html.match(/var\(--[\w-]+\)/g) || []).forEach(m => {
+    (src.match(/var\(--[\w-]+\)/g) || []).forEach(m => {
       varUsages.add(m.match(/--[\w-]+/)[0]);
     });
     // Find --xxx: definitions
-    (html.match(/--[\w-]+\s*:/g) || []).forEach(m => {
+    (src.match(/--[\w-]+\s*:/g) || []).forEach(m => {
       varDefs.add(m.replace(/\s*:/, ''));
     });
     var missing = [...varUsages].filter(v => !varDefs.has(v));
@@ -3263,10 +3275,12 @@ describe('Pipeline: manifest tracking', () => {
   });
 
   it('status badge CSS for all states', () => {
-    assert.ok(html.includes('.review-badge.ready-for-review'));
-    assert.ok(html.includes('.review-badge.in-progress'));
-    assert.ok(html.includes('.review-badge.in-review'));
-    assert.ok(html.includes('.review-badge.approved'));
+    // Badge styling is in the externalized stylesheet, not inline in index.html.
+    var css = fs.readFileSync('site/css/app.css', 'utf8');
+    assert.ok(css.includes('.review-badge.ready-for-review'));
+    assert.ok(css.includes('.review-badge.in-progress'));
+    assert.ok(css.includes('.review-badge.in-review'));
+    assert.ok(css.includes('.review-badge.approved'));
   });
 
   it('getOverallStatus function exists', () => {

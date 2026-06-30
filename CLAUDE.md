@@ -49,7 +49,16 @@ python -m pytest tests/test_offset_srt.py -k detect  # run a single test
 python -m pytest tests/ --cov=tools --cov-report=term-missing  # coverage
 GOLDEN_TALKS_SCOPE=all pytest tests/test_golden_talks.py  # full-corpus golden
 node --test tests/test_*.js                          # run JS (SPA) tests
+pytest -m smoke                                      # SPA boot smoke (~2s, needs chromium)
 ```
+
+**Any change under `site/` MUST pass `pytest -m smoke` AND be opened in a browser
+before it's "done".** The unit lanes only grep strings out of `index.html`/`*.js`/
+`*.css` — they go green even when the SPA renders a blank page (boot throws, or an
+unlinked/404 stylesheet). The boot smoke (`tests/test_spa_boot_smoke.py`) loads the
+app and asserts it boots, renders, and is styled. Off GitHub Pages the app needs
+`?repo=owner/name` (e.g. `localhost:8000/?repo=sy-tools/sy-subtitles`) or it shows a
+deliberate blank page.
 
 See `TESTING.md` for the full guide: markers, golden corpus, property tests,
 snapshots, and the `SY_E2E_REAL_VIMEO` network gate.
