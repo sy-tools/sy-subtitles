@@ -1890,7 +1890,6 @@ var I18N = {
     'freshness.refreshing': '\u041E\u043D\u043E\u0432\u043B\u044E\u044E...',
     'freshness.refreshed': '\u2713 \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E!',
     'freshness.up_to_date': '\u2713 \u0412\u0436\u0435 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u043E',
-    'freshness.offline': '\u26A0 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u043A\u0435\u0448',
     'freshness.error': '\u2717 \u041F\u043E\u043C\u0438\u043B\u043A\u0430:',
     'link.review': '\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434',
     'link.amruta': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043D\u0430 amruta.org',
@@ -2019,7 +2018,6 @@ var I18N = {
     'freshness.refreshing': 'Refreshing...',
     'freshness.refreshed': '\u2713 Refreshed!',
     'freshness.up_to_date': '\u2713 Up to date',
-    'freshness.offline': '\u26a0 Offline \u2014 cached',
     'freshness.error': '\u2717 Error:',
     'link.review': 'Review translation',
     'link.amruta': 'Open on amruta.org',
@@ -5434,7 +5432,9 @@ function updateStaleIndicator() {
   // listeners below. Visible on every view (the freshness bar is sticky), so the
   // user always knows they are offline while they keep working with cached data.
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    if (txt) txt.textContent = t('freshness.offline');
+    // Same wording as the staleNotice offline branch below — one consistent
+    // "offline, showing cache" message regardless of which path detected it.
+    if (txt) txt.textContent = t('stale.offline');
     // No dismiss × on a live offline state — it can't be dismissed; drop it and
     // keep the padding symmetric. The × stays for the dismissable stale notice.
     if (x) x.style.display = 'none';
@@ -5503,8 +5503,8 @@ SPA.refreshManifest = function() {
     if (el) {
       if (m && m._stale) {
         // loadManifest resolved with a stale cache, not fresh data — don't claim
-        // "up to date".
-        el.textContent = t('freshness.offline');
+        // "up to date". Same wording as the stale-indicator pill.
+        el.textContent = t('stale.offline');
         el.style.color = 'var(--accent-red)';
       } else {
         var changed = m.etag !== oldEtag;

@@ -27,7 +27,7 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
 # only the scheduling is not — so retry rather than widen the timeout forever.
 pytestmark = [pytest.mark.e2e, pytest.mark.flaky(reruns=2, reruns_delay=2)]
 
-CACHE = "sy-subtitles-c3"  # CACHE_NAME in sw.js (CACHE_VERSION = 3)
+CACHE = "sy-subtitles-c5"  # CACHE_NAME in sw.js (CACHE_VERSION = 5)
 SW_WAIT_MS = 15000
 
 
@@ -48,7 +48,7 @@ class TestServiceWorker:
         _register_sw(page, server)
         page.evaluate("() => fetch('icon.png')")
         page.wait_for_function(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " return !!(await c.match(location.origin + '/icon.png')); }",
             timeout=10000,
         )
@@ -59,7 +59,7 @@ class TestServiceWorker:
         # Seed a sentinel under the icon.png key; cache-first must return it
         # without going to the network.
         page.evaluate(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " await c.put(location.origin + '/icon.png',"
             " new Response('SENTINEL', {headers: {'content-type': 'text/plain'}})); }"
         )
@@ -71,7 +71,7 @@ class TestServiceWorker:
         # Seed a stale sentinel for index.html; network-first must prefer the
         # live response when the network is reachable.
         page.evaluate(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " await c.put(location.origin + '/index.html',"
             " new Response('STALE', {headers: {'content-type': 'text/html'}})); }"
         )
@@ -100,14 +100,14 @@ class TestServiceWorker:
         # with a sentinel before activation; it (and its entry) must survive.
         page.goto(f"{server}/index.html")
         page.evaluate(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " await c.put(location.origin + '/keep', new Response('KEEP')); }"
         )
         page.evaluate("() => navigator.serviceWorker.register('sw.js')")
         page.wait_for_function("() => !!navigator.serviceWorker.controller", timeout=SW_WAIT_MS)
         assert CACHE in page.evaluate("() => caches.keys()")
         survived = page.evaluate(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " const r = await c.match(location.origin + '/keep'); return r ? await r.text() : null; }"
         )
         assert survived == "KEEP", "activate wrongly purged the current-version cache"
@@ -121,6 +121,33 @@ class TestServiceWorker:
         page.evaluate("() => navigator.serviceWorker.register('sw.js')")
         page.wait_for_function("() => !!navigator.serviceWorker.controller", timeout=SW_WAIT_MS)
         assert page.evaluate("() => !!navigator.serviceWorker.controller") is True
+
+    def test_install_precaches_app_shell(self, server, page):  # noqa: F811
+        # The install handler precaches the shell, so it is present WITHOUT any
+        # navigation beyond the first load — this is what lets the very first
+        # offline reload boot (the page + js loaded before the worker controlled,
+        # so they would not otherwise be cached).
+        _register_sw(page, server)
+        page.wait_for_function(
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
+            " const us = (await c.keys()).map(r => r.url);"
+            " return us.some(u => u.split('?')[0].endsWith('/index.html'))"
+            " && us.filter(u => u.includes('/js/')).length >= 11"
+            " && us.some(u => u.endsWith('/icon.png')); }",
+            timeout=10000,
+        )
+        shell = page.evaluate(
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
+            " const us = (await c.keys()).map(r => r.url);"
+            " return { index: us.some(u => u.split('?')[0].endsWith('/index.html')),"
+            " js: us.filter(u => u.includes('/js/')).length,"
+            " icon: us.some(u => u.endsWith('/icon.png')),"
+            " root: us.some(u => u.split('?')[0].endsWith('/')) }; }"
+        )
+        assert shell["index"], "index.html not precached on install"
+        assert shell["js"] >= 11, f"expected all shell js precached, got {shell['js']}"
+        assert shell["icon"], "icon.png not precached on install"
+        assert shell["root"], "directory root ('./') not precached on install"
 
 
 class TestServiceWorkerOffline:
@@ -137,16 +164,21 @@ class TestServiceWorkerOffline:
     def test_cache_first_miss_goes_to_network_then_serves_offline(self, server, page):  # noqa: F811
         # icon.png is immutable → cache-first. First fetch is a MISS, so it must
         # fall through to the network and populate the cache; a later OFFLINE
-        # fetch must then be served from that cache.
+        # fetch must then be served from that cache. (The install precache seeds
+        # icon.png, so delete it first to exercise the genuine miss path.)
         _register_sw(page, server)
+        page.evaluate(
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
+            " await c.delete(location.origin + '/icon.png'); }"
+        )
         miss = page.evaluate(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " return !!(await c.match(location.origin + '/icon.png')); }"
         )
         assert miss is False, "precondition: icon.png must not be cached yet"
         page.evaluate("() => fetch('icon.png')")
         page.wait_for_function(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " return !!(await c.match(location.origin + '/icon.png')); }",
             timeout=10000,
         )
@@ -165,7 +197,7 @@ class TestServiceWorkerOffline:
         _register_sw(page, server)
         page.evaluate("() => fetch('index.html')")
         page.wait_for_function(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " return !!(await c.match(location.origin + '/index.html')); }",
             timeout=10000,
         )
@@ -184,7 +216,7 @@ class TestServiceWorkerOffline:
         # Seed a cached asset so we can prove the SW is still alive afterwards.
         page.evaluate("() => fetch('icon.png')")
         page.wait_for_function(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " return !!(await c.match(location.origin + '/icon.png')); }",
             timeout=10000,
         )
@@ -208,7 +240,7 @@ class TestServiceWorkerOffline:
         status = page.evaluate("async () => (await fetch('definitely-missing-asset.js')).status")
         assert status == 404, f"expected a 404 from the test server, got {status}"
         cached = page.evaluate(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " return !!(await c.match(location.origin + '/definitely-missing-asset.js')); }"
         )
         assert cached is False, "a 404 response was wrongly written to the cache"
@@ -219,7 +251,7 @@ class TestServiceWorkerOffline:
         _register_sw(page, server)
         page.evaluate("() => fetch('js/sw_routing.js')")
         page.wait_for_function(
-            "async () => { const c = await caches.open('sy-subtitles-c3');"
+            "async () => { const c = await caches.open('sy-subtitles-c5');"
             " return !!(await c.match(location.origin + '/js/sw_routing.js')); }",
             timeout=10000,
         )
@@ -238,7 +270,7 @@ class TestServiceWorkerOffline:
         _register_sw(page, server)
         srt_url = "https://raw.githubusercontent.com/o/r/main/talks/x/uk/final/uk.srt?v=ab12cd34"
         page.evaluate(
-            "async (u) => { const c = await caches.open('sy-subtitles-c3');"
+            "async (u) => { const c = await caches.open('sy-subtitles-c5');"
             " await c.put(u, new Response('CACHED-SRT',"
             " {status: 200, headers: {'content-type': 'text/plain'}})); }",
             srt_url,
@@ -247,30 +279,62 @@ class TestServiceWorkerOffline:
         body = page.evaluate("async (u) => (await (await fetch(u)).text())", srt_url)
         assert body == "CACHED-SRT", f"sha-versioned content not served cache-first: {body[:60]!r}"
 
-    def test_github_api_and_raw_are_network_first_with_cache_fallback(self, server, page):  # noqa: F811
-        # api.github.com + raw.githubusercontent.com are routed network-first, so
-        # an OFFLINE request falls back to whatever the SW previously cached. This
-        # is the "shadowing" mechanism: when the SW holds a cached API response,
-        # the app's own fetch resolves with it offline (never rejects), so the
-        # app-level stale banner does not fire. PR B intentionally inverts this.
+    def test_raw_is_network_first_with_offline_cache_fallback(self, server, page):  # noqa: F811
+        # raw.githubusercontent.com (meta.yaml etc.) is network-first, so an
+        # OFFLINE request falls back to whatever the SW previously cached — this is
+        # what makes already-viewed content available offline.
         _register_sw(page, server)
-        for url in (
-            "https://api.github.com/git/trees/main?recursive=1",
-            "https://raw.githubusercontent.com/o/r/main/review-status.json",
-        ):
-            page.evaluate(
-                "async (u) => { const c = await caches.open('sy-subtitles-c3');"
-                " await c.put(u, new Response('CACHED:' + u,"
-                " {status: 200, headers: {'content-type': 'application/json'}})); }",
-                url,
-            )
+        url = "https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml"
+        page.evaluate(
+            "async (u) => { const c = await caches.open('sy-subtitles-c5');"
+            " await c.put(u, new Response('CACHED-META',"
+            " {status: 200, headers: {'content-type': 'text/plain'}})); }",
+            url,
+        )
         self._go_offline(page)
         try:
-            for url in (
-                "https://api.github.com/git/trees/main?recursive=1",
-                "https://raw.githubusercontent.com/o/r/main/review-status.json",
-            ):
-                body = page.evaluate("async (u) => (await (await fetch(u)).text())", url)
-                assert body == "CACHED:" + url, f"{url} not served from SW cache offline: {body[:60]!r}"
+            body = page.evaluate("async (u) => (await (await fetch(u)).text())", url)
+            assert body == "CACHED-META", f"raw not served from SW cache offline: {body[:60]!r}"
+        finally:
+            self._go_online(page)
+
+    def test_trees_api_is_network_only_and_not_cached(self, server, page):  # noqa: F811
+        # The Trees API is network-only: the SW never caches it, so offline the
+        # request genuinely FAILS (rejects). That is deliberate — it lets the app
+        # detect offline and fall back to its localStorage manifest + show the
+        # offline badge, instead of being fooled by a cached 200 (the shadowing the
+        # earlier network-first behaviour caused). Even a pre-seeded cache entry is
+        # bypassed: network-only never consults the cache.
+        _register_sw(page, server)
+        api = "https://api.github.com/git/trees/main?recursive=1"
+        page.evaluate(
+            "async (u) => { const c = await caches.open('sy-subtitles-c5');"
+            " await c.put(u, new Response('SHOULD-NOT-BE-SERVED', {status: 200})); }",
+            api,
+        )
+        self._go_offline(page)
+        try:
+            outcome = page.evaluate(
+                "async (u) => { try { await fetch(u); return 'resolved'; } catch (e) { return 'rejected'; } }",
+                api,
+            )
+            assert outcome == "rejected", "Trees API offline should reject (network-only), not be served from cache"
+        finally:
+            self._go_online(page)
+
+    def test_first_visit_offline_reload_boots_shell(self, server, page):  # noqa: F811
+        # The whole point of the install precache: an offline reload right after
+        # the FIRST visit must still boot the SPA. The first page + its <script
+        # src> loaded before the worker controlled, so only the precache has the
+        # shell; the navigation falls back to it via ignoreSearch / mode==navigate.
+        _register_sw(page, server)
+        self._go_offline(page)
+        try:
+            page.reload(wait_until="domcontentloaded", timeout=15000)
+            # I18N is defined by index.html's inline script — its presence proves
+            # the precached shell (html + js) booted with no network.
+            page.wait_for_function("() => typeof I18N !== 'undefined'", timeout=10000)
+            assert page.evaluate("() => typeof t === 'function'") is True
+            assert page.evaluate("() => typeof showIndex === 'function'") is True
         finally:
             self._go_online(page)
