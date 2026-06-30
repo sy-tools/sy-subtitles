@@ -120,7 +120,7 @@ def test_spa_boots_renders_and_is_styled_without_errors(smoke_server, smoke_page
     #    this, so the wait times out and the test fails loudly.
     page.wait_for_function("document.title.includes('Index')", timeout=10000)
 
-    # 2. The stylesheet loaded AND applied (catches a missing/unlinked/404 app.css,
+    # 2. The stylesheet loaded AND applied (catches a missing/unlinked/404 sheet,
     #    which renders a functional-but-unstyled page no string grep would catch).
     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
     assert bg not in _UNSTYLED_BG, f"<body> is unstyled — app CSS did not apply (bg={bg!r})"

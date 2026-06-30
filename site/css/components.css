@@ -1,49 +1,10 @@
 /*
-  SY Subtitles — application styles.
-  Extracted verbatim (byte-identical) from the three <style> blocks that
-  previously lived inline in index.html: base + sy-warm-theme + sy-tweaks-theme.
-  PR-1 externalizes; PR-2 splits this into tokens.css + components.css while
-  consolidating the (currently layered) palettes. Single source of truth.
+  components.css — the design system COMPONENT layer.
+  Every class/element rule for the app, built on the tokens in tokens.css
+  (loaded first). No palette/:root token definitions live here — those are
+  the token layer. Component rules that key off the theme (e.g. #bookmarklet
+  ink per data-theme) stay here because they style elements, not tokens.
 */
-/* --- Theme: CSS custom properties --- */
-:root {
-  --bg: #1a1a1a; --bg2: #111; --bg3: #222; --bg4: #333; --bg5: #2a2a2a;
-  --fg: #fff; --fg2: #eee; --fg3: #ccc; --fg4: #aaa; --fg5: #888; --fg6: #666;
-  --border: #333; --border2: #444; --border3: #555;
-  --link: #6af; --accent-green: #4ade80; --accent-orange: #ffa500; --accent-red: #f66;
-  --overlay-bg: rgba(0,0,0,0.85);
-  --stat-active-bg: #1a2a3a; --primary-bg: #2a4a2a; --primary-border: #4a4; --primary-fg: #8f8;
-  --issue-bg: #3a2a4a; --issue-border: #84c; --issue-fg: #c8f;
-  --mark-bg: rgba(136, 68, 204, 0.12);
-  --danger-bg: #4a2a2a; --danger-border: #a44; --danger-fg: #f88;
-  --cell-hover: #222; --cell-edit-bg: #1a2a1a; --cell-edited-bg: #2a2a1a;
-}
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg: #f5f5f5; --bg2: #fff; --bg3: #eee; --bg4: #ddd; --bg5: #e8e8e8;
-    --fg: #111; --fg2: #222; --fg3: #444; --fg4: #666; --fg5: #888; --fg6: #aaa;
-    --border: #ddd; --border2: #ccc; --border3: #bbb;
-    --link: #0066cc; --accent-green: #16a34a; --accent-orange: #d97706; --accent-red: #dc2626;
-    --overlay-bg: rgba(0,0,0,0.75);
-    --stat-active-bg: #e0f0ff; --primary-bg: #e8f5e8; --primary-border: #4a4; --primary-fg: #166016;
-    --issue-bg: #f0e8f5; --issue-border: #84c; --issue-fg: #5a2a7a;
-    --mark-bg: rgba(136, 68, 204, 0.10);
-    --danger-bg: #f5e8e8; --danger-border: #a44; --danger-fg: #a01010;
-    --cell-hover: #f0f0f0; --cell-edit-bg: #e8f5e8; --cell-edited-bg: #f5f0e0;
-  }
-}
-[data-theme="light"] {
-  --bg: #f5f5f5; --bg2: #fff; --bg3: #eee; --bg4: #ddd; --bg5: #e8e8e8;
-  --fg: #111; --fg2: #222; --fg3: #444; --fg4: #666; --fg5: #888; --fg6: #aaa;
-  --border: #ddd; --border2: #ccc; --border3: #bbb;
-  --link: #0066cc; --accent-green: #16a34a; --accent-orange: #d97706; --accent-red: #dc2626;
-  --overlay-bg: rgba(0,0,0,0.75);
-  --stat-active-bg: #e0f0ff; --primary-bg: #e8f5e8; --primary-border: #4a4; --primary-fg: #166016;
-  --issue-bg: #f0e8f5; --issue-border: #84c; --issue-fg: #5a2a7a;
-  --mark-bg: rgba(136, 68, 204, 0.10);
-  --danger-bg: #f5e8e8; --danger-border: #a44; --danger-fg: #a01010;
-  --cell-hover: #f0f0f0; --cell-edit-bg: #e8f5e8; --cell-edited-bg: #f5f0e0;
-}
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: var(--bg); color: var(--fg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; display: flex; flex-direction: column; margin: 0; }
@@ -56,7 +17,6 @@ a:hover { text-decoration: underline; }
    Create issue, mode toggle…) remain reachable from anywhere on the page.
    --freshness-h is the measured height of #freshness-bar above; the view
    header sits directly under it. */
-:root { --freshness-h: 30px; }
 .header { padding: 12px 20px; background: var(--bg2); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
   position: sticky; top: var(--freshness-h); z-index: 20; }
 .header h1 { font-size: 16px; font-weight: normal; color: var(--fg4); }
@@ -321,12 +281,9 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
   padding: 4px 10px; font-size: 12px; cursor: pointer;
 }
 .chip:hover { border-color: var(--fg4); }
-:root { --sync-player-h: 25vh; }
-@media (max-width: 768px) { :root { --sync-player-h: 22vh; } }
 
 /* Preview-view resize handles write these live via JS. Declaring the
    defaults here keeps the var() resolution stable on first paint. */
-:root { --preview-player-h: 54vh; --preview-subs-h: 120px; }
 .sync-player-bar {
   /* Sit below the freshness-bar AND the view header so both headers stay
      visible while the player is open. --view-header-h is measured by JS. */
@@ -379,120 +336,6 @@ body.sync-player-resizing, body.sync-player-resizing * {
 #view-preview.fs-mode .video-wrap > div { position: relative; width: 100%; height: 100%; }
 #view-preview.fs-mode #subtitle-overlay { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 10000; font-size: clamp(28px, 4vw, 80px); background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 40px 10% 28px; min-height: 0; border-radius: 0; text-shadow: 0 2px 6px rgba(0,0,0,1); pointer-events: none; }
 #view-preview.fs-mode .controls { display: none !important; }
-/* ============================================================
-   SY Subtitles — warm paper theme override
-   Reskins the live app's CSS variables + typography.
-   No selectors renamed; all JS/HTML contracts preserved.
-   ============================================================ */
-
-/* LIGHT — warm paper (cream manuscript). Applied as default AND under
-   [data-theme="light"] AND under auto-theme light preference. */
-:root,
-[data-theme="light"] {
-  --bg:  #FAF6EE;   /* page */
-  --bg2: #F6F0E2;   /* cards / header strip */
-  --bg3: #F0E9D7;   /* inputs / chips */
-  --bg4: #E8DFCB;   /* buttons / hover */
-  --bg5: #F3ECDE;   /* subtle zone */
-
-  --fg:  #221E18;   /* primary */
-  --fg2: #2E2820;
-  --fg3: #4A4338;
-  --fg4: #6B6050;
-  --fg5: #8A7D68;
-  --fg6: #A99C85;
-
-  --border:  #E5DCC6;
-  --border2: #D6C9AD;
-  --border3: #B9A887;
-
-  --link: #8A4A2E;          /* warm terracotta link */
-  --accent-green:  #5A7A3A; /* moss */
-  --accent-orange: #C68A2A; /* saffron */
-  --accent-red:    #B04B2E; /* clay */
-
-  --overlay-bg: rgba(26,22,16,0.78);
-
-  --stat-active-bg: #EFE4CE;
-  --primary-bg:     #E6E9D6;
-  --primary-border: #8DA06A;
-  --primary-fg:     #3F5222;
-
-  --issue-bg:     #F1E4D3;
-  --issue-border: #C08A4E;
-  --issue-fg:     #7A4A1E;
-
-  --mark-bg: rgba(198, 138, 42, 0.14);
-
-  --danger-bg:     #F2DCD2;
-  --danger-border: #C08070;
-  --danger-fg:     #8A2E1A;
-
-  --cell-hover:       #F3ECDB;
-  --cell-edit-bg:     #EDEAD4;
-  --cell-edited-bg:   #EFE6CC;
-}
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --bg:  #FAF6EE;
-    --bg2: #F6F0E2;
-    --bg3: #F0E9D7;
-    --bg4: #E8DFCB;
-    --bg5: #F3ECDE;
-    --fg:  #221E18; --fg2: #2E2820; --fg3: #4A4338; --fg4: #6B6050; --fg5: #8A7D68; --fg6: #A99C85;
-    --border: #E5DCC6; --border2: #D6C9AD; --border3: #B9A887;
-    --link: #8A4A2E;
-    --accent-green: #5A7A3A; --accent-orange: #C68A2A; --accent-red: #B04B2E;
-    --overlay-bg: rgba(26,22,16,0.78);
-    --stat-active-bg: #EFE4CE;
-    --primary-bg: #E6E9D6; --primary-border: #8DA06A; --primary-fg: #3F5222;
-    --issue-bg: #F1E4D3; --issue-border: #C08A4E; --issue-fg: #7A4A1E;
-    --mark-bg: rgba(198, 138, 42, 0.14);
-    --danger-bg: #F2DCD2; --danger-border: #C08070; --danger-fg: #8A2E1A;
-    --cell-hover: #F3ECDB; --cell-edit-bg: #EDEAD4; --cell-edited-bg: #EFE6CC;
-  }
-}
-
-/* DARK — dim lamp over manuscript. Walnut base, warm cream ink. */
-:root { color-scheme: light dark; }
-[data-theme="dark"] { color-scheme: dark; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:  #14120F; --bg2: #1A1612; --bg3: #1E1A14; --bg4: #2A2520; --bg5: #221D17;
-    --fg:  #F0E8D6; --fg2: #E4DCC6; --fg3: #C8BDA5; --fg4: #A89C82; --fg5: #8A7F6A; --fg6: #6B6150;
-    --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
-    --link: #E39770;
-    --accent-green: #A8C884; --accent-orange: #E3B26A; --accent-red: #E08B6A;
-    --overlay-bg: rgba(0,0,0,0.80);
-    --stat-active-bg: #2B2418;
-    --primary-bg: #223020; --primary-border: #6C8448; --primary-fg: #BFD29A;
-    --issue-bg: #2E241A; --issue-border: #A67744; --issue-fg: #E0B478;
-    --mark-bg: rgba(227, 151, 112, 0.14);
-    --danger-bg: #2E1F1A; --danger-border: #9E5848; --danger-fg: #E8A48E;
-    --cell-hover: #221E18; --cell-edit-bg: #1F2A1C; --cell-edited-bg: #2A2518;
-  }
-}
-[data-theme="dark"] {
-  --bg:  #14120F; --bg2: #1A1612; --bg3: #1E1A14; --bg4: #2A2520; --bg5: #221D17;
-  --fg:  #F0E8D6; --fg2: #E4DCC6; --fg3: #C8BDA5; --fg4: #A89C82; --fg5: #8A7F6A; --fg6: #6B6150;
-  --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
-  --link: #E39770;
-  --accent-green: #A8C884; --accent-orange: #E3B26A; --accent-red: #E08B6A;
-  --overlay-bg: rgba(0,0,0,0.80);
-  --stat-active-bg: #2B2418;
-  --primary-bg: #223020; --primary-border: #6C8448; --primary-fg: #BFD29A;
-  --issue-bg: #2E241A; --issue-border: #A67744; --issue-fg: #E0B478;
-  --mark-bg: rgba(227, 151, 112, 0.14);
-  --danger-bg: #2E1F1A; --danger-border: #9E5848; --danger-fg: #E8A48E;
-  --cell-hover: #221E18; --cell-edit-bg: #1F2A1C; --cell-edited-bg: #2A2518;
-}
-
-/* --- Typography: warm serif for titles/text, mono for codes, sans for UI --- */
-:root {
-  --f-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --f-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --f-mono:  'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-}
 body {
   font-family: var(--f-sans);
   font-feature-settings: 'ss01', 'cv11';
@@ -875,10 +718,6 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
    surround white. Resetting the scheme keeps the player transparent. */
 .video-wrap iframe,
 .sync-player-video iframe { color-scheme: normal; }
-[data-theme="dark"] { --player-letterbox: #000; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) { --player-letterbox: #000; }
-}
 
 #subtitle-overlay {
   background: var(--bg2);
@@ -937,67 +776,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 [contenteditable="true"]:focus-visible {
   outline-color: var(--link);
 }
-/* ============================================================
-   SY Subtitles — tunable warm palette
-   Overrides only the light-mode surface tokens using HSL knobs.
-   Dark mode is untouched.
-   ============================================================ */
-:root {
-  /* HSL knobs — these are the "warm" palette values the design was tuned to
-     (hue 36°, saturation 71%, lightness 92%, contrast 1.0). */
-  --warm-h: 36;
-  --warm-s: 71%;
-  --warm-l: 92%;
-  --warm-contrast: 1;
-}
-:root,
-[data-theme="light"] {
-  /* Surfaces — step lightness downward from --warm-l */
-  --bg:  hsl(var(--warm-h)  calc(var(--warm-s))       var(--warm-l));
-  --bg2: hsl(var(--warm-h)  calc(var(--warm-s) * 0.95) calc(var(--warm-l) - 2.5%));
-  --bg3: hsl(var(--warm-h)  calc(var(--warm-s) * 0.92) calc(var(--warm-l) - 5%));
-  --bg4: hsl(var(--warm-h)  calc(var(--warm-s) * 0.85) calc(var(--warm-l) - 9%));
-  --bg5: hsl(var(--warm-h)  calc(var(--warm-s) * 0.88) calc(var(--warm-l) - 4%));
-
-  /* Borders */
-  --border:  hsl(var(--warm-h) calc(var(--warm-s) * 0.7)  calc(var(--warm-l) - 8%));
-  --border2: hsl(var(--warm-h) calc(var(--warm-s) * 0.75) calc(var(--warm-l) - 14%));
-  --border3: hsl(var(--warm-h) calc(var(--warm-s) * 0.75) calc(var(--warm-l) - 24%));
-
-  /* Ink — contrast multiplier darkens text on richer backgrounds */
-  --fg:  hsl(30 20% calc(14% / var(--warm-contrast)));
-  --fg2: hsl(30 18% calc(18% / var(--warm-contrast)));
-  --fg3: hsl(30 15% calc(26% / var(--warm-contrast)));
-  --fg4: hsl(32 12% calc(40% / var(--warm-contrast)));
-  --fg5: hsl(34 14% calc(52% / var(--warm-contrast)));
-  --fg6: hsl(36 16% calc(64% / var(--warm-contrast)));
-
-  /* Accent zones — keep the earth tones, just shift lightness slightly with base */
-  --stat-active-bg: hsl(var(--warm-h) calc(var(--warm-s) * 1.05) calc(var(--warm-l) - 7%));
-  --cell-hover:     hsl(var(--warm-h) calc(var(--warm-s) * 0.95) calc(var(--warm-l) - 3%));
-  --cell-edit-bg:   hsl(70            28%                         calc(var(--warm-l) - 6%));
-  --cell-edited-bg: hsl(42            38%                         calc(var(--warm-l) - 7%));
-  --mark-bg:        hsla(36 60% 50% / 0.16);
-}
-
-/* Keep the dark-theme override from the warm block winning in dark mode */
-[data-theme="dark"] {
-  --bg:  #14120F; --bg2: #1A1612; --bg3: #1E1A14; --bg4: #2A2520; --bg5: #221D17;
-  --fg:  #F0E8D6; --fg2: #E4DCC6; --fg3: #C8BDA5; --fg4: #A89C82; --fg5: #8A7F6A; --fg6: #6B6150;
-  --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:  #14120F; --bg2: #1A1612; --bg3: #1E1A14; --bg4: #2A2520; --bg5: #221D17;
-    --fg:  #F0E8D6; --fg2: #E4DCC6; --fg3: #C8BDA5; --fg4: #A89C82; --fg5: #8A7F6A; --fg6: #6B6150;
-    --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
-  }
-}
-
-/* Tweaks panel (design-preview dev tool) was stripped from the shipped
-   HTML. The --warm-h / --warm-s / --warm-l / --warm-contrast vars keep
-   their static defaults declared in :root above and drive the whole
-   paper palette. */
 
 /* ============================================================
    Modal dialog + toast — used for confirm("clear edits"), etc.

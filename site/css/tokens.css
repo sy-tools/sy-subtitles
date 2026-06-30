@@ -1,0 +1,119 @@
+/* =============================================================================
+   tokens.css — the design system's TOKEN layer (single source of truth).
+
+   This is the contract layer: colours, type, and scales every component is built
+   from. Consumed by components.css and styleguide.html. Edit a value here and the
+   whole app re-themes.
+
+   Consolidated from the three layered <style> blocks the app used to ship inline.
+   Only TWO palettes ever actually rendered — the warm-paper light palette and the
+   walnut dark palette (verified by computed styles across all four theme states:
+   auto-light, auto-dark, [data-theme=light], [data-theme=dark]). The original
+   cool-grey base palette and the HSL-knob layer were fully overridden, so they are
+   dropped here. The values below are byte-for-byte the palette the app rendered —
+   this split is pixel-identical (guarded by tests/test_spa_theme_tokens.py).
+   ============================================================================= */
+
+:root {
+  color-scheme: light dark;
+
+  /* ===== Palette — light (warm paper), the default ===== */
+  --bg:  #FAF6EE;   /* page            */
+  --bg2: #F6F0E2;   /* cards / header  */
+  --bg3: #F0E9D7;   /* inputs / chips  */
+  --bg4: #E8DFCB;   /* buttons / hover */
+  --bg5: #F3ECDE;   /* subtle zone     */
+
+  --fg:  #221E18;   /* primary ink */
+  --fg2: #2E2820;
+  --fg3: #4A4338;
+  --fg4: #6B6050;
+  --fg5: #8A7D68;
+  --fg6: #A99C85;   /* faintest */
+
+  --border:  #E5DCC6;
+  --border2: #D6C9AD;
+  --border3: #B9A887;
+
+  --link:          #8A4A2E;   /* warm terracotta */
+  --accent-green:  #5A7A3A;   /* moss    */
+  --accent-orange: #C68A2A;   /* saffron */
+  --accent-red:    #B04B2E;   /* clay    */
+
+  --overlay-bg: rgba(26,22,16,0.78);
+
+  --stat-active-bg: #EFE4CE;
+  --primary-bg:     #E6E9D6;
+  --primary-border: #8DA06A;
+  --primary-fg:     #3F5222;
+
+  --issue-bg:     #F1E4D3;
+  --issue-border: #C08A4E;
+  --issue-fg:     #7A4A1E;
+
+  --mark-bg: rgba(198, 138, 42, 0.14);
+
+  --danger-bg:     #F2DCD2;
+  --danger-border: #C08070;
+  --danger-fg:     #8A2E1A;
+
+  --cell-hover:     #F3ECDB;
+  --cell-edit-bg:   #EDEAD4;
+  --cell-edited-bg: #EFE6CC;
+
+  /* ===== Typography ===== */
+  --f-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --f-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --f-mono:  'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ===== Warm HSL knobs — still consumed by the video-placeholder gradient
+     (.video-wrap) in components.css; kept so that gradient stays in-palette. ===== */
+  --warm-h: 36;
+  --warm-s: 71%;
+  --warm-l: 92%;
+  --warm-contrast: 1;
+
+  /* ===== Structural — defaults; the measured ones are overwritten live by JS ===== */
+  --freshness-h: 30px;
+  --sync-player-h: 25vh;
+  --preview-player-h: 54vh;
+  --preview-subs-h: 120px;
+}
+@media (max-width: 768px) { :root { --sync-player-h: 22vh; } }
+
+/* ===== Palette — dark (walnut), under OS dark unless an explicit light theme ===== */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:  #14120F; --bg2: #1A1612; --bg3: #1E1A14; --bg4: #2A2520; --bg5: #221D17;
+    --fg:  #F0E8D6; --fg2: #E4DCC6; --fg3: #C8BDA5; --fg4: #A89C82; --fg5: #8A7F6A; --fg6: #6B6150;
+    --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
+    --link: #E39770;
+    --accent-green: #A8C884; --accent-orange: #E3B26A; --accent-red: #E08B6A;
+    --overlay-bg: rgba(0,0,0,0.80);
+    --stat-active-bg: #2B2418;
+    --primary-bg: #223020; --primary-border: #6C8448; --primary-fg: #BFD29A;
+    --issue-bg: #2E241A; --issue-border: #A67744; --issue-fg: #E0B478;
+    --mark-bg: rgba(227, 151, 112, 0.14);
+    --danger-bg: #2E1F1A; --danger-border: #9E5848; --danger-fg: #E8A48E;
+    --cell-hover: #221E18; --cell-edit-bg: #1F2A1C; --cell-edited-bg: #2A2518;
+    --player-letterbox: #000;
+  }
+}
+
+/* ===== Palette — dark (explicit), overrides the light default ===== */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg:  #14120F; --bg2: #1A1612; --bg3: #1E1A14; --bg4: #2A2520; --bg5: #221D17;
+  --fg:  #F0E8D6; --fg2: #E4DCC6; --fg3: #C8BDA5; --fg4: #A89C82; --fg5: #8A7F6A; --fg6: #6B6150;
+  --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
+  --link: #E39770;
+  --accent-green: #A8C884; --accent-orange: #E3B26A; --accent-red: #E08B6A;
+  --overlay-bg: rgba(0,0,0,0.80);
+  --stat-active-bg: #2B2418;
+  --primary-bg: #223020; --primary-border: #6C8448; --primary-fg: #BFD29A;
+  --issue-bg: #2E241A; --issue-border: #A67744; --issue-fg: #E0B478;
+  --mark-bg: rgba(227, 151, 112, 0.14);
+  --danger-bg: #2E1F1A; --danger-border: #9E5848; --danger-fg: #E8A48E;
+  --cell-hover: #221E18; --cell-edit-bg: #1F2A1C; --cell-edited-bg: #2A2518;
+  --player-letterbox: #000;
+}

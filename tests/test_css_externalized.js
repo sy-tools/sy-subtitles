@@ -6,10 +6,10 @@
 // This test fails loudly if any inline <style> creeps back, or if a linked sheet
 // goes missing from disk.
 //
-// PR-1 ships a single byte-identical site/css/app.css; PR-2 splits it into
-// tokens.css + components.css while consolidating. This guard is intentionally
-// generic about the filenames so it survives that split — it pins the invariant
-// (no inline CSS; every linked sheet exists and is precached), not the layout.
+// The app's CSS is two linked sheets: tokens.css (the token/contract layer) then
+// components.css (consumers). The generic checks below pin the core invariants
+// (no inline CSS; every linked sheet exists); a dedicated check pins the
+// tokens-before-components load order the cascade depends on.
 
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
@@ -44,5 +44,14 @@ describe('CSS is externalized (no inline <style>)', () => {
     for (const href of linkedCss(html())) {
       assert.ok(fs.existsSync('site/' + href), `site/${href} must exist`);
     }
+  });
+
+  it('tokens.css is linked before components.css (cascade order)', () => {
+    const sheets = linkedCss(html());
+    const t = sheets.indexOf('css/tokens.css');
+    const c = sheets.indexOf('css/components.css');
+    assert.ok(t !== -1, 'css/tokens.css must be linked');
+    assert.ok(c !== -1, 'css/components.css must be linked');
+    assert.ok(t < c, 'tokens.css must be linked before components.css');
   });
 });
