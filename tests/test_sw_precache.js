@@ -83,3 +83,34 @@ describe('SW CDN precache', () => {
     );
   });
 });
+
+describe('CACHE_VERSION ↔ E2E lockstep', () => {
+  // The Playwright E2E (tests/test_service_worker.py) hardcodes the cache name
+  // "sy-subtitles-c<N>" in ~15 embedded JS strings to mirror CACHE_VERSION in
+  // sw.js. The documented rule ("routing changes must bump CACHE_VERSION") means
+  // that number keeps moving (this very PR moved it 3→5). Without this guard, a
+  // bump that misses the py test surfaces as a confusing cache-name mismatch deep
+  // in a slow Playwright run; here it fails fast and loud at the Node layer.
+  // The py file legitimately references OLD versions too (e.g. sy-subtitles-c2 in
+  // the cache-purge tests), so the invariant is "the highest version referenced
+  // in the py file equals sw.js's CACHE_VERSION", not "every reference equals N".
+  it('test_service_worker.py references the current sw.js CACHE_VERSION', () => {
+    const sw = fs.readFileSync('site/sw.js', 'utf8');
+    const v = sw.match(/var CACHE_VERSION = (\d+);/);
+    assert.ok(v, 'CACHE_VERSION not found in site/sw.js');
+    const version = Number(v[1]);
+
+    const py = fs.readFileSync('tests/test_service_worker.py', 'utf8');
+    const refs = [...py.matchAll(/sy-subtitles-c(\d+)/g)].map((m) => Number(m[1]));
+    assert.ok(refs.length > 0, 'expected sy-subtitles-c<N> references in test_service_worker.py');
+    assert.ok(
+      refs.includes(version),
+      `test_service_worker.py must reference the current cache sy-subtitles-c${version}`,
+    );
+    assert.strictEqual(
+      Math.max.apply(null, refs),
+      version,
+      `test_service_worker.py's newest cache is sy-subtitles-c${Math.max.apply(null, refs)} but sw.js CACHE_VERSION=${version} — bump the py constant`,
+    );
+  });
+});

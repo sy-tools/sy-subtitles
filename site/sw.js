@@ -104,7 +104,10 @@ function networkFirst(request) {
     return caches.match(request, { ignoreSearch: true }).then(function(hit) {
       if (hit) return hit;
       // A navigation that still missed (any path/query) boots the SPA from the
-      // precached shell rather than failing with a blank page.
+      // precached shell rather than failing with a blank page. Under the app's
+      // hash routing the document URL is always '/' or '/index.html' (both
+      // precached → a direct hit above), so this deep fallback is reached only by
+      // a non-hash deep link; it is intentionally not E2E-covered for that reason.
       if (request.mode === 'navigate') {
         return caches.match('./', { ignoreSearch: true }).then(function(root) {
           return root || caches.match('index.html', { ignoreSearch: true });
