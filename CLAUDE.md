@@ -85,6 +85,36 @@ suite, so browser and tests can never drift. Add the testable logic to the
 module, test it there, then wire it into the SPA — see
 `site/js/preview_state.js` / `site/js/add_talk_data.js` for the pattern.
 
+### Design System (SPA)
+
+The SPA's look is a formal token/component system. **Build new UI from it; don't
+re-invent values.** Open **`site/styleguide.html`** first — it's the live catalog
+(rendered by the same CSS, so it can't drift).
+
+- **Where it lives:** `site/css/tokens.css` = the contract (palette, type, scales);
+  `site/css/components.css` = component rules built on those tokens (loaded after).
+  Index links both; the boot smoke + shell-version + SW precache track them.
+- **Idiom — style via `var(--token)`, never a raw hex or magic number.** A palette
+  value belongs in `tokens.css` for *both* themes; `components.css` must define no
+  palette (guarded by `test_spa_cache.js`).
+- **Palette:** surfaces `--bg`,`--bg2…5`; ink `--fg`,`--fg2…6`; `--border`,`--border2/3`;
+  `--link`; `--accent-green/orange/red`; semantic zones `--primary/issue/danger-{bg,border,fg}`,
+  `--stat-active-bg`, `--cell-hover/edit-bg/edited-bg`, `--mark-bg`, `--overlay-bg`.
+- **Scales:** `--space-1…8` (4→32), `--radius-sm…pill`, `--text-2xs…-display`,
+  `--shadow-sm/md/lg`, `--z-*`. Type families `--f-serif` (titles), `--f-sans` (UI),
+  `--f-mono` (codes/dates).
+- **Two themes:** warm-paper *light* (the default `:root`) and walnut *dark*
+  (`@media (prefers-color-scheme: dark)` **and** `[data-theme="dark"]`), toggled via
+  the `data-theme` attribute. They stay consistent across all six OS×toggle states —
+  no cross-theme leaks — enforced by **`tests/test_spa_theme_tokens.py`** (computed
+  styles). When you add or change a palette token, set it in the light `:root` AND
+  both dark blocks, then update that guard's `LIGHT`/`DARK` maps.
+- **Buttons:** `<button class="btn btn--primary btn--sm">` — variants
+  `--primary/issue/danger/ghost`, sizes `--sm/--lg`, with hover/active/disabled/
+  focus-visible built in. Use `.btn` for new actions.
+- **A11y:** keep body/label text ≥ WCAG AA on `--bg`; the faint `--fg5/--fg6` are
+  already tuned to pass. Every interactive element inherits the global focus ring.
+
 ## Language Rules
 
 See `glossary/CLAUDE.md` for the canonical deity-pronoun, orthography,
