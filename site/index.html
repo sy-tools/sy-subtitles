@@ -331,10 +331,10 @@
       <button type="button" data-mode="marker" class="chip active" onclick="SPA.setPreviewMode('marker')" data-i18n="preview.mode_marker">&#x1F4CC; Marker</button><button type="button" data-mode="edit" class="chip" onclick="SPA.setPreviewMode('edit')" data-i18n="preview.mode_edit">&#x270E; Edit</button>
     </div>
     <div class="header-actions">
-      <button id="btn-copy-all" onclick="SPA.copyMarkers()" data-i18n="btn.copy_all">Copy all</button>
-      <button id="btn-preview-issue" class="issue" onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
-      <button id="btn-preview-editor" class="primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
-      <button id="btn-clear-all" class="danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
+      <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-i18n="btn.copy_all">Copy all</button>
+      <button id="btn-preview-issue" class="btn btn--issue" onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
+      <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
+      <button id="btn-clear-all" class="btn btn--danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
     </div>
   </div>
   <div class="player-container">
@@ -365,15 +365,15 @@
     </h1>
     <div class="header-actions">
       <span class="video-picker">
-        <button id="btn-sync-player" class="chip" style="display:none"
+        <button id="btn-sync-player" class="btn" style="display:none"
                 onclick="SPA.onSyncBtnClick()"
                 data-i18n-title="title.show_video"
                 data-i18n="btn.show_video">&#x25B6; Show video</button>
         <div id="video-picker-dropdown" class="video-dropdown" role="listbox"></div>
       </span>
-      <button class="issue" onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
-      <button class="primary" onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
-      <button onclick="SPA.revertAllEdits()" id="btn-revert-all" class="danger" style="display:none" data-i18n="btn.revert_all">Revert all</button>
+      <button class="btn btn--issue" onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
+      <button class="btn btn--primary" onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
+      <button onclick="SPA.revertAllEdits()" id="btn-revert-all" class="btn btn--danger" style="display:none" data-i18n="btn.revert_all">Revert all</button>
     </div>
   </div>
   <div id="sync-player-bar" class="sync-player-bar" hidden>
@@ -457,7 +457,7 @@
         <span style="color:var(--fg5);font-size:12px;" data-i18n="add.preview_label">meta.yaml preview:</span>
         <pre id="add-preview" style="margin-top:8px;color:var(--fg3);font-size:12px;font-family:monospace;white-space:pre-wrap;max-height:20em;overflow-y:auto;"></pre>
       </div>
-      <button type="submit" style="padding:10px 24px;background:var(--primary-bg);color:var(--primary-fg);border:1px solid var(--primary-border);border-radius:6px;font-size:15px;cursor:pointer;" data-i18n="add.submit">Create PR</button>
+      <button type="submit" class="btn btn--primary btn--lg" data-i18n="add.submit">Create PR</button>
     </form>
   </div>
 </div>

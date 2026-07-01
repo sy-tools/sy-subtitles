@@ -740,7 +740,7 @@ class TestMarkers:
         page.click("#btn-mark")
         page.click("#btn-mark")
         assert page.locator("#marker-count").text_content() == "2"
-        page.click("button.danger")
+        page.click("#btn-clear-all")
         spa_confirm_accept(page)
         assert page.locator("#marker-count").text_content() == "0"
         assert page.locator(".marker-item").count() == 0
@@ -752,7 +752,7 @@ class TestMarkers:
         page.wait_for_timeout(200)
         page.click("#btn-mark")
         assert page.locator("#marker-count").text_content() == "1"
-        page.click("button.danger")
+        page.click("#btn-clear-all")
         spa_confirm_dismiss(page)
         assert page.locator("#marker-count").text_content() == "1"
         assert page.locator(".marker-item").count() == 1
@@ -767,7 +767,7 @@ class TestMarkers:
             "JSON.parse(localStorage.getItem('preview_2001-01-01_Test-Talk_Test-Video') || '{}').markers || []"
         )
         assert len(data) == 1
-        page.click("button.danger")
+        page.click("#btn-clear-all")
         spa_confirm_accept(page)
         data = page.evaluate(
             "JSON.parse(localStorage.getItem('preview_2001-01-01_Test-Talk_Test-Video') || '{}').markers || []"

@@ -21,10 +21,8 @@ a:hover { text-decoration: underline; }
   position: sticky; top: var(--freshness-h); z-index: 20; }
 .header h1 { font-size: 16px; font-weight: normal; color: var(--fg4); }
 .header-actions { display: flex; gap: 8px; }
-.header-actions button { background: var(--bg4); color: var(--fg); border: 1px solid var(--border3); border-radius: 6px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
-.header-actions button.primary { background: var(--primary-bg); border-color: var(--primary-border); color: var(--primary-fg); }
-.header-actions button.issue { background: var(--issue-bg); border-color: var(--issue-border); color: var(--issue-fg); }
-.header-actions button:active { opacity: 0.7; }
+/* Header action buttons use the .btn system (class="btn btn--issue|primary|danger").
+   Only the mobile touch-target rule for .header-actions button remains (below). */
 button:focus-visible, a:focus-visible,
 input:focus-visible, select:focus-visible, textarea:focus-visible,
 [contenteditable="true"]:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
@@ -174,7 +172,6 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 #time-display { color: var(--fg6); font-size: 13px; font-family: monospace; }
 .preview-list { max-width: 960px; margin: 0 auto; padding: 0 8px; }
 .preview-list summary { color: var(--fg5); cursor: pointer; padding: 8px; font-size: 14px; }
-.header-actions button.danger { background: var(--danger-bg); color: var(--danger-fg); border-color: var(--danger-border); }
 .preview-mode-toggle { display: inline-flex; border: 1px solid var(--border3); border-radius: 6px; overflow: hidden; }
 .preview-mode-toggle button { background: var(--bg4); color: var(--fg5); border: 0; padding: 6px 12px; font-size: 13px; cursor: pointer; border-radius: 0; }
 .preview-mode-toggle button + button { border-left: 1px solid var(--border3); }
@@ -473,14 +470,14 @@ body {
 }
 #search-input:not(:placeholder-shown) { font-style: normal; }
 
-/* Buttons / chips — square corners, quiet weight */
-.header-actions button, .controls button, .chip, .select-chip, .branch-btn,
+/* Chips / segmented controls — square corners, quiet weight. (Header action
+   buttons get this from .btn now; only the still-bespoke controls are listed.) */
+.controls button, .chip, .select-chip, .branch-btn,
 .preview-mode-toggle button {
   border-radius: 2px;
   font-family: var(--f-sans);
   letter-spacing: 0.01em;
 }
-.header-actions button.primary { letter-spacing: 0.02em; }
 
 /* Links — warm terracotta, no underline by default */
 a { text-decoration: none; }
