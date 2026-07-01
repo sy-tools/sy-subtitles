@@ -6,6 +6,7 @@ testpaths = ["tests"]
 addopts = "--tb=short"
 markers = [
     "e2e: browser/Playwright end-to-end tests — slow, need chromium. Deselect with -m 'not e2e'.",
+    "smoke: fast boot smoke — loads the SPA and asserts it boots, renders, and is styled. Run with -m smoke (also tagged e2e). The boot gate for any SPA change.",
     "integration: multi-component or subprocess tests, slower than a unit test.",
     "golden: regression checks over shipped talk corpora (see GOLDEN_TALKS_SCOPE).",
     "slow: wall-clock heavy (>1s) tests.",

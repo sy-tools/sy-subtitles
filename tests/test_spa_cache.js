@@ -666,9 +666,9 @@ describe('Fullscreen mode', () => {
   });
 
   it('subtitle overlay has fixed position in fs-mode', () => {
-    // Check CSS contains position: fixed for subtitle-overlay in fs-mode context
-    var styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-    var css = styleMatch ? styleMatch[1] : '';
+    // Check CSS contains position: fixed for subtitle-overlay in fs-mode context.
+    // CSS is externalized; the fs-mode component rules live in components.css.
+    var css = fs.readFileSync('site/css/components.css', 'utf8');
     assert.ok(css.includes('fs-mode') && css.includes('#subtitle-overlay') && css.includes('position') && css.includes('fixed'),
       'subtitle-overlay should be position:fixed in .fs-mode');
   });
@@ -1038,61 +1038,33 @@ describe('Review mode toggle', () => {
 // ============================================================
 // Tests: Theme system
 // ============================================================
-describe('Theme: CSS variables coverage', () => {
+describe('Design system: token/component layer separation', () => {
+  // Replaces the old brittle "no hardcoded hex" pair (which only ever saw the
+  // first inline <style> block and passed vacuously after externalization). The
+  // real invariant after the split: the palette lives ONLY in tokens.css, never
+  // in components.css. Per-colour correctness is guarded by the computed-style
+  // snapshot in tests/test_spa_theme_tokens.py.
   var fs = require('fs');
-  var html = fs.readFileSync('site/index.html', 'utf8');
+  var tokens = fs.readFileSync('site/css/tokens.css', 'utf8');
+  var components = fs.readFileSync('site/css/components.css', 'utf8');
 
-  // Extract <style> block
-  var styleMatch = html.match(/<style>([\s\S]*?)<\/style>/);
-  var css = styleMatch ? styleMatch[1] : '';
-
-  // Remove :root variable declarations (they legitimately have hex colors)
-  var cssWithoutVars = css.replace(/:root\s*\{[^}]*\}/g, '')
-    .replace(/\[data-theme="[^"]*"\]\s*\{[^}]*\}/g, '')
-    .replace(/@media\s*\(prefers-color-scheme:\s*light\)\s*\{[^}]*:root:not\(\[data-theme="dark"\]\)\s*\{[^}]*\}\s*\}/g, '');
-
-  it('no hardcoded hex colors in CSS rules (outside :root)', () => {
-    // Find #xxx or #xxxxxx patterns that are NOT inside var() or comments
-    var lines = cssWithoutVars.split('\n');
-    var errors = [];
-    lines.forEach((line, i) => {
-      var trimmed = line.trim();
-      if (trimmed.startsWith('/*') || trimmed.startsWith('//')) return;
-      // Match hex colors but not inside var(--xxx)
-      var hexMatches = trimmed.match(/#[0-9a-fA-F]{3,8}\b/g);
-      if (hexMatches) {
-        // Filter out ones that are inside var()
-        hexMatches.forEach(hex => {
-          if (!trimmed.includes('var(--')) {
-            errors.push('CSS line ~' + (i+1) + ': ' + hex + ' in: ' + trimmed.substring(0, 60));
-          }
-        });
-      }
-    });
-    // Allow subtitle overlay to keep #fff (always white text on dark bg)
-    errors = errors.filter(e => !e.includes('#fff') || !e.includes('subtitle-overlay'));
-    // Allow fullscreen mode to use #000 (always black background)
-    errors = errors.filter(e => !(e.includes('#000') && e.includes('fs-mode')));
-    if (errors.length > 0) {
-      console.log('Hardcoded colors found:', errors.slice(0, 5).join('\n'));
+  it('components.css defines no palette tokens (those belong in tokens.css)', () => {
+    // A bare :root / :root:not(...) / [data-theme=...] block whose body declares
+    // --custom-props is a palette definition. Component rules that merely use
+    // var(), or theme an *element* (`:root:not(...) #bookmarklet-link`, which has
+    // a descendant selector so the `{` is not adjacent), are legitimately here.
+    var re = /(?:^|\n)\s*(:root(?::not\([^)]*\))?|\[data-theme="[^"]*"\])\s*\{([^}]*)\}/g;
+    var offenders = [];
+    var m;
+    while ((m = re.exec(components)) !== null) {
+      if (/--[\w-]+\s*:/.test(m[2])) offenders.push(m[1]);
     }
-    assert.strictEqual(errors.length, 0, 'Found ' + errors.length + ' hardcoded hex colors in CSS');
+    assert.deepStrictEqual(offenders, [], 'palette token rules leaked into components.css: ' + offenders.join(', '));
   });
 
-  it('all CSS color properties use var()', () => {
-    var colorProps = ['color:', 'background:', 'background-color:', 'border-color:', 'border:', 'outline:'];
-    var lines = cssWithoutVars.split('\n');
-    var errors = [];
-    lines.forEach((line, i) => {
-      var trimmed = line.trim();
-      if (trimmed.startsWith('/*')) return;
-      colorProps.forEach(prop => {
-        if (trimmed.includes(prop) && trimmed.includes('#') && !trimmed.includes('var(--') && !trimmed.includes('fs-mode')) {
-          errors.push('Line ~' + (i+1) + ': ' + trimmed.substring(0, 80));
-        }
-      });
-    });
-    assert.strictEqual(errors.length, 0, 'CSS properties with hardcoded colors: ' + errors.join('; '));
+  it('tokens.css is the palette source (its :root declares the surface tokens)', () => {
+    assert.ok(/:root\s*\{[\s\S]*?--bg:\s*#FAF6EE/.test(tokens),
+      'tokens.css :root must define the light --bg');
   });
 });
 
@@ -1122,37 +1094,44 @@ describe('Theme: toggle logic', () => {
 describe('Theme: CSS variable completeness', () => {
   var fs = require('fs');
   var html = fs.readFileSync('site/index.html', 'utf8');
+  // Palette/token rules live in tokens.css; component rules in components.css.
+  // The layered cool-grey + HSL palettes were consolidated away (PR-2); these
+  // assert the single canonical warm-paper/walnut palette. The authoritative
+  // per-theme guard is tests/test_spa_theme_tokens.py (computed styles).
+  var css = fs.readFileSync('site/css/tokens.css', 'utf8');
+  var components = fs.readFileSync('site/css/components.css', 'utf8');
 
-  it('dark theme variables defined in :root', () => {
-    assert.ok(html.includes('--bg: #1a1a1a'), 'dark --bg missing');
-    assert.ok(html.includes('--fg: #fff'), 'dark --fg missing');
-    assert.ok(html.includes('--link: #6af'), 'dark --link missing');
+  it('light palette (warm paper) is the :root default', () => {
+    assert.ok(/--bg:\s*#FAF6EE/.test(css), 'light --bg (#FAF6EE) missing');
+    assert.ok(/--fg:\s*#221E18/.test(css), 'light --fg (#221E18) missing');
+    assert.ok(/--link:\s*#8A4A2E/.test(css), 'light --link (#8A4A2E) missing');
   });
 
-  it('light theme variables defined', () => {
-    assert.ok(html.includes('--bg: #f5f5f5'), 'light --bg missing');
-    assert.ok(html.includes('--fg: #111'), 'light --fg missing');
-    assert.ok(html.includes('--link: #0066cc'), 'light --link missing');
+  it('dark palette (walnut) defined for both auto-dark and explicit dark', () => {
+    assert.ok(/--bg:\s*#14120F/.test(css), 'dark --bg (#14120F) missing');
+    assert.ok(/--link:\s*#E39770/.test(css), 'dark --link (#E39770) missing');
+    assert.ok(/@media \(prefers-color-scheme: dark\)/.test(css), 'auto-dark @media missing');
+    assert.ok(/\[data-theme="dark"\]/.test(css), 'explicit [data-theme=dark] missing');
   });
 
-  it('light theme defined both in @media and [data-theme="light"]', () => {
-    assert.ok(html.includes('prefers-color-scheme: light'), '@media query missing');
-    assert.ok(html.includes('[data-theme="light"]'), 'explicit light theme missing');
-  });
-
-  it('dark override prevents light @media from applying', () => {
-    assert.ok(html.includes(':root:not([data-theme="dark"])'), 'dark override guard missing');
+  it('auto-dark is guarded against an explicit light theme', () => {
+    assert.ok(css.includes(':root:not([data-theme="light"])'),
+      'the dark @media must exclude [data-theme=light] so an explicit light theme wins');
   });
 
   it('all var() references have matching definitions', () => {
+    // Usages span the stylesheets and any inline style="" in the HTML;
+    // definitions live in tokens.css. Check the union so an inline var()
+    // usage with no definition is still caught.
+    var src = html + '\n' + css + '\n' + components;
     var varUsages = new Set();
     var varDefs = new Set();
     // Find var(--xxx)
-    (html.match(/var\(--[\w-]+\)/g) || []).forEach(m => {
+    (src.match(/var\(--[\w-]+\)/g) || []).forEach(m => {
       varUsages.add(m.match(/--[\w-]+/)[0]);
     });
     // Find --xxx: definitions
-    (html.match(/--[\w-]+\s*:/g) || []).forEach(m => {
+    (src.match(/--[\w-]+\s*:/g) || []).forEach(m => {
       varDefs.add(m.replace(/\s*:/, ''));
     });
     var missing = [...varUsages].filter(v => !varDefs.has(v));
@@ -3263,10 +3242,12 @@ describe('Pipeline: manifest tracking', () => {
   });
 
   it('status badge CSS for all states', () => {
-    assert.ok(html.includes('.review-badge.ready-for-review'));
-    assert.ok(html.includes('.review-badge.in-progress'));
-    assert.ok(html.includes('.review-badge.in-review'));
-    assert.ok(html.includes('.review-badge.approved'));
+    // Badge styling is a component rule, in components.css.
+    var css = fs.readFileSync('site/css/components.css', 'utf8');
+    assert.ok(css.includes('.review-badge.ready-for-review'));
+    assert.ok(css.includes('.review-badge.in-progress'));
+    assert.ok(css.includes('.review-badge.in-review'));
+    assert.ok(css.includes('.review-badge.approved'));
   });
 
   it('getOverallStatus function exists', () => {

@@ -40,15 +40,36 @@ pytest tests/ -n auto -m "not e2e"
 
 # Only the browser E2E
 pytest tests/ -n auto -m e2e
+
+# Boot smoke — the ~2s gate that proves the SPA actually boots+renders+styles
+pytest -m smoke
 ```
 
 | Marker | Meaning |
 |--------|---------|
 | `e2e` | Browser/Playwright tests — slow, need `playwright install chromium`. |
+| `smoke` | Fast boot smoke (`tests/test_spa_boot_smoke.py`) — also tagged `e2e`. See below. |
 | `integration` | Multi-component / subprocess tests (e.g. dry-run matrix). |
 | `golden` | Regression over shipped talk corpora. |
 | `slow` | Wall-clock heavy (>1s). |
 | `flaky` | Retried via `pytest-rerunfailures` (browser timing under `-n auto`). |
+
+### Boot smoke — "green tests" must mean "the site works"
+
+The unit lanes (`node --test`, `pytest -m "not e2e"`) only grep strings out of
+`index.html` / `*.js` / `*.css`; the ~320 render-level e2e tests are skipped by the
+fast lane. So a change can leave the SPA a **blank page** (boot throws, or an
+unlinked/404 stylesheet) while every test a developer runs still passes — this
+actually happened during the CSS-externalization work.
+
+`tests/test_spa_boot_smoke.py` closes that gap: it loads the app the way it runs
+(mocked GitHub, empty repo tree — deterministic, offline) and asserts it **boots**
+(index view renders), is **styled** (the stylesheet applied), and threw **nothing**
+uncaught. It is tagged both `e2e` (so `-m "not e2e"` stays chromium-free) and
+`smoke` (so `pytest -m smoke` is a ~2s gate). **Run `pytest -m smoke` for any
+change under `site/` — and actually open the page** (`?repo=owner/name` off
+GitHub Pages, e.g. `localhost:8000/?repo=sy-tools/sy-subtitles`); a green unit
+suite alone does not prove the app renders.
 
 ### Golden corpus
 
