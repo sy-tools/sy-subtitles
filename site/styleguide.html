@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SY Subtitles — Design System</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!-- The SAME token + component sheets the app ships. This page cannot drift from
+     the app: it is rendered by the very CSS it documents. -->
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/components.css">
+<style>
+  /* styleguide-only layout (not part of the app; kept minimal, on tokens) */
+  body { max-width: 1080px; margin: 0 auto; padding: var(--space-7); }
+  h1 { font-family: var(--f-serif); font-weight: 400; font-size: var(--text-display); margin-bottom: var(--space-2); }
+  h2 { font-family: var(--f-serif); font-weight: 400; font-size: var(--text-2xl); color: var(--fg2);
+       margin: var(--space-8) 0 var(--space-4); border-bottom: 1px solid var(--border); padding-bottom: var(--space-2); }
+  h3 { font-family: var(--f-mono); text-transform: uppercase; letter-spacing: 0.1em;
+       font-size: var(--text-sm); color: var(--fg5); margin: var(--space-5) 0 var(--space-3); }
+  .lede { color: var(--fg4); font-size: var(--text-lg); }
+  .sg-toolbar { position: sticky; top: 0; background: var(--bg); padding: var(--space-3) 0;
+                display: flex; gap: var(--space-3); align-items: center; z-index: var(--z-sticky); border-bottom: 1px solid var(--border); }
+  .sg-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; }
+  .sg-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-3); }
+  .sg-sw { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--bg2); }
+  .sg-sw .chip-color { height: 56px; }
+  .sg-sw .meta { padding: var(--space-2) var(--space-3); font-family: var(--f-mono); font-size: var(--text-2xs); }
+  .sg-sw .meta b { display: block; color: var(--fg2); font-weight: 500; font-size: var(--text-xs); }
+  .sg-sw .meta span { color: var(--fg5); }
+  .sg-scale-row { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-2); font-family: var(--f-mono); font-size: var(--text-xs); color: var(--fg5); }
+  .sg-scale-row .bar { background: var(--link); height: 14px; border-radius: var(--radius-sm); }
+  .sg-radius { width: 72px; height: 48px; background: var(--bg4); border: 1px solid var(--border3); display: inline-flex; align-items: center; justify-content: center; font-family: var(--f-mono); font-size: var(--text-2xs); color: var(--fg4); }
+  .sg-shadow { width: 120px; height: 60px; background: var(--bg2); border-radius: var(--radius-lg); display: inline-flex; align-items: center; justify-content: center; font-family: var(--f-mono); font-size: var(--text-2xs); color: var(--fg5); }
+  .sg-card { max-width: 520px; }
+  code { font-family: var(--f-mono); font-size: 0.9em; background: var(--bg3); padding: 1px 5px; border-radius: var(--radius-sm); color: var(--fg3); }
+</style>
+</head>
+<body>
+<div class="sg-toolbar">
+  <strong style="font-family:var(--f-serif);font-size:var(--text-lg)">Theme</strong>
+  <button class="btn btn--sm" onclick="setTheme('auto')">Auto</button>
+  <button class="btn btn--sm" onclick="setTheme('light')">Light</button>
+  <button class="btn btn--sm" onclick="setTheme('dark')">Dark</button>
+  <span id="sg-theme" style="font-family:var(--f-mono);font-size:var(--text-xs);color:var(--fg5)"></span>
+</div>
+
+<h1>SY Subtitles — Design System</h1>
+<p class="lede">The tokens and components every screen is built from. Rendered by the same
+<code>tokens.css</code> + <code>components.css</code> the app ships, so it can't drift.</p>
+
+<h2>Palette</h2>
+<p style="color:var(--fg4)">Semantic tokens — reference them via <code>var(--token)</code>, never a raw hex.</p>
+<h3>Surfaces &amp; ink</h3>
+<div class="sg-swatches" id="sw-neutral"></div>
+<h3>Link &amp; accents</h3>
+<div class="sg-swatches" id="sw-accent"></div>
+<h3>Semantic zones (primary / issue / danger / cells)</h3>
+<div class="sg-swatches" id="sw-semantic"></div>
+
+<h2>Typography</h2>
+<p style="font-family:var(--f-serif);font-size:var(--text-2xl);color:var(--fg)">Fraunces — serif, for titles &amp; reading text</p>
+<p style="font-family:var(--f-sans);font-size:var(--text-md)">Inter — sans, for UI chrome and controls</p>
+<p style="font-family:var(--f-mono);font-size:var(--text-base);color:var(--fg4)">JetBrains Mono — mono, for codes, dates, labels</p>
+<h3>Size scale</h3>
+<div id="type-scale"></div>
+
+<h2>Spacing</h2>
+<div id="space-scale"></div>
+
+<h2>Radius</h2>
+<div class="sg-row" id="radius-scale"></div>
+
+<h2>Elevation</h2>
+<div class="sg-row">
+  <div class="sg-shadow" style="box-shadow:var(--shadow-sm)">--shadow-sm</div>
+  <div class="sg-shadow" style="box-shadow:var(--shadow-md)">--shadow-md</div>
+  <div class="sg-shadow" style="box-shadow:var(--shadow-lg)">--shadow-lg</div>
+</div>
+
+<h2>Buttons</h2>
+<p style="color:var(--fg4)"><code>&lt;button class="btn btn--primary"&gt;</code></p>
+<h3>Variants</h3>
+<div class="sg-row">
+  <button class="btn">Neutral</button>
+  <button class="btn btn--primary">Primary</button>
+  <button class="btn btn--issue">Issue</button>
+  <button class="btn btn--danger">Danger</button>
+  <button class="btn btn--ghost">Ghost</button>
+</div>
+<h3>Sizes</h3>
+<div class="sg-row">
+  <button class="btn btn--primary btn--sm">Small</button>
+  <button class="btn btn--primary">Default</button>
+  <button class="btn btn--primary btn--lg">Large</button>
+</div>
+<h3>States</h3>
+<div class="sg-row">
+  <button class="btn btn--primary">Rest</button>
+  <button class="btn btn--primary" disabled>Disabled</button>
+  <button class="btn btn--primary" autofocus>Focus (tab to me)</button>
+</div>
+
+<h2>Controls</h2>
+<div class="sg-row" style="max-width:420px;flex-direction:column;align-items:stretch">
+  <input class="input" placeholder="Text input (.input)">
+  <select class="select-chip"><option>Styled select (.select-chip)</option><option>Two</option></select>
+</div>
+
+<h2>Badges</h2>
+<div class="sg-row">
+  <span class="review-badge needs-review">needs review</span>
+  <span class="review-badge in-review">in review</span>
+  <span class="review-badge approved">approved</span>
+  <span class="review-badge in-progress">in progress</span>
+</div>
+
+<h2>Cards</h2>
+<div class="talk-item sg-card">
+  <div class="talk-date">1975-03-29 <span class="review-badge needs-review">needs review</span></div>
+  <div class="talk-title">Public Program: Science and Trigunatmika</div>
+  <div class="talk-actions">
+    <a href="#" class="preview-link">▶ View translation</a>
+    <a href="#" class="review-link">✎ Review translation</a>
+  </div>
+</div>
+
+<script>
+  function setTheme(t) {
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', t);
+    document.getElementById('sg-theme').textContent = 'data-theme = ' + t;
+    renderSwatches();  // re-read so the hex labels match the current theme
+  }
+  // Live swatches — read the REAL computed token values so this page is a mirror
+  // of tokens.css, not a copy that can rot.
+  function swatches(elId, names) {
+    var cs = getComputedStyle(document.documentElement);
+    document.getElementById(elId).innerHTML = names.map(function (n) {
+      var v = cs.getPropertyValue(n).trim();
+      return '<div class="sg-sw"><div class="chip-color" style="background:var(' + n + ')"></div>' +
+        '<div class="meta"><b>' + n + '</b><span>' + v + '</span></div></div>';
+    }).join('');
+  }
+  function renderSwatches() {
+    swatches('sw-neutral', ['--bg','--bg2','--bg3','--bg4','--bg5','--fg','--fg2','--fg3','--fg4','--fg5','--fg6','--border','--border2','--border3']);
+    swatches('sw-accent', ['--link','--accent-green','--accent-orange','--accent-red','--stat-active-bg','--mark-bg']);
+    swatches('sw-semantic', ['--primary-bg','--primary-border','--primary-fg','--issue-bg','--issue-border','--issue-fg','--danger-bg','--danger-border','--danger-fg','--cell-hover','--cell-edit-bg','--cell-edited-bg']);
+  }
+  renderSwatches();
+
+  var typeScale = [['--text-2xs','10'],['--text-xs','11'],['--text-sm','12'],['--text-base','13'],['--text-md','14'],['--text-lg','15'],['--text-xl','16'],['--text-2xl','18'],['--text-3xl','20'],['--text-display','32']];
+  document.getElementById('type-scale').innerHTML = typeScale.map(function (p) {
+    return '<div style="font-family:var(--f-serif);font-size:var(' + p[0] + ');line-height:1.4">' +
+      '<span style="font-family:var(--f-mono);font-size:12px;color:var(--fg5);display:inline-block;min-width:120px">' + p[0] + '</span> The quick brown fox</div>';
+  }).join('');
+
+  var spaceScale = ['--space-1','--space-2','--space-3','--space-4','--space-5','--space-6','--space-7','--space-8'];
+  var csr = getComputedStyle(document.documentElement);
+  document.getElementById('space-scale').innerHTML = spaceScale.map(function (n) {
+    var v = csr.getPropertyValue(n).trim();
+    return '<div class="sg-scale-row"><span style="min-width:90px">' + n + '</span>' +
+      '<span class="bar" style="width:var(' + n + ')"></span><span>' + v + '</span></div>';
+  }).join('');
+
+  document.getElementById('radius-scale').innerHTML = ['--radius-sm','--radius-md','--radius-lg','--radius-xl','--radius-2xl','--radius-pill']
+    .map(function (n) { return '<div class="sg-radius" style="border-radius:var(' + n + ')">' + n.replace('--radius-','') + '</div>'; }).join('');
+
+  setTheme('auto');
+</script>
+</body>
+</html>

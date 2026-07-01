@@ -33,7 +33,7 @@ LIGHT = {
     "--bg2": "#F6F0E2",
     "--bg3": "#F0E9D7",
     "--fg": "#221E18",
-    "--fg5": "#8A7D68",
+    "--fg5": "#766A54",
     "--border": "#E5DCC6",
     "--link": "#8A4A2E",
     "--stat-active-bg": "#EFE4CE",
