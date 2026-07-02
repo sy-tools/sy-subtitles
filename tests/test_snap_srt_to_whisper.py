@@ -30,6 +30,35 @@ def test_block_with_no_whisper_match_is_kept_and_flagged():
     assert out[1]["start_ms"] == 5000 and out[1]["end_ms"] == 7000
 
 
+def test_rebalance_never_moves_unmatched_block():
+    """A dense matched block must not steal its boundary rebalance from an
+    unmatched neighbour: the unmatched block's stale timing is not a valid
+    balance window, and the contract says unmatched blocks stay untouched."""
+    segs = _segs(
+        [
+            ("aaaa", 1000, 1250),
+            ("bbbb", 1250, 1500),
+            ("cccc", 1500, 1750),
+            ("dddd", 1750, 2000),
+            # unrelated speech (belongs to neither block)
+            ("xxxx", 3000, 3400),
+            ("yyyy", 3500, 3900),
+        ]
+    )
+    blocks = [
+        # 19 chars over 1s once snapped -> CPS 19, above target
+        {"idx": 1, "start_ms": 900, "end_ms": 2100, "text": "aaaa bbbb cccc dddd"},
+        # no whisper match; keeps its original SRT timing
+        {"idx": 2, "start_ms": 2080, "end_ms": 5000, "text": "zzzz qqqq"},
+    ]
+    out, unmatched = snap_to_whisper(blocks, segs, min_gap_ms=80, min_duration_ms=0)
+    assert unmatched == [2]
+    assert out[1]["start_ms"] == 2080
+    assert out[1]["end_ms"] == 5000
+    # and the matched block is not re-timed against the stale window either
+    assert out[0]["end_ms"] == 2000
+
+
 def test_min_duration_extends_into_silence_only():
     """A too-short block grows into the following pause, never over the next block's speech."""
     segs = _segs([("hi", 1000, 1300), ("there", 5000, 6000)])
