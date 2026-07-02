@@ -91,11 +91,13 @@ gh workflow run subtitle-pipeline.yml -f talk_id={date}_{slug}
 
 The pipeline runs all steps automatically and commits results back to the repo.
 
-### 3. Automatic validation
+### 3. Validation
 
-Pushing to `final/*.srt` triggers the **Validate** workflow:
-- Checks for overlaps, gaps, CPS limits, structural issues
-- Posts results as check annotations
+Validation runs inside the pipeline itself (the **Validate** step checks
+text preservation, overlaps, gaps, CPS limits and structural issues before
+anything is committed) and again in `sync-subtitles.yml` for PR edits.
+There is no separate push-triggered Validate workflow; to re-check an SRT
+by hand run `python -m tools.validate_subtitles`.
 
 ## PR-based Edits
 

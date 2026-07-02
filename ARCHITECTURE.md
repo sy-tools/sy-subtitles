@@ -16,7 +16,7 @@
                             │                        │              │
                             │                        ▼              │
                             │  ┌──────────────────────────────────┐ │
-                            │  │ build (prepare → chunks → assemble)│
+                            │  │ build (prepare → LLM → assemble)  │ │
                             │  │  Python splits ──► LLM timecodes  │ │
                             │  │  Python assembles ──► uk.srt      │ │
                             │  └──────────────────────────────────┘ │
@@ -89,7 +89,11 @@ sy-subtitles/
 │   ├── sync_common.py              # Shared sync helpers
 │   └── config.py                   # Threshold constants
 ├── site/                           # GitHub Pages SPA
-│   ├── index.html                  # Preview + Review app
+│   ├── index.html                  # Preview + Review app shell
+│   ├── js/                         # Plain-JS modules (single source, shared with node --test)
+│   ├── css/                        # Design tokens + components (tokens.css, components.css)
+│   ├── styleguide.html             # Live design-system catalog
+│   ├── sw.js                       # Service worker (offline shell precache)
 │   └── icon.png                    # Mahayantra favicon
 ├── review-status.json              # Review tracking (synced from Issues)
 ├── templates/                      # Prompt templates
@@ -114,7 +118,7 @@ Triggered manually via `workflow_dispatch`. Full pipeline:
 1. **Discover** — finds videos and determines what needs processing
 2. **Whisper** — calls `whisper.yml` for word-level speech timestamps
 3. **Translate + Review** — Claude Opus translates EN→UK, then 2+1 review
-4. **Build** — `build_map.py prepare` → parallel LLM chunks → `build_map.py assemble` → `build_srt.py`
+4. **Build** — `build_map.py prepare` → single-pass LLM timecodes (`build-timecodes` job) → `build_map.py assemble` → `build_srt.py`
 5. **Validate** — text preservation, CPS, timing checks
 6. **Commit** — pushes results + creates review tracking Issue
 
@@ -154,15 +158,19 @@ the build/sync stack without burning Claude calls.
 ## Subtitle Builder (V2)
 
 Three-phase architecture:
-1. **Prepare** (Python, deterministic) — splits Ukrainian text into subtitle-sized blocks, finds paragraph boundaries, creates LLM prompt chunks
-2. **Matrix chunks** (LLM, parallel) — each chunk receives UK blocks + EN transcript context + whisper timestamps. LLM returns ONLY timecodes, never modifies text
-3. **Assemble** (Python, deterministic) — collects chunk results, builds mapping table, generates SRT via `build_srt.py`
+1. **Prepare** (Python, deterministic) — splits Ukrainian text into subtitle-sized blocks and prepares timing data (`build_map.py prepare` / `prepare-timing`)
+2. **Build timecodes** (LLM, single pass) — one Opus 4.8 agent receives the UK blocks + EN transcript + timing source (whisper words or en.srt) and writes `timecodes.txt` (`#N | start | end` per block). The LLM returns ONLY timecodes, never modifies text
+3. **Assemble** (Python, deterministic) — merges `timecodes.txt` with `uk_blocks.json` in memory and generates SRT via `build_srt.py`
 
 Key principle: **LLM determines timing, Python guarantees text integrity.**
 
 ## SPA (GitHub Pages)
 
-Single-file app at `site/index.html`:
+App shell at `site/index.html` plus plain-JS modules under `site/js/`
+(shared single-source with the Node test suite), the token/component CSS
+under `site/css/` (`tokens.css` + `components.css`, catalogued live in
+`site/styleguide.html`), and a service worker (`site/sw.js` +
+`site/js/sw_routing.js`) that precaches the shell for offline use:
 - **Index** — talk list with search/filter, review status badges (from `review-status.json`)
 - **Preview** — Vimeo player + subtitle overlay + markers
 - **Review** — side-by-side EN/UK transcript editor
