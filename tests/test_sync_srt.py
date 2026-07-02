@@ -646,6 +646,55 @@ class TestSyncSrtToTranscript:
         assert result["changed"] == 1
         assert "Виправлене перше речення." in (talk / "transcript_uk.txt").read_text(encoding="utf-8")
 
+    def test_duplicate_delete_survives_case_drift_in_cursor_walk(self, tmp_path):
+        """Deleting a block whose text occurs earlier in the transcript must
+        remove the RIGHT occurrence even when a preceding unchanged block has
+        benign case drift (which used to stall the cursor walk, making the
+        deletion grab the earlier duplicate)."""
+        talk_dir = tmp_path / "talks" / "test"
+        video = talk_dir / "Video" / "final"
+        video.mkdir(parents=True)
+
+        old_srt = """1
+00:00:01,000 --> 00:00:05,000
+Вітаю всіх присутніх тут.
+
+2
+00:00:05,100 --> 00:00:07,000
+Так.
+
+3
+00:00:07,100 --> 00:00:10,000
+Дякую вам.
+"""
+        # user deletes block 2 («Так.»)
+        new_srt = """1
+00:00:01,000 --> 00:00:05,000
+Вітаю всіх присутніх тут.
+
+2
+00:00:07,100 --> 00:00:10,000
+Дякую вам.
+"""
+        (talk_dir / "uk_old.srt").write_text(old_srt, encoding="utf-8")
+        (video / "uk.srt").write_text(new_srt, encoding="utf-8")
+
+        # transcript has a leading «Так.» that belongs to no SRT block, and
+        # block 1 drifted in capitalization («вітаю» lowercase)
+        transcript = HEADER + "Так. вітаю всіх присутніх тут. Так. Дякую вам.\n"
+        (talk_dir / "transcript_uk.txt").write_text(transcript, encoding="utf-8")
+
+        result = sync_srt_to_transcript(
+            old_srt=str(talk_dir / "uk_old.srt"),
+            new_srt=str(video / "uk.srt"),
+            transcript=str(talk_dir / "transcript_uk.txt"),
+        )
+        assert result.get("removed") == 1
+
+        text = (talk_dir / "transcript_uk.txt").read_text(encoding="utf-8")
+        # the block-2 «Так.» (after «тут.») is gone, the leading one survives
+        assert "Так. вітаю всіх присутніх тут. Дякую вам." in text
+
     def test_cli_entrypoint_writes_file(self, talk):
         """The module CLI should run end-to-end and update the transcript."""
         import subprocess
