@@ -123,7 +123,10 @@ Triggered manually via `workflow_dispatch`. Full pipeline:
 6. **Commit** — pushes results + creates review tracking Issue
 
 ### sync-subtitles.yml
-Triggered on PRs that modify `transcript_uk.txt`. Does text-only swap in SRT blocks (no re-timing), then validates.
+Triggered on PRs that modify `transcript_uk.txt` **or** `*/final/uk.srt`.
+Runs the two-pass driver (`tools/sync_pr.py`): SRT edits are first synced
+back into the transcript (reverse), then the transcript is synced out to
+every video's SRT (forward) — text-only swaps, no re-timing — and validates.
 
 ### sync-review-status.yml
 Triggered on Issue label/assign changes. Syncs GitHub Issues → `review-status.json`.

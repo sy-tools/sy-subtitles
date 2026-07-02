@@ -44,7 +44,7 @@ tools/                          Python modules (see ARCHITECTURE.md for full lis
   optimize_srt.py               SRT timing optimizer (run from main pipeline)
   sync_*.py                     Transcript ↔ SRT sync (PR workflow)
 
-templates/                      Agent templates (builder, review)
+templates/                      Agent templates (language review)
 glossary/                       SY terminology dictionary (EN → UK, see glossary/README.md)
 ```
 
@@ -103,8 +103,9 @@ by hand run `python -m tools.validate_subtitles`.
 
 To fix Ukrainian text after the pipeline ships subtitles, edit
 `transcript_uk.txt` (or `final/uk.srt`) on a branch and open a PR.
-`sync-subtitles.yml` runs the reverse-then-forward sync, optimizes,
-and validates automatically.
+`sync-subtitles.yml` runs the reverse-then-forward sync and validates
+automatically (text-only swaps — edits that change block structure
+need a full pipeline rebuild; approximate re-timing is banned).
 
 ## Batch Download
 
@@ -126,8 +127,8 @@ Run: `python -m tools.download --manifest queue.yaml`
 | CPS (chars/sec) | ≤15 | ≤20 |
 | CPL (chars/line) | – | ≤84 |
 | Lines per block | 1 (single-line mode) | 1 |
-| Min duration | ≥1.2s | ≥1.0s |
-| Max duration | ≤15s | ≤21s |
+| Min duration | ≥1.2s | ≥1.2s |
+| Max duration | ≤7s (optimizer CLI) | ≤21s |
 | Min gap | ≥80ms (2 frames @24fps) | ≥80ms |
 
 ## License
