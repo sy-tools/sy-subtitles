@@ -69,6 +69,20 @@ def test_split_text_to_lines_enforces_cpl() -> None:
         assert len(line) <= MAX_CPL, line
 
 
+def test_split_text_double_space_never_cuts_mid_word() -> None:
+    # A run of extra whitespace must not skew split positions: every produced
+    # line has to consist of whole words of the original text.
+    text = (
+        "Це  дуже довге речення яке містить подвійний пробіл на початку і має бути "
+        "розділене на частини без розривів посередині слова."
+    )
+    assert len(text) > MAX_CPL
+    lines = split_text_to_lines(text)
+    for line in lines:
+        assert len(line) <= MAX_CPL, line
+    assert " ".join(lines).split() == text.split()
+
+
 def test_split_text_prefers_punctuation() -> None:
     # A comma should be a preferred break point — if any line ends right
     # after the comma, the splitter honoured punctuation priority.

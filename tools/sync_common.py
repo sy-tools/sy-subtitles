@@ -37,6 +37,19 @@ def find_in_text(text: str, needle: str, cursor: int) -> int:
     return text.find(needle, cursor)
 
 
+def find_in_text_lenient(text: str, needle: str, cursor: int) -> int:
+    """find_in_text, falling back to a case-insensitive search.
+
+    Used for cursor tracking across blocks with benign case drift
+    (manual capitalization edits) — a stalled cursor makes later
+    duplicate-text operations pick the wrong occurrence.
+    """
+    pos = text.find(needle, cursor)
+    if pos != -1:
+        return pos
+    return text.lower().find(needle.lower(), cursor)
+
+
 def delete_from_text(text: str, cursor: int, needle: str) -> dict:
     """Remove the first occurrence of `needle` in `text` at/after `cursor`.
 

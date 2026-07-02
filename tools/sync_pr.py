@@ -137,6 +137,10 @@ def _process_talk(
     step_a_failed = False
     for srt in srt_paths:
         video_slug = srt.split("/")[2]
+        if not Path(srt).exists():
+            # `git diff --name-only` also lists deletions — nothing to sync
+            print(f"  [{talk_id}/{video_slug}] SRT deleted in this PR — skip", file=sys.stderr)
+            continue
         base_srt = tmp / f"{talk_id}__{video_slug}.base.srt"
         if not _show_base(base_sha, srt, base_srt):
             print(f"  [{talk_id}/{video_slug}] SRT is new in this PR — skip", file=sys.stderr)

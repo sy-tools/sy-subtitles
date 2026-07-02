@@ -150,18 +150,18 @@ def _split_once(text: str) -> list[str]:
 
     Returns two parts, or [text] if can't split.
     """
-    words = text.split()
+    words = list(re.finditer(r"\S+", text))
     if len(words) <= 1:
         return [text]
 
     mid = len(text) // 2
     candidates: list[tuple[int, int, int]] = []  # (char_pos, priority, distance_from_mid)
-    char_pos = 0
 
-    for i, word in enumerate(words[:-1]):
-        char_pos += len(word)
-        next_word = words[i + 1]
-        next_clean = next_word.lower().rstrip(".,;:!?—»\"'")
+    for i, m in enumerate(words[:-1]):
+        word = m.group()
+        char_pos = m.end()
+        next_m = words[i + 1]
+        next_clean = next_m.group().lower().rstrip(".,;:!?—»\"'")
 
         if word[-1] in ".!?":
             priority = 1
@@ -175,19 +175,14 @@ def _split_once(text: str) -> list[str]:
             priority = 5
 
         left_len = char_pos
-        right_len = len(text) - char_pos - 1
+        right_len = len(text) - next_m.start()
 
         if left_len <= MAX_CPL and right_len <= MAX_CPL:
             candidates.append((char_pos, priority, abs(char_pos - mid)))
 
-        char_pos += 1  # space
-
     if not candidates:
-        char_pos = 0
-        for word in words[:-1]:
-            char_pos += len(word)
-            candidates.append((char_pos, 5, abs(char_pos - mid)))
-            char_pos += 1
+        for m in words[:-1]:
+            candidates.append((m.end(), 5, abs(m.end() - mid)))
 
     if not candidates:
         return [text]
