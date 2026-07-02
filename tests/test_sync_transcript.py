@@ -467,26 +467,131 @@ class TestMismatchedBlockSplits:
         assert srt_blocks[1]["end_ms"] == 15000
 
 
+class TestFragmentScoping:
+    """The diff fragment must be applied inside the changed paragraph's own
+    blocks — a short fragment (e.g. the euphony edit « і » → « й ») almost
+    always occurs in other blocks too, and patching the first global match
+    corrupts an unrelated block while dropping the intended edit."""
+
+    @pytest.fixture
+    def two_para_talk(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        srt_content = """1
+00:00:01,000 --> 00:00:05,000
+Мати дала нам силу і любов.
+
+2
+00:00:05,100 --> 00:00:10,000
+Ми прийшли сюди і ми раді.
+"""
+        (video / "uk.srt").write_text(srt_content, encoding="utf-8")
+        old = HEADER + "Мати дала нам силу і любов.\n\nМи прийшли сюди і ми раді.\n"
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        return talk
+
+    def test_short_fragment_patches_the_edited_paragraph_not_the_first_match(self, two_para_talk):
+        new = HEADER + "Мати дала нам силу і любов.\n\nМи прийшли сюди й ми раді.\n"
+        new_path = two_para_talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(
+            str(two_para_talk), "Video", str(two_para_talk / "transcript_uk_old.txt"), str(new_path)
+        )
+        assert not result.get("error")
+
+        from tools.srt_utils import parse_srt
+
+        srt = parse_srt(str(two_para_talk / "Video" / "final" / "uk.srt"))
+        assert srt[0]["text"] == "Мати дала нам силу і любов."  # untouched
+        assert srt[1]["text"] == "Ми прийшли сюди й ми раді."  # the actual edit
+
+    def test_drifted_srt_with_ambiguous_fragment_errors_instead_of_guessing(self, tmp_path):
+        """When SRT text has drifted from the transcript (word streams no longer
+        equal) and the fragment appears in several blocks, refuse loudly —
+        the caller falls back to the full pipeline."""
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        # SRT drifted: «щось!» vs transcript «щось.»
+        srt_content = """1
+00:00:01,000 --> 00:00:05,000
+Так само і тут щось!
+
+2
+00:00:05,100 --> 00:00:10,000
+І знову і тут інше.
+"""
+        (video / "uk.srt").write_text(srt_content, encoding="utf-8")
+        old = HEADER + "Так само і тут щось.\n\nІ знову і тут інше.\n"
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new = HEADER + "Так само й тут щось.\n\nІ знову і тут інше.\n"
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+        assert "error" in result
+
+        from tools.srt_utils import parse_srt
+
+        srt = parse_srt(str(talk / "Video" / "final" / "uk.srt"))
+        assert srt[0]["text"] == "Так само і тут щось!"  # nothing written
+        assert srt[1]["text"] == "І знову і тут інше."
+
+    def test_drifted_srt_with_unique_fragment_still_applies(self, tmp_path):
+        """Drifted SRT (whisper-shaped blocks) keeps working when the fragment
+        is unambiguous across the whole file."""
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        srt_content = """1
+00:00:01,000 --> 00:00:05,000
+Так само і тут щось!
+
+2
+00:00:05,100 --> 00:00:10,000
+І знову і тут інше.
+"""
+        (video / "uk.srt").write_text(srt_content, encoding="utf-8")
+        old = HEADER + "Так само і тут щось.\n\nІ знову і тут інше.\n"
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new = HEADER + "Так само і тут дещо.\n\nІ знову і тут інше.\n"
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+        assert not result.get("error")
+
+        from tools.srt_utils import parse_srt
+
+        srt = parse_srt(str(talk / "Video" / "final" / "uk.srt"))
+        assert srt[0]["text"] == "Так само і тут дещо!"
+        assert srt[1]["text"] == "І знову і тут інше."
+
+
 class TestFindDiff:
     """Unit tests for _find_diff helper."""
 
     def test_single_word_change(self):
-        old_f, new_f = _find_diff("Перше речення абзацу.", "Перше речення параграфу.")
+        old_f, new_f, offset = _find_diff("Перше речення абзацу.", "Перше речення параграфу.")
         # Prefix/suffix trimming: common suffix "у." is trimmed
         assert "абзац" in old_f
         assert "парагра" in new_f or "параграф" in new_f
+        assert "Перше речення абзацу."[offset : offset + len(old_f)] == old_f
 
     def test_empty_old_returns_empty(self):
-        old_f, _ = _find_diff("", "нове")
+        old_f, _, _ = _find_diff("", "нове")
         assert old_f == ""
 
     def test_multiple_changes(self):
-        old_f, new_f = _find_diff("AAAA. Текст. BBBB!", "CCCC. Текст. DDDD!")
+        old_f, new_f, offset = _find_diff("AAAA. Текст. BBBB!", "CCCC. Текст. DDDD!")
         # Both changes captured in one fragment
         assert "AAAA" in old_f
         assert "BBBB" in old_f
         assert "CCCC" in new_f
         assert "DDDD" in new_f
+        assert offset == 0
 
 
 class TestApplyDiffEdgeCases:
