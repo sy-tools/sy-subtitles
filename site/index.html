@@ -17,6 +17,7 @@
      app script below runs. -->
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/load_token.js"></script>
 <script src="js/index_url_state.js"></script>
 <script src="js/manifest_fetch.js"></script>
 <script src="js/offline_fallback.js"></script>
@@ -802,6 +803,7 @@ var I18N = {
 
     'add.link': '+ \u0414\u043E\u0434\u0430\u0442\u0438',
     'error.srt': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432',
+    'error.clipboard': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u0432 \u0431\u0443\u0444\u0435\u0440 \u2014 \u043A\u043B\u0430\u0446\u043D\u0456\u0442\u044C \u043D\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u0446\u0456 \u0442\u0430 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437',
     'error.offline_content': '\u041D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u043E \u043E\u0444\u043B\u0430\u0439\u043D \u2014 \u0432\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 \u043E\u043D\u043B\u0430\u0439\u043D, \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0432 \u043A\u0435\u0448',
     'error.rate_limit': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u041F\u043E\u043A\u0430\u0437\u0430\u043D\u043E \u043A\u0435\u0448; \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0437\u0430 {min} \u0445\u0432',
     'error.rate_limit_nocache': '\u041B\u0456\u043C\u0456\u0442 \u0437\u0430\u043F\u0438\u0442\u0456\u0432 GitHub. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0437\u0430 {min} \u0445\u0432',
@@ -930,6 +932,7 @@ var I18N = {
 
     'add.link': '+ Add Talk',
     'error.srt': 'Error loading subtitles',
+    'error.clipboard': 'Could not copy to clipboard — click the page and try again',
     'error.offline_content': 'Unavailable offline — open it online once to cache it',
     'error.rate_limit': 'GitHub rate limit reached. Showing cached data; refresh in {min} min',
     'error.rate_limit_nocache': 'GitHub rate limit reached. Try again in {min} min',
@@ -2235,7 +2238,7 @@ function renderStats() {
   bar.innerHTML = '';
   cards.forEach(function(c) {
     var active = activeFilter === c.filter ? ' active' : '';
-    var num = hasSearch ? c.f + '<span style="font-size:12px;color:#666">/' + c.t + '</span>' : '' + c.t;
+    var num = hasSearch ? c.f + '<span style="font-size:12px;color:var(--fg5)">/' + c.t + '</span>' : '' + c.t;
     bar.innerHTML += '<div class="stat-card ' + c.cls + active + '" data-filter="' + c.filter + '" onclick="SPA.filterTalks(\'' + c.filter + '\')">' +
       '<div class="num">' + num + '</div><div class="label">' + c.label + '</div></div>';
   });
@@ -2658,7 +2661,7 @@ function showPreview(talkId, videoSlug) {
     iframe.allow = 'autoplay; fullscreen';
     iframe.allowFullscreen = true;
     iframe.style.cssText = oldIframe.style.cssText || 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
-    if (embedUrl) iframe.src = embedUrl + '&texttrack=false';
+    if (embedUrl) iframe.src = withQueryParam(embedUrl, 'texttrack=false');
     oldIframe.parentNode.replaceChild(iframe, oldIframe);
   }
 
@@ -2674,10 +2677,14 @@ function showPreview(talkId, videoSlug) {
     previewState.mode = persisted.mode;
     previewState.markers = persisted.markers;
     previewState.edits = persisted.edits;
+    previewState.talk = talk;
+    previewState.video = video;
   } else {
     previewState = {
       talkId: talkId,
       videoSlug: videoSlug,
+      talk: talk,
+      video: video,
       subtitles: [],
       mode: persisted.mode,
       markers: persisted.markers,
@@ -2925,13 +2932,21 @@ function applyPreviewMode() {
   if (markBtn) {
     markBtn.textContent = mode === 'edit' ? t('btn.edit') : t('btn.mark');
     markBtn.title = mode === 'edit' ? t('btn.edit_title') : t('btn.mark_title');
+    // Keep the i18n keys in sync with the mode — translatePage() rewrites
+    // every [data-i18n] element, so stale keys would flip the button back
+    // to Marker-mode text on a UI-language toggle.
+    markBtn.setAttribute('data-i18n', mode === 'edit' ? 'btn.edit' : 'btn.mark');
+    markBtn.setAttribute('data-i18n-title', mode === 'edit' ? 'btn.edit_title' : 'btn.mark_title');
   }
   var copyBtn = document.getElementById('btn-copy-all');
   if (copyBtn) copyBtn.style.display = mode === 'marker' ? 'inline-block' : 'none';
   var editorBtn = document.getElementById('btn-preview-editor');
   if (editorBtn) editorBtn.style.display = mode === 'edit' ? 'inline-block' : 'none';
   var label = document.getElementById('preview-list-label');
-  if (label) label.textContent = mode === 'edit' ? t('edits.summary') : t('markers.summary');
+  if (label) {
+    label.textContent = mode === 'edit' ? t('edits.summary') : t('markers.summary');
+    label.setAttribute('data-i18n', mode === 'edit' ? 'edits.summary' : 'markers.summary');
+  }
   var markerList = document.getElementById('marker-list');
   var editList = document.getElementById('edit-list');
   if (markerList) markerList.style.display = mode === 'marker' ? '' : 'none';
@@ -3483,10 +3498,15 @@ function showReview(talkId) {
   var leftUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.leftLang + '.txt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
   var rightUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.rightLang + '.txt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
 
+  // Stale-fetch guard: navigating away (or switching mode/lang) before this
+  // resolves must not let the late response render into the new view or save
+  // edits under the wrong localStorage key.
+  var loadToken = bumpLoadToken(reviewState);
   Promise.all([
     fetch(leftUrl).then(function(r) { return r.ok ? r.text() : ''; }),
     fetch(rightUrl).then(function(r) { return r.ok ? r.text() : ''; })
   ]).then(function(texts) {
+    if (!isCurrentLoad(reviewState, loadToken)) return;
     var left = parseTranscript(texts[0]);
     var right = parseTranscript(texts[1]);
     reviewState.leftParas = left.paragraphs;
@@ -3502,6 +3522,7 @@ function showReview(talkId) {
       SPA.openTranscriptVideo(savedSlug);
     }
   }).catch(function(err) {
+    if (!isCurrentLoad(reviewState, loadToken)) return;
     statusEl.textContent = isOfflineError(err, navigator.onLine)
       ? t('error.offline_content') : t('review.load_error').replace('{err}', err);
     statusEl.classList.add('status-error');
@@ -3583,7 +3604,9 @@ SPA.openTranscriptVideo = function(videoSlug) {
   var sha = (talk._srtSha && talk._srtSha[videoSlug + '/' + srtLang]) || '';
   var url = RAW + '/talks/' + reviewState.talkId + '/' + videoSlug + '/final/' + srtLang + '.srt' +
     (sha ? '?v=' + sha.substring(0, 8) : '');
+  var loadToken = bumpLoadToken(reviewState);
   fetch(url).then(function(r) { return r.ok ? r.text() : ''; }).then(function(text) {
+    if (!isCurrentLoad(reviewState, loadToken)) return;
     if (!text) { showToast(t('review.srt_load_error').replace('{err}', 'SRT not found')); return; }
     var blocks = parseSRT(text);
     var timings = matchParagraphsToSrt(reviewState.rightParas, blocks);
@@ -3593,6 +3616,10 @@ SPA.openTranscriptVideo = function(videoSlug) {
     localStorage.setItem(transcriptVideoStorageKey(reviewState.talkId), videoSlug);
     SyncPlayer.init(reviewState.talkId, videoSlug);
     SyncPlayer.show();
+  }).catch(function(err) {
+    if (!isCurrentLoad(reviewState, loadToken)) return;
+    showToast(isOfflineError(err, navigator.onLine)
+      ? t('error.offline_content') : t('review.srt_load_error').replace('{err}', err));
   });
 };
 
@@ -3657,10 +3684,12 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     var rightSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.rightLang]) || '';
     var leftUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.leftLang + '.txt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
     var rightUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.rightLang + '.txt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
+    var tToken = bumpLoadToken(reviewState);
     Promise.all([
       fetch(leftUrl).then(function(r) { return r.ok ? r.text() : ''; }),
       fetch(rightUrl).then(function(r) { return r.ok ? r.text() : ''; })
     ]).then(function(texts) {
+      if (!isCurrentLoad(reviewState, tToken)) return;
       var left = parseTranscript(texts[0]);
       var right = parseTranscript(texts[1]);
       reviewState.leftParas = left.paragraphs;
@@ -3668,6 +3697,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
       reviewState.rightParsed = right;
       renderReview();
       statusEl.style.display = 'none';
+      statusEl.classList.remove('status-error');
       updateTranscriptSyncBtn();
       // Re-open the last-chosen video so leaving and returning to the
       // same talk restores the player (memory). Skipped when no saved
@@ -3678,6 +3708,11 @@ SPA.switchReviewMode = function(mode, videoSlug) {
       if (savedSlug && videos.some(function(v) { return v.slug === savedSlug; })) {
         SPA.openTranscriptVideo(savedSlug);
       }
+    }).catch(function(err) {
+      if (!isCurrentLoad(reviewState, tToken)) return;
+      statusEl.textContent = isOfflineError(err, navigator.onLine)
+        ? t('error.offline_content') : t('review.load_error').replace('{err}', err);
+      statusEl.classList.add('status-error');
     });
     return;
   }
@@ -3707,10 +3742,12 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   var enUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
   var ukUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
 
+  var srtToken = bumpLoadToken(reviewState);
   Promise.all([
     fetch(enUrl).then(function(r) { return r.ok ? r.text() : ''; }),
     fetch(ukUrl).then(function(r) { return r.ok ? r.text() : ''; })
   ]).then(function(texts) {
+    if (!isCurrentLoad(reviewState, srtToken)) return;
     var enBlocks = parseSRT(texts[0]);
     var ukBlocks = parseSRT(texts[1]);
     var aligned = alignSubtitlesByTime(enBlocks, ukBlocks);
@@ -3724,6 +3761,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     statusEl.style.display = 'none';
     statusEl.classList.remove('status-error');
   }).catch(function(err) {
+    if (!isCurrentLoad(reviewState, srtToken)) return;
     statusEl.textContent = isOfflineError(err, navigator.onLine)
       ? t('error.offline_content') : t('review.srt_load_error').replace('{err}', err);
     statusEl.classList.add('status-error');
@@ -4116,6 +4154,10 @@ SPA.openEditor = function() {
         confirmLabel: t('modal.open_github'),
         singleButton: true
       }).then(function() { window.open(url); });
+    }).catch(function() {
+      // Clipboard can reject (document not focused, permission denied) —
+      // the edits are NOT exported then; say so instead of a dead button.
+      showToast(t('error.clipboard'));
     });
   } else {
     window.open(url);
@@ -4206,10 +4248,12 @@ SPA.switchSrtLang = function(side, lang) {
   var enUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
   var ukUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
 
+  var loadToken = bumpLoadToken(reviewState);
   Promise.all([
     fetch(enUrl).then(function(r) { return r.ok ? r.text() : ''; }),
     fetch(ukUrl).then(function(r) { return r.ok ? r.text() : ''; })
   ]).then(function(texts) {
+    if (!isCurrentLoad(reviewState, loadToken)) return;
     var enBlocks = parseSRT(texts[0]);
     var ukBlocks = parseSRT(texts[1]);
     var aligned = alignSubtitlesByTime(enBlocks, ukBlocks);
@@ -4220,6 +4264,12 @@ SPA.switchSrtLang = function(side, lang) {
     renderReview();
     updateColHeaders();
     statusEl.style.display = 'none';
+    statusEl.classList.remove('status-error');
+  }).catch(function(err) {
+    if (!isCurrentLoad(reviewState, loadToken)) return;
+    statusEl.textContent = isOfflineError(err, navigator.onLine)
+      ? t('error.offline_content') : t('review.srt_load_error').replace('{err}', err);
+    statusEl.classList.add('status-error');
   });
 };
 
@@ -4414,7 +4464,7 @@ SPA.toggleBranches = function() {
   var dd = document.getElementById('branch-dropdown');
   if (!dd) return;
   if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
-  dd.innerHTML = '<div style="color:#888;padding:8px 12px">Loading...</div>';
+  dd.innerHTML = '<div style="color:var(--fg4);padding:8px 12px">Loading...</div>';
   dd.classList.add('open');
   fetch(API + '/branches?per_page=100')
     .then(function(r) { return r.ok ? r.json() : Promise.reject('HTTP ' + r.status); })
@@ -4429,7 +4479,7 @@ SPA.toggleBranches = function() {
       });
     })
     .catch(function(err) {
-      dd.innerHTML = '<div style="color:#f66;padding:8px 12px">Error: ' + err + '</div>';
+      dd.innerHTML = '<div style="color:var(--danger-fg);padding:8px 12px">Error: ' + esc(String(err)) + '</div>';
     });
 };
 
