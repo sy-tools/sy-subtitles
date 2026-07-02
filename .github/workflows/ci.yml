@@ -9,6 +9,8 @@ on:
       - 'site/**'
       - 'requirements*.txt'
       - 'ruff.toml'
+      # the ruff pin-lockstep guard must run when only the pre-commit rev moves
+      - '.pre-commit-config.yaml'
       - '.github/workflows/**'
   pull_request:
     paths:
@@ -17,6 +19,7 @@ on:
       - 'site/**'
       - 'requirements*.txt'
       - 'ruff.toml'
+      - '.pre-commit-config.yaml'
       - '.github/workflows/**'
 
 # Least-privilege default for every job (all are read-only lint/test jobs).

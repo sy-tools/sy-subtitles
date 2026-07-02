@@ -1008,16 +1008,21 @@ jobs:
       - name: Place artifacts into talk directories
         # BUILD_RESULT gates the subtitle copy — skip when validation failed
         # so the broken SRT does not end up on main as the next run's
-        # baseline. Translation artifacts are always copied so progress
-        # survives a build failure. `needs.build-timecodes.result` is a
-        # workflow-controlled enum (success/failure/cancelled/skipped),
+        # baseline. TRANSLATE_RESULT gates the translation copy the same way:
+        # a transcript that failed the translate job's verification gate
+        # (1:1 paragraph count) must not become the next run's baseline;
+        # its artifact stays downloadable for inspection. Both values are
+        # workflow-controlled enums (success/failure/cancelled/skipped),
         # not user input — using `env:` anyway as the safe default.
         env:
           BUILD_RESULT: ${{ needs.build-timecodes.result }}
+          TRANSLATE_RESULT: ${{ needs.translate-and-review.result }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
-          # Translation
-          if [ -d /tmp/translation ]; then
+          # Translation — only when translate-and-review passed verification.
+          if [ "$TRANSLATE_RESULT" = "failure" ]; then
+            echo "=== Translation artifacts SKIPPED (translate-and-review=$TRANSLATE_RESULT) ==="
+          elif [ -d /tmp/translation ]; then
             echo "=== Translation artifacts ==="
             find /tmp/translation -type f
             for f in transcript_uk.txt review_report.md glossary.json; do
@@ -1035,7 +1040,7 @@ jobs:
           elif [ -d /tmp/subtitles ]; then
             echo "=== Subtitle artifacts ==="
             find /tmp/subtitles -type f
-            find /tmp/subtitles \( -name "uk.srt" -o -name "timecodes.txt" -o -name "report.txt" -o -name "build_report.txt" \) | while read src; do
+            find /tmp/subtitles \( -name "uk.srt" -o -name "timecodes.txt" -o -name "report.txt" -o -name "build_report.txt" -o -name "build_manifest.yaml" \) | while read src; do
               # Preserve video slug subdirectory
               rel=$(echo "$src" | grep -o '[^/]*/\(work\|final\)/[^/]*$')
               if [ -n "$rel" ]; then
@@ -1062,7 +1067,10 @@ jobs:
             "talks/*/*/final/build_manifest.yaml"
 
       - name: Create review tracking issue
-        if: success()
+        # Only when subtitles were actually built and committed this run —
+        # resetting the issue to review:pending after a failed build would
+        # wipe the real review status without shipping anything to review.
+        if: success() && needs.build-timecodes.result == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
