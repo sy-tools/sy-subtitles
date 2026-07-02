@@ -171,7 +171,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           pip install -r requirements.txt
-          pip install faster-whisper>=1.2.1
+          # quoted: unquoted >= is a shell redirect that drops the version floor
+          pip install 'faster-whisper>=1.2.1'
 
       - name: Cache Whisper model
         uses: actions/cache@v6
