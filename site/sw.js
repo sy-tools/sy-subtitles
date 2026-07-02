@@ -1,7 +1,7 @@
 // Service Worker for SPA caching
 // Browser detects changes by comparing sw.js byte-for-byte.
 // CACHE_VERSION: bump when cache format changes or to force purge.
-var CACHE_VERSION = 5;
+var CACHE_VERSION = 6;
 var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 
 // Routing predicates (isImmutable / isApiOrRaw / isNavigation / pickStrategy) are
@@ -34,6 +34,7 @@ var SHELL_ASSETS = [
   'css/components.css',
   'js/preview_srt_parser.js',
   'js/preview_state.js',
+  'js/load_token.js',
   'js/index_url_state.js',
   'js/manifest_fetch.js',
   'js/offline_fallback.js',
