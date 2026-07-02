@@ -10,7 +10,9 @@ import re
 import sys
 
 TALK_ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_[A-Za-z0-9_.-]{1,80}$")
-VIDEO_SLUG_RE = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+# First char alphanumeric/underscore: rejects dot-only values (".", "..")
+# and option-like values ("-rf", "--help") that defeat path safety.
+VIDEO_SLUG_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$")
 VIMEO_URL_RE = re.compile(r"^https://(?:www\.)?(?:vimeo\.com|player\.vimeo\.com/video)/\d+(?:/[0-9a-f]+)?/?$")
 
 
