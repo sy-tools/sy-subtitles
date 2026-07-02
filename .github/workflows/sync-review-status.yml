@@ -14,9 +14,13 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # For 'unlabeled' the issue's label list reflects the state AFTER removal,
+    # so removing the last review:* label would skip the sync — also check the
+    # removed label itself (github.event.label.name).
     if: >
       github.event_name != 'issues' ||
-      contains(join(github.event.issue.labels.*.name, ','), 'review:')
+      contains(join(github.event.issue.labels.*.name, ','), 'review:') ||
+      startsWith(github.event.label.name, 'review:')
     steps:
       # Always branch off the live main tip, not the inherited SHA. When this
       # workflow runs via `workflow_call` from subtitle-pipeline.yml, the default

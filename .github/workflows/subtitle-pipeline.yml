@@ -1020,7 +1020,7 @@ jobs:
           if [ -d /tmp/translation ]; then
             echo "=== Translation artifacts ==="
             find /tmp/translation -type f
-            for f in transcript_uk.txt review_report.md; do
+            for f in transcript_uk.txt review_report.md glossary.json; do
               src=$(find /tmp/translation -name "$f" -type f | head -1)
               if [ -n "$src" ]; then
                 cp "$src" "talks/$TALK_ID/$f"
