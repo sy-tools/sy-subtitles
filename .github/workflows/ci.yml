@@ -11,6 +11,10 @@ on:
       - 'ruff.toml'
       # the ruff pin-lockstep guard must run when only the pre-commit rev moves
       - '.pre-commit-config.yaml'
+      # shipped-data guards (no plaintext vimeo links, meta/whisper schemas)
+      # must run when only talk data changes
+      - 'talks/*/meta.yaml'
+      - 'talks/*/*/source/whisper.json'
       - '.github/workflows/**'
   pull_request:
     paths:
@@ -20,6 +24,8 @@ on:
       - 'requirements*.txt'
       - 'ruff.toml'
       - '.pre-commit-config.yaml'
+      - 'talks/*/meta.yaml'
+      - 'talks/*/*/source/whisper.json'
       - '.github/workflows/**'
 
 # Least-privilege default for every job (all are read-only lint/test jobs).

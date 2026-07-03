@@ -88,6 +88,20 @@ def test_ci_paths_cover_precommit_config() -> None:
         assert ".pre-commit-config.yaml" in paths, f"{trigger}.paths misses .pre-commit-config.yaml: {paths}"
 
 
+def test_ci_paths_cover_shipped_talk_data_guards() -> None:
+    """The suite has shipped-data guards (test_no_plaintext_vimeo, and
+    test_schemas' all-shipped meta.yaml/whisper.json validation) — but ci.yml
+    used to skip entirely on PRs that only touch talks/**, so a hand edit
+    reintroducing a plaintext vimeo_url or a corrupt whisper.json shipped
+    with no check running at all."""
+    data = yaml.safe_load((WORKFLOWS / "ci.yml").read_text(encoding="utf-8"))
+    on = data.get("on") or data.get(True)
+    for trigger in ("push", "pull_request"):
+        paths = on[trigger]["paths"]
+        assert "talks/*/meta.yaml" in paths, f"{trigger}.paths misses talks/*/meta.yaml: {paths}"
+        assert "talks/*/*/source/whisper.json" in paths, f"{trigger}.paths misses whisper.json: {paths}"
+
+
 def test_sync_review_status_unlabeled_checks_removed_label() -> None:
     """For an 'unlabeled' event github.event.issue.labels reflects the state
     AFTER removal, so removing the last review:* label used to skip the sync
