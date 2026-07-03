@@ -116,7 +116,6 @@ responses in `tests/fixtures/pipeline_snapshots/`, then `tools.verify_snapshot`
 checks the output (text preservation, block-count tolerance, CPS, validation).
 
 > ⚠️ **Known gap:** the generator `tools/bootstrap_snapshot.py` was removed in
-> `c72e1b53` ("drop uk.map … legacy cleanup") but is still referenced by
-> `test_dryrun_matrix.py` and `tools/verify_snapshot.py`. Until it is restored
-> and modernised, snapshots cannot be regenerated from the documented
-> `python -m tools.bootstrap_snapshot --all`.
+> `c72e1b53` ("drop uk.map … legacy cleanup"). Until it is restored and
+> modernised, the checked-in snapshot fixtures cannot be regenerated —
+> `python -m tools.bootstrap_snapshot --all` no longer exists.
