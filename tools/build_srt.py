@@ -77,6 +77,10 @@ def enforce_gaps(blocks, config=None):
                 # Can't fix by shrinking prev — move current start forward instead
                 result[i - 1]["end_ms"] = result[i - 1]["start_ms"] + config.min_duration_ms
                 result[i]["start_ms"] = result[i - 1]["end_ms"] + config.min_gap_ms
+                # Moving start forward can pass the block's own end (nested
+                # mapping error) — keep start < end invariant
+                if result[i]["end_ms"] <= result[i]["start_ms"]:
+                    result[i]["end_ms"] = result[i]["start_ms"] + config.min_duration_ms
                 warnings.append(
                     f"  Forced gap: #{result[i - 1]['idx']}→#{result[i]['idx']} "
                     f"(moved block #{result[i]['idx']} start forward)"
@@ -97,42 +101,62 @@ def _cps(block):
 
 
 def _extend_block(blocks, i, deficit, config, max_cascade=10):
-    """Extend block i by deficit ms using cascade shifting.
+    """Extend block i by deficit ms into nearby silence.
 
-    Shifts neighbors wholesale into nearby silence gaps (up to max_cascade
-    blocks in each direction). Tries rightward first, then leftward.
+    The gap adjacent to block i is consumed directly (no shifting); any
+    remainder is opened by shifting neighbors wholesale into their own
+    downstream gaps (up to max_cascade blocks in each direction).
+    Tries rightward first, then leftward.
     Returns remaining deficit (0 = fully resolved).
     """
+    # === Extend END: eat the adjacent gap directly ===
+    if i + 1 < len(blocks):
+        gap = blocks[i + 1]["start_ms"] - blocks[i]["end_ms"]
+        take = min(deficit, max(0, gap - config.min_gap_ms))
+        blocks[i]["end_ms"] += take
+        deficit -= take
+
     # === Extend END: shift blocks to the right into gaps ===
-    right_slack = 0
-    for j in range(i, min(i + max_cascade, len(blocks) - 1)):
-        gap = blocks[j + 1]["start_ms"] - blocks[j]["end_ms"]
-        right_slack += max(0, gap - config.min_gap_ms)
+    if deficit > 0:
+        right_slack = 0
+        for j in range(i + 1, min(i + 1 + max_cascade, len(blocks) - 1)):
+            gap = blocks[j + 1]["start_ms"] - blocks[j]["end_ms"]
+            right_slack += max(0, gap - config.min_gap_ms)
 
-    extend_right = min(deficit, right_slack)
-    if extend_right > 0:
-        shift = extend_right
-        for j in range(i + 1, min(i + 1 + max_cascade, len(blocks))):
-            if shift <= 0:
-                break
-            blocks[j]["start_ms"] += shift
-            blocks[j]["end_ms"] += shift
-            if j + 1 < len(blocks):
-                gap = blocks[j + 1]["start_ms"] - blocks[j]["end_ms"]
-                if gap >= config.min_gap_ms:
+        extend_right = min(deficit, right_slack)
+        if extend_right > 0:
+            shift = extend_right
+            for j in range(i + 1, min(i + 1 + max_cascade, len(blocks))):
+                if shift <= 0:
                     break
-                shift = config.min_gap_ms - gap
+                blocks[j]["start_ms"] += shift
+                blocks[j]["end_ms"] += shift
+                if j + 1 < len(blocks):
+                    gap = blocks[j + 1]["start_ms"] - blocks[j]["end_ms"]
+                    if gap >= config.min_gap_ms:
+                        break
+                    shift = config.min_gap_ms - gap
 
-        blocks[i]["end_ms"] += extend_right
-        deficit -= extend_right
+            blocks[i]["end_ms"] += extend_right
+            deficit -= extend_right
+
+    # === Extend START: eat the adjacent gap (or lead-in silence) directly ===
+    if deficit > 0:
+        if i > 0:
+            gap = blocks[i]["start_ms"] - blocks[i - 1]["end_ms"]
+            take = min(deficit, max(0, gap - config.min_gap_ms))
+        else:
+            take = min(deficit, blocks[0]["start_ms"])
+        blocks[i]["start_ms"] -= take
+        deficit -= take
 
     # === Extend START: shift blocks to the left into gaps ===
-    if deficit > 0:
+    if deficit > 0 and i > 0:
         left_slack = 0
-        for j in range(i, max(i - max_cascade, 0), -1):
+        for j in range(i - 1, max(i - 1 - max_cascade, 0), -1):
             gap = blocks[j]["start_ms"] - blocks[j - 1]["end_ms"]
             left_slack += max(0, gap - config.min_gap_ms)
-        if i - max_cascade <= 0 and blocks[0]["start_ms"] > 0:
+        if i - 1 - max_cascade <= 0 and blocks[0]["start_ms"] > 0:
             left_slack += blocks[0]["start_ms"]
 
         extend_left = min(deficit, left_slack)

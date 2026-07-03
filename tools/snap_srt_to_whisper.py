@@ -167,19 +167,25 @@ def _word_gaps(wwords, min_sil_ms=150):
     return out
 
 
-def rebalance_short_blocks(blocks, wwords, target_cps=15, min_gap_ms=80, min_dur_ms=700):
+def rebalance_short_blocks(blocks, wwords, target_cps=15, min_gap_ms=80, min_dur_ms=700, matched_idx=None):
     """When a block reads too fast (CPS above target), move its boundary with the
     next block to even out the reading rate, so the next subtitle doesn't flash
     up while the dense phrase is still being heard. The boundary lands on a real
     whisper word edge (preferring an actual pause), never mid-silence guessing,
     and only when it lowers the pair's worst CPS. The two blocks' outer edges
     (this block's first word, the next block's last word) stay put, so neither
-    is pushed off its own speech — only the shared hand-off moves."""
+    is pushed off its own speech — only the shared hand-off moves.
+
+    Pairs where either block is unmatched (idx not in matched_idx) are skipped:
+    an unmatched block keeps its stale SRT timing, which is neither a valid
+    balance window nor allowed to move (contract: untouched, reviewed by hand)."""
     # candidate boundaries = every whisper word edge; pauses are naturally included
     edges = sorted({w[0] for w in wwords} | {w[1] for w in wwords})
     pauses = {ge for _gs, ge in _word_gaps(wwords)} | {gs for gs, _ge in _word_gaps(wwords)}
     for i in range(len(blocks) - 1):
         b, n = blocks[i], blocks[i + 1]
+        if matched_idx is not None and (b["idx"] not in matched_idx or n["idx"] not in matched_idx):
+            continue
         cb = len(b["text"].replace("\n", ""))
         cn = len(n["text"].replace("\n", ""))
         dur_b = b["end_ms"] - b["start_ms"]
@@ -235,7 +241,7 @@ def snap_to_whisper(blocks, segments, min_gap_ms=80, min_duration_ms=1000, targe
     # 2) where speech is continuous (no pause) but a block still reads too fast,
     #    even out the shared boundary with the next block at a real word edge.
     distribute_pauses(blocks, matched_idx, target_cps, min_gap_ms)
-    rebalance_short_blocks(blocks, wwords, target_cps=target_cps, min_gap_ms=min_gap_ms)
+    rebalance_short_blocks(blocks, wwords, target_cps=target_cps, min_gap_ms=min_gap_ms, matched_idx=matched_idx)
 
     # Floor: keep any block at least min_duration_ms, borrowing only from a
     # following pause (never over the next block's speech).
