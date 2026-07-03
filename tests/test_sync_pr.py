@@ -196,6 +196,28 @@ class TestSyncPrIntegration:
         assert "Перше речення першого абзацу." not in v2_after
         assert "Єдине речення другого абзацу." not in v2_after
 
+    def test_deleted_srt_is_skipped_not_crashing_the_driver(self, repo):
+        """A PR that deletes a final/uk.srt must not kill the whole driver
+        with FileNotFoundError — the deleted SRT is skipped and the rest of
+        the sync still runs."""
+        repo_path, base_sha = repo
+        talk = repo_path / "talks" / "test"
+        _git(repo_path, "rm", "-q", "talks/test/Video1/final/uk.srt")
+        transcript = talk / "transcript_uk.txt"
+        transcript.write_text(
+            BASE_TRANSCRIPT.replace("Єдине речення другого абзацу.", "Нове речення другого абзацу."),
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "talks")
+        _git(repo_path, "commit", "-q", "-m", "delete v1 srt + edit transcript")
+
+        exit_code = run(base_sha)
+        assert exit_code == 0
+
+        assert not (talk / "Video1" / "final" / "uk.srt").exists()  # stays deleted
+        v2_after = (talk / "Video2" / "final" / "uk.srt").read_text(encoding="utf-8")
+        assert "Нове речення другого абзацу." in v2_after  # Step B still ran
+
     def test_no_changes_returns_zero(self, repo):
         """Nothing changed in the PR — driver should noop and exit 0."""
         repo_path, base_sha = repo

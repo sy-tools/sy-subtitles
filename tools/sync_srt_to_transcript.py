@@ -29,7 +29,7 @@ import difflib
 import sys
 
 from .srt_utils import parse_srt, write_srt
-from .sync_common import delete_from_text, find_in_text
+from .sync_common import delete_from_text, find_in_text, find_in_text_lenient
 
 # Thin aliases kept for in-file readability (and to not churn call sites).
 _find_in_transcript = find_in_text
@@ -95,7 +95,10 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
             # cursor doesn't matter and the workflow still does the right
             # thing.
             for k in range(i1, i2):
-                pos = _find_in_transcript(text, old_texts[k], cursor)
+                # Lenient (case-insensitive) fallback: benign capitalization
+                # drift must not stall the cursor, or a later deletion of
+                # duplicated text grabs an earlier occurrence.
+                pos = find_in_text_lenient(text, old_texts[k], cursor)
                 if pos == -1:
                     drifted += 1
                     continue

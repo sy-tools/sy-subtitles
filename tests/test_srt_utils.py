@@ -141,3 +141,12 @@ def test_calc_stats_empty():
     assert stats["total_blocks"] == 0
     assert stats["avg_cps"] == 0
     assert stats["max_cps"] == 0
+
+
+def test_format_stats_empty_does_not_crash():
+    """A 0-block SRT must produce a report, not ZeroDivisionError — the
+    validator turns it into a FAILED report instead of a traceback."""
+    from tools.srt_utils import format_stats
+
+    report = format_stats(calc_stats([]), label="empty")
+    assert "Total blocks: 0" in report

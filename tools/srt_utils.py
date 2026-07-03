@@ -168,9 +168,7 @@ def format_stats(stats, label=""):
     lines.append(f"  CPS > hard max: {stats['cps_over_hard']} ({stats['cps_over_hard'] / n * 100:.1f}%)")
     lines.append(f"  CPL: avg={stats['avg_cpl']:.1f}, max={stats['max_cpl']}")
     lines.append(f"  CPL > max: {stats['cpl_over_max']} ({stats['cpl_over_max'] / n * 100:.1f}%)")
-    lines.append(
-        f"  Chars > max block: {stats['chars_over_max']} ({stats['chars_over_max'] / stats['total_blocks'] * 100:.1f}%)"
-    )
+    lines.append(f"  Chars > max block: {stats['chars_over_max']} ({stats['chars_over_max'] / n * 100:.1f}%)")
     lines.append(f"  Lines > max: {stats['lines_over_max']}")
     lines.append(f"  Duration < min: {stats['duration_under_min']}")
     lines.append(f"  Duration > max: {stats['duration_over_max']}")
