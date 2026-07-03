@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -43,11 +44,12 @@ def find_paragraph_blocks(srt_blocks: list, para_blocks: list) -> list | None:
     return None
 
 
-def _find_diff(old_para: str, new_para: str) -> tuple[str, str]:
+def _find_diff(old_para: str, new_para: str) -> tuple[str, str, int]:
     """Find the changed region between old and new paragraph text.
 
-    Returns (old_fragment, new_fragment) — the minimal differing middle
-    with enough surrounding context for unique matching in SRT blocks.
+    Returns (old_fragment, new_fragment, offset) — the minimal differing
+    middle with enough surrounding context for matching in SRT blocks, and
+    the fragment's exact character offset within old_para.
     """
     # Common prefix
     prefix_len = 0
@@ -78,35 +80,87 @@ def _find_diff(old_para: str, new_para: str) -> tuple[str, str]:
         old_mid = old_para[prefix_len:old_end]
         new_mid = new_para[prefix_len:new_end]
 
-    return old_mid, new_mid
+    return old_mid, new_mid, prefix_len
 
 
-def _apply_diff(old_para: str, new_para: str, srt_blocks: list, p_idx: int) -> dict | None:
+def _locate_fragment(old_paras: list, p_idx: int, frag_lo: int, frag_hi: int, srt_blocks: list) -> tuple | None:
+    """(block_index, char_offset) of paragraph p_idx's fragment [frag_lo, frag_hi).
+
+    Maps by word-stream position: transcript paragraphs and SRT blocks carry
+    the same words in the same order even when segmented differently
+    (whisper-built SRTs combine sentences prepare_blocks would split).
+    Returns None when the streams have drifted or the fragment straddles a
+    block boundary — the caller must then fall back to a stricter search.
+    """
+    para_words = [list(re.finditer(r"\S+", p)) for p in old_paras]
+    block_words = [list(re.finditer(r"\S+", b["text"])) for b in srt_blocks]
+    if [m.group() for ms in para_words for m in ms] != [m.group() for ms in block_words for m in ms]:
+        return None
+
+    words = para_words[p_idx]
+    if not words:
+        return None
+    touched = [k for k, m in enumerate(words) if m.start() < frag_hi and m.end() > frag_lo]
+    if not touched:  # whitespace-only fragment: anchor to the next word
+        touched = [k for k, m in enumerate(words) if m.start() >= frag_lo][:1] or [len(words) - 1]
+
+    w0 = sum(len(ms) for ms in para_words[:p_idx])
+    g_lo, g_hi = w0 + touched[0], w0 + touched[-1]
+
+    pos = 0
+    for ms, block in zip(block_words, srt_blocks, strict=True):
+        if pos <= g_lo and g_hi < pos + len(ms):
+            anchor = ms[g_lo - pos]
+            offset = anchor.start() + (frag_lo - words[touched[0]].start())
+            return block, offset
+        pos += len(ms)
+    return None  # fragment straddles a block boundary
+
+
+def _apply_diff(old_para: str, new_para: str, srt_blocks: list, p_idx: int, loc: tuple | None = None) -> dict | None:
     """Apply text diff from old_para → new_para to SRT blocks.
 
-    Finds the changed region (prefix/suffix trimming), then searches
-    SRT blocks for the old fragment and replaces it in-place.
+    Finds the changed region (prefix/suffix trimming), then replaces the old
+    fragment at `loc` — the (block, offset) located by word-stream position.
+    Without a location (streams drifted, boundary straddle) the fragment is
+    applied only if it is unambiguous across the whole SRT; a short fragment
+    found in several blocks is an error, never a first-match guess.
 
     Returns an error dict on failure, or None on success.
     """
-    old_frag, new_frag = _find_diff(old_para, new_para)
+    old_frag, new_frag, _ = _find_diff(old_para, new_para)
 
     if not old_frag:
         return {"error": (f"P{p_idx + 1}: cannot determine changed text — run the full subtitle pipeline to rebuild")}
 
-    found = False
-    for block in srt_blocks:
-        if old_frag in block["text"]:
+    applied = False
+    if loc is not None:
+        block, offset = loc
+        if offset >= 0 and block["text"][offset : offset + len(old_frag)] == old_frag:
+            block["text"] = block["text"][:offset] + new_frag + block["text"][offset + len(old_frag) :]
+            applied = True
+        elif old_frag in block["text"]:
+            # offset arithmetic thrown off by whitespace variance — still the right block
             block["text"] = block["text"].replace(old_frag, new_frag, 1)
-            found = True
-            print(
-                f"  P{p_idx + 1}: «{old_frag[:60]}» → «{new_frag[:60]}»",
-                file=sys.stderr,
-            )
-            break
+            applied = True
 
-    if not found:
-        return {"error": (f"P{p_idx + 1}: cannot find «{old_frag[:60]}» in SRT blocks")}
+    if not applied:
+        hits = [b for b in srt_blocks if old_frag in b["text"]]
+        if not hits:
+            return {"error": (f"P{p_idx + 1}: cannot find «{old_frag[:60]}» in SRT blocks")}
+        if len(hits) > 1:
+            return {
+                "error": (
+                    f"P{p_idx + 1}: «{old_frag[:60]}» is ambiguous ({len(hits)} blocks) — "
+                    "run the full subtitle pipeline to rebuild"
+                )
+            }
+        hits[0]["text"] = hits[0]["text"].replace(old_frag, new_frag, 1)
+
+    print(
+        f"  P{p_idx + 1}: «{old_frag[:60]}» → «{new_frag[:60]}»",
+        file=sys.stderr,
+    )
 
     # CPL check on all blocks after replacement
     for block in srt_blocks:
@@ -146,9 +200,17 @@ def sync_transcript(talk_dir: str, video_slug: str, old_transcript: str, new_tra
 
     print(f"Changed paragraphs: {len(changed_paras)}", file=sys.stderr)
 
+    # Locate every fragment against the pristine blocks before mutating any
+    # text — applied edits would desync the word streams for later paragraphs.
+    locs = {}
+    for p_idx in changed_paras:
+        old_frag, _new_frag, frag_lo = _find_diff(old_paras[p_idx], new_paras[p_idx])
+        if old_frag:
+            locs[p_idx] = _locate_fragment(old_paras, p_idx, frag_lo, frag_lo + len(old_frag), srt_blocks)
+
     total_updated = 0
     for p_idx in changed_paras:
-        err = _apply_diff(old_paras[p_idx], new_paras[p_idx], srt_blocks, p_idx)
+        err = _apply_diff(old_paras[p_idx], new_paras[p_idx], srt_blocks, p_idx, locs.get(p_idx))
         if err:
             return err
         total_updated += 1
