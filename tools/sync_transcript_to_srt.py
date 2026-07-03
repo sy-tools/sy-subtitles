@@ -133,18 +133,18 @@ def _apply_diff(old_para: str, new_para: str, srt_blocks: list, p_idx: int, loc:
     if not old_frag:
         return {"error": (f"P{p_idx + 1}: cannot determine changed text — run the full subtitle pipeline to rebuild")}
 
-    target = None
+    applied = False
     if loc is not None:
         block, offset = loc
         if offset >= 0 and block["text"][offset : offset + len(old_frag)] == old_frag:
             block["text"] = block["text"][:offset] + new_frag + block["text"][offset + len(old_frag) :]
-            target = block
+            applied = True
         elif old_frag in block["text"]:
             # offset arithmetic thrown off by whitespace variance — still the right block
             block["text"] = block["text"].replace(old_frag, new_frag, 1)
-            target = block
+            applied = True
 
-    if target is None:
+    if not applied:
         hits = [b for b in srt_blocks if old_frag in b["text"]]
         if not hits:
             return {"error": (f"P{p_idx + 1}: cannot find «{old_frag[:60]}» in SRT blocks")}
@@ -156,7 +156,6 @@ def _apply_diff(old_para: str, new_para: str, srt_blocks: list, p_idx: int, loc:
                 )
             }
         hits[0]["text"] = hits[0]["text"].replace(old_frag, new_frag, 1)
-        target = hits[0]
 
     print(
         f"  P{p_idx + 1}: «{old_frag[:60]}» → «{new_frag[:60]}»",
