@@ -1,8 +1,12 @@
 """Tests for whisper_run hallucination filter and segment processing."""
 
+import json
+import sys
+import types
+
 import pytest
 
-from tools.whisper_run import is_hallucination
+from tools.whisper_run import is_hallucination, run_whisper
 
 
 class TestIsHallucination:
@@ -51,54 +55,75 @@ class TestIsHallucination:
         assert is_hallucination("  hello  ") is False
 
 
-class TestWhisperRunConfig:
-    """Test that whisper_run uses correct anti-hallucination config."""
+class TestWhisperRunExecutesConfig:
+    """Run run_whisper against a stub faster_whisper and assert the kwargs the
+    REAL transcribe call receives — grep-of-source tests stayed green as long
+    as the literal appeared anywhere in the function (even a comment), without
+    ever executing the production path."""
 
-    def test_imports_faster_whisper(self):
-        """Verify whisper_run uses faster-whisper, not openai-whisper."""
-        import inspect
+    class _Word:
+        def __init__(self, start, end, word):
+            self.start, self.end, self.word = start, end, word
 
-        from tools.whisper_run import run_whisper
+    class _Segment:
+        def __init__(self, start, end, text, words=None):
+            self.start, self.end, self.text, self.words = start, end, text, words or []
 
-        source = inspect.getsource(run_whisper)
-        assert "faster_whisper" in source
-        assert "WhisperModel" in source
+    @pytest.fixture
+    def run(self, monkeypatch, tmp_path):
+        """Execute run_whisper once with a capturing stub; return (transcribe
+        kwargs, model-init args, parsed output JSON)."""
+        captured = {}
+        seg = self._Segment
+        word = self._Word
 
-    def test_vad_filter_enabled(self):
-        """Verify VAD filter is enabled in transcribe call."""
-        import inspect
+        class WhisperModel:
+            def __init__(self, model, device=None, compute_type=None):
+                captured["init"] = {"model": model, "device": device, "compute_type": compute_type}
 
-        from tools.whisper_run import run_whisper
+            def transcribe(self, path, **kwargs):
+                captured["kwargs"] = kwargs
+                segments = iter(
+                    [
+                        seg(0.0, 1.0, "..."),  # hallucination — must be filtered
+                        seg(1.5, 3.0, "Real speech here.", [word(1.5, 2.0, "Real "), word(2.0, 3.0, "speech")]),
+                    ]
+                )
+                info = types.SimpleNamespace(language="en")
+                return segments, info
 
-        source = inspect.getsource(run_whisper)
-        assert "vad_filter=True" in source
+        fake = types.ModuleType("faster_whisper")
+        fake.WhisperModel = WhisperModel
+        monkeypatch.setitem(sys.modules, "faster_whisper", fake)
 
-    def test_condition_on_previous_text_false(self):
-        """Verify condition_on_previous_text is disabled."""
-        import inspect
+        out = tmp_path / "whisper.json"
+        run_whisper(str(tmp_path / "video.mp4"), str(out), model="medium", language="en")
+        return captured["kwargs"], captured["init"], json.loads(out.read_text(encoding="utf-8"))
 
-        from tools.whisper_run import run_whisper
+    def test_anti_hallucination_transcribe_kwargs(self, run):
+        kwargs, _init, _out = run
+        assert kwargs["vad_filter"] is True
+        assert kwargs["condition_on_previous_text"] is False  # default True LOOPS on long talks
+        assert kwargs["word_timestamps"] is True
+        assert kwargs["language"] == "en"
+        assert kwargs["hallucination_silence_threshold"] > 0
+        assert kwargs["repetition_penalty"] > 1
+        assert kwargs["vad_parameters"]["min_silence_duration_ms"] > 0
 
-        source = inspect.getsource(run_whisper)
-        assert "condition_on_previous_text=False" in source
+    def test_model_instantiated_from_faster_whisper(self, run):
+        _kwargs, init, _out = run
+        assert init["model"] == "medium"
+        assert init["compute_type"] == "int8"
 
-    def test_hallucination_silence_threshold_set(self):
-        """Verify hallucination_silence_threshold is configured."""
-        import inspect
-
-        from tools.whisper_run import run_whisper
-
-        source = inspect.getsource(run_whisper)
-        assert "hallucination_silence_threshold" in source
-
-    def test_repetition_penalty_set(self):
-        """Verify repetition_penalty is > 1."""
-        import inspect
-
-        from tools.whisper_run import run_whisper
-
-        source = inspect.getsource(run_whisper)
-        assert "repetition_penalty=1.2" in source
+    def test_output_filters_hallucinations_and_keeps_words(self, run):
+        _kwargs, _init, out = run
+        texts = [s["text"] for s in out["segments"]]
+        assert texts == ["Real speech here."]
+        assert out["segments"][0]["words"] == [
+            {"start": 1.5, "end": 2.0, "word": "Real"},
+            {"start": 2.0, "end": 3.0, "word": "speech"},
+        ]
+        assert out["language"] == "en"
 
 
 class TestHallucinationOnRealData:
