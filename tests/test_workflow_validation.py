@@ -65,6 +65,13 @@ def test_video_slug_accepts(value: str) -> None:
         "a/b",
         "x" * 200,
         'slug";curl x;"',
+        # path-safety: dot-only and option-like values defeat the allowlist
+        ".",
+        "..",
+        "...",
+        "-rf",
+        "--help",
+        ".hidden",
     ],
 )
 def test_video_slug_rejects(value: str) -> None:

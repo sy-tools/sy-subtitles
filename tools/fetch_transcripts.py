@@ -57,14 +57,16 @@ def fetch_and_save(downloader, url, output_path, label):
         return "error"
 
     text = downloader.extract_transcript(soup)
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     if not text:
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(SENTINEL_CONTENT)
-        print(f"    {label}: no transcript found (sentinel written)")
+        # No sentinel: an empty extraction usually means an expired cookie or
+        # a layout change, not a missing transcript — stamping the slug
+        # complete would skip it on every future run. Only a real 404 above
+        # writes the sentinel.
+        print(f"    {label}: no transcript found (will retry next run)")
         return "empty"
 
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(text)
 

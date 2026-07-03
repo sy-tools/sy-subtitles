@@ -43,10 +43,13 @@ def _require(obj: Any, key: str, expected_type: type, source: str, path: str) ->
         raise SchemaError(source, path, f"missing required field '{key}'")
     value = obj[key]
     if not isinstance(value, expected_type):
+        expected = (
+            "/".join(t.__name__ for t in expected_type) if isinstance(expected_type, tuple) else expected_type.__name__
+        )
         raise SchemaError(
             source,
             f"{path}.{key}",
-            f"expected {expected_type.__name__}, got {type(value).__name__}",
+            f"expected {expected}, got {type(value).__name__}",
         )
     return value
 

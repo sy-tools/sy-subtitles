@@ -107,6 +107,17 @@ def test_whisper_small_overlap_accepted(tmp_path: Path) -> None:
     validate_whisper_json(_w(tmp_path, "whisper.json", ok))
 
 
+def test_whisper_wrong_typed_start_raises_schema_error(tmp_path: Path) -> None:
+    """A string start/end (hand-edited whisper.json) must surface as a
+    SchemaError with a readable message — not AttributeError from formatting
+    a tuple of expected types."""
+    bad = json.loads(json.dumps(GOOD_WHISPER))
+    bad["segments"][0]["start"] = "1.5"
+    path = _w(tmp_path, "whisper.json", bad)
+    with pytest.raises(SchemaError, match="expected int/float, got str"):
+        validate_whisper_json(path)
+
+
 def test_whisper_bad_json(tmp_path: Path) -> None:
     p = tmp_path / "whisper.json"
     p.write_text("{not json", encoding="utf-8")
