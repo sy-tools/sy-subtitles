@@ -3523,6 +3523,7 @@ function showReview(talkId) {
     }
   }).catch(function(err) {
     if (!isCurrentLoad(reviewState, loadToken)) return;
+    clearReviewContent();
     statusEl.textContent = isOfflineError(err, navigator.onLine)
       ? t('error.offline_content') : t('review.load_error').replace('{err}', err);
     statusEl.classList.add('status-error');
@@ -3710,6 +3711,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
       }
     }).catch(function(err) {
       if (!isCurrentLoad(reviewState, tToken)) return;
+      clearReviewContent();
       statusEl.textContent = isOfflineError(err, navigator.onLine)
         ? t('error.offline_content') : t('review.load_error').replace('{err}', err);
       statusEl.classList.add('status-error');
@@ -3762,6 +3764,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     statusEl.classList.remove('status-error');
   }).catch(function(err) {
     if (!isCurrentLoad(reviewState, srtToken)) return;
+    clearReviewContent();
     statusEl.textContent = isOfflineError(err, navigator.onLine)
       ? t('error.offline_content') : t('review.srt_load_error').replace('{err}', err);
     statusEl.classList.add('status-error');
@@ -3988,6 +3991,21 @@ function reviewStorageKey() {
       + '_' + reviewState.srtLeftLang + '_' + reviewState.srtRightLang;
   }
   return 'review_' + reviewState.talkId;
+}
+
+// After a failed mode/talk load the in-memory rows/edits still belong to the
+// PREVIOUS view while mode/videoSlug already point at the new one — any
+// consumer (an openEditor export, a saveReview) would mix the two, e.g.
+// exporting the old rows as the new file. Drop the in-memory content: every
+// edit is already persisted under its own key on each keystroke, so nothing
+// is lost, and the next successful load restores it via loadReviewEditsForMode.
+function clearReviewContent() {
+  reviewState.leftParas = [];
+  reviewState.rightParas = [];
+  reviewState.alignedRows = null;
+  reviewState.rightParsed = null;
+  reviewState.marks = {};
+  reviewState.edits = {};
 }
 
 // Restore saved marks/edits for the current mode (and, for SRT, the current
@@ -4239,10 +4257,6 @@ SPA.switchSrtLang = function(side, lang) {
 
   var leftLang = side === 'left' ? lang : (reviewState.srtLeftLang);
   var rightLang = side === 'right' ? lang : (reviewState.srtRightLang);
-  reviewState.srtLeftLang = leftLang;
-  reviewState.srtRightLang = rightLang;
-  localStorage.setItem('sy_review_srt_left_' + talkId, leftLang);
-  localStorage.setItem('sy_review_srt_right_' + talkId, rightLang);
   var leftSha = (talk && talk._srcSrtSha && talk._srcSrtSha[videoSlug + '/' + leftLang]) || '';
   var rightSha = (talk && talk._srtSha && talk._srtSha[videoSlug + '/' + rightLang]) || '';
   var enUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
@@ -4257,6 +4271,15 @@ SPA.switchSrtLang = function(side, lang) {
     var enBlocks = parseSRT(texts[0]);
     var ukBlocks = parseSRT(texts[1]);
     var aligned = alignSubtitlesByTime(enBlocks, ukBlocks);
+    // Commit the language switch only now: reviewStorageKey() must keep
+    // matching the rows/edits still on screen — the old grid stays editable
+    // during the load (no skeleton here), so flipping the langs before the
+    // fetch resolves would make one keystroke save the OLD pair's edit-set
+    // under the NEW pair's key, clobbering it.
+    reviewState.srtLeftLang = leftLang;
+    reviewState.srtRightLang = rightLang;
+    localStorage.setItem('sy_review_srt_left_' + talkId, leftLang);
+    localStorage.setItem('sy_review_srt_right_' + talkId, rightLang);
     reviewState.leftParas = aligned.map(function(r) { return r.en ? r.en.text : ''; });
     reviewState.rightParas = aligned.map(function(r) { return r.uk ? r.uk.text : ''; });
     reviewState.alignedRows = aligned;
