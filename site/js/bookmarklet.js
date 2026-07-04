@@ -10,6 +10,15 @@
 // required by the Node test suite (tests reach extractAmrutaTalk via the
 // browser global it exports) — single source, no inline mirror.
 (function () {
+  // A collapsed (whitespace-normalized, trimmed) <p> belongs in the transcript
+  // body if it carries any content and is not the metadata header line (which
+  // the pipeline synthesizes from meta, so it must not leak into the body).
+  // NB: keep every non-empty paragraph — a length threshold here silently drops
+  // legitimately short lines like "Welcome to you all." / "May God bless you.".
+  function isTranscriptBodyParagraph(pt) {
+    return !!pt && pt.indexOf("Talk Language:") < 0;
+  }
+
   // Scrape a talk page's DOM into the bookmarklet payload {t,d,u,loc,v,tx}.
   function extractAmrutaTalk(doc) {
     var titleEl = doc.querySelector("h1.entry-title,h1,.entry-title");
@@ -81,7 +90,7 @@
           b.replaceWith(" ");
         });
         var pt = pc.textContent.replace(/\s+/g, " ").trim();
-        if (pt.length > 20 && pt.indexOf("Talk Language:") < 0) {
+        if (isTranscriptBodyParagraph(pt)) {
           tx += (tx ? "\n" : "") + pt;
         }
       }
@@ -93,6 +102,7 @@
   // Expose for tests / debugging.
   if (typeof window !== "undefined") {
     window.extractAmrutaTalk = extractAmrutaTalk;
+    window.isTranscriptBodyParagraph = isTranscriptBodyParagraph;
   }
 
   // When injected as a real <script> by the loader bookmarklet, scrape the
@@ -109,6 +119,9 @@
   }
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { extractAmrutaTalk: extractAmrutaTalk };
+    module.exports = {
+      extractAmrutaTalk: extractAmrutaTalk,
+      isTranscriptBodyParagraph: isTranscriptBodyParagraph,
+    };
   }
 })();
