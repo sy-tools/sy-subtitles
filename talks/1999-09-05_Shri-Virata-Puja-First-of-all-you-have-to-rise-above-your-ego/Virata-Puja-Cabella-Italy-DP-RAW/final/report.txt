@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1999-09-05_Shri-Virata-Puja-First-of-all-you-have-to-rise-above-your-ego/Virata-Puja-Cabella-Italy-DP-RAW/final/uk.srt
+  Transcript: talks/1999-09-05_Shri-Virata-Puja-First-of-all-you-have-to-rise-above-your-ego/transcript_uk.txt
+  EN SRT: talks/1999-09-05_Shri-Virata-Puja-First-of-all-you-have-to-rise-above-your-ego/Virata-Puja-Cabella-Italy-DP-RAW/source/en.srt
+  SRT blocks: 350
+  EN SRT blocks: 376
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:00,030 — 00:47:10,806
+  SRT range:       00:10:53,020 — 00:47:12,806
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 350
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 350
+  CPS: avg=10.4, median=10.3, max=15.2
+  CPS > target: 26 (7.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #143: CPS=15.2 (25ch/1.6s) "що ви маєте постаріти вже"
+    #306: CPS=15.1 (52ch/3.4s) "Бо хоч би які проблеми були в усесвітньому масштабі,"
+    #79: CPS=15.1 (33ch/2.2s) "Це те, що називають Джняна Йоґою."
+    #75: CPS=15.0 (31ch/2.1s) "Тому Його ім’я було Крші-Крішт."
+    #98: CPS=15.0 (34ch/2.3s) "ви не можете припускатися помилок."
+    #106: CPS=15.0 (40ch/2.7s) "Тож Я сказала: «Гаразд, підніміть ціну»."
+    #235: CPS=15.0 (20ch/1.3s) "Ми хочемо ту землю»."
+    #330: CPS=15.0 (40ch/2.7s) "Це приходить через благословення Вірати."
+    #197: CPS=15.0 (46ch/3.1s) "Ось погляньте, що відбувається зараз в ісламі."
+    #311: CPS=15.0 (49ch/3.3s) "Куди б не рушило ваше співчуття, воно спрацьовує."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 350
+  EN SRT blocks: 376
+  Ratio UK/EN: 0.93 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.4 (target ≤15.0)
+  CPS > 15.0: 26 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
