@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-04T04:12:55.431535+00:00",
+  "updated_at": "2026-07-04T21:34:27.441118+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -541,6 +541,12 @@
       "reviewer": null,
       "issue_number": 670,
       "updated_at": "2026-07-04T04:12:42Z"
+    },
+    "1999-09-05_Shri-Virata-Puja-First-of-all-you-have-to-rise-above-your-ego": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 676,
+      "updated_at": "2026-07-04T21:34:18Z"
     }
   }
 }
