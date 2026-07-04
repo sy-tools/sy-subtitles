@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1989-12-17_Devi-Puja-Nothing-to-discuss-in-Sahaja-Yoga/Puja-Alibag/final/uk.srt
+  Transcript: talks/1989-12-17_Devi-Puja-Nothing-to-discuss-in-Sahaja-Yoga/transcript_uk.txt
+  EN SRT: talks/1989-12-17_Devi-Puja-Nothing-to-discuss-in-Sahaja-Yoga/Puja-Alibag/source/en.srt
+  SRT blocks: 272
+  EN SRT blocks: 298
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:02:23,358 — 00:36:33,801
+  SRT range:       00:02:44,084 — 00:36:32,759
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 272
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 272
+  CPS: avg=8.5, median=7.9, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #242: CPS=15.0 (76ch/5.1s) "Звісно, Я казала вам, що доти, доки хтось не стане вашою сес..."
+    #244: CPS=15.0 (76ch/5.1s) "Але жінки можуть купувати для жінок, чоловіки можуть купуват..."
+    #74: CPS=15.0 (67ch/4.5s) "І саме так люди зростають, Я бачила це, – ті, хто починає пр..."
+    #184: CPS=15.0 (61ch/4.1s) "Ви доходите висновку: «Так, ми знаємо, ми знаємо, ми знаємо»..."
+    #170: CPS=15.0 (58ch/3.9s) "Я була б дуже рада дізнатися, якщо ви можете Мені сказати,"
+    #239: CPS=15.0 (58ch/3.9s) "подібно до того, як ця рука має піклуватися про іншу руку,"
+    #69: CPS=15.0 (55ch/3.7s) "Але прийняття не означає терпіння, бо терпіння означає,"
+    #100: CPS=15.0 (55ch/3.7s) "Тепер Я бачила, як вони це роблять – через телебачення,"
+    #4: CPS=15.0 (52ch/3.5s) "що вони хотіли б бути присутніми від самого початку."
+    #156: CPS=15.0 (52ch/3.5s) "Ви знаєте все, ви знаєте, як піднімається Кундаліні,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 272
+  EN SRT blocks: 298
+  Ratio UK/EN: 0.91 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 8.5 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
