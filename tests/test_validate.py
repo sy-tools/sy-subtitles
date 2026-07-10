@@ -794,7 +794,7 @@ def test_block_count_over_ratio_fails(tmp_path):
 
 
 def test_block_count_fewer_uk_is_ok(tmp_path):
-    """UK count lower than EN is fine — Opus dropped editorial blocks."""
+    """UK count lower than EN is fine — the builder agent dropped editorial blocks."""
     en_path = tmp_path / "en.srt"
     _write_srt(en_path, [(i, "00:00:01,000", "00:00:03,000", "x") for i in range(1, 21)])
     uk_blocks = [_block(i, 1000 * i, 1000 * i + 500) for i in range(1, 6)]  # 5 UK vs 20 EN

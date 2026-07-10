@@ -10,7 +10,7 @@ Usage (local):
     python -m tools.build_map prepare-timing --talk-dir TALK --video-slug VIDEO
     python -m tools.build_map assemble --talk-dir TALK --video-slug VIDEO
 
-In CI, `prepare` and `prepare-timing` run first, then a single Opus 4.8 agent
+In CI, `prepare` and `prepare-timing` run first, then a single Claude builder agent
 session produces timecodes.txt, then `assemble` builds the final SRT.
 """
 
@@ -143,7 +143,7 @@ def cmd_assemble(args):
         if m:
             all_timecodes[int(m.group(1))] = (m.group(2), m.group(3))
 
-    # UK blocks may legitimately skip timecodes in en-srt mode — Opus is
+    # UK blocks may legitimately skip timecodes in en-srt mode — the builder agent is
     # instructed to drop UK blocks without an EN SRT counterpart (closing
     # signatures, trailing stage directions, transcript content past the
     # last EN block). Whisper mode still produces timecodes for every id,

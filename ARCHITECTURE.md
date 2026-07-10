@@ -11,7 +11,7 @@
   │ (local)  │               │                                      │
   └─────────┘               │  ┌─────────┐   ┌───────────────────┐ │
    meta.yaml                │  │ whisper  │──►│ translate+review  │ │
-   transcript_en.txt        │  │ (.yml)   │   │ (Claude Opus)     │ │
+   transcript_en.txt        │  │ (.yml)   │   │ (Claude)          │ │
    en.srt                   │  └─────────┘   └───────────────────┘ │
                             │                        │              │
                             │                        ▼              │
@@ -117,7 +117,7 @@ sy-subtitles/
 Triggered manually via `workflow_dispatch`. Full pipeline:
 1. **Discover** — finds videos and determines what needs processing
 2. **Whisper** — calls `whisper.yml` for word-level speech timestamps
-3. **Translate + Review** — Claude Opus translates EN→UK, then 2+1 review
+3. **Translate + Review** — a Claude agent translates EN→UK, then 2+1 review
 4. **Build** — `build_map.py prepare` → single-pass LLM timecodes (`build-timecodes` job) → `build_map.py assemble` → `build_srt.py`
 5. **Validate** — text preservation, CPS, timing checks
 6. **Commit** — pushes results + creates review tracking Issue
@@ -162,7 +162,7 @@ the build/sync stack without burning Claude calls.
 
 Three-phase architecture:
 1. **Prepare** (Python, deterministic) — splits Ukrainian text into subtitle-sized blocks and prepares timing data (`build_map.py prepare` / `prepare-timing`)
-2. **Build timecodes** (LLM, single pass) — one Opus 4.8 agent receives the UK blocks + EN transcript + timing source (whisper words or en.srt) and writes `timecodes.txt` (`#N | start | end` per block). The LLM returns ONLY timecodes, never modifies text
+2. **Build timecodes** (LLM, single pass) — one Claude builder agent (model selectable via the `model` input) receives the UK blocks + EN transcript + timing source (whisper words or en.srt) and writes `timecodes.txt` (`#N | start | end` per block). The LLM returns ONLY timecodes, never modifies text
 3. **Assemble** (Python, deterministic) — merges `timecodes.txt` with `uk_blocks.json` in memory and generates SRT via `build_srt.py`
 
 Key principle: **LLM determines timing, Python guarantees text integrity.**

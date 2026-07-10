@@ -447,7 +447,7 @@ jobs:
             talks/${{ matrix.talk_id }}/review_report.md
             talks/${{ matrix.talk_id }}/glossary.json
 
-  # --- Build subtitles: 2-phase pipeline (prepare + single Opus 4.8 pass) ---
+  # --- Build subtitles: 2-phase pipeline (prepare + single builder-agent pass) ---
 
   # Phase 1: Split UK text into subtitle blocks
   prepare-build:
@@ -577,7 +577,7 @@ jobs:
           path: |
             talks/${{ needs.discover.outputs.talk_id }}/*/work/uk_blocks.json
 
-  # Phase 2: Single Opus 4.8 pass — assign timecodes, build SRT
+  # Phase 2: Single builder-agent pass (MODEL_HEAVY) — assign timecodes, build SRT
   build-timecodes:
     needs: prepare-build
     if: ${{ !cancelled() && needs.prepare-build.result == 'success' }}
@@ -671,7 +671,7 @@ jobs:
             --snapshot "tests/fixtures/pipeline_snapshots/${TALK_ID}/${VIDEO_SLUG}" \
             --work-dir "talks/${TALK_ID}/${VIDEO_SLUG}/work"
 
-      - name: Build timecodes (Opus 4.8)
+      - name: Build timecodes (Claude)
         if: inputs.dry_run != true
         uses: anthropics/claude-code-action@558b1d6cab4085c7753fe402c10bef0fbb92ac7a  # v1.0.165
         env:
@@ -750,7 +750,7 @@ jobs:
         run: |
           N=$(python3 -c "import json; print(len(json.load(open('talks/${TALK_ID}/${VIDEO_SLUG}/work/uk_blocks.json'))))")
           # WHISPER mode: every uk_block must have a timecode — exact count.
-          # EN-SRT mode: Opus is allowed to SKIP UK blocks with no EN
+          # EN-SRT mode: the builder agent is allowed to SKIP UK blocks with no EN
           # counterpart, so count is an upper bound; IDs must still be
           # strictly ascending.
           if [ "$TIMING_SOURCE" = "en-srt" ]; then
@@ -860,7 +860,7 @@ jobs:
               # produce occasional high-CPS blocks unfixable without silence).
               EXTRA_FLAGS="--skip-text-check --skip-time-check --skip-cps-check"
             elif [ "${{ needs.prepare-build.outputs.timing_source }}" = "en-srt" ]; then
-              # Primary in en-srt mode: Opus is instructed to DROP UK blocks
+              # Primary in en-srt mode: the builder agent is instructed to DROP UK blocks
               # with no EN counterpart (trailing signatures, stage
               # directions), so transcript ↔ SRT word equality no longer
               # holds. Replace text-preservation with a block-count sanity
