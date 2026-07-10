@@ -49,6 +49,15 @@ on:
           - claude-fable-5
           - claude-sonnet-5
         default: claude-opus-4-8
+      build_model:
+        description: 'Override model for the build step only (timecode alignment); same-as-model follows `model`'
+        type: choice
+        options:
+          - same-as-model
+          - claude-opus-4-8
+          - claude-fable-5
+          - claude-sonnet-5
+        default: same-as-model
   workflow_call:
     inputs:
       talk_id:
@@ -80,6 +89,10 @@ on:
         description: 'Claude model for LLM steps (translate, review, build)'
         type: string
         default: claude-opus-4-8
+      build_model:
+        description: 'Override model for the build step only; empty or same-as-model follows `model`'
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -90,6 +103,10 @@ permissions:
 env:
   # Push-triggered runs have no inputs context — fall back to the default.
   MODEL_HEAVY: ${{ inputs.model || 'claude-opus-4-8' }}
+  # Build is mechanical timecode alignment — may run on a different model
+  # than review (e.g. review=Fable, build=Opus). The 'same-as-model'
+  # sentinel (choice inputs can't default to '') follows MODEL_HEAVY.
+  MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-4-8' }}
 
 jobs:
   discover:
@@ -680,7 +697,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
-          claude_args: "--max-turns 80 --dangerously-skip-permissions --effort high --model ${{ env.MODEL_HEAVY }}"
+          claude_args: "--max-turns 80 --dangerously-skip-permissions --effort high --model ${{ env.MODEL_BUILD }}"
           show_full_output: true
           prompt: |
             Assign timecodes to Ukrainian subtitle blocks.
