@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-10T21:55:29.867440+00:00",
+  "updated_at": "2026-07-10T22:33:49.966004+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -36,7 +36,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 7,
-      "updated_at": "2026-04-22T18:15:04Z"
+      "updated_at": "2026-07-10T22:33:38Z"
     },
     "1983-07-24_Guru-Puja-Awakening-The-Principle-Of-Guru": {
       "status": "approved",
