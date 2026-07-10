@@ -18,14 +18,15 @@ Source language: English. Target language: Ukrainian.
 1. Download talk: `python -m tools.download --url "https://www.amruta.org/..."`
 2. Push source files (`meta.yaml`, `transcript_en.txt`, `en.srt`)
 3. Trigger pipeline: `gh workflow run subtitle-pipeline.yml -f talk_id={date}_{slug}`
-   Optional inputs: `timing_source=auto|whisper|en-srt` (default `auto` —
+   Optional inputs: `model=claude-opus-4-8|claude-fable-5|claude-sonnet-5`
+   (default `claude-opus-4-8`), `timing_source=auto|whisper|en-srt` (default `auto` —
    en-srt if present, else whisper), `dry_run=true` (replay snapshots via
    `tools.fake_llm`, no commit).
 4. Pipeline runs automatically:
    - **Whisper**: speech detection → `whisper.json` (word-level timestamps)
    - **Translate**: Claude agent translates EN → UK → `transcript_uk.txt`
    - **Review**: 2+1 review (Reviewer L + Reviewer S + Critic)
-   - **Build**: single-pass Opus 4.8 agent writes `timecodes.txt` (`#N | start | end`
+   - **Build**: single-pass Claude builder agent writes `timecodes.txt` (`#N | start | end`
      per block); Python merges with `uk_blocks.json` in memory → `final/uk.srt`
    - **Validate**: structural checks (text, CPL, CPS, overlaps, gaps)
    - **Commit**: pushes all results back to repo

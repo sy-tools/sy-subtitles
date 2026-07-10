@@ -1,7 +1,7 @@
 """Tests for tools.validate_artifacts — timecode validation modes.
 
 Covers the en-srt-mode relaxations added alongside the builder/validator
-contract change: in en-srt mode Opus may drop UK blocks without an EN
+contract change: in en-srt mode the builder agent may drop UK blocks without an EN
 counterpart, so the timecode artifact is allowed to have skipped IDs up
 to a maximum block count, instead of a strict 1..N sequence.
 """

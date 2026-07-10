@@ -67,7 +67,7 @@ def _check_timecodes(
         if idx in seen_ids:
             _fail(f"timecodes {path}:{line_no}: duplicate block id #{idx}")
         # IDs must be strictly ascending. With `allow_skipped_ids` (en-srt
-        # mode — Opus may drop UK blocks without an EN counterpart), gaps
+        # mode — the builder agent may drop UK blocks without an EN counterpart), gaps
         # are fine; without the flag (whisper mode), every id must follow
         # its predecessor exactly.
         if allow_skipped_ids:
@@ -118,12 +118,12 @@ def main() -> None:
     parser.add_argument(
         "--max-blocks",
         type=int,
-        help="Maximum number of blocks in --timecodes (upper bound; for en-srt mode where Opus may skip)",
+        help="Maximum number of blocks in --timecodes (upper bound; for en-srt mode where the builder agent may skip)",
     )
     parser.add_argument(
         "--allow-skipped-ids",
         action="store_true",
-        help="Allow gaps in block IDs (en-srt mode — Opus may drop UK blocks without an EN counterpart)",
+        help="Allow gaps in block IDs (en-srt mode — the builder agent may drop UK blocks without an EN counterpart)",
     )
     parser.add_argument("--talk-dir", help="Validate every artifact under a talk dir")
     args = parser.parse_args()

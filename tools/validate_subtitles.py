@@ -156,7 +156,7 @@ def check_text_preservation(srt_blocks, transcript_path, report):
 def check_block_count_vs_en_srt(srt_blocks, en_srt_path, report, max_ratio=2.0):
     """Compare UK SRT block count against EN SRT block count.
 
-    Intended for en-srt mode with text preservation skipped: if Opus
+    Intended for en-srt mode with text preservation skipped: if the builder agent
     legitimately drops UK blocks that have no EN counterpart, the UK
     count should stay near or below the EN count. A UK count much higher
     than EN suggests transcript-only content leaked into the SRT.
@@ -356,7 +356,7 @@ def manifest_validate_flags(srt_path) -> dict:
         return flags
     if role == "primary" and mode == "en-srt":
         # En-srt primary: transcript-only content is legitimately dropped
-        # by Opus (no EN counterpart), so text preservation is replaced by
+        # by the builder agent (no EN counterpart), so text preservation is replaced by
         # a block-count sanity against the EN SRT.
         flags["skip_text_check"] = True
         en_srt = srt_path.parent.parent / "source" / "en.srt"

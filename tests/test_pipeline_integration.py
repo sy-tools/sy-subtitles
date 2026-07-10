@@ -42,7 +42,7 @@ UK_TRANSCRIPT = """\
 def _generate_mock_timecodes(uk_blocks):
     """Distribute timecodes evenly across all blocks.
 
-    Simulates what a single-pass Opus agent would return: one timecode
+    Simulates what a single-pass builder agent would return: one timecode
     line per block, with even spacing across the full time range.
     """
     # 2 seconds per block, 100ms gap
