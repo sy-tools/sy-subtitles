@@ -41,6 +41,14 @@ on:
         description: 'Replay fake LLM responses from snapshots, skip commit'
         type: boolean
         default: false
+      model:
+        description: 'Claude model for LLM steps (translate, review, build)'
+        type: choice
+        options:
+          - claude-opus-4-8
+          - claude-fable-5
+          - claude-sonnet-5
+        default: claude-opus-4-8
   workflow_call:
     inputs:
       talk_id:
@@ -68,6 +76,10 @@ on:
         description: 'Unique suffix appended to artifact names when called from a matrix driver'
         type: string
         default: ''
+      model:
+        description: 'Claude model for LLM steps (translate, review, build)'
+        type: string
+        default: claude-opus-4-8
 
 permissions:
   contents: write
@@ -76,8 +88,8 @@ permissions:
   pull-requests: write
 
 env:
-  MODEL_HEAVY: claude-opus-4-8
-  MODEL_LIGHT: claude-sonnet-4-6
+  # Push-triggered runs have no inputs context — fall back to the default.
+  MODEL_HEAVY: ${{ inputs.model || 'claude-opus-4-8' }}
 
 jobs:
   discover:
