@@ -4,19 +4,10 @@
   SRT: talks/1983-03-30_Celebration-Of-Birthday-In-Bombay/Birthday-Puja-and-Havan/final/uk.srt
   Transcript: talks/1983-03-30_Celebration-Of-Birthday-In-Bombay/transcript_uk.txt
   EN SRT: talks/1983-03-30_Celebration-Of-Birthday-In-Bombay/Birthday-Puja-and-Havan/source/en.srt
-  SRT blocks: 277
+  SRT blocks: 275
   EN SRT blocks: 393
+  (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
-
-============================================================
-  CHECK 1: Text preservation
-============================================================
-  Transcript chars: 15482
-  SRT chars: 15482
-  Exact normalized match: OK
-  Transcript words: 2510
-  SRT words: 2510
-  Word-level match: OK
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -27,23 +18,23 @@
   CHECK 3: Time range (vs EN SRT)
 ============================================================
   EN SRT range: 00:05:36,440 — 00:33:05,333
-  SRT range:       00:05:36,440 — 00:33:07,361
+  SRT range:       00:06:14,476 — 00:33:07,333
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 277
+  Total blocks: 275
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 277
-  CPS: avg=10.7, median=11.0, max=15.1
-  CPS > target: 6 (2.2%)
+  Total blocks: 275
+  CPS: avg=10.8, median=11.0, max=15.0
+  CPS > target: 4 (1.5%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=54.9, max=84
+  CPL: avg=54.8, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -53,16 +44,24 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #218: CPS=15.1 (59ch/3.9s) "Тож зрозумійте, що ми сидимо на дуже великій землі чесноти."
-    #276: CPS=15.0 (37ch/2.5s) "Не потрібно ні на що просити дозволу."
-    #274: CPS=15.0 (26ch/1.7s) "Я не хочу нічого говорити."
-    #270: CPS=15.0 (58ch/3.9s) "Коли це потрапить у поле вашої уваги, ви будете здивовані."
-    #275: CPS=15.0 (35ch/2.3s) "Виконуйте Пуджу, як вам заманеться."
-    #273: CPS=15.0 (41ch/2.7s) "Тепер, що б ви не хотіли робити – робіть."
-    #106: CPS=15.0 (18ch/1.2s) "Ніщо не рухається."
-    #217: CPS=15.0 (82ch/5.5s) "Якщо щось здається таємничим зараз, то в Сахаджа Йозі все ро..."
-    #60: CPS=15.0 (70ch/4.7s) "Ви вже благословили Мене цим прекрасним заходом, який ви орг..."
-    #205: CPS=15.0 (67ch/4.5s) "звичайній мові простого народу), саме тоді Махараштрі Бхаша ..."
+    #274: CPS=15.0 (37ch/2.5s) "Не потрібно ні на що просити дозволу."
+    #272: CPS=15.0 (26ch/1.7s) "Я не хочу нічого говорити."
+    #273: CPS=15.0 (35ch/2.3s) "Виконуйте Пуджу, як вам заманеться."
+    #271: CPS=15.0 (42ch/2.8s) "Тепер, що б ви не хотіли робити, – робіть."
+    #104: CPS=15.0 (18ch/1.2s) "Ніщо не рухається."
+    #216: CPS=15.0 (82ch/5.5s) "Якщо щось здається таємничим зараз, то в Сахаджа Йозі все ро..."
+    #58: CPS=15.0 (70ch/4.7s) "Ви вже благословили Мене цим прекрасним заходом, який ви орг..."
+    #204: CPS=15.0 (67ch/4.5s) "звичайній мові простого народу), саме тоді Махараштрі Бхаша ..."
+    #198: CPS=15.0 (58ch/3.9s) "тож ви маєте зрозуміти та повністю відмовитися від тютюну."
+    #268: CPS=15.0 (58ch/3.9s) "Коли це потрапить у поле вашої уваги, ви будете здивовані."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 275
+  EN SRT blocks: 393
+  Ratio UK/EN: 0.70 (max allowed 2.0)
+  Block count: OK
 
 ============================================================
   SUMMARY
@@ -73,10 +72,11 @@
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 10.7 (target ≤15.0)
-  CPS > 15.0: 6 blocks
+  Avg CPS: 10.8 (target ≤15.0)
+  CPS > 15.0: 4 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks

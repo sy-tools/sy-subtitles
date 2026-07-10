@@ -1,86 +1,122 @@
-# Language Review – 1983-03-30_Celebration-Of-Birthday-In-Bombay
+# Language Review – 1983-03-30_Celebration-Of-Birthday-In-Bombay, 2026-07-10
 
 ## Process
 
-Review `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter.
-This is a re-review pass after prior review corrections.
-
-### Review Agents
+Review of `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter, per `templates/language_review_template.md`.
+This is a follow-up pass; a prior review pass had already applied 2 corrections («Хоча Я не маю звички…», «пошириться») and its verdicts were taken into account by the Critic below.
 
 - **Reviewer L** – Language (Orthography + Grammar + Punctuation)
-- **Reviewer S** – SY Domain (Capitalization + Terminology + Consistency)
-- **Critic** – Filter + Validate
+- **Reviewer S** – SY Domain (Capitalization + Terminology + Consistency), checked against `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`, `glossary/terms_context.yaml`
+- **Critic** – filtered both tables, removed false positives and style preferences, resolved conflicts (including conflicts with prior-pass verdicts)
+
+Paragraph numbers refer to line numbers in `transcript_uk.txt` (one paragraph per line).
+
+Automated typography checks: quotation marks (only «» present ✓), dash (en-dash U+2013 with spaces, no em-dash or hyphen-as-dash ✓), no Latin/Cyrillic mixing ✓, no double spaces / spaces before punctuation ✓, apostrophe codepoint (✗ — straight U+0027 found, see L19).
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 11 | Conjunction mismatch: «Оскільки...але...» – causal «оскільки» contradicts concessive «але» | `Оскільки Я не маю звички носити прикраси, але Мені доводиться це робити.` | `Хоча Я не маю звички носити прикраси, але Мені доводиться це робити.` |
-| L2 | 38 | Verb form: missing soft sign ь, 3 sg future perfective of «поширитися» | `вона поширится по всьому світу` | `вона пошириться по всьому світу` |
-| L3 | 19 | End punctuation: rhetorical question starting with «Як же...» typically ends with «?» | `Як же пояснити людям, яке значення Пуджі.` | `Як же пояснити людям, яке значення Пуджі?` |
-| L4 | 37 | Case form: Sanskrit name «Шанділья» in genitive context should decline to «Шандільї» | `це місце Шанділья Муні тощо` | `це місце Шандільї Муні тощо` |
-| L5 | 21 | Redundant doubling: «У сахаджа йоґів також деякі з них» – pleonasm in spoken style | `У сахаджа йоґів також деякі з них мають проблеми` | `Серед сахаджа йоґів також деякі мають проблеми` |
-
-**Verified correct:**
-- Spelling, word forms – otherwise consistently correct
-- Latin/Cyrillic mixing – none detected
-- Quotation marks – `«»` used consistently at all levels
-- Em-dash – ` – ` (U+2013) with spaces throughout
-- Ellipsis – none present
-- Apostrophes – consistent use in `п'ятдесят`, `пам'ятати`, `ім'я`, `з'явилася`
-- Comma usage around subordinate clauses – verified
+| L1 | 8 | М’який знак після «ж» неможливий в українській графіці; в іншомовних словах після «ж» перед «я» ставиться апостроф (правопис, §138) | «Прабху Джьячаре» | «Прабху Дж’ячаре» |
+| L2 | 11 | Кома розриває сполуку «просто щоб» і змінює зміст («робити просто» замість «просто щоб порадувати»); далі в цьому ж реченні тричі «просто щоб» без розриву | «доводиться це робити просто, щоб порадувати вас» | «доводиться це робити, просто щоб порадувати вас» |
+| L3 | 11 | Лексична норма: «одягати» – кого, «надягати» – що (прикраси) | «чому Я одягнула всі ці прикраси» | «чому Я надягнула всі ці прикраси» |
+| L4 | 17 | Те саме: «одягати» – кого, «надягати» – що | «Мені доводиться їх одягати» | «Мені доводиться їх надягати» |
+| L5 | 19 | Питальне (інфінітивне) речення з «Як же…» завершене крапкою | «Як же пояснити людям, яке значення Пуджі.» | «Як же пояснити людям, яке значення Пуджі?» |
+| L6 | 21 | Плеоназм: «У сахаджа йоґів… деякі з них» – подвійне позначення тієї самої групи | «У сахаджа йоґів також деякі з них мають проблеми» | «Серед сахаджа йоґів також деякі мають проблеми» |
+| L7 | 21 | Підрядна частина перед головною не закрита комою (правило «кома й тире») | «шляхом віддачі на милість – все стане» | «шляхом віддачі на милість, – все стане» |
+| L8 | 28 | Підрядне означальне «що ми маємо проголосити» не закрите комою перед тире | «єдине, що ми маємо проголосити – нехай» | «єдине, що ми маємо проголосити, – нехай» |
+| L9 | 33 | Змішаний запис числівника (цифра + слова) у суцільному тексті | «встановили тут 3 з половиною Шакті Пітхи» | «встановили тут три з половиною Шакті Пітхи» |
+| L10 | 34 | Збіг сполучників «що якщо» без наступного «то» вимагає коми між ними (пор. коректне «що якщо…, то…» там само) | «сказав нам, що якщо ви вживаєте тютюн, не сідайте» | «сказав нам, що, якщо ви вживаєте тютюн, не сідайте» |
+| L11 | 35 | Калька з англійської “fall into the habit”; українська сполука – «набувати звички» | «щоб вони не потрапляли у звичку вживати тютюн» | «щоб вони не набували звички вживати тютюн» |
+| L12 | 35 | Кома між «прошу вас усіх» і наказовою частиною; чіткіше – двокрапка | «Я прошу вас усіх, без жодного страху називайте» | «Я прошу вас усіх: без жодного страху називайте» |
+| L13 | 36 | Знак питання після непрямого питання | «ніхто не може сказати, чому Махараштра і відколи?» | «ніхто не може сказати, чому Махараштра і відколи.» |
+| L14 | 36 | Вставне «отже» не відокремлене комою | «отже Махараштра – вічна» | «отже, Махараштра – вічна» |
+| L15 | 36 | Зайва кома після сполучника «тобто» (пор. §33, §34 – без коми) | «Тобто, наскільки вічне це місце.» | «Тобто наскільки вічне це місце.» |
+| L16 | 39 | Одиничне сполучне слово в кінці речення комою не відокремлюється | «ні Я не можу сказати, чому.» | «ні Я не можу сказати чому.» |
+| L17 | 40 | Порушення узгодження: «решта» – іменник однини жіночого роду | «тоді всі решта питань будуть вирішені» | «тоді решта питань буде вирішена» |
+| L18 | 40 | Підрядна частина «що б ви не хотіли робити» не закрита комою перед тире | «Тепер, що б ви не хотіли робити – робіть.» | «Тепер, що б ви не хотіли робити, – робіть.» |
+| L19 | весь текст | Прямий апостроф U+0027 замість типографського «’» U+2019 (конвенція проєкту, `glossary/CLAUDE.md`); 7 входжень | «п'ятдесят» (×2), «пам'ятати», «ім'я», «незапам'ятних», «п'ять», «з'явилася» | «п’ятдесят», «пам’ятати», «ім’я», «незапам’ятних», «п’ять», «з’явилася» |
+| L20 | 20, 25 | «насправді» відокремлене комами, хоча не є вставним словом | «насправді, в певному сенсі, дають…»; «Насправді, ваші дні народження…» | зняти коми |
+| L21 | 34 | Тавтологія «широко поширене» | «Вживання тютюну… широко поширене в нашій країні» | «дуже поширене» |
+| L22 | 38 | Нестандартна допустова конструкція | «Яким би чином ми могли, ми маємо це робити.» | «У будь-який спосіб, яким можемо, ми маємо це робити.» |
+| L23 | 38 | «достоїнства» – застаріле/розмовне слово | «мають знати її достоїнства» | «мають знати її чесноти» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| (none found) | | | | |
+| S1 | 3 | Назва міста: у корпусі проєкту 7 виступів пишуть «Мумбаї», цей – єдиний із «Мумбай»; чинна українська норма також «Мумбаї» | «Мумбай (Індія)» | «Мумбаї (Індія)» |
+| S2 | 13 | Конвенція транслітерації санскр. g → ґ (пор. «ґаті» в цьому ж тексті) | «сваргія ананд» | «сварґія ананд» |
+| S3 | 34 | Глосарій: Vitthala → «Вітхала» (наз. відм.); родовий тоді «Вітхали» | «відданий Бога Вітхала» | «відданий Бога Вітхали» |
+| S4 | 33 | Глосарій: Pitha → «пітхи» з малої літери | «Шакті Пітхи» | «Шакті пітхи» |
+| S5 | 33 | «Святих/Святі» з великої літери всупереч загальній нормі | «на цій землі Святих», «Святі багато проповідували» | з малої |
+| S6 | 2 | Велика літера в «Дня народження» у назві | «Пуджа з нагоди Дня народження» | «Пуджа з нагоди дня народження» |
 
-**Verified correct:**
-- Deity pronoun capitalization:
-  - Shri Mataji (1st person): Я/Мене/Мені/Моя/Моє/Мого/Мій/Моїх/Себе/Сама/Своєї – uppercase throughout
-  - Shri Mataji (3rd person): Вона, Матаджі, Матінко, Мати – uppercase throughout
-  - God: Він/Його/Йому/Нього/Богові/Богом/Свій/Своїх/Сам – uppercase throughout
-  - Regular people (Varkari, tobacco users): він/його/йому – lowercase ✓
-- Glossary terms all match `terms_lookup.yaml`:
-  - Кундаліні, Пуджа, тапасьї, бхакті, бхактів, его
-  - Сахаджа Йоґа / Йоґою (instr.) / Йоґи (gen.) / Йозі (loc.) / Йоґу (acc.) – correct declension with ґ→з alternation per `terms_context.yaml`
-  - сахаджа йоґів (practitioners, lowercase per glossary)
-  - Махайоґа/Махайоґою, Брахмашакті, Всепроникна Сила – preserved
-  - Шрі Крішна, Шрі Рама (genitive «Шрі Рами»), Вітхала, Муні, Хануман (plural «Хануманів»)
-  - Варкарі (religious community, capitalized per English source)
-  - віддача на милість (surrender) – correct usage in para 18, 21
-  - «Нехай Бог благословить усіх вас.» – exact glossary match (para 30)
-- Sanskrit 'g' → ґ consistently applied: Йоґа, Йоґи, ґаті, Ардхамаґадхі, Махайоґа
-- Aspirate 'dh' → дх: Махараштра, Свадхістхана (none here), Пітхи, Муладхара (none here)
-- Sanskrit short 'i' → і: Шіва (none here), Махавіра (none here)
-- Language names lowercase: англійська, маратхі ✓
-- Ethnonyms lowercase: махараштрійці ✓
-- Spiritual terms uppercase: Пуджа, Всесвіт, Царство Боже, Реалізація, Божественна любов, Всепроникна Сила, Брахмашакті, Шакті Пітхи, Аштавінаяки
-- Saints/Gods collective uppercase: Святі, Боги (in Hindu/SY context) – consistent with English
-- Proper names: Прахлад, Шанділья Муні, Рамдас Свамі, Трета Юги, Дандакаранья, Аштавінаяки – all correctly transliterated and capitalized
+**Verified clean (no findings):** займенники Шрі Матаджі скрізь із великої (Я/Мене/Мені/Мій/Моя/Сама/Себе/Вона/Її, звертання «Матаджі, Ви нас не попередили»); займенники Бога з великої (Він/Йому/Його/Свій/Сам/Ним/Нього); «Мати/Матері» щодо Шрі Матаджі з великої; Пуджа – послідовно з великої; Кундаліні, Реалізація (§40), Царство Боже, Всевишній, Божественна любов, Всепроникна Сила, Брахмашакті – з великої; «реалізовані душі», «сахаджа йоґи», «его», «бхакті», «тапасья», «ґаті», «діпак» – з малої за глосарієм; «Сахаджа Йоґа», орудний «Йоґою», родовий «Йоґи», місцевий «в Сахаджа Йозі» (не «Йоґі») – за `terms_context.yaml`; назви мов «англійська, маратхі, санскрит, пракріт» – з малої; етнонім «махараштрійці», прикметник «махараштрійська» – з малої; «Шрі Крішна», «Шрі Рама (Рами)», «Хануман(ів)», «Трета Юга», «Махайоґа», «Аштавінаяки», «Рамдас Свамі», «Шанділья Муні», «Прахлад», «Дандакаранья» – за глосарієм/конвенціями; фінальне благословення «Нехай Бог благословить усіх вас.» – канонічна форма.
 
 ### Critic Filter
+
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Genuine Ukrainian grammar error. «Оскільки» marks cause («since»), which is logically incompatible with adversative «але». Minimal fix: replace «Оскільки» with concessive «Хоча» (preserves sentence rhythm; the «хоча...але» pleonasm is widely tolerated in Ukrainian). |
-| L | L2 | **Keep** | Clear typo: «поширится» is missing the soft sign. 3 sg future perfective of reflexive «поширитися» is «пошириться» per standard Ukrainian conjugation (порівн. «зробиться», «ходиться»). |
-| L | L3 | **Remove** | Style preference, not an error. Source English also uses period («Now how to explain...is.»). The elliptical statement with period works as an expression of puzzlement; changing to «?» is translator discretion. |
-| L | L4 | **Remove** | Sanskrit compound names with invariable «Муні» head are commonly treated as a unit and left uninflected in SY translations. Although strict grammar prefers «Шандільї», this is a translator style choice consistent with the broader practice around «Муні». Not a clear error. |
-| L | L5 | **Remove** | Preserves the source speaking style («Sahaj Yogis also, some of them have problems...»). Reflects Shri Mataji's characteristic spoken English. Not a grammatical error, just colloquial redundancy that the translation faithfully carries over. |
+| L | L1 | **Keep** | «жь» неможливе в українській графіці; апостроф після «ж» в іншомовних словах – кодифікована норма (правопис, §138) |
+| L | L2 | **Keep** | Кома в цій позиції змінює зміст; паралельні «просто щоб» у тому ж реченні – без розриву |
+| L | L3 | **Keep** | Лексична норма («надягати що»); у письмовому літературному перекладі підлягає виправленню |
+| L | L4 | **Keep** | Те саме |
+| L | L5 | **Keep** | Речення з питальним «Як же пояснити…» – питальне; крапка сприймається як помилка. Інші риторичні питання тексту (§15 «що нам сказати?», §39 «Чому вона така глибока?») мають «?». Попередній рецензент лишив крапку «за оригіналом», але пунктуація EN-чернетки не є нормативним джерелом для української пунктуації – вердикт попереднього пасу переглянуто. |
+| L | L6 | **Remove** | Попереднє рев’ю явно відхилило цю саму правку: плеоназм вірно передає розмовний стиль оригіналу (“Sahaj Yogis also, some of them have problems”). Підтверджую те рішення; правку, застосовану було в цьому пасі, відкочено. |
+| L | L7 | **Keep** | Кодифіковане правило: підрядна частина закривається комою; тире додається до коми |
+| L | L8 | **Keep** | Те саме правило |
+| L | L9 | **Keep** | Змішаний запис «3 з половиною» нестандартний для суцільного тексту |
+| L | L10 | **Keep** | Кома на стику сполучників за відсутності «то»; у тому ж абзаці конструкція з «то» коректно без коми – консистентно з правилом |
+| L | L11 | **Keep** | Неукраїнська калька, сполука не зафіксована словниками |
+| L | L12 | **Remove** | Безсполучникова конструкція з комою допустима; двокрапка – стилістичне вподобання |
+| L | L13 | **Keep** | Після непрямого питання знак питання не ставиться |
+| L | L14 | **Keep** | «Отже» тут вставне (висновок), відокремлення обов’язкове |
+| L | L15 | **Keep** | Після сполучника «тобто» кома не ставиться; §33 і §34 вже без коми – консистентність |
+| L | L16 | **Keep** | Кодифіковане правило про одиничні сполучні слова («не можу сказати чому») |
+| L | L17 | **Keep** | Грубе порушення узгодження («всі решта… будуть вирішені») |
+| L | L18 | **Keep** | Закриття підрядної частини перед тире |
+| L | L19 | **Keep** | Пряма вимога конвенції проєкту (`glossary/CLAUDE.md`: апостроф ’ U+2019) |
+| L | L20 | **Remove** | Статус «насправді» як вставного – дискусійний; коми передають паузу живого мовлення; не однозначна помилка |
+| L | L21 | **Remove** | «Широко поширений» – узвичаєна сполука; заміна – стилістичне вподобання |
+| L | L22 | **Remove** | Розмовна конструкція віддзеркалює оригінал (“In whatever way we can”); переформулювання – стилістика, не виправлення помилки |
+| L | L23 | **Remove** | «Достоїнство» зафіксоване в СУМ; заміна – смакова |
+| S | S1 | **Keep** | Консистентність корпусу (7 виступів «Мумбаї», цей – єдиний виняток) + чинна українська норма |
+| S | S2 | **Remove** | Глосарій сам містить г-форми для санскритського g (Юга, Агні, Гокул, Годаварі, гхі); «сварга» традиційно через «г»; канонічної форми терміна в глосарії немає |
+| S | S3 | **Remove** | «Вітхала» – коректний родовий відмінок від «Вітхал» (в оригіналі саме “Vithal”); суперечності з глосарієм немає |
+| S | S4 | **Remove** | Власна назва конкретних святинь Махараштри («три з половиною Шакті Пітхи»); в оригіналі з великої; глосарійна «пітхи» стосується загальної назви |
+| S | S5 | **Remove** | Шанобливе написання віддзеркалює оригінал (“land of Saints”) і послідовне в межах тексту |
+| S | S6 | **Remove** | Конвенція проєкту: в інших виступах корпусу назва «Пуджа з нагоди Дня народження» пишеться саме так |
 
 ### Approved Corrections
+
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 11 | «Оскільки ... але» conjunction mismatch | `Хоча Я не маю звички носити прикраси, але Мені доводиться це робити.` |
-| 2 | 38 | Typo «поширится» (missing ь) | `вона пошириться по всьому світу` |
+| 1 | 8 | «Джьячаре» | «Дж’ячаре» |
+| 2 | 11 | «доводиться це робити просто, щоб порадувати вас» | «доводиться це робити, просто щоб порадувати вас» |
+| 3 | 11 | «чому Я одягнула всі ці прикраси» | «чому Я надягнула всі ці прикраси» |
+| 4 | 17 | «Мені доводиться їх одягати» | «Мені доводиться їх надягати» |
+| 5 | 19 | «яке значення Пуджі.» | «яке значення Пуджі?» |
+| 6 | 21 | «шляхом віддачі на милість – все стане» | «шляхом віддачі на милість, – все стане» |
+| 7 | 28 | «єдине, що ми маємо проголосити – нехай» | «єдине, що ми маємо проголосити, – нехай» |
+| 8 | 33 | «3 з половиною Шакті Пітхи» | «три з половиною Шакті Пітхи» |
+| 9 | 34 | «що якщо ви вживаєте тютюн, не сідайте» | «що, якщо ви вживаєте тютюн, не сідайте» |
+| 10 | 35 | «не потрапляли у звичку вживати тютюн» | «не набували звички вживати тютюн» |
+| 11 | 36 | «чому Махараштра і відколи?» | «чому Махараштра і відколи.» |
+| 12 | 36 | «отже Махараштра – вічна» | «отже, Махараштра – вічна» |
+| 13 | 36 | «Тобто, наскільки вічне це місце.» | «Тобто наскільки вічне це місце.» |
+| 14 | 39 | «ні Я не можу сказати, чому.» | «ні Я не можу сказати чому.» |
+| 15 | 40 | «тоді всі решта питань будуть вирішені» | «тоді решта питань буде вирішена» |
+| 16 | 40 | «Тепер, що б ви не хотіли робити – робіть.» | «Тепер, що б ви не хотіли робити, – робіть.» |
+| 17 | весь текст | Прямий апостроф U+0027 (7 входжень) | Типографський апостроф «’» U+2019 |
+| 18 | 3 | «Мумбай (Індія)» | «Мумбаї (Індія)» |
 
 ## Summary
 
-- Language (L): 5 issues found, 2 approved by Critic
-- SY Domain (S): 0 issues found
-- Total corrections applied: 2
+- Language (L): 23 issues found, 17 approved by Critic
+- SY Domain (S): 6 issues found, 1 approved by Critic
+- Total corrections applied: 18
 
-## Quality Assessment
-
-Translation is of high quality. Deity pronoun capitalization is meticulous and consistent (including Мої, Мене, Себе, Сама, Своєї for 1st person Shri Mataji). SY terminology precisely follows the glossary including transliteration conventions (ґ for Sanskrit 'g') and the ґ→з alternation for Sahaja Yoga in locative case (Йозі). Quotation marks «», em-dash ` – `, and apostrophes are all orthographically correct. Dialogue punctuation in embedded quotes (para 18, 35) follows Ukrainian direct-speech rules. Sacred register and devotional tone are well preserved. The two remaining issues were a single-character typo and a single-word conjunction mismatch in an awkward source sentence – both easily fixed without altering meaning.
+All approved corrections have been applied to `transcript_uk.txt`. Deity-pronoun capitalization, glossary terminology, and quotation/dash typography required no changes. One prior-pass verdict (period after «Як же пояснити…») was overridden with documented justification; one prior-pass verdict (preserving the spoken-style pleonasm in §21) was reaffirmed.
