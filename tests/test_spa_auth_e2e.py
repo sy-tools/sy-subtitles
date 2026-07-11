@@ -1,0 +1,174 @@
+"""GitHub sign-in happy path + logout, fully offline (all GitHub endpoints and
+the exchange Worker are mocked with page.route). Follows the boot-smoke server
+pattern; marker e2e only (not smoke — this is a feature test, not the boot gate).
+"""
+
+import http.server
+import json
+import threading
+from pathlib import Path
+
+import pytest
+
+pytestmark = [pytest.mark.e2e]
+
+SITE = Path(__file__).parent.parent / "site"
+EXCHANGE_URL = "https://oauth-exchange.test/exchange"
+
+
+def _serve(index_html: bytes):
+    directory = str(SITE)
+
+    class Handler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *a, **k):
+            super().__init__(*a, directory=directory, **k)
+
+        def log_message(self, *a):
+            pass
+
+        def do_GET(self):
+            if self.path.split("?", 1)[0] in ("/", "/index.html"):
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(index_html)))
+                self.end_headers()
+                self.wfile.write(index_html)
+                return
+            super().do_GET()
+
+    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    port = httpd.server_address[1]
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    return httpd, f"http://127.0.0.1:{port}"
+
+
+@pytest.fixture
+def auth_server():
+    # window test hooks: repo (off-Pages), client id + exchange URL (the shipped
+    # config is empty = feature disabled; the hooks enable it for the test).
+    inject = (
+        "<head><script>"
+        "window.__SY_REPO='sy-tools/sy-subtitles';"
+        "window.__SY_GH_CLIENT_ID='Iv1.test';"
+        f"window.__SY_GH_EXCHANGE_URL='{EXCHANGE_URL}';"
+        "</script>"
+    )
+    index_html = (SITE / "index.html").read_text().replace("<head>", inject, 1).encode("utf-8")
+    httpd, url = _serve(index_html)
+    yield url
+    httpd.shutdown()
+
+
+@pytest.fixture
+def plain_server():
+    # No auth hooks: the shipped default (empty APP_GH_CLIENT_ID) stays in force,
+    # so this serves the app exactly as production would before the GitHub App
+    # exists — the signed-out-default test asserts no auth UI renders.
+    inject = "<head><script>window.__SY_REPO='sy-tools/sy-subtitles';</script>"
+    index_html = (SITE / "index.html").read_text().replace("<head>", inject, 1).encode("utf-8")
+    httpd, url = _serve(index_html)
+    yield url
+    httpd.shutdown()
+
+
+def _route_github(pg, auth_server):
+    # Later-registered routes win in Playwright, so the generic API mock goes
+    # FIRST and the specific /user mock second (it must shadow the generic one).
+    pg.route(
+        "**/api.github.com/**",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            headers={"ETag": '"e2e"'},
+            body=json.dumps({"sha": "e2e", "tree": [], "truncated": False}),
+        ),
+    )
+    pg.route(
+        "**/api.github.com/user",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"login": "tester", "avatar_url": f"{auth_server}/icon.png"}),
+        ),
+    )
+    pg.route(
+        "**/raw.githubusercontent.com/**",
+        lambda r: r.fulfill(status=404, body="not found"),
+    )
+    pg.route(
+        EXCHANGE_URL,
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"token": "gho_e2e"}),
+        ),
+    )
+
+
+@pytest.fixture
+def auth_page(auth_server):
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        pytest.skip("playwright not installed")
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context()
+        pg = ctx.new_page()
+        _route_github(pg, auth_server)
+        yield pg
+        ctx.close()
+        browser.close()
+
+
+def test_callback_exchanges_code_and_signs_in(auth_server, auth_page):
+    page = auth_page
+    # Pre-seed the CSRF state exactly as SPA.ghLogin would before redirecting.
+    page.add_init_script("sessionStorage.setItem('sy_gh_state', 'st1');")
+    page.goto(f"{auth_server}/index.html?code=c1&state=st1")
+    page.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
+    # Token persisted, avatar labeled with the login, URL scrubbed of auth params.
+    assert page.evaluate("localStorage.getItem('sy_gh_token')") == "gho_e2e"
+    assert "tester" in page.evaluate("document.getElementById('gh-avatar').title")
+    assert "code=" not in page.url and "state=" not in page.url
+    # Login button hidden while signed in.
+    assert page.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") == "none"
+
+
+def test_avatar_menu_signs_out(auth_server, auth_page):
+    page = auth_page
+    page.add_init_script("sessionStorage.setItem('sy_gh_state', 'st1');")
+    page.goto(f"{auth_server}/index.html?code=c1&state=st1")
+    page.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
+    page.click("#gh-avatar")
+    page.click(".sy-modal-btn.primary")  # confirm sign-out
+    page.wait_for_selector("#gh-login-btn", state="visible", timeout=5000)
+    assert page.evaluate("localStorage.getItem('sy_gh_token')") is None
+
+
+def test_invalid_state_does_not_sign_in(auth_server, auth_page):
+    page = auth_page
+    page.add_init_script("sessionStorage.setItem('sy_gh_state', 'OTHER');")
+    page.goto(f"{auth_server}/index.html?code=c1&state=st1")
+    page.wait_for_selector("#gh-login-btn", state="visible", timeout=10000)
+    assert page.evaluate("localStorage.getItem('sy_gh_token')") is None
+    assert "code=" not in page.url
+
+
+def test_signed_out_default_shows_no_auth_ui(plain_server):
+    """With an empty client id (the shipped default) neither button renders."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        pytest.skip("playwright not installed")
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context()
+        pg = ctx.new_page()
+        _route_github(pg, plain_server)
+        pg.goto(f"{plain_server}/index.html")
+        pg.wait_for_function("document.title.includes('Index')", timeout=10000)
+        assert pg.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") == "none"
+        assert pg.evaluate("getComputedStyle(document.getElementById('gh-avatar')).display") == "none"
+        ctx.close()
+        browser.close()
