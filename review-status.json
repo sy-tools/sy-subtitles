@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-11T02:48:50.885942+00:00",
+  "updated_at": "2026-07-11T06:53:55.450094+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -102,7 +102,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 127,
-      "updated_at": "2026-04-22T22:41:44Z"
+      "updated_at": "2026-07-11T06:53:44Z"
     },
     "2001-04-22_Easter-Puja-You-Cannot-Resurrect-Yourself-Without-Controlling-Agnya": {
       "status": "pending",
