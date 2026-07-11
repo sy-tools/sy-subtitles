@@ -1,58 +1,86 @@
-# Language Review – 2004-05-09_Sahasrara-Puja-Continue-To-Live-A-Life-of-Reality, 2026-05-02
+# Language Review – 2004-05-09_Sahasrara-Puja-Continue-To-Live-A-Life-of-Reality, 2026-07-11
 
 ## Process
 
-Review of `transcript_uk.txt` (Ukrainian translation) against the English source
-`transcript_en.txt`, glossary terms (`glossary/terms_lookup.yaml`,
-`glossary/terms_context.yaml`), and orthography rules (`glossary/CLAUDE.md`).
+2+1 agent review (Reviewer L + Reviewer S + Critic) of `transcript_uk.txt`
+against `transcript_en.txt`, `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`,
+and `glossary/terms_context.yaml`, per `templates/language_review_template.md`.
 
-Run as 2 parallel reviewers (L and S) + 1 Critic filter, per
-`templates/language_review_template.md`.
+**Second pass.** A prior review (2026-05-02) exists in git history; its Critic
+verdicts are treated as precedent where the same finding recurs, to avoid
+churn on discretionary style calls.
+
+Paragraph numbers are `transcript_uk.txt` line numbers (header lines 1–4,
+body starts at line 6).
+
+Mechanical pre-checks: clean — en-dash ` – ` (U+2013) throughout, apostrophe
+`’` (U+2019), quotes «», no Latin/Cyrillic mixing, no double spaces, single
+hyphen only in «врешті-решт» (correct).
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
 
-| #  | Paragraph | Error | Context | Fix |
-|----|-----------|-------|---------|-----|
-| L1 | 24 | Euphonic alternation «в/у»: after vowel «е» before consonant «С», «у» is preferred. The same sentence already uses «у» in the parallel clause «у своє буття» — internal inconsistency. | «Зростайте **в** Сахадж, зростайте **у** своє буття.» | «Зростайте **у** Сахадж, зростайте **у** своє буття.» |
-| L2 | 11 | Borderline euphonic alternation: after «що» (ends in «о») before «такої» (starts in «т»), «у» is mildly preferred over «в». | «що **в** такої великої кількості з вас Сахасрара відкрита» | «що **у** такої великої кількості з вас Сахасрара відкрита» |
-| L3 | 22 | Comma splice: two independent clauses joined by comma without conjunction. Standard Ukrainian punctuation prefers period, em-dash, or semicolon. Mirrors EN comma splice ("...some time, will be a much better idea"). | «Тоді Я спробую відповісти на них колись, це буде набагато краща ідея.» | «Тоді Я спробую відповісти на них колись — це буде набагато краща ідея.» |
-| L4 | 21 | Comma splice between «погіршилося» and «Я вже дуже стара» (parenthetical «врешті-решт» does not connect them). EN has the same comma splice. | «Моє здоров’я трохи погіршилося, врешті-решт, Я вже дуже стара.» | «Моє здоров’я трохи погіршилося — врешті-решт, Я вже дуже стара.» |
-| L5 | 18 | Comma after a short locative-adverbial introductory phrase «У цих прекрасних обставинах» is not required by Ukrainian punctuation rules. | «У цих прекрасних обставинах, що могла б сказати ваша Мати?» | «У цих прекрасних обставинах що могла б сказати ваша Мати?» |
-| L6 | 19 | Verb agreement with quantifier «багато»: modern Ukrainian prefers plural «отримають» over older singular «отримає» when the noun is animate. | «так багато людей **отримає** Реалізацію» | «так багато людей **отримають** Реалізацію» |
+| # | Paragraph | Error | Context | Fix |
+|---|-----------|-------|---------|-----|
+| L1 | 13 | Connective «хто» after a noun antecedent (norm: «який» after nouns; «хто» only after той/ті/всі) | «так багато людей, **у кого** Сахасрари відкриті» (contrast the correct para 21: «так багато **тих, у кого** Сахасрара відкрита») | «так багато людей, **у яких** Сахасрари відкриті» |
+| L2 | 17 | Relative clause «яка скаже…» separated from its antecedent «Сахасрара» by the predicate — misplaced-clause syntax | «нехай ваша власна Сахасрара **буде відкрита, яка скаже вам**, що таке Істина» | «нехай **буде відкрита ваша власна Сахасрара, яка скаже вам**, що таке Істина» |
+| L3 | 20 | Conjunction «й» before a word starting with «я» (euphony rule: «й» is not used before й, я, ю, є, ї) | «яка почала працювати **й яка** дасть вам» | «яка почала працювати **і яка** дасть вам» |
+| L4 | 18 | Comma after fronted adverbial «У цих прекрасних обставинах» (English-style pause comma) | «У цих прекрасних обставинах**,** що могла б сказати ваша Мати?» | remove comma |
+| L5 | 13 | «Із» before a single consonant at sentence start (norm prefers «з») | «**Із** відкритою Сахасрарою ваше розуміння…» | «З відкритою Сахасрарою…» |
+| L6 | 24 | «у» after a vowel before a single consonant (norm prefers «в») | «Зростайте **у** Сахадж» | «Зростайте в Сахадж» |
+| L7 | 20 | Calque «навчитись, як + інфінітив» | «ви повинні **навчитись, як** використовувати цю силу» | «навчитися використовувати» |
+| L8 | 8 | Awkward repetition «всі… як і всі» | «Ви **всі** були загубленими, як і **всі**.» | «…як і всі інші.» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
-| #  | Paragraph | Error | Context | Fix |
-|----|-----------|-------|---------|-----|
-| S1 | — | No issues found. All Sahasrara/Реалізація/Істина/Пуджа/Божественного/Бог terms consistently capitalized. Shri Mataji pronouns (Я/Моє/Мені/Мою/Моїм/Мене/Собі/Мої) all uppercase. Audience pronouns (ви/вас/ваш) lowercase mid-sentence. Language names (англійська/українська) lowercase. «сахаджа йоґів» lowercase per glossary. Title «Реальності» capitalized in heading and quoted title (paras 2, 6); body «реальності» lowercase (para 9, 18) — matches EN pattern. Vocative «Матінко» (para 15) capitalized per glossary. Quotation marks «» used correctly throughout. Em-dashes ` – ` with spaces. Apostrophes use U+2019. | — | — |
+| # | Paragraph | Error | Context | Fix |
+|---|-----------|-------|---------|-----|
+| S1 | 3, 6 | Place-name form «Кабелла Лігуре» differs from the repo-majority «Кабелла-Лігуре» | «Кампус, Кабелла Лігуре (Італія)» | (consider Кабелла-Лігуре) |
+| S2 | 18 | «життям реальності» lowercase vs the title's «життям Реальності» | «продовжуйте жити життям **реальності**, розуміння» | (consider Реальності) |
+
+Checked and found correct (no findings): Shri Mataji pronouns uppercase in all
+instances (Я/Мені/Мене/Моя/Моє/Моїм/Мої/Собі); «ваша Мати» and vocative
+«Матінко» capitalized per glossary; «Сахасрара» (incl. plural «Сахасрари»),
+«Пуджа», «Реалізація», «Істина», «Божественного», «Сахадж» capitalized per
+glossary; «сахаджа йоґи» lowercase with «ґ», correct genitive «йоґів»; language
+names lowercase («англійська», «українська»); closing blessing «Нехай Бог
+благословить вас» matches the EN «May God bless you» (no «all» in source, so
+the fixed «усіх вас» formula does not apply).
 
 ### Critic Filter
 
-| Source | #  | Verdict | Reason |
-|--------|----|---------|--------|
-| L      | L1 | **Keep** | Clear internal consistency issue: the same sentence pairs «в Сахадж» with «у своє буття». Both should use «у» per Ukrainian euphonic rule (vowel→consonant favours «у»). Genuine error worth fixing. |
-| L      | L2 | Remove  | Borderline euphony only; both forms permitted by Український правопис. No internal inconsistency (single instance). Style preference, not error. |
-| L      | L3 | Remove  | Faithfully preserves the EN spoken-style comma splice. Talk is a transcribed lecture; conversational rhythm is intentionally retained throughout the translation. Not a translator error. |
-| L      | L4 | Remove  | Same reasoning as L3 — preserves EN spoken structure («…gone down, after all, I am very old.»). Consistent with the spoken register chosen elsewhere. |
-| L      | L5 | Remove  | Both with and without comma are acceptable in Ukrainian; the comma reflects the speaker's intonational pause and matches EN. Style preference, not error. |
-| L      | L6 | Remove  | Singular agreement with «багато людей» is grammatical and remains in widespread use; not an error. Translator's choice should be respected absent inconsistency. |
+| Source | # | Verdict | Reason |
+|--------|---|---------|--------|
+| L | L1 | **Keep** | Genuine norm violation: after the noun «людей» the connective must be «у яких». The same talk uses the correct pattern in para 21 («тих, у кого»), so the fix also restores internal consistency. Not flagged in the 2026-05-02 review — no precedent conflict. |
+| L | L2 | **Keep** | Genuine syntax error, not a style preference: «буде відкрита, яка скаже» leaves the relative pronoun stranded after the predicate. Reordering keeps every word and the spoken rhythm while making the clause grammatical. |
+| L | L3 | **Keep** | Codified euphony rule, not a preference: «й» is never used before words starting with «я». Clear-cut fix «й яка» → «і яка». |
+| L | L4 | **Remove** | The 2026-05-02 Critic already ruled on exactly this comma: Remove (optional intonational emphasis, mirrors the EN pause; смислове виділення of a fronted adverbial is permitted). Precedent honored — reversing a discretionary call every review cycle is churn, not correction. |
+| L | L5 | **Remove** | The з/із rule is worded as a tendency («переважно»), and «із» at a sentence start before a consonant is an accepted variant. Not a clear error — avoid over-correction. |
+| L | L6 | **Remove** | Direct conflict with the prior review's *approved* correction #1 (2026-05-02), which deliberately set «Зростайте **у** Сахадж» to preserve the anaphoric parallelism with «зростайте у своє буття» (where «у» is mandatory before the cluster «св»). Orthography permits «у» for rhythm; the established choice stands. |
+| L | L7 | **Remove** | «навчитись, як використовувати» is understandable spoken-register phrasing mirroring the source «learn how to use»; smoother wording is a style preference, not an error. |
+| L | L8 | **Remove** | Faithful to the source's own repetition («You were all lost, as everybody is»); adding «інші» inserts a word absent from the original for purely stylistic gain. |
+| S | S1 | **Remove** | No canonical form exists: the glossary is silent and the corpus itself is split (7× «Кабелла-Лігуре», 4× «Кабелла Лігуре», 5× with «Ліґуре»). Within this talk the form is consistent (paras 3 and 6). A per-talk change would be arbitrary — needs a corpus-wide decision, not a spot fix. |
+| S | S2 | **Remove** | The translation mirrors the source capitalization exactly: the title has «Reality» (uppercase), the body sentence has «a life of reality» (lowercase). Faithful to source — not an error. Same conclusion as the 2026-05-02 review. |
 
 ### Approved Corrections
 
-| #  | Paragraph | Error | Fix |
-|----|-----------|-------|-----|
-| 1  | 24 | «Зростайте в Сахадж» — euphonic «в/у» inconsistency with «у своє буття» in same sentence. | «Зростайте у Сахадж, зростайте у своє буття.» |
+| # | Paragraph | Error | Fix |
+|---|-----------|-------|-----|
+| 1 | 13 | людей, у кого Сахасрари відкриті | людей, у яких Сахасрари відкриті |
+| 2 | 17 | нехай ваша власна Сахасрара буде відкрита, яка скаже вам | нехай буде відкрита ваша власна Сахасрара, яка скаже вам |
+| 3 | 20 | працювати й яка дасть | працювати і яка дасть |
 
 ## Summary
 
-- Language (L): 6 issues found, 1 approved by Critic
-- SY Domain (S): 0 issues found, 0 approved by Critic
-- Total corrections applied: 1
+- Language (L): 8 issues found, 3 approved by Critic
+- SY Domain (S): 2 issues found, 0 approved by Critic
+- Total corrections applied: 3
 
-The translation is of high quality. Capitalization of deity pronouns, sacred
-terms, and SY terminology is fully consistent and matches glossary conventions.
-Quotation marks, em-dashes, and apostrophes follow Ukrainian orthography. The
-only correction needed is a minor internal-consistency fix for «в/у»
-alternation in the closing benediction (paragraph 24).
+The translation is of high quality. Deity-pronoun capitalization, sacred terms,
+and SY terminology are fully consistent with the glossary; punctuation
+characters follow Ukrainian orthography. The three applied fixes are grammar
+corrections (connective choice after a noun antecedent, a misplaced relative
+clause, and the «й» → «і» euphony rule before «я-»). All discretionary style
+items were filtered out, including two where the 2026-05-02 review's verdicts
+served as precedent.
