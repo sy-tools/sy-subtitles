@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-11T10:07:48.131465+00:00",
+  "updated_at": "2026-07-11T12:20:38.617664+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -126,7 +126,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 137,
-      "updated_at": "2026-04-26T03:45:15Z"
+      "updated_at": "2026-07-11T12:20:28Z"
     },
     "2004-05-09_Sahasrara-Puja-Continue-To-Live-A-Life-of-Reality": {
       "status": "pending",
