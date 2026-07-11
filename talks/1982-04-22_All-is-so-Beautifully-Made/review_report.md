@@ -1,9 +1,16 @@
-# Language Review – 1982-04-22_All-is-so-Beautifully-Made, 2026-04-22
+# Language Review – 1982-04-22_All-is-so-Beautifully-Made, 2026-07-11
 
 ## Process
 
 Review of `transcript_uk.txt` performed by 2 parallel reviewers (L + S) filtered by Critic.
 Source: English transcript from Hampstead Friends Meeting House, 22 April 1982.
+
+Note: this is a second review pass. The previous round (2026-04-22) applied 6 corrections
+(gender agreement in ¶21, «воскресив» in ¶35, «В ісламі», «граються», quote-final period);
+those are already in the transcript and were re-verified here. Its Critic ruling on
+«істину» (¶46, lowercase = factual truth, per EN lowercase) is upheld in this round (S2).
+
+Paragraph numbers refer to line numbers in `transcript_uk.txt` (each paragraph is one line; lines 1–4 = header).
 
 ## Results
 
@@ -11,60 +18,96 @@ Source: English transcript from Hampstead Friends Meeting House, 22 April 1982.
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 21 | Gender agreement: masculine forms used where feminine required (Shri Mataji is the speaker) | «Я могла б бути ще одним – як ви це називаєте – лицеміром» | «Я могла б бути ще однією – як ви це називаєте – лицеміркою» |
-| L2 | 21 | Gender agreement: masculine demonstrative and adjectives after feminine verb "могла б" | «тим, кого ви називаєте фальшивим, підставним ґуру» | «тією, кого ви називаєте фальшивою, підставною ґуру» |
-| L3 | 35 | Ungrammatical use of intransitive verb with direct object | «Він ніколи не воскрес Себе Сам» ("воскреснути" is intransitive, cannot take "Себе") | «Він ніколи не воскресив Себе Сам» (transitive "воскресити", matches usage in subsequent sentences) |
-| L4 | 44 | Non-reflexive verb used for generic children's play | «нехай вони грають. Просто нехай грають.» | «нехай вони граються. Просто нехай граються.» |
-| L5 | 47 | Redundant period after `?»` at end of sentence (per Ukrainian Pravopys 2019) | `: «Чому тут свічка?».` | `: «Чому тут свічка?»` |
-| L6 | 14 | "яка писала" agrees with "людина" not "Блейк" – grammatically acceptable but awkward | «така людина, як Блейк, яка писала всю поезію» | Could be «який писав» (agreeing with Blake) |
-| L7 | 10 | "і інфраструктура" after vowel – eupohnic alternation preferred | «так прекрасно, і інфраструктура створена» | «так прекрасно, та інфраструктура створена» |
-| L8 | 52 | "те, що тисне на талії" – locative with "на" less idiomatic than "в" | «те, що тисне на талії» | «те, що тисне в талії» |
-| L9 | 51 | "почуваєтеся набагато краще й зціленими" – awkward parallel (adverb + adj.) | «ви почуваєтеся набагато краще й зціленими» | «ви почуваєтеся набагато краще, зціленими» |
+| L1 | весь текст | Прямий апостроф `'` (U+0027) замість `’` (U+2019) — 23 випадки, всі всередині слів | «зв'язок», «п'ять», «з'єднатися», «нав'язати»… | Замінити всі `'` на `’` (стандарт глосарія та корпусу) |
+| L2 | 11 | Не закрито підрядне «хто бере» комою перед тире | «А той, хто бере – це великий вінець творіння» | «А той, хто бере, – це великий вінець творіння» |
+| L3 | 11 | «дерево» замість «деревина» (EN "they give their wood" — матеріал, не рослина) | «Навіть коли вони помирають, вони віддають своє дерево.» | «…віддають свою деревину.» |
+| L4 | 15 | Не закрито підрядне «що дає природа» комою перед вставною конструкцією з тире | «Отже, все, що дає природа – на грубому рівні…» | «Отже, все, що дає природа, – на грубому рівні…» |
+| L5 | 23 | Кома між однорідними підрядними з одиничним «і»; кома при збігу сполучників «що якщо» | «що якщо ви шукач, і якщо ви шукаєте» | «що, якщо ви шукач і якщо ви шукаєте» |
+| L6 | 18 | «велеречити» — нестандартне дієслово | «велеречити, виголошувати проповіді» | «пишномовно говорити» |
+| L7 | 20 | «нікуди не годні» — розмовна форма | «Ми нікуди не годні.» | «Ми ні на що не годні.» |
+| L8 | 22 | Калька «книги за книгами» (EN "books after books") | «Про це написано книги за книгами» | «Про це написано книгу за книгою» |
+| L9 | 26 | Зайва кома перед одиничним «і» між однорідними присудками | «ми розріжемо цю сітку, і звільнимося» | «ми розріжемо цю сітку і звільнимося» |
+| L10 | 30 | Калька «розумно мудрими» (EN "reasonably wise" = «доволі мудрими»; «розумно мудрий» — тавтологія без змісту) | «приймається розумно мудрими, розсудливими, освіченими, зрілими людьми» | «приймається доволі мудрими, розсудливими…» |
+| L11 | 30 | «масово налаштовані» — калька "mass-minded" | «Чому вони такі масово налаштовані?» | «Чому вони такі стадні?» |
+| L12 | 31 | «Просте, що вони мають побачити» — неприродна субстантивація, речення читається як зламане | «Просте, що вони мають побачити: «Чи стали ми своїм Духом?»» | «Проста річ, яку вони мають побачити: …» |
+| L13 | 32 | Зайва кома перед одиничним «або» між однорідними присудками | «починають вбивати інших, або починають вбивати самих себе» | «…інших або починають вбивати самих себе» |
+| L14 | 34 | «так» + повний прикметник: має бути «така» | «Ви ніколи й не захотіли б її змінити, – вона так чудова.» | «…– вона така чудова.» |
+| L15 | 35 | Неузгоджена конструкція «цю частину, Я знаю, правильно» (EN "I know that part is correct") | «Він – Вічна Істота, цю частину, Я знаю, правильно.» | «Він – Вічна Істота; ця частина, Я знаю, правильна.» |
+| L16 | 35 | Вставне слово «безумовно» (модальна впевненість, "definitely") не відокремлено комами | «Він безумовно воскресив Себе Сам.» | «Він, безумовно, воскресив Себе Сам.» |
+| L17 | 35 | Те саме, друга поява | «Але Він безумовно воскресив Своє Божественне Тіло.» | «Але Він, безумовно, воскресив Своє Божественне Тіло.» |
+| L18 | 38 | Двозначний займенник: «він зупиняється» читається як «шахрай зупиняється» (EN "it stops" = вітерець) | «Якщо ви запитуєте про якогось шахрая: «Чи він хороша людина?» – він зупиняється.» | «…– вітерець зупиняється.» |
+| L19 | 44 | Зламаний порядок слів | «Це всі для вас діти, народжені реалізованими.» | «Усі ці діти для вас – народжені реалізованими.» |
+| L20 | 35, 46 | Кома після обставини «Тепер» на початку речення | «Тепер, як же ви можете довести науково?»; «Тепер, деякі люди, яких Я бачила…» | Вилучити кому після «Тепер» |
+| L21 | 51 | Вставне «зрештою» (у значенні "after all") не відокремлено комами | «бо зрештою енергія має текти» | «бо, зрештою, енергія має текти» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 30 | Religion name should be lowercase per modern Ukrainian orthography | «В Ісламі, якщо ви читаєте» | «В ісламі, якщо ви читаєте» |
-| S2 | 46 | "Істину" / "істину" ambiguity – spiritual Truth vs factual truth | «вони хочуть мати істину» | Could be «Істину» if referring to absolute Truth; matches English lowercase "truth" |
-| S3 | 36 | "заново народжені" vs earlier "двічі народжений" – not strictly inconsistent (different English words: "reborn" vs "twice-born") | «що ми заново народжені» | Acceptable variation; English source uses different terms |
+| S1 | 3 | «друзів» з малої: "Friends Meeting House" — власна назва (Релігійне товариство Друзів, квакери), а не «дім друзів» | «Дім зібрань друзів у Хемпстеді» | «Дім зібрань Друзів у Хемпстеді» |
+| S2 | 46 | «істину» з малої — за глосарієм Істина (absolute Truth) з великої? | «бо вони хочуть мати істину – яку самі бачитимуть» | «…мати Істину…»? |
+| S3 | 17 | "twice-born" перекладено як «двічі народжений», а в глосарії є «Двіджа» | «ви не можете бути двічі народженим» | «ви не можете бути Двіджею»? |
+| S4 | 14 | «Його» з великої щодо Блейка — Блейк не Інкарнація | «ніхто Його не розумів» | «ніхто його не розумів»? |
+
+**Verified correct (no change needed):** займенники Шрі Матаджі скрізь з великої (Я/Мені/Мене/Мною/Мого/Сама/Себе); Христос — Він/Його/Нього/Себе/Сам/Своє з великої; Бог — Він/Сам по Собі/Його; Кундаліні — Вона з великої (¶33, ¶53); терміни за глосарієм: Сахаджа Йоґа, Кундаліні, Аґія чакра / над Аґією, Сахасрара, Дух, Реалізація, Реалізовані душі, ґуру (з малої, через ґ), его, прохолодний вітерець, Мати Земля, Божественна Сила, Царство Боже; «Нехай Бог благословить усіх вас» — точна формула глосарія; назви мов з малої («англійська», «українська»); «стопи» шукачів з малої (¶52 — не Стопи Божества); «іслам» з малої, «Коран» з великої; «день Воскресіння» (¶30) / «День Воскресіння» (¶35) — регістр за оригіналом; корекції попереднього раунду (2026-04-22) на місці.
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Clear gender agreement error. Shri Mataji speaking about Herself: "могла б" (fem), "Сама" (fem), "такою" (fem) all signal feminine subject; masculine "одним лицеміром" is inconsistent and ungrammatical. Standard Ukrainian requires feminine form for female speaker describing herself. |
-| L | L2 | **Keep** | Same gender agreement issue. Feminine subject requires feminine modifiers throughout: "тією", "фальшивою", "підставною". |
-| L | L3 | **Keep** | "Воскрес" (past of intransitive "воскреснути") cannot govern a direct object "Себе". The transitive "воскресити" is required. Confirmed by correct usage in the very next sentences: "Він воскресив Себе Сам" and "Він безумовно воскресив Себе Сам". |
-| L | L4 | **Keep** | Modern Ukrainian standard: reflexive "гратися" for children's generic amusement; non-reflexive "грати" requires transitive complement (грати в X, грати на Y). Editorial correction improves precision. |
-| L | L5 | **Keep** | Ukrainian Pravopys (2019) rule: when quoted sentence ends with `?`, `!`, or `…`, no additional `.` is placed after `»` at the end of the outer sentence. The other quote closures in para 47 follow the correct pattern (`«Ну й що ж тепер робити?»`, `«Чому це?»` without period). |
-| L | L6 | **Remove** | Grammatically correct: "яка" agrees with "людина" (the immediate antecedent). Both "яка писала" (agreeing with "людина") and "який писав" (agreeing with "Блейк") are acceptable Ukrainian patterns. Style preference, not an error. |
-| L | L7 | **Remove** | Style preference. After a comma starting a new clause, "і" is acceptable even after a vowel. Not a grammatical error. |
-| L | L8 | **Remove** | Both "тисне на талії" (locative) and "тисне в талії" are used in Ukrainian. Style preference. |
-| L | L9 | **Remove** | The construction "почуваєтеся краще й зціленими" preserves the English double predicate "feel better and cured". While slightly awkward, it's not ungrammatical. Editorial style preference, not a clear error. |
-| S | S1 | **Keep** | Modern Ukrainian orthography (2019 Pravopys): names of religions are written lowercase (іслам, християнство, буддизм, іудаїзм). "Коран" remains uppercase as a book title, but the religion itself is common noun. |
-| S | S2 | **Remove** | Context is ambiguous (they want to see whether book content is true); original English uses lowercase "truth". Not a clear error. |
-| S | S3 | **Remove** | The Ukrainian variation ("двічі народжений" / "заново народжені" / "народитися знову") correctly reflects the distinct English phrasings ("twice-born" / "reborn" / "born again"). Not an inconsistency. |
+| L | L1 | **Keep** | Явна вимога глосарія (апостроф U+2019) і стандарт корпусу (переважна більшість talks); усі 23 випадки всередині слів — заміна безпечна |
+| L | L2 | **Keep** | Правило: підрядне означальне закривається комою і перед тире; однозначна пунктуаційна помилка |
+| L | L3 | **Keep** | Справжня смислова помилка: дерево «віддає дерево» — нісенітниця; EN "wood" = деревина |
+| L | L4 | **Keep** | Те саме правило, що L2: підрядне «що дає природа» треба закрити комою перед вставкою з тире |
+| L | L5 | **Remove** | Інтонаційні коми розмовного мовлення, дзеркалять коми оригіналу ("if you are a seeker, and if you seek,"); транскриптний стиль допускає |
+| L | L6 | **Remove** | Експресивний оказіоналізм від нормативного «велеречивий», влучно передає "talk big"; не помилка |
+| L | L7 | **Remove** | Розмовна, але вживана форма; допустима в передачі усного мовлення |
+| L | L8 | **Remove** | Оригінал сам має нестандартне "books after books"; заміна не дає явного покращення — тривіальна правка стилю |
+| L | L9 | **Remove** | Інтонаційна кома усного мовлення, дзеркалить оригінал ("…this net, and we'll be freed"); у транскрипті допустима |
+| L | L10 | **Keep** | Справжня семантична помилка: «розумно мудрими» — беззмістовна тавтологія; "reasonably wise" = «доволі мудрими» |
+| L | L11 | **Remove** | Незграбно, але зрозуміло і йде за оригіналом; заміна («стадні») змінює регістр висловлювання — стильова правка |
+| L | L12 | **Keep** | Конструкція справді ламає читання; мінімальна правка «Проста річ, яку…» точно відповідає EN "The simple thing they have to see" |
+| L | L13 | **Remove** | Та сама категорія, що L5/L9 — інтонаційна кома усного мовлення |
+| L | L14 | **Keep** | Однозначна граматична помилка: перед повним прикметником — «така»; сусіднє речення саме вживає «така ніжна, така добра, така співчутлива» |
+| L | L15 | **Keep** | Знахідний «цю частину» ні з чим не узгоджений, фраза не читається; виправлення відновлює зміст EN "I know that part is correct" |
+| L | L16 | **Keep** | «Безумовно» тут — модальне вставне слово ("definitely"), за нормою відокремлюється комами |
+| L | L17 | **Keep** | Те саме, що L16 |
+| L | L18 | **Keep** | В UK обидва антецеденти («шахрай», «вітерець») — «він»; читач майже напевно прочитає «шахрай зупиняється». EN "it stops" однозначно про вітерець — уточнення необхідне і точне |
+| L | L19 | **Remove** | Оригінал сам зламаний ("These are all born-realised children to you"); зміст відновлюваний, «поліпшення» — переписування усного мовлення |
+| L | L20 | **Remove** | Кома після «Тепер» передає дискурсивний маркер EN "Now,"; вжита послідовно в усьому тексті — стильове рішення, не помилка |
+| L | L21 | **Keep** | «Зрештою» у значенні "after all" — вставне слово, відокремлюється комами |
+| S | S1 | **Keep** | "Friends" — власна назва квакерського Товариства Друзів; з малої фраза читається як «дім зібрань (якихось) друзів» — втрата власної назви |
+| S | S2 | **Remove** | Підтверджено вердикт попереднього раунду (2026-04-22): контекст — фактична правда (далі: «самі побачте, правда це чи ні»), EN вживає малу "truth". Не абсолютна Істина — залишити з малої |
+| S | S3 | **Remove** | Хибне спрацьовування: в оригіналі просте "twice-born", не термін "Dwija"; «двічі народжений» — правильний переклад |
+| S | S4 | **Remove** | Хибне спрацьовування: оригінал сам пише "nobody understood Him" з великої (Блейк шанується як реалізована душа) — переклад вірно йде за оригіналом |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 21 | «ще одним – як ви це називаєте – лицеміром» | «ще однією – як ви це називаєте – лицеміркою» |
-| 2 | 21 | «тим, кого ви називаєте фальшивим, підставним ґуру» | «тією, кого ви називаєте фальшивою, підставною ґуру» |
-| 3 | 30 | «В Ісламі» | «В ісламі» |
-| 4 | 35 | «Він ніколи не воскрес Себе Сам» | «Він ніколи не воскресив Себе Сам» |
-| 5 | 44 | «нехай вони грають. Просто нехай грають.» | «нехай вони граються. Просто нехай граються.» |
-| 6 | 47 | «Чому тут свічка?».» (redundant period after `?»`) | «Чому тут свічка?»» |
+| 1 | весь текст | Прямий апостроф `'` (23 випадки) | Замінено на `’` (U+2019) |
+| 2 | 3 | «Дім зібрань друзів» | «Дім зібрань Друзів» |
+| 3 | 11 | «А той, хто бере – це» | «А той, хто бере, – це» |
+| 4 | 11 | «віддають своє дерево» | «віддають свою деревину» |
+| 5 | 15 | «все, що дає природа – на грубому рівні» | «все, що дає природа, – на грубому рівні» |
+| 6 | 30 | «розумно мудрими» | «доволі мудрими» |
+| 7 | 31 | «Просте, що вони мають побачити:» | «Проста річ, яку вони мають побачити:» |
+| 8 | 34 | «вона так чудова» | «вона така чудова» |
+| 9 | 35 | «Вічна Істота, цю частину, Я знаю, правильно.» | «Вічна Істота; ця частина, Я знаю, правильна.» |
+| 10 | 35 | «Він безумовно воскресив Себе Сам.» | «Він, безумовно, воскресив Себе Сам.» |
+| 11 | 35 | «Але Він безумовно воскресив Своє Божественне Тіло.» | «Але Він, безумовно, воскресив Своє Божественне Тіло.» |
+| 12 | 38 | «– він зупиняється.» | «– вітерець зупиняється.» |
+| 13 | 51 | «бо зрештою енергія має текти» | «бо, зрештою, енергія має текти» |
 
 ## Summary
 
-- Language (L): 9 issues flagged, 5 approved by Critic (4 removed as style preferences)
-- SY Domain (S): 3 issues flagged, 1 approved by Critic (2 removed as style / context-dependent)
-- **Total corrections applied: 6**
+- Language (L): 21 issues found, 12 approved by Critic (9 removed as intonational/spoken-style or trivial)
+- SY Domain (S): 4 issues found, 1 approved by Critic (3 removed as false positives)
+- **Total corrections applied: 13** (12 точкових + 1 глобальна заміна апострофа, 23 входження)
 
 Key themes:
-- Gender agreement errors when Shri Mataji refers to Herself in hypothetical roles (para 21)
-- Confusion of intransitive vs transitive "воскрес"/"воскресив" in Resurrection passage (para 35)
-- Minor usage refinements: "гратися" for children's play, lowercase "іслам" per 2019 orthography
-- Ukrainian quotation-mark rule enforcement (no period after `?»`)
+- Normalization of apostrophe to `’` (U+2019) per glossary and corpus standard
+- Closing commas for subordinate clauses before dashes (¶11, ¶15)
+- Modal parentheticals set off by commas: «безумовно» ×2 (¶35), «зрештою» (¶51)
+- Semantic fixes: «деревина» for "wood" (¶11), «доволі мудрими» for "reasonably wise" (¶30), disambiguated «вітерець зупиняється» (¶38)
+- Venue proper name: Quaker «Дім зібрань Друзів» (header)
