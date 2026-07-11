@@ -4,19 +4,10 @@
   SRT: talks/1984-03-22_Birthday-Puja/Birthday-Puja-Be-Sweet/final/uk.srt
   Transcript: talks/1984-03-22_Birthday-Puja/transcript_uk.txt
   EN SRT: talks/1984-03-22_Birthday-Puja/Birthday-Puja-Be-Sweet/source/en.srt
-  SRT blocks: 585
+  SRT blocks: 159
   EN SRT blocks: 153
+  (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
-
-============================================================
-  CHECK 1: Text preservation
-============================================================
-  Transcript chars: 30973
-  SRT chars: 30973
-  Exact normalized match: OK
-  Transcript words: 5117
-  SRT words: 5117
-  Word-level match: OK
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -27,42 +18,50 @@
   CHECK 3: Time range (vs EN SRT)
 ============================================================
   EN SRT range: 00:00:02,611 — 00:42:39,546
-  SRT range:       00:00:00,000 — 00:42:41,569
+  SRT range:       00:00:02,611 — 00:42:41,546
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 585
+  Total blocks: 159
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 585
-  CPS: avg=12.3, median=11.4, max=19.7
-  CPS > target: 76 (13.0%)
+  Total blocks: 159
+  CPS: avg=14.8, median=15.0, max=20.0
+  CPS > target: 70 (44.0%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=51.9, max=84
+  CPL: avg=53.5, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 2
+  Duration < min: 0
   Duration > max: 0
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #530: CPS=19.7 (30ch/1.5s) "обличчям), тоді Я просто знаю,"
-    #493: CPS=18.5 (35ch/1.9s) "Тоді вам не доведеться хвилюватися,"
-    #478: CPS=18.4 (59ch/3.2s) "яка має бхутів (Шрі Матаджі сміється), ви отримуєте бхутів."
-    #514: CPS=18.4 (62ch/3.4s) "Навпаки, ви маєте казати: «Я такий хороший. Що зі мною не та..."
-    #494: CPS=18.3 (51ch/2.8s) "не доведеться кричати, не доведеться нічого казати."
-    #529: CPS=18.1 (33ch/1.8s) "розумієте (спотвореним, скрученим"
-    #501: CPS=17.6 (58ch/3.3s) "Якщо ви кричите на когось в его-орієнтованому суспільстві,"
-    #502: CPS=17.1 (42ch/2.5s) "ви завжди їх відштовхнете, і вони втечуть."
-    #489: CPS=17.1 (63ch/3.7s) "і ви повністю зруйнуєтеся, чим більше ви намагаєтеся це роби..."
-    #508: CPS=17.1 (37ch/2.2s) "Намагайтеся мати мир із самими собою."
+    #68: CPS=20.0 (35ch/1.8s) "Тоді вам не доведеться хвилюватися,"
+    #109: CPS=19.9 (31ch/1.6s) "«Моє серце не може відкритися»."
+    #83: CPS=19.9 (37ch/1.9s) "Намагайтеся мати мир із самими собою."
+    #89: CPS=19.2 (84ch/4.4s) "Навпаки, ви маєте казати: «Я такий хороший. Що зі мною не та..."
+    #69: CPS=19.1 (51ch/2.7s) "не доведеться кричати, не доведеться нічого казати."
+    #107: CPS=18.0 (33ch/1.8s) "Розслабся, розслабся, розслабся»."
+    #66: CPS=17.9 (43ch/2.4s) "Ось що ви маєте розвивати – цю силу любові."
+    #56: CPS=17.4 (64ch/3.7s) "Тож, коли ви слідуєте за Мною, ви маєте слідувати за Мною та..."
+    #72: CPS=17.4 (40ch/2.3s) "Ми не хочемо, щоб хтось був зруйнований."
+    #67: CPS=17.3 (34ch/2.0s) "Спочатку розвиньте цю силу любові."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 159
+  EN SRT blocks: 153
+  Ratio UK/EN: 1.04 (max allowed 2.0)
+  Block count: OK
 
 ============================================================
   SUMMARY
@@ -73,13 +72,14 @@
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 12.3 (target ≤15.0)
-  CPS > 15.0: 76 blocks
+  Avg CPS: 14.8 (target ≤15.0)
+  CPS > 15.0: 70 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 2 blocks
+  Duration < 1200ms: 0 blocks
   Duration > 21000ms: 0 blocks
   Gaps < 80ms: 0 blocks
 
