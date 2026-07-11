@@ -4,7 +4,7 @@
   SRT: talks/1984-03-22_Birthday-Puja/Birthday-Puja-Talk-Be-Sweet/final/uk.srt
   Transcript: talks/1984-03-22_Birthday-Puja/transcript_uk.txt
   EN SRT: talks/1984-03-22_Birthday-Puja/Birthday-Puja-Talk-Be-Sweet/source/en.srt
-  SRT blocks: 570
+  SRT blocks: 146
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,36 +22,36 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 570
+  Total blocks: 146
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 570
-  CPS: avg=69.8, median=86.0, max=138.6
-  CPS > target: 476 (83.5%)
-  CPS > hard max: 420 (73.7%)
-  CPL: avg=52.1, max=84
+  Total blocks: 146
+  CPS: avg=15.0, median=14.9, max=36.1
+  CPS > target: 60 (41.1%)
+  CPS > hard max: 4 (2.7%)
+  CPL: avg=54.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 415
+  Duration < min: 0
   Duration > max: 1
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #385: CPS=138.6 (14ch/0.1s) "Навіщо все це?"
-    #35: CPS=131.6 (15ch/0.1s) "Причина в тому,"
-    #424: CPS=120.4 (39ch/0.3s) "Мені буде дуже радісно почути ці слова."
-    #192: CPS=117.6 (18ch/0.2s) "«Шрі Матаджі, що я"
-    #327: CPS=117.6 (18ch/0.2s) "Так само і з вами."
-    #425: CPS=116.1 (52ch/0.4s) "Тож сьогодні Я прошу у вас подарунок любові та миру."
-    #221: CPS=112.4 (20ch/0.2s) "Чи любите ви когось?"
-    #418: CPS=112.4 (20ch/0.2s) "Тепер Я – ваша Мати."
-    #69: CPS=111.7 (20ch/0.2s) "Ви маєте це зробити."
-    #74: CPS=109.9 (21ch/0.2s) "Ви можете це зробити."
+    #25: CPS=36.1 (44ch/1.2s) "[(маратхі) Дамле Сахаб одягнув курту-піжаму,"
+    #68: CPS=21.2 (35ch/1.6s) "Тоді вам не доведеться хвилюватися,"
+    #63: CPS=20.9 (77ch/3.7s) "Вони хочуть, вони провокують вас, вони провокують вас, щоб в..."
+    #89: CPS=20.7 (84ch/4.0s) "Навпаки, ви маєте казати: «Я такий хороший. Що зі мною не та..."
+    #83: CPS=20.0 (37ch/1.9s) "Намагайтеся мати мир із самими собою."
+    #109: CPS=19.9 (31ch/1.6s) "«Моє серце не може відкритися»."
+    #52: CPS=19.8 (26ch/1.3s) "Якщо ви кричите на людину,"
+    #91: CPS=19.7 (55ch/2.8s) "І саме як наслідок цього ви починаєте кричати на інших."
+    #56: CPS=19.4 (64ch/3.3s) "Тож, коли ви слідуєте за Мною, ви маєте слідувати за Мною та..."
+    #69: CPS=19.1 (51ch/2.7s) "не доведеться кричати, не доведеться нічого казати."
 
 ============================================================
   SUMMARY
@@ -63,11 +63,11 @@
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
 
-  Avg CPS: 69.8 (target ≤15.0)
-  CPS > 15.0: 476 blocks
-  CPS > 20.0: 420 blocks
+  Avg CPS: 15.0 (target ≤15.0)
+  CPS > 15.0: 60 blocks
+  CPS > 20.0: 4 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 415 blocks
+  Duration < 1200ms: 0 blocks
   Duration > 21000ms: 1 blocks
   Gaps < 80ms: 0 blocks
 
