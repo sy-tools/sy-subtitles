@@ -4,7 +4,7 @@ Build complete: 611 blocks
   CPS > 15.0: 0
   CPS > 20.0: 0
   CPL > 84: 0
-  Duration < 1200ms: 2
+  Duration < 1200ms: 1
   Duration > 21000ms: 0
   Gaps < 80ms: 0
   Overlaps: 0
