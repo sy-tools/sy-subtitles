@@ -35,6 +35,16 @@ def test_uses_wrangler_action_from_worker_directory() -> None:
     assert "workingDirectory: workers/oauth-exchange" in text
 
 
+def test_wrangler_action_is_sha_pinned() -> None:
+    """Third-party action handling all four secrets must be pinned to an
+    immutable commit SHA (a movable tag could be repointed at hostile code)."""
+    import re
+
+    text = WF.read_text(encoding="utf-8")
+    ref = re.search(r"cloudflare/wrangler-action@(\S+)", text).group(1)
+    assert re.fullmatch(r"[0-9a-f]{40}", ref), f"not SHA-pinned: {ref}"
+
+
 def test_worker_secrets_come_from_repo_secrets_not_inline() -> None:
     """GH_CLIENT_ID / GH_CLIENT_SECRET must flow repo-secret -> env -> wrangler
     `secrets:` input; a literal value in the workflow would leak the secret."""
