@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-12T20:22:23.069667+00:00",
+  "updated_at": "2026-07-12T20:22:43.907284+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -547,6 +547,12 @@
       "reviewer": null,
       "issue_number": 676,
       "updated_at": "2026-07-04T21:34:18Z"
+    },
+    "1979-01-01_Letter-Human-Chitta-has-many-illusions": {
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 726,
+      "updated_at": "2026-07-12T20:22:41Z"
     }
   }
 }
