@@ -58,6 +58,13 @@ on:
           - claude-fable-5
           - claude-sonnet-5
         default: same-as-model
+      oauth_token:
+        description: 'Claude account: default = CLAUDE_CODE_OAUTH_TOKEN, інше значення X = CLAUDE_CODE_OAUTH_TOKEN_X (порожній секрет відкочується на default)'
+        type: choice
+        options:
+          - default
+          - EXTRA
+        default: default
   workflow_call:
     inputs:
       talk_id:
@@ -93,6 +100,10 @@ on:
         description: 'Override model for the build step only; empty or same-as-model follows `model`'
         type: string
         default: ''
+      oauth_token:
+        description: 'Claude account: default = CLAUDE_CODE_OAUTH_TOKEN, інше значення X = CLAUDE_CODE_OAUTH_TOKEN_X'
+        type: string
+        default: default
 
 permissions:
   contents: write
@@ -107,6 +118,14 @@ env:
   # than review (e.g. review=Fable, build=Opus). The 'same-as-model'
   # sentinel (choice inputs can't default to '') follows MODEL_HEAVY.
   MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-4-8' }}
+  # Обліковий запис Claude для LLM-кроків. Конвенція: oauth_token=X бере
+  # секрет CLAUDE_CODE_OAUTH_TOKEN_X (значення опції = суфікс, верхній
+  # регістр — у виразах нема upper()). Дефолтний секрет — ЛИШЕ для
+  # 'default'/порожнього інпуту (push): якщо іменований секрет відсутній
+  # чи порожній, значення лишається '' і guard-кроки валять запуск — тихий
+  # відкат непомітно палив би ліміти основного акаунта. Хвіст || '' щоб
+  # false-гілка не стала літеральним рядком 'false' у ролі токена.
+  OAUTH_TOKEN: ${{ (inputs.oauth_token && inputs.oauth_token != 'default' && secrets[format('CLAUDE_CODE_OAUTH_TOKEN_{0}', inputs.oauth_token)]) || ((!inputs.oauth_token || inputs.oauth_token == 'default') && secrets.CLAUDE_CODE_OAUTH_TOKEN) || '' }}
 
 jobs:
   discover:
@@ -262,6 +281,18 @@ jobs:
           echo "bun=$(which bun)" >> "$GITHUB_OUTPUT"
           echo "claude=$(which claude)" >> "$GITHUB_OUTPUT"
 
+      - name: Verify Claude token selection
+        # Fail-fast: обраний акаунт без секрета НЕ відкочується на дефолтний
+        # (тихий відкат палив би ліміти основного акаунта непомітно).
+        if: inputs.dry_run != true
+        env:
+          SELECTED: ${{ inputs.oauth_token }}
+        run: |
+          if [ -z "$OAUTH_TOKEN" ]; then
+            echo "::error::oauth_token='${SELECTED}' не резолвиться: секрет CLAUDE_CODE_OAUTH_TOKEN_${SELECTED} відсутній або порожній — відкату на default немає, додайте секрет або запустіть з oauth_token=default"
+            exit 1
+          fi
+
       - name: Translate (dry-run fake)
         if: inputs.translate != false && inputs.dry_run == true
         env:
@@ -279,7 +310,7 @@ jobs:
         if: inputs.translate != false && inputs.dry_run != true
         uses: anthropics/claude-code-action@558b1d6cab4085c7753fe402c10bef0fbb92ac7a  # v1.0.165
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
           claude_args: "--max-turns 80 --dangerously-skip-permissions --effort xhigh --model ${{ env.MODEL_HEAVY }}"
@@ -386,7 +417,7 @@ jobs:
         if: inputs.review != false && inputs.dry_run != true
         uses: anthropics/claude-code-action@558b1d6cab4085c7753fe402c10bef0fbb92ac7a  # v1.0.165
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
           claude_args: "--max-turns 60 --dangerously-skip-permissions --effort xhigh --model ${{ env.MODEL_HEAVY }}"
@@ -678,6 +709,17 @@ jobs:
           echo "bun=$(which bun)" >> "$GITHUB_OUTPUT"
           echo "claude=$(which claude)" >> "$GITHUB_OUTPUT"
 
+      - name: Verify Claude token selection
+        # Fail-fast: обраний акаунт без секрета НЕ відкочується на дефолтний.
+        if: inputs.dry_run != true
+        env:
+          SELECTED: ${{ inputs.oauth_token }}
+        run: |
+          if [ -z "$OAUTH_TOKEN" ]; then
+            echo "::error::oauth_token='${SELECTED}' не резолвиться: секрет CLAUDE_CODE_OAUTH_TOKEN_${SELECTED} відсутній або порожній — відкату на default немає, додайте секрет або запустіть з oauth_token=default"
+            exit 1
+          fi
+
       - name: Build timecodes (dry-run fake)
         if: inputs.dry_run == true
         env:
@@ -694,7 +736,7 @@ jobs:
         env:
           CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
           claude_args: "--max-turns 80 --dangerously-skip-permissions --effort high --model ${{ env.MODEL_BUILD }}"
