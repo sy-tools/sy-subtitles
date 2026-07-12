@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-12T16:39:25.899020+00:00",
+  "updated_at": "2026-07-12T20:22:23.069667+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -339,10 +339,10 @@
       "updated_at": "2026-06-14T16:32:51Z"
     },
     "1979-01-01_Letter": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
       "issue_number": 325,
-      "updated_at": "2026-05-30T11:18:58Z"
+      "updated_at": "2026-07-12T20:22:21Z"
     },
     "2001-05-06_Sahasrara-Puja-To-Break-Sahasrara": {
       "status": "pending",
