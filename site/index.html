@@ -681,6 +681,23 @@ function deriveRepo(hostname, pathname, search) {
   throw new Error('Cannot determine GitHub repo: serve from <owner>.github.io '
     + 'or pass ?repo=owner/name (host was "' + hostname + '").');
 }
+// The OAuth callback returns to the BARE app URL (a GitHub App redirect_uri
+// must exactly match a registered callback, so ?repo/?branch cannot ride
+// along). Restore the app params saved by SPA.ghLogin BEFORE deriveRepo needs
+// them. Runs only on a callback (GitHub always sends `state` back — on both
+// the success and the error path).
+(function() {
+  try {
+    var saved = sessionStorage.getItem('sy_gh_return');
+    if (saved == null) return;
+    if (!new URLSearchParams(location.search).get('state')) return;
+    sessionStorage.removeItem('sy_gh_return');
+    var merged = mergeAuthReturn(location.search, saved);
+    if (merged !== location.search) {
+      history.replaceState(null, '', location.pathname + merged + location.hash);
+    }
+  } catch (e) {}
+})();
 var REPO = deriveRepo();
 function getBranchFromURL() {
   var params = new URLSearchParams(location.search);
@@ -4450,9 +4467,14 @@ SPA.takeForReview = function(talkId) {
 
 SPA.ghLogin = function() {
   var state = makeAuthState();
-  try { sessionStorage.setItem('sy_gh_state', state); } catch (e) {}
+  try {
+    sessionStorage.setItem('sy_gh_state', state);
+    // App params can't ride in redirect_uri (exact-match rule) — they are
+    // restored from here on the way back, before deriveRepo runs.
+    sessionStorage.setItem('sy_gh_return', location.search);
+  } catch (e) {}
   location.href = buildAuthorizeUrl(ghClientId(), state,
-    location.origin + location.pathname + location.search);
+    buildRedirectUri(location.origin, location.pathname));
 };
 
 SPA.ghAccountMenu = function() {
@@ -4473,14 +4495,22 @@ SPA.ghAccountMenu = function() {
 // and load the profile. Every failure path leaves the user signed out with the
 // old flows fully working.
 function handleAuthCallback() {
-  var params = parseAuthCallback(location.search);
-  if (!params) return;
+  var search = location.search;
+  var params = parseAuthCallback(search);
+  var errParam = null;
+  try { errParam = new URLSearchParams(search).get('error'); } catch (e) {}
+  if (!params && !errParam) return;
   var saved = null;
   try {
     saved = sessionStorage.getItem('sy_gh_state');
     sessionStorage.removeItem('sy_gh_state');
   } catch (e) {}
-  history.replaceState(null, '', location.pathname + stripAuthParams(location.search) + location.hash);
+  history.replaceState(null, '', location.pathname + stripAuthParams(search) + location.hash);
+  if (errParam) {
+    // User cancelled on GitHub (?error=access_denied) or the App refused.
+    showToast(t('auth.error_exchange'));
+    return;
+  }
   if (!isValidAuthCallback(params, saved)) {
     showToast(t('auth.error_state'));
     return;

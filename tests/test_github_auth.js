@@ -81,3 +81,48 @@ describe('auth storage', () => {
     assert.strictEqual(getAuthUser(s), null);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GitHub-App exact-match redirect_uri: the query must NOT ride along (GitHub
+// rejects it), so app params round-trip via sessionStorage instead.
+// ---------------------------------------------------------------------------
+const { buildRedirectUri, mergeAuthReturn } = require('../site/js/github_auth');
+
+describe('buildRedirectUri', () => {
+  it('is origin+pathname with no query (exact-match against the App callback)', () => {
+    assert.strictEqual(buildRedirectUri('http://localhost:8000', '/'), 'http://localhost:8000/');
+    assert.strictEqual(
+      buildRedirectUri('https://sy-tools.github.io', '/sy-subtitles/'),
+      'https://sy-tools.github.io/sy-subtitles/');
+  });
+  it('normalizes /index.html to the directory root so ONE callback URL suffices', () => {
+    assert.strictEqual(buildRedirectUri('http://localhost:8000', '/index.html'), 'http://localhost:8000/');
+    assert.strictEqual(
+      buildRedirectUri('https://sy-tools.github.io', '/sy-subtitles/index.html'),
+      'https://sy-tools.github.io/sy-subtitles/');
+  });
+});
+
+describe('mergeAuthReturn', () => {
+  it('adds the saved app params to the callback query, callback params winning', () => {
+    assert.strictEqual(
+      mergeAuthReturn('?code=c1&state=s1', '?repo=a%2Fb&branch=dev'),
+      '?code=c1&state=s1&repo=a%2Fb&branch=dev');
+  });
+  it('does not let a saved param override a callback param', () => {
+    assert.strictEqual(mergeAuthReturn('?code=c1&state=s1', '?state=EVIL&repo=a%2Fb'),
+      '?code=c1&state=s1&repo=a%2Fb');
+  });
+  it('is a no-op for an empty saved search', () => {
+    assert.strictEqual(mergeAuthReturn('?code=c1&state=s1', ''), '?code=c1&state=s1');
+    assert.strictEqual(mergeAuthReturn('?code=c1&state=s1', null), '?code=c1&state=s1');
+  });
+});
+
+describe('stripAuthParams also clears GitHub error-callback params', () => {
+  it('drops error/error_description/error_uri while keeping app params', () => {
+    assert.strictEqual(
+      stripAuthParams('?repo=a%2Fb&error=access_denied&error_description=x&error_uri=y&state=s1'),
+      '?repo=a%2Fb');
+  });
+});

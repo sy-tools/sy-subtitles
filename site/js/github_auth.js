@@ -42,13 +42,36 @@ function isValidAuthCallback(params, savedState) {
   return !!(params && params.state && savedState && params.state === savedState);
 }
 
-// Drop auth params (code/state + GitHub-App install extras) from a query
-// string while preserving app params like ?repo= and ?branch=.
+// Drop auth params (code/state, error-callback params, GitHub-App install
+// extras) from a query string while preserving app params like ?repo=.
 function stripAuthParams(search) {
   var p = new URLSearchParams(search || '');
   p.delete('code'); p.delete('state');
+  p.delete('error'); p.delete('error_description'); p.delete('error_uri');
   p.delete('installation_id'); p.delete('setup_action');
   var s = p.toString();
+  return s ? '?' + s : '';
+}
+
+// GitHub Apps require redirect_uri to EXACTLY match a registered callback
+// URL, so it is the bare origin+path — never the query. /index.html collapses
+// to the directory root so one registered callback covers both ways of
+// opening the app. App params (?repo/?branch/…) round-trip via
+// sessionStorage instead (see mergeAuthReturn).
+function buildRedirectUri(origin, pathname) {
+  return origin + pathname.replace(/index\.html$/, '');
+}
+
+// Merge the pre-login app params (saved before the redirect) back into the
+// callback query. Callback params (code/state/error) always win — a saved
+// value must not be able to spoof them.
+function mergeAuthReturn(currentSearch, savedSearch) {
+  var merged = new URLSearchParams(currentSearch || '');
+  var saved = new URLSearchParams(savedSearch || '');
+  saved.forEach(function (v, k) {
+    if (!merged.has(k)) merged.set(k, v);
+  });
+  var s = merged.toString();
   return s ? '?' + s : '';
 }
 
@@ -78,6 +101,8 @@ if (typeof module !== 'undefined' && module.exports) {
     parseAuthCallback: parseAuthCallback,
     isValidAuthCallback: isValidAuthCallback,
     stripAuthParams: stripAuthParams,
+    buildRedirectUri: buildRedirectUri,
+    mergeAuthReturn: mergeAuthReturn,
     saveAuth: saveAuth,
     getAuthToken: getAuthToken,
     getAuthUser: getAuthUser,
