@@ -35,10 +35,50 @@ from a laptop. It needs four repo secrets:
 ```bash
 gh secret set GH_OAUTH_CLIENT_ID      # the Iv1.… client id (step 1)
 gh secret set GH_OAUTH_CLIENT_SECRET  # the generated client secret (step 1)
-gh secret set CLOUDFLARE_ACCOUNT_ID   # Cloudflare dashboard -> Workers -> Account ID
-gh secret set CLOUDFLARE_API_TOKEN    # dashboard -> My Profile -> API Tokens ->
-                                      #   Create Token -> "Edit Cloudflare Workers" template
+gh secret set CLOUDFLARE_ACCOUNT_ID   # see 3a
+gh secret set CLOUDFLARE_API_TOKEN    # see 3b
 ```
+
+### 3a. CLOUDFLARE_ACCOUNT_ID
+
+A Cloudflare account on the **free plan** is enough (Workers free tier:
+100k requests/day). After signing up at <https://dash.cloudflare.com>:
+
+- Open **Workers & Pages** in the left menu. On the first visit Cloudflare
+  asks you to register a `*.workers.dev` subdomain — pick one (e.g.
+  `sy-tools`); the Worker URL becomes
+  `https://sy-subtitles-oauth.<subdomain>.workers.dev`.
+- The **Account ID** is shown in the right-hand column of the Workers & Pages
+  overview page (also: it is the 32-hex-char segment in the dashboard URL,
+  `dash.cloudflare.com/<account-id>/...`).
+
+### 3b. CLOUDFLARE_API_TOKEN
+
+1. Dashboard → profile icon (top-right) → **My Profile** → **API Tokens**
+   (direct link: <https://dash.cloudflare.com/profile/api-tokens>).
+2. **Create Token** → in the templates list pick **Edit Cloudflare Workers**
+   → *Use template*.
+3. On the token form:
+   - **Account Resources**: *Include* → your account (the one from 3a).
+   - **Zone Resources**: *All zones from an account* → your account. (The
+     template bundles zone-level Workers-routes permissions; this deploy uses
+     only workers.dev, so no zone is ever touched — but the template requires
+     a selection.)
+   - Optionally set **TTL** — but note an expired token silently breaks the
+     deploy workflow later; no expiry + rotation on demand is simpler here.
+4. **Continue to summary** → **Create Token**.
+5. Copy the token — **it is shown exactly once**. Verify it works:
+
+   ```bash
+   curl -s https://api.cloudflare.com/client/v4/user/tokens/verify \
+     -H "Authorization: Bearer <token>"   # expect "status": "active"
+   ```
+
+6. `gh secret set CLOUDFLARE_API_TOKEN` (paste the token).
+
+This token can deploy/edit Workers on the account — treat it like a password:
+it lives only in the repo secret, and can be revoked/rolled any time from the
+same API Tokens page (then update the secret and re-run the workflow).
 
 ## 4. Deploy the Worker (CI)
 
