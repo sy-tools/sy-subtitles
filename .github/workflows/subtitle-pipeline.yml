@@ -120,9 +120,12 @@ env:
   MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-4-8' }}
   # Обліковий запис Claude для LLM-кроків. Конвенція: oauth_token=X бере
   # секрет CLAUDE_CODE_OAUTH_TOKEN_X (значення опції = суфікс, верхній
-  # регістр — у виразах нема upper()). Порожній інпут (push) або
-  # відсутній/порожній іменований секрет відкочуються на дефолтний токен.
-  OAUTH_TOKEN: ${{ (inputs.oauth_token && inputs.oauth_token != 'default' && secrets[format('CLAUDE_CODE_OAUTH_TOKEN_{0}', inputs.oauth_token)]) || secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+  # регістр — у виразах нема upper()). Дефолтний секрет — ЛИШЕ для
+  # 'default'/порожнього інпуту (push): якщо іменований секрет відсутній
+  # чи порожній, значення лишається '' і guard-кроки валять запуск — тихий
+  # відкат непомітно палив би ліміти основного акаунта. Хвіст || '' щоб
+  # false-гілка не стала літеральним рядком 'false' у ролі токена.
+  OAUTH_TOKEN: ${{ (inputs.oauth_token && inputs.oauth_token != 'default' && secrets[format('CLAUDE_CODE_OAUTH_TOKEN_{0}', inputs.oauth_token)]) || ((!inputs.oauth_token || inputs.oauth_token == 'default') && secrets.CLAUDE_CODE_OAUTH_TOKEN) || '' }}
 
 jobs:
   discover:
@@ -277,6 +280,18 @@ jobs:
         run: |
           echo "bun=$(which bun)" >> "$GITHUB_OUTPUT"
           echo "claude=$(which claude)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Claude token selection
+        # Fail-fast: обраний акаунт без секрета НЕ відкочується на дефолтний
+        # (тихий відкат палив би ліміти основного акаунта непомітно).
+        if: inputs.dry_run != true
+        env:
+          SELECTED: ${{ inputs.oauth_token }}
+        run: |
+          if [ -z "$OAUTH_TOKEN" ]; then
+            echo "::error::oauth_token='${SELECTED}' не резолвиться: секрет CLAUDE_CODE_OAUTH_TOKEN_${SELECTED} відсутній або порожній — відкату на default немає, додайте секрет або запустіть з oauth_token=default"
+            exit 1
+          fi
 
       - name: Translate (dry-run fake)
         if: inputs.translate != false && inputs.dry_run == true
@@ -693,6 +708,17 @@ jobs:
         run: |
           echo "bun=$(which bun)" >> "$GITHUB_OUTPUT"
           echo "claude=$(which claude)" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Claude token selection
+        # Fail-fast: обраний акаунт без секрета НЕ відкочується на дефолтний.
+        if: inputs.dry_run != true
+        env:
+          SELECTED: ${{ inputs.oauth_token }}
+        run: |
+          if [ -z "$OAUTH_TOKEN" ]; then
+            echo "::error::oauth_token='${SELECTED}' не резолвиться: секрет CLAUDE_CODE_OAUTH_TOKEN_${SELECTED} відсутній або порожній — відкату на default немає, додайте секрет або запустіть з oauth_token=default"
+            exit 1
+          fi
 
       - name: Build timecodes (dry-run fake)
         if: inputs.dry_run == true
