@@ -717,8 +717,8 @@ var PAGES_BASE = location.pathname.replace(/\/[^/]*$/, '');
 var APP_DEPLOY_SHA = ''; // app-shell version (index.html + js/*.js) at deploy
 var APP_DEPLOY_DATE = ''; // deploy date YYYY-MM-DD
 var APP_GATE_HASH = ''; // passphrase-gate PBKDF2 hash, injected at deploy from the GATE_PASSPHRASE secret (empty => gate disabled / fail-open)
-var APP_GH_CLIENT_ID = ''; // GitHub App client id (public). Empty => GitHub sign-in hidden.
-var APP_GH_EXCHANGE_URL = ''; // code->token exchange Worker (workers/oauth-exchange)
+var APP_GH_CLIENT_ID = 'Iv23liUDzvKwr32aTyMc'; // GitHub App client id (public). Empty => GitHub sign-in hidden.
+var APP_GH_EXCHANGE_URL = 'https://sy-subtitles-oauth.sy-tools.workers.dev/exchange'; // code->token exchange Worker (workers/oauth-exchange)
 // Test hooks mirror __SY_GATE_HASH: Playwright injects these to enable the
 // feature without editing the shipped (empty => disabled) config.
 function ghClientId() { return window.__SY_GH_CLIENT_ID || APP_GH_CLIENT_ID; }

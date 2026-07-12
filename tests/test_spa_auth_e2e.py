@@ -61,9 +61,8 @@ def auth_server():
 
 @pytest.fixture
 def plain_server():
-    # No auth hooks: the shipped default (empty APP_GH_CLIENT_ID) stays in force,
-    # so this serves the app exactly as production would before the GitHub App
-    # exists — the signed-out-default test asserts no auth UI renders.
+    # No auth hooks: the shipped config (real APP_GH_CLIENT_ID + prod worker
+    # URL) stays in force, so this serves the app exactly as production does.
     inject = "<head><script>window.__SY_REPO='sy-tools/sy-subtitles';</script>"
     index_html = (SITE / "index.html").read_text().replace("<head>", inject, 1).encode("utf-8")
     httpd, url = _serve(index_html)
@@ -155,8 +154,9 @@ def test_invalid_state_does_not_sign_in(auth_server, auth_page):
     assert "code=" not in page.url
 
 
-def test_signed_out_default_shows_no_auth_ui(plain_server):
-    """With an empty client id (the shipped default) neither button renders."""
+def test_signed_out_default_shows_login_button(plain_server):
+    """The shipped config carries the real GitHub App client id + worker URL,
+    so a signed-out visitor sees the login button (and no avatar) by default."""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
@@ -168,7 +168,7 @@ def test_signed_out_default_shows_no_auth_ui(plain_server):
         _route_github(pg, plain_server)
         pg.goto(f"{plain_server}/index.html")
         pg.wait_for_function("document.title.includes('Index')", timeout=10000)
-        assert pg.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") == "none"
+        assert pg.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") != "none"
         assert pg.evaluate("getComputedStyle(document.getElementById('gh-avatar')).display") == "none"
         ctx.close()
         browser.close()
