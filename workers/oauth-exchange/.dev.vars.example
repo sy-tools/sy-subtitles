@@ -2,3 +2,9 @@
 # Values come from the GitHub App (docs/github-app-setup.md, step 1).
 GH_CLIENT_ID=Iv1.xxxxxxxxxxxxxxxx
 GH_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Local-only origin allowlist: adds localhost to the prod origin so the
+# injected SPA (serve_auth_local.py, exchange URL -> localhost:8787) is
+# trusted by `wrangler dev`. The deployed Worker uses wrangler.toml's value
+# (prod origin only) — this override never ships.
+ALLOWED_ORIGINS=https://sy-tools.github.io,http://localhost:8000,http://127.0.0.1:8000

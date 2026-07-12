@@ -4,5 +4,7 @@ name = "sy-subtitles-oauth"
 main = "index.mjs"
 compatibility_date = "2026-07-01"
 
+# Production trusts only the GitHub Pages origin. Local dev overrides this
+# with localhost via .dev.vars (read by `wrangler dev`, never deployed).
 [vars]
-ALLOWED_ORIGINS = "https://sy-tools.github.io,http://localhost:8000,http://127.0.0.1:8000"
+ALLOWED_ORIGINS = "https://sy-tools.github.io"
