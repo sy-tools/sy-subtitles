@@ -4913,6 +4913,29 @@ class TestClipboardCopyDialog:
         )
 
 
+class TestPreviewResizeHandleI18n:
+    """The preview resize handles are built imperatively (makeDragHandle), so
+    their title/aria-label must carry data-i18n* keys — otherwise a UI language
+    toggle leaves the tooltip stuck in the previous language."""
+
+    def test_resize_handle_tooltip_refreshes_on_language_toggle(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+        page.set_viewport_size({"width": 1600, "height": 900})
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.wait_for_selector("#preview-player-resize", timeout=10000)
+        before = page.evaluate("document.getElementById('preview-player-resize').title")
+        assert before == "Drag to resize the player"
+        page.click("#lang-btn")
+        handle = "document.getElementById('preview-player-resize')"
+        after_title = page.evaluate(f"{handle}.title")
+        after_aria = page.evaluate(f"{handle}.getAttribute('aria-label')")
+        assert after_title != before, "resize-handle tooltip must refresh on language toggle"
+        expected = page.evaluate("t('preview.resize_player')")
+        assert after_title == expected
+        assert after_aria == expected
+
+
 class TestSubtitleOverlaySize:
     """Subtitle overlay font sizing: width-bound formula, fs-mode baseline,
     and the bidirectional handle→fs-mode mirror."""

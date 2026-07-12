@@ -153,14 +153,18 @@
     return clamp(PREVIEW_SUBS_MIN_PX, h, PREVIEW_SUBS_MAX_PX);
   }
 
-  function makeDragHandle({id, className, title, onMove, onCommit, onReset}) {
+  function makeDragHandle({id, className, titleKey, onMove, onCommit, onReset}) {
     const h = document.createElement('div');
     h.id = id;
     h.className = className;
     h.setAttribute('role','separator');
     h.setAttribute('aria-orientation','horizontal');
-    h.setAttribute('aria-label', title);
-    h.title = title;
+    // Carry the i18n keys so translatePage() re-translates the tooltip/label on
+    // a UI-language toggle — the handle is built imperatively, not from markup.
+    h.setAttribute('data-i18n-title', titleKey);
+    h.setAttribute('data-i18n-aria-label', titleKey);
+    h.setAttribute('aria-label', t(titleKey));
+    h.title = t(titleKey);
     h.tabIndex = 0;
     let pid = null, startY = 0, startVal = 0, cur = 0;
     h.addEventListener('pointerdown', e => {
@@ -208,7 +212,7 @@
       const h = makeDragHandle({
         id: 'preview-player-resize',
         className: 'preview-player-resize',
-        title: t('preview.resize_player'),
+        titleKey: 'preview.resize_player',
         onMove: {
           getStart: () => {
             const cs = getComputedStyle(document.documentElement).getPropertyValue('--preview-player-h').trim();
@@ -231,7 +235,7 @@
       const h = makeDragHandle({
         id: 'preview-subs-resize',
         className: 'preview-subs-resize',
-        title: t('preview.resize_subs'),
+        titleKey: 'preview.resize_subs',
         onMove: {
           getStart: () => {
             // Prefer the live overlay height so first drag picks up the
@@ -5153,6 +5157,10 @@ SPA.toggleLang = function() {
   var btn = document.getElementById('lang-btn');
   if (btn) btn.textContent = currentLang.toUpperCase();
   translatePage();
+  // The avatar tooltip is set imperatively (translated "signed in as" prefix +
+  // the login), so translatePage() — which only touches data-i18n* elements —
+  // can't refresh it. updateAuthUI() re-applies it in the current language.
+  updateAuthUI();
   // Re-render dynamic content
   if (manifest) {
     updateLastModifiedUI();
