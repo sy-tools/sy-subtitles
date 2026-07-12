@@ -110,3 +110,19 @@ def test_sync_review_status_unlabeled_checks_removed_label() -> None:
     data = yaml.safe_load((WORKFLOWS / "sync-review-status.yml").read_text(encoding="utf-8"))
     cond = data["jobs"]["sync"]["if"]
     assert "github.event.label.name" in cond, f"gate ignores the removed label: {cond}"
+
+
+def test_sync_subtitles_commit_skips_ci_to_avoid_self_trigger() -> None:
+    """The sync job commits the synced uk.srt/transcript as github-actions[bot]
+    and pushes to the PR branch. That push re-triggers this same pull_request
+    workflow (its paths include final/uk.srt); the second run then sees BOTH
+    transcript and SRT changed vs the PR base and runs the reverse
+    SRT->transcript pass, which conflicts with the already-applied edit and
+    fails red. The bot's own sync commit must carry a skip-ci token so it does
+    not recursively trigger the workflow."""
+    text = (WORKFLOWS / "sync-subtitles.yml").read_text(encoding="utf-8")
+    commit_lines = [line for line in text.splitlines() if "git commit -m" in line]
+    assert commit_lines, "no `git commit -m` line found in sync-subtitles.yml"
+    skip_token = re.compile(r"\[(?:skip ci|ci skip|no ci|skip actions|actions skip)\]")
+    for line in commit_lines:
+        assert skip_token.search(line), f"sync commit message lacks a skip-ci token (self-trigger risk): {line.strip()}"
