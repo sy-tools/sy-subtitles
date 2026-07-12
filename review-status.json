@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-12T15:24:20.686286+00:00",
+  "updated_at": "2026-07-12T15:50:32.718310+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -411,10 +411,10 @@
       "updated_at": "2026-06-20T10:41:06Z"
     },
     "1975-03-29_Public-Program-ScienceTrigunatmika": {
-      "status": "in-progress",
-      "reviewer": "SlavaSubotskiy",
+      "status": "pending",
+      "reviewer": null,
       "issue_number": 385,
-      "updated_at": "2026-07-12T15:24:19Z"
+      "updated_at": "2026-07-12T15:50:31Z"
     },
     "1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey": {
       "status": "pending",
