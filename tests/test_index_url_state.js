@@ -99,3 +99,12 @@ describe('buildIndexSearch', () => {
     assert.strictEqual(readIndexQuery('?' + qs), 'a b&c=d');
   });
 });
+
+describe("'mine' filter (signed-in reviewers)", () => {
+  it('is a known filter: readable from ?f= and kept by buildIndexSearch', () => {
+    assert.ok(INDEX_FILTERS.indexOf('mine') !== -1);
+    assert.strictEqual(readIndexFilter('?f=mine'), 'mine');
+    const qs = buildIndexSearch('?branch=dev', { query: '', filter: 'mine', defaultFilter: 'all' });
+    assert.strictEqual(qs, 'branch=dev&f=mine');
+  });
+});
