@@ -42,7 +42,7 @@ remains the only available source. Editorial markers from the source
 | L | L5 | Keep | Orthography: uppercase Ви/Ваша only when addressing one person; also aligns with Letter 1. |
 | L | L6, L7 | Remove | Preferences / source-mirroring, not errors. |
 | S | S1 | Keep | Corpus consistency + transliteration convention. |
-| S | S2 | Keep | Dangling idiom adds unsupported meaning; removal restores fidelity. |
+| S | S2 | Remove | Overruled by the project reviewer: «віддати на милість» carries the devotional sense of "surrender" intended here; the phrase stays. |
 | S | S3–S5 | Remove | Confirmations, not corrections. |
 
 ### Approved Corrections
@@ -53,11 +53,10 @@ remains the only available source. Editorial markers from the source
 | 3 | 7 | «навчитеся, що» | «пізнаєте, що» |
 | 4 | 7 | «вашу дуже тонку Брахма Таттву» | «свою дуже тонку Брахма Таттву» |
 | 5 | 7 | «В Сахаджа Йозі» | «У Сахаджа Йозі» |
-| 6 | 7 | «віддавши своє серце на милість» | «віддавши своє серце» |
-| 7 | 8 | «Назавжди Ваша» | «Назавжди ваша» |
+| 6 | 8 | «Назавжди Ваша» | «Назавжди ваша» |
 
 ## Summary
 
 - Language (L): 7 issues found, 5 approved by Critic
-- SY Domain (S): 5 issues found, 2 approved by Critic
-- Applied to `transcript_uk.txt`: 7 corrections
+- SY Domain (S): 5 issues found, 1 approved by Critic
+- Applied to `transcript_uk.txt`: 6 corrections
