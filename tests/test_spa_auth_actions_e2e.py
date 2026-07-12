@@ -1,10 +1,12 @@
 """E2E for the signed-in GitHub write actions: take-for-review (+'mine' chip,
-filter, highlight), Create PR from review edits, and direct issue creation.
-All GitHub endpoints are mocked with page.route; a signed-in session is
-simulated by seeding sy_gh_token / sy_gh_user in localStorage (the app treats
-those as the session — no network auth involved).
+filter, highlight), Create PR from review/preview edits, direct issue
+creation, and the add-talk PR. All GitHub endpoints are mocked with
+page.route; a signed-in session is simulated by seeding sy_gh_token /
+sy_gh_user in localStorage (the app treats those as the session — no network
+auth involved).
 """
 
+import base64
 import http.server
 import json
 import threading
@@ -16,6 +18,7 @@ pytestmark = pytest.mark.e2e
 
 SITE = Path(__file__).parent.parent / "site"
 SPA_URL = "/index.html"
+MOCK_PLAYER_JS = (Path(__file__).parent / "fixtures" / "mock_vimeo_player.js").read_text()
 
 SAMPLE_META = """title: 'Test Talk: Subtitle Preview'
 date: '2001-01-01'
@@ -170,6 +173,16 @@ def _wire(pg, calls, review_status):
     pg.route(
         "**/raw.githubusercontent.com/**/review-status.json",
         lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(review_status)),
+    )
+    # Preview needs a player: serve the mock Vimeo SDK and a blank embed page
+    # so nothing reaches the real network.
+    pg.route(
+        "**/player.vimeo.com/api/player.js",
+        lambda r: r.fulfill(status=200, content_type="application/javascript", body=MOCK_PLAYER_JS),
+    )
+    pg.route(
+        "**/player.vimeo.com/video/**",
+        lambda r: r.fulfill(status=200, content_type="text/html", body="<html></html>"),
     )
     # Write endpoints — registered last so they shadow the generic API mock.
     pg.route("**/api.github.com/repos/**/issues/42/assignees", h(201, {"number": 42}))
@@ -345,5 +358,121 @@ def test_signed_out_shows_none_of_the_new_ui(server, browser):
     pg.goto(f"{server}{SPA_URL}#/review/2001-01-01_Test-Talk")
     pg.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
     assert not pg.locator("#btn-create-pr").is_visible()
+    # The classic editor flow stays: signed-out users see the editor button.
+    assert pg.locator("#btn-review-editor").is_visible()
     assert not calls, "no write API calls may happen signed out"
+    ctx.close()
+
+
+def test_take_for_review_failure_recovers_the_button(server, browser):
+    """A failed write must not leave a dead disabled button: the card stays
+    claimable and the toast names the actionable problem (app not installed)
+    instead of echoing the opaque API message."""
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    pg.route(
+        "**/api.github.com/repos/**/issues/42/assignees",
+        lambda r: r.fulfill(
+            status=403,
+            content_type="application/json",
+            body=json.dumps({"message": "Resource not accessible by integration"}),
+        ),
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    pg.click(".take-review-btn")
+    pg.wait_for_function("document.getElementById('toast').classList.contains('show')", timeout=5000)
+    assert "GitHub App" in pg.locator("#toast").text_content()
+    pg.wait_for_function(
+        "document.querySelector('.take-review-btn') && !document.querySelector('.take-review-btn').disabled",
+        timeout=5000,
+    )
+    ctx.close()
+
+
+def test_signed_in_review_swaps_editor_for_create_pr(server, browser):
+    """Signed in, Create PR REPLACES Open-in-GitHub-Editor (both submit the
+    same edits — showing both would duplicate the action)."""
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    pg.goto(f"{server}{SPA_URL}#/review/2001-01-01_Test-Talk")
+    pg.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
+    assert pg.locator("#btn-create-pr").is_visible()
+    assert pg.locator("#btn-review-editor").count() == 1
+    assert not pg.locator("#btn-review-editor").is_visible()
+    ctx.close()
+
+
+def _open_preview_in_edit_mode(pg, server):
+    pg.goto(f"{server}{SPA_URL}#/preview/2001-01-01_Test-Talk/Test-Video")
+    pg.wait_for_selector("#mock-player", state="visible", timeout=10000)
+    pg.click(".preview-mode-toggle [data-mode='edit']")
+
+
+def test_signed_in_preview_swaps_editor_for_create_pr(server, browser):
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _open_preview_in_edit_mode(pg, server)
+    assert pg.locator("#btn-preview-pr").is_visible()
+    assert pg.locator("#btn-preview-editor").count() == 1
+    assert not pg.locator("#btn-preview-editor").is_visible()
+    # Marker mode hides both edit-submission buttons.
+    pg.click(".preview-mode-toggle [data-mode='marker']")
+    assert not pg.locator("#btn-preview-pr").is_visible()
+    assert not pg.locator("#btn-preview-editor").is_visible()
+    ctx.close()
+
+
+def test_signed_out_preview_keeps_editor_button(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, signed_in=False)
+    _open_preview_in_edit_mode(pg, server)
+    assert pg.locator("#btn-preview-editor").is_visible()
+    assert not pg.locator("#btn-preview-pr").is_visible()
+    assert not calls, "no write API calls may happen signed out"
+    ctx.close()
+
+
+def test_create_pr_from_preview_edits(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    _open_preview_in_edit_mode(pg, server)
+    # Park the playhead on block 1 and edit it through the real UX path.
+    pg.evaluate("window._vimeoPlayer._setTime(2)")
+    pg.click("#btn-mark")
+    pg.wait_for_selector(".edit-item .edited", timeout=5000)
+    row = pg.locator(".edit-item .edited").first
+    row.click()
+    row.press("End")
+    row.type(" ВИПРАВЛЕНО")
+    pg.click("#btn-preview-pr")
+    pg.wait_for_function("window.__opened.length > 0", timeout=10000)
+
+    put = next(c for c in calls if c["method"] == "PUT")
+    assert put["url"].split("?")[0].endswith("/contents/talks/2001-01-01_Test-Talk/Test-Video/final/uk.srt")
+    committed = base64.b64decode(put["body"]["content"]).decode("utf-8")
+    assert "Перший субтитр ВИПРАВЛЕНО" in committed
+    assert "Другий субтитр" in committed
+    refs = next(c for c in calls if c["url"].endswith("/git/refs"))
+    assert refs["body"]["ref"].startswith("refs/heads/preview/2001-01-01_Test-Talk--tester--")
+    pull = next(c for c in calls if c["url"].endswith("/pulls"))
+    assert pull["body"]["head"] == refs["body"]["ref"].replace("refs/heads/", "")
+    assert pg.evaluate("window.__opened[0]") == "https://github.com/sy-tools/sy-subtitles/pull/9"
+    ctx.close()
+
+
+def test_add_talk_creates_pr_when_signed_in(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    payload = json.dumps({"t": "Brand New Talk", "d": "2002-02-02", "u": "https://www.amruta.org/talk/"})
+    pg.goto(f"{server}{SPA_URL}#/add?data={payload}")
+    pg.wait_for_selector("#add-form", state="visible", timeout=10000)
+    pg.click("#add-form button[type='submit']")
+    pg.wait_for_function("window.__opened.length > 0", timeout=10000)
+
+    put = next(c for c in calls if c["method"] == "PUT")
+    assert put["url"].split("?")[0].endswith("/contents/talks/2002-02-02_Brand-New-Talk/meta.yaml")
+    committed = base64.b64decode(put["body"]["content"]).decode("utf-8")
+    assert "Brand New Talk" in committed
+    refs = next(c for c in calls if c["url"].endswith("/git/refs"))
+    assert refs["body"]["ref"].startswith("refs/heads/add-talk/2002-02-02_Brand-New-Talk--tester--")
+    assert pg.evaluate("window.__opened[0]") == "https://github.com/sy-tools/sy-subtitles/pull/9"
     ctx.close()

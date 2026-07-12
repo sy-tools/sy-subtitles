@@ -59,7 +59,21 @@ describe('getViewer', () => {
 const {
   utf8ToBase64, makeBranchName, createIssue, addAssignees,
   getBranchHeadSha, createRef, getFileSha, putFile, createPull, submitFilesPr,
+  isIntegrationAccessError,
 } = require('../site/js/github_api');
+
+describe('isIntegrationAccessError', () => {
+  it('recognizes the 403 "Resource not accessible by integration" reply', () => {
+    assert.strictEqual(isIntegrationAccessError(
+      { status: 403, message: 'Resource not accessible by integration' }), true);
+  });
+  it('rejects other 403s, other statuses, and empty errors', () => {
+    assert.strictEqual(isIntegrationAccessError({ status: 403, message: 'Forbidden' }), false);
+    assert.strictEqual(isIntegrationAccessError({ status: 404, message: 'Resource not accessible by integration' }), false);
+    assert.strictEqual(isIntegrationAccessError({ status: 403 }), false);
+    assert.strictEqual(isIntegrationAccessError(null), false);
+  });
+});
 
 const API = 'https://api.github.com/repos/sy-tools/sy-subtitles';
 

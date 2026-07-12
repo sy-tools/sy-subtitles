@@ -73,6 +73,14 @@ function ghJson(url, token, opts, fetchImpl) {
   });
 }
 
+// A 403 "Resource not accessible by integration" from ghJson means the
+// GitHub App is not installed on the repository (or lacks a permission) —
+// an admin-fixable configuration problem the UI should name explicitly
+// instead of echoing the opaque API message.
+function isIntegrationAccessError(err) {
+  return !!(err && err.status === 403 && /integration/i.test(err.message || ''));
+}
+
 // UTF-8 → base64 for the contents API (btoa alone breaks on non-Latin-1).
 // Works in both the browser and Node (btoa is global in Node 16+).
 function utf8ToBase64(s) {
@@ -185,6 +193,7 @@ if (typeof module !== 'undefined' && module.exports) {
     authHeaders: authHeaders,
     exchangeCode: exchangeCode,
     getViewer: getViewer,
+    isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,
     makeBranchName: makeBranchName,
     createIssue: createIssue,

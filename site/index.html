@@ -297,9 +297,13 @@
 
 <!-- === FRESHNESS BAR (global, all views) === -->
 <div id="freshness-bar" style="background:var(--bg2);border-bottom:1px solid var(--border);padding:4px 20px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--fg6);position:sticky;top:0;z-index:30;">
-  <div class="branch-selector">
-    <button class="branch-btn" id="branch-btn" onclick="SPA.toggleBranches()">main &#x25BE;</button>
-    <div class="branch-dropdown" id="branch-dropdown"></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <img id="gh-avatar" src="" alt="" onclick="SPA.ghAccountMenu()" style="display:none;width:20px;height:20px;border-radius:50%;cursor:pointer;border:1px solid var(--border2);vertical-align:middle;">
+    <button id="gh-login-btn" onclick="SPA.ghLogin()" data-i18n="auth.login" data-i18n-title="auth.login_title" style="display:none;background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;">GitHub</button>
+    <div class="branch-selector">
+      <button class="branch-btn" id="branch-btn" onclick="SPA.toggleBranches()">main &#x25BE;</button>
+      <div class="branch-dropdown" id="branch-dropdown"></div>
+    </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <span id="stale-indicator" style="display:none;align-items:center;gap:6px;background:var(--bg4);color:var(--fg3);border:1px solid var(--border3);border-radius:10px;padding:1px 4px 1px 8px;font-size:11px;">
@@ -307,8 +311,6 @@
       <button class="stale-x" onclick="SPA.dismissStale()" data-i18n-title="stale.dismiss" style="background:none;border:none;color:var(--fg5);cursor:pointer;font-size:13px;line-height:1;padding:0 2px;">&#x00D7;</button>
     </span>
     <span id="last-updated"></span>
-    <img id="gh-avatar" src="" alt="" onclick="SPA.ghAccountMenu()" style="display:none;width:20px;height:20px;border-radius:50%;cursor:pointer;border:1px solid var(--border2);vertical-align:middle;">
-    <button id="gh-login-btn" onclick="SPA.ghLogin()" data-i18n="auth.login" data-i18n-title="auth.login_title" style="display:none;background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;">GitHub</button>
     <button id="refresh-btn" onclick="SPA.refreshManifest()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;display:none;" data-i18n-title="title.refresh">&#x21bb;</button>
     <button id="lang-btn" onclick="SPA.toggleLang()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;" data-i18n-title="title.lang">UK</button>
     <button id="theme-btn" onclick="SPA.cycleTheme()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;" data-i18n-title="title.theme.auto">&#x263C;</button>
@@ -338,6 +340,7 @@
     <div class="header-actions">
       <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-i18n="btn.copy_all">Copy all</button>
       <button id="btn-preview-issue" class="btn btn--issue" onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
+      <button id="btn-preview-pr" class="btn btn--primary" style="display:none" onclick="SPA.createPreviewPr()" data-i18n="btn.create_pr">Create PR</button>
       <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button id="btn-clear-all" class="btn btn--danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
     </div>
@@ -378,7 +381,7 @@
       </span>
       <button class="btn btn--issue" onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
       <button id="btn-create-pr" class="btn btn--primary" data-gh-only style="display:none" onclick="SPA.createReviewPr()" data-i18n="btn.create_pr">Create PR</button>
-      <button class="btn btn--primary" onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
+      <button id="btn-review-editor" class="btn btn--primary" data-gh-hide onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button onclick="SPA.revertAllEdits()" id="btn-revert-all" class="btn btn--danger" style="display:none" data-i18n="btn.revert_all">Revert all</button>
     </div>
   </div>
@@ -889,6 +892,7 @@ var I18N = {
     'issue.created': '\u0406\u0448\u02BC\u044E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
     'review.taken': '\u041F\u0440\u043E\u043C\u043E\u0432\u0443 \u0432\u0437\u044F\u0442\u043E \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'gh.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 GitHub',
+    'gh.no_app_access': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u0434\u043E \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0456\u044E \u2014 \u0430\u0434\u043C\u0456\u043D\u0456\u0441\u0442\u0440\u0430\u0442\u043E\u0440 \u043C\u0430\u0454 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0430 \u043D\u044C\u043E\u043C\u0443',
     'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
   },
   en: {
@@ -1035,6 +1039,7 @@ var I18N = {
     'issue.created': 'Issue created',
     'review.taken': 'Talk taken for review',
     'gh.error': 'GitHub error',
+    'gh.no_app_access': 'The GitHub App has no access to this repository — an admin must install the app on it',
     'title.lang': 'Interface language'
   }
 };
@@ -2523,7 +2528,9 @@ function renderIndex(el) {
     if (takeEl) takeEl.addEventListener('click', function(e) {
       e.stopPropagation();
       takeEl.disabled = true;
-      SPA.takeForReview(tk.id);
+      // Success re-renders the index (this button is replaced); on failure
+      // the re-enable makes the card claimable again.
+      SPA.takeForReview(tk.id).then(function() { takeEl.disabled = false; });
     });
 
     // Copy the talk id on expert-button click (id comes from the closure, never
@@ -3022,6 +3029,20 @@ function flushPreviewPos() {
   writePreviewPosNow();
 }
 
+// Edit-submission buttons live at the mode × auth intersection: edit mode
+// shows exactly ONE of them — Create PR signed in, the clipboard+editor flow
+// signed out (both submit the same edits, showing both would duplicate the
+// action). Called from applyPreviewMode (mode flips) AND updateAuthUI
+// (login/logout while the preview is open).
+function updatePreviewSubmitButtons() {
+  var mode = (typeof previewState !== 'undefined' && previewState.mode) || 'marker';
+  var signedIn = !!getAuthUser();
+  var editorBtn = document.getElementById('btn-preview-editor');
+  if (editorBtn) editorBtn.style.display = (mode === 'edit' && !signedIn) ? 'inline-block' : 'none';
+  var prBtn = document.getElementById('btn-preview-pr');
+  if (prBtn) prBtn.style.display = (mode === 'edit' && signedIn) ? 'inline-block' : 'none';
+}
+
 function applyPreviewMode() {
   var mode = previewState.mode || 'marker';
   document.querySelectorAll('.preview-mode-toggle button').forEach(function(b) {
@@ -3040,8 +3061,7 @@ function applyPreviewMode() {
   }
   var copyBtn = document.getElementById('btn-copy-all');
   if (copyBtn) copyBtn.style.display = mode === 'marker' ? 'inline-block' : 'none';
-  var editorBtn = document.getElementById('btn-preview-editor');
-  if (editorBtn) editorBtn.style.display = mode === 'edit' ? 'inline-block' : 'none';
+  updatePreviewSubmitButtons();
   var label = document.getElementById('preview-list-label');
   if (label) {
     label.textContent = mode === 'edit' ? t('edits.summary') : t('markers.summary');
@@ -3413,7 +3433,9 @@ SPA.copyMarkers = function() {
   });
 };
 
-SPA.createPreviewIssue = function() {
+// {title, body} of the preview issue \u2014 also reused verbatim as the PR body by
+// SPA.createPreviewPr, so both write paths describe the same marks/edits.
+function buildPreviewIssueContent() {
   var s = previewState;
   var gh = 'https://github.com/' + REPO;
   var lang = s.srtLang || 'uk';
@@ -3444,13 +3466,46 @@ SPA.createPreviewIssue = function() {
       lines.push('| ' + m.tc + ' | ' + m.text + ' | ' + (m.comment || '') + ' |');
     });
   }
-  var issueTitle = (s.mode === 'edit' ? 'Subtitle edits: ' : 'Subtitle review: ') + (s.video ? s.video.title : s.videoSlug);
-  var issueBody = lines.join('\n');
+  return {
+    title: (s.mode === 'edit' ? 'Subtitle edits: ' : 'Subtitle review: ') + (s.video ? s.video.title : s.videoSlug),
+    body: lines.join('\n')
+  };
+}
+
+SPA.createPreviewIssue = function() {
+  var content = buildPreviewIssueContent();
   if (getAuthUser() && getAuthToken()) {
-    submitIssueViaApi(issueTitle, issueBody);
+    submitIssueViaApi(content.title, content.body);
     return;
   }
-  openIssuePage(issueTitle, issueBody);
+  openIssuePage(content.title, content.body);
+};
+
+// One-button PR from the preview's subtitle edits: new timestamped branch off
+// BRANCH, commit the rebuilt final/<lang>.srt, open the PR (whose body = the
+// preview issue body). sync-subtitles.yml then reconciles SRT\u2194transcript.
+SPA.createPreviewPr = function() {
+  var user = getAuthUser(), token = getAuthToken();
+  if (!user || !token) return;
+  var s = previewState;
+  var lang = s.srtLang || 'uk';
+  var langEdits = (s.edits && s.edits[lang]) || {};
+  if (!Object.keys(langEdits).length) { showToast(t('pr.no_edits')); return; }
+  var filePath = 'talks/' + s.talkId + '/' + s.videoSlug + '/final/' + lang + '.srt';
+  var content = buildPreviewIssueContent();
+  var btn = document.getElementById('btn-preview-pr');
+  if (btn) btn.disabled = true;
+  submitFilesPr(API, token, {
+    branch: makeBranchName('preview/' + s.talkId, user.login),
+    base: BRANCH,
+    files: [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
+    commitMessage: 'Subtitle edits: ' + s.talkId + ' (' + s.videoSlug + '/' + lang + ')',
+    prTitle: content.title,
+    prBody: content.body
+  }).then(function(pr) {
+    ghCreatedDialog('pr.created', pr);
+  }).catch(ghWriteError)
+    .then(function() { if (btn) btn.disabled = false; });
 };
 
 SPA.openPreviewEditor = function() {
@@ -4188,6 +4243,13 @@ function ghWriteError(err) {
     showToast(t('auth.expired'));
     return;
   }
+  // 403 "Resource not accessible by integration": the GitHub App is not
+  // installed on the repo (or lacks a permission) — name the fix, don't echo
+  // the opaque API message.
+  if (isIntegrationAccessError(err)) {
+    showToast(t('gh.no_app_access'), 6000);
+    return;
+  }
   var msg = t('gh.error') + (err && err.message ? ': ' + err.message : '');
   if (err && err.branch) {
     var burl = 'https://github.com/' + REPO + '/tree/' + err.branch;
@@ -4199,7 +4261,7 @@ function ghWriteError(err) {
     });
     return;
   }
-  showToast(msg);
+  showToast(msg, 4000);
 }
 
 // Signed-in issue path: POST /issues directly (no URL-length limit, no
@@ -4382,10 +4444,10 @@ function esc(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 // protocol-relative //host), then HTML-escape so a quote/tag cannot break out
 // of the href="" attribute. Returns '' for disallowed/empty URLs.
 function safeHref(u) { return /^(https?:\/\/|#|mailto:)/i.test(u || '') ? esc(u) : ''; }
-function showToast(msg) {
+function showToast(msg, ms) {
   var el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
-  setTimeout(function() { el.classList.remove('show'); }, 2000);
+  setTimeout(function() { el.classList.remove('show'); }, ms || 2000);
 }
 function fmtTime(sec) {
   return String(Math.floor(sec/3600)).padStart(2,'0') + ':' + String(Math.floor((sec%3600)/60)).padStart(2,'0') + ':' + String(Math.floor(sec%60)).padStart(2,'0');
@@ -4410,9 +4472,15 @@ function updateAuthUI() {
   } else {
     avatar.style.display = 'none';
   }
-  // Signed-in-only controls (e.g. the review view's Create PR button).
+  // Signed-in-only controls (e.g. the review view's Create PR button) and
+  // their signed-out twins (data-gh-hide, e.g. Open in GitHub Editor): the
+  // API action REPLACES the manual flow — never both at once.
   var ghOnly = document.querySelectorAll('[data-gh-only]');
   for (var i = 0; i < ghOnly.length; i++) ghOnly[i].style.display = user ? '' : 'none';
+  var ghHide = document.querySelectorAll('[data-gh-hide]');
+  for (var j = 0; j < ghHide.length; j++) ghHide[j].style.display = user ? 'none' : '';
+  // The preview's pair also depends on the marker/edit mode — delegate.
+  updatePreviewSubmitButtons();
   // Index cards/chips render auth-dependent bits ("take for review", the
   // 'mine' chip, own-talk highlight) — refresh them on login/logout.
   if (manifest && document.getElementById('index-content')) {
@@ -4430,7 +4498,7 @@ function updateAuthUI() {
 // optimistically so the badge doesn't lag behind the bot commit.
 SPA.takeForReview = function(talkId) {
   var user = getAuthUser(), token = getAuthToken();
-  if (!user || !token) return;
+  if (!user || !token) return Promise.resolve();
   var st = (reviewStatus && reviewStatus.talks && reviewStatus.talks[talkId]) || null;
   var done = function(issueNumber) {
     if (!reviewStatus) reviewStatus = { talks: {} };
@@ -4445,24 +4513,26 @@ SPA.takeForReview = function(talkId) {
     renderIndex(document.getElementById('index-content'));
     showToast(t('review.taken'));
   };
+  // Returns a promise that settles when the claim attempt is over (errors are
+  // reported via ghWriteError, not rethrown) — the card's click handler
+  // re-enables its button on it, so a failure never leaves a dead button.
   if (st && st.issue_number) {
-    addAssignees(API, token, st.issue_number, [user.login])
+    return addAssignees(API, token, st.issue_number, [user.login])
       .then(function() { done(st.issue_number); })
       .catch(ghWriteError);
-  } else {
-    var talk = manifest ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
-    var gh = 'https://github.com/' + REPO;
-    var body = 'Review of [`' + talkId + '`](' + gh + '/tree/main/talks/' + talkId + ')'
-      + '\n\nTaken via the SY Subtitles SPA'
-      + (talk && talk.title ? ' — ' + talk.title : '') + '.';
-    createIssue(API, token, {
-      title: 'Review: ' + talkId,
-      body: body,
-      labels: ['talk-review', 'review:in-progress'],
-      assignees: [user.login]
-    }).then(function(res) { done(res.number); })
-      .catch(ghWriteError);
   }
+  var talk = manifest ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
+  var gh = 'https://github.com/' + REPO;
+  var body = 'Review of [`' + talkId + '`](' + gh + '/tree/main/talks/' + talkId + ')'
+    + '\n\nTaken via the SY Subtitles SPA'
+    + (talk && talk.title ? ' — ' + talk.title : '') + '.';
+  return createIssue(API, token, {
+    title: 'Review: ' + talkId,
+    body: body,
+    labels: ['talk-review', 'review:in-progress'],
+    assignees: [user.login]
+  }).then(function(res) { done(res.number); })
+    .catch(ghWriteError);
 };
 
 SPA.ghLogin = function() {

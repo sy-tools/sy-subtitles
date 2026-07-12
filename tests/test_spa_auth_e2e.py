@@ -211,6 +211,24 @@ def test_callback_restores_app_params_saved_before_login(hooks_only_server):
         browser.close()
 
 
+def test_login_control_sits_left_of_branch_selector(auth_server, auth_page):
+    """The login button and avatar live in the freshness bar's LEFT group,
+    before the branch selector — placed on the right they visually split the
+    refresh button from the last-updated message."""
+    page = auth_page
+    page.goto(f"{auth_server}/index.html")
+    page.wait_for_selector("#gh-login-btn", state="visible", timeout=10000)
+    left_group = "document.getElementById('freshness-bar').children[0]"
+    for el_id in ("gh-login-btn", "gh-avatar", "branch-btn"):
+        assert page.evaluate(f"{left_group}.contains(document.getElementById('{el_id}'))"), (
+            f"#{el_id} must be in the freshness bar's left group"
+        )
+    assert page.evaluate(
+        "!!(document.getElementById('gh-login-btn').compareDocumentPosition("
+        "document.getElementById('branch-btn')) & Node.DOCUMENT_POSITION_FOLLOWING)"
+    ), "login button must precede the branch selector"
+
+
 def test_login_redirect_uri_is_bare_app_url(auth_server, auth_page):
     """The authorize URL must carry a query-less redirect_uri (GitHub Apps
     exact-match a registered callback; ?repo= riding along is rejected with
