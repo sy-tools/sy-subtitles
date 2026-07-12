@@ -377,6 +377,7 @@
         <div id="video-picker-dropdown" class="video-dropdown" role="listbox"></div>
       </span>
       <button class="btn btn--issue" onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
+      <button id="btn-create-pr" class="btn btn--primary" data-gh-only style="display:none" onclick="SPA.createReviewPr()" data-i18n="btn.create_pr">Create PR</button>
       <button class="btn btn--primary" onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button onclick="SPA.revertAllEdits()" id="btn-revert-all" class="btn btn--danger" style="display:none" data-i18n="btn.revert_all">Revert all</button>
     </div>
@@ -862,6 +863,15 @@ var I18N = {
     'auth.error_state': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443: \u043D\u0435\u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 state. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.',
     'auth.error_exchange': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 GitHub',
     'auth.expired': '\u0421\u0435\u0441\u0456\u044F GitHub \u043D\u0435\u0434\u0456\u0439\u0441\u043D\u0430 \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0432\u0438\u0445\u0456\u0434',
+    'btn.create_pr': '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
+    'btn.take_review': '\u0412\u0437\u044F\u0442\u0438 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'stat.mine': '\u043C\u043E\u0457',
+    'pr.created': 'PR \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
+    'pr.no_edits': '\u041D\u0435\u043C\u0430\u0454 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u044C \u0434\u043B\u044F PR',
+    'pr.failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
+    'issue.created': '\u0406\u0448\u02BC\u044E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
+    'review.taken': '\u041F\u0440\u043E\u043C\u043E\u0432\u0443 \u0432\u0437\u044F\u0442\u043E \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'gh.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 GitHub',
     'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
   },
   en: {
@@ -999,6 +1009,15 @@ var I18N = {
     'auth.error_state': 'Sign-in failed: invalid state. Please try again.',
     'auth.error_exchange': 'GitHub sign-in failed',
     'auth.expired': 'GitHub session invalid — signed out',
+    'btn.create_pr': 'Create PR',
+    'btn.take_review': 'Take for review',
+    'stat.mine': 'mine',
+    'pr.created': 'PR created',
+    'pr.no_edits': 'No edits to submit as a PR',
+    'pr.failed': 'Could not create the PR',
+    'issue.created': 'Issue created',
+    'review.taken': 'Talk taken for review',
+    'gh.error': 'GitHub error',
     'title.lang': 'Interface language'
   }
 };
@@ -2222,19 +2241,22 @@ function buildManifest(tree) {
 // Review Status (static JSON, zero API cost)
 // ============================================================
 function computeStats(talks, statuses, query) {
-  var total = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0 };
-  var filtered = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0 };
+  var total = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
+  var filtered = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
+  var authLogin = (getAuthUser() || {}).login || null;
   talks.forEach(function(t) {
     var matchesSearch = !query || ((t.title || '') + ' ' + (t.date || '') + ' ' + t.id).toLowerCase().indexOf(query) !== -1;
     var st = statuses[t.id] || null;
     var stages = getPipelineStages(t, st);
     var status = getOverallStatus(stages, st);
+    var isMine = !!(authLogin && st && st.reviewer === authLogin);
     // Total counts
     total.talks++;
     if (status === 'ready-for-review') total.needs_review++;
     if (status === 'in-review') total.in_review++;
     if (status === 'approved') total.approved++;
     if (status === 'in-progress') total.pending++;
+    if (isMine) total.mine++;
     // Filtered counts (by search)
     if (matchesSearch) {
       filtered.talks++;
@@ -2242,6 +2264,7 @@ function computeStats(talks, statuses, query) {
       if (status === 'in-review') filtered.in_review++;
       if (status === 'approved') filtered.approved++;
       if (status === 'in-progress') filtered.pending++;
+      if (isMine) filtered.mine++;
     }
   });
   return { total: total, filtered: filtered };
@@ -2272,6 +2295,10 @@ function renderStats() {
       { f: s.filtered.needs_review, t: s.total.needs_review, label: t('stat.needs_review'), cls: 'warn', filter: 'needs-review' },
       { f: s.filtered.in_review, t: s.total.in_review, label: t('stat.in_review'), cls: 'info', filter: 'in-review' },
     ];
+  }
+  // Signed-in reviewers get a "mine" chip in both modes.
+  if (getAuthUser()) {
+    cards.push({ f: s.filtered.mine, t: s.total.mine, label: t('stat.mine'), cls: 'good', filter: 'mine' });
   }
   bar.innerHTML = '';
   cards.forEach(function(c) {
@@ -2402,11 +2429,13 @@ function renderIndex(el) {
   document.getElementById('index-toolbar').style.display = 'block';
   var statuses = (reviewStatus && reviewStatus.talks) || {};
   var query = (document.getElementById('search-input').value || '').toLowerCase();
+  var authLogin = (getAuthUser() || {}).login || null;
 
   manifest.talks.forEach(function(tk) {
     var st = statuses[tk.id] || null;
     var stages = getPipelineStages(tk, st);
     var status = getOverallStatus(stages, st);
+    var isMine = !!(authLogin && st && st.reviewer === authLogin);
 
     // Filter by status
     if (activeFilter === 'all' && !expertMode) {
@@ -2417,6 +2446,7 @@ function renderIndex(el) {
       if (activeFilter === 'in-review' && status !== 'in-review') return;
       if (activeFilter === 'pending' && status !== 'in-progress') return;
       if (activeFilter === 'approved' && status !== 'approved') return;
+      if (activeFilter === 'mine' && !isMine) return;
     }
 
     // Search
@@ -2425,7 +2455,7 @@ function renderIndex(el) {
 
     // Build card — all data is from trusted manifest, escaped with esc()
     var div = document.createElement('div');
-    div.className = 'talk-item';
+    div.className = 'talk-item' + (isMine ? ' talk-item--mine' : '');
     var dateStr = tk.date || tk.id.substring(0, 10);
     var badge = '';
     if (st) {
@@ -2452,6 +2482,12 @@ function renderIndex(el) {
     if (actions.review) {
       reviewLink = '<a href="' + safeHref('#/review/' + tk.id) + '" class="review-link">&#x270E; ' + t('link.review') + '</a>';
     }
+    // "Take for review" — signed-in reviewers claim an unassigned talk right
+    // from the card (id is bound via addEventListener below, not inline HTML).
+    var takeBtn = '';
+    if (authLogin && actions.review && status !== 'approved' && !(st && st.reviewer)) {
+      takeBtn = '<button class="btn btn--sm btn--ghost take-review-btn">' + esc(t('btn.take_review')) + '</button>';
+    }
     // Assemble card. amruta_url is attacker-influenceable (meta.yaml from a
     // PR / the amruta-scraping bookmarklet) so route it through safeHref;
     // dateStr is escaped too. The expert button's talk-id copy is bound via
@@ -2464,7 +2500,14 @@ function renderIndex(el) {
     var statusBadge = renderStatusBadge(status, st);
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
-      + ((videoLinks || reviewLink) ? '<div class="talk-actions">' + videoLinks + reviewLink + '</div>' : '');
+      + ((videoLinks || reviewLink || takeBtn) ? '<div class="talk-actions">' + videoLinks + reviewLink + takeBtn + '</div>' : '');
+
+    var takeEl = div.querySelector('.take-review-btn');
+    if (takeEl) takeEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+      takeEl.disabled = true;
+      SPA.takeForReview(tk.id);
+    });
 
     // Copy the talk id on expert-button click (id comes from the closure, never
     // injected into HTML). stopPropagation keeps the card from expanding; the
@@ -3386,22 +3429,11 @@ SPA.createPreviewIssue = function() {
   }
   var issueTitle = (s.mode === 'edit' ? 'Subtitle edits: ' : 'Subtitle review: ') + (s.video ? s.video.title : s.videoSlug);
   var issueBody = lines.join('\n');
-  var url = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending&body=' + encodeURIComponent(issueBody);
-  var shortUrl = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending';
-  if (url.length > 8000) {
-    navigator.clipboard.writeText(issueBody).then(function() {
-      SPA.confirm({
-        title: t('modal.copied_title_issue'),
-        body: t('modal.copied_body_issue'),
-        confirmLabel: t('modal.open_github'),
-        singleButton: true
-      }).then(function() { window.open(shortUrl); });
-    }).catch(function() {
-      window.open(shortUrl);
-    });
-  } else {
-    window.open(url);
+  if (getAuthUser() && getAuthToken()) {
+    submitIssueViaApi(issueTitle, issueBody);
+    return;
   }
+  openIssuePage(issueTitle, issueBody);
 };
 
 SPA.openPreviewEditor = function() {
@@ -4104,15 +4136,74 @@ function updateRevertBtn() {
   btn.textContent = ec > 0 ? t('btn.revert_all') + ' (' + ec + ')' : t('btn.revert_all');
 }
 
-SPA.createReviewIssue = function() {
+// Path + label of the file the review view edits (the right column). Shared
+// by the issue body, the GitHub-editor flow and the signed-in PR flow.
+function reviewFilePath() {
+  var isSrt = reviewState.mode === 'srt';
+  return {
+    isSrt: isSrt,
+    path: isSrt
+      ? 'talks/' + reviewState.talkId + '/' + reviewState.videoSlug + '/final/' + (reviewState.srtRightLang) + '.srt'
+      : 'talks/' + reviewState.talkId + '/transcript_' + reviewState.rightLang + '.txt',
+    label: isSrt ? 'Subtitles' : 'Transcript'
+  };
+}
+
+// Success dialog for a created issue/PR: window.open must happen on the
+// dialog's confirm click (a user gesture) or popup blockers eat it.
+function ghCreatedDialog(titleKey, res) {
+  SPA.confirm({
+    title: t(titleKey),
+    body: '<a href="' + safeHref(res.html_url) + '" target="_blank">#' + res.number + '</a>',
+    confirmLabel: t('modal.open_github'),
+    singleButton: true
+  }).then(function() { window.open(res.html_url); });
+}
+
+// Shared failure path for signed-in write calls. 401 = revoked token → silent
+// sign-out; an error carrying .branch (the PR chain died after the branch was
+// pushed) links to the orphan branch; anything else is a toast.
+function ghWriteError(err) {
+  console.warn('GitHub write failed:', err && err.status, err && err.message);
+  if (err && err.status === 401) {
+    clearAuth();
+    updateAuthUI();
+    showToast(t('auth.expired'));
+    return;
+  }
+  var msg = t('gh.error') + (err && err.message ? ': ' + err.message : '');
+  if (err && err.branch) {
+    var burl = 'https://github.com/' + REPO + '/tree/' + err.branch;
+    SPA.confirm({
+      title: t('pr.failed'),
+      body: esc(msg) + '<br><br><a href="' + safeHref(burl) + '" target="_blank">' + esc(err.branch) + '</a>',
+      confirmLabel: 'OK',
+      singleButton: true
+    });
+    return;
+  }
+  showToast(msg);
+}
+
+// Signed-in issue path: POST /issues directly (no URL-length limit, no
+// clipboard round-trip).
+function submitIssueViaApi(issueTitle, issueBody) {
+  return createIssue(API, getAuthToken(),
+    { title: issueTitle, body: issueBody, labels: ['review:pending'] })
+    .then(function(res) { ghCreatedDialog('issue.created', res); })
+    .catch(ghWriteError);
+}
+
+// {title, body} of the review issue — also reused verbatim as the PR body by
+// SPA.createReviewPr, so both write paths describe the same marks/edits.
+function buildReviewIssueContent() {
   var gh = 'https://github.com/' + REPO;
   var talk = manifest ? manifest.talks.find(function(t) { return t.id === reviewState.talkId; }) : null;
   var title = talk ? talk.title : reviewState.talkId;
-  var isSrt = reviewState.mode === 'srt';
-  var filePath = isSrt
-    ? 'talks/' + reviewState.talkId + '/' + reviewState.videoSlug + '/final/' + (reviewState.srtRightLang) + '.srt'
-    : 'talks/' + reviewState.talkId + '/transcript_' + reviewState.rightLang + '.txt';
-  var fileLabel = isSrt ? 'Subtitles' : 'Transcript';
+  var file = reviewFilePath();
+  var isSrt = file.isSrt;
+  var filePath = file.path;
+  var fileLabel = file.label;
   var aligned = isSrt ? (reviewState.alignedRows || []) : null;
 
   function rowLabel(idx) {
@@ -4142,8 +4233,13 @@ SPA.createReviewIssue = function() {
       lines.push('<details><summary><b>' + rowLabel(idx) + '</b></summary>', '', '**Before:**', '> ' + (reviewState.rightParas[idx]||''), '', '**After:**', '> ' + reviewState.edits[idx], '', '</details>', '');
     });
   }
-  var issueTitle = 'Translation review: ' + title;
-  var issueBody = lines.join('\n');
+  return { title: 'Translation review: ' + title, body: lines.join('\n') };
+}
+
+// Prefilled-URL issue flow with the ~8k URL-length clipboard fallback — the
+// signed-OUT path, byte-identical to the pre-auth behaviour.
+function openIssuePage(issueTitle, issueBody) {
+  var gh = 'https://github.com/' + REPO;
   var url = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending&body=' + encodeURIComponent(issueBody);
   var shortUrl = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending';
   // GitHub URL limit ~8192 chars — if too long, copy body to clipboard
@@ -4161,15 +4257,47 @@ SPA.createReviewIssue = function() {
   } else {
     window.open(url);
   }
+}
+
+SPA.createReviewIssue = function() {
+  var content = buildReviewIssueContent();
+  if (getAuthUser() && getAuthToken()) {
+    submitIssueViaApi(content.title, content.body);
+    return;
+  }
+  openIssuePage(content.title, content.body);
 };
 
-SPA.openEditor = function() {
+// One-button PR from the review edits: new timestamped branch off BRANCH,
+// commit the rebuilt file, open the PR (whose body = the review issue body).
+// The existing sync-subtitles.yml then reconciles transcript↔SRT on the PR.
+SPA.createReviewPr = function() {
+  var user = getAuthUser(), token = getAuthToken();
+  if (!user || !token) return;
+  if (!Object.keys(reviewState.edits).length) { showToast(t('pr.no_edits')); return; }
+  var file = reviewFilePath();
+  var content = buildReviewIssueContent();
+  var btn = document.getElementById('btn-create-pr');
+  if (btn) btn.disabled = true;
+  submitFilesPr(API, token, {
+    branch: makeBranchName('review/' + reviewState.talkId, user.login),
+    base: BRANCH,
+    files: [{ path: file.path, content: buildReviewEditedContent() }],
+    commitMessage: 'Review edits: ' + reviewState.talkId + ' (' + file.label + ')',
+    prTitle: content.title,
+    prBody: content.body
+  }).then(function(pr) {
+    ghCreatedDialog('pr.created', pr);
+  }).catch(ghWriteError)
+    .then(function() { if (btn) btn.disabled = false; });
+};
+
+// Full new content of the review view's edited file: SRT rebuilt with original
+// numbering/timecodes and edited text substituted; transcript re-serialized
+// byte-exact (BOM/CRLF/header preserved). Callers ensure edits exist.
+function buildReviewEditedContent() {
   var isSrt = reviewState.mode === 'srt';
-  var filePath = isSrt
-    ? 'talks/' + reviewState.talkId + '/' + reviewState.videoSlug + '/final/' + (reviewState.srtRightLang) + '.srt'
-    : 'talks/' + reviewState.talkId + '/transcript_' + reviewState.rightLang + '.txt';
-  var url = 'https://github.com/' + REPO + '/edit/main/' + filePath;
-  if (Object.keys(reviewState.edits).length > 0) {
+  {
     var full;
     if (isSrt) {
       // Rebuild a valid SRT from alignedRows: keep block numbering and timecodes
@@ -4205,7 +4333,14 @@ SPA.openEditor = function() {
       var parsed = reviewState.rightParsed || { header: '', separator: '\n', bom: '', lineEnding: '\n' };
       full = serializeTranscript(parsed, paras);
     }
-    navigator.clipboard.writeText(full).then(function() {
+    return full;
+  }
+}
+
+SPA.openEditor = function() {
+  var url = 'https://github.com/' + REPO + '/edit/main/' + reviewFilePath().path;
+  if (Object.keys(reviewState.edits).length > 0) {
+    navigator.clipboard.writeText(buildReviewEditedContent()).then(function() {
       SPA.confirm({
         title: t('modal.copied_title_srt'),
         body: t('modal.copied_body_srt'),
@@ -4258,7 +4393,60 @@ function updateAuthUI() {
   } else {
     avatar.style.display = 'none';
   }
+  // Signed-in-only controls (e.g. the review view's Create PR button).
+  var ghOnly = document.querySelectorAll('[data-gh-only]');
+  for (var i = 0; i < ghOnly.length; i++) ghOnly[i].style.display = user ? '' : 'none';
+  // Index cards/chips render auth-dependent bits ("take for review", the
+  // 'mine' chip, own-talk highlight) — refresh them on login/logout.
+  if (manifest && document.getElementById('index-content')) {
+    // A saved 'mine' filter is meaningless signed out — fall back to 'all'.
+    if (!user && activeFilter === 'mine') activeFilter = 'all';
+    renderStats();
+    renderIndex(document.getElementById('index-content'));
+  }
 }
+
+// "Take for review": assign the talk's review issue to the signed-in user,
+// creating the issue first when none exists (title/label contract of
+// .github/scripts/sync-review-status.py: "Review: <talk_id>" + talk-review).
+// The workflow then flips labels/review-status.json; the UI updates
+// optimistically so the badge doesn't lag behind the bot commit.
+SPA.takeForReview = function(talkId) {
+  var user = getAuthUser(), token = getAuthToken();
+  if (!user || !token) return;
+  var st = (reviewStatus && reviewStatus.talks && reviewStatus.talks[talkId]) || null;
+  var done = function(issueNumber) {
+    if (!reviewStatus) reviewStatus = { talks: {} };
+    if (!reviewStatus.talks) reviewStatus.talks = {};
+    reviewStatus.talks[talkId] = {
+      status: 'in-progress',
+      reviewer: user.login,
+      issue_number: issueNumber,
+      updated_at: new Date().toISOString()
+    };
+    renderStats();
+    renderIndex(document.getElementById('index-content'));
+    showToast(t('review.taken'));
+  };
+  if (st && st.issue_number) {
+    addAssignees(API, token, st.issue_number, [user.login])
+      .then(function() { done(st.issue_number); })
+      .catch(ghWriteError);
+  } else {
+    var talk = manifest ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
+    var gh = 'https://github.com/' + REPO;
+    var body = 'Review of [`' + talkId + '`](' + gh + '/tree/main/talks/' + talkId + ')'
+      + '\n\nTaken via the SY Subtitles SPA'
+      + (talk && talk.title ? ' — ' + talk.title : '') + '.';
+    createIssue(API, token, {
+      title: 'Review: ' + talkId,
+      body: body,
+      labels: ['talk-review', 'review:in-progress'],
+      assignees: [user.login]
+    }).then(function(res) { done(res.number); })
+      .catch(ghWriteError);
+  }
+};
 
 SPA.ghLogin = function() {
   var state = makeAuthState();
@@ -4772,6 +4960,23 @@ SPA.submitAddTalk = function() {
   var talkId = date + '_' + slug;
   var yaml = document.getElementById('add-preview').textContent;
   var filename = 'talks/' + talkId + '/meta.yaml';
+
+  // Signed-in path: branch + commit + PR in one click. sync-subtitles /
+  // new-talk automation then picks the PR up exactly as a hand-made one.
+  var user = getAuthUser(), token = getAuthToken();
+  if (user && token) {
+    submitFilesPr(API, token, {
+      branch: makeBranchName('add-talk/' + talkId, user.login),
+      base: BRANCH,
+      files: [{ path: filename, content: yaml }],
+      commitMessage: 'Add ' + title,
+      prTitle: 'Add ' + title,
+      prBody: 'Added via SY Subtitles SPA from: ' + url
+    }).then(function(pr) {
+      ghCreatedDialog('pr.created', pr);
+    }).catch(ghWriteError);
+    return false;
+  }
 
   // GitHub new file URL — auto-forks for external contributors
   var ghUrl = 'https://github.com/' + REPO + '/new/main?filename=' + encodeURIComponent(filename)
