@@ -10,7 +10,9 @@
 //
 // There is intentionally no ?sort= — the index has no sort control to bind it to.
 
-var INDEX_FILTERS = ['all', 'needs-review', 'in-review', 'pending', 'approved'];
+// 'mine' = talks whose review-status reviewer is the signed-in GitHub login;
+// only meaningful when signed in, harmless (matches nothing) otherwise.
+var INDEX_FILTERS = ['all', 'needs-review', 'in-review', 'pending', 'approved', 'mine'];
 
 function _params(search) {
   try {

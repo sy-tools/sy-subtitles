@@ -27,6 +27,8 @@
 <script src="js/shell_version.js"></script>
 <script src="js/talk_actions.js"></script>
 <script src="js/passphrase_gate.js"></script>
+<script src="js/github_auth.js"></script>
+<script src="js/github_api.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -295,9 +297,13 @@
 
 <!-- === FRESHNESS BAR (global, all views) === -->
 <div id="freshness-bar" style="background:var(--bg2);border-bottom:1px solid var(--border);padding:4px 20px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--fg6);position:sticky;top:0;z-index:30;">
-  <div class="branch-selector">
-    <button class="branch-btn" id="branch-btn" onclick="SPA.toggleBranches()">main &#x25BE;</button>
-    <div class="branch-dropdown" id="branch-dropdown"></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <img id="gh-avatar" src="" alt="" onclick="SPA.ghAccountMenu()" style="display:none;width:20px;height:20px;border-radius:50%;cursor:pointer;border:1px solid var(--border2);vertical-align:middle;">
+    <button id="gh-login-btn" onclick="SPA.ghLogin()" data-i18n="auth.login" data-i18n-title="auth.login_title" style="display:none;background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;">GitHub</button>
+    <div class="branch-selector">
+      <button class="branch-btn" id="branch-btn" onclick="SPA.toggleBranches()">main &#x25BE;</button>
+      <div class="branch-dropdown" id="branch-dropdown"></div>
+    </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <span id="stale-indicator" style="display:none;align-items:center;gap:6px;background:var(--bg4);color:var(--fg3);border:1px solid var(--border3);border-radius:10px;padding:1px 4px 1px 8px;font-size:11px;">
@@ -334,6 +340,7 @@
     <div class="header-actions">
       <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-i18n="btn.copy_all">Copy all</button>
       <button id="btn-preview-issue" class="btn btn--issue" onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
+      <button id="btn-preview-pr" class="btn btn--primary" style="display:none" onclick="SPA.createPreviewPr()" data-i18n="btn.create_pr">Create PR</button>
       <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button id="btn-clear-all" class="btn btn--danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
     </div>
@@ -373,7 +380,8 @@
         <div id="video-picker-dropdown" class="video-dropdown" role="listbox"></div>
       </span>
       <button class="btn btn--issue" onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
-      <button class="btn btn--primary" onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
+      <button id="btn-create-pr" class="btn btn--primary" data-gh-only style="display:none" onclick="SPA.createReviewPr()" data-i18n="btn.create_pr">Create PR</button>
+      <button id="btn-review-editor" class="btn btn--primary" data-gh-hide onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button onclick="SPA.revertAllEdits()" id="btn-revert-all" class="btn btn--danger" style="display:none" data-i18n="btn.revert_all">Revert all</button>
     </div>
   </div>
@@ -676,6 +684,23 @@ function deriveRepo(hostname, pathname, search) {
   throw new Error('Cannot determine GitHub repo: serve from <owner>.github.io '
     + 'or pass ?repo=owner/name (host was "' + hostname + '").');
 }
+// The OAuth callback returns to the BARE app URL (a GitHub App redirect_uri
+// must exactly match a registered callback, so ?repo/?branch cannot ride
+// along). Restore the app params saved by SPA.ghLogin BEFORE deriveRepo needs
+// them. Runs only on a callback (GitHub always sends `state` back — on both
+// the success and the error path).
+(function() {
+  try {
+    var saved = sessionStorage.getItem('sy_gh_return');
+    if (saved == null) return;
+    if (!new URLSearchParams(location.search).get('state')) return;
+    sessionStorage.removeItem('sy_gh_return');
+    var merged = mergeAuthReturn(location.search, saved);
+    if (merged !== location.search) {
+      history.replaceState(null, '', location.pathname + merged + location.hash);
+    }
+  } catch (e) {}
+})();
 var REPO = deriveRepo();
 function getBranchFromURL() {
   var params = new URLSearchParams(location.search);
@@ -692,6 +717,12 @@ var PAGES_BASE = location.pathname.replace(/\/[^/]*$/, '');
 var APP_DEPLOY_SHA = ''; // app-shell version (index.html + js/*.js) at deploy
 var APP_DEPLOY_DATE = ''; // deploy date YYYY-MM-DD
 var APP_GATE_HASH = ''; // passphrase-gate PBKDF2 hash, injected at deploy from the GATE_PASSPHRASE secret (empty => gate disabled / fail-open)
+var APP_GH_CLIENT_ID = 'Iv23liUDzvKwr32aTyMc'; // GitHub App client id (public). Empty => GitHub sign-in hidden.
+var APP_GH_EXCHANGE_URL = 'https://sy-subtitles-oauth.sy-tools.workers.dev/exchange'; // code->token exchange Worker (workers/oauth-exchange)
+// Test hooks mirror __SY_GATE_HASH: Playwright injects these to enable the
+// feature without editing the shipped (empty => disabled) config.
+function ghClientId() { return window.__SY_GH_CLIENT_ID || APP_GH_CLIENT_ID; }
+function ghExchangeUrl() { return window.__SY_GH_EXCHANGE_URL || APP_GH_EXCHANGE_URL; }
 
 // ============================================================
 // Cache — schema versioned, auto-migrates on format change
@@ -844,6 +875,24 @@ var I18N = {
     'confirm.unsaved_edits': '\u041D\u0435\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u0431\u0443\u0434\u0443\u0442\u044C \u0432\u0442\u0440\u0430\u0447\u0435\u043D\u0456. \u041F\u0440\u043E\u0434\u043E\u0432\u0436\u0438\u0442\u0438?',
     'editor.clipboard_alert': '\u0412\u0456\u0434\u0440\u0435\u0434\u0430\u0433\u043E\u0432\u0430\u043D\u0438\u0439 \u0442\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0442 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E.\nGitHub \u0440\u0435\u0434\u0430\u043A\u0442\u043E\u0440 \u0432\u0456\u0434\u043A\u0440\u0438\u0454\u0442\u044C\u0441\u044F \u2014 \u0432\u0438\u0434\u0456\u043B\u0456\u0442\u044C \u0432\u0441\u0435 (Ctrl+A) \u0456 \u0432\u0441\u0442\u0430\u0432\u0442\u0435 (Ctrl+V).',
     'no_transcripts': '\u041D\u0435\u043C\u0430\u0454 \u0442\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0442\u0456\u0432',
+    'auth.login': '\u0423\u0432\u0456\u0439\u0442\u0438',
+    'auth.login_title': '\u0423\u0432\u0456\u0439\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 GitHub, \u0449\u043E\u0431 \u0441\u0442\u0432\u043E\u0440\u044E\u0432\u0430\u0442\u0438 PR \u0442\u0430 \u0456\u0448\u02BC\u044E \u0437\u0456 SPA',
+    'auth.logout': '\u0412\u0438\u0439\u0442\u0438',
+    'auth.logout_confirm': '\u0412\u0438\u0439\u0442\u0438 \u0437 GitHub?',
+    'auth.signed_in': '\u0412\u0438 \u0443\u0432\u0456\u0439\u0448\u043B\u0438 \u044F\u043A',
+    'auth.error_state': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0432\u0445\u043E\u0434\u0443: \u043D\u0435\u0432\u0430\u043B\u0456\u0434\u043D\u0438\u0439 state. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.',
+    'auth.error_exchange': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 GitHub',
+    'auth.expired': '\u0421\u0435\u0441\u0456\u044F GitHub \u043D\u0435\u0434\u0456\u0439\u0441\u043D\u0430 \u2014 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E \u0432\u0438\u0445\u0456\u0434',
+    'btn.create_pr': '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
+    'btn.take_review': '\u0412\u0437\u044F\u0442\u0438 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'stat.mine': '\u043C\u043E\u0457',
+    'pr.created': 'PR \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
+    'pr.no_edits': '\u041D\u0435\u043C\u0430\u0454 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u044C \u0434\u043B\u044F PR',
+    'pr.failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
+    'issue.created': '\u0406\u0448\u02BC\u044E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
+    'review.taken': '\u041F\u0440\u043E\u043C\u043E\u0432\u0443 \u0432\u0437\u044F\u0442\u043E \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'gh.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 GitHub',
+    'gh.no_app_access': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u0434\u043E \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0456\u044E \u2014 \u0430\u0434\u043C\u0456\u043D\u0456\u0441\u0442\u0440\u0430\u0442\u043E\u0440 \u043C\u0430\u0454 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0430 \u043D\u044C\u043E\u043C\u0443',
     'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
   },
   en: {
@@ -973,6 +1022,24 @@ var I18N = {
     'confirm.unsaved_edits': 'Unsaved edits will be lost. Continue?',
     'editor.clipboard_alert': 'Edited transcript copied to clipboard.\nGitHub editor will open \u2014 select all (Ctrl+A) and paste (Ctrl+V).',
     'no_transcripts': 'No transcripts available',
+    'auth.login': 'Sign in',
+    'auth.login_title': 'Sign in with GitHub to create PRs and issues from the SPA',
+    'auth.logout': 'Sign out',
+    'auth.logout_confirm': 'Sign out of GitHub?',
+    'auth.signed_in': 'Signed in as',
+    'auth.error_state': 'Sign-in failed: invalid state. Please try again.',
+    'auth.error_exchange': 'GitHub sign-in failed',
+    'auth.expired': 'GitHub session invalid — signed out',
+    'btn.create_pr': 'Create PR',
+    'btn.take_review': 'Take for review',
+    'stat.mine': 'mine',
+    'pr.created': 'PR created',
+    'pr.no_edits': 'No edits to submit as a PR',
+    'pr.failed': 'Could not create the PR',
+    'issue.created': 'Issue created',
+    'review.taken': 'Talk taken for review',
+    'gh.error': 'GitHub error',
+    'gh.no_app_access': 'The GitHub App has no access to this repository — an admin must install the app on it',
     'title.lang': 'Interface language'
   }
 };
@@ -1994,6 +2061,10 @@ function loadManifest() {
   try { cache = JSON.parse(localStorage.getItem(CACHE_KEY)); } catch(e) {}
 
   var headers = {};
+  // 5000 req/h authenticated vs 60 unauthenticated; the token goes ONLY to
+  // api.github.com (raw.githubusercontent fetches stay tokenless).
+  var hadToken = getAuthToken();
+  if (hadToken) headers['Authorization'] = 'Bearer ' + hadToken;
   if (cache && cache.etag) headers['If-None-Match'] = cache.etag;
 
   // Serve the cached manifest (flagged stale) instead of a blank index when the
@@ -2008,6 +2079,14 @@ function loadManifest() {
 
   return fetch(API + '/git/trees/' + BRANCH + '?recursive=1', { headers: headers })
     .then(function(r) {
+      if (r.status === 401 && hadToken) {
+        // Revoked/invalid token: silently sign out and retry unauthenticated
+        // (loop-safe — the token is cleared before the retry).
+        clearAuth();
+        updateAuthUI();
+        showToast(t('auth.expired'));
+        return loadManifest();
+      }
       if (r.status === 304 && cache) {
         // On 304, Last-Modified header is still returned
         var lm304 = r.headers.get('Last-Modified');
@@ -2184,19 +2263,22 @@ function buildManifest(tree) {
 // Review Status (static JSON, zero API cost)
 // ============================================================
 function computeStats(talks, statuses, query) {
-  var total = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0 };
-  var filtered = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0 };
+  var total = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
+  var filtered = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
+  var authLogin = (getAuthUser() || {}).login || null;
   talks.forEach(function(t) {
     var matchesSearch = !query || ((t.title || '') + ' ' + (t.date || '') + ' ' + t.id).toLowerCase().indexOf(query) !== -1;
     var st = statuses[t.id] || null;
     var stages = getPipelineStages(t, st);
     var status = getOverallStatus(stages, st);
+    var isMine = !!(authLogin && st && st.reviewer === authLogin);
     // Total counts
     total.talks++;
     if (status === 'ready-for-review') total.needs_review++;
     if (status === 'in-review') total.in_review++;
     if (status === 'approved') total.approved++;
     if (status === 'in-progress') total.pending++;
+    if (isMine) total.mine++;
     // Filtered counts (by search)
     if (matchesSearch) {
       filtered.talks++;
@@ -2204,6 +2286,7 @@ function computeStats(talks, statuses, query) {
       if (status === 'in-review') filtered.in_review++;
       if (status === 'approved') filtered.approved++;
       if (status === 'in-progress') filtered.pending++;
+      if (isMine) filtered.mine++;
     }
   });
   return { total: total, filtered: filtered };
@@ -2234,6 +2317,10 @@ function renderStats() {
       { f: s.filtered.needs_review, t: s.total.needs_review, label: t('stat.needs_review'), cls: 'warn', filter: 'needs-review' },
       { f: s.filtered.in_review, t: s.total.in_review, label: t('stat.in_review'), cls: 'info', filter: 'in-review' },
     ];
+  }
+  // Signed-in reviewers get a "mine" chip in both modes.
+  if (getAuthUser()) {
+    cards.push({ f: s.filtered.mine, t: s.total.mine, label: t('stat.mine'), cls: 'good', filter: 'mine' });
   }
   bar.innerHTML = '';
   cards.forEach(function(c) {
@@ -2364,11 +2451,13 @@ function renderIndex(el) {
   document.getElementById('index-toolbar').style.display = 'block';
   var statuses = (reviewStatus && reviewStatus.talks) || {};
   var query = (document.getElementById('search-input').value || '').toLowerCase();
+  var authLogin = (getAuthUser() || {}).login || null;
 
   manifest.talks.forEach(function(tk) {
     var st = statuses[tk.id] || null;
     var stages = getPipelineStages(tk, st);
     var status = getOverallStatus(stages, st);
+    var isMine = !!(authLogin && st && st.reviewer === authLogin);
 
     // Filter by status
     if (activeFilter === 'all' && !expertMode) {
@@ -2379,6 +2468,7 @@ function renderIndex(el) {
       if (activeFilter === 'in-review' && status !== 'in-review') return;
       if (activeFilter === 'pending' && status !== 'in-progress') return;
       if (activeFilter === 'approved' && status !== 'approved') return;
+      if (activeFilter === 'mine' && !isMine) return;
     }
 
     // Search
@@ -2387,7 +2477,7 @@ function renderIndex(el) {
 
     // Build card — all data is from trusted manifest, escaped with esc()
     var div = document.createElement('div');
-    div.className = 'talk-item';
+    div.className = 'talk-item' + (isMine ? ' talk-item--mine' : '');
     var dateStr = tk.date || tk.id.substring(0, 10);
     var badge = '';
     if (st) {
@@ -2414,6 +2504,12 @@ function renderIndex(el) {
     if (actions.review) {
       reviewLink = '<a href="' + safeHref('#/review/' + tk.id) + '" class="review-link">&#x270E; ' + t('link.review') + '</a>';
     }
+    // "Take for review" — signed-in reviewers claim an unassigned talk right
+    // from the card (id is bound via addEventListener below, not inline HTML).
+    var takeBtn = '';
+    if (authLogin && actions.review && status !== 'approved' && !(st && st.reviewer)) {
+      takeBtn = '<button class="btn btn--sm btn--ghost take-review-btn">' + esc(t('btn.take_review')) + '</button>';
+    }
     // Assemble card. amruta_url is attacker-influenceable (meta.yaml from a
     // PR / the amruta-scraping bookmarklet) so route it through safeHref;
     // dateStr is escaped too. The expert button's talk-id copy is bound via
@@ -2426,7 +2522,16 @@ function renderIndex(el) {
     var statusBadge = renderStatusBadge(status, st);
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
-      + ((videoLinks || reviewLink) ? '<div class="talk-actions">' + videoLinks + reviewLink + '</div>' : '');
+      + ((videoLinks || reviewLink || takeBtn) ? '<div class="talk-actions">' + videoLinks + reviewLink + takeBtn + '</div>' : '');
+
+    var takeEl = div.querySelector('.take-review-btn');
+    if (takeEl) takeEl.addEventListener('click', function(e) {
+      e.stopPropagation();
+      takeEl.disabled = true;
+      // Success re-renders the index (this button is replaced); on failure
+      // the re-enable makes the card claimable again.
+      SPA.takeForReview(tk.id).then(function() { takeEl.disabled = false; });
+    });
 
     // Copy the talk id on expert-button click (id comes from the closure, never
     // injected into HTML). stopPropagation keeps the card from expanding; the
@@ -2490,6 +2595,8 @@ SPA.filterTalks = function(filter) {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+  handleAuthCallback();
+  updateAuthUI();
   var searchEl = document.getElementById('search-input');
   if (searchEl) {
     var debounce;
@@ -2922,6 +3029,20 @@ function flushPreviewPos() {
   writePreviewPosNow();
 }
 
+// Edit-submission buttons live at the mode × auth intersection: edit mode
+// shows exactly ONE of them — Create PR signed in, the clipboard+editor flow
+// signed out (both submit the same edits, showing both would duplicate the
+// action). Called from applyPreviewMode (mode flips) AND updateAuthUI
+// (login/logout while the preview is open).
+function updatePreviewSubmitButtons() {
+  var mode = (typeof previewState !== 'undefined' && previewState.mode) || 'marker';
+  var signedIn = !!getAuthUser();
+  var editorBtn = document.getElementById('btn-preview-editor');
+  if (editorBtn) editorBtn.style.display = (mode === 'edit' && !signedIn) ? 'inline-block' : 'none';
+  var prBtn = document.getElementById('btn-preview-pr');
+  if (prBtn) prBtn.style.display = (mode === 'edit' && signedIn) ? 'inline-block' : 'none';
+}
+
 function applyPreviewMode() {
   var mode = previewState.mode || 'marker';
   document.querySelectorAll('.preview-mode-toggle button').forEach(function(b) {
@@ -2940,8 +3061,7 @@ function applyPreviewMode() {
   }
   var copyBtn = document.getElementById('btn-copy-all');
   if (copyBtn) copyBtn.style.display = mode === 'marker' ? 'inline-block' : 'none';
-  var editorBtn = document.getElementById('btn-preview-editor');
-  if (editorBtn) editorBtn.style.display = mode === 'edit' ? 'inline-block' : 'none';
+  updatePreviewSubmitButtons();
   var label = document.getElementById('preview-list-label');
   if (label) {
     label.textContent = mode === 'edit' ? t('edits.summary') : t('markers.summary');
@@ -3313,7 +3433,9 @@ SPA.copyMarkers = function() {
   });
 };
 
-SPA.createPreviewIssue = function() {
+// {title, body} of the preview issue \u2014 also reused verbatim as the PR body by
+// SPA.createPreviewPr, so both write paths describe the same marks/edits.
+function buildPreviewIssueContent() {
   var s = previewState;
   var gh = 'https://github.com/' + REPO;
   var lang = s.srtLang || 'uk';
@@ -3344,24 +3466,46 @@ SPA.createPreviewIssue = function() {
       lines.push('| ' + m.tc + ' | ' + m.text + ' | ' + (m.comment || '') + ' |');
     });
   }
-  var issueTitle = (s.mode === 'edit' ? 'Subtitle edits: ' : 'Subtitle review: ') + (s.video ? s.video.title : s.videoSlug);
-  var issueBody = lines.join('\n');
-  var url = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending&body=' + encodeURIComponent(issueBody);
-  var shortUrl = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending';
-  if (url.length > 8000) {
-    navigator.clipboard.writeText(issueBody).then(function() {
-      SPA.confirm({
-        title: t('modal.copied_title_issue'),
-        body: t('modal.copied_body_issue'),
-        confirmLabel: t('modal.open_github'),
-        singleButton: true
-      }).then(function() { window.open(shortUrl); });
-    }).catch(function() {
-      window.open(shortUrl);
-    });
-  } else {
-    window.open(url);
+  return {
+    title: (s.mode === 'edit' ? 'Subtitle edits: ' : 'Subtitle review: ') + (s.video ? s.video.title : s.videoSlug),
+    body: lines.join('\n')
+  };
+}
+
+SPA.createPreviewIssue = function() {
+  var content = buildPreviewIssueContent();
+  if (getAuthUser() && getAuthToken()) {
+    submitIssueViaApi(content.title, content.body);
+    return;
   }
+  openIssuePage(content.title, content.body);
+};
+
+// One-button PR from the preview's subtitle edits: new timestamped branch off
+// BRANCH, commit the rebuilt final/<lang>.srt, open the PR (whose body = the
+// preview issue body). sync-subtitles.yml then reconciles SRT\u2194transcript.
+SPA.createPreviewPr = function() {
+  var user = getAuthUser(), token = getAuthToken();
+  if (!user || !token) return;
+  var s = previewState;
+  var lang = s.srtLang || 'uk';
+  var langEdits = (s.edits && s.edits[lang]) || {};
+  if (!Object.keys(langEdits).length) { showToast(t('pr.no_edits')); return; }
+  var filePath = 'talks/' + s.talkId + '/' + s.videoSlug + '/final/' + lang + '.srt';
+  var content = buildPreviewIssueContent();
+  var btn = document.getElementById('btn-preview-pr');
+  if (btn) btn.disabled = true;
+  submitFilesPr(API, token, {
+    branch: makeBranchName('preview/' + s.talkId, user.login),
+    base: BRANCH,
+    files: [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
+    commitMessage: 'Subtitle edits: ' + s.talkId + ' (' + s.videoSlug + '/' + lang + ')',
+    prTitle: content.title,
+    prBody: content.body
+  }).then(function(pr) {
+    ghCreatedDialog('pr.created', pr);
+  }).catch(ghWriteError)
+    .then(function() { if (btn) btn.disabled = false; });
 };
 
 SPA.openPreviewEditor = function() {
@@ -4064,15 +4208,81 @@ function updateRevertBtn() {
   btn.textContent = ec > 0 ? t('btn.revert_all') + ' (' + ec + ')' : t('btn.revert_all');
 }
 
-SPA.createReviewIssue = function() {
+// Path + label of the file the review view edits (the right column). Shared
+// by the issue body, the GitHub-editor flow and the signed-in PR flow.
+function reviewFilePath() {
+  var isSrt = reviewState.mode === 'srt';
+  return {
+    isSrt: isSrt,
+    path: isSrt
+      ? 'talks/' + reviewState.talkId + '/' + reviewState.videoSlug + '/final/' + (reviewState.srtRightLang) + '.srt'
+      : 'talks/' + reviewState.talkId + '/transcript_' + reviewState.rightLang + '.txt',
+    label: isSrt ? 'Subtitles' : 'Transcript'
+  };
+}
+
+// Success dialog for a created issue/PR: window.open must happen on the
+// dialog's confirm click (a user gesture) or popup blockers eat it.
+function ghCreatedDialog(titleKey, res) {
+  SPA.confirm({
+    title: t(titleKey),
+    body: '<a href="' + safeHref(res.html_url) + '" target="_blank">#' + res.number + '</a>',
+    confirmLabel: t('modal.open_github'),
+    singleButton: true
+  }).then(function() { window.open(res.html_url); });
+}
+
+// Shared failure path for signed-in write calls. 401 = revoked token → silent
+// sign-out; an error carrying .branch (the PR chain died after the branch was
+// pushed) links to the orphan branch; anything else is a toast.
+function ghWriteError(err) {
+  console.warn('GitHub write failed:', err && err.status, err && err.message);
+  if (err && err.status === 401) {
+    clearAuth();
+    updateAuthUI();
+    showToast(t('auth.expired'));
+    return;
+  }
+  // 403 "Resource not accessible by integration": the GitHub App is not
+  // installed on the repo (or lacks a permission) — name the fix, don't echo
+  // the opaque API message.
+  if (isIntegrationAccessError(err)) {
+    showToast(t('gh.no_app_access'), 6000);
+    return;
+  }
+  var msg = t('gh.error') + (err && err.message ? ': ' + err.message : '');
+  if (err && err.branch) {
+    var burl = 'https://github.com/' + REPO + '/tree/' + err.branch;
+    SPA.confirm({
+      title: t('pr.failed'),
+      body: esc(msg) + '<br><br><a href="' + safeHref(burl) + '" target="_blank">' + esc(err.branch) + '</a>',
+      confirmLabel: 'OK',
+      singleButton: true
+    });
+    return;
+  }
+  showToast(msg, 4000);
+}
+
+// Signed-in issue path: POST /issues directly (no URL-length limit, no
+// clipboard round-trip).
+function submitIssueViaApi(issueTitle, issueBody) {
+  return createIssue(API, getAuthToken(),
+    { title: issueTitle, body: issueBody, labels: ['review:pending'] })
+    .then(function(res) { ghCreatedDialog('issue.created', res); })
+    .catch(ghWriteError);
+}
+
+// {title, body} of the review issue — also reused verbatim as the PR body by
+// SPA.createReviewPr, so both write paths describe the same marks/edits.
+function buildReviewIssueContent() {
   var gh = 'https://github.com/' + REPO;
   var talk = manifest ? manifest.talks.find(function(t) { return t.id === reviewState.talkId; }) : null;
   var title = talk ? talk.title : reviewState.talkId;
-  var isSrt = reviewState.mode === 'srt';
-  var filePath = isSrt
-    ? 'talks/' + reviewState.talkId + '/' + reviewState.videoSlug + '/final/' + (reviewState.srtRightLang) + '.srt'
-    : 'talks/' + reviewState.talkId + '/transcript_' + reviewState.rightLang + '.txt';
-  var fileLabel = isSrt ? 'Subtitles' : 'Transcript';
+  var file = reviewFilePath();
+  var isSrt = file.isSrt;
+  var filePath = file.path;
+  var fileLabel = file.label;
   var aligned = isSrt ? (reviewState.alignedRows || []) : null;
 
   function rowLabel(idx) {
@@ -4102,8 +4312,13 @@ SPA.createReviewIssue = function() {
       lines.push('<details><summary><b>' + rowLabel(idx) + '</b></summary>', '', '**Before:**', '> ' + (reviewState.rightParas[idx]||''), '', '**After:**', '> ' + reviewState.edits[idx], '', '</details>', '');
     });
   }
-  var issueTitle = 'Translation review: ' + title;
-  var issueBody = lines.join('\n');
+  return { title: 'Translation review: ' + title, body: lines.join('\n') };
+}
+
+// Prefilled-URL issue flow with the ~8k URL-length clipboard fallback — the
+// signed-OUT path, byte-identical to the pre-auth behaviour.
+function openIssuePage(issueTitle, issueBody) {
+  var gh = 'https://github.com/' + REPO;
   var url = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending&body=' + encodeURIComponent(issueBody);
   var shortUrl = gh + '/issues/new?title=' + encodeURIComponent(issueTitle) + '&labels=review:pending';
   // GitHub URL limit ~8192 chars — if too long, copy body to clipboard
@@ -4121,15 +4336,47 @@ SPA.createReviewIssue = function() {
   } else {
     window.open(url);
   }
+}
+
+SPA.createReviewIssue = function() {
+  var content = buildReviewIssueContent();
+  if (getAuthUser() && getAuthToken()) {
+    submitIssueViaApi(content.title, content.body);
+    return;
+  }
+  openIssuePage(content.title, content.body);
 };
 
-SPA.openEditor = function() {
+// One-button PR from the review edits: new timestamped branch off BRANCH,
+// commit the rebuilt file, open the PR (whose body = the review issue body).
+// The existing sync-subtitles.yml then reconciles transcript↔SRT on the PR.
+SPA.createReviewPr = function() {
+  var user = getAuthUser(), token = getAuthToken();
+  if (!user || !token) return;
+  if (!Object.keys(reviewState.edits).length) { showToast(t('pr.no_edits')); return; }
+  var file = reviewFilePath();
+  var content = buildReviewIssueContent();
+  var btn = document.getElementById('btn-create-pr');
+  if (btn) btn.disabled = true;
+  submitFilesPr(API, token, {
+    branch: makeBranchName('review/' + reviewState.talkId, user.login),
+    base: BRANCH,
+    files: [{ path: file.path, content: buildReviewEditedContent() }],
+    commitMessage: 'Review edits: ' + reviewState.talkId + ' (' + file.label + ')',
+    prTitle: content.title,
+    prBody: content.body
+  }).then(function(pr) {
+    ghCreatedDialog('pr.created', pr);
+  }).catch(ghWriteError)
+    .then(function() { if (btn) btn.disabled = false; });
+};
+
+// Full new content of the review view's edited file: SRT rebuilt with original
+// numbering/timecodes and edited text substituted; transcript re-serialized
+// byte-exact (BOM/CRLF/header preserved). Callers ensure edits exist.
+function buildReviewEditedContent() {
   var isSrt = reviewState.mode === 'srt';
-  var filePath = isSrt
-    ? 'talks/' + reviewState.talkId + '/' + reviewState.videoSlug + '/final/' + (reviewState.srtRightLang) + '.srt'
-    : 'talks/' + reviewState.talkId + '/transcript_' + reviewState.rightLang + '.txt';
-  var url = 'https://github.com/' + REPO + '/edit/main/' + filePath;
-  if (Object.keys(reviewState.edits).length > 0) {
+  {
     var full;
     if (isSrt) {
       // Rebuild a valid SRT from alignedRows: keep block numbering and timecodes
@@ -4165,7 +4412,14 @@ SPA.openEditor = function() {
       var parsed = reviewState.rightParsed || { header: '', separator: '\n', bom: '', lineEnding: '\n' };
       full = serializeTranscript(parsed, paras);
     }
-    navigator.clipboard.writeText(full).then(function() {
+    return full;
+  }
+}
+
+SPA.openEditor = function() {
+  var url = 'https://github.com/' + REPO + '/edit/main/' + reviewFilePath().path;
+  if (Object.keys(reviewState.edits).length > 0) {
+    navigator.clipboard.writeText(buildReviewEditedContent()).then(function() {
       SPA.confirm({
         title: t('modal.copied_title_srt'),
         body: t('modal.copied_body_srt'),
@@ -4190,13 +4444,159 @@ function esc(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 // protocol-relative //host), then HTML-escape so a quote/tag cannot break out
 // of the href="" attribute. Returns '' for disallowed/empty URLs.
 function safeHref(u) { return /^(https?:\/\/|#|mailto:)/i.test(u || '') ? esc(u) : ''; }
-function showToast(msg) {
+function showToast(msg, ms) {
   var el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
-  setTimeout(function() { el.classList.remove('show'); }, 2000);
+  setTimeout(function() { el.classList.remove('show'); }, ms || 2000);
 }
 function fmtTime(sec) {
   return String(Math.floor(sec/3600)).padStart(2,'0') + ':' + String(Math.floor((sec%3600)/60)).padStart(2,'0') + ':' + String(Math.floor(sec%60)).padStart(2,'0');
+}
+
+// ============================================================
+// GitHub sign-in (auth core). Pure logic lives in js/github_auth.js and
+// js/github_api.js (Node-tested); this block only wires URL, storage,
+// header UI and toasts together.
+// ============================================================
+function updateAuthUI() {
+  var loginBtn = document.getElementById('gh-login-btn');
+  var avatar = document.getElementById('gh-avatar');
+  if (!loginBtn || !avatar) return;
+  var user = getAuthUser();
+  loginBtn.style.display = (ghClientId() && !user) ? '' : 'none';
+  if (user) {
+    avatar.src = user.avatar_url;
+    avatar.title = t('auth.signed_in') + ' ' + user.login;
+    avatar.alt = user.login;
+    avatar.style.display = '';
+  } else {
+    avatar.style.display = 'none';
+  }
+  // Signed-in-only controls (e.g. the review view's Create PR button) and
+  // their signed-out twins (data-gh-hide, e.g. Open in GitHub Editor): the
+  // API action REPLACES the manual flow — never both at once.
+  var ghOnly = document.querySelectorAll('[data-gh-only]');
+  for (var i = 0; i < ghOnly.length; i++) ghOnly[i].style.display = user ? '' : 'none';
+  var ghHide = document.querySelectorAll('[data-gh-hide]');
+  for (var j = 0; j < ghHide.length; j++) ghHide[j].style.display = user ? 'none' : '';
+  // The preview's pair also depends on the marker/edit mode — delegate.
+  updatePreviewSubmitButtons();
+  // Index cards/chips render auth-dependent bits ("take for review", the
+  // 'mine' chip, own-talk highlight) — refresh them on login/logout.
+  if (manifest && document.getElementById('index-content')) {
+    // A saved 'mine' filter is meaningless signed out — fall back to 'all'.
+    if (!user && activeFilter === 'mine') activeFilter = 'all';
+    renderStats();
+    renderIndex(document.getElementById('index-content'));
+  }
+}
+
+// "Take for review": assign the talk's review issue to the signed-in user,
+// creating the issue first when none exists (title/label contract of
+// .github/scripts/sync-review-status.py: "Review: <talk_id>" + talk-review).
+// The workflow then flips labels/review-status.json; the UI updates
+// optimistically so the badge doesn't lag behind the bot commit.
+SPA.takeForReview = function(talkId) {
+  var user = getAuthUser(), token = getAuthToken();
+  if (!user || !token) return Promise.resolve();
+  var st = (reviewStatus && reviewStatus.talks && reviewStatus.talks[talkId]) || null;
+  var done = function(issueNumber) {
+    if (!reviewStatus) reviewStatus = { talks: {} };
+    if (!reviewStatus.talks) reviewStatus.talks = {};
+    reviewStatus.talks[talkId] = {
+      status: 'in-progress',
+      reviewer: user.login,
+      issue_number: issueNumber,
+      updated_at: new Date().toISOString()
+    };
+    renderStats();
+    renderIndex(document.getElementById('index-content'));
+    showToast(t('review.taken'));
+  };
+  // Returns a promise that settles when the claim attempt is over (errors are
+  // reported via ghWriteError, not rethrown) — the card's click handler
+  // re-enables its button on it, so a failure never leaves a dead button.
+  if (st && st.issue_number) {
+    return addAssignees(API, token, st.issue_number, [user.login])
+      .then(function() { done(st.issue_number); })
+      .catch(ghWriteError);
+  }
+  var talk = manifest ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
+  var gh = 'https://github.com/' + REPO;
+  var body = 'Review of [`' + talkId + '`](' + gh + '/tree/main/talks/' + talkId + ')'
+    + '\n\nTaken via the SY Subtitles SPA'
+    + (talk && talk.title ? ' — ' + talk.title : '') + '.';
+  return createIssue(API, token, {
+    title: 'Review: ' + talkId,
+    body: body,
+    labels: ['talk-review', 'review:in-progress'],
+    assignees: [user.login]
+  }).then(function(res) { done(res.number); })
+    .catch(ghWriteError);
+};
+
+SPA.ghLogin = function() {
+  var state = makeAuthState();
+  try {
+    sessionStorage.setItem('sy_gh_state', state);
+    // App params can't ride in redirect_uri (exact-match rule) — they are
+    // restored from here on the way back, before deriveRepo runs.
+    sessionStorage.setItem('sy_gh_return', location.search);
+  } catch (e) {}
+  location.href = buildAuthorizeUrl(ghClientId(), state,
+    buildRedirectUri(location.origin, location.pathname));
+};
+
+SPA.ghAccountMenu = function() {
+  var user = getAuthUser() || {};
+  SPA.confirm({
+    title: t('auth.logout_confirm'),
+    body: esc(user.login || ''),
+    confirmLabel: t('auth.logout')
+  }).then(function(ok) {
+    if (!ok) return;
+    clearAuth();
+    updateAuthUI();
+  });
+};
+
+// On boot: if the URL is an OAuth callback, validate the CSRF state, scrub the
+// auth params from the URL (keeping ?repo/?branch), swap the code for a token
+// and load the profile. Every failure path leaves the user signed out with the
+// old flows fully working.
+function handleAuthCallback() {
+  var search = location.search;
+  var params = parseAuthCallback(search);
+  var errParam = null;
+  try { errParam = new URLSearchParams(search).get('error'); } catch (e) {}
+  if (!params && !errParam) return;
+  var saved = null;
+  try {
+    saved = sessionStorage.getItem('sy_gh_state');
+    sessionStorage.removeItem('sy_gh_state');
+  } catch (e) {}
+  history.replaceState(null, '', location.pathname + stripAuthParams(search) + location.hash);
+  if (errParam) {
+    // User cancelled on GitHub (?error=access_denied) or the App refused.
+    showToast(t('auth.error_exchange'));
+    return;
+  }
+  if (!isValidAuthCallback(params, saved)) {
+    showToast(t('auth.error_state'));
+    return;
+  }
+  exchangeCode(ghExchangeUrl(), params.code)
+    .then(function(token) {
+      return getViewer(token).then(function(user) {
+        saveAuth(token, user);
+        updateAuthUI();
+        showToast(t('auth.signed_in') + ' ' + user.login);
+      });
+    })
+    .catch(function(err) {
+      console.warn('GitHub sign-in failed:', err && err.status);
+      showToast(t('auth.error_exchange'));
+    });
 }
 
 // ============================================================
@@ -4660,6 +5060,23 @@ SPA.submitAddTalk = function() {
   var talkId = date + '_' + slug;
   var yaml = document.getElementById('add-preview').textContent;
   var filename = 'talks/' + talkId + '/meta.yaml';
+
+  // Signed-in path: branch + commit + PR in one click. sync-subtitles /
+  // new-talk automation then picks the PR up exactly as a hand-made one.
+  var user = getAuthUser(), token = getAuthToken();
+  if (user && token) {
+    submitFilesPr(API, token, {
+      branch: makeBranchName('add-talk/' + talkId, user.login),
+      base: BRANCH,
+      files: [{ path: filename, content: yaml }],
+      commitMessage: 'Add ' + title,
+      prTitle: 'Add ' + title,
+      prBody: 'Added via SY Subtitles SPA from: ' + url
+    }).then(function(pr) {
+      ghCreatedDialog('pr.created', pr);
+    }).catch(ghWriteError);
+    return false;
+  }
 
   // GitHub new file URL — auto-forks for external contributors
   var ghUrl = 'https://github.com/' + REPO + '/new/main?filename=' + encodeURIComponent(filename)

@@ -1,0 +1,8 @@
+# Deploy: `wrangler deploy` from this directory.
+# Secrets (once): `wrangler secret put GH_CLIENT_ID`, `wrangler secret put GH_CLIENT_SECRET`
+name = "sy-subtitles-oauth"
+main = "index.mjs"
+compatibility_date = "2026-07-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://sy-tools.github.io,http://localhost:8000,http://127.0.0.1:8000"

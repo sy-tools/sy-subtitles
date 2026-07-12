@@ -58,3 +58,8 @@ docs/superpowers/
 # OS
 .DS_Store
 Thumbs.db
+
+# Cloudflare Worker local dev (secrets + wrangler state + npm)
+.dev.vars
+workers/oauth-exchange/.wrangler/
+node_modules/

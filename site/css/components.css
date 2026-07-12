@@ -434,6 +434,8 @@ body {
 }
 .talk-item:hover { border-color: var(--border3); }
 .talk-item.selected { border-color: var(--link); background: var(--stat-active-bg); }
+/* Talk assigned to the signed-in reviewer — a quiet left accent, no new palette. */
+.talk-item--mine { box-shadow: inset 3px 0 0 var(--accent-green); }
 
 .stat-card {
   border-radius: 2px;
