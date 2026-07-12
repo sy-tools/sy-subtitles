@@ -1,0 +1,4 @@
+# Local dev secrets for `npx wrangler dev` (copy to .dev.vars — gitignored).
+# Values come from the GitHub App (docs/github-app-setup.md, step 1).
+GH_CLIENT_ID=Iv1.xxxxxxxxxxxxxxxx
+GH_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

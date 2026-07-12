@@ -1,0 +1,42 @@
+name: Deploy OAuth Worker
+
+# Deploys workers/oauth-exchange to Cloudflare. Runs on merge to main when the
+# Worker (or this workflow) changes, and on manual dispatch. Requires repo
+# secrets: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID, GH_OAUTH_CLIENT_ID,
+# GH_OAUTH_CLIENT_SECRET (see docs/github-app-setup.md).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'workers/oauth-exchange/**'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Deploy Worker + push its secrets
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: workers/oauth-exchange
+          # Worker secrets are uploaded from same-named env vars below —
+          # values live only in repo secrets, never in this file.
+          secrets: |
+            GH_CLIENT_ID
+            GH_CLIENT_SECRET
+        env:
+          GH_CLIENT_ID: ${{ secrets.GH_OAUTH_CLIENT_ID }}
+          GH_CLIENT_SECRET: ${{ secrets.GH_OAUTH_CLIENT_SECRET }}
