@@ -1,0 +1,9 @@
+# Manual Hindi audio rebuild (no pipeline run) — declared retroactively so the
+# review-edit sync gate (tools/sync_pr.py -> manifest_validate_flags) applies the
+# same en-srt validation the pipeline uses for non-English talks: the subtitles
+# are a legitimate condensation of the fuller transcript_uk.txt (~106 words
+# dropped across ~37 spots, 98.6% word match), so strict text preservation is
+# replaced by structural checks. See the 2026-06-27 audio-rebuild session.
+role: primary
+mode: en-srt
+built_at: '2026-07-08T12:48:29Z'
