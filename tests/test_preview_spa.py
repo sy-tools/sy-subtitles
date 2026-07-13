@@ -2764,6 +2764,10 @@ class TestRealTranscriptRoundTrip:
 
 PREVIEW_KEY = "preview_2001-01-01_Test-Talk_Test-Video"
 LEGACY_KEY = "markers_preview_2001-01-01_Test-Talk_Test-Video"
+# Subtitle text edits now live in the canonical per-block store (js/edit_store.js),
+# shared by the preview and review-SRT views; the preview key keeps only
+# mode + markers. See the edit-store consolidation.
+CANON_UK_KEY = "srt_edits_2001-01-01_Test-Talk_Test-Video_uk"
 
 
 def _goto_preview_video(page, server, video_slug="Test-Video"):
@@ -2991,8 +2995,8 @@ class TestPreviewEditMode:
           el.dispatchEvent(new Event('input', { bubbles: true }));
         """)
         page.wait_for_timeout(50)
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        assert stored["edits"]["uk"]["0"] == "Змінений текст"
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null')")
+        assert canon and canon["0"] == "Змінений текст"
 
     def test_edit_equal_to_original_removes_entry(self, server, page):
         _goto_preview_video(page, server)
@@ -3012,9 +3016,8 @@ class TestPreviewEditMode:
           el.dispatchEvent(new Event('input', { bubbles: true }));
         """)
         page.wait_for_timeout(50)
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        uk_edits = stored["edits"].get("uk", {})
-        assert "0" not in uk_edits and 0 not in uk_edits
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null') || {{}}")
+        assert "0" not in canon and 0 not in canon
 
     def test_edit_enter_resumes_video(self, server, page):
         _goto_preview_video(page, server)
@@ -3042,8 +3045,8 @@ class TestPreviewEditMode:
         """)
         page.wait_for_timeout(50)
         page.click(".edit-item .del")
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        assert stored["edits"].get("uk", {}) == {}
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null') || {{}}")
+        assert canon == {}
 
     def test_edit_list_rows_visible_when_navigating_from_index(self, server, page):
         # Seed an edit for block 0 in uk, then navigate to the preview from
@@ -3598,8 +3601,8 @@ class TestPreviewEditMode:
         spa_confirm_accept(page)
         count = page.locator(".edit-item").count()
         assert count == 0
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        assert stored["edits"].get("uk", {}) == {}
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null') || {{}}")
+        assert canon == {}
 
 
 class TestIndexSingleLink:
@@ -5402,15 +5405,22 @@ class TestLocalEditsSurviveReload:
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
         page.evaluate(
             "previewState.mode = 'edit';"
-            "previewState.edits[0] = 'PREVIEW_EDIT';"
+            "previewState.edits.uk = {0: 'PREVIEW_EDIT'};"
             "previewState.markers.push({time: 12, tc: '00:00:12', text: 'blk', comment: 'note'});"
             "savePreviewState()"
         )
+        # Text edits go to the canonical per-block store; the preview key keeps
+        # only mode + markers.
+        canon = page.evaluate(f"localStorage.getItem('{CANON_UK_KEY}')")
+        assert canon and "PREVIEW_EDIT" in canon, f"preview edit not written to canonical store: {canon!r}"
         raw = page.evaluate("localStorage.getItem('preview_2001-01-01_Test-Talk_Test-Video')")
-        assert raw and "PREVIEW_EDIT" in raw and "00:00:12" in raw, f"preview state not written: {raw!r}"
+        assert raw and "00:00:12" in raw and '"edit"' in raw, f"preview markers/mode not written: {raw!r}"
         page.reload()
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
-        state = page.evaluate("({edits: previewState.edits, markers: previewState.markers, mode: previewState.mode})")
+        state = page.evaluate(
+            "({edits: (previewState.edits && previewState.edits.uk) || {},"
+            " markers: previewState.markers, mode: previewState.mode})"
+        )
         assert state["edits"].get("0") == "PREVIEW_EDIT", f"preview edit lost after reload: {state}"
         assert len(state["markers"]) == 1 and state["markers"][0]["comment"] == "note", (
             f"preview marker lost after reload: {state}"
@@ -5478,8 +5488,10 @@ class TestSrtReviewEditsPersist:
         assert sr["marks"].get("1") == "SRT_MARK", f"SRT mark lost after round-trip: {sr}"
 
     def test_srt_edits_stored_under_separate_video_lang_key(self, server, page):
-        """SRT edits live under their own video+language key, not the transcript
-        key — which is what keeps them isolated across language switches too."""
+        """SRT edits live under their own canonical video+language block store
+        (srt_edits_<talk>_<video>_<lang>), not the transcript key — which is
+        what keeps them isolated across language switches and shared with the
+        preview view of the same video+lang."""
         self._goto_review(server, page)
         page.evaluate("reviewState.edits[0] = 'TRANSCRIPT_EDIT'; saveReview()")
         self._enter_srt(page)
@@ -5488,14 +5500,14 @@ class TestSrtReviewEditsPersist:
             """() => {
                 var transcript = localStorage.getItem('review_2001-01-01_Test-Talk') || '';
                 var srtKey = Object.keys(localStorage).find(
-                    k => k.indexOf('review_srt_2001-01-01_Test-Talk') === 0);
+                    k => k.indexOf('srt_edits_2001-01-01_Test-Talk_Test-Video') === 0);
                 return { transcript, srtKey, srtVal: srtKey ? localStorage.getItem(srtKey) : null };
             }"""
         )
         assert "TRANSCRIPT_EDIT" in keys["transcript"], f"transcript key missing its edit: {keys}"
         assert "SRT_EDIT" not in keys["transcript"], f"SRT edit leaked into transcript key: {keys}"
         assert keys["srtKey"] and "SRT_EDIT" in (keys["srtVal"] or ""), (
-            f"SRT edit not stored under a video+lang-specific key: {keys}"
+            f"SRT edit not stored under the canonical video+lang block key: {keys}"
         )
 
     def test_transcript_and_srt_edits_are_independent(self, server, page):
