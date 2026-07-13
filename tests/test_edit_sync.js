@@ -304,6 +304,10 @@ function ghStub(over) {
   function record(name, detail) { calls.push([name].concat(detail || [])); }
   let putCount = 0;
   let pullCount = 0;
+  // Simulate a branch deleted out from under the engine (external PR close +
+  // branch delete, or a teardown on another device): GitHub answers PUT/GET on
+  // a missing branch with 404 "Branch <name> not found". createRef re-creates it.
+  let branchGone = !!over.branchGone;
   const gh = {
     calls,
     puts: [],
@@ -313,6 +317,7 @@ function ghStub(over) {
     _stateFile: null,
     getFileContent: async (api, token, path, ref) => {
       record('getFileContent', [path, ref]);
+      if (branchGone) return null;                 // 404 on a missing branch -> null
       if ('remote' in over) {
         const r = typeof over.remote === 'function' ? over.remote() : over.remote;
         return r || null;
@@ -323,9 +328,11 @@ function ghStub(over) {
     createRef: async (api, token, name, sha) => {
       record('createRef', [name, sha]);
       if (over.refExists) { const e = new Error('Reference already exists'); e.status = 422; throw e; }
+      if (!over.branchStaysGone) branchGone = false;  // the branch exists again
       return {};
     },
     putFile: async (api, token, opts) => {
+      if (branchGone) { const e = new Error('Branch ' + opts.branch + ' not found'); e.status = 404; throw e; }
       putCount += 1;
       record('putFile', [opts.path, opts.sha || null, !!opts.keepalive]);
       if (opts.path.indexOf('.review-sync/') === 0) {
@@ -654,6 +661,46 @@ describe('engine: teardown on full revert', () => {
     assert.strictEqual(after.prNumber, 77);
     assert.strictEqual(after.status, 'synced');
     assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 2); // branch recreated
+  });
+});
+
+describe('engine: self-heal on an externally deleted branch', () => {
+  // Seeds a "synced" base pointing at a PR whose branch was deleted out of band
+  // (PR closed + branch deleted on github.com, or a teardown on another device).
+  function seededSynced() {
+    return {
+      [syncBaseKey(TALK)]: JSON.stringify({
+        doc: {}, sha: 'oldsha', revision: 1,
+        prNumber: 77, prUrl: 'https://github.com/x/pull/77', nodeId: 'PR_n77',
+        prDraft: true, fileShas: {}, branch: BRANCH_NAME,
+      }),
+    };
+  }
+
+  it('re-creates the branch + a fresh PR when a push hits "Branch not found"', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true }, seededSynced());
+    localEdit(storage, 1, 'again');
+    engine.notifyEdit();
+    await engine.flush();
+
+    const info = engine.getInfo();
+    assert.strictEqual(info.status, 'synced', 'heals to synced, not error');
+    assert.strictEqual(info.prNumber, 77, 'a fresh PR was created');
+    assert.ok(gh.calls.some((c) => c[0] === 'createRef'), 'branch was re-created');
+    assert.ok(gh.calls.some((c) => c[0] === 'createPull'), 'a new PR was opened');
+    assert.strictEqual(gh.puts.at(-1).entries[RKEY].edits[1], 'again', 'the edit reached the branch');
+    const base = JSON.parse(storage.getItem(syncBaseKey(TALK)));
+    assert.strictEqual(base.sha !== null && base.sha !== 'oldsha', true, 'base advanced to the new state');
+  });
+
+  it('surfaces an error (no infinite loop) if the branch stays gone after re-create', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true, branchStaysGone: true }, seededSynced());
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'error', 'one retry then surfaces the error');
+    // Exactly one heal attempt: createRef is tried once, never in a loop.
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 1);
   });
 });
 

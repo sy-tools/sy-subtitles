@@ -448,7 +448,16 @@ function createSyncEngine(opts) {
     }).catch(fail);
   }
 
-  function doFlush(fopts) {
+  // GitHub reports a PUT/GET against a deleted branch as 404 "Branch <name> not
+  // found". It means the sync branch was removed out from under us — a manual PR
+  // close + branch delete on github.com, or a teardown on another device (a
+  // closed PR's branch is gone). The cached prNumber/sha are stale; the cure is
+  // to wipe the branch-dependent state and re-create from scratch.
+  function isBranchGone(e) {
+    return !!(e && e.status === 404 && /branch .*not found/i.test(e.message || ''));
+  }
+
+  function doFlush(fopts, healed) {
     var keepalive = fopts && fopts.keepalive;
     var seqAtStart = editSeq;
     var local = collect();
@@ -625,6 +634,17 @@ function createSyncEngine(opts) {
         if (unchanged && editSeq === seqAtStart) clearDirty();
         setStatus('synced');
       });
+    }).catch(function (e) {
+      if (disposed) return;
+      // Self-heal a branch deleted out from under us (closed PR + deleted branch,
+      // externally or on another device): wipe the stale branch/PR coordinates
+      // and re-create the branch, state file and a fresh draft PR. One retry only
+      // — `healed` guards against a loop if the re-create somehow 404s again.
+      if (isBranchGone(e) && !healed) {
+        resetBase();
+        return doFlush(fopts, true);
+      }
+      throw e;
     }).catch(function (e) {
       if (disposed) return;
       // A rejected promise can carry a falsy reason, so read through e defensively.
