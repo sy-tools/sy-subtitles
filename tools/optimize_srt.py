@@ -379,6 +379,15 @@ def _split_words_at(words, split_pos):
     return words, []
 
 
+def duration_split_cap_ms(config):
+    """Longest duration Phase 1b tolerates without splitting (1s slack over
+    max_duration). Phase 5 merges must respect the SAME cap: a merge past it
+    survives its own run (Phase 1b has already run) only to be dismantled by
+    the next run's split — the optimizer would not be idempotent (issue #739).
+    """
+    return config.max_duration_ms + 1000
+
+
 def split_blocks_by_duration(blocks, config, whisper_intervals=None, word_intervals=None):
     """Split long blocks at sentence/clause/word boundaries with whisper-guided timing.
 
@@ -399,7 +408,7 @@ def split_blocks_by_duration(blocks, config, whisper_intervals=None, word_interv
         dur = b["end_ms"] - b["start_ms"]
         text = b["text"].replace("\n", " ")
 
-        if dur <= config.max_duration_ms + 1000 or len(text) < 10:
+        if dur <= duration_split_cap_ms(config) or len(text) < 10:
             new_blocks.append(b)
             continue
 
@@ -672,7 +681,11 @@ def merge_short_blocks(blocks, config):
                 short_next = next_dur < config.min_duration_ms or (next_chars < 20 and next_dur < 3000) or sparse_next
                 either_sparse = sparse_current or sparse_next
                 max_gap = 3000 if either_sparse else 500
-                max_combined_dur = config.max_duration_ms * 2 if either_sparse else config.max_duration_ms + 1000
+                # Sparse blocks may bridge a bigger gap, but the combined
+                # duration is capped at Phase 1b's split threshold for both
+                # paths (the old sparse 2x-max allowance produced blocks the
+                # next run split differently — issue #739).
+                max_combined_dur = duration_split_cap_ms(config)
                 if (
                     (short_current or short_next)
                     and combined_chars <= config.max_chars_block
@@ -1030,7 +1043,14 @@ def apply_chaining(blocks, config, report):
     for i in range(1, len(blocks)):
         gap = blocks[i]["start_ms"] - blocks[i - 1]["end_ms"]
         if min_chain_gap <= gap <= max_chain_gap:
-            blocks[i - 1]["end_ms"] = blocks[i]["start_ms"] - target_gap
+            new_end = blocks[i]["start_ms"] - target_gap
+            # Never chain a block past Phase 1b's split cap: the next
+            # optimize run would split what this run glued together
+            # (issue #739 — non-idempotent output). The sub-frame gap that
+            # remains is the lesser evil.
+            if new_end - blocks[i - 1]["start_ms"] > duration_split_cap_ms(config):
+                continue
+            blocks[i - 1]["end_ms"] = new_end
             chained += 1
 
     report.append(f"  Gaps chained (3-11 frames -> 2 frames): {chained}")
