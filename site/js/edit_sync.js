@@ -557,9 +557,12 @@ function createSyncEngine(opts) {
       });
     }).catch(function (e) {
       if (disposed) return;
-      if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: e && e.message }); return; }
-      if (e && e.status === 401) { setStatus('error', { kind: 'auth', message: e && e.message }); return; }
-      setStatus('error', { kind: 'sync', message: (e && e.message) || String(e), httpStatus: e && e.status });
+      // A rejected promise can carry a falsy reason, so read through e defensively.
+      var msg = e && e.message;
+      var status = e && e.status;
+      if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: msg }); return; }
+      if (status === 401) { setStatus('error', { kind: 'auth', message: msg }); return; }
+      setStatus('error', { kind: 'sync', message: msg || String(e), httpStatus: status });
     });
   }
 
@@ -593,7 +596,9 @@ function createSyncEngine(opts) {
         setStatus('synced');
       }
     }).catch(function (e) {
-      if (e && e.status === 401) { setStatus('error', { kind: 'auth', message: e && e.message }); return; }
+      // A rejected promise can carry a falsy reason, so read status defensively.
+      var status = e && e.status;
+      if (status === 401) { setStatus('error', { kind: 'auth', message: e && e.message }); return; }
       // Offline / transient pull failures are silent: the next focus retries.
     });
   }
