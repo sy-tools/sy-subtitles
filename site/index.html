@@ -4246,10 +4246,15 @@ function saveReview() {
   if (reviewState.mode === 'srt' && reviewState.rowToBlock && !reviewState._legacyEdits) {
     // Split row-keyed edits: block-mapped ones go to the canonical store
     // (shared with preview), rows without a subtitle block stay in the
-    // legacy key alongside the marks.
+    // legacy key alongside the marks. MERGE into the canonical store (never
+    // replace) so a canonical block edit with no aligned row here — e.g. a
+    // preview edit on a block alignSubtitlesByTime couldn't pair — survives.
     var split = splitReviewRowEdits(reviewState.edits, reviewState.rowToBlock);
+    var mergedCanonical = mergeReviewEditsIntoCanonical(
+      loadSrtEdits(reviewState.talkId, reviewState.videoSlug, reviewState.srtRightLang, localStorage),
+      reviewState.edits, reviewState.rowToBlock);
     saveSrtEdits(reviewState.talkId, reviewState.videoSlug, reviewState.srtRightLang,
-      split.canonical, localStorage);
+      mergedCanonical, localStorage);
     if (Object.keys(reviewState.marks).length || Object.keys(split.legacy).length) {
       localStorage.setItem(reviewStorageKey(),
         JSON.stringify({ marks: reviewState.marks, edits: split.legacy }));
@@ -4717,12 +4722,18 @@ function buildReviewEditedContent() {
   {
     var full;
     if (isSrt) {
-      // Rebuild the SRT from the original parsed blocks with the row-keyed
-      // in-memory edits projected down to blocks — the same per-block shape
-      // the canonical store holds, and the same builder preview uses, so both
-      // views produce the identical file.
-      var split = splitReviewRowEdits(reviewState.edits, reviewState.rowToBlock || []);
-      full = applyEditsToSrt(reviewState.ukBlocks || [], split.canonical);
+      // Rebuild the SRT from the original parsed blocks with the FULL canonical
+      // block map applied — the same builder (and same store) the preview uses,
+      // so both views commit a byte-identical file. Merging (not just the
+      // visible rows' split) keeps a preview edit on a block with no aligned
+      // row here. In degraded legacy mode the canonical store isn't
+      // authoritative, so fall back to the in-memory row edits.
+      var canonical = reviewState._legacyEdits
+        ? splitReviewRowEdits(reviewState.edits, reviewState.rowToBlock || []).canonical
+        : mergeReviewEditsIntoCanonical(
+            loadSrtEdits(reviewState.talkId, reviewState.videoSlug, reviewState.srtRightLang, localStorage),
+            reviewState.edits, reviewState.rowToBlock || []);
+      full = applyEditsToSrt(reviewState.ukBlocks || [], canonical);
     } else {
       var paras = [];
       for (var i = 0; i < reviewState.rightParas.length; i++) {

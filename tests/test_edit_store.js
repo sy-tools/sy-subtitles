@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const {
   srtEditsKey, backupKeyFor, displacedKeyFor,
   loadSrtEdits, saveSrtEdits,
-  mapRowsToBlockIdx, splitReviewRowEdits,
+  mapRowsToBlockIdx, splitReviewRowEdits, mergeReviewEditsIntoCanonical,
   loadPreviewLangEdits, loadReviewRowEdits,
   migratePreviewEdits, migrateReviewSrtEdits,
 } = require('../site/js/edit_store');
@@ -102,6 +102,29 @@ describe('splitReviewRowEdits', () => {
   });
 });
 
+describe('mergeReviewEditsIntoCanonical', () => {
+  it('preserves canonical blocks that have no row in this view', () => {
+    // block 5 was edited in preview and maps to NO aligned row here.
+    const existing = { 3: 'old-3', 5: 'preview-only' };
+    const merged = mergeReviewEditsIntoCanonical(existing, { 0: 'edited-3' }, [3, -1]);
+    assert.deepStrictEqual(merged, { 3: 'edited-3', 5: 'preview-only' });
+  });
+  it('a reverted row deletes only its own block, never an unmapped one', () => {
+    const existing = { 3: 'x', 5: 'preview-only' };
+    // rowToBlock says row 0 -> block 3, but rowEdits is empty (reverted).
+    const merged = mergeReviewEditsIntoCanonical(existing, {}, [3]);
+    assert.deepStrictEqual(merged, { 5: 'preview-only' });
+  });
+  it('spanning rows (same block twice): first row wins, block kept once', () => {
+    const merged = mergeReviewEditsIntoCanonical({}, { 0: 'first', 1: 'second' }, [2, 2]);
+    assert.deepStrictEqual(merged, { 2: 'first' });
+  });
+  it('empty everything yields an empty map', () => {
+    assert.deepStrictEqual(mergeReviewEditsIntoCanonical({}, {}, []), {});
+    assert.deepStrictEqual(mergeReviewEditsIntoCanonical(null, null, null), {});
+  });
+});
+
 describe('loadPreviewLangEdits', () => {
   it('reads canonical edits for the lang', () => {
     const storage = memStorage({ [CANON_UK]: JSON.stringify({ 2: 'к' }) });
@@ -165,7 +188,7 @@ describe('migratePreviewEdits', () => {
     assert.deepStrictEqual(loadSrtEdits(TALK, VIDEO, 'uk', storage), { 4: 'ук-правка' });
   });
 
-  it('existing canonical value wins on conflict (legacy copy survives in backup)', () => {
+  it('existing canonical value wins on conflict (legacy copy survives in backup AND displaced)', () => {
     const storage = memStorage({
       [PREVIEW_KEY]: legacyRaw,
       [CANON_UK]: JSON.stringify({ 4: 'новіша правка' }),
@@ -173,6 +196,9 @@ describe('migratePreviewEdits', () => {
     migratePreviewEdits(TALK, VIDEO, storage);
     assert.deepStrictEqual(loadSrtEdits(TALK, VIDEO, 'uk', storage), { 4: 'новіша правка' });
     assert.strictEqual(storage.getItem(backupKeyFor(PREVIEW_KEY)), legacyRaw);
+    // symmetric with the review-wins case: the superseded preview value is also
+    // recorded under the displaced key (not only in the raw preview backup).
+    assert.deepStrictEqual(JSON.parse(storage.getItem(displacedKeyFor(CANON_UK))), { 4: 'ук-правка' });
   });
 
   it('no edits -> no-op, no backup written', () => {

@@ -60,6 +60,25 @@ function saveSrtEdits(talkId, videoSlug, lang, edits, storage) {
   else storage.setItem(key, JSON.stringify(edits));
 }
 
+// Merge a review-SRT view's current row edits into the EXISTING canonical
+// store. Blocks visible as rows in this view are authoritative (edited or,
+// when absent from rowEdits, reverted -> removed); canonical blocks that have
+// NO row here are preserved untouched. Without this, saving the review view
+// would replace the whole store and silently drop a canonical block edit whose
+// block alignSubtitlesByTime couldn't pair to a row (e.g. a preview edit on a
+// block with overlapping/duplicate timecodes) — see edit_store review.
+function mergeReviewEditsIntoCanonical(existing, rowEdits, rowToBlock) {
+  var split = splitReviewRowEdits(rowEdits, rowToBlock);
+  var visible = {};
+  (rowToBlock || []).forEach(function (b) { if (b >= 0) visible[b] = true; });
+  var out = {};
+  Object.keys(existing || {}).forEach(function (b) {
+    if (!visible[b]) out[b] = existing[b];              // no row here -> keep
+  });
+  Object.keys(split.canonical).forEach(function (b) { out[b] = split.canonical[b]; });
+  return out;
+}
+
 // alignedRows reference the parsed uk block OBJECTS; recover each row's block
 // position via identity so row-keyed legacy edits can be re-keyed per block.
 function mapRowsToBlockIdx(alignedRows, ukBlocks) {
@@ -148,11 +167,26 @@ function migratePreviewEdits(talkId, videoSlug, storage) {
     var verified = true;
     langs.forEach(function (lang) {
       var incoming = coerceEditMap(edits[lang]);
+      var canonKey = srtEditsKey(talkId, videoSlug, lang);
       var canonical = loadSrtEdits(talkId, videoSlug, lang, storage);
+      var displaced = coerceEditMap(readJson(storage, displacedKeyFor(canonKey)));
+      var displacedNew = false;
       Object.keys(incoming).forEach(function (idx) {
-        if (canonical[idx] === undefined) canonical[idx] = incoming[idx];
+        if (canonical[idx] === undefined) {
+          canonical[idx] = incoming[idx];
+        } else if (canonical[idx] !== incoming[idx]) {
+          // An existing (review-authored) value wins; keep the superseded
+          // preview value in the displaced backup too, so the "displaced value
+          // preserved" guarantee holds regardless of migration order.
+          displaced[idx] = incoming[idx];
+          displacedNew = true;
+        }
       });
+      if (displacedNew) storage.setItem(displacedKeyFor(canonKey), JSON.stringify(displaced));
       saveSrtEdits(talkId, videoSlug, lang, canonical, storage);
+      // verifyCanonical checks PRESENCE; every incoming index is present in the
+      // merged canonical (we only ever add, never drop), whether it won or was
+      // recorded as displaced — so the legacy edits are safe to strip.
       if (!verifyCanonical(talkId, videoSlug, lang, incoming, storage)) verified = false;
     });
     if (!verified) return { migrated: false, error: 'verification failed' };
@@ -225,6 +259,7 @@ if (typeof module !== 'undefined' && module.exports) {
     saveSrtEdits: saveSrtEdits,
     mapRowsToBlockIdx: mapRowsToBlockIdx,
     splitReviewRowEdits: splitReviewRowEdits,
+    mergeReviewEditsIntoCanonical: mergeReviewEditsIntoCanonical,
     loadPreviewLangEdits: loadPreviewLangEdits,
     loadReviewRowEdits: loadReviewRowEdits,
     migratePreviewEdits: migratePreviewEdits,
