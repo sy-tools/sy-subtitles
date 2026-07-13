@@ -220,6 +220,32 @@ def test_optimize_with_uk_json(sample_whisper_path, tmp_path):
     assert "Другий" in full_text
 
 
+def test_optimize_idempotent_with_small_max_duration(tmp_path):
+    """CPS extension must not grow a block past the duration-split cap.
+
+    With a small --max-duration, extend_cps used to stretch a high-CPS block
+    toward chars/target_cps (past the cap); the SECOND run's Phase 1b then
+    split it — the issue #739 non-idempotency class, reachable via CLI flags
+    (any --max-duration < max_chars_block/target_cps*1000 - 1000). The same
+    chars/cps growth bound guards cascade_redistribute and absorb_large_gaps.
+    """
+    config = OptimizeConfig(max_duration_ms=4000)
+    text = "This sentence runs long enough to need more reading time. Second part is here."
+    # 78 chars over 4.9s: CPS 15.9 > target 15, so extend_cps wants
+    # 78/15 = 5200ms — past the 5000ms split cap (max_duration + 1000).
+    assert len(text) == 78
+    src = tmp_path / "in.srt"
+    src.write_text(f"1\n00:00:00,000 --> 00:00:04,900\n{text}\n\n", encoding="utf-8")
+    out1 = tmp_path / "out1.srt"
+    out2 = tmp_path / "out2.srt"
+    optimize(srt_path=str(src), json_path=None, output_path=str(out1), config=config)
+    optimize(srt_path=str(out1), json_path=None, output_path=str(out2), config=config)
+
+    key = [(b["start_ms"], b["end_ms"], b["text"]) for b in parse_srt(out1)]
+    key2 = [(b["start_ms"], b["end_ms"], b["text"]) for b in parse_srt(out2)]
+    assert key == key2
+
+
 def test_optimize_without_whisper_json(sample_srt_path, tmp_srt):
     optimize(
         srt_path=str(sample_srt_path),

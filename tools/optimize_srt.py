@@ -261,12 +261,18 @@ def extend_cps(blocks, config):
         cps = chars / duration_s if duration_s > 0 else 999
 
         if cps > config.target_cps:
-            needed_duration_ms = int((chars / config.target_cps) * 1000)
+            current_duration = b["end_ms"] - b["start_ms"]
+            # Growth is capped at Phase 1b's split threshold (never shrinking
+            # a block already past it): an extension beyond the cap would be
+            # split by the NEXT run — the issue #739 non-idempotency class.
+            needed_duration_ms = min(
+                int((chars / config.target_cps) * 1000),
+                max(current_duration, duration_split_cap_ms(config)),
+            )
 
             max_end = blocks[i + 1]["start_ms"] - config.min_gap_ms if i + 1 < len(blocks) else b["end_ms"] + 60000
             min_start = blocks[i - 1]["end_ms"] + config.min_gap_ms if i > 0 else 0
 
-            current_duration = b["end_ms"] - b["start_ms"]
             if needed_duration_ms > current_duration:
                 extra_needed = needed_duration_ms - current_duration
 
@@ -381,9 +387,12 @@ def _split_words_at(words, split_pos):
 
 def duration_split_cap_ms(config):
     """Longest duration Phase 1b tolerates without splitting (1s slack over
-    max_duration). Phase 5 merges must respect the SAME cap: a merge past it
-    survives its own run (Phase 1b has already run) only to be dismantled by
-    the next run's split — the optimizer would not be idempotent (issue #739).
+    max_duration). Every phase that GROWS a block after Phase 1b has run must
+    respect the SAME cap — merge_short_blocks (Phase 5), the CPS growers
+    (extend_cps / cascade recipients / absorb_large_gaps) and Step-5
+    apply_chaining: growth past the cap survives its own run only to be
+    dismantled by the NEXT run's split — the optimizer would not be
+    idempotent (issue #739).
     """
     return config.max_duration_ms + 1000
 
@@ -733,7 +742,9 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
             if cps <= recipient_min_cps:
                 continue
 
-            needed_dur = int((chars / level_cps) * 1000)
+            # Same growth cap as extend_cps: never past Phase 1b's split
+            # threshold (issue #739 idempotency).
+            needed_dur = min(int((chars / level_cps) * 1000), max(dur, duration_split_cap_ms(config)))
             extra_needed = needed_dur - dur
             if extra_needed <= 0:
                 continue
@@ -832,7 +843,9 @@ def absorb_large_gaps(blocks, config, report):
             if cps <= config.target_cps:
                 continue
 
-            needed_dur = int((chars / config.target_cps) * 1000)
+            # Same growth cap as extend_cps: never past Phase 1b's split
+            # threshold (issue #739 idempotency).
+            needed_dur = min(int((chars / config.target_cps) * 1000), max(dur, duration_split_cap_ms(config)))
             extra_needed = needed_dur - dur
             if extra_needed <= 0:
                 continue
@@ -1046,8 +1059,8 @@ def apply_chaining(blocks, config, report):
             new_end = blocks[i]["start_ms"] - target_gap
             # Never chain a block past Phase 1b's split cap: the next
             # optimize run would split what this run glued together
-            # (issue #739 — non-idempotent output). The sub-frame gap that
-            # remains is the lesser evil.
+            # (issue #739 — non-idempotent output). The small (3-11-frame)
+            # gap that remains is the lesser evil.
             if new_end - blocks[i - 1]["start_ms"] > duration_split_cap_ms(config):
                 continue
             blocks[i - 1]["end_ms"] = new_end
