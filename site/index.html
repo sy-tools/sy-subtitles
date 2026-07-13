@@ -1731,6 +1731,10 @@ SPA.confirm = function(opts) {
     closeBtn.className = 'sy-modal-close';
     closeBtn.type = 'button';
     closeBtn.setAttribute('aria-label', t('modal.close') || 'Close');
+    // Self-synced: translatePage() re-applies this on a language toggle, so the
+    // label doesn't stick in the old language if the UI language changes while
+    // a dialog is open. (tests/test_spa_i18n_guard.py)
+    closeBtn.setAttribute('data-i18n-aria-label', 'modal.close');
     closeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
     modal.appendChild(closeBtn);
 
