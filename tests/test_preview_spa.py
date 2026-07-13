@@ -4912,6 +4912,53 @@ class TestClipboardCopyDialog:
             "don't explicitly clear it get the direct window.open path."
         )
 
+    # --- Dismiss affordance: a corner close (X) + Escape/backdrop must NOT
+    # open a GitHub tab. The primary "Open GitHub" button is the ONLY path
+    # that opens. Regression for: Escape (and a missing cancel button) still
+    # firing window.open because the .then() callback ignored the resolved
+    # value.
+    def _open_preview_editor_dialog(self, page, server):
+        """Drive openPreviewEditor with one edit so the clipboard-copy
+        confirm dialog renders, and wait for it."""
+        _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="edit"]')
+        page.wait_for_timeout(50)
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_timeout(200)
+        page.click("#btn-mark")
+        page.evaluate("""
+          var el = document.activeElement;
+          el.innerText = 'DIALOG_DISMISS_EDIT';
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        """)
+        page.wait_for_timeout(50)
+        page.evaluate(self._STUBS)
+        page.evaluate("SPA.openPreviewEditor()")
+        page.wait_for_selector(".sy-modal", timeout=2000)
+
+    def test_info_dialog_has_corner_close_button(self, server, page):
+        """The info dialog must offer a corner close (X) so the user can
+        dismiss it without triggering the primary Open-GitHub action."""
+        self._open_preview_editor_dialog(page, server)
+        assert page.locator(".sy-modal-close").count() == 1, "Info dialog must render a corner close (X) button."
+
+    def test_escape_dismisses_without_opening_tab(self, server, page):
+        """Escape closes the dialog and must NOT open a GitHub tab."""
+        self._open_preview_editor_dialog(page, server)
+        page.keyboard.press("Escape")
+        page.wait_for_selector(".sy-modal", state="detached", timeout=2000)
+        assert page.evaluate("window._openCount") == 0, "Escape must dismiss the dialog WITHOUT opening a GitHub tab."
+
+    def test_corner_close_dismisses_without_opening_tab(self, server, page):
+        """Clicking the corner close (X) closes the dialog and must NOT open
+        a GitHub tab."""
+        self._open_preview_editor_dialog(page, server)
+        page.locator(".sy-modal-close").click()
+        page.wait_for_selector(".sy-modal", state="detached", timeout=2000)
+        assert page.evaluate("window._openCount") == 0, (
+            "Clicking the corner close (X) must dismiss the dialog WITHOUT opening a GitHub tab."
+        )
+
 
 class TestPreviewResizeHandleI18n:
     """The preview resize handles are built imperatively (makeDragHandle), so
