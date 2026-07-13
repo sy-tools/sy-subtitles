@@ -161,3 +161,315 @@ describe('makeSyncDoc', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sync engine
+// ---------------------------------------------------------------------------
+const { createSyncEngine } = require('../site/js/edit_sync');
+
+const RKEY = 'review_' + TALK;
+const BRANCH_NAME = 'sync/tester/' + TALK;
+
+// Manual timer harness: engine timers only fire when the test says so.
+function timerHarness() {
+  let seq = 0;
+  const timers = new Map();
+  return {
+    set(fn, ms) { seq += 1; timers.set(seq, { fn, ms }); return seq; },
+    clear(id) { timers.delete(id); },
+    fire(maxMs) {
+      const due = [...timers].filter(([, t]) => t.ms <= maxMs);
+      due.forEach(([id]) => timers.delete(id));
+      due.forEach(([, t]) => t.fn());
+    },
+    delays() { return [...timers.values()].map((t) => t.ms); },
+  };
+}
+
+// Drain resolved promise chains (gh stubs resolve immediately).
+async function settle() { for (let i = 0; i < 50; i++) await Promise.resolve(); }
+
+// gh double: every call recorded as [name, ...detail]; behavior overridable.
+function ghStub(over) {
+  over = over || {};
+  const calls = [];
+  function record(name, detail) { calls.push([name].concat(detail || [])); }
+  let putCount = 0;
+  const gh = {
+    calls,
+    puts: [],
+    getFileContent: async (api, token, path, ref) => {
+      record('getFileContent', [path, ref]);
+      const r = typeof over.remote === 'function' ? over.remote() : over.remote;
+      return r || null;
+    },
+    getBranchHeadSha: async (api, token, branch) => { record('getBranchHeadSha', [branch]); return 'head1'; },
+    createRef: async (api, token, name, sha) => {
+      record('createRef', [name, sha]);
+      if (over.refExists) { const e = new Error('Reference already exists'); e.status = 422; throw e; }
+      return {};
+    },
+    putFile: async (api, token, opts) => {
+      putCount += 1;
+      record('putFile', [opts.path, opts.sha || null, !!opts.keepalive]);
+      gh.puts.push(JSON.parse(opts.content));
+      if (over.putFails && putCount <= over.putFails.length) {
+        const spec = over.putFails[putCount - 1];
+        if (spec) { const e = new Error(spec.message || 'fail'); e.status = spec.status; throw e; }
+      }
+      return { content: { sha: 'sha_after_put' + putCount } };
+    },
+    createPull: async (api, token, opts) => {
+      record('createPull', [opts.head, opts.base, !!opts.draft]);
+      if (over.draftUnsupported && opts.draft) {
+        const e = new Error('Draft pull requests are not supported in this repository.');
+        e.status = 422;
+        throw e;
+      }
+      return { number: 77, html_url: 'https://github.com/x/pull/77', node_id: 'PR_n77', draft: !!opts.draft };
+    },
+    findOpenPrByHead: async (api, token, owner, branch) => {
+      record('findOpenPrByHead', [owner, branch]);
+      return over.existingPr || null;
+    },
+  };
+  return gh;
+}
+
+function makeEngine(over, storageInit, engineOver) {
+  const timers = timerHarness();
+  const gh = ghStub(over);
+  const statuses = [];
+  const applied = [];
+  const storage = memStorage(storageInit || {});
+  const engine = createSyncEngine(Object.assign({
+    api: 'https://api.github.com/repos/sy-tools/sy-subtitles',
+    owner: 'sy-tools',
+    repo: 'sy-tools/sy-subtitles',
+    token: 'gho_x',
+    login: 'tester',
+    talkId: TALK,
+    base: 'main',
+    branch: BRANCH_NAME,
+    storage,
+    gh,
+    now: () => 1770000000000,
+    setTimeoutFn: timers.set.bind(timers),
+    clearTimeoutFn: timers.clear.bind(timers),
+    isOffline: (e) => /fetch failed/.test((e && e.message) || ''),
+    onStatus: (s) => statuses.push(s),
+    onRemoteApplied: (keys) => applied.push(keys),
+    clientId: 'client1',
+  }, engineOver || {}));
+  return { engine, timers, gh, statuses, applied, storage };
+}
+
+function localEdit(storage, idx, text) {
+  const cur = JSON.parse(storage.getItem(RKEY) || '{"marks":{},"edits":{}}');
+  cur.edits[idx] = text;
+  storage.setItem(RKEY, JSON.stringify(cur));
+}
+
+function remoteDoc(edits, revision, sha) {
+  return {
+    content: JSON.stringify(makeSyncDoc(TALK,
+      { [RKEY]: { marks: {}, edits: edits } }, revision || 1, 'other', '2026-07-13T21:00:00Z')),
+    sha: sha || 'sha_remote1',
+  };
+}
+
+describe('engine: debounce + coalesce', () => {
+  it('one push 15s after the last edit; re-edits re-arm the timer', async () => {
+    const { engine, timers, gh, storage } = makeEngine();
+    localEdit(storage, 1, 'а');
+    engine.notifyEdit();
+    localEdit(storage, 1, 'аб');
+    engine.notifyEdit();
+    timers.fire(14999);
+    await settle();
+    assert.strictEqual(gh.puts.length, 0);
+    timers.fire(15000);
+    await settle();
+    assert.strictEqual(gh.puts.length, 1);
+    assert.strictEqual(gh.puts[0].entries[RKEY].edits[1], 'аб');
+  });
+  it('blur (flushSoon) pushes after the 1.5s coalesce window', async () => {
+    const { engine, timers, gh, storage } = makeEngine();
+    localEdit(storage, 2, 'x');
+    engine.notifyEdit();
+    engine.flushSoon();
+    timers.fire(1500);
+    await settle();
+    assert.strictEqual(gh.puts.length, 1);
+  });
+  it('does nothing when no edit happened (not dirty)', async () => {
+    const { engine, timers, gh } = makeEngine();
+    engine.flushSoon();
+    timers.fire(20000);
+    await settle();
+    await engine.flush();
+    assert.strictEqual(gh.calls.length, 0);
+  });
+});
+
+describe('engine: bootstrap', () => {
+  it('first push creates branch, state file (no sha) and a draft PR', async () => {
+    const { engine, gh, storage } = makeEngine();
+    localEdit(storage, 1, 'перший');
+    engine.notifyEdit();
+    await engine.flush();
+    const names = gh.calls.map((c) => c[0]);
+    assert.deepStrictEqual(names, [
+      'getFileContent', 'getBranchHeadSha', 'createRef', 'putFile', 'createPull',
+    ]);
+    assert.deepStrictEqual(gh.calls[2], ['createRef', BRANCH_NAME, 'head1']);
+    assert.strictEqual(gh.calls[3][2], null); // no sha: brand-new file
+    assert.deepStrictEqual(gh.calls[4], ['createPull', BRANCH_NAME, 'main', true]);
+    const info = engine.getInfo();
+    assert.strictEqual(info.prNumber, 77);
+    assert.strictEqual(info.prUrl, 'https://github.com/x/pull/77');
+    assert.strictEqual(info.status, 'synced');
+    // base meta persisted for the next session
+    const base = JSON.parse(storage.getItem(syncBaseKey(TALK)));
+    assert.strictEqual(base.prNumber, 77);
+    assert.strictEqual(base.sha, 'sha_after_put1');
+  });
+  it('tolerates an already-existing branch ref (422)', async () => {
+    const { engine, gh, storage } = makeEngine({ refExists: true });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.puts.length, 1);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+  it('falls back to a non-draft PR when drafts are unsupported (422)', async () => {
+    const { engine, gh, storage } = makeEngine({ draftUnsupported: true });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    const pulls = gh.calls.filter((c) => c[0] === 'createPull');
+    assert.deepStrictEqual(pulls.map((c) => c[3]), [true, false]);
+    assert.strictEqual(engine.getInfo().prNumber, 77);
+  });
+});
+
+describe('engine: CAS conflict', () => {
+  it('409 -> pull fresh remote, merge, retry with the fresh sha', async () => {
+    let after409 = false;
+    const { engine, gh, storage, applied } = makeEngine({
+      remote: () => (after409 ? remoteDoc({ 9: 'віддалений' }, 3, 'sha_fresh') : null),
+      putFails: [{ status: 409, message: 'is at ... but expected' }],
+    });
+    localEdit(storage, 1, 'локальний');
+    engine.notifyEdit();
+    const origPut = gh.putFile;
+    // flip the remote into existence once the first PUT has conflicted
+    gh.putFile = async (...a) => { const p = origPut(...a); after409 = true; return p; };
+    await engine.flush();
+    assert.strictEqual(gh.puts.length, 2);
+    const finalDoc = gh.puts[1];
+    assert.strictEqual(finalDoc.entries[RKEY].edits[1], 'локальний');
+    assert.strictEqual(finalDoc.entries[RKEY].edits[9], 'віддалений');
+    // remote-won items were applied into local storage too
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[9], 'віддалений');
+    assert.strictEqual(applied.length, 1);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+  it('persistent 409s end in an error status after 3 attempts', async () => {
+    const { engine, gh, storage } = makeEngine({
+      remote: () => remoteDoc({ 9: 'r' }, 3, 'sha_fresh'),
+      putFails: [{ status: 409 }, { status: 409 }, { status: 409 }],
+    });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'error');
+    assert.strictEqual(gh.puts.length, 3);
+  });
+});
+
+describe('engine: pull', () => {
+  it('adopts remote edits on a clean client without pushing', async () => {
+    const { engine, gh, storage, applied, timers } = makeEngine({ remote: remoteDoc({ 5: 'з телефона' }, 2) });
+    await engine.pull(true);
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[5], 'з телефона');
+    assert.deepStrictEqual(applied, [[RKEY]]);
+    timers.fire(60000);
+    await settle();
+    assert.strictEqual(gh.puts.length, 0);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+  it('merges into dirty local state and schedules a re-push', async () => {
+    const { engine, gh, storage, timers } = makeEngine({ remote: remoteDoc({ 5: 'з телефона' }, 2) });
+    localEdit(storage, 1, 'тут');
+    engine.notifyEdit();
+    await engine.pull(true);
+    timers.fire(15000);
+    await settle();
+    assert.strictEqual(gh.puts.length, 1);
+    assert.deepStrictEqual(gh.puts[0].entries[RKEY].edits, { 1: 'тут', 5: 'з телефона' });
+  });
+  it('is throttled: a second non-forced pull within 60s is skipped', async () => {
+    const { engine, gh } = makeEngine({ remote: remoteDoc({ 5: 'r' }, 2) });
+    await engine.pull();
+    await engine.pull();
+    const gets = gh.calls.filter((c) => c[0] === 'getFileContent');
+    assert.strictEqual(gets.length, 1);
+  });
+});
+
+describe('engine: offline + auth failures', () => {
+  it('network failure parks the sync as pending and retries cleanly', async () => {
+    const { engine, gh, storage } = makeEngine({ putFails: [{ status: undefined, message: 'fetch failed' }] });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'pending');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(gh.puts.length, 2);
+  });
+  it('401 surfaces as an auth error', async () => {
+    const { engine, storage } = makeEngine({ putFails: [{ status: 401, message: 'Bad credentials' }] });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    const info = engine.getInfo();
+    assert.strictEqual(info.status, 'error');
+    assert.strictEqual(info.error.kind, 'auth');
+  });
+});
+
+describe('engine: attach', () => {
+  it('re-attaches to an existing remote + PR found by head', async () => {
+    const { engine, gh, storage, applied } = makeEngine({
+      remote: remoteDoc({ 4: 'збережене' }, 6),
+      existingPr: { number: 12, html_url: 'https://github.com/x/pull/12', node_id: 'PR_n12', draft: true },
+    });
+    await engine.attach();
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[4], 'збережене');
+    assert.strictEqual(applied.length, 1);
+    const info = engine.getInfo();
+    assert.strictEqual(info.prNumber, 12);
+    assert.strictEqual(info.prUrl, 'https://github.com/x/pull/12');
+  });
+  it('uses the cached PR from the base meta without querying /pulls', async () => {
+    const baseMeta = {
+      doc: {}, sha: 'sha_old', revision: 2,
+      prNumber: 12, prUrl: 'https://github.com/x/pull/12', nodeId: 'PR_n12', branch: BRANCH_NAME,
+    };
+    const { engine, gh } = makeEngine(
+      { remote: remoteDoc({ 4: 'v' }, 2, 'sha_old') },
+      { [syncBaseKey(TALK)]: JSON.stringify(baseMeta) });
+    await engine.attach();
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'findOpenPrByHead').length, 0);
+    assert.strictEqual(engine.getInfo().prUrl, 'https://github.com/x/pull/12');
+  });
+  it('stays idle (chip hidden) when there is no remote and no local edits', async () => {
+    const { engine, gh } = makeEngine();
+    await engine.attach();
+    assert.strictEqual(engine.getInfo().status, 'idle');
+    assert.strictEqual(gh.puts.length, 0);
+  });
+});

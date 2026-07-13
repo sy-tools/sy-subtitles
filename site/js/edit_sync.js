@@ -204,6 +204,272 @@ function makeSyncDoc(talkId, entries, revision, client, nowIso) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Sync engine: debounce, compare-and-swap pushes, draft-PR bootstrap, pulls.
+// Everything injectable (gh client object, storage, timers, clock) so the
+// Node suite drives it without HTTP or real time.
+// ---------------------------------------------------------------------------
+function createSyncEngine(opts) {
+  var api = opts.api, token = opts.token, talkId = opts.talkId;
+  var storage = opts.storage, gh = opts.gh, fetchImpl = opts.fetchImpl;
+  var setT = opts.setTimeoutFn || setTimeout;
+  var clearT = opts.clearTimeoutFn || clearTimeout;
+  var now = opts.now || function () { return Date.now(); };
+  var isOffline = opts.isOffline || function () { return false; };
+  var onStatus = opts.onStatus || function () {};
+  var onRemoteApplied = opts.onRemoteApplied || function () {};
+  var branch = opts.branch;
+  var baseBranch = opts.base || 'main';
+  var owner = opts.owner;
+  var login = opts.login;
+  var path = syncFilePath(talkId);
+
+  var DEBOUNCE_MS = 15000;   // push this long after the LAST edit
+  var COALESCE_MS = 1500;    // push shortly after a field blur
+  var PULL_THROTTLE_MS = 60000;
+  var MAX_PUT_ATTEMPTS = 3;
+
+  // Base meta = last synced doc + CAS sha + PR coordinates; survives reloads.
+  var meta = null;
+  try { meta = JSON.parse(storage.getItem(syncBaseKey(talkId))); } catch (e) { /* corrupted -> fresh */ }
+  if (!meta || meta.branch !== branch) {
+    meta = { doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null, branch: branch };
+  }
+
+  var clientId = opts.clientId || (function () {
+    var c = storage.getItem('sy_sync_client');
+    if (!c) { c = Math.random().toString(36).slice(2, 8); storage.setItem('sy_sync_client', c); }
+    return c;
+  })();
+
+  var status = 'idle';
+  var lastError = null;
+  var dirty = false;
+  var editSeq = 0;
+  var debounceId = null, coalesceId = null;
+  var lastPullAt = 0;
+  var inflight = null;
+  var disposed = false;
+
+  function info() {
+    return { status: status, prUrl: meta.prUrl, prNumber: meta.prNumber, nodeId: meta.nodeId,
+      branch: branch, dirty: dirty, error: lastError };
+  }
+  function setStatus(s, err) { status = s; lastError = err || null; onStatus(s, info()); }
+  function saveMeta() { storage.setItem(syncBaseKey(talkId), JSON.stringify(meta)); }
+
+  function parseRemote(file) {
+    var doc = null;
+    try { doc = JSON.parse(file.content); } catch (e) { /* treat as empty */ }
+    return {
+      entries: (doc && doc.entries) || {},
+      revision: (doc && doc.revision) || 0,
+      sha: file.sha,
+    };
+  }
+
+  function armDebounce() {
+    if (debounceId !== null) clearT(debounceId);
+    debounceId = setT(function () { debounceId = null; flush(); }, DEBOUNCE_MS);
+  }
+
+  function notifyEdit() {
+    if (disposed) return;
+    dirty = true;
+    editSeq += 1;
+    armDebounce();
+    if (status === 'synced' || status === 'idle') setStatus('pending');
+  }
+
+  function flushSoon() {
+    if (disposed || !dirty) return;
+    if (coalesceId !== null) clearT(coalesceId);
+    coalesceId = setT(function () { coalesceId = null; flush(); }, COALESCE_MS);
+  }
+
+  function flush(fopts) {
+    if (disposed || !dirty) return Promise.resolve();
+    if (inflight) return inflight.then(function () { return flush(fopts); });
+    inflight = doFlush(fopts)
+      .then(function () { inflight = null; }, function () { inflight = null; });
+    return inflight;
+  }
+
+  function doFlush(fopts) {
+    var keepalive = fopts && fopts.keepalive;
+    var seqAtStart = editSeq;
+    setStatus('syncing');
+    var local = collectSyncEntries(talkId, storage);
+    var attempt = 0;
+
+    // Fold a freshly fetched remote doc into local state: three-way merge,
+    // write remote-won items into storage, advance the base to the remote.
+    function integrateRemote(remote) {
+      var merged = mergeSyncDocs(meta.doc || {}, collectSyncEntries(talkId, storage), remote.entries);
+      var changedKeys = applySyncEntries(talkId, merged.entries, storage);
+      if (changedKeys.length) onRemoteApplied(changedKeys);
+      meta.doc = remote.entries;
+      meta.sha = remote.sha;
+      meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+      local = merged.entries;
+    }
+
+    // First push of this session: adopt whatever the sync branch already
+    // holds (another device may have synced), or create the branch.
+    function ensureRemoteBase() {
+      if (meta.sha !== null) return Promise.resolve();
+      return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
+        if (file) { integrateRemote(parseRemote(file)); return; }
+        return gh.getBranchHeadSha(api, token, baseBranch, fetchImpl).then(function (sha) {
+          return gh.createRef(api, token, branch, sha, fetchImpl).catch(function (e) {
+            if (e && e.status === 422) return; // branch already exists — fine
+            throw e;
+          });
+        });
+      });
+    }
+
+    function push() {
+      attempt += 1;
+      var revision = (meta.revision || 0) + 1;
+      var doc = makeSyncDoc(talkId, local, revision, clientId, new Date(now()).toISOString());
+      return gh.putFile(api, token, {
+        path: path,
+        branch: branch,
+        message: 'sync: edit state for ' + talkId,
+        content: JSON.stringify(doc, null, 2) + '\n',
+        sha: meta.sha || undefined,
+        keepalive: keepalive,
+      }, fetchImpl).then(function (res) {
+        meta.doc = local;
+        meta.sha = (res && res.content && res.content.sha) || null;
+        meta.revision = revision;
+        if (editSeq === seqAtStart) {
+          dirty = false;
+          if (debounceId !== null) { clearT(debounceId); debounceId = null; }
+        }
+        saveMeta();
+        return ensurePr();
+      }, function (e) {
+        // CAS: someone else wrote the file since our base sha. Refresh, merge,
+        // retry — the sha is the lock, the merge preserves both sides.
+        if (e && e.status === 409 && attempt < MAX_PUT_ATTEMPTS) {
+          return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
+            if (file) integrateRemote(parseRemote(file));
+            else meta.sha = null;
+            return push();
+          });
+        }
+        throw e;
+      });
+    }
+
+    function ensurePr() {
+      if (meta.prNumber) return Promise.resolve();
+      var title = 'Edit sync: ' + talkId + ' (' + login + ')';
+      var body = 'Automated **draft** PR carrying in-progress review/preview edits from the SPA.\n\n'
+        + '- State file: `' + path + '`\n'
+        + '- Branch: `' + branch + '`\n\n'
+        + 'It is updated in the background while the user edits, and is flipped to '
+        + 'ready-for-review (real files committed, state file removed) when the user '
+        + 'finalizes from the app. Do not merge while draft.';
+      function adopt(pr) {
+        meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
+        saveMeta();
+      }
+      return gh.createPull(api, token,
+        { head: branch, base: baseBranch, title: title, body: body, draft: true }, fetchImpl)
+        .then(adopt, function (e) {
+          if (e && e.status === 422 && /draft/i.test(e.message || '')) {
+            return gh.createPull(api, token,
+              { head: branch, base: baseBranch, title: title, body: body }, fetchImpl).then(adopt);
+          }
+          if (e && e.status === 422 && /already exists/i.test(e.message || '')) {
+            return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl)
+              .then(function (pr) { if (pr) adopt(pr); });
+          }
+          throw e;
+        });
+    }
+
+    return ensureRemoteBase().then(push).then(function () {
+      setStatus('synced');
+    }).catch(function (e) {
+      if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: e && e.message }); return; }
+      if (e && e.status === 401) { setStatus('error', { kind: 'auth', message: e && e.message }); return; }
+      setStatus('error', { kind: 'sync', message: (e && e.message) || String(e), httpStatus: e && e.status });
+    });
+  }
+
+  function pull(force) {
+    if (disposed) return Promise.resolve();
+    var t = now();
+    if (!force && t - lastPullAt < PULL_THROTTLE_MS) return Promise.resolve();
+    lastPullAt = t;
+    return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
+      if (!file) return;
+      if (file.sha === meta.sha) {
+        if (!dirty && status !== 'synced') setStatus('synced');
+        return;
+      }
+      var remote = parseRemote(file);
+      var merged = mergeSyncDocs(meta.doc || {}, collectSyncEntries(talkId, storage), remote.entries);
+      var changedKeys = applySyncEntries(talkId, merged.entries, storage);
+      if (changedKeys.length) onRemoteApplied(changedKeys);
+      meta.doc = remote.entries;
+      meta.sha = remote.sha;
+      meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+      saveMeta();
+      if (merged.changedVsRemote) {
+        // Local still differs (dirty edits or a merge the remote lacks) —
+        // schedule a push so the other device converges.
+        dirty = true;
+        editSeq += 1;
+        armDebounce();
+        setStatus('pending');
+      } else if (!dirty) {
+        setStatus('synced');
+      }
+    }).catch(function (e) {
+      if (e && e.status === 401) { setStatus('error', { kind: 'auth', message: e && e.message }); return; }
+      // Offline / transient pull failures are silent: the next focus retries.
+    });
+  }
+
+  // On talk open: adopt the remote state and re-attach the PR coordinates
+  // (cached in the base meta, else looked up by the deterministic head).
+  function attach() {
+    if (disposed) return Promise.resolve();
+    return pull(true).then(function () {
+      if (meta.sha && !meta.prNumber) {
+        return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
+          if (pr) {
+            meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
+            saveMeta();
+            onStatus(status, info());
+          }
+        }).catch(function () { /* PR lookup is cosmetic — never fail attach */ });
+      }
+    });
+  }
+
+  function destroy() {
+    disposed = true;
+    if (debounceId !== null) { clearT(debounceId); debounceId = null; }
+    if (coalesceId !== null) { clearT(coalesceId); coalesceId = null; }
+  }
+
+  return {
+    notifyEdit: notifyEdit,
+    flushSoon: flushSoon,
+    flush: flush,
+    pull: pull,
+    attach: attach,
+    destroy: destroy,
+    getInfo: info,
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     syncFilePath: syncFilePath,
@@ -216,5 +482,6 @@ if (typeof module !== 'undefined' && module.exports) {
     unflattenDoc: unflattenDoc,
     mergeSyncDocs: mergeSyncDocs,
     makeSyncDoc: makeSyncDoc,
+    createSyncEngine: createSyncEngine,
   };
 }
