@@ -7,12 +7,18 @@
 // merge needs no separate file. Re-attach is one deterministic path: a
 // `markers`-labelled issue titled "Markers: <talkId> / <videoSlug>", resolved
 // via the immediately-consistent list API (no stored-number, no Search).
-var _es = (typeof require !== 'undefined') ? require('./edit_sync') : (typeof window !== 'undefined' ? window : {});
-// Resolved lazily so browser <script> load order (edit_sync.js before this) is
-// not load-time critical.
-function _mergeSyncDocs() { return _es.mergeSyncDocs; }
-
 var MARKER_LABEL = 'markers';
+
+// Marker identity: a marker is the same one across devices/reads when its time
+// and text match (comments/tc are mutable content). Matches edit_sync's.
+function markerIdentity(m) { return String(m && m.time) + '|' + String((m && m.text) || ''); }
+
+// Deep(ish) copy so an in-place edit of a live marker object (the SPA mutates
+// previewState.markers[i].comment in place) can never mutate a stored `base`
+// snapshot — markers are flat objects, so a per-element Object.assign suffices.
+function snapshotMarkers(arr) {
+  return (arr || []).map(function (m) { return Object.assign({}, m); });
+}
 
 function markerIssueTitle(talkId, videoSlug) { return 'Markers: ' + talkId + ' / ' + videoSlug; }
 function markerMetaKey(talkId, videoSlug) { return 'sy_marker_issue_' + talkId + '_' + videoSlug; }
@@ -68,25 +74,45 @@ function parseMarkersBlock(body) {
   } catch (e) { return []; }
 }
 
-// 3-way merge by marker identity (time|text), reusing edit_sync's tested merge.
-// A `preview_`-prefixed synthetic key makes flattenDoc treat the value as a
-// marker entry (merged per marker, delete-by-absence like edits). Returns the
-// merged markers plus `changedVsRemote` (true when the merge differs from the
-// remote), which the pull path uses to decide whether to arm a push.
-function mergeMarkersFull(base, local, remote) {
-  var K = 'preview_marker_sync';
-  var merged = _mergeSyncDocs()(
-    { [K]: { markers: base || [] } },
-    { [K]: { markers: local || [] } },
-    { [K]: { markers: remote || [] } }
-  );
-  return {
-    markers: (merged.entries[K] && merged.entries[K].markers) || [],
-    changedVsRemote: merged.changedVsRemote,
-  };
+// ADDITIVE 3-way merge for markers: `local ∪ (remote \ base)`, keyed by identity.
+//
+// Issues expose NO CAS token (unlike edit_sync's Contents-API sha), so a remote
+// read can be stale, empty or partial (GitHub eventual consistency, a truncated
+// response, a read racing our own write). Such a read must NEVER be trusted to
+// DELETE a local marker — a plain delete-by-absence merge did exactly that and
+// wiped users' markers on flaky networks. So:
+//   - every LOCAL marker is kept (a stale/empty remote can't remove it);
+//   - a remote marker is added only when its identity is NOT already local AND
+//     was NOT locally deleted (present in `base`, absent from `local`);
+//   - on a same-identity content conflict LOCAL wins (mirrors edit_sync).
+// Deletions therefore propagate ONLY from an explicit local removal; a marker
+// another device deleted lingers until this device removes it too — a
+// deliberate trade (a stale marker is recoverable, a lost one is not).
+// Result is sorted by time for a stable issue body. `changedVsRemote` (merged
+// set differs from remote by identity+content) arms a push so the remote
+// converges — re-adding local-only markers and healing a stale read.
+function mergeMarkersInfo(base, local, remote) {
+  base = base || []; local = local || []; remote = remote || [];
+  var localIds = {}, baseIds = {};
+  local.forEach(function (m) { localIds[markerIdentity(m)] = true; });
+  base.forEach(function (m) { baseIds[markerIdentity(m)] = true; });
+  var out = local.slice();
+  remote.forEach(function (m) {
+    var id = markerIdentity(m);
+    if (localIds[id] || baseIds[id]) return;   // already local, or locally deleted
+    out.push(m);
+  });
+  out.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
+  var remoteMap = {}, outMap = {}, changed = false;
+  remote.forEach(function (m) { remoteMap[markerIdentity(m)] = JSON.stringify(m); });
+  out.forEach(function (m) { outMap[markerIdentity(m)] = JSON.stringify(m); });
+  var ids = {};
+  Object.keys(remoteMap).concat(Object.keys(outMap)).forEach(function (k) { ids[k] = true; });
+  Object.keys(ids).forEach(function (k) { if (remoteMap[k] !== outMap[k]) changed = true; });
+  return { markers: out, changedVsRemote: changed };
 }
 function mergeMarkers(base, local, remote) {
-  return mergeMarkersFull(base, local, remote).markers;
+  return mergeMarkersInfo(base, local, remote).markers;
 }
 
 // The engine — DI-driven, mirrors edit_sync.js createSyncEngine (timers,
@@ -183,9 +209,9 @@ function createMarkerSyncEngine(opts) {
         }).then(function (issue) {
           if (disposed) return;
           meta.number = issue.number; meta.url = issue.html_url; meta.nodeId = issue.node_id;
-          // Copy: `local` aliases the SPA's live markers array, which a later
-          // remove/splice would mutate — leaving base wrongly empty for merge.
-          meta.base = local.slice(); saveMeta();
+          // Snapshot: `local` aliases the SPA's live markers array; a later
+          // in-place edit or splice would otherwise mutate base too.
+          meta.base = snapshotMarkers(local); saveMeta();
           if (editSeq === seqAtStart) clearDirty();
           setStatus('synced');
         });
@@ -197,9 +223,9 @@ function createMarkerSyncEngine(opts) {
         var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
         var merged = mergeMarkers(meta.base, local, remote);
         setMarkers(merged);
-        // Copy: setMarkers made `merged` the SPA's live array; a later splice
-        // would otherwise empty base too and break the next merge (no teardown).
-        meta.base = merged.slice();
+        // Snapshot: setMarkers made `merged` the SPA's live array; an in-place
+        // edit or splice would otherwise mutate base too and corrupt the merge.
+        meta.base = snapshotMarkers(merged);
         if (!merged.length) {
           // Teardown: clear the marker block AND close in one PATCH, so a later
           // reopen/pull cannot resurrect the deleted markers from a stale body (C1).
@@ -211,13 +237,11 @@ function createMarkerSyncEngine(opts) {
             else { setStatus('pending'); }  // a mid-teardown re-add re-syncs; never a lying idle
           });
         }
-        var reopen = (iss.state === 'closed')
-          ? gh.setIssueState(api, token, row.number, 'open', fetchImpl)
-          : Promise.resolve();
-        return reopen.then(function () {
-          return gh.updateIssue(api, token, row.number,
-            { body: buildIssueBody(merged, heading) }, fetchImpl);
-        }).then(function () {
+        // Reopen (if closed) AND write the body in ONE PATCH — a separate reopen
+        // then body write leaves a cross-device window where a concurrent teardown
+        // strands the body on a closed issue.
+        return gh.updateIssue(api, token, row.number,
+          { body: buildIssueBody(merged, heading), state: 'open' }, fetchImpl).then(function () {
           if (disposed) return;
           saveMeta();
           if (editSeq === seqAtStart) clearDirty();
@@ -228,9 +252,10 @@ function createMarkerSyncEngine(opts) {
   }
 
   // Adopt the remote issue's markers on open (another device may have synced).
-  // Mirrors edit_sync.pull: base becomes the REMOTE, and if the merge still
-  // differs from the remote (local-only markers, or a merge the remote lacks)
-  // a push is armed so this device converges instead of stranding markers (C2).
+  // Additive merge keeps ALL local markers (a stale/empty read can't delete
+  // one) and adds genuinely-new remote markers; base becomes the REMOTE so a
+  // later local removal still deletes, and `changedVsRemote` arms a push for any
+  // local-only markers so this device converges instead of stranding them (C2).
   function pull(force) {
     if (disposed) return Promise.resolve();
     var t = now();
@@ -243,10 +268,10 @@ function createMarkerSyncEngine(opts) {
         // Closed == no active markers (C1): never seed a resurrection from a
         // stale body.
         var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
-        var full = mergeMarkersFull(meta.base, getMarkers() || [], remote);
-        setMarkers(full.markers);
-        meta.base = remote.slice(); saveMeta();       // base := REMOTE, not the union
-        if (full.changedVsRemote) {
+        var info = mergeMarkersInfo(meta.base, getMarkers() || [], remote);
+        setMarkers(info.markers);
+        meta.base = snapshotMarkers(remote); saveMeta();  // base := REMOTE snapshot
+        if (info.changedVsRemote) {
           // Local still differs from the remote — schedule a push (do not report
           // `synced`, which would leave local-only markers stranded).
           dirty = true; editSeq += 1; armDebounce(); setStatus('pending');

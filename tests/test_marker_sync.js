@@ -185,8 +185,8 @@ describe('marker_sync engine', () => {
     const { engine, gh } = markerEngine({ issue: seeded, localMarkers: [M(3, 'again')] });
     engine.notifyEdit();
     await engine.flush();
-    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'state'), ['state', 7, 'open']);
-    assert.ok(kinds(gh).includes('update'));
+    // Reopen + body write are ONE PATCH now: the update carries state:'open'.
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'update'), ['update', 7, 'open']);
     assert.strictEqual(engine.getInfo().status, 'synced');
   });
 
@@ -308,6 +308,55 @@ describe('marker_sync engine', () => {
     assert.strictEqual(engine.getInfo().status, 'pending', 'local≠remote must not read synced');
     await engine.flush();                             // the armed push lands the local marker
     assert.deepStrictEqual(parseMarkersBlock(gh._issue().body).map((m) => m.text), ['localonly']);
+  });
+
+  // NETWORK SAFETY: issues have no CAS (no sha). A stale / empty / partial remote
+  // read must NEVER delete a local marker via delete-by-absence — that caused live
+  // marker loss. Deletions propagate ONLY from an explicit LOCAL removal.
+  it('a stale EMPTY remote read keeps local markers and heals, never tears down', async () => {
+    const seeded = { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
+      body: buildIssueBody([], 'Video One') };  // reads back empty (eventual consistency)
+    const { engine, gh, getLocal } = markerEngine(
+      { issue: seeded, localMarkers: [M(1, 'a'), M(2, 'b')] },
+      { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [M(1, 'a'), M(2, 'b')] }) });
+    engine.notifyEdit();
+    await engine.flush();
+    assert.deepStrictEqual(getLocal().map((m) => m.text).sort(), ['a', 'b'], 'local markers survive');
+    assert.notStrictEqual(gh._issue().state, 'closed', 'must not tear down on a stale read');
+    assert.deepStrictEqual(parseMarkersBlock(gh._issue().body).map((m) => m.text).sort(), ['a', 'b'],
+      'the stale remote is healed by re-pushing the local markers');
+  });
+  it('a stale remote read missing ONE marker does not delete it', async () => {
+    const seeded = { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
+      body: buildIssueBody([M(1, 'a')], 'Video One') };  // 'b' missing from this read
+    const { engine, getLocal } = markerEngine(
+      { issue: seeded, localMarkers: [M(1, 'a'), M(2, 'b')] },
+      { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [M(1, 'a'), M(2, 'b')] }) });
+    engine.notifyEdit();
+    await engine.flush();
+    assert.deepStrictEqual(getLocal().map((m) => m.text).sort(), ['a', 'b']);
+  });
+  it('a comment typed in place survives the next flush (no revert/aliasing)', async () => {
+    const live = [M(1, 'a', '')];
+    const gh = ghIssueStub({});
+    const storage = memStorage({});
+    const timers = timerHarness();
+    const engine = createMarkerSyncEngine({
+      api: API, owner: 'o', login: 'me', token: 'x', talkId: TALK, videoSlug: VIDEO, heading: 'V',
+      getMarkers: () => live,
+      setMarkers: (m) => { live.length = 0; m.forEach((x) => live.push(x)); },
+      storage, gh, now: () => 1,
+      setTimeoutFn: timers.set.bind(timers), clearTimeoutFn: timers.clear.bind(timers),
+      isOffline: () => false, onStatus: () => {},
+    });
+    engine.notifyEdit();
+    await engine.flush();                 // create; base snapshot = [a, '']
+    live[0].comment = 'my note';          // in-place comment edit (aliasing hazard)
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(parseMarkersBlock(gh._issue().body)[0].comment, 'my note',
+      'the typed comment reaches the issue, not reverted to base');
+    assert.strictEqual(live[0].comment, 'my note');
   });
 
   // I3: a marker's own text may embed a decoy `<!-- sy-markers: <b64> -->`. The
