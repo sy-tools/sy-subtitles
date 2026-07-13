@@ -76,6 +76,16 @@ function ghJson(url, token, opts, fetchImpl) {
   });
 }
 
+// GET the repo root and report the viewer's effective write right. With a
+// user-to-server token, permissions reflects the USER — push=false means
+// "not added to the repo" (read-only mode), regardless of the App's own
+// installation. Missing permissions (defensive) counts as no access.
+function getRepoPermissions(api, token, fetchImpl) {
+  return ghJson(api, token, null, fetchImpl).then(function (r) {
+    return { push: !!(r.permissions && r.permissions.push) };
+  });
+}
+
 // A 403 "Resource not accessible by integration" from ghJson means the
 // GitHub App is not installed on the repository (or lacks a permission) —
 // an admin-fixable configuration problem the UI should name explicitly
@@ -350,6 +360,7 @@ if (typeof module !== 'undefined' && module.exports) {
     authHeaders: authHeaders,
     exchangeCode: exchangeCode,
     getViewer: getViewer,
+    getRepoPermissions: getRepoPermissions,
     isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,
     base64ToUtf8: base64ToUtf8,

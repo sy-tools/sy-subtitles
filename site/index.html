@@ -305,7 +305,7 @@
 <!-- === FRESHNESS BAR (global, all views) === -->
 <div id="freshness-bar" style="background:var(--bg2);border-bottom:1px solid var(--border);padding:4px 20px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--fg6);position:sticky;top:0;z-index:30;">
   <div style="display:flex;align-items:center;gap:8px;">
-    <img id="gh-avatar" src="" alt="" onclick="SPA.ghAccountMenu()" style="display:none;width:20px;height:20px;border-radius:50%;cursor:pointer;border:1px solid var(--border2);vertical-align:middle;">
+    <span id="gh-avatar-wrap" class="gh-avatar-wrap"><img id="gh-avatar" src="" alt="" onclick="SPA.ghAccountMenu()" style="display:none;width:20px;height:20px;border-radius:50%;cursor:pointer;border:1px solid var(--border2);vertical-align:middle;"><svg id="gh-avatar-badge" class="gh-avatar-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m19 5 3-3"/><path d="m2 22 3-3"/><path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"/><path d="M7.5 13.5 10 11"/><path d="M13.5 7.5 11 10"/><path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z"/></svg></span>
     <button id="gh-login-btn" onclick="SPA.ghLogin()" data-i18n="auth.login" data-i18n-title="auth.login_title" style="display:none;background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;">GitHub</button>
     <div class="branch-selector">
       <button class="branch-btn" id="branch-btn" onclick="SPA.toggleBranches()">main &#x25BE;</button>
@@ -929,6 +929,10 @@ var I18N = {
     'sync.chip_title': '\u0421\u0442\u0430\u043D \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457 \u043F\u0440\u0430\u0432\u043E\u043A \u2014 \u0447\u0435\u0440\u043D\u0435\u0442\u043A\u0430 PR \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E',
     'marker.chip_title': '\u0421\u0442\u0430\u043D \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457 \u043C\u0430\u0440\u043A\u0435\u0440\u0456\u0432 \u2014 \u0456\u0448\u02BC\u044E \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E',
     'marker.open_issue': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0456\u0448\u02BC\u044E',
+    'gh.no_repo_access': '\u0412\u0430\u0441 \u0449\u0435 \u043D\u0435 \u0434\u043E\u0434\u0430\u043D\u043E \u0434\u043E \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0456\u044E \u2014 \u0437\u0432\u0435\u0440\u043D\u0456\u0442\u044C\u0441\u044F \u0434\u043E \u0430\u0434\u043C\u0456\u043D\u0456\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0430. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043B\u0438\u0448\u0435 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443',
+    'auth.no_write': '\u0412\u0445\u0456\u0434 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E, \u0430\u043B\u0435 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043B\u0438\u0448\u0435 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443',
+    'auth.write_granted': '\u0414\u043E\u0441\u0442\u0443\u043F \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0430\u0434\u0430\u043D\u043E \u2014 \u0432\u0441\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E',
+    'auth.readonly_title': '(\u0431\u0435\u0437 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441)',
     'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
   },
   en: {
@@ -1091,6 +1095,10 @@ var I18N = {
     'sync.chip_title': 'Edit sync status — the draft PR updates automatically',
     'marker.chip_title': 'Marker sync status — the issue updates automatically',
     'marker.open_issue': 'Open issue',
+    'gh.no_repo_access': 'You have not been added to the repository yet — ask an administrator. Read-only features are available',
+    'auth.no_write': 'Signed in, but without write access — read-only features available',
+    'auth.write_granted': 'Write access granted — all features enabled',
+    'auth.readonly_title': '(no write access)',
     'title.lang': 'Interface language'
   }
 };
@@ -2340,7 +2348,7 @@ function buildManifest(tree) {
 function computeStats(talks, statuses, query) {
   var total = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
   var filtered = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
-  var authLogin = (getAuthUser() || {}).login || null;
+  var authLogin = (ghWriteUser() || {}).login || null;
   talks.forEach(function(t) {
     var matchesSearch = !query || ((t.title || '') + ' ' + (t.date || '') + ' ' + t.id).toLowerCase().indexOf(query) !== -1;
     var st = statuses[t.id] || null;
@@ -2393,8 +2401,8 @@ function renderStats() {
       { f: s.filtered.in_review, t: s.total.in_review, label: t('stat.in_review'), cls: 'info', filter: 'in-review' },
     ];
   }
-  // Signed-in reviewers get a "mine" chip in both modes.
-  if (getAuthUser()) {
+  // Reviewers with write access get a "mine" chip in both modes.
+  if (ghWriteUser()) {
     cards.push({ f: s.filtered.mine, t: s.total.mine, label: t('stat.mine'), cls: 'good', filter: 'mine' });
   }
   bar.innerHTML = '';
@@ -2526,7 +2534,7 @@ function renderIndex(el) {
   document.getElementById('index-toolbar').style.display = 'block';
   var statuses = (reviewStatus && reviewStatus.talks) || {};
   var query = (document.getElementById('search-input').value || '').toLowerCase();
-  var authLogin = (getAuthUser() || {}).login || null;
+  var authLogin = (ghWriteUser() || {}).login || null;
 
   manifest.talks.forEach(function(tk) {
     var st = statuses[tk.id] || null;
@@ -2672,6 +2680,10 @@ SPA.filterTalks = function(filter) {
 document.addEventListener('DOMContentLoaded', function() {
   handleAuthCallback();
   updateAuthUI();
+  // Restored sessions: verify write access (on a callback boot the token is
+  // not saved yet — handleAuthCallback probes after the exchange instead).
+  checkWriteAccess();
+  setInterval(function() { if (hasNoWrite()) checkWriteAccess(); }, WRITE_RECHECK_MS);
   var searchEl = document.getElementById('search-input');
   if (searchEl) {
     var debounce;
@@ -3145,7 +3157,7 @@ function flushPreviewPos() {
 // applyPreviewMode (mode flips) AND updateAuthUI (login/logout mid-preview).
 function updatePreviewSubmitButtons() {
   var mode = (typeof previewState !== 'undefined' && previewState.mode) || 'edit';
-  var signedIn = !!getAuthUser();
+  var signedIn = !!ghWriteUser();
   var editorBtn = document.getElementById('btn-preview-editor');
   if (editorBtn) editorBtn.style.display = (mode === 'edit' && !signedIn) ? 'inline-block' : 'none';
 }
@@ -3598,7 +3610,7 @@ function buildPreviewIssueContent() {
 
 SPA.createPreviewIssue = function() {
   var content = buildPreviewIssueContent();
-  if (getAuthUser() && getAuthToken()) {
+  if (ghWriteUser() && getAuthToken()) {
     submitIssueViaApi(content.title, content.body);
     return;
   }
@@ -4393,11 +4405,25 @@ function ghWriteError(err) {
     showToast(t('auth.expired'));
     return;
   }
-  // 403 "Resource not accessible by integration": the GitHub App is not
-  // installed on the repo (or lacks a permission) — name the fix, don't echo
-  // the opaque API message.
+  // 403 "Resource not accessible by integration" covers TWO distinct causes;
+  // the permissions probe tells them apart: push=false → the USER has not
+  // been added to the repo (degrade to read-only mode); push=true → the App
+  // itself is missing a permission / not installed. Name the right fix
+  // instead of echoing the opaque API message (or blaming the wrong party).
   if (isIntegrationAccessError(err)) {
-    showToast(t('gh.no_app_access'), 6000);
+    getRepoPermissions(API, getAuthToken())
+      .then(function(p) {
+        if (!p.push) {
+          if (!hasNoWrite()) {
+            saveNoWrite();
+            updateAuthUI();
+          }
+          showToast(t('gh.no_repo_access'), 6000);
+        } else {
+          showToast(t('gh.no_app_access'), 6000);
+        }
+      })
+      .catch(function() { showToast(t('gh.no_app_access'), 6000); });
     return;
   }
   var msg = t('gh.error') + (err && err.message ? ': ' + err.message : '');
@@ -4474,7 +4500,10 @@ function activeSyncTarget(talkId) {
 // the engine (new branch/state/PR) whenever the target changes.
 function ensureEditSync() {
   var talkId = currentSyncTalkId();
-  var user = getAuthUser(), token = getAuthToken();
+  // ghWriteUser() is null in read-only mode (signed in, no repo write access) —
+  // attaching the engine would 403 on every push. updateAuthUI() calls this on
+  // the write-access transition, so the engine detaches/attaches automatically.
+  var user = ghWriteUser(), token = getAuthToken();
   if (!talkId || !user || !token || typeof createSyncEngine === 'undefined') {
     destroyEditSync();
     return;
@@ -4672,7 +4701,9 @@ function toggleSyncDropdown(inf) {
 // mode; the manual Create-issue/Copy-all buttons stay hidden signed-in.
 function ensureMarkerSync() {
   var talkId = currentSyncTalkId();
-  var user = getAuthUser(), token = getAuthToken();
+  // Read-only sessions (ghWriteUser() === null) can't write the markers issue —
+  // don't attach. updateAuthUI() re-runs this on the write-access transition.
+  var user = ghWriteUser(), token = getAuthToken();
   var previewOpen = document.getElementById('view-preview').classList.contains('active');
   var active = talkId && user && token && typeof createMarkerSyncEngine !== 'undefined'
     && previewOpen && previewState && previewState.talkId === talkId
@@ -4890,7 +4921,7 @@ function openIssuePage(issueTitle, issueBody) {
 
 SPA.createReviewIssue = function() {
   var content = buildReviewIssueContent();
-  if (getAuthUser() && getAuthToken()) {
+  if (ghWriteUser() && getAuthToken()) {
     submitIssueViaApi(content.title, content.body);
     return;
   }
@@ -4973,15 +5004,26 @@ function fmtTime(sec) {
 // js/github_api.js (Node-tested); this block only wires URL, storage,
 // header UI and toasts together.
 // ============================================================
+// Effective user for write-gated UI: null while the no-write flag is set, so
+// a signed-in user WITHOUT repo write access gets exactly the signed-out
+// feature set (prefilled-issue / editor-buffer fallbacks) — only the avatar
+// (grayscale + disconnect badge) betrays the session.
+function ghWriteUser() {
+  return hasNoWrite() ? null : getAuthUser();
+}
+
 function updateAuthUI() {
   var loginBtn = document.getElementById('gh-login-btn');
   var avatar = document.getElementById('gh-avatar');
   if (!loginBtn || !avatar) return;
   var user = getAuthUser();
+  var writeUser = ghWriteUser(); // null while read-only (no repo write access)
   loginBtn.style.display = (ghClientId() && !user) ? '' : 'none';
+  var wrap = document.getElementById('gh-avatar-wrap');
+  if (wrap) wrap.classList.toggle('gh-avatar--readonly', !!user && !writeUser);
   if (user) {
     avatar.src = user.avatar_url;
-    avatar.title = t('auth.signed_in') + ' ' + user.login;
+    avatar.title = t('auth.signed_in') + ' ' + user.login + (writeUser ? '' : ' ' + t('auth.readonly_title'));
     avatar.alt = user.login;
     avatar.style.display = '';
   } else {
@@ -4989,11 +5031,12 @@ function updateAuthUI() {
   }
   // Signed-in-only controls (e.g. the review view's Create PR button) and
   // their signed-out twins (data-gh-hide, e.g. Open in GitHub Editor): the
-  // API action REPLACES the manual flow — never both at once.
+  // API action REPLACES the manual flow — never both at once. Read-only
+  // sessions count as signed out here (writeUser, not user).
   var ghOnly = document.querySelectorAll('[data-gh-only]');
-  for (var i = 0; i < ghOnly.length; i++) ghOnly[i].style.display = user ? '' : 'none';
+  for (var i = 0; i < ghOnly.length; i++) ghOnly[i].style.display = writeUser ? '' : 'none';
   var ghHide = document.querySelectorAll('[data-gh-hide]');
-  for (var j = 0; j < ghHide.length; j++) ghHide[j].style.display = user ? 'none' : '';
+  for (var j = 0; j < ghHide.length; j++) ghHide[j].style.display = writeUser ? 'none' : '';
   // The preview's pair also depends on the marker/edit mode — delegate.
   updatePreviewSubmitButtons();
   // Edit auto-sync lives only in a signed-in session on a talk view.
@@ -5002,12 +5045,41 @@ function updateAuthUI() {
   // Index cards/chips render auth-dependent bits ("take for review", the
   // 'mine' chip, own-talk highlight) — refresh them on login/logout.
   if (manifest && document.getElementById('index-content')) {
-    // A saved 'mine' filter is meaningless signed out — fall back to 'all'.
-    if (!user && activeFilter === 'mine') activeFilter = 'all';
+    // A saved 'mine' filter is meaningless without write access — fall back.
+    if (!writeUser && activeFilter === 'mine') activeFilter = 'all';
     renderStats();
     renderIndex(document.getElementById('index-content'));
   }
 }
+
+// Probe the viewer's repo write right and keep the no-write flag + UI in
+// sync. Only an authoritative 200 flips state — transient failures (network,
+// rate limit) keep the current mode; a 401 means the token died (sign out).
+function checkWriteAccess() {
+  var token = getAuthToken();
+  if (!token) return Promise.resolve();
+  return getRepoPermissions(API, token).then(function(p) {
+    var had = hasNoWrite();
+    if (p.push && had) {
+      clearNoWrite();
+      updateAuthUI();
+      showToast(t('auth.write_granted'));
+    } else if (!p.push && !had) {
+      saveNoWrite();
+      updateAuthUI();
+      showToast(t('auth.no_write'), 6000);
+    }
+  }).catch(function(err) {
+    if (err && err.status === 401) {
+      clearAuth();
+      updateAuthUI();
+      showToast(t('auth.expired'));
+    }
+  });
+}
+// While read-only, re-probe on this cadence so the UI upgrades itself soon
+// after an admin adds the user — no re-login needed.
+var WRITE_RECHECK_MS = 30 * 60 * 1000;
 
 // "Take for review": assign the talk's review issue to the signed-in user,
 // creating the issue first when none exists (title/label contract of
@@ -5015,7 +5087,7 @@ function updateAuthUI() {
 // The workflow then flips labels/review-status.json; the UI updates
 // optimistically so the badge doesn't lag behind the bot commit.
 SPA.takeForReview = function(talkId) {
-  var user = getAuthUser(), token = getAuthToken();
+  var user = ghWriteUser(), token = getAuthToken();
   if (!user || !token) return Promise.resolve();
   var st = (reviewStatus && reviewStatus.talks && reviewStatus.talks[talkId]) || null;
   var done = function(issueNumber) {
@@ -5069,7 +5141,8 @@ SPA.ghAccountMenu = function() {
   var user = getAuthUser() || {};
   SPA.confirm({
     title: t('auth.logout_confirm'),
-    body: esc(user.login || ''),
+    body: esc(user.login || '')
+      + (hasNoWrite() ? '<br><br>' + esc(t('gh.no_repo_access')) : ''),
     confirmLabel: t('auth.logout')
   }).then(function(ok) {
     if (!ok) return;
@@ -5109,6 +5182,7 @@ function handleAuthCallback() {
         saveAuth(token, user);
         updateAuthUI();
         showToast(t('auth.signed_in') + ' ' + user.login);
+        checkWriteAccess();
       });
     })
     .catch(function(err) {
@@ -5588,7 +5662,7 @@ SPA.submitAddTalk = function() {
 
   // Signed-in path: branch + commit + PR in one click. sync-subtitles /
   // new-talk automation then picks the PR up exactly as a hand-made one.
-  var user = getAuthUser(), token = getAuthToken();
+  var user = ghWriteUser(), token = getAuthToken();
   if (user && token) {
     submitFilesPr(API, token, {
       branch: makeBranchName('add-talk/' + talkId, user.login),

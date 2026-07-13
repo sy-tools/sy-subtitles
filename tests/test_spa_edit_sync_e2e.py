@@ -266,6 +266,18 @@ def _wire(pg, calls, review_status, sync_opts):
         lambda r: r.fulfill(status=200, content_type="text/html", body="<html></html>"),
     )
 
+    # Repo root: the write-access probe (#753) GETs this on boot. The signed-in
+    # test user HAS write access, so report push=true — else ghWriteUser() is null
+    # and the sync engines never attach.
+    pg.route(
+        "**/api.github.com/repos/sy-tools/sy-subtitles",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"permissions": {"push": True, "pull": True}}),
+        ),
+    )
+
     # 2) write endpoints — registered last so they shadow the generic API mock.
     pg.route("**/api.github.com/repos/**/git/ref/heads/main", _record(calls, 200, {"object": {"sha": "base1"}}))
     pg.route("**/api.github.com/repos/**/git/refs", _record(calls, 201, {}))

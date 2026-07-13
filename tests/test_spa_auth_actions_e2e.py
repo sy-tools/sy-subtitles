@@ -159,6 +159,16 @@ def _wire(pg, calls, review_status):
             body=json.dumps(MOCK_TREE),
         ),
     )
+    # Repo root: the write-access probe — full access, so the signed-in write
+    # UI (the subject of these tests) stays enabled.
+    pg.route(
+        "**/api.github.com/repos/sy-tools/sy-subtitles",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"permissions": {"push": True, "pull": True}}),
+        ),
+    )
     pg.route("**/raw.githubusercontent.com/**", lambda r: r.fulfill(status=404, body="not found"))
     pg.route(
         "**/raw.githubusercontent.com/**/meta.yaml",

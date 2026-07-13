@@ -43,11 +43,12 @@ _WINDOW = 6
 # stay correct across a language toggle for the stated reason. Keys are the
 # stripped source line; keep each reason accurate if you touch the code.
 ALLOWLIST = {
-    # Avatar tooltip is composite ("signed in as" + the GitHub login), so it
-    # can't be a plain data-i18n-title. SPA.toggleLang() calls updateAuthUI(),
-    # which re-applies it in the current language. (test_spa_auth_e2e.py:
+    # Avatar tooltip is composite ("signed in as" + the GitHub login + the
+    # read-only suffix), so it can't be a plain data-i18n-title.
+    # SPA.toggleLang() calls updateAuthUI(), which re-applies it in the
+    # current language. (test_spa_auth_e2e.py:
     # test_avatar_tooltip_refreshes_on_language_toggle)
-    "avatar.title = t('auth.signed_in') + ' ' + user.login;",
+    "avatar.title = t('auth.signed_in') + ' ' + user.login + (writeUser ? '' : ' ' + t('auth.readonly_title'));",
     # Theme button title mirrors the current theme mode; SPA.toggleLang()
     # re-applies it via the themeBtn.title line below.
     "if (btn) { btn.textContent = icons[mode]; btn.title = t('title.theme.' + mode); }",
