@@ -53,7 +53,8 @@ function ghIssueStub(over) {
       return { number: nextNum, html_url: 'u' + nextNum, node_id: 'I' };
     },
     updateIssue: async (a, t, n, fields) => {
-      calls.push(['update', n]);
+      calls.push(['update', n, fields.state]);
+      if (over.onUpdate) over.onUpdate(fields);
       if (issue) { if (fields.body !== undefined) issue.body = fields.body; if (fields.state) issue.state = fields.state; }
       return issue;
     },
@@ -173,7 +174,8 @@ describe('marker_sync engine', () => {
       { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [M(1, 'alpha')] }) });
     engine.notifyEdit();
     await engine.flush();
-    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'state'), ['state', 7, 'closed']);
+    assert.strictEqual(gh._issue().state, 'closed');
+    assert.deepStrictEqual(parseMarkersBlock(gh._issue().body), [], 'teardown empties the marker block');
     assert.strictEqual(engine.getInfo().status, 'idle');
   });
 
@@ -233,7 +235,8 @@ describe('marker_sync engine', () => {
     live.splice(0, 1);                     // in-place removal (the aliasing hazard)
     engine.notifyEdit();
     await engine.flush();
-    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'state'), ['state', 50, 'closed']);
+    assert.strictEqual(gh._issue().state, 'closed');
+    assert.deepStrictEqual(parseMarkersBlock(gh._issue().body), []);
   });
 
   it('snapshots base after a merge/update so a later removal still tears down', async () => {
@@ -259,21 +262,64 @@ describe('marker_sync engine', () => {
     state.live.splice(0, 1);              // in-place removal on that shared array
     engine.notifyEdit();
     await engine.flush();
-    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'state'), ['state', 7, 'closed']);
+    assert.strictEqual(gh._issue().state, 'closed');
+    assert.deepStrictEqual(parseMarkersBlock(gh._issue().body), []);
   });
 
   it('does not drop a marker added mid-teardown; chip never lies idle', async () => {
     const seeded = { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
       body: buildIssueBody([M(1, 'a')], 'Video One') };
     const holder = {};
-    // onState (fired during the teardown close) injects a fresh marker + notify,
-    // as if the user re-added one while the close request was on the wire.
+    // onUpdate (fired during the teardown close+clear PATCH) injects a fresh
+    // marker + notify, as if the user re-added one while the request was on the wire.
     const h = markerEngine(
-      { issue: seeded, localMarkers: [], onState: () => holder.fn && holder.fn() },
+      { issue: seeded, localMarkers: [], onUpdate: () => holder.fn && holder.fn() },
       { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [M(1, 'a')] }) });
     holder.fn = () => { h.setLocal([M(9, 'redo')]); h.engine.notifyEdit(); };
     h.engine.notifyEdit();
     await h.engine.flush();
     assert.notStrictEqual(h.engine.getInfo().status, 'idle', 'a mid-teardown re-add must not read idle');
+  });
+
+  // C1: a CLOSED issue must never seed markers back into the SPA. Teardown
+  // closes-not-deletes, so a stale body can linger; attach/pull must read a
+  // closed issue as empty and leave local markers alone (no resurrection, no
+  // lying `synced` chip).
+  it('does not resurrect markers from a closed issue on attach (C1)', async () => {
+    const stale = buildIssueBody([M(1, 'ghost'), M(2, 'ghost2')], 'Video One');
+    const seeded = { number: 9, title: TITLE, state: 'closed', node_id: 'I9', html_url: 'u9', body: stale };
+    const { engine, gh, getLocal } = markerEngine({ issue: seeded, localMarkers: [] },
+      { [META_KEY]: JSON.stringify({ number: 9, url: 'u9', nodeId: 'I9', base: [] }) });
+    await engine.attach();
+    assert.deepStrictEqual(getLocal(), [], 'a closed issue must not repopulate local markers');
+    assert.notStrictEqual(engine.getInfo().status, 'synced', 'chip must not lie synced on a closed issue');
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'update' || c[0] === 'state').length, 0,
+      'a pull must not reopen or rewrite a closed issue');
+  });
+
+  // C2: device B has a local-only marker and the remote issue is open-but-empty.
+  // attach must adopt the REMOTE as base and PUSH the local marker up, not fold
+  // it into base (which delete-by-absence would silently drop on the next flush).
+  it('pushes a local-only marker on attach instead of stranding it (C2)', async () => {
+    const seeded = { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
+      body: buildIssueBody([], 'Video One') };
+    const { engine, gh } = markerEngine({ issue: seeded, localMarkers: [M(2, 'localonly')] });
+    await engine.attach();                            // pull: base := remote([]), arm a push
+    assert.strictEqual(engine.getInfo().status, 'pending', 'local≠remote must not read synced');
+    await engine.flush();                             // the armed push lands the local marker
+    assert.deepStrictEqual(parseMarkersBlock(gh._issue().body).map((m) => m.text), ['localonly']);
+  });
+
+  // I3: a marker's own text may embed a decoy `<!-- sy-markers: <b64> -->`. The
+  // real block is appended LAST by buildIssueBody, so the parser must read the
+  // last match (and the human table must not emit a live comment), else a
+  // crafted marker hijacks the structured payload cross-device.
+  it('parseMarkersBlock ignores a decoy block embedded in marker text (I3)', () => {
+    const evil = Buffer.from(JSON.stringify([{ time: 9, tc: '00:00:09', text: 'EVIL', comment: '' }]),
+      'utf-8').toString('base64');
+    const markers = [{ time: 1, tc: '00:00:01', text: 'x <!-- sy-markers: ' + evil + ' -->', comment: '' }];
+    const body = buildIssueBody(markers, 'V');
+    assert.deepStrictEqual(parseMarkersBlock(body), markers, 'the appended real block wins, not the decoy');
+    assert.strictEqual(parseMarkersBlock(body).some((m) => m.text === 'EVIL'), false);
   });
 });

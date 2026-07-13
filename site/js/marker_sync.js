@@ -28,16 +28,29 @@ function b64decode(s) {
     : decodeURIComponent(escape(atob(s)));
 }
 
+// Neutralise a value before it goes into a Markdown table cell: `|` breaks the
+// column layout, newlines break the row, and a literal `<!--` would let a
+// crafted marker inject a decoy sy-markers comment (see parseMarkersBlock, I3).
+function escapeCell(s) {
+  return String(s || '')
+    .replace(/\|/g, '\\|')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/</g, '&lt;');
+}
+
 function renderMarkersTable(markers, heading) {
   var lines = ['## Markers' + (heading ? ' — ' + heading : ''), '',
     '| Time | Subtitle | Comment |', '|------|----------|---------|'];
   (markers || []).forEach(function (m) {
-    lines.push('| ' + (m.tc || '') + ' | ' + (m.text || '') + ' | ' + (m.comment || '') + ' |');
+    lines.push('| ' + escapeCell(m.tc) + ' | ' + escapeCell(m.text) + ' | ' + escapeCell(m.comment) + ' |');
   });
   return lines.join('\n');
 }
 
-var BLOCK_RE = /<!-- sy-markers: ([A-Za-z0-9+/=]*) -->/;
+// Global so parseMarkersBlock can take the LAST match: buildIssueBody always
+// appends the authoritative block last, so reading the final match ignores any
+// decoy the human table above it might contain (I3).
+var BLOCK_RE = /<!-- sy-markers: ([A-Za-z0-9+/=]*) -->/g;
 
 function buildIssueBody(markers, heading) {
   return renderMarkersTable(markers, heading)
@@ -45,25 +58,35 @@ function buildIssueBody(markers, heading) {
 }
 
 function parseMarkersBlock(body) {
-  var m = BLOCK_RE.exec(body || '');
-  if (!m) return [];
+  BLOCK_RE.lastIndex = 0;
+  var m, last = null;
+  while ((m = BLOCK_RE.exec(body || '')) !== null) last = m;
+  if (!last) return [];
   try {
-    var arr = JSON.parse(b64decode(m[1]));
+    var arr = JSON.parse(b64decode(last[1]));
     return Array.isArray(arr) ? arr : [];
   } catch (e) { return []; }
 }
 
 // 3-way merge by marker identity (time|text), reusing edit_sync's tested merge.
 // A `preview_`-prefixed synthetic key makes flattenDoc treat the value as a
-// marker entry (merged per marker, delete-by-absence like edits).
-function mergeMarkers(base, local, remote) {
+// marker entry (merged per marker, delete-by-absence like edits). Returns the
+// merged markers plus `changedVsRemote` (true when the merge differs from the
+// remote), which the pull path uses to decide whether to arm a push.
+function mergeMarkersFull(base, local, remote) {
   var K = 'preview_marker_sync';
   var merged = _mergeSyncDocs()(
     { [K]: { markers: base || [] } },
     { [K]: { markers: local || [] } },
     { [K]: { markers: remote || [] } }
   );
-  return (merged.entries[K] && merged.entries[K].markers) || [];
+  return {
+    markers: (merged.entries[K] && merged.entries[K].markers) || [],
+    changedVsRemote: merged.changedVsRemote,
+  };
+}
+function mergeMarkers(base, local, remote) {
+  return mergeMarkersFull(base, local, remote).markers;
 }
 
 // The engine — DI-driven, mirrors edit_sync.js createSyncEngine (timers,
@@ -169,15 +192,19 @@ function createMarkerSyncEngine(opts) {
       }
       return gh.getIssue(api, token, row.number, fetchImpl).then(function (iss) {
         if (disposed) return;
-        var remote = parseMarkersBlock(iss.body);
+        // A closed issue carries no active markers; reading its (possibly stale)
+        // body would resurrect just-deleted markers (C1). Treat closed as empty.
+        var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
         var merged = mergeMarkers(meta.base, local, remote);
         setMarkers(merged);
         // Copy: setMarkers made `merged` the SPA's live array; a later splice
         // would otherwise empty base too and break the next merge (no teardown).
         meta.base = merged.slice();
         if (!merged.length) {
-          // Teardown: close the issue (analog of the PR close+delete).
-          return gh.setIssueState(api, token, row.number, 'closed', fetchImpl).then(function () {
+          // Teardown: clear the marker block AND close in one PATCH, so a later
+          // reopen/pull cannot resurrect the deleted markers from a stale body (C1).
+          return gh.updateIssue(api, token, row.number,
+            { body: buildIssueBody([], heading), state: 'closed' }, fetchImpl).then(function () {
             if (disposed) return;
             saveMeta();
             if (editSeq === seqAtStart) { clearDirty(); setStatus('idle'); }
@@ -201,6 +228,9 @@ function createMarkerSyncEngine(opts) {
   }
 
   // Adopt the remote issue's markers on open (another device may have synced).
+  // Mirrors edit_sync.pull: base becomes the REMOTE, and if the merge still
+  // differs from the remote (local-only markers, or a merge the remote lacks)
+  // a push is armed so this device converges instead of stranding markers (C2).
   function pull(force) {
     if (disposed) return Promise.resolve();
     var t = now();
@@ -210,11 +240,19 @@ function createMarkerSyncEngine(opts) {
       if (disposed || !row) return;
       return gh.getIssue(api, token, row.number, fetchImpl).then(function (iss) {
         if (disposed) return;
-        var remote = parseMarkersBlock(iss.body);
-        var merged = mergeMarkers(meta.base, getMarkers() || [], remote);
-        setMarkers(merged);
-        meta.base = merged.slice(); saveMeta();
-        if (!dirty) setStatus(merged.length ? 'synced' : 'idle');
+        // Closed == no active markers (C1): never seed a resurrection from a
+        // stale body.
+        var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
+        var full = mergeMarkersFull(meta.base, getMarkers() || [], remote);
+        setMarkers(full.markers);
+        meta.base = remote.slice(); saveMeta();       // base := REMOTE, not the union
+        if (full.changedVsRemote) {
+          // Local still differs from the remote — schedule a push (do not report
+          // `synced`, which would leave local-only markers stranded).
+          dirty = true; editSeq += 1; armDebounce(); setStatus('pending');
+        } else if (!dirty) {
+          setStatus(remote.length ? 'synced' : 'idle');
+        }
       });
     }).catch(function () { /* transient pull failures are silent */ });
   }
