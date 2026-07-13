@@ -195,6 +195,7 @@ function ghStub(over) {
   const calls = [];
   function record(name, detail) { calls.push([name].concat(detail || [])); }
   let putCount = 0;
+  let pullCount = 0;
   const gh = {
     calls,
     puts: [],
@@ -220,11 +221,16 @@ function ghStub(over) {
       return { content: { sha: 'sha_after_put' + putCount } };
     },
     createPull: async (api, token, opts) => {
+      pullCount += 1;
       record('createPull', [opts.head, opts.base, !!opts.draft]);
       if (over.draftUnsupported && opts.draft) {
         const e = new Error('Draft pull requests are not supported in this repository.');
         e.status = 422;
         throw e;
+      }
+      if (over.pullFails && pullCount <= over.pullFails.length) {
+        const spec = over.pullFails[pullCount - 1];
+        if (spec) { const e = new Error(spec.message || 'fail'); e.status = spec.status; throw e; }
       }
       return { number: 77, html_url: 'https://github.com/x/pull/77', node_id: 'PR_n77', draft: !!opts.draft };
     },
@@ -350,6 +356,42 @@ describe('engine: bootstrap', () => {
     const pulls = gh.calls.filter((c) => c[0] === 'createPull');
     assert.deepStrictEqual(pulls.map((c) => c[3]), [true, false]);
     assert.strictEqual(engine.getInfo().prNumber, 77);
+  });
+});
+
+describe('engine: no-op protection', () => {
+  it('never bootstraps a branch/PR when there is nothing to sync', async () => {
+    // e.g. a mode toggle marks the state dirty without any real edit
+    const { engine, gh } = makeEngine();
+    engine.notifyEdit();
+    await engine.flush();
+    const names = gh.calls.map((c) => c[0]);
+    assert.deepStrictEqual(names, ['getFileContent']); // looked, created nothing
+    assert.strictEqual(engine.getInfo().status, 'idle');
+  });
+  it('skips the PUT when the doc is unchanged since the last push', async () => {
+    const { engine, gh, storage } = makeEngine();
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.puts.length, 1);
+    engine.notifyEdit(); // dirty again, but storage did not change
+    await engine.flush();
+    assert.strictEqual(gh.puts.length, 1);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(engine.getInfo().dirty, false);
+  });
+  it('flush({force}) retries the PR creation after it failed once', async () => {
+    const { engine, gh, storage } = makeEngine({ pullFails: [{ status: 500, message: 'boom' }] });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'error');
+    assert.strictEqual(engine.getInfo().prNumber, null);
+    await engine.flush({ force: true });
+    assert.strictEqual(gh.puts.length, 1); // state already pushed — no re-PUT
+    assert.strictEqual(engine.getInfo().prNumber, 77);
+    assert.strictEqual(engine.getInfo().status, 'synced');
   });
 });
 

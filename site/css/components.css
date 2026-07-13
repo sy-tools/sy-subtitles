@@ -922,3 +922,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 @keyframes sy-toast-out {
   to { opacity: 0; transform: translateY(8px); }
 }
+
+/* ---- Edit auto-sync status chip (freshness bar) ---- */
+#sync-chip-icon svg { display: block; }
+#sync-chip-btn.sync-pending { color: var(--accent-orange); border-color: var(--accent-orange); }
+#sync-chip-btn.sync-error { color: var(--accent-red); border-color: var(--accent-red); }
+@keyframes sync-spin { to { transform: rotate(360deg); } }
+#sync-chip-icon svg.spin { animation: sync-spin 1s linear infinite; }

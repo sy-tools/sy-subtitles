@@ -29,6 +29,7 @@
 <script src="js/passphrase_gate.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
+<script src="js/edit_sync.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -307,6 +308,14 @@
     <div class="branch-selector">
       <button class="branch-btn" id="branch-btn" onclick="SPA.toggleBranches()">main &#x25BE;</button>
       <div class="branch-dropdown" id="branch-dropdown"></div>
+    </div>
+    <!-- Edit auto-sync status (signed-in only): link to the draft PR, or a
+         dropdown with recovery actions when the sync is failing. -->
+    <div class="branch-selector" id="sync-chip" style="display:none">
+      <button class="branch-btn" id="sync-chip-btn" onclick="SPA.syncChipClick()" data-i18n-title="sync.chip_title" style="display:inline-flex;align-items:center;gap:5px;">
+        <span id="sync-chip-icon" style="pointer-events:none"></span><span id="sync-chip-text" style="pointer-events:none"></span>
+      </button>
+      <div class="branch-dropdown" id="sync-chip-dropdown"></div>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
@@ -897,6 +906,17 @@ var I18N = {
     'review.taken': '\u041F\u0440\u043E\u043C\u043E\u0432\u0443 \u0432\u0437\u044F\u0442\u043E \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'gh.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 GitHub',
     'gh.no_app_access': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u0434\u043E \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0456\u044E \u2014 \u0430\u0434\u043C\u0456\u043D\u0456\u0441\u0442\u0440\u0430\u0442\u043E\u0440 \u043C\u0430\u0454 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0430 \u043D\u044C\u043E\u043C\u0443',
+    'sync.synced': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u043E\u0432\u0430\u043D\u043E',
+    'sync.syncing': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u044F\u2026',
+    'sync.pending': '\u041E\u0447\u0456\u043A\u0443\u0454 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457',
+    'sync.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457',
+    'sync.retry': '\u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0440\u0430\u0437',
+    'sync.open_pr': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043D\u0430 GitHub',
+    'sync.copy_backup': '\u0421\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u0443 \u043A\u043E\u043F\u0456\u044E \u043F\u0440\u0430\u0432\u043E\u043A',
+    'sync.backup_copied': '\u041F\u0440\u0430\u0432\u043A\u0438 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u0432 \u0431\u0443\u0444\u0435\u0440 (JSON)',
+    'sync.signin': '\u0423\u0432\u0456\u0439\u0442\u0438 \u0437\u043D\u043E\u0432\u0443',
+    'sync.chip_title': '\u0421\u0442\u0430\u043D \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457 \u043F\u0440\u0430\u0432\u043E\u043A \u2014 \u0447\u0435\u0440\u043D\u0435\u0442\u043A\u0430 PR \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E',
+    'btn.finalize_pr': '\u0424\u0456\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 PR',
     'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
   },
   en: {
@@ -1044,6 +1064,17 @@ var I18N = {
     'review.taken': 'Talk taken for review',
     'gh.error': 'GitHub error',
     'gh.no_app_access': 'The GitHub App has no access to this repository — an admin must install the app on it',
+    'sync.synced': 'Synced',
+    'sync.syncing': 'Syncing…',
+    'sync.pending': 'Sync pending',
+    'sync.error': 'Sync error',
+    'sync.retry': 'Retry now',
+    'sync.open_pr': 'Open on GitHub',
+    'sync.copy_backup': 'Copy edits backup',
+    'sync.backup_copied': 'Edits copied to clipboard (JSON)',
+    'sync.signin': 'Sign in again',
+    'sync.chip_title': 'Edit sync status — the draft PR updates automatically',
+    'btn.finalize_pr': 'Finalize PR',
     'title.lang': 'Interface language'
   }
 };
@@ -2017,6 +2048,7 @@ function route() {
       document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
       history.replaceState(null, '', location.pathname + location.search);
       showIndex();
+      ensureEditSync();
       ensureUnlocked().then(function(ok) { if (ok) location.hash = target; });
       return;
     }
@@ -2055,6 +2087,9 @@ function route() {
     }
     showIndex();
   }
+  // Edit auto-sync follows the view: engine for the open talk (signed-in),
+  // torn down elsewhere.
+  ensureEditSync();
 }
 
 // ============================================================
@@ -3009,6 +3044,7 @@ function savePreviewState() {
     edits: previewState.edits || {},
   };
   localStorage.setItem(key, JSON.stringify(payload));
+  if (editSync) editSync.notifyEdit();
 }
 
 // Playback position is persisted under its own key (sy.preview_pos.*) on a 2s
@@ -4172,6 +4208,7 @@ function loadReviewEditsForMode() {
 function saveReview() {
   localStorage.setItem(reviewStorageKey(), JSON.stringify({ marks: reviewState.marks, edits: reviewState.edits }));
   updateRevertBtn();
+  if (editSync) editSync.notifyEdit();
 }
 
 SPA.revertEdit = function(idx) {
@@ -4276,6 +4313,182 @@ function submitIssueViaApi(issueTitle, issueBody) {
     .then(function(res) { ghCreatedDialog('issue.created', res); })
     .catch(ghWriteError);
 }
+
+// ============================================================
+// Edit auto-sync (signed-in): review/preview edits replicate in the
+// background to a state file on a deterministic branch with a draft PR.
+// Pure logic lives in js/edit_sync.js + js/github_api.js (Node-tested);
+// this block wires lifecycle (route/auth), the status chip and re-renders.
+// ============================================================
+var editSync = null;
+
+// Stroke SVG icons (project rule: no emoji in UI controls).
+var SYNC_ICONS = {
+  synced: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6.5 4.8 9.3 10 3.5"/></svg>',
+  syncing: '<svg class="spin" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 6a4.2 4.2 0 1 1-1.23-2.97"/><polyline points="10.4 0.9 10.4 3.3 8 3.3"/></svg>',
+  pending: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="4.6"/><polyline points="6 3.6 6 6 7.8 7"/></svg>',
+  error: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.6 11 10.4H1z"/><line x1="6" y1="4.8" x2="6" y2="7"/><line x1="6" y1="8.7" x2="6" y2="8.71"/></svg>',
+};
+
+function currentSyncTalkId() {
+  var hash = location.hash.slice(1) || '/';
+  if (hash.indexOf('/review/') === 0) return hash.split('/')[2].split('?')[0];
+  if (hash.indexOf('/preview/') === 0) return hash.split('/')[2];
+  return null;
+}
+
+// (Re)create the engine for the currently open talk, or tear it down when
+// signed out / not on a talk view. Idempotent — called from route() and
+// updateAuthUI().
+function ensureEditSync() {
+  var talkId = currentSyncTalkId();
+  var user = getAuthUser(), token = getAuthToken();
+  if (!talkId || !user || !token || typeof createSyncEngine === 'undefined') {
+    destroyEditSync();
+    return;
+  }
+  if (editSync && editSync.talkId === talkId) return;
+  destroyEditSync();
+  var engine = createSyncEngine({
+    api: API,
+    owner: REPO.split('/')[0],
+    token: token,
+    login: user.login,
+    talkId: talkId,
+    base: BRANCH,
+    branch: makeSyncBranchName(user.login, talkId),
+    storage: localStorage,
+    gh: {
+      getFileContent: getFileContent,
+      getBranchHeadSha: getBranchHeadSha,
+      createRef: createRef,
+      putFile: putFile,
+      createPull: createPull,
+      findOpenPrByHead: findOpenPrByHead,
+    },
+    isOffline: isOfflineError,
+    onStatus: onSyncStatus,
+    onRemoteApplied: onSyncRemoteApplied,
+  });
+  engine.talkId = talkId;
+  editSync = engine;
+  engine.attach();
+  renderSyncStatus(engine.getInfo().status, engine.getInfo());
+}
+
+function destroyEditSync() {
+  if (editSync) { editSync.destroy(); editSync = null; }
+  renderSyncStatus('idle', null);
+}
+
+function onSyncStatus(status, info) {
+  // A background 401 means the token was revoked — same silent sign-out the
+  // foreground write paths perform (ghWriteError).
+  if (status === 'error' && info && info.error && info.error.kind === 'auth') {
+    destroyEditSync();
+    clearAuth();
+    updateAuthUI();
+    showToast(t('auth.expired'));
+    return;
+  }
+  renderSyncStatus(status, info);
+}
+
+// Remote edits just landed in localStorage (pull/merge) — refresh whichever
+// talk view is open so the cells show them without a reload.
+function onSyncRemoteApplied() {
+  var reviewOpen = document.getElementById('view-review').classList.contains('active');
+  if (reviewOpen && reviewState.talkId) {
+    loadReviewEditsForMode();
+    renderReview();
+    updateRevertBtn();
+  }
+  var previewOpen = document.getElementById('view-preview').classList.contains('active');
+  if (previewOpen && previewState && previewState.talkId) {
+    var persisted = loadPreviewState(previewState.talkId, previewState.videoSlug, localStorage);
+    previewState.mode = persisted.mode;
+    previewState.markers = persisted.markers;
+    previewState.edits = persisted.edits;
+    applyPreviewMode();
+    renderMarkers();
+    renderEditList();
+    updateClearBtn();
+  }
+}
+
+function renderSyncStatus(status, info) {
+  var chip = document.getElementById('sync-chip');
+  if (!chip) return;
+  if (!editSync || status === 'idle') {
+    chip.style.display = 'none';
+    var dd0 = document.getElementById('sync-chip-dropdown');
+    if (dd0) dd0.classList.remove('open');
+    return;
+  }
+  chip.style.display = '';
+  var labels = { synced: 'sync.synced', syncing: 'sync.syncing', pending: 'sync.pending', error: 'sync.error' };
+  var textEl = document.getElementById('sync-chip-text');
+  textEl.textContent = t(labels[status] || status);
+  textEl.setAttribute('data-i18n', labels[status] || '');
+  document.getElementById('sync-chip-icon').innerHTML = SYNC_ICONS[status] || '';
+  var btn = document.getElementById('sync-chip-btn');
+  btn.classList.toggle('sync-pending', status === 'pending');
+  btn.classList.toggle('sync-error', status === 'error');
+}
+
+SPA.syncChipClick = function() {
+  if (!editSync) return;
+  var inf = editSync.getInfo();
+  if (inf.status === 'error') { toggleSyncDropdown(inf); return; }
+  if (inf.status === 'pending' || inf.status === 'syncing') { editSync.flush(); return; }
+  if (inf.prUrl) window.open(inf.prUrl);
+  else window.open('https://github.com/' + REPO + '/tree/' + inf.branch);
+};
+
+// Error-state dropdown: recovery actions instead of a dead red chip.
+function toggleSyncDropdown(inf) {
+  var dd = document.getElementById('sync-chip-dropdown');
+  if (!dd) return;
+  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+  dd.innerHTML = '';
+  function item(label, fn) {
+    var d = document.createElement('div');
+    d.textContent = label;
+    d.onclick = function() { dd.classList.remove('open'); fn(); };
+    dd.appendChild(d);
+  }
+  item(t('sync.retry'), function() { if (editSync) editSync.flush(); });
+  if (inf.prUrl || inf.branch) {
+    item(t('sync.open_pr'), function() {
+      window.open(inf.prUrl || ('https://github.com/' + REPO + '/tree/' + inf.branch));
+    });
+  }
+  item(t('sync.copy_backup'), function() {
+    var entries = collectSyncEntries(inf.talkId || (editSync && editSync.talkId) || '', localStorage);
+    navigator.clipboard.writeText(JSON.stringify(entries, null, 2))
+      .then(function() { showToast(t('sync.backup_copied')); })
+      .catch(function() { showToast(t('error.clipboard')); });
+  });
+  dd.classList.add('open');
+}
+
+// Push triggers beyond the engine's own 15s debounce: field blur (capture
+// phase — blur does not bubble), tab hide/close (keepalive so the request
+// survives teardown), connectivity return; pulls on tab focus/visibility.
+document.addEventListener('blur', function(e) {
+  if (!editSync || !e.target) return;
+  var el = e.target;
+  var tag = el.tagName;
+  if (el.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA') editSync.flushSoon();
+}, true);
+window.addEventListener('online', function() { if (editSync) editSync.flush(); });
+window.addEventListener('focus', function() { if (editSync) editSync.pull(); });
+document.addEventListener('visibilitychange', function() {
+  if (!editSync) return;
+  if (document.visibilityState === 'hidden') editSync.flush({ keepalive: true });
+  else editSync.pull();
+});
+window.addEventListener('pagehide', function() { if (editSync) editSync.flush({ keepalive: true }); });
 
 // {title, body} of the review issue — also reused verbatim as the PR body by
 // SPA.createReviewPr, so both write paths describe the same marks/edits.
@@ -4485,6 +4698,8 @@ function updateAuthUI() {
   for (var j = 0; j < ghHide.length; j++) ghHide[j].style.display = user ? 'none' : '';
   // The preview's pair also depends on the marker/edit mode — delegate.
   updatePreviewSubmitButtons();
+  // Edit auto-sync lives only in a signed-in session on a talk view.
+  ensureEditSync();
   // Index cards/chips render auth-dependent bits ("take for review", the
   // 'mine' chip, own-talk highlight) — refresh them on login/logout.
   if (manifest && document.getElementById('index-content')) {

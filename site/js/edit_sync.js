@@ -288,7 +288,9 @@ function createSyncEngine(opts) {
   }
 
   function flush(fopts) {
-    if (disposed || !dirty) return Promise.resolve();
+    // force bypasses the dirty gate: the recovery path ("Retry now") must be
+    // able to re-run the PR-creation tail even after the state itself pushed.
+    if (disposed || (!dirty && !(fopts && fopts.force))) return Promise.resolve();
     if (inflight) return inflight.then(function () { return flush(fopts); });
     inflight = doFlush(fopts)
       .then(function () { inflight = null; }, function () { inflight = null; });
@@ -315,11 +317,14 @@ function createSyncEngine(opts) {
     }
 
     // First push of this session: adopt whatever the sync branch already
-    // holds (another device may have synced), or create the branch.
+    // holds (another device may have synced), or create the branch. The
+    // branch is only created when there is real content to push — a dirty
+    // flag alone (e.g. a mode toggle) must never bootstrap anything.
     function ensureRemoteBase() {
       if (meta.sha !== null) return Promise.resolve();
       return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
         if (file) { integrateRemote(parseRemote(file)); return; }
+        if (!Object.keys(local).length) return;
         return gh.getBranchHeadSha(api, token, baseBranch, fetchImpl).then(function (sha) {
           return gh.createRef(api, token, branch, sha, fetchImpl).catch(function (e) {
             if (e && e.status === 422) return; // branch already exists — fine
@@ -349,7 +354,6 @@ function createSyncEngine(opts) {
           if (debounceId !== null) { clearT(debounceId); debounceId = null; }
         }
         saveMeta();
-        return ensurePr();
       }, function (e) {
         // CAS: someone else wrote the file since our base sha. Refresh, merge,
         // retry — the sha is the lock, the merge preserves both sides.
@@ -392,8 +396,27 @@ function createSyncEngine(opts) {
         });
     }
 
-    return ensureRemoteBase().then(push).then(function () {
-      setStatus('synced');
+    return ensureRemoteBase().then(function () {
+      // Nothing local and nothing remote: don't create a branch/PR for an
+      // empty state (a mode toggle is "dirty" but carries no content).
+      if (meta.sha === null && !Object.keys(local).length) {
+        dirty = false;
+        if (debounceId !== null) { clearT(debounceId); debounceId = null; }
+        setStatus('idle');
+        return;
+      }
+      // Same doc as the last push (e.g. an edit typed and reverted): no PUT,
+      // but still make sure the PR exists (its creation may have failed).
+      var unchanged = meta.sha !== null
+        && JSON.stringify(local) === JSON.stringify(meta.doc || {});
+      var step = unchanged ? Promise.resolve() : push();
+      return step.then(ensurePr).then(function () {
+        if (unchanged && editSeq === seqAtStart) {
+          dirty = false;
+          if (debounceId !== null) { clearT(debounceId); debounceId = null; }
+        }
+        setStatus('synced');
+      });
     }).catch(function (e) {
       if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: e && e.message }); return; }
       if (e && e.status === 401) { setStatus('error', { kind: 'auth', message: e && e.message }); return; }
