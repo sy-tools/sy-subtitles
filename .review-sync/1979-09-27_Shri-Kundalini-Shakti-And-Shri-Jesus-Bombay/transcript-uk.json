@@ -1,15 +1,8 @@
 {
   "version": 1,
-  "revision": 1,
-  "updatedAt": "2026-07-13T13:43:10.656Z",
+  "revision": 2,
+  "updatedAt": "2026-07-13T13:44:12.546Z",
   "client": "kolodd",
   "talkId": "1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay",
-  "entries": {
-    "review_1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay": {
-      "marks": {},
-      "edits": {
-        "0": "Тема, яку сьогодні поставлено перед вами, надзвичайно захоплива й притягальна: Кундаліні та Ісус Христос, Господь Ісус Христос. Для звичайних, простих людей це щось цілковито нове, і донині ніхто ніколи не проводив такого зв’язку між ними"
-      }
-    }
-  }
+  "entries": {}
 }
