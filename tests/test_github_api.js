@@ -222,6 +222,16 @@ describe('closePull / deleteRef (edit-sync teardown)', () => {
     assert.ok(/\/pulls\/5$/.test(calls[0].url), calls[0].url);
     assert.deepStrictEqual(calls[0].body, { state: 'closed' });
   });
+  it('closePull swallows an already-gone PR (404) so teardown stays idempotent', async () => {
+    const f = routerFetch([{ method: 'PATCH', match: '/pulls/', status: 404,
+      payload: { message: 'Not Found' } }], []);
+    assert.strictEqual(await closePull(API, 'gho_x', 9, f), null);
+  });
+  it('closePull rethrows other errors (e.g. 500)', async () => {
+    const f = routerFetch([{ method: 'PATCH', match: '/pulls/', status: 500,
+      payload: { message: 'boom' } }], []);
+    await assert.rejects(() => closePull(API, 'gho_x', 9, f), (e) => e.status === 500);
+  });
   it('deleteRef DELETEs refs/heads/<branch> (slashes kept)', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'DELETE', match: '/git/refs/heads/', status: 200, payload: {} }], calls);

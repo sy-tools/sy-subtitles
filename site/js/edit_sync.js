@@ -388,29 +388,64 @@ function createSyncEngine(opts) {
     saveMeta();
   }
 
-  // Everything was reverted: close the sync PR and delete its branch, then go
-  // idle (the chip hides). Idempotent — deleteRef swallows an already-gone
-  // branch, and a missing PR just deletes the branch.
-  function teardown() {
+  // Everything was reverted locally. Before destroying the shared branch, pull
+  // its current state and three-way merge: a concurrent device may have synced
+  // edits we never pulled. If the merged result is still empty, close the PR +
+  // delete the branch and go idle (the chip hides); if it carries edits, keep
+  // the PR and re-arm a normal flush to push the merged doc back. seqAtStart
+  // guards a re-edit that lands mid-teardown (undo -> redo): it must re-create
+  // from the pristine base, never be dropped under a lying 'idle'. Idempotent:
+  // closePull swallows an already-gone PR, deleteRef an already-gone branch.
+  function teardown(seqAtStart) {
     setStatus('syncing');
-    var prNumber = meta.prNumber;
-    var chain = prNumber
-      ? gh.closePull(api, token, prNumber, fetchImpl)
-      : Promise.resolve();
-    return chain
-      .then(function () { return gh.deleteRef(api, token, branch, fetchImpl); })
-      .then(function () {
-        if (disposed) return;
-        clearDirty();
-        resetBase();
-        setStatus('idle');
-      }, function (e) {
-        if (disposed) return;
-        var msg = e && e.message;
-        var st = e && e.status;
-        if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: msg }); return; }
-        setStatus('error', { kind: 'sync', message: msg || String(e), httpStatus: st });
-      });
+    function fail(e) {
+      if (disposed) return;
+      var msg = e && e.message;
+      var st = e && e.status;
+      if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: msg }); return; }
+      setStatus('error', { kind: 'sync', message: msg || String(e), httpStatus: st });
+    }
+    return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
+      if (disposed) return;
+      if (file) {
+        var remote = parseRemote(file);
+        var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
+        var changedKeys = apply(merged.entries);
+        if (changedKeys.length) onRemoteApplied(changedKeys);
+        meta.doc = remote.entries;
+        meta.sha = remote.sha;
+        meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+        saveMeta();
+        if (Object.keys(merged.entries).length) {
+          // A concurrent device's edits survive on the remote — don't tear the
+          // PR down; re-arm a flush so the merged doc is pushed back.
+          dirty = true;
+          editSeq += 1;
+          armDebounce();
+          setStatus('pending');
+          return;
+        }
+      }
+      var prNumber = meta.prNumber;
+      var chain = prNumber
+        ? gh.closePull(api, token, prNumber, fetchImpl)
+        : Promise.resolve();
+      return chain
+        .then(function () { return gh.deleteRef(api, token, branch, fetchImpl); })
+        .then(function () {
+          if (disposed) return;
+          resetBase();
+          if (editSeq === seqAtStart) {
+            clearDirty();
+            setStatus('idle');
+          } else {
+            // A re-edit landed mid-teardown: its dirty flag + armed debounce are
+            // intact, so it re-creates from the pristine base. Keep the chip
+            // honest ('pending'), never 'idle'.
+            setStatus('pending');
+          }
+        });
+    }).catch(fail);
   }
 
   function doFlush(fopts) {
@@ -421,7 +456,7 @@ function createSyncEngine(opts) {
       // Everything was reverted. If a PR/state was already synced, tear it
       // down ("no edits = no PR"); otherwise just stay idle without a request —
       // attach() covers remote adoption and a mode toggle must not cost one.
-      if (meta.prNumber || meta.sha !== null) return teardown();
+      if (meta.prNumber || meta.sha !== null) return teardown(seqAtStart);
       clearDirty();
       if (status !== 'idle') setStatus('idle');
       return Promise.resolve();

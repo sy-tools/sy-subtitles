@@ -4629,10 +4629,10 @@ function syncRevertSoon() { if (editSync) editSync.flushSoon(); }
 // has the data (rows/blocks) to rebuild its transcript/SRT; other modes'
 // edits live in the state file until their view is opened. The file is rebuilt
 // whenever the view's SOURCE data is loaded, NOT only when edits currently
-// exist: reverting the last edit must re-commit the ORIGINAL file back to the
-// PR (rebuilt with no edits). Guarding on "edits exist" left the committed file
-// stuck with the stale edit while the state file correctly went empty — so the
-// chip said "synced" but the PR kept the last edit.
+// exist: after a PARTIAL revert the file must be re-committed with the
+// remaining edits (guarding on "edits exist" once left the committed file stuck
+// with a stale edit). A revert to ZERO edits never reaches here — the engine
+// intercepts it in doFlush and tears the PR down instead of committing.
 function buildSyncFiles() {
   if (!editSync) return [];
   try {

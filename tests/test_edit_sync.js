@@ -379,6 +379,8 @@ function ghStub(over) {
     },
     closePull: async (api, token, prNumber) => {
       record('closePull', [prNumber]);
+      // Hook to simulate a re-edit (or anything) landing mid-teardown.
+      if (over.onClosePull) over.onClosePull();
       if (over.closePullFails) { const e = new Error('close failed'); e.status = over.closePullFails; throw e; }
       return { number: prNumber, state: 'closed' };
     },
@@ -567,6 +569,7 @@ describe('engine: teardown on full revert', () => {
     const { engine, gh, storage } = makeEngine();
     localEdit(storage, 1, 'a'); engine.notifyEdit(); await engine.flush();
     storage.removeItem(RKEY); engine.notifyEdit(); await engine.flush();  // teardown
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'closePull').length, 1); // PR really closed
     localEdit(storage, 2, 'b'); engine.notifyEdit(); await engine.flush(); // re-edit
     assert.strictEqual(engine.getInfo().prNumber, 77);
     assert.strictEqual(engine.getInfo().status, 'synced');
@@ -599,6 +602,58 @@ describe('engine: teardown on full revert', () => {
     assert.strictEqual(gh.calls.filter((c) => c[0] === 'closePull').length, 0);
     assert.strictEqual(gh.calls.filter((c) => c[0] === 'deleteRef').length, 0);
     assert.strictEqual(engine.getInfo().status, 'idle');
+  });
+
+  it('keeps the PR when the remote branch still carries a concurrent edit', async () => {
+    // Two devices, same talk/target: this device reverts to zero, but the other
+    // synced an edit we never pulled. Teardown must pull+merge and, finding the
+    // merge non-empty, push instead of destroying the branch (which would lose
+    // the other device's edit) — the CAS guarantee of the old empty-push path.
+    const { engine, gh, storage } = makeEngine();
+    localEdit(storage, 1, 'mine');
+    engine.notifyEdit();
+    await engine.flush();                                 // PR 77; remote = {1:'mine'}
+    const remote = JSON.parse(gh._stateFile.content);
+    remote.entries[RKEY].edits[5] = 'from phone';         // concurrent device's edit
+    gh._stateFile = { content: JSON.stringify(remote), sha: 'sha_concurrent' };
+
+    storage.removeItem(RKEY);                             // revert my only edit
+    engine.notifyEdit();
+    await engine.flush();
+
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'closePull').length, 0, 'must NOT close the PR');
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'deleteRef').length, 0, 'must NOT delete the branch');
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[5], 'from phone', 'concurrent edit merged in');
+    assert.notStrictEqual(engine.getInfo().status, 'idle');
+  });
+
+  it('a re-edit that lands mid-teardown is not dropped and the chip never lies idle', async () => {
+    // undo -> redo: the revert triggers teardown; a new edit arrives while
+    // closePull/deleteRef are on the wire. It must survive with the chip honest
+    // (not idle) and re-create the PR from the pristine base on the next flush.
+    const holder = {};
+    const { engine, gh, storage } = makeEngine({
+      onClosePull: () => { localEdit(storage, 9, 'redo'); holder.engine.notifyEdit(); },
+    });
+    holder.engine = engine;
+    localEdit(storage, 1, 'first');
+    engine.notifyEdit();
+    await engine.flush();                                 // PR 77
+
+    storage.removeItem(RKEY);
+    engine.notifyEdit();
+    await engine.flush();                                 // teardown; onClosePull injects the redo
+
+    const mid = engine.getInfo();
+    assert.notStrictEqual(mid.status, 'idle', 'chip must not read idle while an edit is pending');
+    assert.strictEqual(mid.prNumber, null);              // base was reset
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[9], 'redo', 'the redo survived locally');
+
+    await engine.flush();                                 // the pending edit re-creates from scratch
+    const after = engine.getInfo();
+    assert.strictEqual(after.prNumber, 77);
+    assert.strictEqual(after.status, 'synced');
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 2); // branch recreated
   });
 });
 

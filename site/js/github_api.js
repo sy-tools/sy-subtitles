@@ -231,10 +231,16 @@ function convertPullToDraft(token, nodeId, fetchImpl) {
 }
 
 // PATCH /pulls/<n> {state:'closed'} — closes the PR without merging. Edit sync
-// calls this to tear a sync PR down when the last edit is reverted.
+// calls this to tear a sync PR down when the last edit is reverted. Best-effort:
+// a 404 (the PR was already deleted server-side) resolves as success so a
+// teardown retry does not get wedged; closing an already-closed PR returns 200.
 function closePull(api, token, prNumber, fetchImpl) {
   return ghJson(api + '/pulls/' + prNumber, token,
-    { method: 'PATCH', body: { state: 'closed' } }, fetchImpl);
+    { method: 'PATCH', body: { state: 'closed' } }, fetchImpl)
+    .catch(function (e) {
+      if (e && e.status === 404) return null;
+      throw e;
+    });
 }
 
 // DELETE /git/refs/heads/<branch> — removes the branch. The repo's
