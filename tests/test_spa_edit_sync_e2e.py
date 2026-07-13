@@ -6,12 +6,17 @@ auto-sync to a state file (.review-sync/<talkId>.json) on a deterministic
 branch (sync/<login>/<talkId>) behind a draft PR. This suite drives the real
 browser flow with all GitHub endpoints mocked via page.route:
 
-  1. first edit bootstraps the branch, state file and draft PR,
+  1. first edit bootstraps the branch, state file, draft PR AND commits the
+     real edited file (v2 pushes the transcript alongside the state file),
   2. cross-device pull adopts remote edits without pushing,
   3. a CAS 409 triggers a fetch + three-way merge + retry,
-  4. the signed-in preview hides Copy-all (signed out keeps it in marker mode),
-  5. finalize commits the real file, deletes the state file, marks PR ready,
-  6. the synced chip opens the PR url.
+  4. the signed-in preview hides Copy-all + the issue button, and the removed
+     one-button PR control (#btn-preview-pr) is absent (signed out keeps the
+     affordances in marker mode),
+  5. finalize (from the chip dropdown) deletes the state file and marks the
+     draft PR ready via GraphQL — no re-commit, no new branch/PR,
+  6. a NEW edit after finalize re-drafts the PR (GraphQL) and re-pushes state,
+  7. the sync chip's dropdown opens the PR url.
 
 The harness mirrors tests/test_spa_auth_actions_e2e.py: a local http.server
 serves site/ with window.__SY_* injected in <head>, the signed-in session is
@@ -94,8 +99,11 @@ REVIEW_STATUS_UNASSIGNED = {
     },
 }
 
+# Chip / dropdown labels (English | Ukrainian) — both UI languages accepted.
 SYNCED_LABEL_RE = "Synced|Синхронізовано"
-FINALIZE_LABEL_RE = "Finalize PR|Фіналізувати PR"
+READY_LABEL_RE = "In review|На ревʼю"
+FINALIZE_LABEL_RE = "Finalize|Фіналізувати"
+OPEN_PR_LABEL_RE = "Open on GitHub|Відкрити на GitHub"
 
 
 @pytest.fixture(scope="module")
@@ -270,14 +278,23 @@ def _wire(pg, calls, review_status, sync_opts):
         )
 
     pg.route("**/api.github.com/repos/**/pulls**", pulls)
-    pg.route(
-        "**/api.github.com/graphql",
-        _record(
-            calls,
-            200,
-            {"data": {"markPullRequestReadyForReview": {"pullRequest": {"isDraft": False}}}},
-        ),
-    )
+
+    def graphql(route):
+        # Draft <-> ready are the only GraphQL mutations; dispatch by the query
+        # text so a finalize (markPullRequestReadyForReview) and an
+        # edit-after-finalize (convertPullRequestToDraft) each get a matching
+        # reply. Always record for the assertions.
+        req = route.request
+        body = json.loads(req.post_data) if req.post_data else None
+        calls.append({"method": req.method, "url": req.url, "body": body})
+        query = (body or {}).get("query", "")
+        if "convertPullRequestToDraft" in query:
+            data = {"convertPullRequestToDraft": {"pullRequest": {"isDraft": True}}}
+        else:
+            data = {"markPullRequestReadyForReview": {"pullRequest": {"isDraft": False}}}
+        route.fulfill(status=200, content_type="application/json", body=json.dumps({"data": data}))
+
+    pg.route("**/api.github.com/graphql", graphql)
 
     def talks_contents(route):
         req = route.request
@@ -373,6 +390,28 @@ def _edit_first_review_cell(pg, appended):
     cell.press("Tab")  # blur -> engine.flushSoon() (1.5s coalesce)
 
 
+def _open_chip_dropdown(pg):
+    """Click the chip button and wait until its dropdown is open and populated.
+
+    The chip button ALWAYS toggles the dropdown in v2; items are plain <div>s
+    appended when it opens.
+    """
+    pg.click("#sync-chip-btn")
+    pg.wait_for_function(
+        "() => { const dd = document.getElementById('sync-chip-dropdown');"
+        " return dd && dd.classList.contains('open') && dd.children.length > 0; }",
+        timeout=5000,
+    )
+
+
+def _click_dropdown_item(pg, label_re):
+    """Open the dropdown and click the item whose text matches label_re."""
+    import re
+
+    _open_chip_dropdown(pg)
+    pg.locator("#sync-chip-dropdown div", has_text=re.compile(label_re)).first.click()
+
+
 def _review_sync_puts(calls):
     return [c for c in calls if c["method"] == "PUT" and "/contents/.review-sync/" in c["url"].split("?")[0]]
 
@@ -410,6 +449,17 @@ def test_first_edit_bootstraps_branch_state_and_draft_pr(server, browser):
     assert REVIEW_KEY in doc["entries"]
     edits = doc["entries"][REVIEW_KEY]["edits"]
     assert any("SYNCED123" in str(v) for v in edits.values())
+
+    # v2 also commits the real edited file to the sync branch so the draft PR
+    # diff is human-readable (a PUT to transcript_uk.txt, not just the state).
+    real_put = next(
+        c
+        for c in calls
+        if c["method"] == "PUT" and f"/contents/talks/{TALK_ID}/transcript_uk.txt" in c["url"].split("?")[0]
+    )
+    assert real_put["body"]["branch"] == SYNC_BRANCH
+    committed = base64.b64decode(real_put["body"]["content"]).decode("utf-8")
+    assert "SYNCED123" in committed
 
     pull = next(c for c in calls if c["method"] == "POST" and c["url"].endswith("/pulls"))
     assert pull["body"]["draft"] is True
@@ -504,22 +554,30 @@ def _open_preview_marker(pg, server):
 def test_signed_in_hides_copy_all_signed_out_shows(server, browser):
     ctx1, pg1 = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
     _open_preview_marker(pg1, server)
+    # Signed in, the auto-sync chip replaces the manual affordances: Copy-all
+    # and the issue button are hidden (data-gh-hide), and the removed one-button
+    # PR control is not in the DOM at all.
     assert not pg1.locator("#btn-copy-all").is_visible()
+    assert not pg1.locator("#btn-preview-issue").is_visible()
+    assert pg1.locator("#btn-preview-pr").count() == 0
     ctx1.close()
 
     ctx2, pg2 = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=False)
     _open_preview_marker(pg2, server)
     # Default preview mode is marker: the signed-out Copy-all affordance shows.
     assert pg2.locator("#btn-copy-all").is_visible()
+    # #btn-preview-pr never existed — absent regardless of auth state.
+    assert pg2.locator("#btn-preview-pr").count() == 0
     ctx2.close()
 
 
 # ---------------------------------------------------------------------------
-# 5. Finalize: commit real file, delete state file, mark PR ready.
+# 5. Finalize (from the chip dropdown): delete state file, mark PR ready via
+#    GraphQL. No re-commit, no new branch/PR.
 # ---------------------------------------------------------------------------
 
 
-def test_finalize_commits_real_file_deletes_state_and_marks_ready(server, browser):
+def test_finalize_deletes_state_and_marks_ready(server, browser):
     calls = []
     local_edit = review_entry({"0": "LOCAL EDIT TEXT"})
     entries = {REVIEW_KEY: local_edit}
@@ -529,7 +587,9 @@ def test_finalize_commits_real_file_deletes_state_and_marks_ready(server, browse
         REVIEW_STATUS_UNASSIGNED,
         {"get_mode": "doc", "doc_entries": entries, "doc_sha": "shaR1"},
     )
-    # Seed an attached sync PR + a local edit that survive the reload.
+    # Seed an attached DRAFT sync PR + a matching local edit + matching remote
+    # doc, all of which survive the reload. Nothing is dirty on open, so
+    # finalize takes the no-flush path (no re-commit).
     base_meta = {
         "doc": entries,
         "sha": "shaR1",
@@ -537,6 +597,8 @@ def test_finalize_commits_real_file_deletes_state_and_marks_ready(server, browse
         "prNumber": PR_NUMBER,
         "prUrl": PR_URL,
         "nodeId": PR_NODE_ID,
+        "prDraft": True,
+        "fileShas": {},
         "branch": SYNC_BRANCH,
     }
     pg.add_init_script(
@@ -545,24 +607,14 @@ def test_finalize_commits_real_file_deletes_state_and_marks_ready(server, browse
     )
     _open_review(pg, server)
 
-    # The attached PR relabels the Create PR button to Finalize PR.
-    pg.wait_for_function(
-        "() => { const b = document.getElementById('btn-create-pr');"
-        f" return b && b.offsetParent !== null && /{FINALIZE_LABEL_RE}/.test(b.textContent); }}",
-        timeout=10000,
-    )
-    pg.click("#btn-create-pr")
+    # The attached PR surfaces as a synced chip; finalize lives in its dropdown.
+    _wait_chip_synced(pg)
+    _click_dropdown_item(pg, FINALIZE_LABEL_RE)
+    # finalize resolves -> success dialog (auto-confirmed) -> window.open(prUrl).
     pg.wait_for_function("window.__opened.length > 0", timeout=10000)
+    assert pg.evaluate("window.__opened[0]") == PR_URL
 
-    # Real file committed to the sync branch.
-    put = next(
-        c
-        for c in calls
-        if c["method"] == "PUT" and f"/contents/talks/{TALK_ID}/transcript_uk.txt" in c["url"].split("?")[0]
-    )
-    assert put["body"]["branch"] == SYNC_BRANCH
-
-    # State file removed.
+    # State file removed on the sync branch.
     delete = next(
         c for c in calls if c["method"] == "DELETE" and c["url"].split("?")[0].endswith("/contents/" + STATE_PATH)
     )
@@ -570,20 +622,86 @@ def test_finalize_commits_real_file_deletes_state_and_marks_ready(server, browse
 
     # Draft flipped to ready via GraphQL, keyed on the PR node id.
     graphql = next(c for c in calls if c["method"] == "POST" and c["url"].endswith("/graphql"))
+    assert "markPullRequestReadyForReview" in graphql["body"]["query"]
     assert graphql["body"]["variables"]["id"] == PR_NODE_ID
 
-    # No second branch and no second PR were created.
+    # No re-commit of the real file, no second branch, no second PR.
+    assert not [
+        c
+        for c in calls
+        if c["method"] == "PUT" and f"/contents/talks/{TALK_ID}/transcript_uk.txt" in c["url"].split("?")[0]
+    ]
+    assert not [c for c in calls if c["method"] == "POST" and c["url"].endswith("/git/refs")]
+    assert not [c for c in calls if c["method"] == "POST" and c["url"].endswith("/pulls")]
+
+    # Chip now shows the ready ("In review") state.
+    import re
+
+    pg.wait_for_function(
+        "() => { const txt = document.getElementById('sync-chip-text');"
+        f"  return txt && /{READY_LABEL_RE}/.test(txt.textContent); }}",
+        timeout=10000,
+    )
+    assert re.search(READY_LABEL_RE, pg.locator("#sync-chip-text").text_content())
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 6. Edit after finalize re-drafts the PR (GraphQL) and re-pushes state.
+# ---------------------------------------------------------------------------
+
+
+def test_edit_after_finalize_redrafts(server, browser):
+    calls = []
+    # Seed an attached READY (non-draft) PR with no cached state (sha null) and
+    # a clean local store; the remote state file is 404 (finalize removed it).
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
+    base_meta = {
+        "doc": {},
+        "sha": None,
+        "revision": 1,
+        "prNumber": PR_NUMBER,
+        "prUrl": PR_URL,
+        "nodeId": PR_NODE_ID,
+        "prDraft": False,
+        "fileShas": {},
+        "branch": SYNC_BRANCH,
+    }
+    pg.add_init_script(f"localStorage.setItem({json.dumps(SYNC_BASE_KEY)}, {json.dumps(json.dumps(base_meta))});")
+    _open_review(pg, server)
+
+    # Attach surfaces the ready PR as the 'ready' chip state.
+    pg.wait_for_function(
+        "() => { const chip = document.getElementById('sync-chip');"
+        "  const txt = document.getElementById('sync-chip-text');"
+        f"  return chip && chip.style.display !== 'none' && txt && /{READY_LABEL_RE}/.test(txt.textContent); }}",
+        timeout=10000,
+    )
+
+    # A fresh edit must silently re-draft the PR and re-create the state file.
+    _edit_first_review_cell(pg, " AFTER_FINAL")
+    _wait_chip_synced(pg)
+
+    graphql = next(c for c in calls if c["method"] == "POST" and c["url"].endswith("/graphql"))
+    assert "convertPullRequestToDraft" in graphql["body"]["query"]
+    assert graphql["body"]["variables"]["id"] == PR_NODE_ID
+
+    puts = _review_sync_puts(calls)
+    assert puts, "the re-drafted PR must get a fresh state-file PUT"
+    assert decode_put_doc(puts[-1])["entries"][REVIEW_KEY]["edits"]
+
+    # No new branch/PR — the finalized PR is reused.
     assert not [c for c in calls if c["method"] == "POST" and c["url"].endswith("/git/refs")]
     assert not [c for c in calls if c["method"] == "POST" and c["url"].endswith("/pulls")]
     ctx.close()
 
 
 # ---------------------------------------------------------------------------
-# 6. Synced chip opens the PR url.
+# 7. The sync chip's dropdown opens the PR url.
 # ---------------------------------------------------------------------------
 
 
-def test_sync_chip_links_to_pr(server, browser):
+def test_sync_chip_dropdown_opens_pr(server, browser):
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
     _open_review(pg, server)
@@ -591,7 +709,7 @@ def test_sync_chip_links_to_pr(server, browser):
     _edit_first_review_cell(pg, " SYNCED123")
     _wait_chip_synced(pg)
 
-    pg.click("#sync-chip-btn")
+    _click_dropdown_item(pg, OPEN_PR_LABEL_RE)
     pg.wait_for_function("window.__opened.length > 0", timeout=5000)
     assert pg.evaluate("window.__opened[0]") == PR_URL
     ctx.close()
