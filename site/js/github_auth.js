@@ -10,6 +10,9 @@
 
 var GH_TOKEN_KEY = 'sy_gh_token';
 var GH_USER_KEY = 'sy_gh_user';
+// Present ⇔ the last authoritative permissions check said push=false; lets
+// boot render the read-only UI immediately, before the async re-check.
+var GH_NO_WRITE_KEY = 'sy_gh_no_write';
 
 // One-shot CSRF state: 16 random bytes as 32 hex chars. The RNG is injectable
 // for deterministic tests; production uses WebCrypto.
@@ -92,6 +95,17 @@ function clearAuth(storage) {
   var s = storage || localStorage;
   s.removeItem(GH_TOKEN_KEY);
   s.removeItem(GH_USER_KEY);
+  s.removeItem(GH_NO_WRITE_KEY);
+}
+
+function saveNoWrite(storage) {
+  (storage || localStorage).setItem(GH_NO_WRITE_KEY, '1');
+}
+function clearNoWrite(storage) {
+  (storage || localStorage).removeItem(GH_NO_WRITE_KEY);
+}
+function hasNoWrite(storage) {
+  return (storage || localStorage).getItem(GH_NO_WRITE_KEY) === '1';
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -107,7 +121,11 @@ if (typeof module !== 'undefined' && module.exports) {
     getAuthToken: getAuthToken,
     getAuthUser: getAuthUser,
     clearAuth: clearAuth,
+    saveNoWrite: saveNoWrite,
+    clearNoWrite: clearNoWrite,
+    hasNoWrite: hasNoWrite,
     GH_TOKEN_KEY: GH_TOKEN_KEY,
     GH_USER_KEY: GH_USER_KEY,
+    GH_NO_WRITE_KEY: GH_NO_WRITE_KEY,
   };
 }

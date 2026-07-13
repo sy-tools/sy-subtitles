@@ -90,6 +90,16 @@ def _route_github(pg, auth_server):
             body=json.dumps({"login": "tester", "avatar_url": f"{auth_server}/icon.png"}),
         ),
     )
+    # Repo root: the write-access probe. Default = full access (a collaborator),
+    # matching what the API returns for users who have been added to the repo.
+    pg.route(
+        "**/api.github.com/repos/sy-tools/sy-subtitles",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"permissions": {"push": True, "pull": True}}),
+        ),
+    )
     pg.route(
         "**/raw.githubusercontent.com/**",
         lambda r: r.fulfill(status=404, body="not found"),
@@ -268,3 +278,79 @@ def test_login_redirect_uri_is_bare_app_url(auth_server, auth_page):
     # (sessionStorage can't be asserted here: page.url is github.com now — a
     # different origin. The stash/restore pair is proven by
     # test_callback_restores_app_params_saved_before_login.)
+
+
+# ---------------------------------------------------------------------------
+# Read-only mode: signed in WITHOUT repo write access (permissions.push=false
+# — the user has not been added to the repo; the repo itself is public-read).
+# The UI must collapse to the signed-out feature set, keeping only the avatar
+# (grayscale + disconnect badge) as evidence of the session.
+# ---------------------------------------------------------------------------
+
+
+def _seed_session(pg):
+    pg.add_init_script(
+        "localStorage.setItem('sy_gh_token', 'gho_e2e');"
+        "localStorage.setItem('sy_gh_user',"
+        " JSON.stringify({login: 'tester', avatar_url: 'icon.png'}));"
+    )
+
+
+def _route_repo_permissions(pg, push):
+    # Registered after the fixture's default push=true route — later wins.
+    pg.route(
+        "**/api.github.com/repos/sy-tools/sy-subtitles",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"permissions": {"push": push, "pull": True}}),
+        ),
+    )
+
+
+def test_readonly_user_gets_signed_out_ui_with_badge(auth_server, auth_page):
+    page = auth_page
+    _route_repo_permissions(page, False)
+    _seed_session(page)
+    page.goto(f"{auth_server}/index.html")
+    page.wait_for_function("localStorage.getItem('sy_gh_no_write') === '1'", timeout=10000)
+    # Avatar stays (still signed in), marked grayscale + badge.
+    assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).display") != "none"
+    assert page.evaluate("document.getElementById('gh-avatar-wrap').classList.contains('gh-avatar--readonly')")
+    assert "grayscale" in page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).filter")
+    assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar-badge')).display") != "none"
+    # Write-gated controls behave exactly as for a signed-out visitor.
+    assert page.evaluate("document.getElementById('btn-create-pr').style.display") == "none"
+    assert page.evaluate("document.getElementById('btn-review-editor').style.display") != "none"
+    # The login button must NOT reappear — the user IS signed in.
+    assert page.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") == "none"
+
+
+def test_write_access_return_clears_flag_and_restores_ui(auth_server, auth_page):
+    """Once an admin adds the user, the next probe (boot here; the 30-min
+    re-check while the page is open) lifts read-only mode automatically."""
+    page = auth_page  # fixture default: push=true
+    _seed_session(page)
+    page.add_init_script("localStorage.setItem('sy_gh_no_write', '1');")
+    page.goto(f"{auth_server}/index.html")
+    page.wait_for_function("localStorage.getItem('sy_gh_no_write') === null", timeout=10000)
+    assert not page.evaluate("document.getElementById('gh-avatar-wrap').classList.contains('gh-avatar--readonly')")
+    assert page.evaluate("document.getElementById('btn-create-pr').style.display") != "none"
+
+
+def test_integration_403_blames_missing_repo_access_not_the_app(auth_server, auth_page):
+    """GitHub returns the SAME 403 'Resource not accessible by integration'
+    for app-not-installed AND user-without-write. ghWriteError must consult
+    permissions and blame the right cause instead of always blaming the App."""
+    page = auth_page
+    _route_repo_permissions(page, False)
+    _seed_session(page)
+    page.goto(f"{auth_server}/index.html")
+    # Let the boot probe finish first so the toast assertion is race-free.
+    page.wait_for_function("localStorage.getItem('sy_gh_no_write') === '1'", timeout=10000)
+    page.evaluate("ghWriteError({status: 403, message: 'Resource not accessible by integration'})")
+    page.wait_for_function(
+        "document.getElementById('toast').textContent === t('gh.no_repo_access')",
+        timeout=5000,
+    )
+    assert page.evaluate("localStorage.getItem('sy_gh_no_write')") == "1"

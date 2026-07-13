@@ -126,3 +126,34 @@ describe('stripAuthParams also clears GitHub error-callback params', () => {
       '?repo=a%2Fb');
   });
 });
+
+// ---------------------------------------------------------------------------
+// No-write flag: present in storage ⇔ the last authoritative permissions
+// check said push=false. Lets boot render the degraded (read-only) UI
+// immediately, before the async re-check returns.
+// ---------------------------------------------------------------------------
+const { saveNoWrite, clearNoWrite, hasNoWrite, GH_NO_WRITE_KEY } = require('../site/js/github_auth');
+
+describe('no-write flag storage', () => {
+  it('round-trips the flag', () => {
+    const s = fakeStorage();
+    assert.strictEqual(hasNoWrite(s), false);
+    saveNoWrite(s);
+    assert.strictEqual(hasNoWrite(s), true);
+    clearNoWrite(s);
+    assert.strictEqual(hasNoWrite(s), false);
+  });
+  it('uses the sy_gh_no_write key', () => {
+    const s = fakeStorage();
+    saveNoWrite(s);
+    assert.strictEqual(s.getItem(GH_NO_WRITE_KEY), '1');
+    assert.strictEqual(GH_NO_WRITE_KEY, 'sy_gh_no_write');
+  });
+  it('clearAuth drops the flag with the session', () => {
+    const s = fakeStorage();
+    saveAuth('gho_x', { login: 'ira', avatar_url: 'u' }, s);
+    saveNoWrite(s);
+    clearAuth(s);
+    assert.strictEqual(hasNoWrite(s), false);
+  });
+});
