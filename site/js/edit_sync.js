@@ -380,13 +380,48 @@ function createSyncEngine(opts) {
     if (debounceId !== null) { clearT(debounceId); debounceId = null; }
   }
 
+  // Reset to a pristine, un-synced base — a later edit lazily re-creates the
+  // branch/PR from scratch. Reassigns the closure's meta so every reader sees it.
+  function resetBase() {
+    meta = { doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null,
+      prDraft: null, fileShas: {}, branch: branch };
+    saveMeta();
+  }
+
+  // Everything was reverted: close the sync PR and delete its branch, then go
+  // idle (the chip hides). Idempotent — deleteRef swallows an already-gone
+  // branch, and a missing PR just deletes the branch.
+  function teardown() {
+    setStatus('syncing');
+    var prNumber = meta.prNumber;
+    var chain = prNumber
+      ? gh.closePull(api, token, prNumber, fetchImpl)
+      : Promise.resolve();
+    return chain
+      .then(function () { return gh.deleteRef(api, token, branch, fetchImpl); })
+      .then(function () {
+        if (disposed) return;
+        clearDirty();
+        resetBase();
+        setStatus('idle');
+      }, function (e) {
+        if (disposed) return;
+        var msg = e && e.message;
+        var st = e && e.status;
+        if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: msg }); return; }
+        setStatus('error', { kind: 'sync', message: msg || String(e), httpStatus: st });
+      });
+  }
+
   function doFlush(fopts) {
     var keepalive = fopts && fopts.keepalive;
     var seqAtStart = editSeq;
     var local = collect();
-    // Nothing local and nothing ever synced: don't even look — attach()
-    // covers remote adoption, and a mode toggle must not cost a request.
-    if (meta.sha === null && !Object.keys(local).length) {
+    if (!Object.keys(local).length) {
+      // Everything was reverted. If a PR/state was already synced, tear it
+      // down ("no edits = no PR"); otherwise just stay idle without a request —
+      // attach() covers remote adoption and a mode toggle must not cost one.
+      if (meta.prNumber || meta.sha !== null) return teardown();
       clearDirty();
       if (status !== 'idle') setStatus('idle');
       return Promise.resolve();

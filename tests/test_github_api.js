@@ -209,8 +209,39 @@ describe('branch + contents + pull primitives', () => {
 // ---------------------------------------------------------------------------
 const {
   base64ToUtf8, makeSyncBranchName, getFileContent, findOpenPrByHead,
-  markPullReady, convertPullToDraft, deleteFile,
+  markPullReady, convertPullToDraft, deleteFile, closePull, deleteRef,
 } = require('../site/js/github_api');
+
+describe('closePull / deleteRef (edit-sync teardown)', () => {
+  it('closePull PATCHes the PR to state=closed', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'PATCH', match: '/pulls/5', status: 200,
+      payload: { number: 5, state: 'closed' } }], calls);
+    await closePull(API, 'gho_x', 5, f);
+    assert.strictEqual(calls[0].method, 'PATCH');
+    assert.ok(/\/pulls\/5$/.test(calls[0].url), calls[0].url);
+    assert.deepStrictEqual(calls[0].body, { state: 'closed' });
+  });
+  it('deleteRef DELETEs refs/heads/<branch> (slashes kept)', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'DELETE', match: '/git/refs/heads/', status: 200, payload: {} }], calls);
+    await deleteRef(API, 'gho_x', 'sync/u/talk--v1-uk', f);
+    assert.strictEqual(calls[0].method, 'DELETE');
+    assert.ok(/\/git\/refs\/heads\/sync\/u\/talk--v1-uk$/.test(calls[0].url), calls[0].url);
+  });
+  it('deleteRef swallows an already-gone branch (404 and 422)', async () => {
+    for (const status of [404, 422]) {
+      const f = routerFetch([{ method: 'DELETE', match: '/git/refs/heads/', status,
+        payload: { message: 'Reference does not exist' } }], []);
+      assert.strictEqual(await deleteRef(API, 'gho_x', 'b', f), null);
+    }
+  });
+  it('deleteRef rethrows other errors (e.g. 500)', async () => {
+    const f = routerFetch([{ method: 'DELETE', match: '/git/refs/heads/', status: 500,
+      payload: { message: 'boom' } }], []);
+    await assert.rejects(() => deleteRef(API, 'gho_x', 'b', f), (e) => e.status === 500);
+  });
+});
 
 describe('base64ToUtf8', () => {
   it('round-trips UTF-8 through utf8ToBase64', () => {

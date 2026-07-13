@@ -270,6 +270,14 @@ def _wire(pg, calls, review_status, sync_opts):
     pg.route("**/api.github.com/repos/**/git/ref/heads/main", _record(calls, 200, {"object": {"sha": "base1"}}))
     pg.route("**/api.github.com/repos/**/git/refs", _record(calls, 201, {}))
 
+    def delete_ref(route):
+        # DELETE /git/refs/heads/<branch> — teardown drops the sync branch.
+        req = route.request
+        calls.append({"method": req.method, "url": req.url, "body": None})
+        route.fulfill(status=204, body="")
+
+    pg.route("**/api.github.com/repos/**/git/refs/heads/**", delete_ref)
+
     def pulls(route):
         req = route.request
         if req.method == "GET":
@@ -739,32 +747,41 @@ def _transcript_puts(calls):
     ]
 
 
-def test_reverting_the_last_edit_recommits_the_original_file(server, browser):
-    """Removing the last edit must push the ORIGINAL file back to the PR, not
-    leave the committed file stuck with the stale edit. Regression: buildSyncFiles
-    only rebuilt when edits existed, so a full revert updated the state file
-    (chip => synced) but never re-committed the real file."""
+def test_reverting_the_last_edit_tears_down_the_pr(server, browser):
+    """ "No edits = no PR": reverting the last edit closes the sync PR, deletes
+    its branch and hides the chip — instead of committing an empty file."""
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
     _open_review(pg, server)
 
     _edit_first_review_cell(pg, " SYNCED123")
     _wait_chip_synced(pg)
-    edited = _transcript_puts(calls)
-    assert edited, "the edit must have committed the transcript"
-    assert "SYNCED123" in base64.b64decode(edited[-1]["body"]["content"]).decode("utf-8")
+    assert _transcript_puts(calls), "the edit must have committed the transcript"
 
-    # Revert every edit and force an immediate sync.
-    n0 = len(edited)
-    pg.evaluate("reviewState.edits = {}; saveReview(); editSync.flush({ force: true });")
-    for _ in range(50):
-        if len(_transcript_puts(calls)) > n0:
+    # Revert the only edit via the real handler (no forced flush): it must sync
+    # on the fast 1.5s cadence (syncRevertSoon -> flushSoon) and, being empty,
+    # tear the PR down.
+    pg.evaluate("SPA.revertEdit(0)")
+
+    def _closed_pull():
+        return [
+            c
+            for c in calls
+            if c["method"] == "PATCH" and "/pulls/" in c["url"] and (c["body"] or {}).get("state") == "closed"
+        ]
+
+    def _deleted_branch():
+        return [c for c in calls if c["method"] == "DELETE" and f"/git/refs/heads/{SYNC_BRANCH}" in c["url"]]
+
+    for _ in range(60):
+        if _closed_pull() and _deleted_branch():
             break
         pg.wait_for_timeout(100)
-    reverted = _transcript_puts(calls)
-    assert len(reverted) > n0, "revert must re-commit the transcript file"
-    restored = base64.b64decode(reverted[-1]["body"]["content"]).decode("utf-8")
-    assert "SYNCED123" not in restored, f"reverted file still carries the edit: {restored!r}"
+
+    assert _closed_pull(), "revert-all must close the sync PR"
+    assert _deleted_branch(), "revert-all must delete the sync branch"
+    assert _closed_pull()[-1]["url"].split("?")[0].endswith(f"/pulls/{PR_NUMBER}")
+    pg.wait_for_selector("#sync-chip", state="hidden", timeout=5000)
     ctx.close()
 
 

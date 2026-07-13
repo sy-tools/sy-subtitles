@@ -3437,6 +3437,7 @@ SPA.deleteEdit = function(idx) {
   if (previewState.edits && previewState.edits[lang]) {
     delete previewState.edits[lang][idx];
     savePreviewState();
+    syncRevertSoon();
     renderEditList();
     updateClearBtn();
   }
@@ -3473,6 +3474,7 @@ SPA.clearAll = function() {
       if (!ok) return;
       previewState.edits[lang] = {};
       savePreviewState();
+      syncRevertSoon();
       renderEditList();
       updateClearBtn();
       showToast(t('toast.edits_cleared'));
@@ -3489,6 +3491,7 @@ SPA.clearAll = function() {
       if (!ok) return;
       previewState.markers = [];
       savePreviewState();
+      syncRevertSoon();
       renderMarkers();
       updateClearBtn();
       showToast(t('toast.markers_cleared'));
@@ -4277,6 +4280,7 @@ SPA.revertEdit = function(idx) {
     if (cell) cell.classList.remove('edited');
   }
   saveReview();
+  syncRevertSoon();
   showToast(t('toast.reverted').replace('{n}', idx+1));
 };
 
@@ -4293,6 +4297,7 @@ SPA.revertAllEdits = function() {
     if (!ok) return;
     reviewState.edits = {};
     saveReview();
+    syncRevertSoon();
     renderReview();
     showToast(t('toast.all_reverted'));
   });
@@ -4455,6 +4460,8 @@ function ensureEditSync() {
       findOpenPrByHead: findOpenPrByHead,
       markPullReady: markPullReady,
       convertPullToDraft: convertPullToDraft,
+      closePull: closePull,
+      deleteRef: deleteRef,
     },
     isOffline: isOfflineError,
     buildFiles: buildSyncFiles,
@@ -4612,6 +4619,11 @@ document.addEventListener('visibilitychange', function() {
   else editSync.pull();
 });
 window.addEventListener('pagehide', function() { if (editSync) editSync.flush({ keepalive: true }); });
+
+// A revert/clear is a deliberate "undo", so sync it on the fast blur cadence
+// (1.5s) instead of the 15s typing debounce — the PR (or, when the last edit
+// is gone, its teardown) then follows promptly.
+function syncRevertSoon() { if (editSync) editSync.flushSoon(); }
 
 // Rebuilds the real edited file(s) for the sync engine — only the OPEN view
 // has the data (rows/blocks) to rebuild its transcript/SRT; other modes'

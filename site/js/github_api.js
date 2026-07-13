@@ -230,6 +230,26 @@ function convertPullToDraft(token, nodeId, fetchImpl) {
     { id: nodeId }, fetchImpl);
 }
 
+// PATCH /pulls/<n> {state:'closed'} — closes the PR without merging. Edit sync
+// calls this to tear a sync PR down when the last edit is reverted.
+function closePull(api, token, prNumber, fetchImpl) {
+  return ghJson(api + '/pulls/' + prNumber, token,
+    { method: 'PATCH', body: { state: 'closed' } }, fetchImpl);
+}
+
+// DELETE /git/refs/heads/<branch> — removes the branch. The repo's
+// delete-on-merge only fires on merge, so a plain close leaves the branch;
+// this removes it. Best-effort: a 404/422 (already gone) resolves as success
+// so teardown stays idempotent. Slashes in <branch> are kept (git ref path).
+function deleteRef(api, token, branchName, fetchImpl) {
+  return ghJson(api + '/git/refs/heads/' + branchName, token,
+    { method: 'DELETE' }, fetchImpl)
+    .catch(function (e) {
+      if (e && (e.status === 404 || e.status === 422)) return null;
+      throw e;
+    });
+}
+
 // One-button PR: base head sha → new branch → per-file (blob sha on base →
 // PUT to branch, sequential to keep commit order) → open the PR. A failure
 // after the branch exists carries e.branch so the UI can link to the orphan
@@ -290,6 +310,8 @@ if (typeof module !== 'undefined' && module.exports) {
     findOpenPrByHead: findOpenPrByHead,
     markPullReady: markPullReady,
     convertPullToDraft: convertPullToDraft,
+    closePull: closePull,
+    deleteRef: deleteRef,
     submitFilesPr: submitFilesPr,
   };
 }

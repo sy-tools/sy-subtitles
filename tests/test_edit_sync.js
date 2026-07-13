@@ -377,6 +377,20 @@ function ghStub(over) {
       record('convertPullToDraft', [nodeId]);
       return {};
     },
+    closePull: async (api, token, prNumber) => {
+      record('closePull', [prNumber]);
+      if (over.closePullFails) { const e = new Error('close failed'); e.status = over.closePullFails; throw e; }
+      return { number: prNumber, state: 'closed' };
+    },
+    // Mirrors the real helper: already-gone (404/422) resolves; other errors
+    // throw. Deleting the branch also removes the state file that lived on it.
+    deleteRef: async (api, token, branchName) => {
+      record('deleteRef', [branchName]);
+      const s = over.deleteRefStatus;
+      if (s && s !== 404 && s !== 422) { const e = new Error('delete failed'); e.status = s; throw e; }
+      gh._stateFile = null;
+      return null;
+    },
   };
   return gh;
 }
@@ -524,6 +538,67 @@ describe('engine: bootstrap', () => {
     assert.strictEqual(info.prNumber, 12);
     assert.strictEqual(info.prDraft, true);
     assert.strictEqual(info.status, 'synced');
+  });
+});
+
+describe('engine: teardown on full revert', () => {
+  it('reverting the last edit closes the PR, deletes the branch and hides the chip', async () => {
+    const { engine, gh, storage } = makeEngine();
+    localEdit(storage, 1, 'правка');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().prNumber, 77);   // PR created
+
+    storage.removeItem(RKEY);                             // revert everything
+    engine.notifyEdit();
+    await engine.flush();
+
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'closePull'), ['closePull', 77]);
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'deleteRef'), ['deleteRef', BRANCH_NAME]);
+    const info = engine.getInfo();
+    assert.strictEqual(info.status, 'idle');             // chip hides
+    assert.strictEqual(info.prNumber, null);             // in-memory base reset
+    const base = JSON.parse(storage.getItem(syncBaseKey(TALK)));
+    assert.strictEqual(base.prNumber, null);             // persisted base wiped
+    assert.strictEqual(base.sha, null);
+  });
+
+  it('a fresh edit after teardown re-creates the branch and PR from scratch', async () => {
+    const { engine, gh, storage } = makeEngine();
+    localEdit(storage, 1, 'a'); engine.notifyEdit(); await engine.flush();
+    storage.removeItem(RKEY); engine.notifyEdit(); await engine.flush();  // teardown
+    localEdit(storage, 2, 'b'); engine.notifyEdit(); await engine.flush(); // re-edit
+    assert.strictEqual(engine.getInfo().prNumber, 77);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 2); // branch recreated
+  });
+
+  it('teardown is best-effort: an already-gone branch (404) still completes', async () => {
+    const { engine, storage } = makeEngine({ deleteRefStatus: 404 });
+    localEdit(storage, 1, 'a'); engine.notifyEdit(); await engine.flush();
+    storage.removeItem(RKEY); engine.notifyEdit(); await engine.flush();
+    const info = engine.getInfo();
+    assert.strictEqual(info.status, 'idle');             // not an error
+    assert.strictEqual(info.prNumber, null);
+  });
+
+  it('closes a finalized (ready) PR too — no edits means no PR', async () => {
+    const { engine, gh, storage } = makeEngine();
+    localEdit(storage, 1, 'a'); engine.notifyEdit(); await engine.flush();
+    await engine.finalize();                             // PR -> ready for review
+    assert.strictEqual(engine.getInfo().prDraft, false);
+    storage.removeItem(RKEY); engine.notifyEdit(); await engine.flush();
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'closePull'), ['closePull', 77]);
+    assert.strictEqual(engine.getInfo().status, 'idle');
+  });
+
+  it('empty edits with nothing ever synced stays idle (no teardown network)', async () => {
+    const { engine, gh } = makeEngine();                 // never synced, no PR
+    engine.notifyEdit();                                 // dirty but collect() empty
+    await engine.flush();
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'closePull').length, 0);
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'deleteRef').length, 0);
+    assert.strictEqual(engine.getInfo().status, 'idle');
   });
 });
 
