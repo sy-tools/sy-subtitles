@@ -169,6 +169,53 @@ describe('flatten/unflatten shape stability', () => {
   });
 });
 
+describe('canonical srt_edits entries (shared preview/review block store)', () => {
+  const CK = 'srt_edits_' + TALK + '_video1_uk';
+
+  it('collectSyncEntries picks up canonical keys and drops empty maps', () => {
+    const storage = memStorage({
+      [CK]: JSON.stringify({ 4: 'правка' }),
+      ['srt_edits_' + TALK + '_video1_en']: JSON.stringify({}),
+      'srt_edits_2000-07-02_Other-Talk_v_uk': JSON.stringify({ 1: 'other' }),
+    });
+    const entries = collectSyncEntries(TALK, storage);
+    assert.deepStrictEqual(Object.keys(entries), [CK]);
+    assert.deepStrictEqual(entries[CK], { 4: 'правка' });
+  });
+
+  it('applySyncEntries removes stale canonical keys absent from the doc', () => {
+    const storage = memStorage({ [CK]: JSON.stringify({ 4: 'gone' }) });
+    const changed = applySyncEntries(TALK, {}, storage);
+    assert.deepStrictEqual(changed, [CK]);
+    assert.strictEqual(storage.getItem(CK), null);
+  });
+
+  it('round-trips to the exact JSON saveSrtEdits stores', () => {
+    const entry = { 2: 'а', 11: 'б' };
+    const rt = unflattenDoc(flattenDoc({ [CK]: entry }));
+    assert.strictEqual(JSON.stringify(rt[CK]), JSON.stringify(entry));
+    assert.ok(!('marks' in rt[CK]) && !('edits' in rt[CK]),
+      'canonical entries stay a plain block map');
+  });
+
+  it('merges canonical entries per block', () => {
+    const base = { [CK]: { 1: 'a' } };
+    const local = { [CK]: { 1: 'a', 2: 'local' } };
+    const remote = { [CK]: { 1: 'a', 3: 'remote' } };
+    const r = mergeSyncDocs(base, local, remote);
+    assert.deepStrictEqual(r.entries[CK], { 1: 'a', 2: 'local', 3: 'remote' });
+    assert.strictEqual(r.changedVsLocal, true);
+    assert.strictEqual(r.changedVsRemote, true);
+  });
+
+  it('an emptied canonical entry disappears from the merged doc', () => {
+    const base = { [CK]: { 1: 'v' } };
+    const r = mergeSyncDocs(base, {}, base);
+    assert.strictEqual(r.entries[CK], undefined);
+    assert.strictEqual(r.changedVsRemote, true);
+  });
+});
+
 describe('makeSyncDoc', () => {
   it('wraps entries with version/revision/client/talkId', () => {
     const d = makeSyncDoc(TALK, { a: 1 }, 4, 'k3b9x2', '2026-07-13T22:00:00Z');

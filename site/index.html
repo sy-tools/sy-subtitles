@@ -17,6 +17,7 @@
      app script below runs. -->
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/edit_store.js"></script>
 <script src="js/load_token.js"></script>
 <script src="js/index_url_state.js"></script>
 <script src="js/manifest_fetch.js"></script>
@@ -2817,12 +2818,24 @@ function showPreview(talkId, videoSlug) {
     : availLangs.indexOf('uk') !== -1 ? 'uk' : availLangs[0];
 
   var persisted = loadPreviewState(talkId, videoSlug, localStorage);
+  // Subtitle edits live in the canonical per-block store (js/edit_store.js),
+  // shared with the review-SRT view; the legacy in-state edits are migrated
+  // losslessly on first load. On a failed migration (e.g. storage quota) the
+  // session keeps the legacy write path — nothing moves, nothing is lost.
+  var editsMigration = migratePreviewEdits(talkId, videoSlug, localStorage);
+  var legacyEditMode = !!(editsMigration && editsMigration.error);
+  var editsCache = {};
+  availLangs.forEach(function(l) {
+    editsCache[l] = loadPreviewLangEdits(talkId, videoSlug, l, localStorage);
+  });
   if (sameVideo) {
     // Keep player, playback position and loaded subtitles; refresh the
     // persisted marker/edit state and keep the user's current language.
     previewState.mode = persisted.mode;
     previewState.markers = persisted.markers;
-    previewState.edits = persisted.edits;
+    previewState.edits = editsCache;
+    previewState._editLangs = availLangs;
+    previewState._legacyEdits = legacyEditMode;
     previewState.talk = talk;
     previewState.video = video;
   } else {
@@ -2834,7 +2847,9 @@ function showPreview(talkId, videoSlug) {
       subtitles: [],
       mode: persisted.mode,
       markers: persisted.markers,
-      edits: persisted.edits,
+      edits: editsCache,
+      _editLangs: availLangs,
+      _legacyEdits: legacyEditMode,
       currentTime: 0,
       lastText: '',
       srtLang: defaultLang,
@@ -3038,11 +3053,22 @@ function vimeoEmbed(url) {
 function savePreviewState() {
   if (!previewState || !previewState.talkId) return;
   var key = 'preview_' + previewState.talkId + '_' + previewState.videoSlug;
+  var edits = previewState.edits || {};
   var payload = {
     mode: previewState.mode || 'marker',
     markers: previewState.markers || [],
-    edits: previewState.edits || {},
+    edits: {},
   };
+  if (previewState._legacyEdits) {
+    // Migration failed for this video (e.g. storage quota) — keep the legacy
+    // in-state shape so no edit is stranded half-way; dual-read shows it and
+    // the next healthy load migrates it.
+    payload.edits = edits;
+  } else {
+    Object.keys(edits).forEach(function(lang) {
+      saveSrtEdits(previewState.talkId, previewState.videoSlug, lang, edits[lang], localStorage);
+    });
+  }
   localStorage.setItem(key, JSON.stringify(payload));
   if (editSync) editSync.notifyEdit();
 }
@@ -3834,6 +3860,8 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   if (mode === 'transcript') {
     reviewState.mode = 'transcript';
     reviewState.videoSlug = '';
+    reviewState.ukBlocks = null;
+    reviewState.rowToBlock = null;
     loadReviewEditsForMode();
     localStorage.setItem('sy_review_mode_' + talkId, JSON.stringify({ mode: 'transcript' }));
     updateColHeaders();
@@ -3918,6 +3946,14 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     reviewState.leftParas = aligned.map(function(r) { return r.en ? r.en.text : ''; });
     reviewState.rightParas = aligned.map(function(r) { return r.uk ? r.uk.text : ''; });
     reviewState.alignedRows = aligned;
+    // SRT edits live in the canonical per-block store (js/edit_store.js),
+    // shared with the preview view of the same video+lang. Legacy row-keyed
+    // edits migrate lazily here — the first moment the row->block map exists.
+    reviewState.ukBlocks = ukBlocks;
+    reviewState.rowToBlock = mapRowsToBlockIdx(aligned, ukBlocks);
+    var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
+      reviewState.rowToBlock, localStorage);
+    reviewState._legacyEdits = !!(mig && mig.error);
     loadReviewEditsForMode();
 
     renderReview();
@@ -4165,17 +4201,26 @@ function clearReviewContent() {
   reviewState.rightParas = [];
   reviewState.alignedRows = null;
   reviewState.rightParsed = null;
+  reviewState.ukBlocks = null;
+  reviewState.rowToBlock = null;
   reviewState.marks = {};
   reviewState.edits = {};
 }
 
 // Restore saved marks/edits for the current mode (and, for SRT, the current
-// video + language pair) instead of discarding them.
+// video + language pair) instead of discarding them. In SRT mode the edits
+// come from the canonical per-block store (shared with preview), projected
+// onto rows; the legacy key keeps only marks and unmappable row edits.
 function loadReviewEditsForMode() {
   try {
     var s = JSON.parse(localStorage.getItem(reviewStorageKey()) || '{}');
     reviewState.marks = s.marks || {};
-    reviewState.edits = s.edits || {};
+    if (reviewState.mode === 'srt' && reviewState.rowToBlock && !reviewState._legacyEdits) {
+      reviewState.edits = loadReviewRowEdits(reviewState.talkId, reviewState.videoSlug,
+        reviewState.srtLeftLang, reviewState.srtRightLang, reviewState.rowToBlock, localStorage);
+    } else {
+      reviewState.edits = s.edits || {};
+    }
   } catch (e) {
     reviewState.marks = {};
     reviewState.edits = {};
@@ -4183,7 +4228,22 @@ function loadReviewEditsForMode() {
 }
 
 function saveReview() {
-  localStorage.setItem(reviewStorageKey(), JSON.stringify({ marks: reviewState.marks, edits: reviewState.edits }));
+  if (reviewState.mode === 'srt' && reviewState.rowToBlock && !reviewState._legacyEdits) {
+    // Split row-keyed edits: block-mapped ones go to the canonical store
+    // (shared with preview), rows without a subtitle block stay in the
+    // legacy key alongside the marks.
+    var split = splitReviewRowEdits(reviewState.edits, reviewState.rowToBlock);
+    saveSrtEdits(reviewState.talkId, reviewState.videoSlug, reviewState.srtRightLang,
+      split.canonical, localStorage);
+    if (Object.keys(reviewState.marks).length || Object.keys(split.legacy).length) {
+      localStorage.setItem(reviewStorageKey(),
+        JSON.stringify({ marks: reviewState.marks, edits: split.legacy }));
+    } else {
+      localStorage.removeItem(reviewStorageKey());
+    }
+  } else {
+    localStorage.setItem(reviewStorageKey(), JSON.stringify({ marks: reviewState.marks, edits: reviewState.edits }));
+  }
   updateRevertBtn();
   if (editSync) editSync.notifyEdit();
 }
@@ -4404,7 +4464,11 @@ function onSyncRemoteApplied() {
     var persisted = loadPreviewState(previewState.talkId, previewState.videoSlug, localStorage);
     previewState.mode = persisted.mode;
     previewState.markers = persisted.markers;
-    previewState.edits = persisted.edits;
+    var cache = {};
+    (previewState._editLangs || [previewState.srtLang || 'uk']).forEach(function(l) {
+      cache[l] = loadPreviewLangEdits(previewState.talkId, previewState.videoSlug, l, localStorage);
+    });
+    previewState.edits = cache;
     updateClearBtn();
     if (!typing) {
       applyPreviewMode();
@@ -4609,29 +4673,12 @@ function buildReviewEditedContent() {
   {
     var full;
     if (isSrt) {
-      // Rebuild a valid SRT from alignedRows: keep block numbering and timecodes
-      // from the original UK blocks, substitute edited text where present.
-      var aligned = reviewState.alignedRows || [];
-      var blocks = [];
-      var seen = {};
-      for (var i = 0; i < aligned.length; i++) {
-        var uk = aligned[i].uk;
-        if (!uk) continue;
-        var key = uk.startMs + '_' + uk.endMs;
-        if (seen[key]) continue;
-        seen[key] = true;
-        var text = reviewState.edits[i] !== undefined ? reviewState.edits[i] : uk.text;
-        blocks.push({ startMs: uk.startMs, endMs: uk.endMs, text: text });
-      }
-      blocks.sort(function(a, b) { return a.startMs - b.startMs; });
-      var lines = [];
-      for (var j = 0; j < blocks.length; j++) {
-        lines.push(String(j + 1));
-        lines.push(msToSrtTime(blocks[j].startMs) + ' --> ' + msToSrtTime(blocks[j].endMs));
-        lines.push(blocks[j].text);
-        lines.push('');
-      }
-      full = lines.join('\n');
+      // Rebuild the SRT from the original parsed blocks with the row-keyed
+      // in-memory edits projected down to blocks — the same per-block shape
+      // the canonical store holds, and the same builder preview uses, so both
+      // views produce the identical file.
+      var split = splitReviewRowEdits(reviewState.edits, reviewState.rowToBlock || []);
+      full = applyEditsToSrt(reviewState.ukBlocks || [], split.canonical);
     } else {
       var paras = [];
       for (var i = 0; i < reviewState.rightParas.length; i++) {
@@ -4915,6 +4962,11 @@ SPA.switchSrtLang = function(side, lang) {
     reviewState.leftParas = aligned.map(function(r) { return r.en ? r.en.text : ''; });
     reviewState.rightParas = aligned.map(function(r) { return r.uk ? r.uk.text : ''; });
     reviewState.alignedRows = aligned;
+    reviewState.ukBlocks = ukBlocks;
+    reviewState.rowToBlock = mapRowsToBlockIdx(aligned, ukBlocks);
+    var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
+      reviewState.rowToBlock, localStorage);
+    reviewState._legacyEdits = !!(mig && mig.error);
     loadReviewEditsForMode();
     renderReview();
     updateColHeaders();

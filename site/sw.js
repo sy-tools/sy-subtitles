@@ -34,6 +34,7 @@ var SHELL_ASSETS = [
   'css/components.css',
   'js/preview_srt_parser.js',
   'js/preview_state.js',
+  'js/edit_store.js',
   'js/load_token.js',
   'js/index_url_state.js',
   'js/manifest_fetch.js',

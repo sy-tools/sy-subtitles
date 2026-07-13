@@ -25,13 +25,20 @@ function syncBaseKey(talkId) { return 'sy_sync_base_' + talkId; }
 function isSyncSpaceKey(key, talkId) {
   return key === 'review_' + talkId
     || key.indexOf('review_srt_' + talkId + '_') === 0
-    || key.indexOf('preview_' + talkId + '_') === 0;
+    || key.indexOf('preview_' + talkId + '_') === 0
+    || key.indexOf('srt_edits_' + talkId + '_') === 0;
 }
 
+// Canonical per-block stores (js/edit_store.js) are a bare {blockIdx: text}
+// map, unlike the {marks/markers/edits} wrappers of the other entries.
+function isCanonicalKey(key) { return String(key).indexOf('srt_edits_') === 0; }
+
 // An entry with no marks, no markers and no edits carries nothing worth
-// syncing (e.g. everything was reverted) — treated as absent.
-function entryIsEmpty(entry) {
+// syncing (e.g. everything was reverted) — treated as absent. `key` selects
+// the entry's shape (canonical block map vs marks/markers/edits wrapper).
+function entryIsEmpty(entry, key) {
   if (!entry) return true;
+  if (isCanonicalKey(key)) return !Object.keys(entry).length;
   if (Object.keys(entry.marks || {}).length) return false;
   if ((entry.markers || []).length) return false;
   var edits = entry.edits || {};
@@ -53,7 +60,7 @@ function collectSyncEntries(talkId, storage) {
     if (!key || !isSyncSpaceKey(key, talkId)) continue;
     var parsed;
     try { parsed = JSON.parse(storage.getItem(key)); } catch (e) { continue; }
-    if (entryIsEmpty(parsed)) continue;
+    if (entryIsEmpty(parsed, key)) continue;
     entries[key] = parsed;
   }
   return entries;
@@ -96,6 +103,12 @@ function flattenDoc(entries) {
   var flat = {};
   Object.keys(entries || {}).forEach(function (entryKey) {
     var e = entries[entryKey] || {};
+    if (isCanonicalKey(entryKey)) {
+      Object.keys(e).forEach(function (idx) {
+        flat[JSON.stringify([entryKey, 'blocks', idx])] = JSON.stringify(e[idx]);
+      });
+      return;
+    }
     var marks = e.marks || {};
     Object.keys(marks).forEach(function (idx) {
       flat[JSON.stringify([entryKey, 'marks', idx])] = JSON.stringify(marks[idx]);
@@ -127,9 +140,11 @@ function unflattenDoc(flat) {
     var path = JSON.parse(flatKey);
     var entryKey = path[0], kind = path[1];
     var e = entries[entryKey];
-    if (!e) e = entries[entryKey] = { marks: {}, edits: {}, markers: [] };
+    if (!e) e = entries[entryKey] = { marks: {}, edits: {}, markers: [], blocks: {} };
     var value = JSON.parse(flat[flatKey]);
-    if (kind === 'marks') {
+    if (kind === 'blocks') {
+      e.blocks[path[2]] = value;
+    } else if (kind === 'marks') {
       e.marks[path[2]] = value;
     } else if (kind === 'edits') {
       if (path.length === 4) {
@@ -153,10 +168,11 @@ function unflattenDoc(flat) {
     // so a byte-different equal doc would cause pointless pushes/re-renders.
     // A merge can leave an entry with no items (every edit deleted) — drop it.
     var isPreview = entryKey.indexOf('preview_') === 0;
-    var norm = isPreview
-      ? { mode: e.mode === undefined ? 'marker' : e.mode, markers: e.markers, edits: e.edits }
-      : { marks: e.marks, edits: e.edits };
-    if (entryIsEmpty(norm)) delete entries[entryKey];
+    var norm = isCanonicalKey(entryKey) ? e.blocks
+      : isPreview
+        ? { mode: e.mode === undefined ? 'marker' : e.mode, markers: e.markers, edits: e.edits }
+        : { marks: e.marks, edits: e.edits };
+    if (entryIsEmpty(norm, entryKey)) delete entries[entryKey];
     else entries[entryKey] = norm;
   });
   return entries;
