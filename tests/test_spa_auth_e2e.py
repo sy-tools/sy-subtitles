@@ -238,6 +238,45 @@ def test_callback_restores_app_params_saved_before_login(hooks_only_server):
         browser.close()
 
 
+def test_login_roundtrip_returns_to_the_page_the_user_left(hooks_only_server):
+    """Full circle: clicking login on a preview page must land back ON that
+    preview page. redirect_uri is the bare app URL (exact-match rule), so BOTH
+    the query (?repo=) and the hash route (#/preview/...) round-trip via
+    sessionStorage; losing the hash strands the user on the index after login."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        pytest.skip("playwright not installed")
+    from urllib.parse import parse_qs, urlparse
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context()
+        pg = ctx.new_page()
+        _route_github(pg, hooks_only_server)
+
+        # GitHub authorize bounces straight back to redirect_uri with a code —
+        # the shape of a real approval, so the SPA's stash/restore pair runs
+        # exactly as in production.
+        def authorize(route):
+            q = parse_qs(urlparse(route.request.url).query)
+            target = q["redirect_uri"][0] + "?code=c1&state=" + q["state"][0]
+            route.fulfill(status=302, headers={"Location": target})
+
+        pg.route("https://github.com/login/oauth/authorize*", authorize)
+
+        route_hash = "#/preview/1979-09-27_Talk/Video-HD"
+        pg.goto(f"{hooks_only_server}/index.html?repo=sy-tools%2Fsy-subtitles{route_hash}")
+        pg.wait_for_selector("#gh-login-btn", state="visible", timeout=10000)
+        pg.click("#gh-login-btn")
+        pg.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
+        assert pg.evaluate("localStorage.getItem('sy_gh_token')") == "gho_e2e"
+        assert "repo=" in pg.url and "code=" not in pg.url
+        assert pg.url.endswith(route_hash), f"login must return to the page the user left, got {pg.url}"
+        ctx.close()
+        browser.close()
+
+
 def test_login_control_sits_left_of_branch_selector(auth_server, auth_page):
     """The login button and avatar live in the freshness bar's LEFT group,
     before the branch selector — placed on the right they visually split the

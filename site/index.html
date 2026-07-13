@@ -717,9 +717,12 @@ function deriveRepo(hostname, pathname, search) {
     if (saved == null) return;
     if (!new URLSearchParams(location.search).get('state')) return;
     sessionStorage.removeItem('sy_gh_return');
+    var savedHash = sessionStorage.getItem('sy_gh_return_hash');
+    sessionStorage.removeItem('sy_gh_return_hash');
     var merged = mergeAuthReturn(location.search, saved);
-    if (merged !== location.search) {
-      history.replaceState(null, '', location.pathname + merged + location.hash);
+    var hash = mergeAuthReturnHash(location.hash, savedHash);
+    if (merged !== location.search || hash !== location.hash) {
+      history.replaceState(null, '', location.pathname + merged + hash);
     }
   } catch (e) {}
 })();
@@ -5125,8 +5128,10 @@ SPA.ghLogin = function() {
   try {
     sessionStorage.setItem('sy_gh_state', state);
     // App params can't ride in redirect_uri (exact-match rule) — they are
-    // restored from here on the way back, before deriveRepo runs.
+    // restored from here on the way back, before deriveRepo runs. The hash
+    // route rides along too, so login returns to the page the user left.
     sessionStorage.setItem('sy_gh_return', location.search);
+    sessionStorage.setItem('sy_gh_return_hash', location.hash);
   } catch (e) {}
   location.href = buildAuthorizeUrl(ghClientId(), state,
     buildRedirectUri(location.origin, location.pathname));

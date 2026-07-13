@@ -119,6 +119,31 @@ describe('mergeAuthReturn', () => {
   });
 });
 
+// The hash route (#/preview/...) cannot ride in redirect_uri either — it
+// round-trips via sessionStorage next to the saved search and is restored
+// on the callback, so login returns the user to the page they left.
+const { mergeAuthReturnHash } = require('../site/js/github_auth');
+
+describe('mergeAuthReturnHash', () => {
+  it('restores the saved hash when the callback arrives with none', () => {
+    assert.strictEqual(
+      mergeAuthReturnHash('', '#/preview/1979_Talk/Video-HD'),
+      '#/preview/1979_Talk/Video-HD');
+  });
+  it('keeps a non-empty current hash (never clobbers a live route)', () => {
+    assert.strictEqual(
+      mergeAuthReturnHash('#/review/other', '#/preview/1979_Talk/Video-HD'),
+      '#/review/other');
+  });
+  it('is a no-op for an empty or missing saved hash', () => {
+    assert.strictEqual(mergeAuthReturnHash('', ''), '');
+    assert.strictEqual(mergeAuthReturnHash('', null), '');
+  });
+  it('ignores a saved value that is not a hash fragment', () => {
+    assert.strictEqual(mergeAuthReturnHash('', 'garbage-no-hash'), '');
+  });
+});
+
 describe('stripAuthParams also clears GitHub error-callback params', () => {
   it('drops error/error_description/error_uri while keeping app params', () => {
     assert.strictEqual(
