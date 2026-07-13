@@ -3,6 +3,9 @@ run-name: "Sync: ${{ github.event.pull_request.title }}"
 
 on:
   pull_request:
+    # Default types (opened, synchronize, reopened) don't fire when a draft is
+    # marked ready — add ready_for_review so that transition runs the sync once.
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
     paths:
       - 'talks/*/transcript_uk.txt'
@@ -13,6 +16,10 @@ permissions:
 
 jobs:
   sync:
+    # Skip draft PRs: the author is still editing, so don't let the bot sync
+    # and commit back over half-finished transcript/SRT work. Runs once the PR
+    # is marked ready for review (see ready_for_review trigger above).
+    if: ${{ !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

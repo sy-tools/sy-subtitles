@@ -112,6 +112,22 @@ def test_sync_review_status_unlabeled_checks_removed_label() -> None:
     assert "github.event.label.name" in cond, f"gate ignores the removed label: {cond}"
 
 
+def test_sync_subtitles_skips_draft_prs() -> None:
+    """A draft PR is work-in-progress: the author is still editing the
+    transcript/SRT, so the bot must not race in, sync, and commit back over
+    half-finished edits. The sync job gates on the PR not being a draft, and
+    the trigger adds `ready_for_review` so marking a draft ready fires exactly
+    one sync (the default types don't include that transition)."""
+    data = yaml.safe_load((WORKFLOWS / "sync-subtitles.yml").read_text(encoding="utf-8"))
+    on = data.get("on") or data.get(True)  # yaml 1.1 parses bare `on` as True
+    types = on["pull_request"].get("types") or []
+    assert "ready_for_review" in types, (
+        f"pull_request.types must include ready_for_review so a draft->ready transition triggers the sync: {types}"
+    )
+    cond = data["jobs"]["sync"]["if"]
+    assert "draft" in cond, f"sync job must skip draft PRs via an `if` gate: {cond}"
+
+
 def test_sync_subtitles_commit_skips_ci_to_avoid_self_trigger() -> None:
     """The sync job commits the synced uk.srt/transcript as github-actions[bot]
     and pushes to the PR branch. That push re-triggers this same pull_request
