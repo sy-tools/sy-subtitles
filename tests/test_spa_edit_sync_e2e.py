@@ -312,6 +312,49 @@ def _wire(pg, calls, review_status, sync_opts):
 
     pg.route("**/api.github.com/graphql", graphql)
 
+    # Issue endpoints for marker-sync (create / list / get / patch) + labels.
+    issue_state = {"issue": None, "next": 900}
+
+    def labels(route):
+        route.fulfill(status=201, content_type="application/json", body=json.dumps({}))
+
+    pg.route("**/api.github.com/repos/**/labels", labels)
+
+    def issues(route):
+        req = route.request
+        method = req.method
+        url = req.url
+        if method == "GET" and "/issues?" in url:  # list by label
+            rows = [issue_state["issue"]] if issue_state["issue"] else []
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(rows))
+            return
+        if method == "GET":  # single issue
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(issue_state["issue"] or {}))
+            return
+        body = json.loads(req.post_data) if req.post_data else {}
+        calls.append({"method": method, "url": url, "body": body})
+        if method == "POST":
+            n = issue_state["next"]
+            issue_state["next"] += 1
+            issue_state["issue"] = {
+                "number": n,
+                "title": body.get("title"),
+                "state": "open",
+                "node_id": f"I_{n}",
+                "html_url": f"https://github.com/x/issues/{n}",
+                "body": body.get("body", ""),
+            }
+            route.fulfill(status=201, content_type="application/json", body=json.dumps(issue_state["issue"]))
+            return
+        if issue_state["issue"]:  # PATCH
+            if "body" in body:
+                issue_state["issue"]["body"] = body["body"]
+            if "state" in body:
+                issue_state["issue"]["state"] = body["state"]
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(issue_state["issue"] or {}))
+
+    pg.route("**/api.github.com/repos/**/issues**", issues)
+
     def talks_contents(route):
         req = route.request
         if req.method == "GET":
@@ -833,4 +876,56 @@ def test_preview_edit_syncs_to_video_scoped_target(server, browser):
     assert real["body"]["branch"] == video_branch
     committed = base64.b64decode(real["body"]["content"]).decode("utf-8")
     assert "PREVIEWSYNC" in committed
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 9. Signed-in preview markers auto-sync to a GitHub issue (create + teardown).
+# ---------------------------------------------------------------------------
+
+
+def test_signed_in_marker_creates_issue_then_closes_when_emptied(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
+    _open_preview_marker(pg, server)
+    pg.wait_for_function("() => window.markerSync", timeout=10000)
+
+    # Add a marker -> creates the markers issue on the fast cadence.
+    pg.evaluate("window.previewState.currentTime = 3; window.previewState.lastText = 'Sub one';")
+    pg.evaluate("SPA.addMarker()")
+
+    def _created():
+        return [c for c in calls if c["method"] == "POST" and c["url"].split("?")[0].endswith("/issues")]
+
+    for _ in range(60):
+        if _created():
+            break
+        pg.wait_for_timeout(100)
+    created = _created()
+    assert created, "adding a marker must create the markers issue"
+    body = created[-1]["body"]
+    assert body["title"] == f"Markers: {TALK_ID} / {VIDEO_SLUG}"
+    assert body["labels"] == ["markers"]
+    assert "<!-- sy-markers:" in body["body"], "issue body must carry the structured block"
+    pg.wait_for_selector("#marker-chip", state="visible", timeout=5000)
+    number = pg.evaluate("window.markerSync.getInfo().issueNumber")
+
+    # Remove the only marker -> teardown closes the same issue.
+    pg.evaluate("SPA.removeMarker(0)")
+
+    def _closed():
+        return [
+            c
+            for c in calls
+            if c["method"] == "PATCH"
+            and c["url"].split("?")[0].endswith(f"/issues/{number}")
+            and (c["body"] or {}).get("state") == "closed"
+        ]
+
+    for _ in range(60):
+        if _closed():
+            break
+        pg.wait_for_timeout(100)
+    assert _closed(), "emptying the markers must close the issue"
+    pg.wait_for_selector("#marker-chip", state="hidden", timeout=5000)
     ctx.close()

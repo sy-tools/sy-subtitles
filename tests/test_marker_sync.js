@@ -213,6 +213,29 @@ describe('marker_sync engine', () => {
     assert.strictEqual(engine.getInfo().issueNumber, 7);
   });
 
+  it('snapshots base on create so a later in-place removal still tears down', async () => {
+    // Regression: meta.base = local aliased the SPA's live markers array; a
+    // later splice emptied base too, so the merge unioned instead of deleting.
+    const live = [M(1, 'a')];
+    const gh = ghIssueStub({});
+    const storage = memStorage({});
+    const timers = timerHarness();
+    const engine = createMarkerSyncEngine({
+      api: API, owner: 'o', login: 'me', token: 'x', talkId: TALK, videoSlug: VIDEO, heading: 'V',
+      getMarkers: () => live,
+      setMarkers: (m) => { live.length = 0; m.forEach((x) => live.push(x)); },
+      storage, gh, now: () => 1,
+      setTimeoutFn: timers.set.bind(timers), clearTimeoutFn: timers.clear.bind(timers),
+      isOffline: () => false, onStatus: () => {},
+    });
+    engine.notifyEdit();
+    await engine.flush();                 // create; base snapshot = [a]
+    live.splice(0, 1);                     // in-place removal (the aliasing hazard)
+    engine.notifyEdit();
+    await engine.flush();
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'state'), ['state', 50, 'closed']);
+  });
+
   it('does not drop a marker added mid-teardown; chip never lies idle', async () => {
     const seeded = { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
       body: buildIssueBody([M(1, 'a')], 'Video One') };

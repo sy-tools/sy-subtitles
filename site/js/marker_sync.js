@@ -160,7 +160,9 @@ function createMarkerSyncEngine(opts) {
         }).then(function (issue) {
           if (disposed) return;
           meta.number = issue.number; meta.url = issue.html_url; meta.nodeId = issue.node_id;
-          meta.base = local; saveMeta();
+          // Copy: `local` aliases the SPA's live markers array, which a later
+          // remove/splice would mutate — leaving base wrongly empty for merge.
+          meta.base = local.slice(); saveMeta();
           if (editSeq === seqAtStart) clearDirty();
           setStatus('synced');
         });
