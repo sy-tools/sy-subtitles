@@ -39,6 +39,7 @@ function b64decode(s) {
 // crafted marker inject a decoy sy-markers comment (see parseMarkersBlock, I3).
 function escapeCell(s) {
   return String(s || '')
+    .replace(/\\/g, '\\\\')   // escape backslash FIRST, else it defeats the `|` escape
     .replace(/\|/g, '\\|')
     .replace(/[\r\n]+/g, ' ')
     .replace(/</g, '&lt;');

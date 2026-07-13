@@ -112,6 +112,14 @@ describe('marker_sync helpers', () => {
     assert.ok(t.startsWith('## Markers — Video X'));
     assert.ok(t.includes('| 00:00:01 | alpha | c1 |'));
   });
+  it('escapes backslashes before pipes so "\\|" cannot break the table (CodeQL)', () => {
+    // A lone backslash must be doubled: "c\\d" -> "c\\\\d".
+    assert.ok(renderMarkersTable([M(2, 'c\\d', '')], 'V').includes('c\\\\d'));
+    // "a\\|b" must escape the backslash FIRST, then the pipe, so the pipe stays
+    // escaped in-cell: "a\\|b" -> "a\\\\\\|b" (not "a\\|b", which markdown reads
+    // as a literal backslash followed by a bare column break).
+    assert.ok(renderMarkersTable([M(1, 'a\\|b', '')], 'V').includes('a\\\\\\|b'));
+  });
   it('parseMarkersBlock returns [] when absent or corrupt', () => {
     assert.deepStrictEqual(parseMarkersBlock('no block here'), []);
     assert.deepStrictEqual(parseMarkersBlock('<!-- sy-markers: @@@ -->'), []);
