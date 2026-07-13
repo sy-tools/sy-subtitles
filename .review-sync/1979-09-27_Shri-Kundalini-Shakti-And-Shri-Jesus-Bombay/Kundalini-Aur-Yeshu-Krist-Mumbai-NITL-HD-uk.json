@@ -1,8 +1,12 @@
 {
   "version": 1,
-  "revision": 5,
-  "updatedAt": "2026-07-13T13:28:17.735Z",
+  "revision": 6,
+  "updatedAt": "2026-07-13T13:29:33.905Z",
   "client": "kolodd",
   "talkId": "1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay",
-  "entries": {}
+  "entries": {
+    "srt_edits_1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay_Kundalini-Aur-Yeshu-Krist-Mumbai-NITL-HD_uk": {
+      "92": "наші індійці все ще лишаються дуже великими англійцями. Я багато разів кажу,"
+    }
+  }
 }
