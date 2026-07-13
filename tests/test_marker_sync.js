@@ -32,7 +32,6 @@ function timerHarness() {
     fireAll() { const fns = Object.values(timers); Object.keys(timers).forEach((k) => delete timers[k]); fns.forEach((fn) => fn()); },
   };
 }
-async function settle() { for (let i = 0; i < 50; i++) await Promise.resolve(); }
 
 // Stateful issue double: one issue, seeded via over.issue (title must match).
 function ghIssueStub(over) {

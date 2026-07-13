@@ -16,9 +16,7 @@
   // Shared cloud silhouette: a symmetric, puffy cloud (three rounded top lobes
   // over a flat bottom) drawn in a 24x24 viewBox. Reads clearly as a cloud even
   // at ~19px. The inner glyph is layered on top, centred on the body (~12,13).
-  var CLOUD = '<path d="M7 18C4.79 18 3 16.21 3 14C3 11.95 4.54 10.26 6.53 10.03'
-    + 'C7.14 7.7 9.36 6 12 6C14.64 6 16.86 7.7 17.47 10.03C19.46 10.26 21 11.95 21 14'
-    + 'C21 16.21 19.21 18 17 18Z"/>';
+  var CLOUD = '<path d="M7 18C4.79 18 3 16.21 3 14C3 11.95 4.54 10.26 6.53 10.03C7.14 7.7 9.36 6 12 6C14.64 6 16.86 7.7 17.47 10.03C19.46 10.26 21 11.95 21 14C21 16.21 19.21 18 17 18Z"/>';
 
   var GLYPHS = {
     // Two static sync arrows (upper arc heading right, lower arc heading left) —
