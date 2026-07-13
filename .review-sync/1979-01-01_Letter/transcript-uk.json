@@ -1,8 +1,15 @@
 {
   "version": 1,
-  "revision": 4,
-  "updatedAt": "2026-07-13T12:58:09.537Z",
+  "revision": 5,
+  "updatedAt": "2026-07-13T15:47:02.232Z",
   "client": "kolodd",
   "talkId": "1979-01-01_Letter",
-  "entries": {}
+  "entries": {
+    "review_1979-01-01_Letter": {
+      "marks": {},
+      "edits": {
+        "0": "Лист, перекладений з маратхі. Лондон, 1979"
+      }
+    }
+  }
 }
