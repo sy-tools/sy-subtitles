@@ -731,6 +731,43 @@ def test_sync_chip_dropdown_opens_pr(server, browser):
 # ---------------------------------------------------------------------------
 
 
+def _transcript_puts(calls):
+    return [
+        c
+        for c in calls
+        if c["method"] == "PUT" and f"/contents/talks/{TALK_ID}/transcript_uk.txt" in c["url"].split("?")[0]
+    ]
+
+
+def test_reverting_the_last_edit_recommits_the_original_file(server, browser):
+    """Removing the last edit must push the ORIGINAL file back to the PR, not
+    leave the committed file stuck with the stale edit. Regression: buildSyncFiles
+    only rebuilt when edits existed, so a full revert updated the state file
+    (chip => synced) but never re-committed the real file."""
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
+    _open_review(pg, server)
+
+    _edit_first_review_cell(pg, " SYNCED123")
+    _wait_chip_synced(pg)
+    edited = _transcript_puts(calls)
+    assert edited, "the edit must have committed the transcript"
+    assert "SYNCED123" in base64.b64decode(edited[-1]["body"]["content"]).decode("utf-8")
+
+    # Revert every edit and force an immediate sync.
+    n0 = len(edited)
+    pg.evaluate("reviewState.edits = {}; saveReview(); editSync.flush({ force: true });")
+    for _ in range(50):
+        if len(_transcript_puts(calls)) > n0:
+            break
+        pg.wait_for_timeout(100)
+    reverted = _transcript_puts(calls)
+    assert len(reverted) > n0, "revert must re-commit the transcript file"
+    restored = base64.b64decode(reverted[-1]["body"]["content"]).decode("utf-8")
+    assert "SYNCED123" not in restored, f"reverted file still carries the edit: {restored!r}"
+    ctx.close()
+
+
 def test_preview_edit_syncs_to_video_scoped_target(server, browser):
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})

@@ -4615,25 +4615,32 @@ window.addEventListener('pagehide', function() { if (editSync) editSync.flush({ 
 
 // Rebuilds the real edited file(s) for the sync engine — only the OPEN view
 // has the data (rows/blocks) to rebuild its transcript/SRT; other modes'
-// edits live in the state file until their view is opened.
+// edits live in the state file until their view is opened. The file is rebuilt
+// whenever the view's SOURCE data is loaded, NOT only when edits currently
+// exist: reverting the last edit must re-commit the ORIGINAL file back to the
+// PR (rebuilt with no edits). Guarding on "edits exist" left the committed file
+// stuck with the stale edit while the state file correctly went empty — so the
+// chip said "synced" but the PR kept the last edit.
 function buildSyncFiles() {
   if (!editSync) return [];
   try {
     var reviewOpen = document.getElementById('view-review').classList.contains('active');
-    if (reviewOpen && reviewState.talkId === editSync.talkId
-        && Object.keys(reviewState.edits).length
-        && (reviewState.rightParas.length || (reviewState.alignedRows || []).length)) {
-      return [{ path: reviewFilePath().path, content: buildReviewEditedContent() }];
+    if (reviewOpen && reviewState.talkId === editSync.talkId) {
+      var hasData = reviewState.mode === 'srt'
+        ? (reviewState.ukBlocks || []).length
+        : reviewState.rightParas.length;
+      if (hasData) {
+        return [{ path: reviewFilePath().path, content: buildReviewEditedContent() }];
+      }
     }
     var previewOpen = document.getElementById('view-preview').classList.contains('active');
-    if (previewOpen && previewState && previewState.talkId === editSync.talkId) {
+    if (previewOpen && previewState && previewState.talkId === editSync.talkId
+        && (previewState.subtitles || []).length) {
       var lang = previewState.srtLang || 'uk';
       var langEdits = (previewState.edits && previewState.edits[lang]) || {};
-      if (Object.keys(langEdits).length && (previewState.subtitles || []).length) {
-        var path = 'talks/' + previewState.talkId + '/' + previewState.videoSlug
-          + '/final/' + lang + '.srt';
-        return [{ path: path, content: applyEditsToSrt(previewState.subtitles, langEdits) }];
-      }
+      var path = 'talks/' + previewState.talkId + '/' + previewState.videoSlug
+        + '/final/' + lang + '.srt';
+      return [{ path: path, content: applyEditsToSrt(previewState.subtitles, langEdits) }];
     }
   } catch (e) {
     console.warn('buildSyncFiles failed:', e && e.message);
