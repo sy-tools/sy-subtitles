@@ -1,9 +1,15 @@
 """E2E for the signed-in GitHub write actions: take-for-review (+'mine' chip,
-filter, highlight), Create PR from review/preview edits, direct issue
-creation, and the add-talk PR. All GitHub endpoints are mocked with
-page.route; a signed-in session is simulated by seeding sy_gh_token /
-sy_gh_user in localStorage (the app treats those as the session — no network
-auth involved).
+filter, highlight), direct review-issue creation via the API, and the add-talk
+PR. All GitHub endpoints are mocked with page.route; a signed-in session is
+simulated by seeding sy_gh_token / sy_gh_user in localStorage (the app treats
+those as the session — no network auth involved).
+
+Note (edit-sync v2): the one-button "Create PR" flow from review/preview edits
+was removed — background auto-sync (tests/test_spa_edit_sync_e2e.py) replaced
+it. #btn-create-pr / #btn-preview-pr no longer exist, and the manual editor /
+issue buttons are now signed-out-only (data-gh-hide). The signed-in issue API
+path (SPA.createReviewIssue -> submitIssueViaApi) still exists and is exercised
+here by calling it directly, since its button is hidden while signed in.
 """
 
 import base64
@@ -309,46 +315,16 @@ def test_mine_chip_filters_and_highlights(server, browser):
     ctx.close()
 
 
-def test_create_pr_from_review_edits(server, browser):
-    calls = []
-    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
-    pg.goto(f"{server}{SPA_URL}#/review/2001-01-01_Test-Talk")
-    pg.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
-    assert pg.locator("#btn-create-pr").is_visible()
-    cell = pg.locator(".cell.uk .cell-text").first
-    cell.click()
-    cell.press("End")
-    cell.type(" ВИПРАВЛЕНО")
-    cell.press("Tab")
-    pg.wait_for_timeout(200)
-    pg.click("#btn-create-pr")
-    pg.wait_for_function("window.__opened.length > 0", timeout=10000)
-
-    seq = [(c["method"], c["url"].split("/repos/")[-1].split("?")[0]) for c in calls]
-    assert ("POST", "sy-tools/sy-subtitles/git/refs") in seq
-    assert ("POST", "sy-tools/sy-subtitles/pulls") in seq
-    refs = next(c for c in calls if c["url"].endswith("/git/refs"))
-    assert refs["body"]["ref"].startswith("refs/heads/review/2001-01-01_Test-Talk--tester--")
-    put = next(c for c in calls if c["method"] == "PUT")
-    assert put["url"].split("?")[0].endswith("/contents/talks/2001-01-01_Test-Talk/transcript_uk.txt")
-    import base64
-
-    committed = base64.b64decode(put["body"]["content"]).decode("utf-8")
-    assert "ВИПРАВЛЕНО" in committed
-    assert put["body"]["sha"] == "blob1"
-    pull = next(c for c in calls if c["url"].endswith("/pulls"))
-    assert pull["body"]["head"] == refs["body"]["ref"].replace("refs/heads/", "")
-    assert "Suggested edits" in pull["body"]["body"]
-    assert pg.evaluate("window.__opened[0]") == "https://github.com/sy-tools/sy-subtitles/pull/9"
-    ctx.close()
-
-
 def test_review_issue_posted_via_api_when_signed_in(server, browser):
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
     pg.goto(f"{server}{SPA_URL}#/review/2001-01-01_Test-Talk")
     pg.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
-    pg.click("#view-review .btn--issue")
+    # Edit-sync v2: the "Create Issue" button is data-gh-hide, so it is hidden
+    # while signed in (auto-sync replaces the manual flows). The signed-in issue
+    # API path still exists — invoke it directly rather than clicking the button.
+    assert not pg.locator("#view-review .btn--issue").is_visible()
+    pg.evaluate("SPA.createReviewIssue()")
     pg.wait_for_function("window.__opened.length > 0", timeout=10000)
     posts = [c for c in calls if c["method"] == "POST" and c["url"].endswith("/issues")]
     assert posts and posts[0]["body"]["title"].startswith("Translation review:")
@@ -367,7 +343,8 @@ def test_signed_out_shows_none_of_the_new_ui(server, browser):
     assert pg.locator(".stat-card[data-filter='mine']").count() == 0
     pg.goto(f"{server}{SPA_URL}#/review/2001-01-01_Test-Talk")
     pg.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
-    assert not pg.locator("#btn-create-pr").is_visible()
+    # The one-button Create-PR control was removed entirely (edit-sync v2).
+    assert pg.locator("#btn-create-pr").count() == 0
     # The classic editor flow stays: signed-out users see the editor button.
     assert pg.locator("#btn-review-editor").is_visible()
     assert not calls, "no write API calls may happen signed out"
@@ -400,13 +377,14 @@ def test_take_for_review_failure_recovers_the_button(server, browser):
     ctx.close()
 
 
-def test_signed_in_review_swaps_editor_for_create_pr(server, browser):
-    """Signed in, Create PR REPLACES Open-in-GitHub-Editor (both submit the
-    same edits — showing both would duplicate the action)."""
+def test_signed_in_review_hides_editor_and_has_no_create_pr(server, browser):
+    """Edit-sync v2: signed in, background auto-sync replaces the manual flows.
+    The Open-in-GitHub-Editor button is data-gh-hide (present but hidden), and
+    there is no Create-PR button at all."""
     ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
     pg.goto(f"{server}{SPA_URL}#/review/2001-01-01_Test-Talk")
     pg.wait_for_function("document.querySelectorAll('.cell.uk').length > 0", timeout=10000)
-    assert pg.locator("#btn-create-pr").is_visible()
+    assert pg.locator("#btn-create-pr").count() == 0
     assert pg.locator("#btn-review-editor").count() == 1
     assert not pg.locator("#btn-review-editor").is_visible()
     ctx.close()
@@ -418,15 +396,17 @@ def _open_preview_in_edit_mode(pg, server):
     pg.click(".preview-mode-toggle [data-mode='edit']")
 
 
-def test_signed_in_preview_swaps_editor_for_create_pr(server, browser):
+def test_signed_in_preview_hides_editor_and_has_no_pr_button(server, browser):
+    """Edit-sync v2: signed in, the preview's editor button is hidden (edit
+    mode, signed in) and the removed Create-PR control is absent."""
     ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
     _open_preview_in_edit_mode(pg, server)
-    assert pg.locator("#btn-preview-pr").is_visible()
+    assert pg.locator("#btn-preview-pr").count() == 0
     assert pg.locator("#btn-preview-editor").count() == 1
     assert not pg.locator("#btn-preview-editor").is_visible()
-    # Marker mode hides both edit-submission buttons.
+    # Marker mode also keeps the editor hidden; still no PR button.
     pg.click(".preview-mode-toggle [data-mode='marker']")
-    assert not pg.locator("#btn-preview-pr").is_visible()
+    assert pg.locator("#btn-preview-pr").count() == 0
     assert not pg.locator("#btn-preview-editor").is_visible()
     ctx.close()
 
@@ -436,36 +416,9 @@ def test_signed_out_preview_keeps_editor_button(server, browser):
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, signed_in=False)
     _open_preview_in_edit_mode(pg, server)
     assert pg.locator("#btn-preview-editor").is_visible()
-    assert not pg.locator("#btn-preview-pr").is_visible()
+    # The one-button preview PR control was removed entirely (edit-sync v2).
+    assert pg.locator("#btn-preview-pr").count() == 0
     assert not calls, "no write API calls may happen signed out"
-    ctx.close()
-
-
-def test_create_pr_from_preview_edits(server, browser):
-    calls = []
-    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
-    _open_preview_in_edit_mode(pg, server)
-    # Park the playhead on block 1 and edit it through the real UX path.
-    pg.evaluate("window._vimeoPlayer._setTime(2)")
-    pg.click("#btn-mark")
-    pg.wait_for_selector(".edit-item .edited", timeout=5000)
-    row = pg.locator(".edit-item .edited").first
-    row.click()
-    row.press("End")
-    row.type(" ВИПРАВЛЕНО")
-    pg.click("#btn-preview-pr")
-    pg.wait_for_function("window.__opened.length > 0", timeout=10000)
-
-    put = next(c for c in calls if c["method"] == "PUT")
-    assert put["url"].split("?")[0].endswith("/contents/talks/2001-01-01_Test-Talk/Test-Video/final/uk.srt")
-    committed = base64.b64decode(put["body"]["content"]).decode("utf-8")
-    assert "Перший субтитр ВИПРАВЛЕНО" in committed
-    assert "Другий субтитр" in committed
-    refs = next(c for c in calls if c["url"].endswith("/git/refs"))
-    assert refs["body"]["ref"].startswith("refs/heads/preview/2001-01-01_Test-Talk--tester--")
-    pull = next(c for c in calls if c["url"].endswith("/pulls"))
-    assert pull["body"]["head"] == refs["body"]["ref"].replace("refs/heads/", "")
-    assert pg.evaluate("window.__opened[0]") == "https://github.com/sy-tools/sy-subtitles/pull/9"
     ctx.close()
 
 

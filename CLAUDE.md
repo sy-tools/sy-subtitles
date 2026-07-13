@@ -103,7 +103,8 @@ re-invent values.** Open **`site/styleguide.html`** first — it's the live cata
   value belongs in `tokens.css` for *both* themes; `components.css` must define no
   palette (guarded by `test_spa_cache.js`).
 - **Palette:** surfaces `--bg`,`--bg2…5`; ink `--fg`,`--fg2…6`; `--border`,`--border2/3`;
-  `--link`; `--accent-green/orange/red`; semantic zones `--primary/issue/danger-{bg,border,fg}`,
+  `--link`; `--accent-green/orange/red`; `--sync-progress` (blue cloud-sync tone);
+  semantic zones `--primary/issue/danger-{bg,border,fg}`,
   `--stat-active-bg`, `--cell-hover/edit-bg/edited-bg`, `--mark-bg`, `--overlay-bg`.
 - **Scales:** `--space-1…8` (4→32), `--radius-sm…pill`, `--text-2xs…-display`,
   `--shadow-sm/md/lg`, `--z-*`. Type families `--f-serif` (titles), `--f-sans` (UI),
@@ -114,6 +115,14 @@ re-invent values.** Open **`site/styleguide.html`** first — it's the live cata
   no cross-theme leaks — enforced by **`tests/test_spa_theme_tokens.py`** (computed
   styles). When you add or change a palette token, set it in the light `:root` AND
   both dark blocks, then update that guard's `LIGHT`/`DARK` maps.
+- **Ship the catalog entry — same change, no exceptions.** Any NEW component
+  (a reusable class/pattern) OR palette token MUST land in `site/styleguide.html`
+  in the same change: a component → a live example section rendered by the real
+  CSS (and, for icon components, generated from the real JS so it can't drift —
+  see the `.sync-cloud` "Sync status" section); a colour token → a swatch. The
+  catalog is the contract, not an afterthought — an undocumented colour token
+  fails **`tests/test_styleguide_palette_coverage.py`**. If you catch yourself
+  wiring UI straight into `index.html` without a styleguide entry, stop and add it.
 - **Buttons:** `<button class="btn btn--primary btn--sm">` — variants
   `--primary/issue/danger/ghost`, sizes `--sm/--lg`, with hover/active/disabled/
   focus-visible built in. Use `.btn` for new actions.

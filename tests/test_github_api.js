@@ -119,10 +119,10 @@ describe('createIssue', () => {
   it('POSTs title/body/labels/assignees with auth and returns number+url', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'POST', match: '/issues', status: 201,
-      payload: { number: 42, html_url: 'https://github.com/x/issues/42' } }], calls);
+      payload: { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42' } }], calls);
     const res = await createIssue(API, 'gho_x',
       { title: 'Review: t', body: 'b', labels: ['talk-review'], assignees: ['slava'] }, f);
-    assert.deepStrictEqual(res, { number: 42, html_url: 'https://github.com/x/issues/42' });
+    assert.deepStrictEqual(res, { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42' });
     assert.strictEqual(calls[0].url, API + '/issues');
     assert.strictEqual(calls[0].headers.Authorization, 'Bearer gho_x');
     assert.deepStrictEqual(calls[0].body,
@@ -188,8 +188,265 @@ describe('branch + contents + pull primitives', () => {
     const f = routerFetch([{ method: 'POST', match: '/pulls', status: 201,
       payload: { number: 9, html_url: 'https://github.com/x/pull/9' } }], calls);
     const res = await createPull(API, 'gho_x', { head: 'review/b', base: 'main', title: 't', body: 'b' }, f);
-    assert.deepStrictEqual(res, { number: 9, html_url: 'https://github.com/x/pull/9' });
+    assert.strictEqual(res.number, 9);
+    assert.strictEqual(res.html_url, 'https://github.com/x/pull/9');
     assert.deepStrictEqual(calls[0].body, { head: 'review/b', base: 'main', title: 't', body: 'b' });
+  });
+  it('createPull passes draft through and plucks node_id + draft from the reply', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'POST', match: '/pulls', status: 201,
+      payload: { number: 9, html_url: 'https://github.com/x/pull/9', node_id: 'PR_node9', draft: true } }], calls);
+    const res = await createPull(API, 'gho_x',
+      { head: 'sync/u/t', base: 'main', title: 't', body: 'b', draft: true }, f);
+    assert.strictEqual(calls[0].body.draft, true);
+    assert.strictEqual(res.node_id, 'PR_node9');
+    assert.strictEqual(res.draft, true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Edit auto-sync primitives
+// ---------------------------------------------------------------------------
+const {
+  base64ToUtf8, makeSyncBranchName, getFileContent, findOpenPrByHead,
+  markPullReady, convertPullToDraft, deleteFile, closePull, deleteRef,
+  getIssue, updateIssue, setIssueState, listIssuesByLabel, ensureLabel,
+} = require('../site/js/github_api');
+
+describe('issue sync primitives (marker sync)', () => {
+  it('createIssue passes labels and plucks number/url/node_id', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'POST', match: '/issues', status: 201,
+      payload: { number: 3, html_url: 'u', node_id: 'I_3' } }], calls);
+    const r = await createIssue(API, 'gho_x', { title: 't', body: 'b', labels: ['markers'] }, f);
+    assert.deepStrictEqual(calls[0].body.labels, ['markers']);
+    assert.deepStrictEqual(r, { number: 3, html_url: 'u', node_id: 'I_3' });
+  });
+  it('getIssue reads number/state/body/node_id', async () => {
+    const f = routerFetch([{ method: 'GET', match: '/issues/5', status: 200,
+      payload: { number: 5, state: 'open', body: 'B', node_id: 'I_5', updated_at: 'T' } }], []);
+    assert.deepStrictEqual(await getIssue(API, 'gho_x', 5, f),
+      { number: 5, state: 'open', body: 'B', node_id: 'I_5' });
+  });
+  it('updateIssue PATCHes the given fields', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'PATCH', match: '/issues/5', status: 200,
+      payload: { number: 5, state: 'open', body: 'NB' } }], calls);
+    await updateIssue(API, 'gho_x', 5, { body: 'NB' }, f);
+    assert.deepStrictEqual(calls[0].body, { body: 'NB' });
+  });
+  it('setIssueState closes/reopens and swallows 404', async () => {
+    const calls = [];
+    const ok = routerFetch([{ method: 'PATCH', match: '/issues/5', status: 200,
+      payload: { number: 5, state: 'closed' } }], calls);
+    await setIssueState(API, 'gho_x', 5, 'closed', ok);
+    assert.deepStrictEqual(calls[0].body, { state: 'closed' });
+    const gone = routerFetch([{ method: 'PATCH', match: '/issues/9', status: 404,
+      payload: { message: 'Not Found' } }], []);
+    assert.strictEqual(await setIssueState(API, 'gho_x', 9, 'closed', gone), null);
+  });
+  it('listIssuesByLabel GETs labels=&state=all and maps rows', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'GET', match: '/issues?', status: 200,
+      payload: [{ number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B' }] }], calls);
+    const rows = await listIssuesByLabel(API, 'gho_x', 'markers', f);
+    assert.ok(/labels=markers/.test(calls[0].url) && /state=all/.test(calls[0].url), calls[0].url);
+    assert.deepStrictEqual(rows[0],
+      { number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B' });
+  });
+  it('listIssuesByLabel pages through until a short page (I2)', async () => {
+    const full = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, title: 'T' + (i + 1),
+      state: 'open', node_id: 'I', html_url: 'u', body: '' }));
+    const tail = [{ number: 101, title: 'LAST', state: 'closed', node_id: 'I', html_url: 'u', body: '' }];
+    const calls = [];
+    const f = routerFetch([
+      { method: 'GET', match: '&page=1', status: 200, payload: full },
+      { method: 'GET', match: '&page=2', status: 200, payload: tail },
+    ], calls);
+    const rows = await listIssuesByLabel(API, 'gho_x', 'markers', f);
+    assert.strictEqual(rows.length, 101, 'both pages are merged');
+    assert.strictEqual(rows[100].title, 'LAST');
+    assert.strictEqual(calls.length, 2, 'stops after the short second page');
+  });
+  it('ensureLabel POSTs and tolerates a 422 already-exists', async () => {
+    const f422 = routerFetch([{ method: 'POST', match: '/labels', status: 422,
+      payload: { message: 'already_exists' } }], []);
+    assert.strictEqual(await ensureLabel(API, 'gho_x', 'markers', f422), null);
+  });
+});
+
+describe('closePull / deleteRef (edit-sync teardown)', () => {
+  it('closePull PATCHes the PR to state=closed', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'PATCH', match: '/pulls/5', status: 200,
+      payload: { number: 5, state: 'closed' } }], calls);
+    await closePull(API, 'gho_x', 5, f);
+    assert.strictEqual(calls[0].method, 'PATCH');
+    assert.ok(/\/pulls\/5$/.test(calls[0].url), calls[0].url);
+    assert.deepStrictEqual(calls[0].body, { state: 'closed' });
+  });
+  it('closePull swallows an already-gone PR (404) so teardown stays idempotent', async () => {
+    const f = routerFetch([{ method: 'PATCH', match: '/pulls/', status: 404,
+      payload: { message: 'Not Found' } }], []);
+    assert.strictEqual(await closePull(API, 'gho_x', 9, f), null);
+  });
+  it('closePull rethrows other errors (e.g. 500)', async () => {
+    const f = routerFetch([{ method: 'PATCH', match: '/pulls/', status: 500,
+      payload: { message: 'boom' } }], []);
+    await assert.rejects(() => closePull(API, 'gho_x', 9, f), (e) => e.status === 500);
+  });
+  it('deleteRef DELETEs refs/heads/<branch> (slashes kept)', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'DELETE', match: '/git/refs/heads/', status: 200, payload: {} }], calls);
+    await deleteRef(API, 'gho_x', 'sync/u/talk--v1-uk', f);
+    assert.strictEqual(calls[0].method, 'DELETE');
+    assert.ok(/\/git\/refs\/heads\/sync\/u\/talk--v1-uk$/.test(calls[0].url), calls[0].url);
+  });
+  it('deleteRef swallows an already-gone branch (404 and 422)', async () => {
+    for (const status of [404, 422]) {
+      const f = routerFetch([{ method: 'DELETE', match: '/git/refs/heads/', status,
+        payload: { message: 'Reference does not exist' } }], []);
+      assert.strictEqual(await deleteRef(API, 'gho_x', 'b', f), null);
+    }
+  });
+  it('deleteRef rethrows other errors (e.g. 500)', async () => {
+    const f = routerFetch([{ method: 'DELETE', match: '/git/refs/heads/', status: 500,
+      payload: { message: 'boom' } }], []);
+    await assert.rejects(() => deleteRef(API, 'gho_x', 'b', f), (e) => e.status === 500);
+  });
+});
+
+describe('base64ToUtf8', () => {
+  it('round-trips UTF-8 through utf8ToBase64', () => {
+    const s = 'Привіт ✓ — "лапки"';
+    assert.strictEqual(base64ToUtf8(utf8ToBase64(s)), s);
+  });
+  it('tolerates the newlines GitHub inserts into content payloads', () => {
+    const b64 = utf8ToBase64('Привіт, Мамо!');
+    const wrapped = b64.slice(0, 8) + '\n' + b64.slice(8) + '\n';
+    assert.strictEqual(base64ToUtf8(wrapped), 'Привіт, Мамо!');
+  });
+});
+
+describe('makeSyncBranchName', () => {
+  it('is deterministic: sync/<login>/<talkId> with no timestamp', () => {
+    assert.strictEqual(
+      makeSyncBranchName('slava', '1979-09-27_Shri-Kundalini'),
+      'sync/slava/1979-09-27_Shri-Kundalini');
+    assert.strictEqual(
+      makeSyncBranchName('slava', '1979-09-27_Shri-Kundalini'),
+      makeSyncBranchName('slava', '1979-09-27_Shri-Kundalini'));
+  });
+  it('scrubs characters git refs cannot hold', () => {
+    const name = makeSyncBranchName('l..in', 'a b~c^d:e?f*g[h]i\\j');
+    assert.ok(!/[ ~^:?*\[\]\\]/.test(name) && !name.includes('..'));
+  });
+  it('appends a --<target> segment when a target is given (still deterministic)', () => {
+    assert.strictEqual(
+      makeSyncBranchName('slava', '1979-09-27_Talk', 'video1-uk'),
+      'sync/slava/1979-09-27_Talk--video1-uk');
+    assert.strictEqual(
+      makeSyncBranchName('slava', '1979-09-27_Talk', 'transcript-uk'),
+      makeSyncBranchName('slava', '1979-09-27_Talk', 'transcript-uk'));
+  });
+});
+
+describe('getFileContent', () => {
+  it('GETs contents?ref= and decodes base64 body with sha', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'GET', match: '/contents/.review-sync/t.json',
+      payload: { content: utf8ToBase64('{"a":"Привіт"}') + '\n', sha: 'blob9' } }], calls);
+    const res = await getFileContent(API, 'gho_x', '.review-sync/t.json', 'sync/u/t', f);
+    assert.deepStrictEqual(res, { content: '{"a":"Привіт"}', sha: 'blob9' });
+    assert.strictEqual(calls[0].url, API + '/contents/.review-sync/t.json?ref=sync/u/t');
+  });
+  it('resolves null on 404 (no sync yet)', async () => {
+    const f = routerFetch([{ method: 'GET', match: '/contents/', status: 404,
+      payload: { message: 'Not Found' } }], []);
+    assert.strictEqual(await getFileContent(API, 'gho_x', '.review-sync/t.json', 'sync/u/t', f), null);
+  });
+  it('rejects on other errors', async () => {
+    const f = routerFetch([{ method: 'GET', match: '/contents/', status: 500,
+      payload: { message: 'boom' } }], []);
+    await assert.rejects(getFileContent(API, 'gho_x', '.review-sync/t.json', 'sync/u/t', f),
+      (e) => e.status === 500);
+  });
+});
+
+describe('findOpenPrByHead', () => {
+  it('queries pulls?head=<owner>:<branch>&state=open and returns the first PR', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'GET', match: '/pulls?head=',
+      payload: [{ number: 3, html_url: 'https://github.com/x/pull/3', node_id: 'PR_n3', draft: true }] }], calls);
+    const res = await findOpenPrByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f);
+    assert.deepStrictEqual(res, { number: 3, html_url: 'https://github.com/x/pull/3', node_id: 'PR_n3', draft: true });
+    assert.ok(calls[0].url.includes('/pulls?head=' + encodeURIComponent('sy-tools:sync/u/t') + '&state=open'));
+  });
+  it('resolves null when no open PR has that head', async () => {
+    const f = routerFetch([{ method: 'GET', match: '/pulls?head=', payload: [] }], []);
+    assert.strictEqual(await findOpenPrByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f), null);
+  });
+});
+
+describe('markPullReady', () => {
+  it('POSTs the GraphQL mutation with the PR node id', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'POST', match: 'api.github.com/graphql',
+      payload: { data: { markPullRequestReadyForReview: { pullRequest: { isDraft: false } } } } }], calls);
+    await markPullReady('gho_x', 'PR_n3', f);
+    assert.strictEqual(calls[0].url, 'https://api.github.com/graphql');
+    assert.strictEqual(calls[0].headers.Authorization, 'Bearer gho_x');
+    assert.match(calls[0].body.query, /markPullRequestReadyForReview/);
+    assert.deepStrictEqual(calls[0].body.variables, { id: 'PR_n3' });
+  });
+  it('rejects when the GraphQL reply carries errors', async () => {
+    const f = routerFetch([{ method: 'POST', match: 'api.github.com/graphql',
+      payload: { errors: [{ message: 'not mergeable' }] } }], []);
+    await assert.rejects(markPullReady('gho_x', 'PR_n3', f), /not mergeable/);
+  });
+});
+
+describe('convertPullToDraft', () => {
+  it('POSTs the GraphQL mutation with the PR node id', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'POST', match: 'api.github.com/graphql',
+      payload: { data: { convertPullRequestToDraft: { pullRequest: { isDraft: true } } } } }], calls);
+    await convertPullToDraft('gho_x', 'PR_n3', f);
+    assert.match(calls[0].body.query, /convertPullRequestToDraft/);
+    assert.deepStrictEqual(calls[0].body.variables, { id: 'PR_n3' });
+  });
+  it('rejects when the GraphQL reply carries errors', async () => {
+    const f = routerFetch([{ method: 'POST', match: 'api.github.com/graphql',
+      payload: { errors: [{ message: 'nope' }] } }], []);
+    await assert.rejects(convertPullToDraft('gho_x', 'PR_n3', f), /nope/);
+  });
+});
+
+describe('deleteFile', () => {
+  it('DELETEs contents/<path> with sha + branch + message', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'DELETE', match: '/contents/.review-sync/t.json',
+      payload: { commit: {} } }], calls);
+    await deleteFile(API, 'gho_x',
+      { path: '.review-sync/t.json', branch: 'sync/u/t', message: 'remove sync state', sha: 'blob9' }, f);
+    assert.deepStrictEqual(calls[0].body,
+      { message: 'remove sync state', branch: 'sync/u/t', sha: 'blob9' });
+  });
+});
+
+describe('keepalive passthrough', () => {
+  it('putFile with keepalive:true sets keepalive on the fetch init', async () => {
+    let seenInit = null;
+    const f = async (url, init) => { seenInit = init; return new Response('{}', { status: 201 }); };
+    await putFile(API, 'gho_x',
+      { path: 'x.json', branch: 'b', message: 'm', content: 'x', keepalive: true }, f);
+    assert.strictEqual(seenInit.keepalive, true);
+  });
+  it('putFile without keepalive leaves the init flag unset', async () => {
+    let seenInit = null;
+    const f = async (url, init) => { seenInit = init; return new Response('{}', { status: 201 }); };
+    await putFile(API, 'gho_x', { path: 'x.json', branch: 'b', message: 'm', content: 'x' }, f);
+    assert.ok(!('keepalive' in seenInit));
   });
 });
 

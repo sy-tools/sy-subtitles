@@ -61,6 +61,9 @@ function ghJson(url, token, opts, fetchImpl) {
     init.headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(opts.body);
   }
+  // keepalive lets a final sync flush survive the page being torn down
+  // (pagehide) — the browser finishes the request after the document dies.
+  if (opts && opts.keepalive) init.keepalive = true;
   return f(url, init).then(function (r) {
     return r.json().catch(function () { return {}; }).then(function (body) {
       if (!r.ok) {
@@ -97,6 +100,11 @@ function utf8ToBase64(s) {
   return btoa(unescape(encodeURIComponent(s)));
 }
 
+// base64 → UTF-8, tolerating the newlines GitHub wraps content payloads with.
+function base64ToUtf8(b64) {
+  return decodeURIComponent(escape(atob(String(b64).replace(/\s+/g, ''))));
+}
+
 // review/<talk>--<login>--HHMMSS, scrubbed of characters git refs reject.
 // Timestamp suffix makes retries collision-free.
 function makeBranchName(prefix, login, now) {
@@ -109,10 +117,71 @@ function makeBranchName(prefix, login, now) {
     .replace(/\.\.+/g, '.');
 }
 
+// sync/<login>/<talkId>[--<target>] — deterministic (NO timestamp) on
+// purpose: the edit auto-sync branch must be re-findable when the page is
+// reopened on any device. An optional target scopes the branch to one edited
+// file (v3). Same ref-illegal-char scrub as makeBranchName.
+function makeSyncBranchName(login, talkId, target) {
+  return ('sync/' + login + '/' + talkId + (target ? '--' + target : ''))
+    .replace(/[ ~^:?*[\]\\]/g, '-')
+    .replace(/\.\.+/g, '.');
+}
+
 // POST /issues → {number, html_url}. fields: {title, body, labels, assignees}.
+// fields may include title/body/labels/assignees. Returns number+url+node_id.
 function createIssue(api, token, fields, fetchImpl) {
   return ghJson(api + '/issues', token, { method: 'POST', body: fields }, fetchImpl)
-    .then(function (r) { return { number: r.number, html_url: r.html_url }; });
+    .then(function (r) { return { number: r.number, html_url: r.html_url, node_id: r.node_id }; });
+}
+
+// GET /issues/<n> → the fields marker-sync needs for the pull/merge step.
+function getIssue(api, token, number, fetchImpl) {
+  return ghJson(api + '/issues/' + number, token, null, fetchImpl).then(function (r) {
+    return { number: r.number, state: r.state, body: r.body || '', node_id: r.node_id };
+  });
+}
+
+// PATCH /issues/<n> with arbitrary fields (body and/or state).
+function updateIssue(api, token, number, fields, fetchImpl) {
+  return ghJson(api + '/issues/' + number, token, { method: 'PATCH', body: fields }, fetchImpl);
+}
+
+// PATCH state — teardown (closed) / reopen (open). Swallows 404 (already gone).
+function setIssueState(api, token, number, state, fetchImpl) {
+  return ghJson(api + '/issues/' + number, token, { method: 'PATCH', body: { state: state } }, fetchImpl)
+    .catch(function (e) { if (e && e.status === 404) return null; throw e; });
+}
+
+// GET /issues?labels=<label>&state=all — the LIST API is immediately consistent
+// (a just-created issue is present at once), unlike the search index. This is the
+// sole deterministic re-attach mechanism for marker-sync (matched by title).
+// Teardown CLOSES (not deletes) issues, so the labelled set grows unbounded over
+// the corpus; page through until a short page so an older talk's issue past the
+// first 100 is still found (else re-attach would create a duplicate). Capped at
+// MAX_PAGES as a runaway backstop.
+function listIssuesByLabel(api, token, label, fetchImpl) {
+  var PER_PAGE = 100, MAX_PAGES = 20;
+  var base = api + '/issues?labels=' + encodeURIComponent(label) + '&state=all&per_page=' + PER_PAGE;
+  function mapRow(r) {
+    return { number: r.number, title: r.title, state: r.state, node_id: r.node_id,
+      html_url: r.html_url, body: r.body || '' };
+  }
+  function fetchPage(page, acc) {
+    return ghJson(base + '&page=' + page, token, null, fetchImpl).then(function (list) {
+      var rows = list || [];
+      acc = acc.concat(rows.map(mapRow));
+      if (rows.length === PER_PAGE && page < MAX_PAGES) return fetchPage(page + 1, acc);
+      return acc;
+    });
+  }
+  return fetchPage(1, []);
+}
+
+// POST /labels — idempotent; a 422 "already exists" is success.
+function ensureLabel(api, token, name, fetchImpl) {
+  return ghJson(api + '/labels', token, { method: 'POST', body: { name: name } }, fetchImpl)
+    .then(function () { return null; })
+    .catch(function (e) { if (e && e.status === 422) return null; throw e; });
 }
 
 function addAssignees(api, token, issueNumber, logins, fetchImpl) {
@@ -150,14 +219,102 @@ function putFile(api, token, opts, fetchImpl) {
   };
   if (opts.sha) body.sha = opts.sha;
   return ghJson(api + '/contents/' + opts.path, token,
-    { method: 'PUT', body: body }, fetchImpl);
+    { method: 'PUT', body: body, keepalive: opts.keepalive }, fetchImpl);
+}
+
+// GET /contents/<path>?ref=<ref> → {content (decoded UTF-8), sha}, or null
+// when the path/ref does not exist yet (the sync branch's 404 = "no sync").
+function getFileContent(api, token, path, ref, fetchImpl) {
+  return ghJson(api + '/contents/' + path + '?ref=' + ref, token, null, fetchImpl)
+    .then(function (r) { return { content: base64ToUtf8(r.content), sha: r.sha }; })
+    .catch(function (e) {
+      if (e.status === 404) return null;
+      throw e;
+    });
+}
+
+// DELETE /contents/<path> — removes the file from the branch (needs the blob
+// sha, like updates do).
+function deleteFile(api, token, opts, fetchImpl) {
+  return ghJson(api + '/contents/' + opts.path, token, {
+    method: 'DELETE',
+    body: { message: opts.message, branch: opts.branch, sha: opts.sha },
+  }, fetchImpl);
 }
 
 function createPull(api, token, opts, fetchImpl) {
+  var body = { head: opts.head, base: opts.base, title: opts.title, body: opts.body };
+  if (opts.draft !== undefined) body.draft = opts.draft;
   return ghJson(api + '/pulls', token, {
     method: 'POST',
-    body: { head: opts.head, base: opts.base, title: opts.title, body: opts.body },
-  }, fetchImpl).then(function (r) { return { number: r.number, html_url: r.html_url }; });
+    body: body,
+  }, fetchImpl).then(function (r) {
+    return { number: r.number, html_url: r.html_url, node_id: r.node_id, draft: r.draft };
+  });
+}
+
+// First open PR whose head is <owner>:<branch>, or null. Used to re-attach
+// the edit-sync draft PR on page reopen (and after a lost create response).
+function findOpenPrByHead(api, token, owner, branch, fetchImpl) {
+  return ghJson(api + '/pulls?head=' + encodeURIComponent(owner + ':' + branch)
+    + '&state=open', token, null, fetchImpl)
+    .then(function (list) {
+      if (!list || !list.length) return null;
+      var r = list[0];
+      return { number: r.number, html_url: r.html_url, node_id: r.node_id, draft: r.draft };
+    });
+}
+
+// Draft <-> ready transitions are GraphQL-only (REST has no endpoint).
+// Both reject when the reply carries errors.
+function ghGraphql(token, query, variables, fetchImpl) {
+  return ghJson('https://api.github.com/graphql', token, {
+    method: 'POST',
+    body: { query: query, variables: variables },
+  }, fetchImpl).then(function (r) {
+    if (r && r.errors && r.errors.length) {
+      throw new Error(r.errors[0].message || 'GraphQL error');
+    }
+    return r;
+  });
+}
+
+function markPullReady(token, nodeId, fetchImpl) {
+  return ghGraphql(token,
+    'mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
+    { id: nodeId }, fetchImpl);
+}
+
+function convertPullToDraft(token, nodeId, fetchImpl) {
+  return ghGraphql(token,
+    'mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
+    { id: nodeId }, fetchImpl);
+}
+
+// PATCH /pulls/<n> {state:'closed'} — closes the PR without merging. Edit sync
+// calls this to tear a sync PR down when the last edit is reverted. Best-effort:
+// a 404 (the PR was already deleted server-side) resolves as success so a
+// teardown retry does not get wedged; closing an already-closed PR returns 200.
+function closePull(api, token, prNumber, fetchImpl) {
+  return ghJson(api + '/pulls/' + prNumber, token,
+    { method: 'PATCH', body: { state: 'closed' } }, fetchImpl)
+    .catch(function (e) {
+      if (e && e.status === 404) return null;
+      throw e;
+    });
+}
+
+// DELETE /git/refs/heads/<branch> — removes the branch. The repo's
+// delete-on-merge only fires on merge, so a plain close leaves the branch;
+// this removes it. Best-effort: a 404/422 (already gone) resolves as success
+// so teardown stays idempotent. Slashes in <branch> are kept (git ref path).
+function deleteRef(api, token, branchName, fetchImpl) {
+  return ghJson(api + '/git/refs/heads/' + branchName, token,
+    { method: 'DELETE' }, fetchImpl)
+    .catch(function (e) {
+      if (e && (e.status === 404 || e.status === 422)) return null;
+      throw e;
+    });
 }
 
 // One-button PR: base head sha → new branch → per-file (blob sha on base →
@@ -206,14 +363,28 @@ if (typeof module !== 'undefined' && module.exports) {
     getRepoPermissions: getRepoPermissions,
     isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,
+    base64ToUtf8: base64ToUtf8,
     makeBranchName: makeBranchName,
+    makeSyncBranchName: makeSyncBranchName,
     createIssue: createIssue,
+    getIssue: getIssue,
+    updateIssue: updateIssue,
+    setIssueState: setIssueState,
+    listIssuesByLabel: listIssuesByLabel,
+    ensureLabel: ensureLabel,
     addAssignees: addAssignees,
     getBranchHeadSha: getBranchHeadSha,
     createRef: createRef,
     getFileSha: getFileSha,
+    getFileContent: getFileContent,
+    deleteFile: deleteFile,
     putFile: putFile,
     createPull: createPull,
+    findOpenPrByHead: findOpenPrByHead,
+    markPullReady: markPullReady,
+    convertPullToDraft: convertPullToDraft,
+    closePull: closePull,
+    deleteRef: deleteRef,
     submitFilesPr: submitFilesPr,
   };
 }

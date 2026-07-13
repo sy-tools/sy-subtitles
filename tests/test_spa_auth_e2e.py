@@ -319,8 +319,9 @@ def test_readonly_user_gets_signed_out_ui_with_badge(auth_server, auth_page):
     assert page.evaluate("document.getElementById('gh-avatar-wrap').classList.contains('gh-avatar--readonly')")
     assert "grayscale" in page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).filter")
     assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar-badge')).display") != "none"
-    # Write-gated controls behave exactly as for a signed-out visitor.
-    assert page.evaluate("document.getElementById('btn-create-pr').style.display") == "none"
+    # Write-gated controls behave exactly as for a signed-out visitor: the
+    # signed-out fallback (data-gh-hide, e.g. Open in GitHub Editor) is shown.
+    # (v3 removed the write-only Create-PR buttons; edits auto-sync instead.)
     assert page.evaluate("document.getElementById('btn-review-editor').style.display") != "none"
     # The login button must NOT reappear — the user IS signed in.
     assert page.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") == "none"
@@ -335,7 +336,9 @@ def test_write_access_return_clears_flag_and_restores_ui(auth_server, auth_page)
     page.goto(f"{auth_server}/index.html")
     page.wait_for_function("localStorage.getItem('sy_gh_no_write') === null", timeout=10000)
     assert not page.evaluate("document.getElementById('gh-avatar-wrap').classList.contains('gh-avatar--readonly')")
-    assert page.evaluate("document.getElementById('btn-create-pr').style.display") != "none"
+    # With write access the signed-out fallback (data-gh-hide) is hidden again —
+    # auto-sync takes over (v3 removed the standalone Create-PR button).
+    assert page.evaluate("document.getElementById('btn-review-editor').style.display") == "none"
 
 
 def test_integration_403_blames_missing_repo_access_not_the_app(auth_server, auth_page):

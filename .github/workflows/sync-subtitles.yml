@@ -3,8 +3,8 @@ run-name: "Sync: ${{ github.event.pull_request.title }}"
 
 on:
   pull_request:
-    # Default types (opened, synchronize, reopened) don't fire when a draft is
-    # marked ready — add ready_for_review so that transition runs the sync once.
+    # ready_for_review is NOT in the default set — it is the moment the SPA's
+    # edit auto-sync finalizes its draft PR, and exactly when the sync must run.
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
     paths:
@@ -16,10 +16,11 @@ permissions:
 
 jobs:
   sync:
-    # Skip draft PRs: the author is still editing, so don't let the bot sync
-    # and commit back over half-finished transcript/SRT work. Runs once the PR
-    # is marked ready for review (see ready_for_review trigger above).
-    if: ${{ !github.event.pull_request.draft }}
+    # Draft PRs are the SPA edit auto-sync's live workspace: it commits the
+    # edited files in the background every few seconds of editing. Running
+    # the reconciliation on each of those pushes would be a CI storm, and
+    # its bot commits would race the client's next push. Sync only real PRs.
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

@@ -12,6 +12,12 @@ body { background: var(--bg); color: var(--fg); font-family: -apple-system, Blin
 
 /* --- Shared --- */
 a { color: var(--link); text-decoration: none; }
+/* Visually hidden, still exposed to assistive tech (accessible names for
+   icon-only controls such as the cloud sync chips). */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
 a:hover { text-decoration: underline; }
 /* Header bars stay pinned while scrolling so action buttons (Clear all,
    Create issue, mode toggle…) remain reachable from anywhere on the page.
@@ -939,6 +945,23 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 @keyframes sy-toast-out {
   to { opacity: 0; transform: translateY(8px); }
 }
+
+/* ---- Cloud sync-status chip: the reusable .sync-cloud component ----
+   One elegant cloud, three tones: blue progress, green ok, red error. Used by
+   the edit + marker chips AND documented live in styleguide.html, so the tone
+   colour + spin live on the class (not the chip ids) and can't drift. */
+.sync-cloud { line-height: 0; }
+.sync-cloud svg { display: block; }
+.sync-cloud--progress { color: var(--sync-progress); }
+.sync-cloud--ok { color: var(--accent-green); }
+.sync-cloud--error { color: var(--accent-red); }
+
+/* The chip is just the cloud — no pill border/background; colour carries state. */
+#sync-chip-btn, #marker-chip-btn {
+  border: none; background: none; padding: 3px; border-radius: var(--radius-sm);
+  color: var(--fg4); line-height: 0;
+}
+#sync-chip-btn:hover, #marker-chip-btn:hover { background: var(--cell-hover); }
 
 /* --- GitHub avatar: read-only state (signed in, no repo write access) ---- */
 .gh-avatar-wrap {

@@ -37,6 +37,10 @@ _XSS_AMRUTA_ATTR = 'https://www.amruta.org/x" data-xss="pwned'
 XSS_AMRUTA_TAG_META = SAMPLE_META + "amruta_url: '" + _XSS_AMRUTA_TAG + "'\n"
 XSS_AMRUTA_ATTR_META = SAMPLE_META + "amruta_url: '" + _XSS_AMRUTA_ATTR + "'\n"
 
+# Canonical pipeline shape (tools/srt_utils.py write_srt): a trailing blank line
+# after EVERY block, so the file ends with "\n\n". Real repo files all end this
+# way — the SPA rebuild must match byte-for-byte or reviewers see a spurious
+# trailing-newline diff on every commit.
 SAMPLE_SRT = """1
 00:00:01,000 --> 00:00:05,000
 Перший субтитр
@@ -44,6 +48,7 @@ SAMPLE_SRT = """1
 2
 00:00:06,000 --> 00:00:10,000
 Другий субтитр
+
 """
 
 SAMPLE_EN_SRT = """1
@@ -2768,6 +2773,10 @@ class TestRealTranscriptRoundTrip:
 
 PREVIEW_KEY = "preview_2001-01-01_Test-Talk_Test-Video"
 LEGACY_KEY = "markers_preview_2001-01-01_Test-Talk_Test-Video"
+# Subtitle text edits now live in the canonical per-block store (js/edit_store.js),
+# shared by the preview and review-SRT views; the preview key keeps only
+# mode + markers. See the edit-store consolidation.
+CANON_UK_KEY = "srt_edits_2001-01-01_Test-Talk_Test-Video_uk"
 
 
 def _goto_preview_video(page, server, video_slug="Test-Video"):
@@ -3013,8 +3022,8 @@ class TestPreviewEditMode:
           el.dispatchEvent(new Event('input', { bubbles: true }));
         """)
         page.wait_for_timeout(50)
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        assert stored["edits"]["uk"]["0"] == "Змінений текст"
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null')")
+        assert canon and canon["0"] == "Змінений текст"
 
     def test_edit_equal_to_original_removes_entry(self, server, page):
         _goto_preview_video(page, server)
@@ -3034,9 +3043,8 @@ class TestPreviewEditMode:
           el.dispatchEvent(new Event('input', { bubbles: true }));
         """)
         page.wait_for_timeout(50)
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        uk_edits = stored["edits"].get("uk", {})
-        assert "0" not in uk_edits and 0 not in uk_edits
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null') || {{}}")
+        assert "0" not in canon and 0 not in canon
 
     def test_edit_enter_resumes_video(self, server, page):
         _goto_preview_video(page, server)
@@ -3064,8 +3072,8 @@ class TestPreviewEditMode:
         """)
         page.wait_for_timeout(50)
         page.click(".edit-item .del")
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        assert stored["edits"].get("uk", {}) == {}
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null') || {{}}")
+        assert canon == {}
 
     def test_edit_list_rows_visible_when_navigating_from_index(self, server, page):
         # Seed an edit for block 0 in uk, then navigate to the preview from
@@ -3266,17 +3274,20 @@ class TestPreviewEditMode:
     # ------------------------------------------------------------------
     # Canonicalization coverage for the preview PR button.
     #
-    # Our pipeline produces SRTs in ONE canonical form: UTF-8 without BOM,
-    # LF line endings, blocks numbered from 1, a single blank line between
-    # blocks, and exactly one trailing newline. If a human manually commits
-    # an SRT in a different shape, `openPreviewEditor` MUST rewrite it back
-    # to canonical form rather than faithfully preserve the source bytes —
-    # reviewers should never see arbitrary formatting drift in their PRs.
+    # Our pipeline produces SRTs in ONE canonical form (tools/srt_utils.py
+    # write_srt): UTF-8 without BOM, LF line endings, blocks numbered from 1,
+    # a single blank line between blocks, and a trailing blank line after the
+    # last block too (the file ends with "\n\n"). If a human manually commits
+    # an SRT in a different shape, `openPreviewEditor` MUST rewrite it back to
+    # canonical form rather than faithfully preserve the source bytes — reviewers
+    # should never see arbitrary formatting drift in their PRs.
     #
     # These tests codify that contract, so an accidental "preserve source"
     # refactor of parseSRT / applyEditsToSrt would fail loudly.
     # ------------------------------------------------------------------
-    CANONICAL_SRT = "1\n00:00:01,000 --> 00:00:05,000\nПЕРШИЙ_НОВ\n\n2\n00:00:06,000 --> 00:00:10,000\nДругий субтитр\n"
+    CANONICAL_SRT = (
+        "1\n00:00:01,000 --> 00:00:05,000\nПЕРШИЙ_НОВ\n\n2\n00:00:06,000 --> 00:00:10,000\nДругий субтитр\n\n"
+    )
 
     def _override_uk_srt(self, page, body):
         """Replace the UK SRT mock with `body`. MUST be called before navigation."""
@@ -3350,14 +3361,15 @@ class TestPreviewEditMode:
         )
 
     def test_canonicalize_adds_trailing_newline_when_missing(self, server, page):
-        """Source without a trailing newline → clipboard ends with exactly one `\\n`."""
+        """Source without a trailing newline → clipboard is canonicalized to the
+        write_srt shape, ending with a trailing blank line (`\\n\\n`)."""
         source = "1\n00:00:01,000 --> 00:00:05,000\nПерший субтитр\n\n2\n00:00:06,000 --> 00:00:10,000\nДругий субтитр"
         assert not source.endswith("\n")
         self._override_uk_srt(page, source)
         _goto_preview_video(page, server)
         clip = self._edit_block0_and_grab_clip(page)
-        assert clip.endswith("\n"), f"missing trailing newline: {clip[-20:]!r}"
-        assert not clip.endswith("\n\n"), f"extra trailing newline: {clip[-20:]!r}"
+        assert clip.endswith("\n\n"), f"canonical form must end with a trailing blank line: {clip[-20:]!r}"
+        assert not clip.endswith("\n\n\n"), f"no doubled trailing blank line: {clip[-20:]!r}"
         assert clip == self.CANONICAL_SRT, (
             f"Trailing newline not canonicalized.\n--- expected ---\n{self.CANONICAL_SRT!r}\n--- got ---\n{clip!r}"
         )
@@ -3403,7 +3415,7 @@ class TestPreviewEditMode:
     }
 
     EN_SRT_TIGHT = (
-        "1\n00:00:01,000 --> 00:00:05,000\nFirst EN block\n\n2\n00:00:06,000 --> 00:00:10,000\nSecond EN block\n"
+        "1\n00:00:01,000 --> 00:00:05,000\nFirst EN block\n\n2\n00:00:06,000 --> 00:00:10,000\nSecond EN block\n\n"
     )
 
     def _install_multi_lang_tree(self, page, en_body=None):
@@ -3620,8 +3632,8 @@ class TestPreviewEditMode:
         spa_confirm_accept(page)
         count = page.locator(".edit-item").count()
         assert count == 0
-        stored = page.evaluate(f"JSON.parse(localStorage.getItem('{PREVIEW_KEY}') || 'null')")
-        assert stored["edits"].get("uk", {}) == {}
+        canon = page.evaluate(f"JSON.parse(localStorage.getItem('{CANON_UK_KEY}') || 'null') || {{}}")
+        assert canon == {}
 
 
 class TestIndexSingleLink:
@@ -5474,15 +5486,22 @@ class TestLocalEditsSurviveReload:
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
         page.evaluate(
             "previewState.mode = 'edit';"
-            "previewState.edits[0] = 'PREVIEW_EDIT';"
+            "previewState.edits.uk = {0: 'PREVIEW_EDIT'};"
             "previewState.markers.push({time: 12, tc: '00:00:12', text: 'blk', comment: 'note'});"
             "savePreviewState()"
         )
+        # Text edits go to the canonical per-block store; the preview key keeps
+        # only mode + markers.
+        canon = page.evaluate(f"localStorage.getItem('{CANON_UK_KEY}')")
+        assert canon and "PREVIEW_EDIT" in canon, f"preview edit not written to canonical store: {canon!r}"
         raw = page.evaluate("localStorage.getItem('preview_2001-01-01_Test-Talk_Test-Video')")
-        assert raw and "PREVIEW_EDIT" in raw and "00:00:12" in raw, f"preview state not written: {raw!r}"
+        assert raw and "00:00:12" in raw and '"edit"' in raw, f"preview markers/mode not written: {raw!r}"
         page.reload()
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
-        state = page.evaluate("({edits: previewState.edits, markers: previewState.markers, mode: previewState.mode})")
+        state = page.evaluate(
+            "({edits: (previewState.edits && previewState.edits.uk) || {},"
+            " markers: previewState.markers, mode: previewState.mode})"
+        )
         assert state["edits"].get("0") == "PREVIEW_EDIT", f"preview edit lost after reload: {state}"
         assert len(state["markers"]) == 1 and state["markers"][0]["comment"] == "note", (
             f"preview marker lost after reload: {state}"
@@ -5550,8 +5569,10 @@ class TestSrtReviewEditsPersist:
         assert sr["marks"].get("1") == "SRT_MARK", f"SRT mark lost after round-trip: {sr}"
 
     def test_srt_edits_stored_under_separate_video_lang_key(self, server, page):
-        """SRT edits live under their own video+language key, not the transcript
-        key — which is what keeps them isolated across language switches too."""
+        """SRT edits live under their own canonical video+language block store
+        (srt_edits_<talk>_<video>_<lang>), not the transcript key — which is
+        what keeps them isolated across language switches and shared with the
+        preview view of the same video+lang."""
         self._goto_review(server, page)
         page.evaluate("reviewState.edits[0] = 'TRANSCRIPT_EDIT'; saveReview()")
         self._enter_srt(page)
@@ -5560,14 +5581,14 @@ class TestSrtReviewEditsPersist:
             """() => {
                 var transcript = localStorage.getItem('review_2001-01-01_Test-Talk') || '';
                 var srtKey = Object.keys(localStorage).find(
-                    k => k.indexOf('review_srt_2001-01-01_Test-Talk') === 0);
+                    k => k.indexOf('srt_edits_2001-01-01_Test-Talk_Test-Video') === 0);
                 return { transcript, srtKey, srtVal: srtKey ? localStorage.getItem(srtKey) : null };
             }"""
         )
         assert "TRANSCRIPT_EDIT" in keys["transcript"], f"transcript key missing its edit: {keys}"
         assert "SRT_EDIT" not in keys["transcript"], f"SRT edit leaked into transcript key: {keys}"
         assert keys["srtKey"] and "SRT_EDIT" in (keys["srtVal"] or ""), (
-            f"SRT edit not stored under a video+lang-specific key: {keys}"
+            f"SRT edit not stored under the canonical video+lang block key: {keys}"
         )
 
     def test_transcript_and_srt_edits_are_independent(self, server, page):

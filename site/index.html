@@ -17,6 +17,7 @@
      app script below runs. -->
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/edit_store.js"></script>
 <script src="js/load_token.js"></script>
 <script src="js/index_url_state.js"></script>
 <script src="js/manifest_fetch.js"></script>
@@ -29,6 +30,9 @@
 <script src="js/passphrase_gate.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
+<script src="js/edit_sync.js"></script>
+<script src="js/marker_sync.js"></script>
+<script src="js/sync_status_view.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -308,6 +312,22 @@
       <button class="branch-btn" id="branch-btn" onclick="SPA.toggleBranches()">main &#x25BE;</button>
       <div class="branch-dropdown" id="branch-dropdown"></div>
     </div>
+    <!-- Edit auto-sync status (signed-in only): link to the draft PR, or a
+         dropdown with recovery actions when the sync is failing. -->
+    <div class="branch-selector" id="sync-chip" style="display:none">
+      <button class="branch-btn" id="sync-chip-btn" onclick="SPA.syncChipClick()" data-i18n-title="sync.chip_title" style="display:inline-flex;align-items:center;gap:5px;">
+        <span id="sync-chip-icon" class="sync-cloud" style="pointer-events:none"></span><span id="sync-chip-text" class="sr-only" style="pointer-events:none"></span>
+      </button>
+      <div class="branch-dropdown" id="sync-chip-dropdown"></div>
+    </div>
+    <!-- Marker auto-sync chip: shown in preview marker mode when signed in;
+         links to the markers issue the marker_sync engine keeps up to date. -->
+    <div class="branch-selector" id="marker-chip" style="display:none">
+      <button class="branch-btn" id="marker-chip-btn" onclick="SPA.markerChipClick()" data-i18n-title="marker.chip_title" style="display:inline-flex;align-items:center;gap:5px;">
+        <span id="marker-chip-icon" class="sync-cloud" style="pointer-events:none"></span><span id="marker-chip-text" class="sr-only" style="pointer-events:none"></span>
+      </button>
+      <div class="branch-dropdown" id="marker-chip-dropdown"></div>
+    </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px;">
     <span id="stale-indicator" style="display:none;align-items:center;gap:6px;background:var(--bg4);color:var(--fg3);border:1px solid var(--border3);border-radius:10px;padding:1px 4px 1px 8px;font-size:11px;">
@@ -342,9 +362,8 @@
       <button type="button" data-mode="edit" class="chip active" onclick="SPA.setPreviewMode('edit')" data-i18n="preview.mode_edit">&#x270E; Edit</button><button type="button" data-mode="marker" class="chip" onclick="SPA.setPreviewMode('marker')" data-i18n="preview.mode_marker">&#x1F4CC; Marker</button>
     </div>
     <div class="header-actions">
-      <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-i18n="btn.copy_all">Copy all</button>
-      <button id="btn-preview-issue" class="btn btn--issue" onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
-      <button id="btn-preview-pr" class="btn btn--primary" style="display:none" onclick="SPA.createPreviewPr()" data-i18n="btn.create_pr">Create PR</button>
+      <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-gh-hide data-i18n="btn.copy_all">Copy all</button>
+      <button id="btn-preview-issue" class="btn btn--issue" data-gh-hide onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
       <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button id="btn-clear-all" class="btn btn--danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
     </div>
@@ -383,8 +402,7 @@
                 data-i18n="btn.show_video">&#x25B6; Show video</button>
         <div id="video-picker-dropdown" class="video-dropdown" role="listbox"></div>
       </span>
-      <button class="btn btn--issue" onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
-      <button id="btn-create-pr" class="btn btn--primary" data-gh-only style="display:none" onclick="SPA.createReviewPr()" data-i18n="btn.create_pr">Create PR</button>
+      <button class="btn btn--issue" data-gh-hide onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
       <button id="btn-review-editor" class="btn btn--primary" data-gh-hide onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button onclick="SPA.revertAllEdits()" id="btn-revert-all" class="btn btn--danger" style="display:none" data-i18n="btn.revert_all">Revert all</button>
     </div>
@@ -892,12 +910,26 @@ var I18N = {
     'btn.take_review': '\u0412\u0437\u044F\u0442\u0438 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'stat.mine': '\u043C\u043E\u0457',
     'pr.created': 'PR \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
+    'pr.finalized': 'PR \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0434\u043E \u0440\u0435\u0432\u02BC\u044E',
     'pr.no_edits': '\u041D\u0435\u043C\u0430\u0454 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u044C \u0434\u043B\u044F PR',
     'pr.failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
     'issue.created': '\u0406\u0448\u02BC\u044E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
     'review.taken': '\u041F\u0440\u043E\u043C\u043E\u0432\u0443 \u0432\u0437\u044F\u0442\u043E \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'gh.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 GitHub',
     'gh.no_app_access': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u0434\u043E \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0456\u044E \u2014 \u0430\u0434\u043C\u0456\u043D\u0456\u0441\u0442\u0440\u0430\u0442\u043E\u0440 \u043C\u0430\u0454 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043E\u043A \u043D\u0430 \u043D\u044C\u043E\u043C\u0443',
+    'sync.synced': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u043E\u0432\u0430\u043D\u043E',
+    'sync.syncing': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u044F\u2026',
+    'sync.pending': '\u041E\u0447\u0456\u043A\u0443\u0454 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457',
+    'sync.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457',
+    'sync.ready': '\u041D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'sync.finalize': '\u0424\u0456\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u2014 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'sync.sync_now': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0440\u0430\u0437',
+    'sync.open_pr': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043D\u0430 GitHub',
+    'sync.copy_backup': '\u0421\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u0443 \u043A\u043E\u043F\u0456\u044E \u043F\u0440\u0430\u0432\u043E\u043A',
+    'sync.backup_copied': '\u041F\u0440\u0430\u0432\u043A\u0438 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u0432 \u0431\u0443\u0444\u0435\u0440 (JSON)',
+    'sync.chip_title': '\u0421\u0442\u0430\u043D \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457 \u043F\u0440\u0430\u0432\u043E\u043A \u2014 \u0447\u0435\u0440\u043D\u0435\u0442\u043A\u0430 PR \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E',
+    'marker.chip_title': '\u0421\u0442\u0430\u043D \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457 \u043C\u0430\u0440\u043A\u0435\u0440\u0456\u0432 \u2014 \u0456\u0448\u02BC\u044E \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E',
+    'marker.open_issue': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0456\u0448\u02BC\u044E',
     'gh.no_repo_access': '\u0412\u0430\u0441 \u0449\u0435 \u043D\u0435 \u0434\u043E\u0434\u0430\u043D\u043E \u0434\u043E \u0440\u0435\u043F\u043E\u0437\u0438\u0442\u043E\u0440\u0456\u044E \u2014 \u0437\u0432\u0435\u0440\u043D\u0456\u0442\u044C\u0441\u044F \u0434\u043E \u0430\u0434\u043C\u0456\u043D\u0456\u0441\u0442\u0440\u0430\u0442\u043E\u0440\u0430. \u0414\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043B\u0438\u0448\u0435 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443',
     'auth.no_write': '\u0412\u0445\u0456\u0434 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E, \u0430\u043B\u0435 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043B\u0438\u0448\u0435 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443',
     'auth.write_granted': '\u0414\u043E\u0441\u0442\u0443\u043F \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0430\u0434\u0430\u043D\u043E \u2014 \u0432\u0441\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E',
@@ -1044,12 +1076,26 @@ var I18N = {
     'btn.take_review': 'Take for review',
     'stat.mine': 'mine',
     'pr.created': 'PR created',
+    'pr.finalized': 'PR marked ready for review',
     'pr.no_edits': 'No edits to submit as a PR',
     'pr.failed': 'Could not create the PR',
     'issue.created': 'Issue created',
     'review.taken': 'Talk taken for review',
     'gh.error': 'GitHub error',
     'gh.no_app_access': 'The GitHub App has no access to this repository — an admin must install the app on it',
+    'sync.synced': 'Synced',
+    'sync.syncing': 'Syncing…',
+    'sync.pending': 'Sync pending',
+    'sync.error': 'Sync error',
+    'sync.ready': 'In review',
+    'sync.finalize': 'Finalize — ready for review',
+    'sync.sync_now': 'Sync now',
+    'sync.open_pr': 'Open on GitHub',
+    'sync.copy_backup': 'Copy edits backup',
+    'sync.backup_copied': 'Edits copied to clipboard (JSON)',
+    'sync.chip_title': 'Edit sync status — the draft PR updates automatically',
+    'marker.chip_title': 'Marker sync status — the issue updates automatically',
+    'marker.open_issue': 'Open issue',
     'gh.no_repo_access': 'You have not been added to the repository yet — ask an administrator. Read-only features are available',
     'auth.no_write': 'Signed in, but without write access — read-only features available',
     'auth.write_granted': 'Write access granted — all features enabled',
@@ -2012,6 +2058,9 @@ SPA.switchSubLang = function(lang) {
     // Persist only on confirmed success so a broken lang doesn't get
     // stuck as the default on next load.
     if (previewState) localStorage.setItem('sy_srt_lang_' + previewState.talkId, lang);
+    // The subtitle language IS part of the sync target — re-key so edits sync
+    // to the <video>-<lang> PR for the language now shown.
+    ensureEditSync();
     if (previewState && previewState.mode === 'edit') {
       renderEditList();
       updateClearBtn();
@@ -2042,6 +2091,7 @@ function route() {
       document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
       history.replaceState(null, '', location.pathname + location.search);
       showIndex();
+      ensureEditSync();
       ensureUnlocked().then(function(ok) { if (ok) location.hash = target; });
       return;
     }
@@ -2080,6 +2130,11 @@ function route() {
     }
     showIndex();
   }
+  // Edit auto-sync follows the view: engine for the open talk (signed-in),
+  // torn down elsewhere. ensureMarkerSync tears the marker engine down when the
+  // view is no longer preview-marker, so its chip can't linger on the index.
+  ensureEditSync();
+  ensureMarkerSync();
 }
 
 // ============================================================
@@ -2811,12 +2866,24 @@ function showPreview(talkId, videoSlug) {
     : availLangs.indexOf('uk') !== -1 ? 'uk' : availLangs[0];
 
   var persisted = loadPreviewState(talkId, videoSlug, localStorage);
+  // Subtitle edits live in the canonical per-block store (js/edit_store.js),
+  // shared with the review-SRT view; the legacy in-state edits are migrated
+  // losslessly on first load. On a failed migration (e.g. storage quota) the
+  // session keeps the legacy write path — nothing moves, nothing is lost.
+  var editsMigration = migratePreviewEdits(talkId, videoSlug, localStorage);
+  var legacyEditMode = !!(editsMigration && editsMigration.error);
+  var editsCache = {};
+  availLangs.forEach(function(l) {
+    editsCache[l] = loadPreviewLangEdits(talkId, videoSlug, l, localStorage);
+  });
   if (sameVideo) {
     // Keep player, playback position and loaded subtitles; refresh the
     // persisted marker/edit state and keep the user's current language.
     previewState.mode = persisted.mode;
     previewState.markers = persisted.markers;
-    previewState.edits = persisted.edits;
+    previewState.edits = editsCache;
+    previewState._editLangs = availLangs;
+    previewState._legacyEdits = legacyEditMode;
     previewState.talk = talk;
     previewState.video = video;
   } else {
@@ -2828,7 +2895,9 @@ function showPreview(talkId, videoSlug) {
       subtitles: [],
       mode: persisted.mode,
       markers: persisted.markers,
-      edits: persisted.edits,
+      edits: editsCache,
+      _editLangs: availLangs,
+      _legacyEdits: legacyEditMode,
       currentTime: 0,
       lastText: '',
       srtLang: defaultLang,
@@ -2876,6 +2945,12 @@ function showPreview(talkId, videoSlug) {
   // rather than waiting for the 400ms timer, which can lose the race against a
   // slow page load (and did, once an extra <script> was added to <head>).
   if (window.maybeInstallResize) window.maybeInstallResize();
+
+  // previewState (video + srtLang) is now set — re-key the sync engine onto
+  // this video's SRT target (shared with review-SRT). route()'s own call ran
+  // before the async manifest resolved, so this is where preview attaches.
+  ensureEditSync();
+  ensureMarkerSync();   // marker mode → the markers issue engine
 
   // Capture the entry {talkId, videoSlug} so fetch-settled callbacks
   // from a stale entry don't mutate state for the next one if the user
@@ -3032,12 +3107,27 @@ function vimeoEmbed(url) {
 function savePreviewState() {
   if (!previewState || !previewState.talkId) return;
   var key = 'preview_' + previewState.talkId + '_' + previewState.videoSlug;
+  var edits = previewState.edits || {};
   var payload = {
     mode: previewState.mode || 'edit',
     markers: previewState.markers || [],
-    edits: previewState.edits || {},
+    edits: {},
   };
+  if (previewState._legacyEdits) {
+    // Migration failed for this video (e.g. storage quota) — keep the legacy
+    // in-state shape so no edit is stranded half-way; dual-read shows it and
+    // the next healthy load migrates it.
+    payload.edits = edits;
+  } else {
+    Object.keys(edits).forEach(function(lang) {
+      saveSrtEdits(previewState.talkId, previewState.videoSlug, lang, edits[lang], localStorage);
+    });
+  }
   localStorage.setItem(key, JSON.stringify(payload));
+  // NOTE: do NOT notify editSync here. savePreviewState persists BOTH edits and
+  // markers, and is also called on marker changes / mode switches / marker pull.
+  // The edit engine must be nudged only by real SRT edits (see editNotify), or a
+  // marker action spuriously drafts an edit PR and flashes the edit chip.
 }
 
 // Playback position is persisted under its own key (sy.preview_pos.*) on a 2s
@@ -3062,18 +3152,15 @@ function flushPreviewPos() {
   writePreviewPosNow();
 }
 
-// Edit-submission buttons live at the mode × auth intersection: edit mode
-// shows exactly ONE of them — Create PR signed in, the clipboard+editor flow
-// signed out (both submit the same edits, showing both would duplicate the
-// action). Called from applyPreviewMode (mode flips) AND updateAuthUI
-// (login/logout while the preview is open).
+// Signed out, edit mode: the clipboard+editor flow is the only submit path.
+// Signed in there is NO submit button at all — edits auto-sync to the draft
+// PR and the whole lifecycle lives in the sync chip. Called from
+// applyPreviewMode (mode flips) AND updateAuthUI (login/logout mid-preview).
 function updatePreviewSubmitButtons() {
   var mode = (typeof previewState !== 'undefined' && previewState.mode) || 'edit';
   var signedIn = !!ghWriteUser();
   var editorBtn = document.getElementById('btn-preview-editor');
   if (editorBtn) editorBtn.style.display = (mode === 'edit' && !signedIn) ? 'inline-block' : 'none';
-  var prBtn = document.getElementById('btn-preview-pr');
-  if (prBtn) prBtn.style.display = (mode === 'edit' && signedIn) ? 'inline-block' : 'none';
 }
 
 function applyPreviewMode() {
@@ -3092,8 +3179,12 @@ function applyPreviewMode() {
     markBtn.setAttribute('data-i18n', mode === 'edit' ? 'btn.edit' : 'btn.mark');
     markBtn.setAttribute('data-i18n-title', mode === 'edit' ? 'btn.edit_title' : 'btn.mark_title');
   }
+  // Copy-all is a signed-out affordance (data-gh-hide): signed in, marker_sync
+  // auto-syncs the markers to their GitHub issue (see ensureMarkerSync) and the
+  // marker chip links to it. Keep the mode × auth gating consistent here since
+  // this assignment would otherwise override updateAuthUI's hiding.
   var copyBtn = document.getElementById('btn-copy-all');
-  if (copyBtn) copyBtn.style.display = mode === 'marker' ? 'inline-block' : 'none';
+  if (copyBtn) copyBtn.style.display = (mode === 'marker' && !getAuthUser()) ? 'inline-block' : 'none';
   updatePreviewSubmitButtons();
   var label = document.getElementById('preview-list-label');
   if (label) {
@@ -3112,6 +3203,10 @@ SPA.setPreviewMode = function(mode) {
   previewState.mode = mode;
   savePreviewState();
   applyPreviewMode();
+  ensureMarkerSync();   // attach in marker mode, detach in edit mode
+  // Re-render the edit chip for the new mode: hide it in marker mode, restore it
+  // (with its live status) when returning to edit mode.
+  renderSyncStatus(editSync ? editSync.getInfo().status : 'idle', editSync ? editSync.getInfo() : null);
   renderMarkers();
   renderEditList();
   updateClearBtn();
@@ -3134,6 +3229,7 @@ SPA.addMarker = function() {
   previewState.markers.push({ time: tSec, tc: fmtTime(tSec), text: text, comment: '' });
   if (previewState.player) previewState.player.pause();
   savePreviewState();
+  markerNotifySoon();
   renderMarkers();
   updateClearBtn();
   var inputs = document.querySelectorAll('.marker-item .comment');
@@ -3143,12 +3239,14 @@ SPA.addMarker = function() {
 SPA.removeMarker = function(i) {
   previewState.markers.splice(i, 1);
   savePreviewState();
+  markerNotifySoon();
   renderMarkers();
   updateClearBtn();
 };
 SPA.updateMarkerComment = function(i, val) {
   previewState.markers[i].comment = val;
   savePreviewState();
+  markerNotify();
 };
 SPA.seekTo = function(sec) { if (previewState.player) previewState.player.setCurrentTime(sec); };
 SPA.seek = function(delta) {
@@ -3356,6 +3454,7 @@ SPA.addEdit = function() {
   if (previewState.edits[lang][idx] === undefined) {
     previewState.edits[lang][idx] = blocks[idx].text;
     savePreviewState();
+    editNotify();
     renderEditList();
     updateClearBtn();
   }
@@ -3387,6 +3486,7 @@ SPA.onEditInput = function(idx, el) {
     el.classList.add('edited-dirty');
   }
   savePreviewState();
+  editNotify();
   updateClearBtn();
 };
 
@@ -3395,6 +3495,8 @@ SPA.deleteEdit = function(idx) {
   if (previewState.edits && previewState.edits[lang]) {
     delete previewState.edits[lang][idx];
     savePreviewState();
+    editNotify();
+    syncRevertSoon();
     renderEditList();
     updateClearBtn();
   }
@@ -3431,6 +3533,8 @@ SPA.clearAll = function() {
       if (!ok) return;
       previewState.edits[lang] = {};
       savePreviewState();
+      editNotify();
+      syncRevertSoon();
       renderEditList();
       updateClearBtn();
       showToast(t('toast.edits_cleared'));
@@ -3447,6 +3551,7 @@ SPA.clearAll = function() {
       if (!ok) return;
       previewState.markers = [];
       savePreviewState();
+      markerNotifySoon();
       renderMarkers();
       updateClearBtn();
       showToast(t('toast.markers_cleared'));
@@ -3466,8 +3571,7 @@ SPA.copyMarkers = function() {
   });
 };
 
-// {title, body} of the preview issue \u2014 also reused verbatim as the PR body by
-// SPA.createPreviewPr, so both write paths describe the same marks/edits.
+// {title, body} of the preview issue (the signed-out reporting flow).
 function buildPreviewIssueContent() {
   var s = previewState;
   var gh = 'https://github.com/' + REPO;
@@ -3514,32 +3618,9 @@ SPA.createPreviewIssue = function() {
   openIssuePage(content.title, content.body);
 };
 
-// One-button PR from the preview's subtitle edits: new timestamped branch off
-// BRANCH, commit the rebuilt final/<lang>.srt, open the PR (whose body = the
-// preview issue body). sync-subtitles.yml then reconciles SRT\u2194transcript.
-SPA.createPreviewPr = function() {
-  var user = ghWriteUser(), token = getAuthToken();
-  if (!user || !token) return;
-  var s = previewState;
-  var lang = s.srtLang || 'uk';
-  var langEdits = (s.edits && s.edits[lang]) || {};
-  if (!Object.keys(langEdits).length) { showToast(t('pr.no_edits')); return; }
-  var filePath = 'talks/' + s.talkId + '/' + s.videoSlug + '/final/' + lang + '.srt';
-  var content = buildPreviewIssueContent();
-  var btn = document.getElementById('btn-preview-pr');
-  if (btn) btn.disabled = true;
-  submitFilesPr(API, token, {
-    branch: makeBranchName('preview/' + s.talkId, user.login),
-    base: BRANCH,
-    files: [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
-    commitMessage: 'Subtitle edits: ' + s.talkId + ' (' + s.videoSlug + '/' + lang + ')',
-    prTitle: content.title,
-    prBody: content.body
-  }).then(function(pr) {
-    ghCreatedDialog('pr.created', pr);
-  }).catch(ghWriteError)
-    .then(function() { if (btn) btn.disabled = false; });
-};
+// Signed-in preview edits auto-sync to the draft PR — see buildSyncFiles and
+// the sync chip. Signed out, the clipboard + GitHub-editor flow below is the
+// submit path.
 
 SPA.openPreviewEditor = function() {
   var s = previewState;
@@ -3669,6 +3750,11 @@ function showReview(talkId) {
     SPA.switchReviewMode('srt', savedObj.video);
     return;
   }
+
+  // Transcript-default entry: the target (transcript-<rightLang>) is known now
+  // — showReview runs after route()'s own ensureEditSync (async manifest), so
+  // this is where the engine first attaches for a review view.
+  ensureEditSync();
 
   var leftSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.leftLang]) || '';
   var rightSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.rightLang]) || '';
@@ -3850,9 +3936,12 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   if (mode === 'transcript') {
     reviewState.mode = 'transcript';
     reviewState.videoSlug = '';
+    reviewState.ukBlocks = null;
+    reviewState.rowToBlock = null;
     loadReviewEditsForMode();
     localStorage.setItem('sy_review_mode_' + talkId, JSON.stringify({ mode: 'transcript' }));
     updateColHeaders();
+    ensureEditSync();   // re-key: transcript target
     // Reload transcripts
     statusEl.textContent = t('review.loading');
     statusEl.style.display = 'block';
@@ -3916,6 +4005,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   reviewState.srtLeftLang = leftLang;
   reviewState.srtRightLang = rightLang;
   updateColHeaders();
+  ensureEditSync();   // re-key: <video>-<rightLang> SRT target
   var leftSha = (talk && talk._srcSrtSha && talk._srcSrtSha[videoSlug + '/' + leftLang]) || '';
   var rightSha = (talk && talk._srtSha && talk._srtSha[videoSlug + '/' + rightLang]) || '';
   var enUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
@@ -3934,6 +4024,14 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     reviewState.leftParas = aligned.map(function(r) { return r.en ? r.en.text : ''; });
     reviewState.rightParas = aligned.map(function(r) { return r.uk ? r.uk.text : ''; });
     reviewState.alignedRows = aligned;
+    // SRT edits live in the canonical per-block store (js/edit_store.js),
+    // shared with the preview view of the same video+lang. Legacy row-keyed
+    // edits migrate lazily here — the first moment the row->block map exists.
+    reviewState.ukBlocks = ukBlocks;
+    reviewState.rowToBlock = mapRowsToBlockIdx(aligned, ukBlocks);
+    var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
+      reviewState.rowToBlock, localStorage);
+    reviewState._legacyEdits = !!(mig && mig.error);
     loadReviewEditsForMode();
 
     renderReview();
@@ -4181,17 +4279,26 @@ function clearReviewContent() {
   reviewState.rightParas = [];
   reviewState.alignedRows = null;
   reviewState.rightParsed = null;
+  reviewState.ukBlocks = null;
+  reviewState.rowToBlock = null;
   reviewState.marks = {};
   reviewState.edits = {};
 }
 
 // Restore saved marks/edits for the current mode (and, for SRT, the current
-// video + language pair) instead of discarding them.
+// video + language pair) instead of discarding them. In SRT mode the edits
+// come from the canonical per-block store (shared with preview), projected
+// onto rows; the legacy key keeps only marks and unmappable row edits.
 function loadReviewEditsForMode() {
   try {
     var s = JSON.parse(localStorage.getItem(reviewStorageKey()) || '{}');
     reviewState.marks = s.marks || {};
-    reviewState.edits = s.edits || {};
+    if (reviewState.mode === 'srt' && reviewState.rowToBlock && !reviewState._legacyEdits) {
+      reviewState.edits = loadReviewRowEdits(reviewState.talkId, reviewState.videoSlug,
+        reviewState.srtLeftLang, reviewState.srtRightLang, reviewState.rowToBlock, localStorage);
+    } else {
+      reviewState.edits = s.edits || {};
+    }
   } catch (e) {
     reviewState.marks = {};
     reviewState.edits = {};
@@ -4199,8 +4306,29 @@ function loadReviewEditsForMode() {
 }
 
 function saveReview() {
-  localStorage.setItem(reviewStorageKey(), JSON.stringify({ marks: reviewState.marks, edits: reviewState.edits }));
+  if (reviewState.mode === 'srt' && reviewState.rowToBlock && !reviewState._legacyEdits) {
+    // Split row-keyed edits: block-mapped ones go to the canonical store
+    // (shared with preview), rows without a subtitle block stay in the
+    // legacy key alongside the marks. MERGE into the canonical store (never
+    // replace) so a canonical block edit with no aligned row here — e.g. a
+    // preview edit on a block alignSubtitlesByTime couldn't pair — survives.
+    var split = splitReviewRowEdits(reviewState.edits, reviewState.rowToBlock);
+    var mergedCanonical = mergeReviewEditsIntoCanonical(
+      loadSrtEdits(reviewState.talkId, reviewState.videoSlug, reviewState.srtRightLang, localStorage),
+      reviewState.edits, reviewState.rowToBlock);
+    saveSrtEdits(reviewState.talkId, reviewState.videoSlug, reviewState.srtRightLang,
+      mergedCanonical, localStorage);
+    if (Object.keys(reviewState.marks).length || Object.keys(split.legacy).length) {
+      localStorage.setItem(reviewStorageKey(),
+        JSON.stringify({ marks: reviewState.marks, edits: split.legacy }));
+    } else {
+      localStorage.removeItem(reviewStorageKey());
+    }
+  } else {
+    localStorage.setItem(reviewStorageKey(), JSON.stringify({ marks: reviewState.marks, edits: reviewState.edits }));
+  }
   updateRevertBtn();
+  if (editSync) editSync.notifyEdit();
 }
 
 SPA.revertEdit = function(idx) {
@@ -4212,6 +4340,7 @@ SPA.revertEdit = function(idx) {
     if (cell) cell.classList.remove('edited');
   }
   saveReview();
+  syncRevertSoon();
   showToast(t('toast.reverted').replace('{n}', idx+1));
 };
 
@@ -4228,6 +4357,7 @@ SPA.revertAllEdits = function() {
     if (!ok) return;
     reviewState.edits = {};
     saveReview();
+    syncRevertSoon();
     renderReview();
     showToast(t('toast.all_reverted'));
   });
@@ -4320,8 +4450,407 @@ function submitIssueViaApi(issueTitle, issueBody) {
     .catch(ghWriteError);
 }
 
-// {title, body} of the review issue — also reused verbatim as the PR body by
-// SPA.createReviewPr, so both write paths describe the same marks/edits.
+// ============================================================
+// Edit auto-sync (signed-in): review/preview edits replicate in the
+// background to a state file on a deterministic branch with a draft PR.
+// Pure logic lives in js/edit_sync.js + js/github_api.js (Node-tested);
+// this block wires lifecycle (route/auth), the status chip and re-renders.
+// ============================================================
+var editSync = null;
+var markerSync = null;
+
+// Stroke SVG icons (project rule: no emoji in UI controls).
+// Per-status label (accessible name + hover tooltip). The visible glyph folds
+// these into three cloud tones (see sync_status_view.js), but the text keeps
+// the precise state for screen readers and the title tooltip.
+var SYNC_LABELS = { synced: 'sync.synced', syncing: 'sync.syncing', pending: 'sync.pending',
+  error: 'sync.error', ready: 'sync.ready' };
+
+// Paint one cloud chip (prefix 'sync' or 'marker') from an engine status.
+// The state word lives on in the DOM (sr-only) as the button's accessible name
+// and drives the hover tooltip; the cloud colour carries the three tones.
+function paintSyncChip(prefix, status) {
+  var chip = document.getElementById(prefix + '-chip');
+  if (!chip) return;
+  var vis = syncStatusVisual(status);
+  if (vis.hidden) {
+    chip.style.display = 'none';
+    var dd0 = document.getElementById(prefix + '-chip-dropdown');
+    if (dd0) dd0.classList.remove('open');
+    return;
+  }
+  chip.style.display = '';
+  var key = SYNC_LABELS[status] || status;
+  var label = t(key);
+  var textEl = document.getElementById(prefix + '-chip-text');
+  textEl.textContent = label;
+  textEl.setAttribute('data-i18n', SYNC_LABELS[status] || '');
+  var iconEl = document.getElementById(prefix + '-chip-icon');
+  iconEl.className = 'sync-cloud sync-cloud--' + vis.tone;
+  iconEl.innerHTML = syncCloudSvg(vis.tone);
+  var btn = document.getElementById(prefix + '-chip-btn');
+  btn.setAttribute('data-i18n-title', key);
+  btn.setAttribute('title', label);
+}
+
+function currentSyncTalkId() {
+  var hash = location.hash.slice(1) || '/';
+  if (hash.indexOf('/review/') === 0) return hash.split('/')[2].split('?')[0];
+  if (hash.indexOf('/preview/') === 0) return hash.split('/')[2];
+  return null;
+}
+
+// The file-scoped sync target of the currently open view: the preview and the
+// review-SRT of a video+lang share one target (same committed file); the
+// review-transcript is its own target. Returns null while a view's async load
+// has not populated its state yet — the view's own ensureEditSync() call
+// re-keys once the state (video/lang/mode) is known.
+function activeSyncTarget(talkId) {
+  var reviewOpen = document.getElementById('view-review').classList.contains('active');
+  if (reviewOpen && reviewState && reviewState.talkId === talkId) {
+    if (reviewState.mode === 'srt' && reviewState.videoSlug) {
+      return srtSyncTarget(talkId, reviewState.videoSlug, reviewState.srtRightLang || 'uk');
+    }
+    return transcriptSyncTarget(talkId, reviewState.rightLang || 'uk');
+  }
+  var previewOpen = document.getElementById('view-preview').classList.contains('active');
+  if (previewOpen && previewState && previewState.talkId === talkId && previewState.videoSlug) {
+    return srtSyncTarget(talkId, previewState.videoSlug, previewState.srtLang || 'uk');
+  }
+  return null;
+}
+
+// (Re)create the engine for the active view's sync target, or tear it down
+// when signed out / not on a talk view. Idempotent and target-aware: called
+// from route(), updateAuthUI() AND every mode/video/lang switch, it re-keys
+// the engine (new branch/state/PR) whenever the target changes.
+function ensureEditSync() {
+  var talkId = currentSyncTalkId();
+  // ghWriteUser() is null in read-only mode (signed in, no repo write access) —
+  // attaching the engine would 403 on every push. updateAuthUI() calls this on
+  // the write-access transition, so the engine detaches/attaches automatically.
+  var user = ghWriteUser(), token = getAuthToken();
+  if (!talkId || !user || !token || typeof createSyncEngine === 'undefined') {
+    destroyEditSync();
+    return;
+  }
+  // Navigated to a different talk: drop the old talk's engine now; the new
+  // view re-keys when its state is ready.
+  if (editSync && editSync.talkId !== talkId) destroyEditSync();
+  var tgt = activeSyncTarget(talkId);
+  if (!tgt) return;                                   // view not ready yet
+  if (editSync && editSync.talkId === talkId && editSync.target === tgt.slug) {
+    // Same target, engine kept — but the VIEW/mode may have changed (preview and
+    // review-SRT share the <video>-<lang> target). Re-render so the marker-mode
+    // gate applies: hide the edit chip in preview marker mode, restore it in edit
+    // mode / review. This is the single choke-point every view/mode/lang switch
+    // calls, so it fixes the stale-chip transitions with no extra hooks.
+    renderSyncStatus(editSync.getInfo().status, editSync.getInfo());
+    return;
+  }
+  destroyEditSync();
+  var engine = createSyncEngine({
+    api: API,
+    owner: REPO.split('/')[0],
+    token: token,
+    login: user.login,
+    talkId: talkId,
+    target: tgt.slug,
+    entryFilter: tgt.filter,
+    base: BRANCH,
+    branch: makeSyncBranchName(user.login, talkId, tgt.slug),
+    storage: localStorage,
+    gh: {
+      getFileContent: getFileContent,
+      getFileSha: getFileSha,
+      getBranchHeadSha: getBranchHeadSha,
+      createRef: createRef,
+      putFile: putFile,
+      deleteFile: deleteFile,
+      createPull: createPull,
+      findOpenPrByHead: findOpenPrByHead,
+      markPullReady: markPullReady,
+      convertPullToDraft: convertPullToDraft,
+      closePull: closePull,
+      deleteRef: deleteRef,
+    },
+    isOffline: isOfflineError,
+    buildFiles: buildSyncFiles,
+    onStatus: onSyncStatus,
+    onRemoteApplied: onSyncRemoteApplied,
+  });
+  engine.talkId = talkId;
+  engine.target = tgt.slug;
+  editSync = engine;
+  engine.attach();
+  renderSyncStatus(engine.getInfo().status, engine.getInfo());
+}
+
+// Tears the engine down and returns a promise that settles once any
+// in-flight push has finished (see engine.destroy) — finalize awaits it.
+function destroyEditSync() {
+  var stopped = Promise.resolve();
+  if (editSync) { stopped = editSync.destroy() || stopped; editSync = null; }
+  renderSyncStatus('idle', null);
+  return stopped;
+}
+
+function onSyncStatus(status, info) {
+  // A background 401 means the token was revoked — same silent sign-out the
+  // foreground write paths perform (ghWriteError).
+  if (status === 'error' && info && info.error && info.error.kind === 'auth') {
+    destroyEditSync();
+    clearAuth();
+    updateAuthUI();
+    showToast(t('auth.expired'));
+    return;
+  }
+  renderSyncStatus(status, info);
+}
+
+// Remote edits just landed in localStorage (pull/merge) — refresh whichever
+// talk view is open so the cells show them without a reload. In-memory state
+// is ALWAYS reloaded (a later save must not clobber the merged storage), but
+// the DOM re-render is skipped while the user is typing in a field — it
+// would drop their caret; the next render picks the changes up.
+function syncUserIsTyping() {
+  var el = document.activeElement;
+  return !!(el && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'));
+}
+
+function onSyncRemoteApplied() {
+  var typing = syncUserIsTyping();
+  var reviewOpen = document.getElementById('view-review').classList.contains('active');
+  if (reviewOpen && reviewState.talkId) {
+    loadReviewEditsForMode();
+    updateRevertBtn();
+    if (!typing) renderReview();
+  }
+  var previewOpen = document.getElementById('view-preview').classList.contains('active');
+  if (previewOpen && previewState && previewState.talkId) {
+    var persisted = loadPreviewState(previewState.talkId, previewState.videoSlug, localStorage);
+    previewState.mode = persisted.mode;
+    previewState.markers = persisted.markers;
+    var cache = {};
+    (previewState._editLangs || [previewState.srtLang || 'uk']).forEach(function(l) {
+      cache[l] = loadPreviewLangEdits(previewState.talkId, previewState.videoSlug, l, localStorage);
+    });
+    previewState.edits = cache;
+    updateClearBtn();
+    if (!typing) {
+      applyPreviewMode();
+      renderMarkers();
+      renderEditList();
+    }
+  }
+}
+
+// The preview shows one sync chip per mode: the edit chip belongs to edit mode
+// (and to review), the marker chip to marker mode. Suppress the edit chip while
+// preview marker mode is active so the two never stack (the engine keeps running
+// in the background — edits made in edit mode still sync while markers are shown).
+function previewMarkerModeActive() {
+  var previewOpen = document.getElementById('view-preview').classList.contains('active');
+  return !!(previewOpen && previewState && previewState.mode === 'marker');
+}
+
+function renderSyncStatus(status, info) {
+  // The edit chip is suppressed while preview marker mode is active (the marker
+  // chip takes over) and whenever there is no engine attached.
+  paintSyncChip('sync', (!editSync || previewMarkerModeActive()) ? 'idle' : status);
+}
+
+// The chip is the whole signed-in lifecycle: its dropdown carries the PR
+// link, the finalize action, a manual sync and the local backup.
+SPA.syncChipClick = function() {
+  if (!editSync) return;
+  toggleSyncDropdown(editSync.getInfo());
+};
+
+SPA.syncFinalize = function() {
+  if (!editSync) return;
+  editSync.finalize()
+    .then(function(pr) { ghCreatedDialog('pr.finalized', pr); })
+    .catch(ghWriteError);
+};
+
+function toggleSyncDropdown(inf) {
+  var dd = document.getElementById('sync-chip-dropdown');
+  if (!dd) return;
+  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+  dd.innerHTML = '';
+  function item(label, fn) {
+    var d = document.createElement('div');
+    d.textContent = label;
+    d.onclick = function() { dd.classList.remove('open'); fn(); };
+    dd.appendChild(d);
+  }
+  if (inf.prUrl || inf.branch) {
+    item(t('sync.open_pr'), function() {
+      window.open(inf.prUrl || ('https://github.com/' + REPO + '/tree/' + inf.branch));
+    });
+  }
+  // Finalize: only meaningful while the PR is still a draft. After it, the
+  // chip shows 'ready'; any further edit silently re-drafts the PR.
+  if (inf.prNumber && inf.prDraft !== false) {
+    item(t('sync.finalize'), function() { SPA.syncFinalize(); });
+  }
+  if (inf.status === 'pending' || inf.status === 'error' || inf.dirty) {
+    item(t('sync.sync_now'), function() { if (editSync) editSync.flush({ force: true }); });
+  }
+  item(t('sync.copy_backup'), function() {
+    var entries = collectSyncEntries((editSync && editSync.talkId) || '', localStorage);
+    navigator.clipboard.writeText(JSON.stringify(entries, null, 2))
+      .then(function() { showToast(t('sync.backup_copied')); })
+      .catch(function() { showToast(t('error.clipboard')); });
+  });
+  dd.classList.add('open');
+}
+
+// ── Marker auto-sync (preview marker mode) — parallel to editSync, but the
+// target is a GitHub issue (marker_sync.js). Only attaches in preview marker
+// mode; the manual Create-issue/Copy-all buttons stay hidden signed-in.
+function ensureMarkerSync() {
+  var talkId = currentSyncTalkId();
+  // Read-only sessions (ghWriteUser() === null) can't write the markers issue —
+  // don't attach. updateAuthUI() re-runs this on the write-access transition.
+  var user = ghWriteUser(), token = getAuthToken();
+  var previewOpen = document.getElementById('view-preview').classList.contains('active');
+  var active = talkId && user && token && typeof createMarkerSyncEngine !== 'undefined'
+    && previewOpen && previewState && previewState.talkId === talkId
+    && previewState.videoSlug && previewState.mode === 'marker';
+  if (!active) { destroyMarkerSync(); return; }
+  if (markerSync && markerSync.talkId === talkId && markerSync.videoSlug === previewState.videoSlug) return;
+  destroyMarkerSync();
+  var engine = createMarkerSyncEngine({
+    api: API, owner: REPO.split('/')[0], repo: REPO, token: token, login: user.login,
+    talkId: talkId, videoSlug: previewState.videoSlug,
+    heading: (previewState.video ? previewState.video.title : previewState.videoSlug),
+    getMarkers: function() { return previewState.markers || []; },
+    setMarkers: function(m) { previewState.markers = m; savePreviewState(); renderMarkers(); updateClearBtn(); },
+    storage: localStorage,
+    gh: {
+      createIssue: createIssue, getIssue: getIssue, updateIssue: updateIssue,
+      setIssueState: setIssueState, listIssuesByLabel: listIssuesByLabel, ensureLabel: ensureLabel,
+    },
+    isOffline: isOfflineError,
+    onStatus: onMarkerStatus,
+  });
+  markerSync = engine;
+  engine.attach();
+  renderMarkerStatus(engine.getInfo().status, engine.getInfo());
+}
+
+function destroyMarkerSync() {
+  var stopped = Promise.resolve();
+  if (markerSync) { stopped = markerSync.destroy() || stopped; markerSync = null; }
+  renderMarkerStatus('idle', null);
+  return stopped;
+}
+
+function onMarkerStatus(status, info) {
+  if (status === 'error' && info && info.error && info.error.kind === 'auth') {
+    destroyMarkerSync(); clearAuth(); updateAuthUI(); showToast(t('auth.expired'));
+    return;
+  }
+  renderMarkerStatus(status, info);
+}
+
+function renderMarkerStatus(status, info) {
+  paintSyncChip('marker', markerSync ? status : 'idle');
+}
+
+SPA.markerChipClick = function() {
+  if (!markerSync) return;
+  var dd = document.getElementById('marker-chip-dropdown');
+  var inf = markerSync.getInfo();
+  if (!dd) return;
+  if (dd.classList.contains('open')) { dd.classList.remove('open'); return; }
+  dd.innerHTML = '';
+  function item(label, fn) {
+    var d = document.createElement('div');
+    d.textContent = label; d.onclick = function() { dd.classList.remove('open'); fn(); };
+    dd.appendChild(d);
+  }
+  if (inf.issueUrl) item(t('marker.open_issue'), function() { window.open(inf.issueUrl); });
+  if (inf.status === 'pending' || inf.status === 'error' || inf.dirty) {
+    item(t('sync.sync_now'), function() { if (markerSync) markerSync.flush({ force: true }); });
+  }
+  dd.classList.add('open');
+};
+
+// Push triggers beyond the engine's own 15s debounce: field blur (capture
+// phase — blur does not bubble), tab hide/close (keepalive so the request
+// survives teardown), connectivity return; pulls on tab focus/visibility.
+document.addEventListener('blur', function(e) {
+  if (!e.target) return;
+  var el = e.target;
+  var tag = el.tagName;
+  if (el.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA') {
+    if (editSync) editSync.flushSoon();
+    if (markerSync) markerSync.flushSoon();
+  }
+}, true);
+window.addEventListener('online', function() { if (editSync) editSync.flush(); if (markerSync) markerSync.flush(); });
+window.addEventListener('focus', function() { if (editSync) editSync.pull(); if (markerSync) markerSync.pull(); });
+document.addEventListener('visibilitychange', function() {
+  var hidden = document.visibilityState === 'hidden';
+  if (editSync) { if (hidden) editSync.flush({ keepalive: true }); else editSync.pull(); }
+  if (markerSync) { if (hidden) markerSync.flush({ keepalive: true }); else markerSync.pull(); }
+});
+window.addEventListener('pagehide', function() {
+  if (editSync) editSync.flush({ keepalive: true });
+  if (markerSync) markerSync.flush({ keepalive: true });
+});
+
+// A revert/clear is a deliberate "undo", so sync it on the fast blur cadence
+// (1.5s) instead of the 15s typing debounce — the PR (or, when the last edit
+// is gone, its teardown) then follows promptly.
+function syncRevertSoon() { if (editSync) editSync.flushSoon(); }
+// A real SRT edit was made — nudge the edit engine (15s typing debounce). Kept
+// separate from savePreviewState so marker changes / mode switches don't dirty
+// the edit engine (see savePreviewState).
+function editNotify() { if (editSync) editSync.notifyEdit(); }
+// Marker equivalents: a discrete add/remove/clear syncs on the fast cadence.
+function markerNotify() { if (markerSync) markerSync.notifyEdit(); }
+function markerNotifySoon() { if (markerSync) { markerSync.notifyEdit(); markerSync.flushSoon(); } }
+
+// Rebuilds the real edited file(s) for the sync engine — only the OPEN view
+// has the data (rows/blocks) to rebuild its transcript/SRT; other modes'
+// edits live in the state file until their view is opened. The file is rebuilt
+// whenever the view's SOURCE data is loaded, NOT only when edits currently
+// exist: after a PARTIAL revert the file must be re-committed with the
+// remaining edits (guarding on "edits exist" once left the committed file stuck
+// with a stale edit). A revert to ZERO edits never reaches here — the engine
+// intercepts it in doFlush and tears the PR down instead of committing.
+function buildSyncFiles() {
+  if (!editSync) return [];
+  try {
+    var reviewOpen = document.getElementById('view-review').classList.contains('active');
+    if (reviewOpen && reviewState.talkId === editSync.talkId) {
+      var hasData = reviewState.mode === 'srt'
+        ? (reviewState.ukBlocks || []).length
+        : reviewState.rightParas.length;
+      if (hasData) {
+        return [{ path: reviewFilePath().path, content: buildReviewEditedContent() }];
+      }
+    }
+    var previewOpen = document.getElementById('view-preview').classList.contains('active');
+    if (previewOpen && previewState && previewState.talkId === editSync.talkId
+        && (previewState.subtitles || []).length) {
+      var lang = previewState.srtLang || 'uk';
+      var langEdits = (previewState.edits && previewState.edits[lang]) || {};
+      var path = 'talks/' + previewState.talkId + '/' + previewState.videoSlug
+        + '/final/' + lang + '.srt';
+      return [{ path: path, content: applyEditsToSrt(previewState.subtitles, langEdits) }];
+    }
+  } catch (e) {
+    console.warn('buildSyncFiles failed:', e && e.message);
+  }
+  return [];
+}
+
+// {title, body} of the review issue (the signed-out reporting flow).
 function buildReviewIssueContent() {
   var gh = 'https://github.com/' + REPO;
   var talk = manifest ? manifest.talks.find(function(t) { return t.id === reviewState.talkId; }) : null;
@@ -4394,30 +4923,6 @@ SPA.createReviewIssue = function() {
   openIssuePage(content.title, content.body);
 };
 
-// One-button PR from the review edits: new timestamped branch off BRANCH,
-// commit the rebuilt file, open the PR (whose body = the review issue body).
-// The existing sync-subtitles.yml then reconciles transcript↔SRT on the PR.
-SPA.createReviewPr = function() {
-  var user = ghWriteUser(), token = getAuthToken();
-  if (!user || !token) return;
-  if (!Object.keys(reviewState.edits).length) { showToast(t('pr.no_edits')); return; }
-  var file = reviewFilePath();
-  var content = buildReviewIssueContent();
-  var btn = document.getElementById('btn-create-pr');
-  if (btn) btn.disabled = true;
-  submitFilesPr(API, token, {
-    branch: makeBranchName('review/' + reviewState.talkId, user.login),
-    base: BRANCH,
-    files: [{ path: file.path, content: buildReviewEditedContent() }],
-    commitMessage: 'Review edits: ' + reviewState.talkId + ' (' + file.label + ')',
-    prTitle: content.title,
-    prBody: content.body
-  }).then(function(pr) {
-    ghCreatedDialog('pr.created', pr);
-  }).catch(ghWriteError)
-    .then(function() { if (btn) btn.disabled = false; });
-};
-
 // Full new content of the review view's edited file: SRT rebuilt with original
 // numbering/timecodes and edited text substituted; transcript re-serialized
 // byte-exact (BOM/CRLF/header preserved). Callers ensure edits exist.
@@ -4426,29 +4931,18 @@ function buildReviewEditedContent() {
   {
     var full;
     if (isSrt) {
-      // Rebuild a valid SRT from alignedRows: keep block numbering and timecodes
-      // from the original UK blocks, substitute edited text where present.
-      var aligned = reviewState.alignedRows || [];
-      var blocks = [];
-      var seen = {};
-      for (var i = 0; i < aligned.length; i++) {
-        var uk = aligned[i].uk;
-        if (!uk) continue;
-        var key = uk.startMs + '_' + uk.endMs;
-        if (seen[key]) continue;
-        seen[key] = true;
-        var text = reviewState.edits[i] !== undefined ? reviewState.edits[i] : uk.text;
-        blocks.push({ startMs: uk.startMs, endMs: uk.endMs, text: text });
-      }
-      blocks.sort(function(a, b) { return a.startMs - b.startMs; });
-      var lines = [];
-      for (var j = 0; j < blocks.length; j++) {
-        lines.push(String(j + 1));
-        lines.push(msToSrtTime(blocks[j].startMs) + ' --> ' + msToSrtTime(blocks[j].endMs));
-        lines.push(blocks[j].text);
-        lines.push('');
-      }
-      full = lines.join('\n');
+      // Rebuild the SRT from the original parsed blocks with the FULL canonical
+      // block map applied — the same builder (and same store) the preview uses,
+      // so both views commit a byte-identical file. Merging (not just the
+      // visible rows' split) keeps a preview edit on a block with no aligned
+      // row here. In degraded legacy mode the canonical store isn't
+      // authoritative, so fall back to the in-memory row edits.
+      var canonical = reviewState._legacyEdits
+        ? splitReviewRowEdits(reviewState.edits, reviewState.rowToBlock || []).canonical
+        : mergeReviewEditsIntoCanonical(
+            loadSrtEdits(reviewState.talkId, reviewState.videoSlug, reviewState.srtRightLang, localStorage),
+            reviewState.edits, reviewState.rowToBlock || []);
+      full = applyEditsToSrt(reviewState.ukBlocks || [], canonical);
     } else {
       var paras = [];
       for (var i = 0; i < reviewState.rightParas.length; i++) {
@@ -4540,6 +5034,9 @@ function updateAuthUI() {
   for (var j = 0; j < ghHide.length; j++) ghHide[j].style.display = writeUser ? 'none' : '';
   // The preview's pair also depends on the marker/edit mode — delegate.
   updatePreviewSubmitButtons();
+  // Edit auto-sync lives only in a signed-in session on a talk view.
+  ensureEditSync();
+  ensureMarkerSync();
   // Index cards/chips render auth-dependent bits ("take for review", the
   // 'mine' chip, own-talk highlight) — refresh them on login/logout.
   if (manifest && document.getElementById('index-content')) {
@@ -4773,6 +5270,13 @@ SPA.switchSrtLang = function(side, lang) {
     reviewState.leftParas = aligned.map(function(r) { return r.en ? r.en.text : ''; });
     reviewState.rightParas = aligned.map(function(r) { return r.uk ? r.uk.text : ''; });
     reviewState.alignedRows = aligned;
+    reviewState.ukBlocks = ukBlocks;
+    reviewState.rowToBlock = mapRowsToBlockIdx(aligned, ukBlocks);
+    var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
+      reviewState.rowToBlock, localStorage);
+    reviewState._legacyEdits = !!(mig && mig.error);
+    // Only the RIGHT (final) lang selects the sync target; re-key on change.
+    ensureEditSync();
     loadReviewEditsForMode();
     renderReview();
     updateColHeaders();
