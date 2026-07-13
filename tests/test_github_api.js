@@ -250,3 +250,37 @@ describe('submitFilesPr', () => {
     }, f), (e) => e.status === 401 && !e.branch);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Repo write-access probe: GET the repo root and read permissions.push.
+// A user-to-server token reflects the USER's effective rights, so push=false
+// means "not added to the repo" — the read-only-mode trigger.
+// ---------------------------------------------------------------------------
+const { getRepoPermissions } = require('../site/js/github_api');
+
+describe('getRepoPermissions', () => {
+  it('GETs the repo api root with the Bearer header and resolves {push:true}', async () => {
+    const capture = {};
+    const p = await getRepoPermissions('https://api.github.com/repos/o/r', 'gho_x',
+      fetchDouble(200, { permissions: { push: true, pull: true } }, capture));
+    assert.deepStrictEqual(p, { push: true });
+    assert.strictEqual(capture.url, 'https://api.github.com/repos/o/r');
+    assert.strictEqual(capture.init.headers.Authorization, 'Bearer gho_x');
+  });
+  it('resolves {push:false} when the user has read-only access', async () => {
+    const p = await getRepoPermissions('https://api.github.com/repos/o/r', 'gho_x',
+      fetchDouble(200, { permissions: { push: false, pull: true } }));
+    assert.deepStrictEqual(p, { push: false });
+  });
+  it('resolves {push:false} when permissions are absent from the payload', async () => {
+    const p = await getRepoPermissions('https://api.github.com/repos/o/r', 'gho_x',
+      fetchDouble(200, { full_name: 'o/r' }));
+    assert.deepStrictEqual(p, { push: false });
+  });
+  it('rejects with Error{status} on a non-OK reply (rate limit, bad token)', async () => {
+    await assert.rejects(
+      getRepoPermissions('https://api.github.com/repos/o/r', 'gho_x',
+        fetchDouble(403, { message: 'API rate limit exceeded' })),
+      (e) => e.status === 403 && /rate limit/.test(e.message));
+  });
+});

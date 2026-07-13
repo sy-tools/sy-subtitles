@@ -939,3 +939,30 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 @keyframes sy-toast-out {
   to { opacity: 0; transform: translateY(8px); }
 }
+
+/* --- GitHub avatar: read-only state (signed in, no repo write access) ---- */
+.gh-avatar-wrap {
+  position: relative;
+  display: inline-flex;
+  line-height: 0;
+}
+.gh-avatar-wrap.gh-avatar--readonly #gh-avatar {
+  filter: grayscale(1);
+  opacity: .85;
+}
+.gh-avatar-badge {
+  display: none;
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 11px;
+  height: 11px;
+  padding: 1px;
+  color: var(--accent-orange);
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-pill);
+}
+.gh-avatar-wrap.gh-avatar--readonly .gh-avatar-badge {
+  display: block;
+}
