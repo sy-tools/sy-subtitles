@@ -351,7 +351,7 @@
       <button type="button" data-mode="marker" class="chip active" onclick="SPA.setPreviewMode('marker')" data-i18n="preview.mode_marker">&#x1F4CC; Marker</button><button type="button" data-mode="edit" class="chip" onclick="SPA.setPreviewMode('edit')" data-i18n="preview.mode_edit">&#x270E; Edit</button>
     </div>
     <div class="header-actions">
-      <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-i18n="btn.copy_all">Copy all</button>
+      <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-gh-hide data-i18n="btn.copy_all">Copy all</button>
       <button id="btn-preview-issue" class="btn btn--issue" onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
       <button id="btn-preview-pr" class="btn btn--primary" style="display:none" onclick="SPA.createPreviewPr()" data-i18n="btn.create_pr">Create PR</button>
       <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
@@ -900,6 +900,7 @@ var I18N = {
     'btn.take_review': '\u0412\u0437\u044F\u0442\u0438 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'stat.mine': '\u043C\u043E\u0457',
     'pr.created': 'PR \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
+    'pr.finalized': 'PR \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0434\u043E \u0440\u0435\u0432\u02BC\u044E',
     'pr.no_edits': '\u041D\u0435\u043C\u0430\u0454 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u044C \u0434\u043B\u044F PR',
     'pr.failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
     'issue.created': '\u0406\u0448\u02BC\u044E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
@@ -1058,6 +1059,7 @@ var I18N = {
     'btn.take_review': 'Take for review',
     'stat.mine': 'mine',
     'pr.created': 'PR created',
+    'pr.finalized': 'PR marked ready for review',
     'pr.no_edits': 'No edits to submit as a PR',
     'pr.failed': 'Could not create the PR',
     'issue.created': 'Issue created',
@@ -3099,8 +3101,12 @@ function applyPreviewMode() {
     markBtn.setAttribute('data-i18n', mode === 'edit' ? 'btn.edit' : 'btn.mark');
     markBtn.setAttribute('data-i18n-title', mode === 'edit' ? 'btn.edit_title' : 'btn.mark_title');
   }
+  // Copy-all is a signed-out affordance (data-gh-hide): with auto-sync the
+  // markers already live in the draft PR, and the chip's dropdown still
+  // offers a JSON backup. Keep the mode × auth gating consistent here since
+  // this assignment would otherwise override updateAuthUI's hiding.
   var copyBtn = document.getElementById('btn-copy-all');
-  if (copyBtn) copyBtn.style.display = mode === 'marker' ? 'inline-block' : 'none';
+  if (copyBtn) copyBtn.style.display = (mode === 'marker' && !getAuthUser()) ? 'inline-block' : 'none';
   updatePreviewSubmitButtons();
   var label = document.getElementById('preview-list-label');
   if (label) {
@@ -3535,17 +3541,28 @@ SPA.createPreviewPr = function() {
   var content = buildPreviewIssueContent();
   var btn = document.getElementById('btn-preview-pr');
   if (btn) btn.disabled = true;
-  submitFilesPr(API, token, {
-    branch: makeBranchName('preview/' + s.talkId, user.login),
-    base: BRANCH,
-    files: [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
-    commitMessage: 'Subtitle edits: ' + s.talkId + ' (' + s.videoSlug + '/' + lang + ')',
-    prTitle: content.title,
-    prBody: content.body
-  }).then(function(pr) {
-    ghCreatedDialog('pr.created', pr);
-  }).catch(ghWriteError)
-    .then(function() { if (btn) btn.disabled = false; });
+  var commitMessage = 'Subtitle edits: ' + s.talkId + ' (' + s.videoSlug + '/' + lang + ')';
+  var syncInfo = editSync && editSync.getInfo();
+  var op;
+  if (syncInfo && syncInfo.prNumber) {
+    // A sync draft PR exists — finalize it instead of opening a second PR.
+    op = finalizeSyncPr(
+      [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
+      commitMessage);
+  } else {
+    op = submitFilesPr(API, token, {
+      branch: makeBranchName('preview/' + s.talkId, user.login),
+      base: BRANCH,
+      files: [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
+      commitMessage: commitMessage,
+      prTitle: content.title,
+      prBody: content.body
+    }).then(function(pr) {
+      ghCreatedDialog('pr.created', pr);
+    });
+  }
+  op.catch(ghWriteError)
+    .then(function() { if (btn) btn.disabled = false; ensureEditSync(); });
 };
 
 SPA.openPreviewEditor = function() {
@@ -4416,7 +4433,21 @@ function onSyncRemoteApplied() {
   }
 }
 
+// The Create PR buttons become "Finalize PR" once a sync draft PR exists:
+// the same click then commits the real files to the sync branch and flips
+// the draft to ready instead of opening a second PR.
+function updatePrButtonLabels(hasSyncPr) {
+  ['btn-create-pr', 'btn-preview-pr'].forEach(function(id) {
+    var b = document.getElementById(id);
+    if (!b) return;
+    var key = hasSyncPr ? 'btn.finalize_pr' : 'btn.create_pr';
+    b.textContent = t(key);
+    b.setAttribute('data-i18n', key);
+  });
+}
+
 function renderSyncStatus(status, info) {
+  updatePrButtonLabels(!!(editSync && info && info.prNumber));
   var chip = document.getElementById('sync-chip');
   if (!chip) return;
   if (!editSync || status === 'idle') {
@@ -4489,6 +4520,51 @@ document.addEventListener('visibilitychange', function() {
   else editSync.pull();
 });
 window.addEventListener('pagehide', function() { if (editSync) editSync.flush({ keepalive: true }); });
+
+// Finalize the sync draft PR: commit the real edited files to the sync
+// branch, drop the state file, flip the draft to ready-for-review. The PR
+// the user has watched in the chip becomes the deliverable — no second PR.
+function finalizeSyncPr(files, commitMessage) {
+  var token = getAuthToken();
+  var talkId = editSync.talkId;
+  var inf = editSync.getInfo();
+  var statePath = syncFilePath(talkId);
+  // Stop background pushes first so a late state PUT cannot resurrect the
+  // state file after we delete it.
+  destroyEditSync();
+  localStorage.removeItem(syncBaseKey(talkId));
+  var chain = Promise.resolve();
+  files.forEach(function(file) {
+    chain = chain.then(function() {
+      return getFileSha(API, token, file.path, inf.branch);
+    }).then(function(sha) {
+      return putFile(API, token, {
+        path: file.path, branch: inf.branch, message: commitMessage,
+        content: file.content, sha: sha,
+      });
+    });
+  });
+  return chain.then(function() {
+    return getFileContent(API, token, statePath, inf.branch);
+  }).then(function(state) {
+    if (state) {
+      return deleteFile(API, token, {
+        path: statePath, branch: inf.branch,
+        message: 'sync: finalize ' + talkId, sha: state.sha,
+      });
+    }
+  }).then(function() {
+    // GraphQL-only operation; a failure is non-fatal — the PR just stays a
+    // draft and the user flips it on GitHub.
+    if (!inf.nodeId) return;
+    return markPullReady(token, inf.nodeId).catch(function(e) {
+      console.warn('markPullReady failed:', e && e.message);
+      showToast(t('gh.error') + (e && e.message ? ': ' + e.message : ''), 4000);
+    });
+  }).then(function() {
+    ghCreatedDialog('pr.finalized', { number: inf.prNumber, html_url: inf.prUrl });
+  });
+}
 
 // {title, body} of the review issue — also reused verbatim as the PR body by
 // SPA.createReviewPr, so both write paths describe the same marks/edits.
@@ -4575,17 +4651,26 @@ SPA.createReviewPr = function() {
   var content = buildReviewIssueContent();
   var btn = document.getElementById('btn-create-pr');
   if (btn) btn.disabled = true;
-  submitFilesPr(API, token, {
-    branch: makeBranchName('review/' + reviewState.talkId, user.login),
-    base: BRANCH,
-    files: [{ path: file.path, content: buildReviewEditedContent() }],
-    commitMessage: 'Review edits: ' + reviewState.talkId + ' (' + file.label + ')',
-    prTitle: content.title,
-    prBody: content.body
-  }).then(function(pr) {
-    ghCreatedDialog('pr.created', pr);
-  }).catch(ghWriteError)
-    .then(function() { if (btn) btn.disabled = false; });
+  var commitMessage = 'Review edits: ' + reviewState.talkId + ' (' + file.label + ')';
+  var syncInfo = editSync && editSync.getInfo();
+  var op;
+  if (syncInfo && syncInfo.prNumber) {
+    // A sync draft PR exists — finalize it instead of opening a second PR.
+    op = finalizeSyncPr([{ path: file.path, content: buildReviewEditedContent() }], commitMessage);
+  } else {
+    op = submitFilesPr(API, token, {
+      branch: makeBranchName('review/' + reviewState.talkId, user.login),
+      base: BRANCH,
+      files: [{ path: file.path, content: buildReviewEditedContent() }],
+      commitMessage: commitMessage,
+      prTitle: content.title,
+      prBody: content.body
+    }).then(function(pr) {
+      ghCreatedDialog('pr.created', pr);
+    });
+  }
+  op.catch(ghWriteError)
+    .then(function() { if (btn) btn.disabled = false; ensureEditSync(); });
 };
 
 // Full new content of the review view's edited file: SRT rebuilt with original
