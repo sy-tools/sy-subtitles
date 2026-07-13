@@ -61,6 +61,9 @@ function ghJson(url, token, opts, fetchImpl) {
     init.headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(opts.body);
   }
+  // keepalive lets a final sync flush survive the page being torn down
+  // (pagehide) — the browser finishes the request after the document dies.
+  if (opts && opts.keepalive) init.keepalive = true;
   return f(url, init).then(function (r) {
     return r.json().catch(function () { return {}; }).then(function (body) {
       if (!r.ok) {
@@ -87,6 +90,11 @@ function utf8ToBase64(s) {
   return btoa(unescape(encodeURIComponent(s)));
 }
 
+// base64 → UTF-8, tolerating the newlines GitHub wraps content payloads with.
+function base64ToUtf8(b64) {
+  return decodeURIComponent(escape(atob(String(b64).replace(/\s+/g, ''))));
+}
+
 // review/<talk>--<login>--HHMMSS, scrubbed of characters git refs reject.
 // Timestamp suffix makes retries collision-free.
 function makeBranchName(prefix, login, now) {
@@ -95,6 +103,15 @@ function makeBranchName(prefix, login, now) {
     + String(d.getUTCMinutes()).padStart(2, '0')
     + String(d.getUTCSeconds()).padStart(2, '0');
   return (prefix + '--' + login + '--' + stamp)
+    .replace(/[ ~^:?*[\]\\]/g, '-')
+    .replace(/\.\.+/g, '.');
+}
+
+// sync/<login>/<talkId> — deterministic (NO timestamp) on purpose: the edit
+// auto-sync branch must be re-findable when the page is reopened on any
+// device. Same ref-illegal-char scrub as makeBranchName.
+function makeSyncBranchName(login, talkId) {
+  return ('sync/' + login + '/' + talkId)
     .replace(/[ ~^:?*[\]\\]/g, '-')
     .replace(/\.\.+/g, '.');
 }
@@ -140,14 +157,68 @@ function putFile(api, token, opts, fetchImpl) {
   };
   if (opts.sha) body.sha = opts.sha;
   return ghJson(api + '/contents/' + opts.path, token,
-    { method: 'PUT', body: body }, fetchImpl);
+    { method: 'PUT', body: body, keepalive: opts.keepalive }, fetchImpl);
+}
+
+// GET /contents/<path>?ref=<ref> → {content (decoded UTF-8), sha}, or null
+// when the path/ref does not exist yet (the sync branch's 404 = "no sync").
+function getFileContent(api, token, path, ref, fetchImpl) {
+  return ghJson(api + '/contents/' + path + '?ref=' + ref, token, null, fetchImpl)
+    .then(function (r) { return { content: base64ToUtf8(r.content), sha: r.sha }; })
+    .catch(function (e) {
+      if (e.status === 404) return null;
+      throw e;
+    });
+}
+
+// DELETE /contents/<path> — removes the file from the branch (needs the blob
+// sha, like updates do).
+function deleteFile(api, token, opts, fetchImpl) {
+  return ghJson(api + '/contents/' + opts.path, token, {
+    method: 'DELETE',
+    body: { message: opts.message, branch: opts.branch, sha: opts.sha },
+  }, fetchImpl);
 }
 
 function createPull(api, token, opts, fetchImpl) {
+  var body = { head: opts.head, base: opts.base, title: opts.title, body: opts.body };
+  if (opts.draft !== undefined) body.draft = opts.draft;
   return ghJson(api + '/pulls', token, {
     method: 'POST',
-    body: { head: opts.head, base: opts.base, title: opts.title, body: opts.body },
-  }, fetchImpl).then(function (r) { return { number: r.number, html_url: r.html_url }; });
+    body: body,
+  }, fetchImpl).then(function (r) {
+    return { number: r.number, html_url: r.html_url, node_id: r.node_id, draft: r.draft };
+  });
+}
+
+// First open PR whose head is <owner>:<branch>, or null. Used to re-attach
+// the edit-sync draft PR on page reopen (and after a lost create response).
+function findOpenPrByHead(api, token, owner, branch, fetchImpl) {
+  return ghJson(api + '/pulls?head=' + encodeURIComponent(owner + ':' + branch)
+    + '&state=open', token, null, fetchImpl)
+    .then(function (list) {
+      if (!list || !list.length) return null;
+      var r = list[0];
+      return { number: r.number, html_url: r.html_url, node_id: r.node_id, draft: r.draft };
+    });
+}
+
+// Flip a draft PR to "ready for review". REST has no endpoint for this —
+// it is GraphQL-only. Rejects when the reply carries errors (the caller
+// treats that as non-fatal: the PR simply stays a draft).
+function markPullReady(token, nodeId, fetchImpl) {
+  return ghJson('https://api.github.com/graphql', token, {
+    method: 'POST',
+    body: {
+      query: 'mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
+      variables: { id: nodeId },
+    },
+  }, fetchImpl).then(function (r) {
+    if (r && r.errors && r.errors.length) {
+      throw new Error(r.errors[0].message || 'GraphQL error');
+    }
+    return r;
+  });
 }
 
 // One-button PR: base head sha → new branch → per-file (blob sha on base →
@@ -195,14 +266,20 @@ if (typeof module !== 'undefined' && module.exports) {
     getViewer: getViewer,
     isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,
+    base64ToUtf8: base64ToUtf8,
     makeBranchName: makeBranchName,
+    makeSyncBranchName: makeSyncBranchName,
     createIssue: createIssue,
     addAssignees: addAssignees,
     getBranchHeadSha: getBranchHeadSha,
     createRef: createRef,
     getFileSha: getFileSha,
+    getFileContent: getFileContent,
+    deleteFile: deleteFile,
     putFile: putFile,
     createPull: createPull,
+    findOpenPrByHead: findOpenPrByHead,
+    markPullReady: markPullReady,
     submitFilesPr: submitFilesPr,
   };
 }
