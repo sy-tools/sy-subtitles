@@ -3,7 +3,10 @@
 // by the Node test suite — no inline mirror.
 
 function defaultPreviewState() {
-  return { mode: 'marker', markers: [], edits: {} };
+  // Edit is the primary action on the preview page, so a fresh video opens in
+  // edit mode. (Legacy markers-only storage is migrated back to marker mode in
+  // loadPreviewState so existing markers aren't hidden.)
+  return { mode: 'edit', markers: [], edits: {} };
 }
 
 function newKeyFor(talkId, videoSlug) {
@@ -54,6 +57,9 @@ function loadPreviewState(talkId, videoSlug, storage) {
     }
     if (!Array.isArray(legacyMarkers)) legacyMarkers = [];
     var migrated = defaultPreviewState();
+    // Legacy storage only ever held markers, so land the migrated state in
+    // marker mode — don't hide those markers behind the new edit default.
+    migrated.mode = 'marker';
     migrated.markers = legacyMarkers;
     storage.setItem(newKey, JSON.stringify(migrated));
     storage.removeItem(legacyKey);

@@ -339,7 +339,7 @@
       <select id="preview-video-select" class="select-chip" style="display:none;margin-left:8px;vertical-align:middle" onchange="SPA.switchPreviewVideo(this.value)"></select>
     </h1>
     <div class="preview-mode-toggle" role="group">
-      <button type="button" data-mode="marker" class="chip active" onclick="SPA.setPreviewMode('marker')" data-i18n="preview.mode_marker">&#x1F4CC; Marker</button><button type="button" data-mode="edit" class="chip" onclick="SPA.setPreviewMode('edit')" data-i18n="preview.mode_edit">&#x270E; Edit</button>
+      <button type="button" data-mode="marker" class="chip" onclick="SPA.setPreviewMode('marker')" data-i18n="preview.mode_marker">&#x1F4CC; Marker</button><button type="button" data-mode="edit" class="chip active" onclick="SPA.setPreviewMode('edit')" data-i18n="preview.mode_edit">&#x270E; Edit</button>
     </div>
     <div class="header-actions">
       <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-i18n="btn.copy_all">Copy all</button>
@@ -3004,7 +3004,7 @@ function savePreviewState() {
   if (!previewState || !previewState.talkId) return;
   var key = 'preview_' + previewState.talkId + '_' + previewState.videoSlug;
   var payload = {
-    mode: previewState.mode || 'marker',
+    mode: previewState.mode || 'edit',
     markers: previewState.markers || [],
     edits: previewState.edits || {},
   };
@@ -3039,7 +3039,7 @@ function flushPreviewPos() {
 // action). Called from applyPreviewMode (mode flips) AND updateAuthUI
 // (login/logout while the preview is open).
 function updatePreviewSubmitButtons() {
-  var mode = (typeof previewState !== 'undefined' && previewState.mode) || 'marker';
+  var mode = (typeof previewState !== 'undefined' && previewState.mode) || 'edit';
   var signedIn = !!getAuthUser();
   var editorBtn = document.getElementById('btn-preview-editor');
   if (editorBtn) editorBtn.style.display = (mode === 'edit' && !signedIn) ? 'inline-block' : 'none';
@@ -3048,7 +3048,7 @@ function updatePreviewSubmitButtons() {
 }
 
 function applyPreviewMode() {
-  var mode = previewState.mode || 'marker';
+  var mode = previewState.mode || 'edit';
   document.querySelectorAll('.preview-mode-toggle button').forEach(function(b) {
     if (b.dataset.mode === mode) b.classList.add('active');
     else b.classList.remove('active');

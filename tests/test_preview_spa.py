@@ -695,6 +695,9 @@ class TestMarkers:
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
         page.wait_for_timeout(1000)
+        # Edit is the default mode now; these tests exercise markers, so opt in.
+        page.click('.preview-mode-toggle [data-mode="marker"]')
+        page.wait_for_timeout(100)
 
     def test_marker_persists_in_localStorage(self, server, page):
         """Markers should be saved to localStorage."""
@@ -2241,6 +2244,7 @@ class TestBranchSelector:
         pg.add_init_script("localStorage.clear();")
         pg.goto(f"{server}{SPA_URL}#/preview/2001-01-01_Test-Talk/Test-Video")
         pg.wait_for_selector("#subtitle-overlay", timeout=10000)
+        pg.click('.preview-mode-toggle [data-mode="marker"]')
         pg.click("#btn-mark")
         pg.wait_for_selector(".marker-item", timeout=5000)
         assert pg.locator(".marker-item").count() == 1
@@ -2780,15 +2784,19 @@ def _goto_preview_video(page, server, video_slug="Test-Video"):
 
 
 class TestPreviewModeDefaults:
-    def test_default_mode_is_marker(self, server, page):
+    def test_default_mode_is_edit(self, server, page):
         _goto_preview_video(page, server)
         mode = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
         )
         assert mode is True
 
-    def test_default_new_key_shape_on_first_mutation(self, server, page):
+    def test_marker_new_key_shape_on_first_mutation(self, server, page):
+        # Marker mode is now opt-in (edit is the default); switch to it, then
+        # the first mark writes the well-formed new-key shape.
         _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="marker"]')
+        page.wait_for_timeout(100)
         page.evaluate("window._vimeoPlayer._setTime(2)")
         page.wait_for_timeout(200)
         page.click("#btn-mark")
@@ -2801,17 +2809,20 @@ class TestPreviewModeDefaults:
 
     def test_mode_persisted_across_reload(self, server, page):
         _goto_preview_video(page, server)
-        page.click('.preview-mode-toggle [data-mode="edit"]')
+        # Switch away from the edit default so the reload actually proves the
+        # choice was persisted (re-selecting the default would save nothing).
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         page.wait_for_timeout(100)
         _goto_preview_video(page, server)
         mode = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
         )
         assert mode is True
 
     def test_mode_independent_per_video(self, server, page):
         _goto_preview_video(page, server, "Test-Video")
-        page.click('.preview-mode-toggle [data-mode="edit"]')
+        # v1 → marker (non-default); v2 must still open on the edit default.
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         page.wait_for_timeout(100)
         _goto_preview_video(page, server, "Test-Video-2")
         debug = page.evaluate("""
@@ -2824,12 +2835,12 @@ class TestPreviewModeDefaults:
           })
         """)
         mode2 = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
         )
         assert mode2 is True, f"debug: {debug}"
         _goto_preview_video(page, server, "Test-Video")
         mode1 = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
         )
         assert mode1 is True
 
@@ -2909,12 +2920,14 @@ class TestPreviewLayoutButtons:
 
     def test_copy_btn_only_visible_in_marker_mode(self, server, page):
         _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         assert page.locator("#btn-copy-all").is_visible() is True
         page.click('.preview-mode-toggle [data-mode="edit"]')
         assert page.locator("#btn-copy-all").is_visible() is False
 
     def test_open_editor_btn_only_visible_in_edit_mode(self, server, page):
         _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         assert page.locator("#btn-preview-editor").is_visible() is False
         page.click('.preview-mode-toggle [data-mode="edit"]')
         assert page.locator("#btn-preview-editor").is_visible() is True
@@ -3856,6 +3869,9 @@ class TestPreviewMarkerIssueAndCopy:
     markdown tables or wrong file paths slip through silently."""
 
     def _seed_markers(self, page):
+        # Markers live in marker mode; edit is the default now, so switch first.
+        page.click('.preview-mode-toggle [data-mode="marker"]')
+        page.wait_for_timeout(50)
         page.evaluate(
             """
             previewState.markers = [
