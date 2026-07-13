@@ -149,7 +149,8 @@ function listIssuesByLabel(api, token, label, fetchImpl) {
   return ghJson(api + '/issues?labels=' + encodeURIComponent(label) + '&state=all&per_page=100',
     token, null, fetchImpl).then(function (list) {
     return (list || []).map(function (r) {
-      return { number: r.number, title: r.title, state: r.state, node_id: r.node_id, body: r.body || '' };
+      return { number: r.number, title: r.title, state: r.state, node_id: r.node_id,
+        html_url: r.html_url, body: r.body || '' };
     });
   });
 }

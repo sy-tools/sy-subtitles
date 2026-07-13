@@ -248,10 +248,11 @@ describe('issue sync primitives (marker sync)', () => {
   it('listIssuesByLabel GETs labels=&state=all and maps rows', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'GET', match: '/issues?', status: 200,
-      payload: [{ number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', body: 'B' }] }], calls);
+      payload: [{ number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B' }] }], calls);
     const rows = await listIssuesByLabel(API, 'gho_x', 'markers', f);
     assert.ok(/labels=markers/.test(calls[0].url) && /state=all/.test(calls[0].url), calls[0].url);
-    assert.deepStrictEqual(rows[0], { number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', body: 'B' });
+    assert.deepStrictEqual(rows[0],
+      { number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B' });
   });
   it('ensureLabel POSTs and tolerates a 422 already-exists', async () => {
     const f422 = routerFetch([{ method: 'POST', match: '/labels', status: 422,
