@@ -107,11 +107,12 @@ function makeBranchName(prefix, login, now) {
     .replace(/\.\.+/g, '.');
 }
 
-// sync/<login>/<talkId> — deterministic (NO timestamp) on purpose: the edit
-// auto-sync branch must be re-findable when the page is reopened on any
-// device. Same ref-illegal-char scrub as makeBranchName.
-function makeSyncBranchName(login, talkId) {
-  return ('sync/' + login + '/' + talkId)
+// sync/<login>/<talkId>[--<target>] — deterministic (NO timestamp) on
+// purpose: the edit auto-sync branch must be re-findable when the page is
+// reopened on any device. An optional target scopes the branch to one edited
+// file (v3). Same ref-illegal-char scrub as makeBranchName.
+function makeSyncBranchName(login, talkId, target) {
+  return ('sync/' + login + '/' + talkId + (target ? '--' + target : ''))
     .replace(/[ ~^:?*[\]\\]/g, '-')
     .replace(/\.\.+/g, '.');
 }

@@ -2,9 +2,11 @@
 site/index.html).
 
 For a signed-in user on a review/preview view, edits stored in localStorage
-auto-sync to a state file (.review-sync/<talkId>.json) on a deterministic
-branch (sync/<login>/<talkId>) behind a draft PR. This suite drives the real
-browser flow with all GitHub endpoints mocked via page.route:
+auto-sync to a file-scoped state file (.review-sync/<talkId>/<target>.json) on
+a deterministic branch (sync/<login>/<talkId>--<target>) behind a draft PR,
+where the target names the edited file (transcript-<lang> or <video>-<lang>).
+This suite drives the real browser flow with all GitHub endpoints mocked via
+page.route:
 
   1. first edit bootstraps the branch, state file, draft PR AND commits the
      real edited file (v2 pushes the transcript alongside the state file),
@@ -16,7 +18,10 @@ browser flow with all GitHub endpoints mocked via page.route:
   5. finalize (from the chip dropdown) deletes the state file and marks the
      draft PR ready via GraphQL — no re-commit, no new branch/PR,
   6. a NEW edit after finalize re-drafts the PR (GraphQL) and re-pushes state,
-  7. the sync chip's dropdown opens the PR url.
+  7. the sync chip's dropdown opens the PR url,
+  8. a preview subtitle edit syncs to the VIDEO-scoped target (its own branch/
+     state/PR + final/uk.srt), distinct from the transcript target — v3's
+     file-scoped PRs.
 
 The harness mirrors tests/test_spa_auth_actions_e2e.py: a local http.server
 serves site/ with window.__SY_* injected in <head>, the signed-in session is
@@ -38,14 +43,17 @@ SITE = Path(__file__).parent.parent / "site"
 SPA_URL = "/index.html"
 MOCK_PLAYER_JS = (Path(__file__).parent / "fixtures" / "mock_vimeo_player.js").read_text()
 
-# Session identity: the sync branch is derived from this login + the talk id.
+# Session identity: the sync branch is derived from this login + the talk id +
+# the file-scoped target. The review view here opens in transcript-default
+# mode, so its target is transcript-<rightLang> (rightLang defaults to uk).
 LOGIN = "tester"
 TALK_ID = "2001-01-01_Test-Talk"
 VIDEO_SLUG = "Test-Video"
-SYNC_BRANCH = f"sync/{LOGIN}/{TALK_ID}"
-STATE_PATH = f".review-sync/{TALK_ID}.json"
+SYNC_TARGET = "transcript-uk"
+SYNC_BRANCH = f"sync/{LOGIN}/{TALK_ID}--{SYNC_TARGET}"
+STATE_PATH = f".review-sync/{TALK_ID}/{SYNC_TARGET}.json"
 REVIEW_KEY = f"review_{TALK_ID}"
-SYNC_BASE_KEY = f"sy_sync_base_{TALK_ID}"
+SYNC_BASE_KEY = f"sy_sync_base_{TALK_ID}__{SYNC_TARGET}"
 
 PR_NUMBER = 88
 PR_URL = "https://github.com/sy-tools/sy-subtitles/pull/88"
@@ -712,4 +720,63 @@ def test_sync_chip_dropdown_opens_pr(server, browser):
     _click_dropdown_item(pg, OPEN_PR_LABEL_RE)
     pg.wait_for_function("window.__opened.length > 0", timeout=5000)
     assert pg.evaluate("window.__opened[0]") == PR_URL
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 8. A PREVIEW subtitle edit syncs to the VIDEO-scoped target (its own branch,
+#    state file and PR), distinct from the transcript target — proving v3's
+#    file-scoped PRs. The edit lands in the canonical block store and the
+#    committed real file is final/uk.srt.
+# ---------------------------------------------------------------------------
+
+
+def test_preview_edit_syncs_to_video_scoped_target(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
+    pg.goto(f"{server}{SPA_URL}#/preview/{TALK_ID}/{VIDEO_SLUG}")
+    pg.wait_for_selector("#mock-player", state="visible", timeout=10000)
+    pg.wait_for_function(
+        "() => window.previewState && (window.previewState.subtitles || []).length > 0",
+        timeout=10000,
+    )
+
+    # Enter edit mode, position inside block 1 (1-5s) and add an edit.
+    pg.evaluate("SPA.setPreviewMode('edit')")
+    pg.evaluate("window._vimeoPlayer._currentTime = 3; window.previewState.currentTime = 3;")
+    pg.evaluate("SPA.addEdit()")
+    cell = pg.locator(".edit-item .edited").first
+    cell.click()
+    cell.press("End")
+    cell.type(" PREVIEWSYNC")
+    cell.press("Tab")  # blur -> flushSoon
+
+    _wait_chip_synced(pg)
+
+    video_target = f"{VIDEO_SLUG}-uk"
+    video_branch = f"sync/{LOGIN}/{TALK_ID}--{video_target}"
+    video_state = f".review-sync/{TALK_ID}/{video_target}.json"
+    canon_key = f"srt_edits_{TALK_ID}_{VIDEO_SLUG}_uk"
+
+    # The state PUT went to the VIDEO target's own path + branch — NOT the
+    # transcript target used by the review tests above.
+    put = next(c for c in _review_sync_puts(calls) if c["url"].split("?")[0].endswith("/contents/" + video_state))
+    assert put["body"]["branch"] == video_branch
+    doc = decode_put_doc(put)
+    assert canon_key in doc["entries"], "edit stored in the canonical block map"
+    assert any("PREVIEWSYNC" in str(v) for v in doc["entries"][canon_key].values())
+
+    # A branch ref was created for the video target specifically.
+    refs = next(c for c in calls if c["url"].endswith("/git/refs"))
+    assert refs["body"]["ref"] == "refs/heads/" + video_branch
+
+    # The real committed file is the video's final/uk.srt with the edit applied.
+    real = next(
+        c
+        for c in calls
+        if c["method"] == "PUT" and f"/contents/talks/{TALK_ID}/{VIDEO_SLUG}/final/uk.srt" in c["url"].split("?")[0]
+    )
+    assert real["body"]["branch"] == video_branch
+    committed = base64.b64decode(real["body"]["content"]).decode("utf-8")
+    assert "PREVIEWSYNC" in committed
     ctx.close()

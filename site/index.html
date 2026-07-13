@@ -2019,6 +2019,9 @@ SPA.switchSubLang = function(lang) {
     // Persist only on confirmed success so a broken lang doesn't get
     // stuck as the default on next load.
     if (previewState) localStorage.setItem('sy_srt_lang_' + previewState.talkId, lang);
+    // The subtitle language IS part of the sync target — re-key so edits sync
+    // to the <video>-<lang> PR for the language now shown.
+    ensureEditSync();
     if (previewState && previewState.mode === 'edit') {
       renderEditList();
       updateClearBtn();
@@ -2898,6 +2901,11 @@ function showPreview(talkId, videoSlug) {
   // slow page load (and did, once an extra <script> was added to <head>).
   if (window.maybeInstallResize) window.maybeInstallResize();
 
+  // previewState (video + srtLang) is now set — re-key the sync engine onto
+  // this video's SRT target (shared with review-SRT). route()'s own call ran
+  // before the async manifest resolved, so this is where preview attaches.
+  ensureEditSync();
+
   // Capture the entry {talkId, videoSlug} so fetch-settled callbacks
   // from a stale entry don't mutate state for the next one if the user
   // navigates away before the network resolves.
@@ -3680,6 +3688,11 @@ function showReview(talkId) {
     return;
   }
 
+  // Transcript-default entry: the target (transcript-<rightLang>) is known now
+  // — showReview runs after route()'s own ensureEditSync (async manifest), so
+  // this is where the engine first attaches for a review view.
+  ensureEditSync();
+
   var leftSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.leftLang]) || '';
   var rightSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.rightLang]) || '';
   var leftUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.leftLang + '.txt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
@@ -3865,6 +3878,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     loadReviewEditsForMode();
     localStorage.setItem('sy_review_mode_' + talkId, JSON.stringify({ mode: 'transcript' }));
     updateColHeaders();
+    ensureEditSync();   // re-key: transcript target
     // Reload transcripts
     statusEl.textContent = t('review.loading');
     statusEl.style.display = 'block';
@@ -3928,6 +3942,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   reviewState.srtLeftLang = leftLang;
   reviewState.srtRightLang = rightLang;
   updateColHeaders();
+  ensureEditSync();   // re-key: <video>-<rightLang> SRT target
   var leftSha = (talk && talk._srcSrtSha && talk._srcSrtSha[videoSlug + '/' + leftLang]) || '';
   var rightSha = (talk && talk._srtSha && talk._srtSha[videoSlug + '/' + rightLang]) || '';
   var enUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
@@ -4375,9 +4390,30 @@ function currentSyncTalkId() {
   return null;
 }
 
-// (Re)create the engine for the currently open talk, or tear it down when
-// signed out / not on a talk view. Idempotent — called from route() and
-// updateAuthUI().
+// The file-scoped sync target of the currently open view: the preview and the
+// review-SRT of a video+lang share one target (same committed file); the
+// review-transcript is its own target. Returns null while a view's async load
+// has not populated its state yet — the view's own ensureEditSync() call
+// re-keys once the state (video/lang/mode) is known.
+function activeSyncTarget(talkId) {
+  var reviewOpen = document.getElementById('view-review').classList.contains('active');
+  if (reviewOpen && reviewState && reviewState.talkId === talkId) {
+    if (reviewState.mode === 'srt' && reviewState.videoSlug) {
+      return srtSyncTarget(talkId, reviewState.videoSlug, reviewState.srtRightLang || 'uk');
+    }
+    return transcriptSyncTarget(talkId, reviewState.rightLang || 'uk');
+  }
+  var previewOpen = document.getElementById('view-preview').classList.contains('active');
+  if (previewOpen && previewState && previewState.talkId === talkId && previewState.videoSlug) {
+    return srtSyncTarget(talkId, previewState.videoSlug, previewState.srtLang || 'uk');
+  }
+  return null;
+}
+
+// (Re)create the engine for the active view's sync target, or tear it down
+// when signed out / not on a talk view. Idempotent and target-aware: called
+// from route(), updateAuthUI() AND every mode/video/lang switch, it re-keys
+// the engine (new branch/state/PR) whenever the target changes.
 function ensureEditSync() {
   var talkId = currentSyncTalkId();
   var user = getAuthUser(), token = getAuthToken();
@@ -4385,7 +4421,12 @@ function ensureEditSync() {
     destroyEditSync();
     return;
   }
-  if (editSync && editSync.talkId === talkId) return;
+  // Navigated to a different talk: drop the old talk's engine now; the new
+  // view re-keys when its state is ready.
+  if (editSync && editSync.talkId !== talkId) destroyEditSync();
+  var tgt = activeSyncTarget(talkId);
+  if (!tgt) return;                                   // view not ready yet
+  if (editSync && editSync.talkId === talkId && editSync.target === tgt.slug) return;
   destroyEditSync();
   var engine = createSyncEngine({
     api: API,
@@ -4393,8 +4434,10 @@ function ensureEditSync() {
     token: token,
     login: user.login,
     talkId: talkId,
+    target: tgt.slug,
+    entryFilter: tgt.filter,
     base: BRANCH,
-    branch: makeSyncBranchName(user.login, talkId),
+    branch: makeSyncBranchName(user.login, talkId, tgt.slug),
     storage: localStorage,
     gh: {
       getFileContent: getFileContent,
@@ -4414,6 +4457,7 @@ function ensureEditSync() {
     onRemoteApplied: onSyncRemoteApplied,
   });
   engine.talkId = talkId;
+  engine.target = tgt.slug;
   editSync = engine;
   engine.attach();
   renderSyncStatus(engine.getInfo().status, engine.getInfo());
@@ -4967,6 +5011,8 @@ SPA.switchSrtLang = function(side, lang) {
     var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
       reviewState.rowToBlock, localStorage);
     reviewState._legacyEdits = !!(mig && mig.error);
+    // Only the RIGHT (final) lang selects the sync target; re-key on change.
+    ensureEditSync();
     loadReviewEditsForMode();
     renderReview();
     updateColHeaders();

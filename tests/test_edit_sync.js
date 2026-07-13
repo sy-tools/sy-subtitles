@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const {
   syncFilePath, syncBaseKey, collectSyncEntries, applySyncEntries,
   mergeSyncDocs, makeSyncDoc, flattenDoc, unflattenDoc,
+  srtSyncTarget, transcriptSyncTarget,
 } = require('../site/js/edit_sync');
 
 const TALK = '1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay';
@@ -23,6 +24,33 @@ describe('names', () => {
   it('syncFilePath and syncBaseKey are talk-scoped', () => {
     assert.strictEqual(syncFilePath(TALK), '.review-sync/' + TALK + '.json');
     assert.strictEqual(syncBaseKey(TALK), 'sy_sync_base_' + TALK);
+  });
+  it('target-scoped paths/keys nest the target', () => {
+    assert.strictEqual(syncFilePath(TALK, 'video1-uk'), '.review-sync/' + TALK + '/video1-uk.json');
+    assert.strictEqual(syncBaseKey(TALK, 'video1-uk'), 'sy_sync_base_' + TALK + '__video1-uk');
+  });
+});
+
+describe('sync targets (file-scoped)', () => {
+  it('srtSyncTarget claims the canonical block store and same-final-lang legacy leftovers', () => {
+    const tgt = srtSyncTarget(TALK, 'video1', 'uk');
+    assert.strictEqual(tgt.slug, 'video1-uk');
+    assert.ok(tgt.filter('srt_edits_' + TALK + '_video1_uk'));
+    assert.ok(tgt.filter('review_srt_' + TALK + '_video1_en_uk'));
+    assert.ok(tgt.filter('review_srt_' + TALK + '_video1_hi_uk'));
+    // other lang / other video / preview markers / canonical of another lang
+    assert.ok(!tgt.filter('srt_edits_' + TALK + '_video1_de'));
+    assert.ok(!tgt.filter('review_srt_' + TALK + '_video1_en_de'));
+    assert.ok(!tgt.filter('srt_edits_' + TALK + '_video2_uk'));
+    assert.ok(!tgt.filter('preview_' + TALK + '_video1'));
+    assert.ok(!tgt.filter('review_' + TALK));
+  });
+  it('transcriptSyncTarget claims only the transcript review entry', () => {
+    const tgt = transcriptSyncTarget(TALK, 'uk');
+    assert.strictEqual(tgt.slug, 'transcript-uk');
+    assert.ok(tgt.filter('review_' + TALK));
+    assert.ok(!tgt.filter('srt_edits_' + TALK + '_video1_uk'));
+    assert.ok(!tgt.filter('preview_' + TALK + '_video1'));
   });
 });
 
@@ -81,6 +109,22 @@ describe('applySyncEntries', () => {
     const storage = memStorage({ ['review_' + TALK]: JSON.stringify(entry) });
     const changed = applySyncEntries(TALK, { ['review_' + TALK]: entry }, storage);
     assert.deepStrictEqual(changed, []);
+  });
+  it('a key filter scopes both collection and stale-deletion to one target', () => {
+    const CK = 'srt_edits_' + TALK + '_video1_uk';
+    const storage = memStorage({
+      [CK]: JSON.stringify({ 4: 'sub' }),
+      ['review_' + TALK]: JSON.stringify({ marks: {}, edits: { 1: 'transcript' } }),
+    });
+    const tgt = srtSyncTarget(TALK, 'video1', 'uk');
+    // collection sees only the target's key
+    assert.deepStrictEqual(Object.keys(collectSyncEntries(TALK, storage, tgt.filter)), [CK]);
+    // applying an EMPTY target doc removes the target's key but must NOT touch
+    // the transcript key that belongs to a different target
+    const changed = applySyncEntries(TALK, {}, storage, tgt.filter);
+    assert.deepStrictEqual(changed, [CK]);
+    assert.strictEqual(storage.getItem(CK), null);
+    assert.ok(storage.getItem('review_' + TALK), 'other-target key survives');
   });
 });
 
@@ -733,5 +777,56 @@ describe('engine: attach', () => {
     await engine.attach();
     assert.strictEqual(engine.getInfo().status, 'idle');
     assert.strictEqual(gh.puts.length, 0);
+  });
+});
+
+describe('engine: target-scoped coexistence', () => {
+  // Two engines for the same talk but different targets (a video SRT and the
+  // transcript) must each sync only their own keys, to their own state path,
+  // without deleting the other target's local edits.
+  it('two targets sync independently and never clobber each other', async () => {
+    const CK = 'srt_edits_' + TALK + '_video1_uk';
+    const storage = memStorage({
+      [CK]: JSON.stringify({ 4: 'sub-edit' }),
+      ['review_' + TALK]: JSON.stringify({ marks: {}, edits: { 1: 'transcript-edit' } }),
+    });
+    const srt = srtSyncTarget(TALK, 'video1', 'uk');
+    const tr = transcriptSyncTarget(TALK, 'uk');
+    const shared = {
+      api: 'https://api.github.com/repos/sy-tools/sy-subtitles', owner: 'sy-tools',
+      token: 'gho_x', login: 'tester', talkId: TALK, base: 'main', storage,
+      now: () => 1770000000000, clientId: 'client1',
+      isOffline: () => false,
+    };
+    const ghA = ghStub();
+    const ghB = ghStub();
+    const tA = timerHarness(); const tB = timerHarness();
+    const engA = createSyncEngine(Object.assign({}, shared, {
+      gh: ghA, target: srt.slug, entryFilter: srt.filter,
+      branch: 'sync/tester/' + TALK + '--' + srt.slug,
+      setTimeoutFn: tA.set.bind(tA), clearTimeoutFn: tA.clear.bind(tA),
+    }));
+    const engB = createSyncEngine(Object.assign({}, shared, {
+      gh: ghB, target: tr.slug, entryFilter: tr.filter,
+      branch: 'sync/tester/' + TALK + '--' + tr.slug,
+      setTimeoutFn: tB.set.bind(tB), clearTimeoutFn: tB.clear.bind(tB),
+    }));
+
+    engA.notifyEdit(); await engA.flush(); await settle();
+    engB.notifyEdit(); await engB.flush(); await settle();
+
+    // Each engine wrote to its OWN state path.
+    assert.ok(ghA.calls.some((c) => c[0] === 'putFile' && c[1] === '.review-sync/' + TALK + '/video1-uk.json'));
+    assert.ok(ghB.calls.some((c) => c[0] === 'putFile' && c[1] === '.review-sync/' + TALK + '/transcript-uk.json'));
+    // Each doc carries ONLY its own target's entry.
+    assert.deepStrictEqual(Object.keys(ghA.puts[0].entries), [CK]);
+    assert.deepStrictEqual(Object.keys(ghB.puts[0].entries), ['review_' + TALK]);
+    // Neither engine deleted the other's local edit.
+    assert.ok(storage.getItem(CK));
+    assert.ok(storage.getItem('review_' + TALK));
+    // Base metas are stored under distinct target-scoped keys.
+    assert.ok(storage.getItem(syncBaseKey(TALK, srt.slug)));
+    assert.ok(storage.getItem(syncBaseKey(TALK, tr.slug)));
+    assert.strictEqual(storage.getItem(syncBaseKey(TALK)), null);
   });
 });

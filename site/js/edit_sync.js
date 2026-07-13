@@ -13,12 +13,51 @@
 
 // State file lives OUTSIDE talks/ on purpose: no workflow paths-filter
 // (ci.yml, sync-subtitles.yml, deploy-pages.yml) matches .review-sync/**,
-// so sync commits trigger zero CI runs.
-function syncFilePath(talkId) { return '.review-sync/' + talkId + '.json'; }
+// so sync commits trigger zero CI runs. A `target` scopes the sync to one
+// edited file (v3): each target gets its own branch/state file/PR, so
+// unrelated work products (a transcript vs a video's SRT) never share a PR.
+function syncFilePath(talkId, target) {
+  return target ? '.review-sync/' + talkId + '/' + target + '.json'
+    : '.review-sync/' + talkId + '.json';
+}
 
 // localStorage key of the sync base: the last successfully synced doc + its
-// blob sha (the CAS token) + the attached PR coordinates.
-function syncBaseKey(talkId) { return 'sy_sync_base_' + talkId; }
+// blob sha (the CAS token) + the attached PR coordinates. Target-scoped keys
+// use `__` (the target slug already contains single hyphens).
+function syncBaseKey(talkId, target) {
+  return target ? 'sy_sync_base_' + talkId + '__' + target : 'sy_sync_base_' + talkId;
+}
+
+// --- file-scoped sync targets ----------------------------------------------
+// A target names ONE edited file within a talk and the localStorage keys that
+// build it. The video-SRT target is SHARED by the preview and the review-SRT
+// views of the same video+final-lang (they now write the same canonical block
+// store), so those two modes converge on one PR instead of fighting over the
+// file. Markers/preview-mode carry no committed file and stay out of the
+// file-scoped sync (still local + in "Copy backup").
+function srtSyncTarget(talkId, videoSlug, lang) {
+  var canon = 'srt_edits_' + talkId + '_' + videoSlug + '_' + lang;
+  var legacyPrefix = 'review_srt_' + talkId + '_' + videoSlug + '_';
+  var suffix = '_' + lang;
+  return {
+    slug: videoSlug + '-' + lang,
+    filter: function (key) {
+      if (key === canon) return true;
+      return key.indexOf(legacyPrefix) === 0 && key.slice(-suffix.length) === suffix;
+    },
+  };
+}
+
+function transcriptSyncTarget(talkId, lang) {
+  var reviewKey = 'review_' + talkId;
+  return {
+    // The transcript review key is rightLang-agnostic (a pre-existing SPA
+    // quirk); the slug carries the active lang so the branch/file are named
+    // for the transcript actually being committed.
+    slug: 'transcript-' + lang,
+    filter: function (key) { return key === reviewKey; },
+  };
+}
 
 // The sync-space predicate: ONLY the edit-bearing keys. UI-state keys
 // (sy_review_*, sy.preview_pos.*, sy.sync_player.*) never sync.
@@ -52,12 +91,15 @@ function entryIsEmpty(entry, key) {
 }
 
 // Read the talk's sync-space entries out of localStorage. Unparseable or
-// empty values are skipped.
-function collectSyncEntries(talkId, storage) {
+// empty values are skipped. An optional `keyFilter` scopes the read to one
+// target (v3); without it, every sync-space key is collected (used by the
+// "Copy backup" action, which backs up the whole talk).
+function collectSyncEntries(talkId, storage, keyFilter) {
   var entries = {};
   for (var i = 0; i < storage.length; i++) {
     var key = storage.key(i);
     if (!key || !isSyncSpaceKey(key, talkId)) continue;
+    if (keyFilter && !keyFilter(key)) continue;
     var parsed;
     try { parsed = JSON.parse(storage.getItem(key)); } catch (e) { continue; }
     if (entryIsEmpty(parsed, key)) continue;
@@ -68,14 +110,19 @@ function collectSyncEntries(talkId, storage) {
 
 // Write merged entries back into localStorage; sync-space keys absent from
 // the doc are removed (a delete that won the merge). Returns the keys whose
-// stored value actually changed, so the caller can re-render only then.
-function applySyncEntries(talkId, entries, storage) {
+// stored value actually changed, so the caller can re-render only then. The
+// same optional `keyFilter` scopes BOTH the write set and the stale-deletion
+// scan to one target — critical so a target-scoped engine never deletes a
+// sibling target's local edits.
+function applySyncEntries(talkId, entries, storage, keyFilter) {
   var changed = [];
   var present = {};
   var stale = [];
   for (var i = 0; i < storage.length; i++) {
     var key = storage.key(i);
-    if (key && isSyncSpaceKey(key, talkId)) { present[key] = true; if (!(key in entries)) stale.push(key); }
+    if (key && isSyncSpaceKey(key, talkId) && (!keyFilter || keyFilter(key))) {
+      present[key] = true; if (!(key in entries)) stale.push(key);
+    }
   }
   Object.keys(entries).forEach(function (key) {
     var next = JSON.stringify(entries[key]);
@@ -242,7 +289,13 @@ function createSyncEngine(opts) {
   var baseBranch = opts.base || 'main';
   var owner = opts.owner;
   var login = opts.login;
-  var path = syncFilePath(talkId);
+  var target = opts.target || null;               // v3 file-scope (or null = whole talk)
+  var entryFilter = opts.entryFilter || null;     // key predicate for this target
+  var path = syncFilePath(talkId, target);
+  // Bind the filter into the collect/apply helpers so every call site is
+  // scoped to this engine's target.
+  function collect() { return collectSyncEntries(talkId, storage, entryFilter); }
+  function apply(entries) { return applySyncEntries(talkId, entries, storage, entryFilter); }
 
   var DEBOUNCE_MS = 15000;   // push this long after the LAST edit
   var COALESCE_MS = 1500;    // push shortly after a field blur
@@ -251,7 +304,7 @@ function createSyncEngine(opts) {
 
   // Base meta = last synced doc + CAS sha + PR coordinates; survives reloads.
   var meta = null;
-  try { meta = JSON.parse(storage.getItem(syncBaseKey(talkId))); } catch (e) { /* corrupted -> fresh */ }
+  try { meta = JSON.parse(storage.getItem(syncBaseKey(talkId, target))); } catch (e) { /* corrupted -> fresh */ }
   if (!meta || meta.branch !== branch) {
     meta = { doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null,
       prDraft: null, fileShas: {}, branch: branch };
@@ -281,7 +334,7 @@ function createSyncEngine(opts) {
       prDraft: meta.prDraft, branch: branch, dirty: dirty, error: lastError };
   }
   function setStatus(s, err) { status = s; lastError = err || null; onStatus(s, info()); }
-  function saveMeta() { storage.setItem(syncBaseKey(talkId), JSON.stringify(meta)); }
+  function saveMeta() { storage.setItem(syncBaseKey(talkId, target), JSON.stringify(meta)); }
 
   function parseRemote(file) {
     var doc = null;
@@ -330,7 +383,7 @@ function createSyncEngine(opts) {
   function doFlush(fopts) {
     var keepalive = fopts && fopts.keepalive;
     var seqAtStart = editSeq;
-    var local = collectSyncEntries(talkId, storage);
+    var local = collect();
     // Nothing local and nothing ever synced: don't even look — attach()
     // covers remote adoption, and a mode toggle must not cost a request.
     if (meta.sha === null && !Object.keys(local).length) {
@@ -344,8 +397,8 @@ function createSyncEngine(opts) {
     // Fold a freshly fetched remote doc into local state: three-way merge,
     // write remote-won items into storage, advance the base to the remote.
     function integrateRemote(remote) {
-      var merged = mergeSyncDocs(meta.doc || {}, collectSyncEntries(talkId, storage), remote.entries);
-      var changedKeys = applySyncEntries(talkId, merged.entries, storage);
+      var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
+      var changedKeys = apply(merged.entries);
       if (changedKeys.length) onRemoteApplied(changedKeys);
       meta.doc = remote.entries;
       meta.sha = remote.sha;
@@ -522,8 +575,8 @@ function createSyncEngine(opts) {
         return;
       }
       var remote = parseRemote(file);
-      var merged = mergeSyncDocs(meta.doc || {}, collectSyncEntries(talkId, storage), remote.entries);
-      var changedKeys = applySyncEntries(talkId, merged.entries, storage);
+      var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
+      var changedKeys = apply(merged.entries);
       if (changedKeys.length) onRemoteApplied(changedKeys);
       meta.doc = remote.entries;
       meta.sha = remote.sha;
@@ -618,6 +671,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     syncFilePath: syncFilePath,
     syncBaseKey: syncBaseKey,
+    srtSyncTarget: srtSyncTarget,
+    transcriptSyncTarget: transcriptSyncTarget,
     isSyncSpaceKey: isSyncSpaceKey,
     entryIsEmpty: entryIsEmpty,
     collectSyncEntries: collectSyncEntries,

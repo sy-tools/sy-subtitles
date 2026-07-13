@@ -237,6 +237,14 @@ describe('makeSyncBranchName', () => {
     const name = makeSyncBranchName('l..in', 'a b~c^d:e?f*g[h]i\\j');
     assert.ok(!/[ ~^:?*\[\]\\]/.test(name) && !name.includes('..'));
   });
+  it('appends a --<target> segment when a target is given (still deterministic)', () => {
+    assert.strictEqual(
+      makeSyncBranchName('slava', '1979-09-27_Talk', 'video1-uk'),
+      'sync/slava/1979-09-27_Talk--video1-uk');
+    assert.strictEqual(
+      makeSyncBranchName('slava', '1979-09-27_Talk', 'transcript-uk'),
+      makeSyncBranchName('slava', '1979-09-27_Talk', 'transcript-uk'));
+  });
 });
 
 describe('getFileContent', () => {
