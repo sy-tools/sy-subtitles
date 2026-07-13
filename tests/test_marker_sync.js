@@ -236,6 +236,32 @@ describe('marker_sync engine', () => {
     assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'state'), ['state', 50, 'closed']);
   });
 
+  it('snapshots base after a merge/update so a later removal still tears down', async () => {
+    // The SPA's setMarkers aliases its live array (previewState.markers = m); if
+    // meta.base = merged (not a copy), a later splice empties base too and the
+    // teardown never fires. This mimics that aliasing setMarkers.
+    const state = { live: [M(1, 'a')] };
+    const seeded = { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
+      body: buildIssueBody([], 'V') };
+    const gh = ghIssueStub({ issue: seeded });
+    const storage = memStorage({ [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [] }) });
+    const timers = timerHarness();
+    const engine = createMarkerSyncEngine({
+      api: API, owner: 'o', login: 'me', token: 'x', talkId: TALK, videoSlug: VIDEO, heading: 'V',
+      getMarkers: () => state.live,
+      setMarkers: (m) => { state.live = m; },   // aliases, exactly like the SPA
+      storage, gh, now: () => 1,
+      setTimeoutFn: timers.set.bind(timers), clearTimeoutFn: timers.clear.bind(timers),
+      isOffline: () => false, onStatus: () => {},
+    });
+    engine.notifyEdit();
+    await engine.flush();                 // update path: setMarkers(merged) aliases state.live
+    state.live.splice(0, 1);              // in-place removal on that shared array
+    engine.notifyEdit();
+    await engine.flush();
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'state'), ['state', 7, 'closed']);
+  });
+
   it('does not drop a marker added mid-teardown; chip never lies idle', async () => {
     const seeded = { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
       body: buildIssueBody([M(1, 'a')], 'Video One') };

@@ -172,7 +172,9 @@ function createMarkerSyncEngine(opts) {
         var remote = parseMarkersBlock(iss.body);
         var merged = mergeMarkers(meta.base, local, remote);
         setMarkers(merged);
-        meta.base = merged;
+        // Copy: setMarkers made `merged` the SPA's live array; a later splice
+        // would otherwise empty base too and break the next merge (no teardown).
+        meta.base = merged.slice();
         if (!merged.length) {
           // Teardown: close the issue (analog of the PR close+delete).
           return gh.setIssueState(api, token, row.number, 'closed', fetchImpl).then(function () {
@@ -211,7 +213,7 @@ function createMarkerSyncEngine(opts) {
         var remote = parseMarkersBlock(iss.body);
         var merged = mergeMarkers(meta.base, getMarkers() || [], remote);
         setMarkers(merged);
-        meta.base = merged; saveMeta();
+        meta.base = merged.slice(); saveMeta();
         if (!dirty) setStatus(merged.length ? 'synced' : 'idle');
       });
     }).catch(function () { /* transient pull failures are silent */ });
