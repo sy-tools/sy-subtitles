@@ -2122,8 +2122,10 @@ function route() {
     showIndex();
   }
   // Edit auto-sync follows the view: engine for the open talk (signed-in),
-  // torn down elsewhere.
+  // torn down elsewhere. ensureMarkerSync tears the marker engine down when the
+  // view is no longer preview-marker, so its chip can't linger on the index.
   ensureEditSync();
+  ensureMarkerSync();
 }
 
 // ============================================================
@@ -4482,7 +4484,15 @@ function ensureEditSync() {
   if (editSync && editSync.talkId !== talkId) destroyEditSync();
   var tgt = activeSyncTarget(talkId);
   if (!tgt) return;                                   // view not ready yet
-  if (editSync && editSync.talkId === talkId && editSync.target === tgt.slug) return;
+  if (editSync && editSync.talkId === talkId && editSync.target === tgt.slug) {
+    // Same target, engine kept — but the VIEW/mode may have changed (preview and
+    // review-SRT share the <video>-<lang> target). Re-render so the marker-mode
+    // gate applies: hide the edit chip in preview marker mode, restore it in edit
+    // mode / review. This is the single choke-point every view/mode/lang switch
+    // calls, so it fixes the stale-chip transitions with no extra hooks.
+    renderSyncStatus(editSync.getInfo().status, editSync.getInfo());
+    return;
+  }
   destroyEditSync();
   var engine = createSyncEngine({
     api: API,
