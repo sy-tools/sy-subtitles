@@ -749,7 +749,7 @@ describe('engine: offline + auth failures', () => {
 
 describe('engine: attach', () => {
   it('re-attaches to an existing remote + PR found by head', async () => {
-    const { engine, gh, storage, applied } = makeEngine({
+    const { engine, storage, applied } = makeEngine({
       remote: remoteDoc({ 4: 'збережене' }, 6),
       existingPr: { number: 12, html_url: 'https://github.com/x/pull/12', node_id: 'PR_n12', draft: true },
     });
