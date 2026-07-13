@@ -715,7 +715,13 @@ function deriveRepo(hostname, pathname, search) {
   try {
     var saved = sessionStorage.getItem('sy_gh_return');
     if (saved == null) return;
-    if (!new URLSearchParams(location.search).get('state')) return;
+    var cbState = new URLSearchParams(location.search).get('state');
+    // Only OUR callback may consume the stash: GitHub echoes back the exact
+    // state we generated (on both the success and the error path), so a
+    // foreign ?state= URL (pasted link, unrelated App-install callback after
+    // an abandoned login) must not teleport the user to a stale pre-login
+    // route. On mismatch the stash is left intact for the real callback.
+    if (!cbState || cbState !== sessionStorage.getItem('sy_gh_state')) return;
     sessionStorage.removeItem('sy_gh_return');
     var savedHash = sessionStorage.getItem('sy_gh_return_hash');
     sessionStorage.removeItem('sy_gh_return_hash');

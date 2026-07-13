@@ -277,6 +277,26 @@ def test_login_roundtrip_returns_to_the_page_the_user_left(hooks_only_server):
         browser.close()
 
 
+def test_foreign_state_url_does_not_consume_the_return_stash(auth_server, auth_page):
+    """An abandoned login leaves the return stash in sessionStorage. A later
+    URL carrying an UNRELATED ?state= (a pasted link, a foreign App-install
+    callback) must not consume it and teleport the user to the stale
+    pre-login route — only a state matching the saved CSRF state (which
+    GitHub echoes back on both success and error paths) may restore."""
+    page = auth_page
+    page.add_init_script(
+        "sessionStorage.setItem('sy_gh_state', 'st1');"
+        "sessionStorage.setItem('sy_gh_return', '?repo=sy-tools%2Fsy-subtitles');"
+        "sessionStorage.setItem('sy_gh_return_hash', '#/preview/1979-09-27_Talk/Video-HD');"
+    )
+    page.goto(f"{auth_server}/index.html?state=UNRELATED")
+    page.wait_for_selector("#gh-login-btn", state="visible", timeout=10000)
+    assert "#/preview/" not in page.url, f"stale route must not be restored, got {page.url}"
+    assert "repo=" not in page.url
+    # The stash survives for the real callback that may still arrive.
+    assert page.evaluate("sessionStorage.getItem('sy_gh_return_hash')") == ("#/preview/1979-09-27_Talk/Video-HD")
+
+
 def test_login_control_sits_left_of_branch_selector(auth_server, auth_page):
     """The login button and avatar live in the freshness bar's LEFT group,
     before the branch selector — placed on the right they visually split the
