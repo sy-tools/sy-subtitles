@@ -1,15 +1,8 @@
 {
   "version": 1,
-  "revision": 1,
-  "updatedAt": "2026-07-13T12:48:46.676Z",
+  "revision": 2,
+  "updatedAt": "2026-07-13T12:49:17.070Z",
   "client": "kolodd",
   "talkId": "1979-01-01_Letter",
-  "entries": {
-    "review_1979-01-01_Letter": {
-      "marks": {},
-      "edits": {
-        "1": "Мої дорогі сахаджа йоґи,б"
-      }
-    }
-  }
+  "entries": {}
 }
