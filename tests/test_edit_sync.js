@@ -502,6 +502,25 @@ describe('engine: bootstrap', () => {
     assert.strictEqual(base.prNumber, 77);
     assert.strictEqual(base.sha, 'sha_after_put1');
   });
+  it('adopts pre-existing local edits on attach and creates the PR (no fresh edit needed)', async () => {
+    const { engine, gh, storage } = makeEngine();
+    // Edits already sit in localStorage from a previous session; the user just
+    // navigates back onto the page and never types — so no notifyEdit() fires.
+    localEdit(storage, 1, 'from a previous session');
+    await engine.attach();
+    assert.strictEqual(
+      engine.getInfo().dirty,
+      true,
+      'attach must mark un-synced local edits dirty so the first sync triggers',
+    );
+    await engine.flush();
+    const names = gh.calls.map((c) => c[0]);
+    assert.ok(
+      names.includes('createPull'),
+      'a draft PR must be created for edits that predate the engine',
+    );
+    assert.strictEqual(engine.getInfo().prNumber, 77);
+  });
   it('tolerates an already-existing branch ref (422)', async () => {
     const { engine, gh, storage } = makeEngine({ refExists: true });
     localEdit(storage, 1, 'x');

@@ -662,7 +662,21 @@ function createSyncEngine(opts) {
     if (!force && t - lastPullAt < PULL_THROTTLE_MS) return Promise.resolve();
     lastPullAt = t;
     return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
-      if (!file) return;
+      if (!file) {
+        // No remote state yet (the sync branch/file has not been created). If we
+        // already hold un-synced local edits — e.g. the user re-opened a page
+        // they had edited in a previous session and never typed again, so no
+        // notifyEdit() fires — arm a push so the first sync still creates the
+        // branch + state file + draft PR instead of waiting for a fresh edit.
+        var pending = mergeSyncDocs(meta.doc || {}, collect(), {});
+        if (pending.changedVsRemote) {
+          dirty = true;
+          editSeq += 1;
+          armDebounce();
+          setStatus('pending');
+        }
+        return;
+      }
       if (file.sha === meta.sha) {
         if (!dirty && status !== 'synced') setStatus('synced');
         return;

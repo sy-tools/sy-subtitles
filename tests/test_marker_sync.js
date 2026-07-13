@@ -317,6 +317,20 @@ describe('marker_sync engine', () => {
     assert.deepStrictEqual(parseMarkersBlock(gh._issue().body).map((m) => m.text), ['localonly']);
   });
 
+  // Same class as the edit-sync "pre-existing edits on attach" bug, but for the
+  // markers issue: NO issue exists yet and the user takes no fresh action (page
+  // re-opened with markers from a previous session). attach must still create it.
+  it('creates the issue for local markers that predate the engine (no issue yet)', async () => {
+    const { engine, gh } = markerEngine({ localMarkers: [M(3, 'from a previous session')] });
+    await engine.attach();                            // resolveIssue -> no row
+    assert.strictEqual(engine.getInfo().dirty, true,
+      'attach must mark pre-existing local markers dirty so the first sync triggers');
+    await engine.flush();
+    assert.ok(gh._issue(), 'a markers issue must be created for markers that predate the engine');
+    assert.deepStrictEqual(parseMarkersBlock(gh._issue().body).map((m) => m.text),
+      ['from a previous session']);
+  });
+
   // NETWORK SAFETY: issues have no CAS (no sha). A stale / empty / partial remote
   // read must NEVER delete a local marker via delete-by-absence — that caused live
   // marker loss. Deletions propagate ONLY from an explicit LOCAL removal.

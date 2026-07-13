@@ -263,7 +263,18 @@ function createMarkerSyncEngine(opts) {
     if (!force && t - lastPullAt < PULL_THROTTLE_MS) return Promise.resolve();
     lastPullAt = t;
     return resolveIssue().then(function (row) {
-      if (disposed || !row) return;
+      if (disposed) return;
+      if (!row) {
+        // No markers issue yet. If we already hold local markers that predate
+        // this engine (page re-opened with markers from a previous session and
+        // no fresh action, so no notifyEdit fires), arm a push so the first sync
+        // still creates the issue instead of waiting for a new marker action.
+        var info0 = mergeMarkersInfo(meta.base, getMarkers() || [], []);
+        if (info0.changedVsRemote) {
+          dirty = true; editSeq += 1; armDebounce(); setStatus('pending');
+        }
+        return;
+      }
       return gh.getIssue(api, token, row.number, fetchImpl).then(function (iss) {
         if (disposed) return;
         // Closed == no active markers (C1): never seed a resurrection from a
