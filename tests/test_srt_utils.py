@@ -85,6 +85,28 @@ def test_write_srt_roundtrip(sample_srt_path, tmp_srt):
         assert orig["text"] == new["text"]
 
 
+def test_write_srt_exact_bytes_lockstep_with_spa(tmp_srt):
+    """The SPA's applyEditsToSrt (site/js/preview_state.js) commits edited
+    subtitles, and its output MUST be byte-identical to this writer so opening a
+    subtitle for edit (or reverting one) produces no spurious diff. Both are
+    pinned to the same literal here; keep them in lockstep — the twin JS
+    assertion lives in tests/test_preview_state.js ("byte-for-byte like
+    write_srt"). Each block is "<n>\\n<tc>\\n<text>\\n\\n" (a trailing blank
+    line after every block, including the last)."""
+    blocks = [
+        {"start_ms": 1000, "end_ms": 5000, "text": "First"},
+        {"start_ms": 6000, "end_ms": 10000, "text": "Second"},
+        {"start_ms": 11000, "end_ms": 15000, "text": "Third"},
+    ]
+    write_srt(blocks, tmp_srt)
+    expected = (
+        "1\n00:00:01,000 --> 00:00:05,000\nFirst\n\n"
+        "2\n00:00:06,000 --> 00:00:10,000\nSecond\n\n"
+        "3\n00:00:11,000 --> 00:00:15,000\nThird\n\n"
+    )
+    assert tmp_srt.read_text(encoding="utf-8") == expected
+
+
 # --- load_whisper_json ---
 
 

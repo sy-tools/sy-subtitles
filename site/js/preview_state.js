@@ -82,16 +82,21 @@ function msToSrtTime(ms) {
 function applyEditsToSrt(blocks, edits) {
   if (!blocks || !blocks.length) return '';
   var e = edits || {};
-  var lines = [];
+  var out = '';
   for (var i = 0; i < blocks.length; i++) {
     var b = blocks[i];
     var text = Object.prototype.hasOwnProperty.call(e, i) ? e[i] : b.text;
-    lines.push(String(i + 1));
-    lines.push(msToSrtTime(b.startMs) + ' --> ' + msToSrtTime(b.endMs));
-    lines.push(text);
-    lines.push('');
+    // Byte-for-byte the pipeline's writer (tools/srt_utils.py write_srt):
+    // "<n>\n<tc>\n<text>\n\n" per block — a trailing blank line after EVERY
+    // block, INCLUDING the last, so the file ends with "\n\n". Rebuilding with
+    // an unchanged block must reproduce the original exactly; emitting a single
+    // trailing "\n" (an array join) dropped the final blank line, so even a
+    // no-op "open for edit" produced a spurious one-newline diff in the PR.
+    out += (i + 1) + '\n'
+      + msToSrtTime(b.startMs) + ' --> ' + msToSrtTime(b.endMs) + '\n'
+      + text + '\n\n';
   }
-  return lines.join('\n');
+  return out;
 }
 
 // True when showPreview is re-entered for the video that is already loaded

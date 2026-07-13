@@ -37,6 +37,10 @@ _XSS_AMRUTA_ATTR = 'https://www.amruta.org/x" data-xss="pwned'
 XSS_AMRUTA_TAG_META = SAMPLE_META + "amruta_url: '" + _XSS_AMRUTA_TAG + "'\n"
 XSS_AMRUTA_ATTR_META = SAMPLE_META + "amruta_url: '" + _XSS_AMRUTA_ATTR + "'\n"
 
+# Canonical pipeline shape (tools/srt_utils.py write_srt): a trailing blank line
+# after EVERY block, so the file ends with "\n\n". Real repo files all end this
+# way — the SPA rebuild must match byte-for-byte or reviewers see a spurious
+# trailing-newline diff on every commit.
 SAMPLE_SRT = """1
 00:00:01,000 --> 00:00:05,000
 Перший субтитр
@@ -44,6 +48,7 @@ SAMPLE_SRT = """1
 2
 00:00:06,000 --> 00:00:10,000
 Другий субтитр
+
 """
 
 SAMPLE_EN_SRT = """1
@@ -3247,17 +3252,20 @@ class TestPreviewEditMode:
     # ------------------------------------------------------------------
     # Canonicalization coverage for the preview PR button.
     #
-    # Our pipeline produces SRTs in ONE canonical form: UTF-8 without BOM,
-    # LF line endings, blocks numbered from 1, a single blank line between
-    # blocks, and exactly one trailing newline. If a human manually commits
-    # an SRT in a different shape, `openPreviewEditor` MUST rewrite it back
-    # to canonical form rather than faithfully preserve the source bytes —
-    # reviewers should never see arbitrary formatting drift in their PRs.
+    # Our pipeline produces SRTs in ONE canonical form (tools/srt_utils.py
+    # write_srt): UTF-8 without BOM, LF line endings, blocks numbered from 1,
+    # a single blank line between blocks, and a trailing blank line after the
+    # last block too (the file ends with "\n\n"). If a human manually commits
+    # an SRT in a different shape, `openPreviewEditor` MUST rewrite it back to
+    # canonical form rather than faithfully preserve the source bytes — reviewers
+    # should never see arbitrary formatting drift in their PRs.
     #
     # These tests codify that contract, so an accidental "preserve source"
     # refactor of parseSRT / applyEditsToSrt would fail loudly.
     # ------------------------------------------------------------------
-    CANONICAL_SRT = "1\n00:00:01,000 --> 00:00:05,000\nПЕРШИЙ_НОВ\n\n2\n00:00:06,000 --> 00:00:10,000\nДругий субтитр\n"
+    CANONICAL_SRT = (
+        "1\n00:00:01,000 --> 00:00:05,000\nПЕРШИЙ_НОВ\n\n2\n00:00:06,000 --> 00:00:10,000\nДругий субтитр\n\n"
+    )
 
     def _override_uk_srt(self, page, body):
         """Replace the UK SRT mock with `body`. MUST be called before navigation."""
@@ -3331,14 +3339,15 @@ class TestPreviewEditMode:
         )
 
     def test_canonicalize_adds_trailing_newline_when_missing(self, server, page):
-        """Source without a trailing newline → clipboard ends with exactly one `\\n`."""
+        """Source without a trailing newline → clipboard is canonicalized to the
+        write_srt shape, ending with a trailing blank line (`\\n\\n`)."""
         source = "1\n00:00:01,000 --> 00:00:05,000\nПерший субтитр\n\n2\n00:00:06,000 --> 00:00:10,000\nДругий субтитр"
         assert not source.endswith("\n")
         self._override_uk_srt(page, source)
         _goto_preview_video(page, server)
         clip = self._edit_block0_and_grab_clip(page)
-        assert clip.endswith("\n"), f"missing trailing newline: {clip[-20:]!r}"
-        assert not clip.endswith("\n\n"), f"extra trailing newline: {clip[-20:]!r}"
+        assert clip.endswith("\n\n"), f"canonical form must end with a trailing blank line: {clip[-20:]!r}"
+        assert not clip.endswith("\n\n\n"), f"no doubled trailing blank line: {clip[-20:]!r}"
         assert clip == self.CANONICAL_SRT, (
             f"Trailing newline not canonicalized.\n--- expected ---\n{self.CANONICAL_SRT!r}\n--- got ---\n{clip!r}"
         )
@@ -3384,7 +3393,7 @@ class TestPreviewEditMode:
     }
 
     EN_SRT_TIGHT = (
-        "1\n00:00:01,000 --> 00:00:05,000\nFirst EN block\n\n2\n00:00:06,000 --> 00:00:10,000\nSecond EN block\n"
+        "1\n00:00:01,000 --> 00:00:05,000\nFirst EN block\n\n2\n00:00:06,000 --> 00:00:10,000\nSecond EN block\n\n"
     )
 
     def _install_multi_lang_tree(self, page, en_body=None):

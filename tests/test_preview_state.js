@@ -288,23 +288,17 @@ describe('applyEditsToSrt', () => {
     { index: 3, startMs: 11000, endMs: 15000, text: 'Third' },
   ];
 
-  it('empty edits rebuild identical SRT', () => {
+  it('empty edits rebuild the SRT byte-for-byte like write_srt (trailing blank line per block)', () => {
     const out = applyEditsToSrt(blocks, {});
-    const expected = [
-      '1',
-      '00:00:01,000 --> 00:00:05,000',
-      'First',
-      '',
-      '2',
-      '00:00:06,000 --> 00:00:10,000',
-      'Second',
-      '',
-      '3',
-      '00:00:11,000 --> 00:00:15,000',
-      'Third',
-      '',
-    ].join('\n');
+    // Mirrors tools/srt_utils.py write_srt: "<n>\n<tc>\n<text>\n\n" per block,
+    // so the file ends with a trailing blank line ("\n\n"), not a single "\n".
+    const expected =
+      '1\n00:00:01,000 --> 00:00:05,000\nFirst\n\n' +
+      '2\n00:00:06,000 --> 00:00:10,000\nSecond\n\n' +
+      '3\n00:00:11,000 --> 00:00:15,000\nThird\n\n';
     assert.strictEqual(out, expected);
+    assert.ok(out.endsWith('Third\n\n'), 'must end with a trailing blank line');
+    assert.ok(!/\n\n\n/.test(out), 'no doubled blank lines');
   });
 
   it('replaces one block text', () => {
