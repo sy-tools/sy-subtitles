@@ -237,8 +237,13 @@ function createSyncEngine(opts) {
   var meta = null;
   try { meta = JSON.parse(storage.getItem(syncBaseKey(talkId))); } catch (e) { /* corrupted -> fresh */ }
   if (!meta || meta.branch !== branch) {
-    meta = { doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null, branch: branch };
+    meta = { doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null,
+      prDraft: null, fileShas: {}, branch: branch };
   }
+  if (!meta.fileShas) meta.fileShas = {};
+  // Rebuilds the real edited files for the currently open view (wiring
+  // provides it); their commits make the draft PR diff human-readable.
+  var buildFiles = opts.buildFiles || function () { return []; };
 
   var clientId = opts.clientId || (function () {
     var c = storage.getItem('sy_sync_client');
@@ -254,14 +259,10 @@ function createSyncEngine(opts) {
   var lastPullAt = 0;
   var inflight = null;
   var disposed = false;
-  // The deterministic branch already carries an open NON-draft PR (a past
-  // finalize) — pushing state onto it would dirty a human-facing PR, so the
-  // engine goes permanently silent for this talk (edits stay local-only).
-  var submitted = false;
 
   function info() {
     return { status: status, prUrl: meta.prUrl, prNumber: meta.prNumber, nodeId: meta.nodeId,
-      branch: branch, dirty: dirty, error: lastError };
+      prDraft: meta.prDraft, branch: branch, dirty: dirty, error: lastError };
   }
   function setStatus(s, err) { status = s; lastError = err || null; onStatus(s, info()); }
   function saveMeta() { storage.setItem(syncBaseKey(talkId), JSON.stringify(meta)); }
@@ -282,15 +283,15 @@ function createSyncEngine(opts) {
   }
 
   function notifyEdit() {
-    if (disposed || submitted) return;
+    if (disposed) return;
     dirty = true;
     editSeq += 1;
     armDebounce();
-    if (status === 'synced' || status === 'idle') setStatus('pending');
+    if (status === 'synced' || status === 'idle' || status === 'ready') setStatus('pending');
   }
 
   function flushSoon() {
-    if (disposed || submitted || !dirty) return;
+    if (disposed || !dirty) return;
     if (coalesceId !== null) clearT(coalesceId);
     coalesceId = setT(function () { coalesceId = null; flush(); }, COALESCE_MS);
   }
@@ -298,7 +299,7 @@ function createSyncEngine(opts) {
   function flush(fopts) {
     // force bypasses the dirty gate: the recovery path ("Retry now") must be
     // able to re-run the PR-creation tail even after the state itself pushed.
-    if (disposed || submitted || (!dirty && !(fopts && fopts.force))) return Promise.resolve();
+    if (disposed || (!dirty && !(fopts && fopts.force))) return Promise.resolve();
     if (inflight) return inflight.then(function () { return flush(fopts); });
     inflight = doFlush(fopts)
       .then(function () { inflight = null; }, function () { inflight = null; });
@@ -336,18 +337,21 @@ function createSyncEngine(opts) {
       local = merged.entries;
     }
 
-    // First push of this session: adopt whatever the sync branch already
-    // holds (another device may have synced), or create the branch — unless
-    // the branch's PR was already submitted for review (see `submitted`).
+    // First push of this session (or right after a finalize): adopt whatever
+    // the sync branch already holds, re-attach its PR, or create the branch.
     function ensureRemoteBase() {
       if (meta.sha !== null) return Promise.resolve();
       return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
         if (file) { integrateRemote(parseRemote(file)); return; }
+        // A known PR means the branch exists and the state file was removed
+        // by a finalize — the push below simply recreates it.
+        if (meta.prNumber) return;
         return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
-          if (pr && pr.draft === false) { submitted = true; return; }
           if (pr) {
-            // an orphaned draft PR (e.g. the state file was lost) — reuse it
+            // existing PR on the deterministic branch (finalized on another
+            // device, or the state file was lost) — reuse it
             meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
+            meta.prDraft = pr.draft !== false;
             saveMeta();
             return;
           }
@@ -359,6 +363,52 @@ function createSyncEngine(opts) {
           });
         });
       });
+    }
+
+    // A submitted (ready) PR silently returns to draft when editing resumes —
+    // new commits must never land on a PR that looks review-ready.
+    function ensureDraft() {
+      if (disposed || !meta.prNumber || meta.prDraft !== false) return Promise.resolve();
+      return gh.convertPullToDraft(token, meta.nodeId, fetchImpl).then(function () {
+        meta.prDraft = true;
+        saveMeta();
+      });
+    }
+
+    // Commit the rebuilt real files (the open view's transcript/SRT) so the
+    // PR diff stays human-readable. Blob shas are cached per path; a stale
+    // sha (409/422) is refreshed once and retried.
+    function pushFiles() {
+      if (disposed) return Promise.resolve();
+      var files = buildFiles() || [];
+      var chain = Promise.resolve();
+      files.forEach(function (file) {
+        chain = chain.then(function () {
+          var known = meta.fileShas[file.path]
+            ? Promise.resolve(meta.fileShas[file.path])
+            : gh.getFileSha(api, token, file.path, branch, fetchImpl);
+          return known.then(function (sha) {
+            function put(shaToUse) {
+              return gh.putFile(api, token, {
+                path: file.path, branch: branch,
+                message: 'sync: ' + talkId + ' edits',
+                content: file.content, sha: shaToUse || undefined,
+                keepalive: keepalive,
+              }, fetchImpl);
+            }
+            return put(sha).catch(function (e) {
+              if (e && (e.status === 409 || e.status === 422)) {
+                return gh.getFileSha(api, token, file.path, branch, fetchImpl).then(put);
+              }
+              throw e;
+            });
+          }).then(function (res) {
+            meta.fileShas[file.path] = (res && res.content && res.content.sha) || null;
+            saveMeta();
+          });
+        });
+      });
+      return chain;
     }
 
     function push() {
@@ -404,6 +454,7 @@ function createSyncEngine(opts) {
         + 'finalizes from the app. Do not merge while draft.';
       function adopt(pr) {
         meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
+        meta.prDraft = pr.draft !== false;
         saveMeta();
       }
       return gh.createPull(api, token,
@@ -423,16 +474,13 @@ function createSyncEngine(opts) {
 
     return ensureRemoteBase().then(function () {
       if (disposed) return;
-      if (submitted) {
-        clearDirty();
-        setStatus('idle');
-        return;
-      }
       // Same doc as the last push (e.g. an edit typed and reverted): no PUT,
       // but still make sure the PR exists (its creation may have failed).
       var unchanged = meta.sha !== null
         && JSON.stringify(local) === JSON.stringify(meta.doc || {});
-      var step = unchanged ? Promise.resolve() : push();
+      var step = unchanged
+        ? Promise.resolve()
+        : ensureDraft().then(push).then(pushFiles);
       return step.then(ensurePr).then(function () {
         if (disposed) return;
         if (unchanged && editSeq === seqAtStart) clearDirty();
@@ -482,19 +530,49 @@ function createSyncEngine(opts) {
   }
 
   // On talk open: adopt the remote state and re-attach the PR coordinates
-  // (cached in the base meta, else looked up by the deterministic head).
+  // (cached in the base meta, else looked up by the deterministic head —
+  // a finalized-on-another-device PR surfaces here as the 'ready' state).
   function attach() {
     if (disposed) return Promise.resolve();
     return pull(true).then(function () {
-      if (meta.sha && !meta.prNumber) {
-        return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
-          if (pr) {
-            meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
-            saveMeta();
-            onStatus(status, info());
-          }
-        }).catch(function () { /* PR lookup is cosmetic — never fail attach */ });
+      if (meta.prNumber) {
+        if (meta.prDraft === false && !dirty && status !== 'ready') setStatus('ready');
+        return;
       }
+      return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
+        if (!pr) return;
+        meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
+        meta.prDraft = pr.draft !== false;
+        saveMeta();
+        if (meta.prDraft === false && !dirty) setStatus('ready');
+        else onStatus(status, info());
+      }).catch(function () { /* PR lookup is cosmetic — never fail attach */ });
+    });
+  }
+
+  // Finalize: push anything pending, remove the state file from the branch
+  // and flip the draft PR to ready-for-review. Fully reversible — the next
+  // edit re-drafts the PR and recreates the state (see ensureDraft).
+  function finalize() {
+    if (disposed || !meta.prNumber) return Promise.reject(new Error('no sync PR to finalize'));
+    var pre = dirty ? flush() : Promise.resolve();
+    return pre.then(function () {
+      return gh.getFileContent(api, token, path, branch, fetchImpl);
+    }).then(function (file) {
+      if (file) {
+        return gh.deleteFile(api, token, {
+          path: path, branch: branch,
+          message: 'sync: finalize ' + talkId, sha: file.sha,
+        }, fetchImpl);
+      }
+    }).then(function () {
+      return gh.markPullReady(token, meta.nodeId, fetchImpl);
+    }).then(function () {
+      meta.prDraft = false;
+      meta.sha = null; // the state file is gone; the next push recreates it
+      saveMeta();
+      setStatus('ready');
+      return { number: meta.prNumber, html_url: meta.prUrl };
     });
   }
 
@@ -514,6 +592,7 @@ function createSyncEngine(opts) {
     flush: flush,
     pull: pull,
     attach: attach,
+    finalize: finalize,
     destroy: destroy,
     getInfo: info,
   };

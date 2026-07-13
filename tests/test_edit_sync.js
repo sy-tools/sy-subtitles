@@ -216,10 +216,17 @@ function ghStub(over) {
   const gh = {
     calls,
     puts: [],
+    // Stateful like the real Contents API: a PUT to the state path makes the
+    // file visible to later GETs, a DELETE removes it. An explicit
+    // over.remote (value or function) takes precedence.
+    _stateFile: null,
     getFileContent: async (api, token, path, ref) => {
       record('getFileContent', [path, ref]);
-      const r = typeof over.remote === 'function' ? over.remote() : over.remote;
-      return r || null;
+      if ('remote' in over) {
+        const r = typeof over.remote === 'function' ? over.remote() : over.remote;
+        return r || null;
+      }
+      return gh._stateFile;
     },
     getBranchHeadSha: async (api, token, branch) => { record('getBranchHeadSha', [branch]); return 'head1'; },
     createRef: async (api, token, name, sha) => {
@@ -230,12 +237,18 @@ function ghStub(over) {
     putFile: async (api, token, opts) => {
       putCount += 1;
       record('putFile', [opts.path, opts.sha || null, !!opts.keepalive]);
-      gh.puts.push(JSON.parse(opts.content));
+      if (opts.path.indexOf('.review-sync/') === 0) {
+        gh.puts.push(JSON.parse(opts.content));
+      }
       if (over.putFails && putCount <= over.putFails.length) {
         const spec = over.putFails[putCount - 1];
         if (spec) { const e = new Error(spec.message || 'fail'); e.status = spec.status; throw e; }
       }
-      return { content: { sha: 'sha_after_put' + putCount } };
+      const sha = 'sha_after_put' + putCount;
+      if (opts.path.indexOf('.review-sync/') === 0) {
+        gh._stateFile = { content: opts.content, sha };
+      }
+      return { content: { sha } };
     },
     createPull: async (api, token, opts) => {
       pullCount += 1;
@@ -254,6 +267,24 @@ function ghStub(over) {
     findOpenPrByHead: async (api, token, owner, branch) => {
       record('findOpenPrByHead', [owner, branch]);
       return over.existingPr || null;
+    },
+    getFileSha: async (api, token, path, ref) => {
+      record('getFileSha', [path, ref]);
+      return 'fileblob1';
+    },
+    deleteFile: async (api, token, opts) => {
+      record('deleteFile', [opts.path, opts.branch, opts.sha]);
+      if (opts.path.indexOf('.review-sync/') === 0) gh._stateFile = null;
+      return {};
+    },
+    markPullReady: async (token, nodeId) => {
+      record('markPullReady', [nodeId]);
+      if (over.readyFails) throw new Error('graphql down');
+      return {};
+    },
+    convertPullToDraft: async (token, nodeId) => {
+      record('convertPullToDraft', [nodeId]);
+      return {};
     },
   };
   return gh;
@@ -386,23 +417,94 @@ describe('engine: bootstrap', () => {
     assert.strictEqual(engine.getInfo().status, 'synced');
     assert.strictEqual(gh.puts.length, 1);
   });
-  it('goes silent when the branch already carries a submitted (ready) PR', async () => {
-    // Post-finalize: the deterministic branch has an open NON-draft PR.
-    // Pushing state onto it would dirty a human-facing PR — stay local-only.
+  it('an edit onto a branch with a submitted (ready) PR converts it back to draft', async () => {
+    // Post-finalize continuation, possibly from another device: the
+    // deterministic branch carries an open NON-draft PR. A new edit silently
+    // re-drafts it and the sync resumes — fully reversible lifecycle.
     const { engine, gh, storage } = makeEngine({
       existingPr: { number: 12, html_url: 'https://github.com/x/pull/12', node_id: 'PR_n12', draft: false },
     });
     localEdit(storage, 1, 'x');
     engine.notifyEdit();
     await engine.flush();
-    assert.strictEqual(gh.puts.length, 0);
-    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 0);
-    assert.strictEqual(engine.getInfo().status, 'idle');
-    // ...and stays silent on later edits without re-asking GitHub
-    const callsBefore = gh.calls.length;
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'convertPullToDraft').length, 1);
+    assert.strictEqual(gh.puts.length, 1);
+    const info = engine.getInfo();
+    assert.strictEqual(info.prNumber, 12);
+    assert.strictEqual(info.prDraft, true);
+    assert.strictEqual(info.status, 'synced');
+  });
+});
+
+describe('engine: real-file commits', () => {
+  it('pushes the rebuilt real file alongside the state file', async () => {
+    const files = [{ path: 'talks/' + TALK + '/transcript_uk.txt', content: 'ПОВНИЙ ФАЙЛ' }];
+    const { engine, gh, storage } = makeEngine({}, null, { buildFiles: () => files });
+    localEdit(storage, 1, 'x');
     engine.notifyEdit();
     await engine.flush();
-    assert.strictEqual(gh.calls.length, callsBefore);
+    const filePuts = gh.calls.filter((c) => c[0] === 'putFile' && c[1] === files[0].path);
+    assert.strictEqual(filePuts.length, 1);
+    // the blob sha for the real file was looked up on the sync branch
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'getFileSha'),
+      ['getFileSha', files[0].path, BRANCH_NAME]);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+  it('caches the real file sha across pushes', async () => {
+    const files = [{ path: 'talks/' + TALK + '/transcript_uk.txt', content: 'V1' }];
+    const { engine, gh, storage } = makeEngine({}, null, { buildFiles: () => files });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    localEdit(storage, 1, 'y');
+    files[0].content = 'V2';
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'getFileSha').length, 1);
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'putFile' && c[1] === files[0].path).length, 2);
+  });
+});
+
+describe('engine: finalize + re-draft lifecycle', () => {
+  async function bootstrapped(over, engineOver) {
+    const made = makeEngine(over, null, engineOver);
+    localEdit(made.storage, 1, 'x');
+    made.engine.notifyEdit();
+    await made.engine.flush();
+    return made;
+  }
+  it('finalize deletes the state file, flips ready and reports the PR', async () => {
+    const { engine, gh } = await bootstrapped();
+    const pr = await engine.finalize();
+    assert.deepStrictEqual(pr, { number: 77, html_url: 'https://github.com/x/pull/77' });
+    const del = gh.calls.find((c) => c[0] === 'deleteFile');
+    assert.ok(del && del[1] === syncFilePath(TALK) && del[2] === BRANCH_NAME);
+    assert.deepStrictEqual(gh.calls.find((c) => c[0] === 'markPullReady'), ['markPullReady', 'PR_n77']);
+    const info = engine.getInfo();
+    assert.strictEqual(info.status, 'ready');
+    assert.strictEqual(info.prDraft, false);
+  });
+  it('finalize flushes pending edits first', async () => {
+    const { engine, gh, storage } = await bootstrapped();
+    localEdit(storage, 2, 'останнє');
+    engine.notifyEdit();
+    await engine.finalize();
+    assert.strictEqual(gh.puts.length, 2);
+    assert.ok(JSON.stringify(gh.puts[1]).includes('останнє'));
+    const seq = gh.calls.map((c) => c[0]);
+    assert.ok(seq.indexOf('deleteFile') > seq.lastIndexOf('putFile'), 'delete follows the last push');
+  });
+  it('the first edit after finalize re-drafts the PR and recreates the state', async () => {
+    const { engine, gh, storage } = await bootstrapped();
+    await engine.finalize();
+    localEdit(storage, 2, 'нове');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'convertPullToDraft').length, 1);
+    assert.strictEqual(gh.puts.length, 2); // state file re-created
+    const info = engine.getInfo();
+    assert.strictEqual(info.prDraft, true);
+    assert.strictEqual(info.status, 'synced');
   });
 });
 

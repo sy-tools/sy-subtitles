@@ -203,22 +203,30 @@ function findOpenPrByHead(api, token, owner, branch, fetchImpl) {
     });
 }
 
-// Flip a draft PR to "ready for review". REST has no endpoint for this —
-// it is GraphQL-only. Rejects when the reply carries errors (the caller
-// treats that as non-fatal: the PR simply stays a draft).
-function markPullReady(token, nodeId, fetchImpl) {
+// Draft <-> ready transitions are GraphQL-only (REST has no endpoint).
+// Both reject when the reply carries errors.
+function ghGraphql(token, query, variables, fetchImpl) {
   return ghJson('https://api.github.com/graphql', token, {
     method: 'POST',
-    body: {
-      query: 'mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
-      variables: { id: nodeId },
-    },
+    body: { query: query, variables: variables },
   }, fetchImpl).then(function (r) {
     if (r && r.errors && r.errors.length) {
       throw new Error(r.errors[0].message || 'GraphQL error');
     }
     return r;
   });
+}
+
+function markPullReady(token, nodeId, fetchImpl) {
+  return ghGraphql(token,
+    'mutation($id:ID!){markPullRequestReadyForReview(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
+    { id: nodeId }, fetchImpl);
+}
+
+function convertPullToDraft(token, nodeId, fetchImpl) {
+  return ghGraphql(token,
+    'mutation($id:ID!){convertPullRequestToDraft(input:{pullRequestId:$id}){pullRequest{isDraft}}}',
+    { id: nodeId }, fetchImpl);
 }
 
 // One-button PR: base head sha → new branch → per-file (blob sha on base →
@@ -280,6 +288,7 @@ if (typeof module !== 'undefined' && module.exports) {
     createPull: createPull,
     findOpenPrByHead: findOpenPrByHead,
     markPullReady: markPullReady,
+    convertPullToDraft: convertPullToDraft,
     submitFilesPr: submitFilesPr,
   };
 }

@@ -209,7 +209,7 @@ describe('branch + contents + pull primitives', () => {
 // ---------------------------------------------------------------------------
 const {
   base64ToUtf8, makeSyncBranchName, getFileContent, findOpenPrByHead,
-  markPullReady, deleteFile,
+  markPullReady, convertPullToDraft, deleteFile,
 } = require('../site/js/github_api');
 
 describe('base64ToUtf8', () => {
@@ -291,6 +291,22 @@ describe('markPullReady', () => {
     const f = routerFetch([{ method: 'POST', match: 'api.github.com/graphql',
       payload: { errors: [{ message: 'not mergeable' }] } }], []);
     await assert.rejects(markPullReady('gho_x', 'PR_n3', f), /not mergeable/);
+  });
+});
+
+describe('convertPullToDraft', () => {
+  it('POSTs the GraphQL mutation with the PR node id', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'POST', match: 'api.github.com/graphql',
+      payload: { data: { convertPullRequestToDraft: { pullRequest: { isDraft: true } } } } }], calls);
+    await convertPullToDraft('gho_x', 'PR_n3', f);
+    assert.match(calls[0].body.query, /convertPullRequestToDraft/);
+    assert.deepStrictEqual(calls[0].body.variables, { id: 'PR_n3' });
+  });
+  it('rejects when the GraphQL reply carries errors', async () => {
+    const f = routerFetch([{ method: 'POST', match: 'api.github.com/graphql',
+      payload: { errors: [{ message: 'nope' }] } }], []);
+    await assert.rejects(convertPullToDraft('gho_x', 'PR_n3', f), /nope/);
   });
 });
 
