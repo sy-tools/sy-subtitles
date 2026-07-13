@@ -2905,6 +2905,15 @@ class TestPreviewLayoutButtons:
         btns = page.locator(".preview-mode-toggle button").count()
         assert btns == 2
 
+    def test_edit_chip_comes_first(self, server, page):
+        """Edit is the default mode, so its chip is the leftmost in the toggle."""
+        _goto_preview_video(page, server)
+        modes = page.evaluate(
+            "Array.from(document.querySelectorAll('.preview-mode-toggle button'))"
+            ".map(function(b){ return b.getAttribute('data-mode'); })"
+        )
+        assert modes == ["edit", "marker"]
+
     def test_clear_btn_hidden_when_empty(self, server, page):
         _goto_preview_video(page, server)
         visible = page.locator("#btn-clear-all").is_visible()
