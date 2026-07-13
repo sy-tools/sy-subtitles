@@ -775,6 +775,7 @@ var I18N = {
     'confirm.revert_all': '\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 {n} {word}?',
     'modal.cancel': '\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438',
     'modal.confirm': '\u041F\u0456\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0438',
+    'modal.close': '\u0417\u0430\u043A\u0440\u0438\u0442\u0438',
     'modal.clear': '\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438',
     'modal.discard': '\u0412\u0456\u0434\u043A\u0438\u043D\u0443\u0442\u0438',
     'modal.revert': '\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438',
@@ -922,6 +923,7 @@ var I18N = {
     'confirm.revert_all': 'Revert {n} {word}?',
     'modal.cancel': 'Cancel',
     'modal.confirm': 'Confirm',
+    'modal.close': 'Close',
     'modal.clear': 'Clear',
     'modal.discard': 'Discard',
     'modal.revert': 'Revert',
@@ -1722,6 +1724,20 @@ SPA.confirm = function(opts) {
     modal.setAttribute('role', 'dialog');
     modal.setAttribute('aria-modal', 'true');
 
+    // Corner close (X): a dismiss affordance present on every dialog. It
+    // resolves the promise with `false` — same as Escape/Cancel — so callers
+    // that guard on the resolved value never treat a dismiss as a confirm.
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'sy-modal-close';
+    closeBtn.type = 'button';
+    closeBtn.setAttribute('aria-label', t('modal.close') || 'Close');
+    // Self-synced: translatePage() re-applies this on a language toggle, so the
+    // label doesn't stick in the old language if the UI language changes while
+    // a dialog is open. (tests/test_spa_i18n_guard.py)
+    closeBtn.setAttribute('data-i18n-aria-label', 'modal.close');
+    closeBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
+    modal.appendChild(closeBtn);
+
     var h = document.createElement('h3');
     h.className = 'sy-modal-title';
     h.textContent = opts.title || '';
@@ -1771,6 +1787,7 @@ SPA.confirm = function(opts) {
     backdrop.addEventListener('click', function(e) {
       if (e.target === backdrop && !opts.singleButton) close(false);
     });
+    closeBtn.addEventListener('click', function() { close(false); });
     if (cancelBtn) cancelBtn.addEventListener('click', function() { close(false); });
     okBtn.addEventListener('click', function() { close(true); });
     document.addEventListener('keydown', onKey, true);
@@ -3526,7 +3543,7 @@ SPA.openPreviewEditor = function() {
         body: t('modal.copied_body_srt'),
         confirmLabel: t('modal.open_github'),
         singleButton: true
-      }).then(function() { window.open(url); });
+      }).then(function(ok) { if (ok) window.open(url); });
     }).catch(function() {
       window.open(url);
     });
@@ -4233,7 +4250,7 @@ function ghCreatedDialog(titleKey, res) {
     body: '<a href="' + safeHref(res.html_url) + '" target="_blank">#' + res.number + '</a>',
     confirmLabel: t('modal.open_github'),
     singleButton: true
-  }).then(function() { window.open(res.html_url); });
+  }).then(function(ok) { if (ok) window.open(res.html_url); });
 }
 
 // Shared failure path for signed-in write calls. 401 = revoked token → silent
@@ -4333,7 +4350,7 @@ function openIssuePage(issueTitle, issueBody) {
         body: t('modal.copied_body_issue'),
         confirmLabel: t('modal.open_github'),
         singleButton: true
-      }).then(function() { window.open(shortUrl); });
+      }).then(function(ok) { if (ok) window.open(shortUrl); });
     }).catch(function() {
       window.open(shortUrl);
     });
@@ -4429,7 +4446,7 @@ SPA.openEditor = function() {
         body: t('modal.copied_body_srt'),
         confirmLabel: t('modal.open_github'),
         singleButton: true
-      }).then(function() { window.open(url); });
+      }).then(function(ok) { if (ok) window.open(url); });
     }).catch(function() {
       // Clipboard can reject (document not focused, permission denied) —
       // the edits are NOT exported then; say so instead of a dead button.
@@ -5097,7 +5114,7 @@ SPA.submitAddTalk = function() {
         body: t('modal.copied_body_meta'),
         confirmLabel: t('modal.open_github'),
         singleButton: true
-      }).then(function() { window.open(shortUrl); });
+      }).then(function(ok) { if (ok) window.open(shortUrl); });
     }).catch(function() {
       window.open(shortUrl);
     });
