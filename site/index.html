@@ -32,6 +32,7 @@
 <script src="js/github_api.js"></script>
 <script src="js/edit_sync.js"></script>
 <script src="js/marker_sync.js"></script>
+<script src="js/sync_status_view.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -315,7 +316,7 @@
          dropdown with recovery actions when the sync is failing. -->
     <div class="branch-selector" id="sync-chip" style="display:none">
       <button class="branch-btn" id="sync-chip-btn" onclick="SPA.syncChipClick()" data-i18n-title="sync.chip_title" style="display:inline-flex;align-items:center;gap:5px;">
-        <span id="sync-chip-icon" style="pointer-events:none"></span><span id="sync-chip-text" style="pointer-events:none"></span>
+        <span id="sync-chip-icon" class="sync-cloud" style="pointer-events:none"></span><span id="sync-chip-text" class="sr-only" style="pointer-events:none"></span>
       </button>
       <div class="branch-dropdown" id="sync-chip-dropdown"></div>
     </div>
@@ -323,7 +324,7 @@
          links to the markers issue the marker_sync engine keeps up to date. -->
     <div class="branch-selector" id="marker-chip" style="display:none">
       <button class="branch-btn" id="marker-chip-btn" onclick="SPA.markerChipClick()" data-i18n-title="marker.chip_title" style="display:inline-flex;align-items:center;gap:5px;">
-        <span id="marker-chip-icon" style="pointer-events:none"></span><span id="marker-chip-text" style="pointer-events:none"></span>
+        <span id="marker-chip-icon" class="sync-cloud" style="pointer-events:none"></span><span id="marker-chip-text" class="sr-only" style="pointer-events:none"></span>
       </button>
       <div class="branch-dropdown" id="marker-chip-dropdown"></div>
     </div>
@@ -4459,13 +4460,38 @@ var editSync = null;
 var markerSync = null;
 
 // Stroke SVG icons (project rule: no emoji in UI controls).
-var SYNC_ICONS = {
-  synced: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6.5 4.8 9.3 10 3.5"/></svg>',
-  syncing: '<svg class="spin" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 6a4.2 4.2 0 1 1-1.23-2.97"/><polyline points="10.4 0.9 10.4 3.3 8 3.3"/></svg>',
-  pending: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="4.6"/><polyline points="6 3.6 6 6 7.8 7"/></svg>',
-  error: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.6 11 10.4H1z"/><line x1="6" y1="4.8" x2="6" y2="7"/><line x1="6" y1="8.7" x2="6" y2="8.71"/></svg>',
-  ready: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.2 10.6 1.4 7.6 10.6 5.4 7z"/><line x1="5.4" y1="7" x2="10.6" y2="1.4"/></svg>',
-};
+// Per-status label (accessible name + hover tooltip). The visible glyph folds
+// these into three cloud tones (see sync_status_view.js), but the text keeps
+// the precise state for screen readers and the title tooltip.
+var SYNC_LABELS = { synced: 'sync.synced', syncing: 'sync.syncing', pending: 'sync.pending',
+  error: 'sync.error', ready: 'sync.ready' };
+
+// Paint one cloud chip (prefix 'sync' or 'marker') from an engine status.
+// The state word lives on in the DOM (sr-only) as the button's accessible name
+// and drives the hover tooltip; the cloud colour carries the three tones.
+function paintSyncChip(prefix, status) {
+  var chip = document.getElementById(prefix + '-chip');
+  if (!chip) return;
+  var vis = syncStatusVisual(status);
+  if (vis.hidden) {
+    chip.style.display = 'none';
+    var dd0 = document.getElementById(prefix + '-chip-dropdown');
+    if (dd0) dd0.classList.remove('open');
+    return;
+  }
+  chip.style.display = '';
+  var key = SYNC_LABELS[status] || status;
+  var label = t(key);
+  var textEl = document.getElementById(prefix + '-chip-text');
+  textEl.textContent = label;
+  textEl.setAttribute('data-i18n', SYNC_LABELS[status] || '');
+  var iconEl = document.getElementById(prefix + '-chip-icon');
+  iconEl.className = 'sync-cloud sync-cloud--' + vis.tone;
+  iconEl.innerHTML = syncCloudSvg(vis.tone);
+  var btn = document.getElementById(prefix + '-chip-btn');
+  btn.setAttribute('data-i18n-title', key);
+  btn.setAttribute('title', label);
+}
 
 function currentSyncTalkId() {
   var hash = location.hash.slice(1) || '/';
@@ -4629,24 +4655,9 @@ function previewMarkerModeActive() {
 }
 
 function renderSyncStatus(status, info) {
-  var chip = document.getElementById('sync-chip');
-  if (!chip) return;
-  if (!editSync || status === 'idle' || previewMarkerModeActive()) {
-    chip.style.display = 'none';
-    var dd0 = document.getElementById('sync-chip-dropdown');
-    if (dd0) dd0.classList.remove('open');
-    return;
-  }
-  chip.style.display = '';
-  var labels = { synced: 'sync.synced', syncing: 'sync.syncing', pending: 'sync.pending',
-    error: 'sync.error', ready: 'sync.ready' };
-  var textEl = document.getElementById('sync-chip-text');
-  textEl.textContent = t(labels[status] || status);
-  textEl.setAttribute('data-i18n', labels[status] || '');
-  document.getElementById('sync-chip-icon').innerHTML = SYNC_ICONS[status] || '';
-  var btn = document.getElementById('sync-chip-btn');
-  btn.classList.toggle('sync-pending', status === 'pending');
-  btn.classList.toggle('sync-error', status === 'error');
+  // The edit chip is suppressed while preview marker mode is active (the marker
+  // chip takes over) and whenever there is no engine attached.
+  paintSyncChip('sync', (!editSync || previewMarkerModeActive()) ? 'idle' : status);
 }
 
 // The chip is the whole signed-in lifecycle: its dropdown carries the PR
@@ -4746,23 +4757,7 @@ function onMarkerStatus(status, info) {
 }
 
 function renderMarkerStatus(status, info) {
-  var chip = document.getElementById('marker-chip');
-  if (!chip) return;
-  if (!markerSync || status === 'idle') {
-    chip.style.display = 'none';
-    var dd0 = document.getElementById('marker-chip-dropdown');
-    if (dd0) dd0.classList.remove('open');
-    return;
-  }
-  chip.style.display = '';
-  var labels = { synced: 'sync.synced', syncing: 'sync.syncing', pending: 'sync.pending', error: 'sync.error' };
-  var textEl = document.getElementById('marker-chip-text');
-  textEl.textContent = t(labels[status] || status);
-  textEl.setAttribute('data-i18n', labels[status] || '');
-  document.getElementById('marker-chip-icon').innerHTML = SYNC_ICONS[status] || '';
-  var btn = document.getElementById('marker-chip-btn');
-  btn.classList.toggle('sync-pending', status === 'pending');
-  btn.classList.toggle('sync-error', status === 'error');
+  paintSyncChip('marker', markerSync ? status : 'idle');
 }
 
 SPA.markerChipClick = function() {

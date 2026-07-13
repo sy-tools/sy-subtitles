@@ -1006,3 +1006,52 @@ def test_edit_chip_is_hidden_in_marker_mode(server, browser):
     pg.evaluate("SPA.setPreviewMode('edit')")
     pg.wait_for_selector("#sync-chip", state="visible", timeout=5000)
     ctx.close()
+
+
+def test_cloud_chip_dom_contract(server, browser):
+    # The status chip is one elegant cloud with three tones: blue progress
+    # (pending folds in), green ok (ready folds in), red error. The state word
+    # stays in the DOM as an sr-only accessible name (present but not shown).
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
+    pg.goto(f"{server}{SPA_URL}#/review/{TALK_ID}")
+    pg.wait_for_function("() => typeof paintSyncChip === 'function'", timeout=10000)
+
+    # Drive each status synchronously so an async engine re-render can't race us.
+    result = pg.evaluate(
+        """() => {
+          const icon = document.getElementById('sync-chip-icon');
+          const chip = document.getElementById('sync-chip');
+          const txt = document.getElementById('sync-chip-text');
+          const snap = (status) => {
+            paintSyncChip('sync', status);
+            return {
+              cls: icon.className,
+              svg: !!icon.querySelector('svg'),
+              display: chip.style.display,
+              label: txt.textContent,
+              textW: txt.getBoundingClientRect().width,
+            };
+          };
+          return { syncing: snap('syncing'), pending: snap('pending'),
+                   synced: snap('synced'), ready: snap('ready'),
+                   error: snap('error'), idle: snap('idle') };
+        }"""
+    )
+    # The tone lives on the reusable .sync-cloud component (icon), not the button,
+    # so styleguide.html can render the same component. pending folds into the
+    # progress tone (no waiting glyph); ready folds into ok.
+    for st in ("syncing", "pending"):
+        assert "sync-cloud--progress" in result[st]["cls"], st
+        assert result[st]["display"] != "none", st
+    for st in ("synced", "ready"):
+        assert "sync-cloud--ok" in result[st]["cls"], st
+    assert "sync-cloud--error" in result["error"]["cls"]
+    # A cloud svg is always painted for a visible tone.
+    assert result["synced"]["svg"] is True
+    # The label is present (accessible name) but visually hidden (sr-only).
+    assert result["synced"]["label"]
+    assert result["synced"]["textW"] < 2
+    # idle hides the whole chip.
+    assert result["idle"]["display"] == "none"
+    ctx.close()
