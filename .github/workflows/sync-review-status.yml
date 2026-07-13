@@ -14,6 +14,16 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # Serialize syncs: rapid issue events (e.g. claiming two talks seconds
+    # apart) used to spawn parallel runs that raced bot-pr.sh from the same
+    # base into duplicate stuck PRs (#728/#729). Job-level on purpose —
+    # workflow-level concurrency is ignored when this file runs via
+    # workflow_call. cancel-in-progress stays false: an in-flight sync is a
+    # multi-step sequence (label edits → regenerate → PR → merge) and must
+    # finish; new runs queue behind it.
+    concurrency:
+      group: review-status-sync
+      cancel-in-progress: false
     # For 'unlabeled' the issue's label list reflects the state AFTER removal,
     # so removing the last review:* label would skip the sync — also check the
     # removed label itself (github.event.label.name).

@@ -20,9 +20,12 @@ Source language: English. Target language: Ukrainian.
 3. Trigger pipeline: `gh workflow run subtitle-pipeline.yml -f talk_id={date}_{slug}`
    Optional inputs: `model=claude-opus-4-8|claude-fable-5|claude-sonnet-5`
    (default `claude-opus-4-8`), `build_model=...` (build-step-only override,
-   default `same-as-model`), `timing_source=auto|whisper|en-srt` (default `auto` —
-   en-srt if present, else whisper), `dry_run=true` (replay snapshots via
-   `tools.fake_llm`, no commit).
+   default `same-as-model`), `oauth_token=default|EXTRA` (Claude account:
+   value `X` → secret `CLAUDE_CODE_OAUTH_TOKEN_X`; missing/empty named secret
+   FAILS the run — no silent fallback to the default account),
+   `timing_source=auto|whisper|en-srt` (default `auto` — en-srt if present,
+   else whisper), `dry_run=true` (replay snapshots via `tools.fake_llm`,
+   no commit).
 4. Pipeline runs automatically:
    - **Whisper**: speech detection → `whisper.json` (word-level timestamps)
    - **Translate**: Claude agent translates EN → UK → `transcript_uk.txt`

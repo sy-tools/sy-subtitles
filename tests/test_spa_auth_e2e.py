@@ -134,6 +134,23 @@ def test_callback_exchanges_code_and_signs_in(auth_server, auth_page):
     assert page.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") == "none"
 
 
+def test_avatar_tooltip_refreshes_on_language_toggle(auth_server, auth_page):
+    """The avatar tooltip carries the translated "signed in as" prefix, but it
+    is set imperatively (the avatar has no data-i18n* attribute), so a UI
+    language toggle must refresh it — otherwise it sticks in the old language."""
+    page = auth_page
+    page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+    page.add_init_script("sessionStorage.setItem('sy_gh_state', 'st1');")
+    page.goto(f"{auth_server}/index.html?code=c1&state=st1")
+    page.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
+    before = page.evaluate("document.getElementById('gh-avatar').title")
+    assert before == "Signed in as tester"
+    page.click("#lang-btn")
+    after = page.evaluate("document.getElementById('gh-avatar').title")
+    assert after != before, "avatar tooltip must refresh on language toggle"
+    assert after == page.evaluate("t('auth.signed_in')") + " tester"
+
+
 def test_avatar_menu_signs_out(auth_server, auth_page):
     page = auth_page
     page.add_init_script("sessionStorage.setItem('sy_gh_state', 'st1');")

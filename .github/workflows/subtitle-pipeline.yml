@@ -58,6 +58,13 @@ on:
           - claude-fable-5
           - claude-sonnet-5
         default: same-as-model
+      oauth_token:
+        description: 'Claude account: default = CLAUDE_CODE_OAUTH_TOKEN; any other value X = CLAUDE_CODE_OAUTH_TOKEN_X (missing/empty named secret fails the run)'
+        type: choice
+        options:
+          - default
+          - EXTRA
+        default: default
   workflow_call:
     inputs:
       talk_id:
@@ -93,6 +100,10 @@ on:
         description: 'Override model for the build step only; empty or same-as-model follows `model`'
         type: string
         default: ''
+      oauth_token:
+        description: 'Claude account: default = CLAUDE_CODE_OAUTH_TOKEN; any other value X = CLAUDE_CODE_OAUTH_TOKEN_X'
+        type: string
+        default: default
 
 permissions:
   contents: write
@@ -107,6 +118,15 @@ env:
   # than review (e.g. review=Fable, build=Opus). The 'same-as-model'
   # sentinel (choice inputs can't default to '') follows MODEL_HEAVY.
   MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-4-8' }}
+  # Claude account for the LLM steps. Convention: oauth_token=X reads
+  # secrets.CLAUDE_CODE_OAUTH_TOKEN_X (option value is the literal
+  # uppercase suffix — expressions have no upper()). The default secret is
+  # used ONLY for 'default' / empty input (push runs): when the named
+  # secret is missing or empty the value stays '' and the guard steps fail
+  # the run — a silent fallback would burn the primary account's weekly
+  # limits unnoticed. The || '' tail keeps a false branch from
+  # stringifying into a literal 'false' token.
+  OAUTH_TOKEN: ${{ (inputs.oauth_token && inputs.oauth_token != 'default' && secrets[format('CLAUDE_CODE_OAUTH_TOKEN_{0}', inputs.oauth_token)]) || ((!inputs.oauth_token || inputs.oauth_token == 'default') && secrets.CLAUDE_CODE_OAUTH_TOKEN) || '' }}
 
 jobs:
   discover:
@@ -262,6 +282,19 @@ jobs:
           echo "bun=$(which bun)" >> "$GITHUB_OUTPUT"
           echo "claude=$(which claude)" >> "$GITHUB_OUTPUT"
 
+      - name: Verify Claude token selection
+        # Fail-fast: a selected account whose secret is missing must NOT
+        # fall back to the default token (that would silently burn the
+        # primary account's limits).
+        if: inputs.dry_run != true
+        env:
+          SELECTED: ${{ inputs.oauth_token }}
+        run: |
+          if [ -z "$OAUTH_TOKEN" ]; then
+            echo "::error::oauth_token='${SELECTED}' did not resolve: secret CLAUDE_CODE_OAUTH_TOKEN_${SELECTED} is missing or empty — there is no fallback to default; add the secret or rerun with oauth_token=default"
+            exit 1
+          fi
+
       - name: Translate (dry-run fake)
         if: inputs.translate != false && inputs.dry_run == true
         env:
@@ -279,7 +312,7 @@ jobs:
         if: inputs.translate != false && inputs.dry_run != true
         uses: anthropics/claude-code-action@558b1d6cab4085c7753fe402c10bef0fbb92ac7a  # v1.0.165
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
           claude_args: "--max-turns 80 --dangerously-skip-permissions --effort xhigh --model ${{ env.MODEL_HEAVY }}"
@@ -386,7 +419,7 @@ jobs:
         if: inputs.review != false && inputs.dry_run != true
         uses: anthropics/claude-code-action@558b1d6cab4085c7753fe402c10bef0fbb92ac7a  # v1.0.165
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
           claude_args: "--max-turns 60 --dangerously-skip-permissions --effort xhigh --model ${{ env.MODEL_HEAVY }}"
@@ -678,6 +711,18 @@ jobs:
           echo "bun=$(which bun)" >> "$GITHUB_OUTPUT"
           echo "claude=$(which claude)" >> "$GITHUB_OUTPUT"
 
+      - name: Verify Claude token selection
+        # Fail-fast: a selected account whose secret is missing must NOT
+        # fall back to the default token.
+        if: inputs.dry_run != true
+        env:
+          SELECTED: ${{ inputs.oauth_token }}
+        run: |
+          if [ -z "$OAUTH_TOKEN" ]; then
+            echo "::error::oauth_token='${SELECTED}' did not resolve: secret CLAUDE_CODE_OAUTH_TOKEN_${SELECTED} is missing or empty — there is no fallback to default; add the secret or rerun with oauth_token=default"
+            exit 1
+          fi
+
       - name: Build timecodes (dry-run fake)
         if: inputs.dry_run == true
         env:
@@ -694,7 +739,7 @@ jobs:
         env:
           CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
           claude_args: "--max-turns 80 --dangerously-skip-permissions --effort high --model ${{ env.MODEL_BUILD }}"
