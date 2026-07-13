@@ -3109,7 +3109,10 @@ function savePreviewState() {
     });
   }
   localStorage.setItem(key, JSON.stringify(payload));
-  if (editSync) editSync.notifyEdit();
+  // NOTE: do NOT notify editSync here. savePreviewState persists BOTH edits and
+  // markers, and is also called on marker changes / mode switches / marker pull.
+  // The edit engine must be nudged only by real SRT edits (see editNotify), or a
+  // marker action spuriously drafts an edit PR and flashes the edit chip.
 }
 
 // Playback position is persisted under its own key (sy.preview_pos.*) on a 2s
@@ -3186,6 +3189,9 @@ SPA.setPreviewMode = function(mode) {
   savePreviewState();
   applyPreviewMode();
   ensureMarkerSync();   // attach in marker mode, detach in edit mode
+  // Re-render the edit chip for the new mode: hide it in marker mode, restore it
+  // (with its live status) when returning to edit mode.
+  renderSyncStatus(editSync ? editSync.getInfo().status : 'idle', editSync ? editSync.getInfo() : null);
   renderMarkers();
   renderEditList();
   updateClearBtn();
@@ -3433,6 +3439,7 @@ SPA.addEdit = function() {
   if (previewState.edits[lang][idx] === undefined) {
     previewState.edits[lang][idx] = blocks[idx].text;
     savePreviewState();
+    editNotify();
     renderEditList();
     updateClearBtn();
   }
@@ -3464,6 +3471,7 @@ SPA.onEditInput = function(idx, el) {
     el.classList.add('edited-dirty');
   }
   savePreviewState();
+  editNotify();
   updateClearBtn();
 };
 
@@ -3472,6 +3480,7 @@ SPA.deleteEdit = function(idx) {
   if (previewState.edits && previewState.edits[lang]) {
     delete previewState.edits[lang][idx];
     savePreviewState();
+    editNotify();
     syncRevertSoon();
     renderEditList();
     updateClearBtn();
@@ -3509,6 +3518,7 @@ SPA.clearAll = function() {
       if (!ok) return;
       previewState.edits[lang] = {};
       savePreviewState();
+      editNotify();
       syncRevertSoon();
       renderEditList();
       updateClearBtn();
@@ -4570,10 +4580,19 @@ function onSyncRemoteApplied() {
   }
 }
 
+// The preview shows one sync chip per mode: the edit chip belongs to edit mode
+// (and to review), the marker chip to marker mode. Suppress the edit chip while
+// preview marker mode is active so the two never stack (the engine keeps running
+// in the background — edits made in edit mode still sync while markers are shown).
+function previewMarkerModeActive() {
+  var previewOpen = document.getElementById('view-preview').classList.contains('active');
+  return !!(previewOpen && previewState && previewState.mode === 'marker');
+}
+
 function renderSyncStatus(status, info) {
   var chip = document.getElementById('sync-chip');
   if (!chip) return;
-  if (!editSync || status === 'idle') {
+  if (!editSync || status === 'idle' || previewMarkerModeActive()) {
     chip.style.display = 'none';
     var dd0 = document.getElementById('sync-chip-dropdown');
     if (dd0) dd0.classList.remove('open');
@@ -4752,6 +4771,10 @@ window.addEventListener('pagehide', function() {
 // (1.5s) instead of the 15s typing debounce — the PR (or, when the last edit
 // is gone, its teardown) then follows promptly.
 function syncRevertSoon() { if (editSync) editSync.flushSoon(); }
+// A real SRT edit was made — nudge the edit engine (15s typing debounce). Kept
+// separate from savePreviewState so marker changes / mode switches don't dirty
+// the edit engine (see savePreviewState).
+function editNotify() { if (editSync) editSync.notifyEdit(); }
 // Marker equivalents: a discrete add/remove/clear syncs on the fast cadence.
 function markerNotify() { if (markerSync) markerSync.notifyEdit(); }
 function markerNotifySoon() { if (markerSync) { markerSync.notifyEdit(); markerSync.flushSoon(); } }

@@ -613,6 +613,7 @@ def _open_preview_marker(pg, server):
 def test_signed_in_hides_copy_all_signed_out_shows(server, browser):
     ctx1, pg1 = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
     _open_preview_marker(pg1, server)
+    pg1.evaluate("SPA.setPreviewMode('marker')")  # default is edit since #748
     # Signed in, the auto-sync chip replaces the manual affordances: Copy-all
     # and the issue button are hidden (data-gh-hide), and the removed one-button
     # PR control is not in the DOM at all.
@@ -623,7 +624,8 @@ def test_signed_in_hides_copy_all_signed_out_shows(server, browser):
 
     ctx2, pg2 = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=False)
     _open_preview_marker(pg2, server)
-    # Default preview mode is marker: the signed-out Copy-all affordance shows.
+    pg2.evaluate("SPA.setPreviewMode('marker')")  # opt into marker mode explicitly
+    # In marker mode the signed-out Copy-all affordance shows.
     assert pg2.locator("#btn-copy-all").is_visible()
     # #btn-preview-pr never existed — absent regardless of auth state.
     assert pg2.locator("#btn-preview-pr").count() == 0
@@ -888,6 +890,7 @@ def test_signed_in_marker_creates_issue_then_closes_when_emptied(server, browser
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
     _open_preview_marker(pg, server)
+    pg.evaluate("SPA.setPreviewMode('marker')")  # default is edit since #748
     pg.wait_for_function("() => window.markerSync", timeout=10000)
 
     # Add a marker -> creates the markers issue on the fast cadence.
@@ -928,4 +931,66 @@ def test_signed_in_marker_creates_issue_then_closes_when_emptied(server, browser
         pg.wait_for_timeout(100)
     assert _closed(), "emptying the markers must close the issue"
     pg.wait_for_selector("#marker-chip", state="hidden", timeout=5000)
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 10. Preview chip hygiene: one chip per mode, and marker actions never touch
+#     the edit engine (regressions the user reported live).
+# ---------------------------------------------------------------------------
+
+
+def test_marker_action_does_not_dirty_the_edit_engine(server, browser):
+    # Bug 2: savePreviewState no longer nudges editSync, so a marker add must not
+    # mark the edit engine dirty (which would flash a spurious edit chip / draft
+    # an edit PR with no edits).
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
+    _open_preview_marker(pg, server)
+    pg.evaluate("SPA.setPreviewMode('marker')")
+    pg.wait_for_function("() => window.markerSync", timeout=10000)
+    # editSync attaches for the preview SRT target regardless of mode.
+    pg.wait_for_function("() => window.editSync", timeout=10000)
+
+    pg.evaluate("window.previewState.currentTime = 3; window.previewState.lastText = 'Sub one';")
+    pg.evaluate("SPA.addMarker()")
+    pg.wait_for_timeout(300)
+
+    assert pg.evaluate("() => window.editSync.getInfo().dirty") is False, (
+        "a marker action must not dirty the edit engine (Bug 2)"
+    )
+    assert not pg.locator("#sync-chip").is_visible(), "the edit chip must not appear for a marker action"
+    ctx.close()
+
+
+def test_edit_chip_is_hidden_in_marker_mode(server, browser):
+    # Bug 1: the edit sync chip and the marker chip must not stack. In marker mode
+    # the edit chip is suppressed even with pending edits; it returns in edit mode.
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
+    pg.goto(f"{server}{SPA_URL}#/preview/{TALK_ID}/{VIDEO_SLUG}")
+    pg.wait_for_selector("#mock-player", state="visible", timeout=10000)
+    pg.wait_for_function(
+        "() => window.previewState && (window.previewState.subtitles || []).length > 0",
+        timeout=10000,
+    )
+
+    # Make a real edit so the edit engine has a live chip.
+    pg.evaluate("SPA.setPreviewMode('edit')")
+    pg.evaluate("window._vimeoPlayer._currentTime = 3; window.previewState.currentTime = 3;")
+    pg.evaluate("SPA.addEdit()")
+    cell = pg.locator(".edit-item .edited").first
+    cell.click()
+    cell.press("End")
+    cell.type(" X")
+    cell.press("Tab")  # blur -> flushSoon
+    pg.wait_for_selector("#sync-chip", state="visible", timeout=5000)
+
+    # Switch to marker mode -> the edit chip hides (one chip per mode).
+    pg.evaluate("SPA.setPreviewMode('marker')")
+    pg.wait_for_selector("#sync-chip", state="hidden", timeout=5000)
+
+    # Back to edit mode -> the edit chip returns.
+    pg.evaluate("SPA.setPreviewMode('edit')")
+    pg.wait_for_selector("#sync-chip", state="visible", timeout=5000)
     ctx.close()
