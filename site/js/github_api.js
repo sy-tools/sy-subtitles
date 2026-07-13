@@ -118,9 +118,47 @@ function makeSyncBranchName(login, talkId, target) {
 }
 
 // POST /issues → {number, html_url}. fields: {title, body, labels, assignees}.
+// fields may include title/body/labels/assignees. Returns number+url+node_id.
 function createIssue(api, token, fields, fetchImpl) {
   return ghJson(api + '/issues', token, { method: 'POST', body: fields }, fetchImpl)
-    .then(function (r) { return { number: r.number, html_url: r.html_url }; });
+    .then(function (r) { return { number: r.number, html_url: r.html_url, node_id: r.node_id }; });
+}
+
+// GET /issues/<n> → the fields marker-sync needs for the pull/merge step.
+function getIssue(api, token, number, fetchImpl) {
+  return ghJson(api + '/issues/' + number, token, null, fetchImpl).then(function (r) {
+    return { number: r.number, state: r.state, body: r.body || '', node_id: r.node_id, updatedAt: r.updated_at };
+  });
+}
+
+// PATCH /issues/<n> with arbitrary fields (body and/or state).
+function updateIssue(api, token, number, fields, fetchImpl) {
+  return ghJson(api + '/issues/' + number, token, { method: 'PATCH', body: fields }, fetchImpl);
+}
+
+// PATCH state — teardown (closed) / reopen (open). Swallows 404 (already gone).
+function setIssueState(api, token, number, state, fetchImpl) {
+  return ghJson(api + '/issues/' + number, token, { method: 'PATCH', body: { state: state } }, fetchImpl)
+    .catch(function (e) { if (e && e.status === 404) return null; throw e; });
+}
+
+// GET /issues?labels=<label>&state=all — the LIST API is immediately consistent
+// (a just-created issue is present at once), unlike the search index. This is the
+// sole deterministic re-attach mechanism for marker-sync (matched by title).
+function listIssuesByLabel(api, token, label, fetchImpl) {
+  return ghJson(api + '/issues?labels=' + encodeURIComponent(label) + '&state=all&per_page=100',
+    token, null, fetchImpl).then(function (list) {
+    return (list || []).map(function (r) {
+      return { number: r.number, title: r.title, state: r.state, node_id: r.node_id, body: r.body || '' };
+    });
+  });
+}
+
+// POST /labels — idempotent; a 422 "already exists" is success.
+function ensureLabel(api, token, name, fetchImpl) {
+  return ghJson(api + '/labels', token, { method: 'POST', body: { name: name } }, fetchImpl)
+    .then(function () { return null; })
+    .catch(function (e) { if (e && e.status === 422) return null; throw e; });
 }
 
 function addAssignees(api, token, issueNumber, logins, fetchImpl) {
@@ -305,6 +343,11 @@ if (typeof module !== 'undefined' && module.exports) {
     makeBranchName: makeBranchName,
     makeSyncBranchName: makeSyncBranchName,
     createIssue: createIssue,
+    getIssue: getIssue,
+    updateIssue: updateIssue,
+    setIssueState: setIssueState,
+    listIssuesByLabel: listIssuesByLabel,
+    ensureLabel: ensureLabel,
     addAssignees: addAssignees,
     getBranchHeadSha: getBranchHeadSha,
     createRef: createRef,

@@ -119,10 +119,10 @@ describe('createIssue', () => {
   it('POSTs title/body/labels/assignees with auth and returns number+url', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'POST', match: '/issues', status: 201,
-      payload: { number: 42, html_url: 'https://github.com/x/issues/42' } }], calls);
+      payload: { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42' } }], calls);
     const res = await createIssue(API, 'gho_x',
       { title: 'Review: t', body: 'b', labels: ['talk-review'], assignees: ['slava'] }, f);
-    assert.deepStrictEqual(res, { number: 42, html_url: 'https://github.com/x/issues/42' });
+    assert.deepStrictEqual(res, { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42' });
     assert.strictEqual(calls[0].url, API + '/issues');
     assert.strictEqual(calls[0].headers.Authorization, 'Bearer gho_x');
     assert.deepStrictEqual(calls[0].body,
@@ -210,7 +210,55 @@ describe('branch + contents + pull primitives', () => {
 const {
   base64ToUtf8, makeSyncBranchName, getFileContent, findOpenPrByHead,
   markPullReady, convertPullToDraft, deleteFile, closePull, deleteRef,
+  getIssue, updateIssue, setIssueState, listIssuesByLabel, ensureLabel,
 } = require('../site/js/github_api');
+
+describe('issue sync primitives (marker sync)', () => {
+  it('createIssue passes labels and plucks number/url/node_id', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'POST', match: '/issues', status: 201,
+      payload: { number: 3, html_url: 'u', node_id: 'I_3' } }], calls);
+    const r = await createIssue(API, 'gho_x', { title: 't', body: 'b', labels: ['markers'] }, f);
+    assert.deepStrictEqual(calls[0].body.labels, ['markers']);
+    assert.deepStrictEqual(r, { number: 3, html_url: 'u', node_id: 'I_3' });
+  });
+  it('getIssue reads number/state/body/node_id/updatedAt', async () => {
+    const f = routerFetch([{ method: 'GET', match: '/issues/5', status: 200,
+      payload: { number: 5, state: 'open', body: 'B', node_id: 'I_5', updated_at: 'T' } }], []);
+    assert.deepStrictEqual(await getIssue(API, 'gho_x', 5, f),
+      { number: 5, state: 'open', body: 'B', node_id: 'I_5', updatedAt: 'T' });
+  });
+  it('updateIssue PATCHes the given fields', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'PATCH', match: '/issues/5', status: 200,
+      payload: { number: 5, state: 'open', body: 'NB' } }], calls);
+    await updateIssue(API, 'gho_x', 5, { body: 'NB' }, f);
+    assert.deepStrictEqual(calls[0].body, { body: 'NB' });
+  });
+  it('setIssueState closes/reopens and swallows 404', async () => {
+    const calls = [];
+    const ok = routerFetch([{ method: 'PATCH', match: '/issues/5', status: 200,
+      payload: { number: 5, state: 'closed' } }], calls);
+    await setIssueState(API, 'gho_x', 5, 'closed', ok);
+    assert.deepStrictEqual(calls[0].body, { state: 'closed' });
+    const gone = routerFetch([{ method: 'PATCH', match: '/issues/9', status: 404,
+      payload: { message: 'Not Found' } }], []);
+    assert.strictEqual(await setIssueState(API, 'gho_x', 9, 'closed', gone), null);
+  });
+  it('listIssuesByLabel GETs labels=&state=all and maps rows', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'GET', match: '/issues?', status: 200,
+      payload: [{ number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', body: 'B' }] }], calls);
+    const rows = await listIssuesByLabel(API, 'gho_x', 'markers', f);
+    assert.ok(/labels=markers/.test(calls[0].url) && /state=all/.test(calls[0].url), calls[0].url);
+    assert.deepStrictEqual(rows[0], { number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', body: 'B' });
+  });
+  it('ensureLabel POSTs and tolerates a 422 already-exists', async () => {
+    const f422 = routerFetch([{ method: 'POST', match: '/labels', status: 422,
+      payload: { message: 'already_exists' } }], []);
+    assert.strictEqual(await ensureLabel(API, 'gho_x', 'markers', f422), null);
+  });
+});
 
 describe('closePull / deleteRef (edit-sync teardown)', () => {
   it('closePull PATCHes the PR to state=closed', async () => {
