@@ -32,9 +32,9 @@ function makeStorage(initial) {
 }
 
 describe('defaultPreviewState', () => {
-  it('has marker mode and empty collections', () => {
+  it('has edit mode and empty collections', () => {
     const s = defaultPreviewState();
-    assert.strictEqual(s.mode, 'marker');
+    assert.strictEqual(s.mode, 'edit');
     assert.deepStrictEqual(s.markers, []);
     assert.deepStrictEqual(s.edits, {});
   });
@@ -79,7 +79,7 @@ describe('loadPreviewState — migration and precedence', () => {
   it('returns default when neither key is present', () => {
     const storage = makeStorage();
     const state = loadPreviewState(talkId, videoSlug, storage);
-    assert.strictEqual(state.mode, 'marker');
+    assert.strictEqual(state.mode, 'edit');
     assert.deepStrictEqual(state.markers, []);
     assert.deepStrictEqual(state.edits, {});
     // Default is not written back to storage until user mutates.
@@ -135,7 +135,7 @@ describe('loadPreviewState — migration and precedence', () => {
   it('falls back to default on corrupted new key', () => {
     const storage = makeStorage({ [newKey]: '{not-json' });
     const state = loadPreviewState(talkId, videoSlug, storage);
-    assert.strictEqual(state.mode, 'marker');
+    assert.strictEqual(state.mode, 'edit');
     assert.deepStrictEqual(state.markers, []);
   });
 

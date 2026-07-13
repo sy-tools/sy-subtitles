@@ -700,6 +700,9 @@ class TestMarkers:
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
         page.wait_for_timeout(1000)
+        # Edit is the default mode now; these tests exercise markers, so opt in.
+        page.click('.preview-mode-toggle [data-mode="marker"]')
+        page.wait_for_timeout(100)
 
     def test_marker_persists_in_localStorage(self, server, page):
         """Markers should be saved to localStorage."""
@@ -2246,6 +2249,7 @@ class TestBranchSelector:
         pg.add_init_script("localStorage.clear();")
         pg.goto(f"{server}{SPA_URL}#/preview/2001-01-01_Test-Talk/Test-Video")
         pg.wait_for_selector("#subtitle-overlay", timeout=10000)
+        pg.click('.preview-mode-toggle [data-mode="marker"]')
         pg.click("#btn-mark")
         pg.wait_for_selector(".marker-item", timeout=5000)
         assert pg.locator(".marker-item").count() == 1
@@ -2789,15 +2793,19 @@ def _goto_preview_video(page, server, video_slug="Test-Video"):
 
 
 class TestPreviewModeDefaults:
-    def test_default_mode_is_marker(self, server, page):
+    def test_default_mode_is_edit(self, server, page):
         _goto_preview_video(page, server)
         mode = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
         )
         assert mode is True
 
-    def test_default_new_key_shape_on_first_mutation(self, server, page):
+    def test_marker_new_key_shape_on_first_mutation(self, server, page):
+        # Marker mode is now opt-in (edit is the default); switch to it, then
+        # the first mark writes the well-formed new-key shape.
         _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="marker"]')
+        page.wait_for_timeout(100)
         page.evaluate("window._vimeoPlayer._setTime(2)")
         page.wait_for_timeout(200)
         page.click("#btn-mark")
@@ -2810,17 +2818,20 @@ class TestPreviewModeDefaults:
 
     def test_mode_persisted_across_reload(self, server, page):
         _goto_preview_video(page, server)
-        page.click('.preview-mode-toggle [data-mode="edit"]')
+        # Switch away from the edit default so the reload actually proves the
+        # choice was persisted (re-selecting the default would save nothing).
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         page.wait_for_timeout(100)
         _goto_preview_video(page, server)
         mode = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
         )
         assert mode is True
 
     def test_mode_independent_per_video(self, server, page):
         _goto_preview_video(page, server, "Test-Video")
-        page.click('.preview-mode-toggle [data-mode="edit"]')
+        # v1 → marker (non-default); v2 must still open on the edit default.
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         page.wait_for_timeout(100)
         _goto_preview_video(page, server, "Test-Video-2")
         debug = page.evaluate("""
@@ -2833,12 +2844,12 @@ class TestPreviewModeDefaults:
           })
         """)
         mode2 = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
         )
         assert mode2 is True, f"debug: {debug}"
         _goto_preview_video(page, server, "Test-Video")
         mode1 = page.evaluate(
-            "document.querySelector('.preview-mode-toggle [data-mode=\"edit\"]').classList.contains('active')"
+            "document.querySelector('.preview-mode-toggle [data-mode=\"marker\"]').classList.contains('active')"
         )
         assert mode1 is True
 
@@ -2903,6 +2914,15 @@ class TestPreviewLayoutButtons:
         btns = page.locator(".preview-mode-toggle button").count()
         assert btns == 2
 
+    def test_edit_chip_comes_first(self, server, page):
+        """Edit is the default mode, so its chip is the leftmost in the toggle."""
+        _goto_preview_video(page, server)
+        modes = page.evaluate(
+            "Array.from(document.querySelectorAll('.preview-mode-toggle button'))"
+            ".map(function(b){ return b.getAttribute('data-mode'); })"
+        )
+        assert modes == ["edit", "marker"]
+
     def test_clear_btn_hidden_when_empty(self, server, page):
         _goto_preview_video(page, server)
         visible = page.locator("#btn-clear-all").is_visible()
@@ -2918,12 +2938,14 @@ class TestPreviewLayoutButtons:
 
     def test_copy_btn_only_visible_in_marker_mode(self, server, page):
         _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         assert page.locator("#btn-copy-all").is_visible() is True
         page.click('.preview-mode-toggle [data-mode="edit"]')
         assert page.locator("#btn-copy-all").is_visible() is False
 
     def test_open_editor_btn_only_visible_in_edit_mode(self, server, page):
         _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="marker"]')
         assert page.locator("#btn-preview-editor").is_visible() is False
         page.click('.preview-mode-toggle [data-mode="edit"]')
         assert page.locator("#btn-preview-editor").is_visible() is True
@@ -3868,6 +3890,9 @@ class TestPreviewMarkerIssueAndCopy:
     markdown tables or wrong file paths slip through silently."""
 
     def _seed_markers(self, page):
+        # Markers live in marker mode; edit is the default now, so switch first.
+        page.click('.preview-mode-toggle [data-mode="marker"]')
+        page.wait_for_timeout(50)
         page.evaluate(
             """
             previewState.markers = [
@@ -4922,6 +4947,53 @@ class TestClipboardCopyDialog:
         assert val is True, (
             "Fixture must set window.__spa_auto_info_confirm = true so tests that "
             "don't explicitly clear it get the direct window.open path."
+        )
+
+    # --- Dismiss affordance: a corner close (X) + Escape/backdrop must NOT
+    # open a GitHub tab. The primary "Open GitHub" button is the ONLY path
+    # that opens. Regression for: Escape (and a missing cancel button) still
+    # firing window.open because the .then() callback ignored the resolved
+    # value.
+    def _open_preview_editor_dialog(self, page, server):
+        """Drive openPreviewEditor with one edit so the clipboard-copy
+        confirm dialog renders, and wait for it."""
+        _goto_preview_video(page, server)
+        page.click('.preview-mode-toggle [data-mode="edit"]')
+        page.wait_for_timeout(50)
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_timeout(200)
+        page.click("#btn-mark")
+        page.evaluate("""
+          var el = document.activeElement;
+          el.innerText = 'DIALOG_DISMISS_EDIT';
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        """)
+        page.wait_for_timeout(50)
+        page.evaluate(self._STUBS)
+        page.evaluate("SPA.openPreviewEditor()")
+        page.wait_for_selector(".sy-modal", timeout=2000)
+
+    def test_info_dialog_has_corner_close_button(self, server, page):
+        """The info dialog must offer a corner close (X) so the user can
+        dismiss it without triggering the primary Open-GitHub action."""
+        self._open_preview_editor_dialog(page, server)
+        assert page.locator(".sy-modal-close").count() == 1, "Info dialog must render a corner close (X) button."
+
+    def test_escape_dismisses_without_opening_tab(self, server, page):
+        """Escape closes the dialog and must NOT open a GitHub tab."""
+        self._open_preview_editor_dialog(page, server)
+        page.keyboard.press("Escape")
+        page.wait_for_selector(".sy-modal", state="detached", timeout=2000)
+        assert page.evaluate("window._openCount") == 0, "Escape must dismiss the dialog WITHOUT opening a GitHub tab."
+
+    def test_corner_close_dismisses_without_opening_tab(self, server, page):
+        """Clicking the corner close (X) closes the dialog and must NOT open
+        a GitHub tab."""
+        self._open_preview_editor_dialog(page, server)
+        page.locator(".sy-modal-close").click()
+        page.wait_for_selector(".sy-modal", state="detached", timeout=2000)
+        assert page.evaluate("window._openCount") == 0, (
+            "Clicking the corner close (X) must dismiss the dialog WITHOUT opening a GitHub tab."
         )
 
 
