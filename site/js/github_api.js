@@ -127,7 +127,7 @@ function createIssue(api, token, fields, fetchImpl) {
 // GET /issues/<n> → the fields marker-sync needs for the pull/merge step.
 function getIssue(api, token, number, fetchImpl) {
   return ghJson(api + '/issues/' + number, token, null, fetchImpl).then(function (r) {
-    return { number: r.number, state: r.state, body: r.body || '', node_id: r.node_id, updatedAt: r.updated_at };
+    return { number: r.number, state: r.state, body: r.body || '', node_id: r.node_id };
   });
 }
 
@@ -145,14 +145,26 @@ function setIssueState(api, token, number, state, fetchImpl) {
 // GET /issues?labels=<label>&state=all — the LIST API is immediately consistent
 // (a just-created issue is present at once), unlike the search index. This is the
 // sole deterministic re-attach mechanism for marker-sync (matched by title).
+// Teardown CLOSES (not deletes) issues, so the labelled set grows unbounded over
+// the corpus; page through until a short page so an older talk's issue past the
+// first 100 is still found (else re-attach would create a duplicate). Capped at
+// MAX_PAGES as a runaway backstop.
 function listIssuesByLabel(api, token, label, fetchImpl) {
-  return ghJson(api + '/issues?labels=' + encodeURIComponent(label) + '&state=all&per_page=100',
-    token, null, fetchImpl).then(function (list) {
-    return (list || []).map(function (r) {
-      return { number: r.number, title: r.title, state: r.state, node_id: r.node_id,
-        html_url: r.html_url, body: r.body || '' };
+  var PER_PAGE = 100, MAX_PAGES = 20;
+  var base = api + '/issues?labels=' + encodeURIComponent(label) + '&state=all&per_page=' + PER_PAGE;
+  function mapRow(r) {
+    return { number: r.number, title: r.title, state: r.state, node_id: r.node_id,
+      html_url: r.html_url, body: r.body || '' };
+  }
+  function fetchPage(page, acc) {
+    return ghJson(base + '&page=' + page, token, null, fetchImpl).then(function (list) {
+      var rows = list || [];
+      acc = acc.concat(rows.map(mapRow));
+      if (rows.length === PER_PAGE && page < MAX_PAGES) return fetchPage(page + 1, acc);
+      return acc;
     });
-  });
+  }
+  return fetchPage(1, []);
 }
 
 // POST /labels — idempotent; a 422 "already exists" is success.

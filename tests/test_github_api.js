@@ -222,11 +222,11 @@ describe('issue sync primitives (marker sync)', () => {
     assert.deepStrictEqual(calls[0].body.labels, ['markers']);
     assert.deepStrictEqual(r, { number: 3, html_url: 'u', node_id: 'I_3' });
   });
-  it('getIssue reads number/state/body/node_id/updatedAt', async () => {
+  it('getIssue reads number/state/body/node_id', async () => {
     const f = routerFetch([{ method: 'GET', match: '/issues/5', status: 200,
       payload: { number: 5, state: 'open', body: 'B', node_id: 'I_5', updated_at: 'T' } }], []);
     assert.deepStrictEqual(await getIssue(API, 'gho_x', 5, f),
-      { number: 5, state: 'open', body: 'B', node_id: 'I_5', updatedAt: 'T' });
+      { number: 5, state: 'open', body: 'B', node_id: 'I_5' });
   });
   it('updateIssue PATCHes the given fields', async () => {
     const calls = [];
@@ -253,6 +253,20 @@ describe('issue sync primitives (marker sync)', () => {
     assert.ok(/labels=markers/.test(calls[0].url) && /state=all/.test(calls[0].url), calls[0].url);
     assert.deepStrictEqual(rows[0],
       { number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B' });
+  });
+  it('listIssuesByLabel pages through until a short page (I2)', async () => {
+    const full = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, title: 'T' + (i + 1),
+      state: 'open', node_id: 'I', html_url: 'u', body: '' }));
+    const tail = [{ number: 101, title: 'LAST', state: 'closed', node_id: 'I', html_url: 'u', body: '' }];
+    const calls = [];
+    const f = routerFetch([
+      { method: 'GET', match: '&page=1', status: 200, payload: full },
+      { method: 'GET', match: '&page=2', status: 200, payload: tail },
+    ], calls);
+    const rows = await listIssuesByLabel(API, 'gho_x', 'markers', f);
+    assert.strictEqual(rows.length, 101, 'both pages are merged');
+    assert.strictEqual(rows[100].title, 'LAST');
+    assert.strictEqual(calls.length, 2, 'stops after the short second page');
   });
   it('ensureLabel POSTs and tolerates a 422 already-exists', async () => {
     const f422 = routerFetch([{ method: 'POST', match: '/labels', status: 422,
