@@ -2,7 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const {
   syncFilePath, syncBaseKey, collectSyncEntries, applySyncEntries,
-  mergeSyncDocs, makeSyncDoc,
+  mergeSyncDocs, makeSyncDoc, flattenDoc, unflattenDoc,
 } = require('../site/js/edit_sync');
 
 const TALK = '1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay';
@@ -149,6 +149,23 @@ describe('mergeSyncDocs (three-way, per item)', () => {
     assert.deepStrictEqual(merged.edits.uk, { 1: 'x', 9: 'remote' });
     // markers stay sorted by time
     assert.ok(merged.markers[0].time <= merged.markers[1].time);
+  });
+});
+
+describe('flatten/unflatten shape stability', () => {
+  it('round-trips entries to the exact JSON the app itself stores', () => {
+    // Byte-identical shapes matter: doFlush's "unchanged" fast path and
+    // applySyncEntries' change detection compare JSON strings.
+    const PK = 'preview_' + TALK + '_v';
+    const RK = 'review_' + TALK;
+    const m = { time: 5, tc: '00:00:05', text: 'sub', comment: 'c' };
+    const preview = { mode: 'edit', markers: [m], edits: { uk: { 1: 'x' } } };
+    const review = { marks: { 2: 'note' }, edits: { 1: 'y' } };
+    const rt = unflattenDoc(flattenDoc({ [PK]: preview, [RK]: review }));
+    assert.strictEqual(JSON.stringify(rt[PK]), JSON.stringify(preview));
+    assert.strictEqual(JSON.stringify(rt[RK]), JSON.stringify(review));
+    assert.ok(!('marks' in rt[PK]), 'preview entries carry no marks field');
+    assert.ok(!('markers' in rt[RK]), 'review entries carry no markers field');
   });
 });
 
@@ -326,11 +343,11 @@ describe('engine: bootstrap', () => {
     await engine.flush();
     const names = gh.calls.map((c) => c[0]);
     assert.deepStrictEqual(names, [
-      'getFileContent', 'getBranchHeadSha', 'createRef', 'putFile', 'createPull',
+      'getFileContent', 'findOpenPrByHead', 'getBranchHeadSha', 'createRef', 'putFile', 'createPull',
     ]);
-    assert.deepStrictEqual(gh.calls[2], ['createRef', BRANCH_NAME, 'head1']);
-    assert.strictEqual(gh.calls[3][2], null); // no sha: brand-new file
-    assert.deepStrictEqual(gh.calls[4], ['createPull', BRANCH_NAME, 'main', true]);
+    assert.deepStrictEqual(gh.calls[3], ['createRef', BRANCH_NAME, 'head1']);
+    assert.strictEqual(gh.calls[4][2], null); // no sha: brand-new file
+    assert.deepStrictEqual(gh.calls[5], ['createPull', BRANCH_NAME, 'main', true]);
     const info = engine.getInfo();
     assert.strictEqual(info.prNumber, 77);
     assert.strictEqual(info.prUrl, 'https://github.com/x/pull/77');
@@ -357,16 +374,70 @@ describe('engine: bootstrap', () => {
     assert.deepStrictEqual(pulls.map((c) => c[3]), [true, false]);
     assert.strictEqual(engine.getInfo().prNumber, 77);
   });
+  it('adopts an existing draft PR on the branch instead of creating a second one', async () => {
+    const { engine, gh, storage } = makeEngine({
+      existingPr: { number: 12, html_url: 'https://github.com/x/pull/12', node_id: 'PR_n12', draft: true },
+    });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createPull').length, 0);
+    assert.strictEqual(engine.getInfo().prNumber, 12);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(gh.puts.length, 1);
+  });
+  it('goes silent when the branch already carries a submitted (ready) PR', async () => {
+    // Post-finalize: the deterministic branch has an open NON-draft PR.
+    // Pushing state onto it would dirty a human-facing PR — stay local-only.
+    const { engine, gh, storage } = makeEngine({
+      existingPr: { number: 12, html_url: 'https://github.com/x/pull/12', node_id: 'PR_n12', draft: false },
+    });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.puts.length, 0);
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 0);
+    assert.strictEqual(engine.getInfo().status, 'idle');
+    // ...and stays silent on later edits without re-asking GitHub
+    const callsBefore = gh.calls.length;
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.calls.length, callsBefore);
+  });
+});
+
+describe('engine: destroy vs in-flight flush', () => {
+  it('destroy() resolves after the in-flight flush and suppresses its tail', async () => {
+    let releasePut;
+    const putGate = new Promise((res) => { releasePut = res; });
+    const { engine, gh, storage } = makeEngine();
+    const origPut = gh.putFile;
+    gh.putFile = async (...a) => { await putGate; return origPut(...a); };
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    const flushP = engine.flush();
+    await settle(); // flush is now parked on the PUT
+    let destroyed = false;
+    const destroyP = engine.destroy().then(() => { destroyed = true; });
+    await settle();
+    assert.strictEqual(destroyed, false, 'destroy must wait for the in-flight flush');
+    releasePut();
+    await flushP;
+    await destroyP;
+    assert.strictEqual(destroyed, true);
+    // the tail (PR creation) was suppressed by the dispose
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createPull').length, 0);
+  });
 });
 
 describe('engine: no-op protection', () => {
   it('never bootstraps a branch/PR when there is nothing to sync', async () => {
-    // e.g. a mode toggle marks the state dirty without any real edit
+    // e.g. a mode toggle marks the state dirty without any real edit —
+    // not even a lookup GET is spent on it (attach() covers adoption).
     const { engine, gh } = makeEngine();
     engine.notifyEdit();
     await engine.flush();
-    const names = gh.calls.map((c) => c[0]);
-    assert.deepStrictEqual(names, ['getFileContent']); // looked, created nothing
+    assert.deepStrictEqual(gh.calls, []);
     assert.strictEqual(engine.getInfo().status, 'idle');
   });
   it('skips the PUT when the doc is unchanged since the last push', async () => {

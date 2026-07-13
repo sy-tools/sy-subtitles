@@ -3543,12 +3543,13 @@ SPA.createPreviewPr = function() {
   if (btn) btn.disabled = true;
   var commitMessage = 'Subtitle edits: ' + s.talkId + ' (' + s.videoSlug + '/' + lang + ')';
   var syncInfo = editSync && editSync.getInfo();
+  var finalized = false;
   var op;
   if (syncInfo && syncInfo.prNumber) {
     // A sync draft PR exists — finalize it instead of opening a second PR.
     op = finalizeSyncPr(
       [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
-      commitMessage);
+      commitMessage).then(function() { finalized = true; });
   } else {
     op = submitFilesPr(API, token, {
       branch: makeBranchName('preview/' + s.talkId, user.login),
@@ -3562,7 +3563,12 @@ SPA.createPreviewPr = function() {
     });
   }
   op.catch(ghWriteError)
-    .then(function() { if (btn) btn.disabled = false; ensureEditSync(); });
+    .then(function() {
+      if (btn) btn.disabled = false;
+      // After a successful finalize the engine stays down on purpose: a new
+      // one would push the state file right back onto the now-ready PR.
+      if (!finalized) ensureEditSync();
+    });
 };
 
 SPA.openPreviewEditor = function() {
@@ -4393,9 +4399,13 @@ function ensureEditSync() {
   renderSyncStatus(engine.getInfo().status, engine.getInfo());
 }
 
+// Tears the engine down and returns a promise that settles once any
+// in-flight push has finished (see engine.destroy) — finalize awaits it.
 function destroyEditSync() {
-  if (editSync) { editSync.destroy(); editSync = null; }
+  var stopped = Promise.resolve();
+  if (editSync) { stopped = editSync.destroy() || stopped; editSync = null; }
   renderSyncStatus('idle', null);
+  return stopped;
 }
 
 function onSyncStatus(status, info) {
@@ -4412,13 +4422,22 @@ function onSyncStatus(status, info) {
 }
 
 // Remote edits just landed in localStorage (pull/merge) — refresh whichever
-// talk view is open so the cells show them without a reload.
+// talk view is open so the cells show them without a reload. In-memory state
+// is ALWAYS reloaded (a later save must not clobber the merged storage), but
+// the DOM re-render is skipped while the user is typing in a field — it
+// would drop their caret; the next render picks the changes up.
+function syncUserIsTyping() {
+  var el = document.activeElement;
+  return !!(el && (el.isContentEditable || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA'));
+}
+
 function onSyncRemoteApplied() {
+  var typing = syncUserIsTyping();
   var reviewOpen = document.getElementById('view-review').classList.contains('active');
   if (reviewOpen && reviewState.talkId) {
     loadReviewEditsForMode();
-    renderReview();
     updateRevertBtn();
+    if (!typing) renderReview();
   }
   var previewOpen = document.getElementById('view-preview').classList.contains('active');
   if (previewOpen && previewState && previewState.talkId) {
@@ -4426,10 +4445,12 @@ function onSyncRemoteApplied() {
     previewState.mode = persisted.mode;
     previewState.markers = persisted.markers;
     previewState.edits = persisted.edits;
-    applyPreviewMode();
-    renderMarkers();
-    renderEditList();
     updateClearBtn();
+    if (!typing) {
+      applyPreviewMode();
+      renderMarkers();
+      renderEditList();
+    }
   }
 }
 
@@ -4529,11 +4550,11 @@ function finalizeSyncPr(files, commitMessage) {
   var talkId = editSync.talkId;
   var inf = editSync.getInfo();
   var statePath = syncFilePath(talkId);
-  // Stop background pushes first so a late state PUT cannot resurrect the
-  // state file after we delete it.
-  destroyEditSync();
+  // Stop background pushes first AND wait for any in-flight one to land, so
+  // a late state PUT cannot resurrect the state file after we delete it.
+  var stopped = destroyEditSync();
   localStorage.removeItem(syncBaseKey(talkId));
-  var chain = Promise.resolve();
+  var chain = stopped.catch(function() {});
   files.forEach(function(file) {
     chain = chain.then(function() {
       return getFileSha(API, token, file.path, inf.branch);
@@ -4653,10 +4674,12 @@ SPA.createReviewPr = function() {
   if (btn) btn.disabled = true;
   var commitMessage = 'Review edits: ' + reviewState.talkId + ' (' + file.label + ')';
   var syncInfo = editSync && editSync.getInfo();
+  var finalized = false;
   var op;
   if (syncInfo && syncInfo.prNumber) {
     // A sync draft PR exists — finalize it instead of opening a second PR.
-    op = finalizeSyncPr([{ path: file.path, content: buildReviewEditedContent() }], commitMessage);
+    op = finalizeSyncPr([{ path: file.path, content: buildReviewEditedContent() }], commitMessage)
+      .then(function() { finalized = true; });
   } else {
     op = submitFilesPr(API, token, {
       branch: makeBranchName('review/' + reviewState.talkId, user.login),
@@ -4670,7 +4693,12 @@ SPA.createReviewPr = function() {
     });
   }
   op.catch(ghWriteError)
-    .then(function() { if (btn) btn.disabled = false; ensureEditSync(); });
+    .then(function() {
+      if (btn) btn.disabled = false;
+      // After a successful finalize the engine stays down on purpose: a new
+      // one would push the state file right back onto the now-ready PR.
+      if (!finalized) ensureEditSync();
+    });
 };
 
 // Full new content of the review view's edited file: SRT rebuilt with original

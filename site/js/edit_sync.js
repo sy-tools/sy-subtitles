@@ -147,13 +147,17 @@ function unflattenDoc(flat) {
   Object.keys(entries).forEach(function (entryKey) {
     var e = entries[entryKey];
     e.markers.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
-    // Normalize the shape back to what the app stores: review entries have
-    // no markers/mode; preview entries keep all three fields. A merge can
-    // leave an entry with no items at all (every edit deleted) — drop it.
+    // Normalize to the EXACT shape (fields and order) the app itself stores
+    // (savePreviewState: {mode, markers, edits}; saveReview: {marks, edits})
+    // — the "unchanged" fast path and change detection compare JSON strings,
+    // so a byte-different equal doc would cause pointless pushes/re-renders.
+    // A merge can leave an entry with no items (every edit deleted) — drop it.
     var isPreview = entryKey.indexOf('preview_') === 0;
-    if (!isPreview) { delete e.markers; }
-    else if (e.mode === undefined) { e.mode = 'marker'; }
-    if (entryIsEmpty(e)) delete entries[entryKey];
+    var norm = isPreview
+      ? { mode: e.mode === undefined ? 'marker' : e.mode, markers: e.markers, edits: e.edits }
+      : { marks: e.marks, edits: e.edits };
+    if (entryIsEmpty(norm)) delete entries[entryKey];
+    else entries[entryKey] = norm;
   });
   return entries;
 }
@@ -250,6 +254,10 @@ function createSyncEngine(opts) {
   var lastPullAt = 0;
   var inflight = null;
   var disposed = false;
+  // The deterministic branch already carries an open NON-draft PR (a past
+  // finalize) — pushing state onto it would dirty a human-facing PR, so the
+  // engine goes permanently silent for this talk (edits stay local-only).
+  var submitted = false;
 
   function info() {
     return { status: status, prUrl: meta.prUrl, prNumber: meta.prNumber, nodeId: meta.nodeId,
@@ -274,7 +282,7 @@ function createSyncEngine(opts) {
   }
 
   function notifyEdit() {
-    if (disposed) return;
+    if (disposed || submitted) return;
     dirty = true;
     editSeq += 1;
     armDebounce();
@@ -282,7 +290,7 @@ function createSyncEngine(opts) {
   }
 
   function flushSoon() {
-    if (disposed || !dirty) return;
+    if (disposed || submitted || !dirty) return;
     if (coalesceId !== null) clearT(coalesceId);
     coalesceId = setT(function () { coalesceId = null; flush(); }, COALESCE_MS);
   }
@@ -290,18 +298,30 @@ function createSyncEngine(opts) {
   function flush(fopts) {
     // force bypasses the dirty gate: the recovery path ("Retry now") must be
     // able to re-run the PR-creation tail even after the state itself pushed.
-    if (disposed || (!dirty && !(fopts && fopts.force))) return Promise.resolve();
+    if (disposed || submitted || (!dirty && !(fopts && fopts.force))) return Promise.resolve();
     if (inflight) return inflight.then(function () { return flush(fopts); });
     inflight = doFlush(fopts)
       .then(function () { inflight = null; }, function () { inflight = null; });
     return inflight;
   }
 
+  function clearDirty() {
+    dirty = false;
+    if (debounceId !== null) { clearT(debounceId); debounceId = null; }
+  }
+
   function doFlush(fopts) {
     var keepalive = fopts && fopts.keepalive;
     var seqAtStart = editSeq;
-    setStatus('syncing');
     var local = collectSyncEntries(talkId, storage);
+    // Nothing local and nothing ever synced: don't even look — attach()
+    // covers remote adoption, and a mode toggle must not cost a request.
+    if (meta.sha === null && !Object.keys(local).length) {
+      clearDirty();
+      if (status !== 'idle') setStatus('idle');
+      return Promise.resolve();
+    }
+    setStatus('syncing');
     var attempt = 0;
 
     // Fold a freshly fetched remote doc into local state: three-way merge,
@@ -317,24 +337,32 @@ function createSyncEngine(opts) {
     }
 
     // First push of this session: adopt whatever the sync branch already
-    // holds (another device may have synced), or create the branch. The
-    // branch is only created when there is real content to push — a dirty
-    // flag alone (e.g. a mode toggle) must never bootstrap anything.
+    // holds (another device may have synced), or create the branch — unless
+    // the branch's PR was already submitted for review (see `submitted`).
     function ensureRemoteBase() {
       if (meta.sha !== null) return Promise.resolve();
       return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
         if (file) { integrateRemote(parseRemote(file)); return; }
-        if (!Object.keys(local).length) return;
-        return gh.getBranchHeadSha(api, token, baseBranch, fetchImpl).then(function (sha) {
-          return gh.createRef(api, token, branch, sha, fetchImpl).catch(function (e) {
-            if (e && e.status === 422) return; // branch already exists — fine
-            throw e;
+        return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
+          if (pr && pr.draft === false) { submitted = true; return; }
+          if (pr) {
+            // an orphaned draft PR (e.g. the state file was lost) — reuse it
+            meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
+            saveMeta();
+            return;
+          }
+          return gh.getBranchHeadSha(api, token, baseBranch, fetchImpl).then(function (sha) {
+            return gh.createRef(api, token, branch, sha, fetchImpl).catch(function (e) {
+              if (e && e.status === 422) return; // branch already exists — fine
+              throw e;
+            });
           });
         });
       });
     }
 
     function push() {
+      if (disposed) return Promise.resolve();
       attempt += 1;
       var revision = (meta.revision || 0) + 1;
       var doc = makeSyncDoc(talkId, local, revision, clientId, new Date(now()).toISOString());
@@ -349,10 +377,7 @@ function createSyncEngine(opts) {
         meta.doc = local;
         meta.sha = (res && res.content && res.content.sha) || null;
         meta.revision = revision;
-        if (editSeq === seqAtStart) {
-          dirty = false;
-          if (debounceId !== null) { clearT(debounceId); debounceId = null; }
-        }
+        if (editSeq === seqAtStart) clearDirty();
         saveMeta();
       }, function (e) {
         // CAS: someone else wrote the file since our base sha. Refresh, merge,
@@ -369,7 +394,7 @@ function createSyncEngine(opts) {
     }
 
     function ensurePr() {
-      if (meta.prNumber) return Promise.resolve();
+      if (disposed || meta.prNumber) return Promise.resolve();
       var title = 'Edit sync: ' + talkId + ' (' + login + ')';
       var body = 'Automated **draft** PR carrying in-progress review/preview edits from the SPA.\n\n'
         + '- State file: `' + path + '`\n'
@@ -397,11 +422,9 @@ function createSyncEngine(opts) {
     }
 
     return ensureRemoteBase().then(function () {
-      // Nothing local and nothing remote: don't create a branch/PR for an
-      // empty state (a mode toggle is "dirty" but carries no content).
-      if (meta.sha === null && !Object.keys(local).length) {
-        dirty = false;
-        if (debounceId !== null) { clearT(debounceId); debounceId = null; }
+      if (disposed) return;
+      if (submitted) {
+        clearDirty();
         setStatus('idle');
         return;
       }
@@ -411,13 +434,12 @@ function createSyncEngine(opts) {
         && JSON.stringify(local) === JSON.stringify(meta.doc || {});
       var step = unchanged ? Promise.resolve() : push();
       return step.then(ensurePr).then(function () {
-        if (unchanged && editSeq === seqAtStart) {
-          dirty = false;
-          if (debounceId !== null) { clearT(debounceId); debounceId = null; }
-        }
+        if (disposed) return;
+        if (unchanged && editSeq === seqAtStart) clearDirty();
         setStatus('synced');
       });
     }).catch(function (e) {
+      if (disposed) return;
       if (isOffline(e)) { setStatus('pending', { kind: 'offline', message: e && e.message }); return; }
       if (e && e.status === 401) { setStatus('error', { kind: 'auth', message: e && e.message }); return; }
       setStatus('error', { kind: 'sync', message: (e && e.message) || String(e), httpStatus: e && e.status });
@@ -476,10 +498,14 @@ function createSyncEngine(opts) {
     });
   }
 
+  // Tear down: no further timers or status emissions. Returns a promise that
+  // resolves once any in-flight flush settles — finalize awaits it so a PUT
+  // in the air cannot race its read-then-delete of the state file.
   function destroy() {
     disposed = true;
     if (debounceId !== null) { clearT(debounceId); debounceId = null; }
     if (coalesceId !== null) { clearT(coalesceId); coalesceId = null; }
+    return inflight || Promise.resolve();
   }
 
   return {
