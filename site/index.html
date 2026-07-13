@@ -352,8 +352,7 @@
     </div>
     <div class="header-actions">
       <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-gh-hide data-i18n="btn.copy_all">Copy all</button>
-      <button id="btn-preview-issue" class="btn btn--issue" onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
-      <button id="btn-preview-pr" class="btn btn--primary" style="display:none" onclick="SPA.createPreviewPr()" data-i18n="btn.create_pr">Create PR</button>
+      <button id="btn-preview-issue" class="btn btn--issue" data-gh-hide onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
       <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button id="btn-clear-all" class="btn btn--danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
     </div>
@@ -392,8 +391,7 @@
                 data-i18n="btn.show_video">&#x25B6; Show video</button>
         <div id="video-picker-dropdown" class="video-dropdown" role="listbox"></div>
       </span>
-      <button class="btn btn--issue" onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
-      <button id="btn-create-pr" class="btn btn--primary" data-gh-only style="display:none" onclick="SPA.createReviewPr()" data-i18n="btn.create_pr">Create PR</button>
+      <button class="btn btn--issue" data-gh-hide onclick="SPA.createReviewIssue()" data-i18n="btn.create_review_issue">Create Issue</button>
       <button id="btn-review-editor" class="btn btn--primary" data-gh-hide onclick="SPA.openEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
       <button onclick="SPA.revertAllEdits()" id="btn-revert-all" class="btn btn--danger" style="display:none" data-i18n="btn.revert_all">Revert all</button>
     </div>
@@ -911,13 +909,13 @@ var I18N = {
     'sync.syncing': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u044F\u2026',
     'sync.pending': '\u041E\u0447\u0456\u043A\u0443\u0454 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457',
     'sync.error': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457',
-    'sync.retry': '\u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u0438 \u0437\u0430\u0440\u0430\u0437',
+    'sync.ready': '\u041D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'sync.finalize': '\u0424\u0456\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u2014 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
+    'sync.sync_now': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0440\u0430\u0437',
     'sync.open_pr': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043D\u0430 GitHub',
     'sync.copy_backup': '\u0421\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u0443 \u043A\u043E\u043F\u0456\u044E \u043F\u0440\u0430\u0432\u043E\u043A',
     'sync.backup_copied': '\u041F\u0440\u0430\u0432\u043A\u0438 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u0432 \u0431\u0443\u0444\u0435\u0440 (JSON)',
-    'sync.signin': '\u0423\u0432\u0456\u0439\u0442\u0438 \u0437\u043D\u043E\u0432\u0443',
     'sync.chip_title': '\u0421\u0442\u0430\u043D \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457 \u043F\u0440\u0430\u0432\u043E\u043A \u2014 \u0447\u0435\u0440\u043D\u0435\u0442\u043A\u0430 PR \u043E\u043D\u043E\u0432\u043B\u044E\u0454\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E',
-    'btn.finalize_pr': '\u0424\u0456\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 PR',
     'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
   },
   en: {
@@ -1070,13 +1068,13 @@ var I18N = {
     'sync.syncing': 'Syncing…',
     'sync.pending': 'Sync pending',
     'sync.error': 'Sync error',
-    'sync.retry': 'Retry now',
+    'sync.ready': 'In review',
+    'sync.finalize': 'Finalize — ready for review',
+    'sync.sync_now': 'Sync now',
     'sync.open_pr': 'Open on GitHub',
     'sync.copy_backup': 'Copy edits backup',
     'sync.backup_copied': 'Edits copied to clipboard (JSON)',
-    'sync.signin': 'Sign in again',
     'sync.chip_title': 'Edit sync status — the draft PR updates automatically',
-    'btn.finalize_pr': 'Finalize PR',
     'title.lang': 'Interface language'
   }
 };
@@ -3071,18 +3069,15 @@ function flushPreviewPos() {
   writePreviewPosNow();
 }
 
-// Edit-submission buttons live at the mode × auth intersection: edit mode
-// shows exactly ONE of them — Create PR signed in, the clipboard+editor flow
-// signed out (both submit the same edits, showing both would duplicate the
-// action). Called from applyPreviewMode (mode flips) AND updateAuthUI
-// (login/logout while the preview is open).
+// Signed out, edit mode: the clipboard+editor flow is the only submit path.
+// Signed in there is NO submit button at all — edits auto-sync to the draft
+// PR and the whole lifecycle lives in the sync chip. Called from
+// applyPreviewMode (mode flips) AND updateAuthUI (login/logout mid-preview).
 function updatePreviewSubmitButtons() {
   var mode = (typeof previewState !== 'undefined' && previewState.mode) || 'marker';
   var signedIn = !!getAuthUser();
   var editorBtn = document.getElementById('btn-preview-editor');
   if (editorBtn) editorBtn.style.display = (mode === 'edit' && !signedIn) ? 'inline-block' : 'none';
-  var prBtn = document.getElementById('btn-preview-pr');
-  if (prBtn) prBtn.style.display = (mode === 'edit' && signedIn) ? 'inline-block' : 'none';
 }
 
 function applyPreviewMode() {
@@ -3479,8 +3474,7 @@ SPA.copyMarkers = function() {
   });
 };
 
-// {title, body} of the preview issue \u2014 also reused verbatim as the PR body by
-// SPA.createPreviewPr, so both write paths describe the same marks/edits.
+// {title, body} of the preview issue (the signed-out reporting flow).
 function buildPreviewIssueContent() {
   var s = previewState;
   var gh = 'https://github.com/' + REPO;
@@ -3527,49 +3521,9 @@ SPA.createPreviewIssue = function() {
   openIssuePage(content.title, content.body);
 };
 
-// One-button PR from the preview's subtitle edits: new timestamped branch off
-// BRANCH, commit the rebuilt final/<lang>.srt, open the PR (whose body = the
-// preview issue body). sync-subtitles.yml then reconciles SRT\u2194transcript.
-SPA.createPreviewPr = function() {
-  var user = getAuthUser(), token = getAuthToken();
-  if (!user || !token) return;
-  var s = previewState;
-  var lang = s.srtLang || 'uk';
-  var langEdits = (s.edits && s.edits[lang]) || {};
-  if (!Object.keys(langEdits).length) { showToast(t('pr.no_edits')); return; }
-  var filePath = 'talks/' + s.talkId + '/' + s.videoSlug + '/final/' + lang + '.srt';
-  var content = buildPreviewIssueContent();
-  var btn = document.getElementById('btn-preview-pr');
-  if (btn) btn.disabled = true;
-  var commitMessage = 'Subtitle edits: ' + s.talkId + ' (' + s.videoSlug + '/' + lang + ')';
-  var syncInfo = editSync && editSync.getInfo();
-  var finalized = false;
-  var op;
-  if (syncInfo && syncInfo.prNumber) {
-    // A sync draft PR exists — finalize it instead of opening a second PR.
-    op = finalizeSyncPr(
-      [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
-      commitMessage).then(function() { finalized = true; });
-  } else {
-    op = submitFilesPr(API, token, {
-      branch: makeBranchName('preview/' + s.talkId, user.login),
-      base: BRANCH,
-      files: [{ path: filePath, content: applyEditsToSrt(s.subtitles || [], langEdits) }],
-      commitMessage: commitMessage,
-      prTitle: content.title,
-      prBody: content.body
-    }).then(function(pr) {
-      ghCreatedDialog('pr.created', pr);
-    });
-  }
-  op.catch(ghWriteError)
-    .then(function() {
-      if (btn) btn.disabled = false;
-      // After a successful finalize the engine stays down on purpose: a new
-      // one would push the state file right back onto the now-ready PR.
-      if (!finalized) ensureEditSync();
-    });
-};
+// Signed-in preview edits auto-sync to the draft PR — see buildSyncFiles and
+// the sync chip. Signed out, the clipboard + GitHub-editor flow below is the
+// submit path.
 
 SPA.openPreviewEditor = function() {
   var s = previewState;
@@ -4351,6 +4305,7 @@ var SYNC_ICONS = {
   syncing: '<svg class="spin" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.2 6a4.2 4.2 0 1 1-1.23-2.97"/><polyline points="10.4 0.9 10.4 3.3 8 3.3"/></svg>',
   pending: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="4.6"/><polyline points="6 3.6 6 6 7.8 7"/></svg>',
   error: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 1.6 11 10.4H1z"/><line x1="6" y1="4.8" x2="6" y2="7"/><line x1="6" y1="8.7" x2="6" y2="8.71"/></svg>',
+  ready: '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 6.2 10.6 1.4 7.6 10.6 5.4 7z"/><line x1="5.4" y1="7" x2="10.6" y2="1.4"/></svg>',
 };
 
 function currentSyncTalkId() {
@@ -4383,13 +4338,18 @@ function ensureEditSync() {
     storage: localStorage,
     gh: {
       getFileContent: getFileContent,
+      getFileSha: getFileSha,
       getBranchHeadSha: getBranchHeadSha,
       createRef: createRef,
       putFile: putFile,
+      deleteFile: deleteFile,
       createPull: createPull,
       findOpenPrByHead: findOpenPrByHead,
+      markPullReady: markPullReady,
+      convertPullToDraft: convertPullToDraft,
     },
     isOffline: isOfflineError,
+    buildFiles: buildSyncFiles,
     onStatus: onSyncStatus,
     onRemoteApplied: onSyncRemoteApplied,
   });
@@ -4454,21 +4414,7 @@ function onSyncRemoteApplied() {
   }
 }
 
-// The Create PR buttons become "Finalize PR" once a sync draft PR exists:
-// the same click then commits the real files to the sync branch and flips
-// the draft to ready instead of opening a second PR.
-function updatePrButtonLabels(hasSyncPr) {
-  ['btn-create-pr', 'btn-preview-pr'].forEach(function(id) {
-    var b = document.getElementById(id);
-    if (!b) return;
-    var key = hasSyncPr ? 'btn.finalize_pr' : 'btn.create_pr';
-    b.textContent = t(key);
-    b.setAttribute('data-i18n', key);
-  });
-}
-
 function renderSyncStatus(status, info) {
-  updatePrButtonLabels(!!(editSync && info && info.prNumber));
   var chip = document.getElementById('sync-chip');
   if (!chip) return;
   if (!editSync || status === 'idle') {
@@ -4478,7 +4424,8 @@ function renderSyncStatus(status, info) {
     return;
   }
   chip.style.display = '';
-  var labels = { synced: 'sync.synced', syncing: 'sync.syncing', pending: 'sync.pending', error: 'sync.error' };
+  var labels = { synced: 'sync.synced', syncing: 'sync.syncing', pending: 'sync.pending',
+    error: 'sync.error', ready: 'sync.ready' };
   var textEl = document.getElementById('sync-chip-text');
   textEl.textContent = t(labels[status] || status);
   textEl.setAttribute('data-i18n', labels[status] || '');
@@ -4488,16 +4435,20 @@ function renderSyncStatus(status, info) {
   btn.classList.toggle('sync-error', status === 'error');
 }
 
+// The chip is the whole signed-in lifecycle: its dropdown carries the PR
+// link, the finalize action, a manual sync and the local backup.
 SPA.syncChipClick = function() {
   if (!editSync) return;
-  var inf = editSync.getInfo();
-  if (inf.status === 'error') { toggleSyncDropdown(inf); return; }
-  if (inf.status === 'pending' || inf.status === 'syncing') { editSync.flush(); return; }
-  if (inf.prUrl) window.open(inf.prUrl);
-  else window.open('https://github.com/' + REPO + '/tree/' + inf.branch);
+  toggleSyncDropdown(editSync.getInfo());
 };
 
-// Error-state dropdown: recovery actions instead of a dead red chip.
+SPA.syncFinalize = function() {
+  if (!editSync) return;
+  editSync.finalize()
+    .then(function(pr) { ghCreatedDialog('pr.finalized', pr); })
+    .catch(ghWriteError);
+};
+
 function toggleSyncDropdown(inf) {
   var dd = document.getElementById('sync-chip-dropdown');
   if (!dd) return;
@@ -4509,14 +4460,21 @@ function toggleSyncDropdown(inf) {
     d.onclick = function() { dd.classList.remove('open'); fn(); };
     dd.appendChild(d);
   }
-  item(t('sync.retry'), function() { if (editSync) editSync.flush(); });
   if (inf.prUrl || inf.branch) {
     item(t('sync.open_pr'), function() {
       window.open(inf.prUrl || ('https://github.com/' + REPO + '/tree/' + inf.branch));
     });
   }
+  // Finalize: only meaningful while the PR is still a draft. After it, the
+  // chip shows 'ready'; any further edit silently re-drafts the PR.
+  if (inf.prNumber && inf.prDraft !== false) {
+    item(t('sync.finalize'), function() { SPA.syncFinalize(); });
+  }
+  if (inf.status === 'pending' || inf.status === 'error' || inf.dirty) {
+    item(t('sync.sync_now'), function() { if (editSync) editSync.flush({ force: true }); });
+  }
   item(t('sync.copy_backup'), function() {
-    var entries = collectSyncEntries(inf.talkId || (editSync && editSync.talkId) || '', localStorage);
+    var entries = collectSyncEntries((editSync && editSync.talkId) || '', localStorage);
     navigator.clipboard.writeText(JSON.stringify(entries, null, 2))
       .then(function() { showToast(t('sync.backup_copied')); })
       .catch(function() { showToast(t('error.clipboard')); });
@@ -4542,53 +4500,35 @@ document.addEventListener('visibilitychange', function() {
 });
 window.addEventListener('pagehide', function() { if (editSync) editSync.flush({ keepalive: true }); });
 
-// Finalize the sync draft PR: commit the real edited files to the sync
-// branch, drop the state file, flip the draft to ready-for-review. The PR
-// the user has watched in the chip becomes the deliverable — no second PR.
-function finalizeSyncPr(files, commitMessage) {
-  var token = getAuthToken();
-  var talkId = editSync.talkId;
-  var inf = editSync.getInfo();
-  var statePath = syncFilePath(talkId);
-  // Stop background pushes first AND wait for any in-flight one to land, so
-  // a late state PUT cannot resurrect the state file after we delete it.
-  var stopped = destroyEditSync();
-  localStorage.removeItem(syncBaseKey(talkId));
-  var chain = stopped.catch(function() {});
-  files.forEach(function(file) {
-    chain = chain.then(function() {
-      return getFileSha(API, token, file.path, inf.branch);
-    }).then(function(sha) {
-      return putFile(API, token, {
-        path: file.path, branch: inf.branch, message: commitMessage,
-        content: file.content, sha: sha,
-      });
-    });
-  });
-  return chain.then(function() {
-    return getFileContent(API, token, statePath, inf.branch);
-  }).then(function(state) {
-    if (state) {
-      return deleteFile(API, token, {
-        path: statePath, branch: inf.branch,
-        message: 'sync: finalize ' + talkId, sha: state.sha,
-      });
+// Rebuilds the real edited file(s) for the sync engine — only the OPEN view
+// has the data (rows/blocks) to rebuild its transcript/SRT; other modes'
+// edits live in the state file until their view is opened.
+function buildSyncFiles() {
+  if (!editSync) return [];
+  try {
+    var reviewOpen = document.getElementById('view-review').classList.contains('active');
+    if (reviewOpen && reviewState.talkId === editSync.talkId
+        && Object.keys(reviewState.edits).length
+        && (reviewState.rightParas.length || (reviewState.alignedRows || []).length)) {
+      return [{ path: reviewFilePath().path, content: buildReviewEditedContent() }];
     }
-  }).then(function() {
-    // GraphQL-only operation; a failure is non-fatal — the PR just stays a
-    // draft and the user flips it on GitHub.
-    if (!inf.nodeId) return;
-    return markPullReady(token, inf.nodeId).catch(function(e) {
-      console.warn('markPullReady failed:', e && e.message);
-      showToast(t('gh.error') + (e && e.message ? ': ' + e.message : ''), 4000);
-    });
-  }).then(function() {
-    ghCreatedDialog('pr.finalized', { number: inf.prNumber, html_url: inf.prUrl });
-  });
+    var previewOpen = document.getElementById('view-preview').classList.contains('active');
+    if (previewOpen && previewState && previewState.talkId === editSync.talkId) {
+      var lang = previewState.srtLang || 'uk';
+      var langEdits = (previewState.edits && previewState.edits[lang]) || {};
+      if (Object.keys(langEdits).length && (previewState.subtitles || []).length) {
+        var path = 'talks/' + previewState.talkId + '/' + previewState.videoSlug
+          + '/final/' + lang + '.srt';
+        return [{ path: path, content: applyEditsToSrt(previewState.subtitles, langEdits) }];
+      }
+    }
+  } catch (e) {
+    console.warn('buildSyncFiles failed:', e && e.message);
+  }
+  return [];
 }
 
-// {title, body} of the review issue — also reused verbatim as the PR body by
-// SPA.createReviewPr, so both write paths describe the same marks/edits.
+// {title, body} of the review issue (the signed-out reporting flow).
 function buildReviewIssueContent() {
   var gh = 'https://github.com/' + REPO;
   var talk = manifest ? manifest.talks.find(function(t) { return t.id === reviewState.talkId; }) : null;
@@ -4659,46 +4599,6 @@ SPA.createReviewIssue = function() {
     return;
   }
   openIssuePage(content.title, content.body);
-};
-
-// One-button PR from the review edits: new timestamped branch off BRANCH,
-// commit the rebuilt file, open the PR (whose body = the review issue body).
-// The existing sync-subtitles.yml then reconciles transcript↔SRT on the PR.
-SPA.createReviewPr = function() {
-  var user = getAuthUser(), token = getAuthToken();
-  if (!user || !token) return;
-  if (!Object.keys(reviewState.edits).length) { showToast(t('pr.no_edits')); return; }
-  var file = reviewFilePath();
-  var content = buildReviewIssueContent();
-  var btn = document.getElementById('btn-create-pr');
-  if (btn) btn.disabled = true;
-  var commitMessage = 'Review edits: ' + reviewState.talkId + ' (' + file.label + ')';
-  var syncInfo = editSync && editSync.getInfo();
-  var finalized = false;
-  var op;
-  if (syncInfo && syncInfo.prNumber) {
-    // A sync draft PR exists — finalize it instead of opening a second PR.
-    op = finalizeSyncPr([{ path: file.path, content: buildReviewEditedContent() }], commitMessage)
-      .then(function() { finalized = true; });
-  } else {
-    op = submitFilesPr(API, token, {
-      branch: makeBranchName('review/' + reviewState.talkId, user.login),
-      base: BRANCH,
-      files: [{ path: file.path, content: buildReviewEditedContent() }],
-      commitMessage: commitMessage,
-      prTitle: content.title,
-      prBody: content.body
-    }).then(function(pr) {
-      ghCreatedDialog('pr.created', pr);
-    });
-  }
-  op.catch(ghWriteError)
-    .then(function() {
-      if (btn) btn.disabled = false;
-      // After a successful finalize the engine stays down on purpose: a new
-      // one would push the state file right back onto the now-ready PR.
-      if (!finalized) ensureEditSync();
-    });
 };
 
 // Full new content of the review view's edited file: SRT rebuilt with original
