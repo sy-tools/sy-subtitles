@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import HealthCheck, assume, example, given, settings
 from hypothesis import strategies as st
 
 from tools.config import OptimizeConfig
@@ -243,6 +243,43 @@ def test_optimize_introduces_no_hard_cps_violation(tmp_path_factory, blocks: lis
 
 
 @given(uk_map_blocks())
+# Issue #739 counterexample, pinned so every runner replays it (the shrunk
+# example otherwise lives only in a local hypothesis DB): a dense run of
+# short equal blocks that Phase 5 used to merge past Phase 1b's duration-split
+# threshold — the NEXT run then split it, so optimize(optimize(X)) != optimize(X).
+@example(
+    blocks=[
+        Block(idx=1, start_ms=0, end_ms=1200, text="A."),
+        Block(idx=2, start_ms=1280, end_ms=2480, text="A."),
+        Block(idx=3, start_ms=2560, end_ms=3760, text="A."),
+        Block(idx=4, start_ms=3840, end_ms=5040, text="A."),
+        Block(idx=5, start_ms=5120, end_ms=6320, text="A."),
+        Block(idx=6, start_ms=6400, end_ms=7600, text="A."),
+        Block(idx=7, start_ms=7680, end_ms=8880, text="A A."),
+        Block(idx=8, start_ms=8960, end_ms=10160, text="A A A A A."),
+        Block(idx=9, start_ms=10240, end_ms=11440, text="A A A."),
+        Block(idx=10, start_ms=11520, end_ms=12720, text="A."),
+        Block(idx=11, start_ms=12800, end_ms=14000, text="A."),
+        Block(idx=12, start_ms=14080, end_ms=15280, text="A."),
+        Block(idx=13, start_ms=15360, end_ms=16560, text="A A."),
+        Block(idx=14, start_ms=16640, end_ms=17840, text="A A A A A A A A A."),
+        Block(idx=15, start_ms=17920, end_ms=19120, text="A."),
+        Block(idx=16, start_ms=19200, end_ms=20400, text="A A A A."),
+        Block(idx=17, start_ms=20480, end_ms=21730, text="A A A A A A A A A A A."),
+        Block(idx=18, start_ms=21810, end_ms=23010, text="A."),
+        Block(idx=19, start_ms=23090, end_ms=24290, text="A A A."),
+        Block(idx=20, start_ms=24370, end_ms=25570, text="A A A."),
+        Block(idx=21, start_ms=25650, end_ms=27450, text="A A A A A A A A A A A."),
+        Block(idx=22, start_ms=27530, end_ms=28730, text="A."),
+        Block(idx=23, start_ms=28810, end_ms=30010, text="A."),
+        Block(idx=24, start_ms=30090, end_ms=36105, text="A qêĘ."),
+        Block(idx=25, start_ms=36243, end_ms=42258, text="ꭴȩæ𞤱Ź."),
+        Block(idx=26, start_ms=42511, end_ms=45152, text="A."),
+        Block(idx=27, start_ms=45326, end_ms=49292, text="A eŮ𝞟é ĿĈŦĘItÃᏢ A A A A."),
+        Block(idx=28, start_ms=49718, end_ms=50918, text="A."),
+        Block(idx=29, start_ms=50998, end_ms=52198, text="A."),
+    ]
+)
 @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_optimize_is_idempotent(tmp_path_factory, blocks: list[Block]) -> None:
     """optimize(optimize(X)) == optimize(X) — the output is a fixed point."""
