@@ -78,6 +78,15 @@ function mergeAuthReturn(currentSearch, savedSearch) {
   return s ? '?' + s : '';
 }
 
+// Restore the pre-login hash route on the callback. The current hash wins
+// when present (never clobber a live route); a saved value that is not a
+// '#...' fragment is ignored — it gets concatenated into the URL by
+// history.replaceState, so junk must not leak in.
+function mergeAuthReturnHash(currentHash, savedHash) {
+  if (currentHash) return currentHash;
+  return (savedHash && savedHash.charAt(0) === '#') ? savedHash : '';
+}
+
 function saveAuth(token, user, storage) {
   var s = storage || localStorage;
   s.setItem(GH_TOKEN_KEY, token);
@@ -117,6 +126,7 @@ if (typeof module !== 'undefined' && module.exports) {
     stripAuthParams: stripAuthParams,
     buildRedirectUri: buildRedirectUri,
     mergeAuthReturn: mergeAuthReturn,
+    mergeAuthReturnHash: mergeAuthReturnHash,
     saveAuth: saveAuth,
     getAuthToken: getAuthToken,
     getAuthUser: getAuthUser,

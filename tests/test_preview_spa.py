@@ -5140,6 +5140,20 @@ class TestSubtitleOverlaySize:
         chain after hashchange — a fixed sleep is unreliable across machines."""
         page.wait_for_selector("#preview-subs-resize", timeout=10000)
 
+    def _wait_fs_engaged(self, page):
+        """Wait until requestFullscreen has actually engaged. Best-effort:
+        some headless environments never grant native fullscreen, in which
+        case there is no pending request to race and the synchronous .fs-mode
+        class (added by toggleFullscreen itself) is already in effect, so a
+        timeout here is benign."""
+        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+        with contextlib.suppress(PlaywrightTimeoutError):
+            page.wait_for_function(
+                "document.fullscreenElement === document.getElementById('view-preview')",
+                timeout=2000,
+            )
+
     def _enter_fs(self, page):
         """Enter REAL native fullscreen and wait until requestFullscreen has
         actually engaged. requestFullscreen is async: without this wait a
@@ -5148,20 +5162,9 @@ class TestSubtitleOverlaySize:
         next enter is then misread as an exit and the font is measured in the
         embedded (non-fs) state. Waiting for the native state to settle keeps
         the enter/exit probe sequence deterministic while still exercising the
-        real Fullscreen API.
-
-        Best-effort: some headless environments never grant native fullscreen,
-        in which case there is no pending request to race and the synchronous
-        .fs-mode class (added by toggleFullscreen itself) is already in effect,
-        so a timeout here is benign."""
-        from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
-
+        real Fullscreen API."""
         page.evaluate("SPA.toggleFullscreen()")
-        with contextlib.suppress(PlaywrightTimeoutError):
-            page.wait_for_function(
-                "document.fullscreenElement === document.getElementById('view-preview')",
-                timeout=2000,
-            )
+        self._wait_fs_engaged(page)
 
     def _exit_fs(self, page):
         """Exit native fullscreen and wait until it has fully released, so the
@@ -5176,10 +5179,26 @@ class TestSubtitleOverlaySize:
     def _read_fs_font_px_via_toggle(self, page, drag_to_h=None):
         """Enter real fullscreen (optionally after dragging the embedded handle,
         which sets --preview-subs-scale via JS) and read the resulting subtitle
-        overlay font size."""
+        overlay font size.
+
+        The tune and the fullscreen toggle run in ONE evaluate. Two separate
+        evaluates leave an event-loop gap between them, and the preview boot's
+        pending `setTimeout(maybeInstallResize, 50)` chain could fire in that
+        gap — still in EMBEDDED mode — re-applying the just-persisted height
+        through computeSubsMaxPx's narrow embedded clamp (~115px on this
+        layout), silently shrinking the scale the probe just set; entering
+        fullscreen then locked the shrunken value in (maybeInstallResize is
+        gated on `!fs-mode`), the long-standing `big=59.6 < baseline=64`
+        flake. With no gap the stray timer can only fire after .fs-mode is on,
+        where it is gated out."""
         if drag_to_h is not None:
-            page.evaluate(f"({self._SET_HANDLE_JS})({drag_to_h})")
-        self._enter_fs(page)
+            page.evaluate(
+                f"(h) => {{ const setHandle = {self._SET_HANDLE_JS}; setHandle(h); SPA.toggleFullscreen(); }}",
+                drag_to_h,
+            )
+            self._wait_fs_engaged(page)
+        else:
+            self._enter_fs(page)
         return page.evaluate("parseFloat(getComputedStyle(document.getElementById('subtitle-overlay')).fontSize)")
 
     def test_fs_mode_default_matches_baseline(self, server, page):
