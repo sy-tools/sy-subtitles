@@ -4,7 +4,7 @@
   SRT: talks/1980-07-27_Guru-Puja-The-Statutes-of-the-Lord/Shri-Guru-Puja/final/uk.srt
   Transcript: talks/1980-07-27_Guru-Puja-The-Statutes-of-the-Lord/transcript_uk.txt
   EN SRT: talks/1980-07-27_Guru-Puja-The-Statutes-of-the-Lord/Shri-Guru-Puja/source/en.srt
-  SRT blocks: 620
+  SRT blocks: 619
   EN SRT blocks: 774
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -24,17 +24,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 620
+  Total blocks: 619
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 620
-  CPS: avg=9.4, median=8.8, max=15.0
-  CPS > target: 8 (1.3%)
+  Total blocks: 619
+  CPS: avg=9.5, median=8.9, max=15.0
+  CPS > target: 7 (1.1%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=51.5, max=84
+  CPL: avg=51.6, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -46,19 +46,19 @@
   Worst CPS blocks (top 10):
     #338: CPS=15.0 (25ch/1.7s) "Ти роздала все, що мала»."
     #336: CPS=15.0 (61ch/4.1s) "У святий день ми можемо дарувати старшим, тож Я його віддам»..."
-    #346: CPS=15.0 (64ch/4.3s) "вона подумала, що має надіслати Мені кілька сарі, тож надісл..."
-    #337: CPS=15.0 (79ch/5.3s) "Вона сказала: «У тебе тепер залишилося лише одне, навіщо ти ..."
+    #337: CPS=15.0 (79ch/5.3s) "Вона сказала: «У Тебе тепер залишилося лише одне, навіщо Ти ..."
     #335: CPS=15.0 (41ch/2.7s) "Я сказала: «Я хочу подарувати їй це сарі."
     #77: CPS=15.0 (77ch/5.1s) "узагалі не повинні говорити про Сахадж Йоґу; вони не мають н..."
     #340: CPS=15.0 (69ch/4.6s) "І ми обговорювали це на кухні, і Я сказала: «Навіщо ти Мені ..."
     #345: CPS=15.0 (84ch/5.6s) "Через те, що Я подарувала кілька шовкових сарі цій жінці, ко..."
     #334: CPS=15.0 (48ch/3.2s) "Тож Я сказала одній із племінниць Мого чоловіка,"
-    #275: CPS=15.0 (82ch/5.5s) "Але Христос сказав — можливо, Він знав сучасних людей, що во..."
+    #275: CPS=15.0 (82ch/5.5s) "Але Христос сказав – можливо, Він знав сучасних людей, що во..."
+    #353: CPS=15.0 (82ch/5.5s) "мені сьогодні те саме перлове намисто, яке Ви подарували мен..."
 
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 620
+  UK SRT blocks: 619
   EN SRT blocks: 774
   Ratio UK/EN: 0.80 (max allowed 2.0)
   Block count: OK
@@ -75,8 +75,8 @@
   [PASS] UK/EN block count ratio
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 9.4 (target ≤15.0)
-  CPS > 15.0: 8 blocks
+  Avg CPS: 9.5 (target ≤15.0)
+  CPS > 15.0: 7 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
