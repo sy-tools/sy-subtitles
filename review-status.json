@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-15T07:27:37.850371+00:00",
+  "updated_at": "2026-07-15T08:10:58.131763+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -216,7 +216,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 244,
-      "updated_at": "2026-06-20T11:53:27Z"
+      "updated_at": "2026-07-15T08:10:46Z"
     },
     "1982-07-11_From-Heart-to-Sahasrara": {
       "status": "pending",
