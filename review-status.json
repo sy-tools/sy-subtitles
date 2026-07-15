@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-15T04:52:00.312889+00:00",
+  "updated_at": "2026-07-15T05:53:40.989175+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -210,7 +210,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 235,
-      "updated_at": "2026-06-15T16:55:39Z"
+      "updated_at": "2026-07-15T05:53:30Z"
     },
     "2001-12-25_Christmas-Puja": {
       "status": "pending",
