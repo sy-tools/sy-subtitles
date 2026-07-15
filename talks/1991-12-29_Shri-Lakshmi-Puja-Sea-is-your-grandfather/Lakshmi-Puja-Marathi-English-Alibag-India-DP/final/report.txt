@@ -4,7 +4,7 @@
   SRT: talks/1991-12-29_Shri-Lakshmi-Puja-Sea-is-your-grandfather/Lakshmi-Puja-Marathi-English-Alibag-India-DP/final/uk.srt
   Transcript: talks/1991-12-29_Shri-Lakshmi-Puja-Sea-is-your-grandfather/transcript_uk.txt
   EN SRT: talks/1991-12-29_Shri-Lakshmi-Puja-Sea-is-your-grandfather/Lakshmi-Puja-Marathi-English-Alibag-India-DP/source/en.srt
-  SRT blocks: 214
+  SRT blocks: 215
   EN SRT blocks: 263
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -24,17 +24,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 214
+  Total blocks: 215
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 214
-  CPS: avg=11.8, median=12.4, max=15.1
-  CPS > target: 15 (7.0%)
+  Total blocks: 215
+  CPS: avg=11.7, median=12.0, max=15.0
+  CPS > target: 11 (5.1%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=54.4, max=84
+  CPL: avg=54.1, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -44,23 +44,23 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #182: CPS=15.1 (45ch/3.0s) "Це знову щось на кшталт кругообігу, Я казала,"
-    #212: CPS=15.1 (43ch/2.9s) "Цю віру ви повинні мати, що ви сахаджа йоґ."
-    #133: CPS=15.0 (43ch/2.9s) "Тож ось чого ви повинні навчитися від моря,"
-    #184: CPS=15.0 (43ch/2.9s) "Чим більше ви використовуєте свої вібрації,"
-    #145: CPS=15.0 (55ch/3.7s) "Потім підходить ще хтось і каже: «Мати, Ти вилікуй її»."
-    #187: CPS=15.0 (61ch/4.1s) "як Я вам казала, що вода йде в Гімалаї, повертається річками..."
-    #134: CPS=15.0 (67ch/4.5s) "що дуже важливо для сахаджа йоґів, – що ви поглинаєте все, б..."
-    #185: CPS=15.0 (41ch/2.7s) "тим набагато більше ви їх отримуватимете."
-    #140: CPS=15.0 (44ch/2.9s) "«Мати, її ноги не в порядку, чи щось не так."
-    #139: CPS=15.0 (56ch/3.7s) "Бо нещодавно, коли Я йшла, просто на шляху сиділа жінка:"
+    #134: CPS=15.0 (43ch/2.9s) "Тож ось чого ви повинні навчитися від моря,"
+    #185: CPS=15.0 (43ch/2.9s) "Чим більше ви використовуєте свої вібрації,"
+    #101: CPS=15.0 (52ch/3.5s) "величезна кількість багатства, яке ще не досліджене;"
+    #146: CPS=15.0 (55ch/3.7s) "Потім підходить ще хтось і каже: «Мати, Ти вилікуй її»."
+    #102: CPS=15.0 (61ch/4.1s) "але щойно його дослідять, увесь світ може стати дуже багатим..."
+    #188: CPS=15.0 (61ch/4.1s) "як Я вам казала, що вода йде в Гімалаї, повертається річками..."
+    #186: CPS=15.0 (41ch/2.7s) "тим набагато більше ви їх отримуватимете."
+    #93: CPS=15.0 (56ch/3.7s) "Але якщо ви підійдете ближче до моря, де вони посаджені,"
+    #148: CPS=15.0 (74ch/4.9s) "Ви всі можете лікувати їх, ви можете допомагати їм, і ви буд..."
+    #150: CPS=15.0 (80ch/5.3s) "Ви повинні наважуватися, ви повинні мати достатньо мужності,..."
 
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 214
+  UK SRT blocks: 215
   EN SRT blocks: 263
-  Ratio UK/EN: 0.81 (max allowed 2.0)
+  Ratio UK/EN: 0.82 (max allowed 2.0)
   Block count: OK
 
 ============================================================
@@ -75,8 +75,8 @@
   [PASS] UK/EN block count ratio
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 11.8 (target ≤15.0)
-  CPS > 15.0: 15 blocks
+  Avg CPS: 11.7 (target ≤15.0)
+  CPS > 15.0: 11 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
