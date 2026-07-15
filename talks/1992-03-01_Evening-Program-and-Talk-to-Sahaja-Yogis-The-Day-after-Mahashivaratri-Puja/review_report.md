@@ -1,4 +1,4 @@
-# Language Review – 1992-03-01 Evening Program and Talk to Sahaja Yogis (The Day after Mahashivaratri Puja), 2026-05-29
+# Language Review – 1992-03-01 Evening Program and Talk to Sahaja Yogis (The Day after Mahashivaratri Puja), 2026-07-15
 
 ## Process
 
@@ -6,8 +6,13 @@ Reviewed `transcript_uk.txt` (107 content lines) against the English original (`
 `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`, and `glossary/terms_context.yaml`
 using 2 parallel reviewers (L = Language, S = SY Domain) + 1 Critic filter.
 
-Character-level checks were run across the file and against the rest of the corpus to confirm
-which orthographic conventions are canonical.
+A prior review round (2026-05-29, preserved in git history) already normalized the ellipsis
+(`…` → `...`, 13×), the dash (`—` → ` – `, 62×), and fixed the parent's mid-sentence `Я` → `я` (§56).
+Its Critic rulings (euphony `вже/уже` = acceptable variant; reverential capitalization
+`Мої Слова/Ім’я/Волосся/Голову/Програмі/Присутності` = deliberate, mirrors source; lowercase
+pronouns for `Дух` = correct) were respected and not re-litigated. Character-level checks
+(quotes, apostrophes, double spaces, mixed Latin/Cyrillic, dash/ellipsis characters) were re-run
+and are clean. Debatable conventions were verified against the full talk corpus.
 
 ## Results
 
@@ -15,52 +20,76 @@ which orthographic conventions are canonical.
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | all (13×) | Single-character ellipsis `…` (U+2026) used throughout; `glossary/CLAUDE.md` mandates three dots `...`. Corpus confirms: 21/24 UK transcripts use `...`, only 3 use `…`. | `дрібничку…`, `шлюбом…`, `лідерів…` | Replace every `…` → `...` |
-| L2 | all (62×) | Em-dash `—` (U+2014) used for all interjection dashes; `glossary/CLAUDE.md` mandates en-dash ` – ` (U+2013) with spaces. Corpus confirms: 32/37 UK transcripts use U+2013, only 5 use U+2014. | `Перший момент:` / `Потім друге — про...` / `ви — Шакті` | Replace every ` — ` → ` – ` |
-| L3 | 22 | Euphony: `не так вже й` after consonant-final `так` | `питання жінки, не так вже й чоловіка` | `не так уже й` |
-| L4 | 19 | Awkward concessive construction `які б речі у вас не були` | `які б речі у вас не були` | `хоч би які речі у вас були` |
+| L1 | 6 | Comma directly before an opening parenthesis — not permitted in Ukrainian punctuation; header line 3 has the same phrase correctly without it | `Ньюкасл, (Австралія), 1 березня 1992` | `Ньюкасл (Австралія), 1 березня 1992` |
+| L2 | 23 | Commas around `головно` — it is a plain adverb (= «переважно»), not a parenthetical (вставне слово) | `виникає, головно, коли жінки не знають` | `виникає головно, коли жінки не знають` |
+| L3 | 41 | Dangling adverbial participle: the agent of `організувавши` is not the subject `воно` (дієприслівниковий зворот requires same subject) | `може здаватися, що, організувавши це, воно збільшилося` | `може здаватися, що завдяки організації воно збільшилося` |
+| L4 | 45 | Comma after the conjunction `тобто` — `тобто` is not a parenthetical; only the comma before it is correct | `людини, тобто, коли ви їдете в Індію` | `людини, тобто коли ви їдете в Індію` |
+| L5 | 53 | Question mark after an indirect question — the main clause `Я не знаю` is declarative, so the sentence takes a period (EN «?» is a transcription quirk) | `Але Я не знаю, чому в Австралії ви так любите сонце, коли його так багато?` | `...коли його так багато.` |
+| L6 | 72 | Mood mismatch in the concessive: `хоч би` requires the conditional (б-form), as in the parallel `хоч би що це було` | `хоч би що це було, хоч би що вам підходить` | `хоч би що вам підходило` |
+| L7 | 100 | Missing space after ellipsis before the editorial insert; the same line has `тепер... [Гінді:` correctly spaced | `повертатися до...[Гінді: Котра година?]` | `повертатися до... [Гінді: Котра година?]` |
+| L8 | 27 | Direct rhetorical question ends with a period | `Тож як ви можете мати таку думку, що коли Я кажу «голова», то він домінує над серцем.` | (considered) `?` |
+| L9 | 25 | Relative pronoun agreement with two coordinated nouns | `терпіння й співчуття, яке у вас є` | (considered) `які у вас є` |
+| L10 | 50 | Possibly missing comma between coordinate modifiers | `у всіх блискуче гарне волосся` | (considered) `блискуче, гарне волосся` |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 56 | Mid-sentence uppercase `Я` refers to the **parent** modeling a tooth-brushing game for the child, **not** Shri Mataji. Uppercase `Я` is reserved for Shri Mataji; regular people are lowercase. (Cf. §45/§65 where the practitioner's own `я/мої/мені` are correctly lowercase.) | `Ти почистиш свої зуби, Я почищу свої зуби.` | `...я почищу свої зуби.` |
-| S2 | 9, 11, 51, 63, 77 | Reverential capitalization of common nouns after Shri Mataji's possessive (`Мої Слова`, `Моє Ім’я`, `Своє Волосся`, `Моїй Програмі/Присутності`, `Мою Голову`) | `використовувати Мої Слова` | (considered) lowercase the nouns |
-| S3 | 64, 65, 86 | Pronoun for `Дух` written lowercase (`він/його/ним`) | `Дух... він зробив нас такими милими` | (considered) uppercase pronoun |
+| S1 | 13, 17, 18, 27, 38, 73(×2), 75, 76, 78, 80, 81, 83(×2) | Genitive of `Сахаджа Йоґа` written with plain `г` (`Йоги`), while every other case form in this transcript keeps `ґ` (`Йоґа/Йоґу/Йоґою`; loc. `Йозі` per glossary). Morphologically the ґ→з alternation applies only to dative/locative; genitive keeps the stem `Йоґ-`. Corpus confirms: 284× `Сахаджа Йоґи` vs 34× `Сахаджа Йоги` across all UK transcripts. | `подорож Сахаджа Йоги`, `ріст Сахаджа Йоги`, `для Сахаджа Йоги`... (14×) | `Сахаджа Йоги` → `Сахаджа Йоґи` (14×) |
+| S2 | 104 | Vocative `Мати` in the yogini's address instead of `Матінко` | `Мати, прийми її, будь ласка` | (considered) `Матінко` |
+| S3 | 48 | `Медхастітха` (Medhastitha) — term absent from glossary; transliteration audit | `Медхастітха – вони сідають на жир` | (verified, no change) |
+| S4 | 31 | Meaning drift vs garbled source: `їхній прихід до чийогось дому стає для Мене проблемою` — context (§32: `Бо якщо Я йду до чийогось дому...`) shows the "problem" is Shri Mataji's going to houses, not "their" coming | `Але тепер їхній прихід до чийогось дому...` | (considered) rephrase |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Backed by explicit rule in `glossary/CLAUDE.md` ("Ellipsis: `...` three dots") **and** corpus majority (21/24). Genuine orthography deviation. |
-| L | L2 | **Keep** | Backed by explicit rule in `glossary/CLAUDE.md` ("En-dash: ` – ` (U+2013) with spaces") **and** corpus majority (32/37). Genuine orthography deviation. |
-| L | L3 | Remove | `так вже` is a normatively acceptable, widely used variant; the вже/уже alternation is a soft euphony preference, not an error. |
-| L | L4 | Remove | Sentence is grammatical and comprehensible; the `які б … не` concessive is debated but accepted in usage. Rewording is a style preference, not a correction. |
-| S | S1 | **Keep** | The pronoun unambiguously denotes the parent in a worked example addressed to parents (`ви берете їх`, `Саме ви можете навчити`), not Shri Mataji. Mid-sentence (not sentence-initial), so the sentence-start exception does not apply. Clear violation of the deity-pronoun rule. |
-| S | S2 | Remove | Applied **consistently** throughout and mirrors the source's deliberate reverential capitalization (`My Words/Name/Hair/Program/Presence/Head`). `glossary/CLAUDE.md` neither lists nor forbids these; lowercasing is a style preference, not a clear error. Leave as-is for source fidelity. |
-| S | S3 | Remove | Refers to the individual/own spirit; the noun `Дух` is correctly uppercase, and the deity-pronoun rule mandates uppercase pronouns only for Shri Mataji and named Incarnations. Lowercase pronoun matches EN lowercase "she/it" and is used consistently. Not an error. |
+| L | L1 | **Keep** | Hard punctuation rule (no comma before an opening parenthesis) plus internal inconsistency with line 3 of the same file. Genuine error. |
+| L | L2 | **Keep** | `головно` is an adverb per СУМ, not on any вставні-слова list; commas around it are a genuine punctuation error, not a style call. The comma before `коли` (subordinate clause) is retained. |
+| L | L3 | **Keep** | Clear violation of the same-subject rule for дієприслівниковий зворот («воно» did not do the organizing). The fix preserves the EN meaning ("by organizing it, it has increased") with minimal rewording. |
+| L | L4 | **Keep** | `тобто` is a conjunction; a comma after it is normatively wrong. Same class of error as L2. |
+| L | L5 | **Keep** | Ukrainian punctuation puts a period after an indirect question regardless of source punctuation — same precedence of UK norms over EN quirks as the prior round's ellipsis/dash fixes. |
+| L | L6 | **Keep** | Genuine grammar error: the indicative `підходить` breaks the required conditional after `хоч би`, and the sentence itself contains the correct parallel (`хоч би що це було`). |
+| L | L7 | **Keep** | Genuine typographic slip, proven by the correctly spaced twin (`тепер... [Гінді:`) in the very same line. |
+| L | L8 | Remove | The period mirrors the EN source exactly and matches the falling rhetorical intonation of the delivery; the following `Як таке може бути?` carries the interrogation. Unlike L5, no Ukrainian norm is violated by a rhetorical question rendered declaratively per source. |
+| L | L9 | Remove | Agreement with the nearest of two neuter singular nouns (`співчуття, яке`) is grammatically acceptable; plural `які` is a preference, not a correction. |
+| L | L10 | Remove | The adverbial reading `блискуче гарне` («strikingly beautiful») is defensible and matches the casual spoken register of "all shining nice hair"; not clearly an error. |
+| S | S1 | **Keep** | Backed by canonical spelling `Сахаджа Йоґа` (terms_lookup), morphology (no ґ→г alternation exists; only dat./loc. → `Йозі`), intra-file consistency (`Йоґу/Йоґою` everywhere else), and 284-to-34 corpus majority. All 14 hits verified to be the genitive of the practice (capital `Й`), not the plural `сахаджа йоґи`. |
+| S | S2 | Remove | terms_context reserves `Матінко` for prayer address («Звертання "Матінко" в молитві»); this is dialogue, where `Мати` is used consistently in this transcript (§21, §30, §32, §35, §66, §85) and across the corpus. Not an error. |
+| S | S3 | Remove (no change needed) | Transliteration `Медхастітха` faithfully follows the EN "Medhastitha" and the conventions table (`dh` → дх, short `i` → і). Verified correct; nothing to fix. |
+| S | S4 | Remove | Out of scope for the L/S review (meaning, not orthography/terminology), and the UK faithfully renders the garbled EN source ("But they go into somebody's house..."). Changing it would be retranslation, not correction. Noted for a future translation-accuracy pass. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | all (13×) | `…` (U+2026) → three dots | `…` → `...` |
-| 2 | all (62×) | `—` (U+2014) → en-dash with spaces | ` — ` → ` – ` |
-| 3 | 56 | Uppercase `Я` for the parent (not Shri Mataji) | `Я почищу` → `я почищу` |
+| 1 | 6 | Comma before parenthesis | `Ньюкасл, (Австралія)` → `Ньюкасл (Австралія)` |
+| 2 | 23 | Commas around adverb `головно` | `виникає, головно, коли` → `виникає головно, коли` |
+| 3 | 41 | Dangling participle | `що, організувавши це, воно збільшилося` → `що завдяки організації воно збільшилося` |
+| 4 | 45 | Comma after `тобто` | `тобто, коли ви їдете` → `тобто коли ви їдете` |
+| 5 | 53 | `?` after indirect question | `коли його так багато?` → `коли його так багато.` |
+| 6 | 72 | Indicative after `хоч би` | `хоч би що вам підходить` → `хоч би що вам підходило` |
+| 7 | 100 | Missing space after ellipsis | `до...[Гінді` → `до... [Гінді` |
+| 8 | 13, 17, 18, 27, 38, 73(×2), 75, 76, 78, 80, 81, 83(×2) | Genitive `Сахаджа Йоги` | `Сахаджа Йоги` → `Сахаджа Йоґи` (14×) |
 
 ## Summary
 
-- Language (L): 4 issues found, 2 approved by Critic
-- SY Domain (S): 3 issues found, 1 approved by Critic
-- Total corrections applied: 3 distinct fixes (76 textual replacements)
+- Language (L): 10 issues found, 7 approved by Critic
+- SY Domain (S): 4 issues found, 1 approved by Critic
+- Total corrections applied: 8 distinct fixes (21 textual replacements)
 
 ### Notes
 
-- Quotation marks (all `«»`), apostrophes (all `’` U+2019), and absence of mixed Latin/Cyrillic were
-  verified clean — no findings. `IBM` (§33) is an intentional brand name.
-- Deity-pronoun capitalization is otherwise excellent and nuanced: Shri Mataji `Я/Мені/Мій/Моя/Вона/Сама`
-  uppercase; the husband's `він` (§74) and the practitioner's `я/мої/мені` (§45, §65) correctly lowercase;
-  `Ти` for Shri Mataji in others' speech (§31, §32, §35) uppercase, while `ти` for John (§92) lowercase.
-- Glossary terminology is consistent and correct: `Сахаджа Йоґа`/locative `Йозі`, `сахаджа йоґ(и/ів/инь/ам/ами)`,
-  `Муладхара`, `Сахасрара`, `Вішва Нірмала Дхарма`, `Пуджа`, `Дух`, `Дхарма`, `Шакті`, `Лакшмі`, `Шрі Крішна`,
-  `бандхан`, `бадха`, `бхути`, `вібрації`. Language name `англійська` correctly lowercase.
+- Post-fix verification: `Йоґа` case forms now fully consistent (`Йоґа` 9, `Йоґу` 12, `Йоґи` 14,
+  `Йоґою` 1, loc. `Йозі` 10); no `…`/`—`/straight quotes/double spaces/mixed-alphabet strings remain.
+- Deity-pronoun capitalization is correct and nuanced throughout: Shri Mataji
+  (`Я/Мені/Мій/Своє/Вона/Сама/Ти` in others' speech) uppercase; Shri Krishna `Він` (§52) uppercase;
+  the husband's `я` (§74), the parent's `я` (§56), the practitioner's `я` (§65), and `ти` for
+  John (§92) correctly lowercase.
+- Glossary terminology verified: `сахаджа йоґ/йоґи/йоґів/йоґам/йоґами/йоґинь`, `Муладхара`,
+  `Сахасрара`, `Вішва Нірмала Дхарма`, `Пуджа`, `Дхарма`, `Дух`, `Шакті`, `Лакшмі`, `Шрі Крішна`,
+  `Ґанапатіпуле`, `бандхан`, `бадха`, `бхути`, `вібрації`, `его`, `заблокувалися` (catching →
+  блокування). Language/religion names (`англійською`, `християнство`, `іслам`, `буддизм`)
+  correctly lowercase; `Захід` (Western world) correctly uppercase.
+- §31 meaning-drift observation (S4) left unchanged — flagged for a future translation-accuracy
+  pass, as the UK mirrors the garbled EN source.
