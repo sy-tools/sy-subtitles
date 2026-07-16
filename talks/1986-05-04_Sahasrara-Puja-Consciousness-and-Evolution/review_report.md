@@ -1,83 +1,90 @@
-# Language Review – 1986-05-04 Sahasrara Puja "Consciousness and Evolution"
+# Language Review – 1986-05-04_Sahasrara-Puja-Consciousness-and-Evolution, 2026-07-16
 
-**File reviewed:** `transcript_uk.txt` (full paragraphed Ukrainian translation, 58 paragraphs)
-**Source reference:** `transcript_en.txt`
-**Process:** 2+1 review (Reviewer L + Reviewer S → Critic → Apply), per `templates/language_review_template.md`
-**References used:** `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`, `glossary/terms_context.yaml`
+## Process
 
-A full orthography/grammar/punctuation pass was done by hand and corroborated with a
-mechanical scan: **no** straight quotes, **no** double spaces, **no** Latin characters in
-Cyrillic words, **no** hyphen-as-dash, **no** spaces before punctuation, **no** ASCII
-ellipsis. Quotation marks are uniformly «…», the en-dash is ` – ` with spaces, and the
-apostrophe is consistently `'` (U+2019: `розв'язати`, `п'ятдесят`, `обов'язково`,
-`невід'ємну`, `ім'я`, `комп'ютер`, `салок'я`, `тадатм'ю`).
+Review of `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel
+reviewers + 1 critic filter, per `templates/language_review_template.md`.
+Paragraph numbers (¶) below = line numbers of `transcript_uk.txt`.
 
----
+Automated character-level pre-check: no mixed Latin/Cyrillic, no Russian letters,
+apostrophe is `’` (U+2019) throughout, dash is ` – ` (U+2013) with spaces, quotes
+are `«»` only, no double spaces, no space before punctuation, no wrong ellipsis — clean.
 
-## Step 1 — Reviewer L (Language: Orthography · Grammar · Punctuation)
+> Note: this report supersedes an earlier review run that approved 0 corrections.
+> The present pass found four genuine issues (¶20 ×2, ¶37, ¶49) that the earlier
+> pass did not surface; each was verified against the orthographic norm and the
+> talk corpus before being applied.
 
-| # | ¶ | Original | Comment | Type |
-|---|----|----------|---------|------|
-| L1 | 32 | `…ви знаєте чому: бо він святий.` | Considered adding a comma (`знаєте, чому`). Held for Critic. | Punctuation |
-| L2 | 7 | `За шістнадцять ударів, або шістнадцять рухів, ви досягаєте…` | Commas frame `або шістнадцять рухів` as a clarifying restatement; a plain disjunction would take none. Held for Critic. | Punctuation |
-| L3 | 20 | `…й одягти чорний одяг…` | `одягти одяг` is mildly pleonastic. Held for Critic. | Style |
+## Results
 
-Verb/gender/number agreement is sound throughout (e.g. ¶34 `Відчуття… подолає` — neut. sg.;
-¶19 `его… перевершує… накриває`; ¶50 `сили… мають діяти`).
+### L. Language (Orthography + Grammar + Punctuation)
 
-## Step 2 — Reviewer S (SY Domain: Capitalization · Terminology · Consistency)
+| # | Paragraph | Error | Context | Fix |
+|---|-----------|-------|---------|-----|
+| L1 | 20 | Правопис: «гіпі» — словникова форма «хіпі» (традиційне *х* для англ. *h*); увесь корпус талків (1987, 1991) уживає «хіпі» | «Коли вони ставали гіпі, чи коли вони ставали панками» | «Коли вони ставали хіпі…» |
+| L2 | 20 | Зайва кома після сполучника «тобто»; у цьому ж абзаці — «Тобто навіть на тому етапі» без коми, і в усьому талку «тобто» скрізь без коми | «Тобто, навіть коли сахаджа йоґи переконані…» | «Тобто навіть коли сахаджа йоґи переконані…» |
+| L3 | 37 | Пряме питання з початковою часткою «Чи» завершене крапкою (пор. попереднє «чи пильні ми?» та серію «Чи…?» в ¶38) | «Чи ми сприймаємо як належне, що Мати… покладе нас у колиску й віднесе нас туди.» | «…віднесе нас туди?» |
+| L4 | 49 | Знак питання після непрямого питання: головна частина — спонукальна («Уявіть собі»), отже речення розповідне | «Уявіть собі, що було б у цьому світі, якби були лише чоловіки або лише жінки?» | «…лише чоловіки або лише жінки.» |
+| L5 | 39 | Керування: «казати розуміння» — сумнівна валентність дієслова | «Усі ці тонкі розуміння Я казала вам багато разів.» | «Про всі ці тонкі розуміння Я казала вам багато разів.» |
+| L6 | 20 | «одягти чорний одяг» — за приписовою нормою «надягти (щось)» | «…обличчя в чорне й одягти чорний одяг» | «…й надягти чорний одяг» |
+| L7 | 49 | Сполучуваність: «наскільки далеко ми досягли свідомості» | «…наскільки далеко ми досягли свідомості для наших стосунків…» | «…наскільки ми досягли свідомості…» |
 
-Deity-pronoun capitalization is handled correctly throughout: Shri Mataji's first person and
-possessives are capitalized (`Я`, `Мене`, `Мій`, `Свого`, `Себе`, `Мною`…); Shri Mataji in
-the third person is capitalized (`Мати`, `Вона`, `Матері`); the addressee-of-Shri-Mataji `Ви`
-is capitalized (¶43, the lady's reply); the individual Incarnation is capitalized
-(`Шрі Крішну… бо Він має…`); `Сама Аді Шакті` (Herself) is capitalized; regular people stay
-lowercase (`він арієць`, `бо він святий`, `його дружиною`). Spiritual terms are correctly
-capitalized (`Інкарнація`, `Пуджа`, `Істина`, `Лотосових Стіп`). Language names are lowercase
-(`англійська`, `українська`, `французькою`).
+### S. SY Domain (Capitalization + Terminology + Consistency)
 
-Terminology checked against `terms_lookup.yaml` / `terms_context.yaml` — all conformant:
-`Сахасрара`, `Кундаліні`, `Ґанеша`/`Ґанешу`, `Муладхара`/`Муладхарі`, `Вішуддхі`,
-`Нірвікальпа`/`Нірвікальпу`, `бандхани`, `чайтанья`, `Аді Шакті`, `Вірата`/`Вірати`,
-`Вішну Таттва`, `Самореалізація`, `Реалізація`, `Інкарнація`, `Маха Ґанеша` (cf.
-`Маха Ґанапаті`).
+| # | Paragraph | Error | Context | Fix |
+|---|-----------|-------|---------|-----|
+| S1 | 26 | «реалізованими» з малої, тоді як в оригіналі «Realized» з великої | «більше, ніж люди, які не є реалізованими» | «…які не є Реалізованими» |
+| S2 | 50 | «Лотосових Стіп» — інші талки корпусу мають «Лотосових Стоп» | «віддаючись на милість біля Лотосових Стіп Божества» | «…біля Лотосових Стоп Божества» |
+| S3 | 11 | «чайтанью» з малої — пор. глосарій «Парамчайтанья» з великої | «почали усвідомлювати вібрації, тобто чайтанью» | «…тобто Чайтанью» |
+| S4 | 14 | «Маха Ґанешу» — перевірити написання окремо/разом | «а й Маха Ґанешу у вашому мозку» | «Махаґанешу»? |
 
-| # | ¶ | Observation | Comment | Type |
-|---|----|-------------|---------|------|
-| S1 | 7 vs 55 | `День Сахасрари` (cap) vs `день Сахасрари` (lc) | Apparent inconsistency. Held for Critic. | Capitalization |
-| S2 | 7,11 vs 22,25 | `Самореалізація` vs `Реалізація` | Apparent inconsistency. Held for Critic. | Terminology |
+Verified as correct (no findings): deity pronouns for Shri Mataji uppercase throughout
+(«Я», «Мені», «Мене», «Мій», «Своє», «Себе», «Мною», «Вона», «Мати», «Матері»); «Він» for
+Shri Krishna uppercase; «він святий» (¶32) lowercase — saints are not Incarnations;
+a yogi's quoted/self speech «я» (¶23, ¶36, ¶38) lowercase; «Ви» of the lady addressing
+Shri Mataji (¶43) uppercase; «Інкарнація», «Істина», «Пуджа», «Стопи», «Божество»,
+«Реалізація», «Самореалізація», «Нірвікальпа», «Єство» uppercase; «сахаджа йоґ/йоґи»
+lowercase, «Сахаджа Йоґа» uppercase, locative «в Сахаджа Йозі» (не «Йоґі»); «англійська»,
+«українська», «французькою» lowercase; «Кундаліні», «Муладхара»/«Муладхарі», «Вішуддхі»,
+«Сахасрара»/«Сахасрарі», «Аді Шакті», «Вірата»/«Вірати», «Вішну Таттва», «бандхани»,
+«обумовленості», «живити», «его», «День Сахасрари» (¶7, proper) vs «день Сахасрари»
+(¶55, common — mirrors EN) per glossary; transliteration per conventions (ґ, дх,
+апостроф: «салок’я», «саміп’я», «санідх’я», «тадатм’я», «відья», «Ґреґуар»).
 
-## Step 3 — Critic (Filter + Validate)
+### Critic Filter
 
-| Source | ¶ | Verdict | Reason |
-|--------|----|---------|--------|
-| L1 | 32 | **Remove (false positive)** | A subordinate clause reduced to a single connective word (`чому`) is **not** set off by a comma in Ukrainian (cf. «обіцяв прийти, але не сказав коли»). `знаєте чому:` is correct. |
-| L2 | 7 | **Remove** | The commas legitimately mark `або шістнадцять рухів` as a clarifying apposition (уточнення) — a defensible authorial choice, not an error. |
-| L3 | 20 | **Remove** | Intelligible; the English source is itself elliptical. Stylistic preference, not an error. |
-| S1 | 7/55 | **Remove (false positive)** | Faithfully mirrors the English: "Sahasrara **Day**" (proper → `День`) vs "the **day** of Sahasrara" (common → `день`). |
-| S2 | 7,11/22,25 | **Remove (false positive)** | Tracks the source's own distinction and the glossary, which lists **both** `Самореалізація` (Self-realization) and `Реалізація` (Realization). Correct, not an inconsistency. |
+| Source | # | Verdict | Reason |
+|--------|---|---------|--------|
+| L | L1 | Keep | Словникова норма — «хіпі»; корпус (1987-04-19, 1991-02-16) послідовно вживає «хіпі». Виправлення усуває і орфографічну помилку, і розбіжність із корпусом |
+| L | L2 | Keep | «Тобто» — сполучник, кома після нього не ставиться; решта талку — скрізь без коми. У корпусних «Тобто, наприклад, …» кома належить наступному вставному слову, якого тут немає |
+| L | L3 | Keep | Речення з початковим питальним «Чи» — пряме загальне питання; попереднє «чи пильні ми?» і паралельна серія «Чи…?» в ¶38 підтверджують питальну інтонацію |
+| L | L4 | Keep | Після непрямого питання знак питання не ставиться; головна частина спонукальна, отже речення розповідне |
+| L | L5 | Remove | Відтворює розмовний регістр оригіналу («All these subtle understandings I have told you many a times»); зміст зрозумілий — не помилка |
+| L | L6 | Remove | «одягти» щодо предмета одягу — узвичаєне слововживання (СУМ); корпус послідовно вживає «одягти/одягнути»; заміна — смакова |
+| L | L7 | Remove | Дзеркалить незграбність оригіналу «how far we have achieved the consciousness»; правка була б стилістичним переписуванням, а не виправленням помилки |
+| S | S1 | Remove | Глосарій припускає «реалізована душа» з малої; тут загальна характеристика людей — оригінал коректний |
+| S | S2 | Remove | «Стіп» — нормативний родовий множини від «стопа» (чергування о→і в закритому складі, як «ніг»); капіталізація правильна. Від норми відхиляються якраз інші талки, не цей |
+| S | S3 | Remove | В оригіналі «chaitanya» з малої; окремо «чайтанья» не є власною назвою в глосарії — мала літера доречна |
+| S | S4 | Remove | Написання окремо відповідає глосарійній моделі «Маха Ґанапаті»; помилки немає |
 
-Additionally verified as **correct** (potential flags that proved conformant):
-- `Сахаджа Йоґа` / locative `в Сахаджа Йозі` — exactly the glossary rule (`ґ→з`; "НЕ «Йоґі»").
-- `сахаджа йоґи / йоґів / йоґами / йоґа` (lowercase practitioners) — matches the glossary's
-  declension table.
+### Approved Corrections
 
-**Critic-approved corrections: 0.**
+| # | Paragraph | Error | Fix |
+|---|-----------|-------|-----|
+| 1 | 20 | «Коли вони ставали гіпі» | «Коли вони ставали хіпі» |
+| 2 | 20 | «Тобто, навіть коли сахаджа йоґи переконані…» | «Тобто навіть коли сахаджа йоґи переконані…» |
+| 3 | 37 | «…покладе нас у колиску й віднесе нас туди.» | «…покладе нас у колиску й віднесе нас туди?» |
+| 4 | 49 | «…якби були лише чоловіки або лише жінки?» | «…якби були лише чоловіки або лише жінки.» |
 
-## Step 4 — Applied Corrections
-
-No corrections were applied — none were warranted. `transcript_uk.txt` is left unchanged.
-
----
+All four corrections have been applied to `transcript_uk.txt`.
 
 ## Summary
 
-- Language (L): 3 candidates raised, **0** approved by Critic.
-- SY Domain (S): 2 candidates raised, **0** approved by Critic.
-- **Total corrections applied: 0.**
+- Language (L): 7 issues found, 4 approved by Critic
+- SY Domain (S): 4 issues found, 0 approved by Critic
+- Total corrections applied: 4
 
-The Ukrainian translation is of high quality: orthography, grammar, punctuation,
-deity-pronoun capitalization, spiritual-term capitalization, transliteration, and fidelity
-to the English source are all sound and fully consistent with the glossary. Every reviewer
-candidate proved, on inspection, to be either a faithful rendering of the source or a correct
-application of Ukrainian orthographic rules.
+Overall the translation is of high quality: deity-pronoun capitalization,
+spiritual-term capitalization, glossary terminology, and transliteration are fully
+conformant; the approved fixes are one dictionary spelling («хіпі») and three
+punctuation corrections (conjunction comma, direct vs. indirect question marks).
