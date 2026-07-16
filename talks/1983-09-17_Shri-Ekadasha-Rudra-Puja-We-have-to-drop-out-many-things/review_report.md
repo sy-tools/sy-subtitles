@@ -1,4 +1,4 @@
-# Language Review – 1983-09-17 Shri Ekadasha Rudra Puja: We have to drop out many things, 2026-05-30
+# Language Review – 1983-09-17 Shri Ekadasha Rudra Puja: We have to drop out many things, 2026-07-16
 
 ## Process
 
@@ -6,74 +6,98 @@
 against `transcript_en.txt`, `glossary/CLAUDE.md`, `terms_lookup.yaml`,
 and `terms_context.yaml`.
 
-Automated character-level checks were run first to anchor the language review:
+Paragraph numbers refer to body paragraphs of `transcript_uk.txt`
+(¶1 = «Отже, сьогодні, згідно з індійським календарем…», header lines excluded).
 
-- **Quotation marks:** 63 `«` / 63 `»`, balanced. No German `„"`, English `""`,
-  or straight `"` quotes anywhere.
-- **Dashes:** 45 en-dashes ` – ` (U+2013). Zero em-dashes (U+2014). Correct.
-- **Apostrophes:** 13 occurrences, all `’` (U+2019). No straight `'`, modifier
-  `ʼ`, or left `‘` apostrophes.
-- **Ellipsis:** 2 occurrences of single-char `…` (U+2026) — non-conformant with
-  the house rule `...` (three dots). See L1, L2.
-- **г / ґ:** all `Сахаджа Йоґа` forms (`Йоґа/Йоґу/Йоґи/Йоґою`) correctly use `ґ`;
-  genitive `Йоґи` is consistent across para 15/25/42/51. No г/ґ slips.
-- **Spacing:** no double spaces, no space-before-punctuation, no missing space
-  after `,;:`. No Latin/Cyrillic letter mixing inside words.
+**Note on the previous review (2026-05-30).** An earlier 2+1 review applied
+3 corrections (2× `…` → `...`, `арті` → `Аарті`); all are confirmed present in
+the current text and character-level checks remain clean (balanced `«»` at all
+levels, ` – ` U+2013 dashes, `’` U+2019 apostrophes, three-dot ellipsis, no
+Latin/Cyrillic mixing). This pass focuses on grammar, verb government, and
+capitalization. Two findings below (Approved #4, #10) revisit candidates the
+previous Critic rejected; the overriding justification is given in the Critic
+table.
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 44 | Single-char ellipsis `…` (U+2026) instead of house-style three dots `...` | `…І це настає, коли Шіва гнівається` | `...І це настає, коли Шіва гнівається` |
-| L2 | 76 | Single-char ellipsis `…` instead of `...` | `«Саба ко дуа…»` | `«Саба ко дуа...»` |
-| L3 | 6 | Comma + dash sequence `, –` suspected redundant | `сьогодні, згідно з індійським календарем, – день` | (none) |
-| L4 | 18 | Verb form `постять` suspected | `дуже багато людей постять цього дня` | (none) |
-| L5 | 21 | Awkward construction `ви робите те, що самі дієте, наче дияволи` | `У той час ви робите те, що самі дієте, наче дияволи.` | (none) |
+| L1 | 12 | Називний відмінок замість орудного в присудку при «ставати» | «Ця частина стає надто велика, товста, випнута.» | «Ця частина стає надто великою, товстою, випнутою.» |
+| L2 | 14 | Порушене дієслівне керування (зевгма): «поклонятися» вимагає давального (якій), «шанувати» – знахідного (яку); зайва кома перед одиничним «або» | «…людина, якій ви поклоняєтеся як ґуру, або шануєте як ґуру…» | «…людина, якій ви поклоняєтеся як ґуру або яку шануєте як ґуру…» |
+| L3 | 16 | Неграматична передача англійської розщепленої конструкції: «робите те, що самі дієте» – «те, що» не може бути додатком до неперехідного «дієте» | «У той час ви робите те, що самі дієте, наче дияволи.» | «У той час ви самі дієте, наче дияволи.» |
+| L4 | 20 | Порушене керування: «сказати лазівку» неможливе; потрібно «сказати про» | «І це лазівка Сахаджа Йоґи, яку Я мушу сказати вам як Мати…» | «І це лазівка Сахаджа Йоґи, про яку Я мушу сказати вам як Мати…» |
+| L5 | 21 | Тавтологія «подарувати подарунок» | «…якщо ви маєте комусь подарувати подарунок, ви ховаєте його…» | «…якщо ви маєте зробити комусь подарунок, ви ховаєте його…» |
+| L6 | 29 | Зайва кома перед одиничним «і» між однорідними підрядними | «Бо ви не знаєте, де буде мати завтра, і де буде батько.» | «Бо ви не знаєте, де буде мати завтра і де буде батько.» |
+| L7 | 34 | Зайва кома перед одиничним «і» в переліку однорідних підрядних («закон, що А…, Б… і В…») | «…гомосексуальність має бути дозволена, вседозволеність має бути дозволена, і всі ці речі мають бути дозволені.» | «…вседозволеність має бути дозволена і всі ці речі мають бути дозволені.» |
+| L8 | 10 | Дієслово «квапить» без вираженого підмета | «…створюється така надзвичайна ситуація, і так їх квапить до Сахаджа Йоґи…» | «…і це квапить їх до Сахаджа Йоґи…» |
+| L9 | 31 | Невідмінюваний термін: «по всій «медха»» замість місцевого відмінка | «І сумніви починають накопичуватися по всій «медха»…» | «…по всій «медсі»…» |
+| L10 | 49 | «бо» + дієприслівник – неграматична конструкція | «Через ці помилки, через які вам доводиться йти, бо не розуміючи, що це вертикально.» | «…бо ви не розумієте, що це вертикально.» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 76 | Term `арті` deviates from glossary `Aarti → Аарті` (ceremony name, capitalized) | `встанемо й візьмемо арті` | `встанемо й візьмемо Аарті` |
-| S2 | 78 | `ця Сила` capitalized — suspected over-capitalization vs lowercase `сила` elsewhere | `ця Сила створює «О»` | (none) |
-| S3 | 23 | `екадашею` lowercase vs `Екадаша` capitalized elsewhere | `коли ми називаємо це екадашею, яка приносить перетворення` | (none) |
-| S4 | 83 | `суперего`/`сакшат` lowercase inside mantra vs glossary `Сакшат` | `«Ом сакшат суперего мардіні»?` | (none) |
+| S1 | 12 | Займенник Шрі Матаджі про Себе з малої літери (правило: ЗАВЖДИ з великої) | «І я бачила такого персонажа.» | «І Я бачила такого персонажа.» |
+| S2 | 19 | Займенник Шрі Матаджі про Себе з малої літери | «Деякі люди, яких я бачила, кажуть…» | «Деякі люди, яких Я бачила, кажуть…» |
+| S3 | 78 | «сакшат» з малої літери; глосарій фіксує `sakshat → Сакшат` | «[Шрі Матаджі промовляє мантру: «Ом сакшат суперего мардіні»?]» | «Ом Сакшат суперего мардіні» |
+| S4 | 81 | «пуджа» з малої літери в назві церемонії; правило «Пуджа – uppercase (ceremony name)» і неконсистентність із ¶39 («Пуджу Ґанеші») | «…мають першими зробити Ґанеша [пуджу].» | «…мають першими зробити Ґанеша [Пуджу].» |
+| S5 | 30 | «реалізовані діти» з малої, тоді як в EN «Realised children» з великої | «Особливо реалізовані діти, якщо вони дуже високої якості…» | «Особливо Реалізовані діти…» |
 
 ### Critic Filter
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | Keep | `glossary/CLAUDE.md` mandates `...` (three dots) as the ellipsis form; the single Unicode char `…` is non-conformant. |
-| L | L2 | Keep | Same house-style rule; convert `…` → `...`. |
-| L | L3 | Remove | Correct punctuation: the dash marks the omitted copula (`сьогодні … – день`) and the comma closes the inserted parenthetical `згідно з індійським календарем`. Not an error. |
-| L | L4 | Remove | `постять` is a valid 3rd-pers-pl form of `постити` (to fast). Original correct. |
-| L | L5 | Remove | Mirrors the deliberately awkward EN source (“what you do is to act like the devils yourself”); no grammatical fault. Style preference, not an error. |
-| S | S1 | Keep | Direct glossary match: `terms_lookup.yaml` lists `Aarti → Аарті`. Ceremony name → capitalized, matching `Пуджа`/`Хаван` treatment. |
-| S | S2 | Remove | Mirrors EN capitalization distinction (`this Power` vs `this force`). Faithful to source; defensible. |
-| S | S3 | Remove | Mirrors EN lowercase `ekadasha` here (the day/concept, not the deity-power). Source-faithful; `Екадаша` is correctly capitalized where EN capitalizes it. |
-| S | S4 | Remove | Inside a tentative/uncertain mantra rendering marked `«...»?`; lowercasing within the flowing transliteration is acceptable and intentional. |
+| L | L1 | Keep | Нормативний орудний відмінок присудка при «ставати»; решта тексту вживає саме орудний («стаєте оголеною людською істотою», «стати товстою великою пластиною») – граматична й внутрішньо-стильова неузгодженість. |
+| L | L2 | Keep | Справжнє порушення керування: «шанувати якій» неможливе. Кома перед одиничним «або» між однорідними присудками також зайва. |
+| L | L3 | Keep | Переглянуто вердикт попереднього рев’ю (Remove як «стиль»): англійське джерело – граматична розщеплена конструкція (“what you do is to act like the devils yourself”), зламаним є лише український переклад. Це відрізняється від L10, де зламане саме джерело. Мінімальна правка зберігає зміст. |
+| L | L4 | Keep | «Сказати лазівку» – неможливе керування; «про яку» – мінімальна правка. |
+| L | L5 | Keep | «Подарувати подарунок» – класичний плеоназм, а не смакова правка; оригінал “give somebody a present” його не вимагає. |
+| L | L6 | Keep | Однорідні підрядні, з’єднані одиничним «і», комою не розділяються – чітке правило пунктуації. |
+| L | L7 | Keep | Те саме правило: перелік «А, Б і В» без коми перед одиничним «і». |
+| L | L8 | Remove | Хибне спрацювання: підмет «ситуація» еліптично переноситься з попередньої частини («створюється ситуація, і так [вона] їх квапить») – допустима конструкція розмовного мовлення. |
+| L | L9 | Remove | Хибне спрацювання: цитований іншомовний термін у лапках («медха») допустимо лишати невідмінюваним. |
+| L | L10 | Remove | Джерело так само розірване (“because not understanding that it is vertical”) – переклад свідомо віддзеркалює фрагментоване усне мовлення; «виправлення» віддалило б текст від оригіналу. |
+| S | S1 | Keep | Пряме порушення правила: займенники Шрі Матаджі про Себе – завжди з великої. |
+| S | S2 | Keep | Те саме правило. |
+| S | S3 | Keep | Переглянуто вердикт попереднього рев’ю (Remove як «допустимо в непевній мантрі»): глосарій – контракт, і він прямо фіксує «Сакшат» з великої; «суперего» в тій самій мантрі коректно лишається з малої (глосарій: суперего). Знак «?» стосується непевності розшифровки, а не орфографії. |
+| S | S4 | Keep | Правило «Пуджа – uppercase (ceremony name)» + консистентність із «Пуджу Ґанеші» в ¶39: це та сама церемонія. Родові згадки «пуджі» в ремарках ([про початок пуджі], [щодо пуджі]) не змінюються – там і EN має родове “the puja”. |
+| S | S5 | Remove | Хибне спрацювання: глосарій явно допускає малу літеру («Реалізована Душа / реалізована душа»); атрибутивне вживання з малої не є помилкою. |
 
 ### Approved Corrections
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 44 | `…` (U+2026) → house-style `...` | `...І це настає, коли Шіва гнівається` |
-| 2 | 76 | `…` (U+2026) → `...` | `«Саба ко дуа...»` |
-| 3 | 76 | `арті` → glossary form `Аарті` | `встанемо й візьмемо Аарті` |
+| 1 | 12 | «стає надто велика, товста, випнута» | «стає надто великою, товстою, випнутою» |
+| 2 | 12 | «І я бачила такого персонажа.» | «І Я бачила такого персонажа.» |
+| 3 | 14 | «якій ви поклоняєтеся як ґуру, або шануєте як ґуру» | «якій ви поклоняєтеся як ґуру або яку шануєте як ґуру» |
+| 4 | 16 | «У той час ви робите те, що самі дієте, наче дияволи.» | «У той час ви самі дієте, наче дияволи.» |
+| 5 | 19 | «яких я бачила» | «яких Я бачила» |
+| 6 | 20 | «лазівка Сахаджа Йоґи, яку Я мушу сказати вам» | «лазівка Сахаджа Йоґи, про яку Я мушу сказати вам» |
+| 7 | 21 | «маєте комусь подарувати подарунок» | «маєте зробити комусь подарунок» |
+| 8 | 29 | «де буде мати завтра, і де буде батько» | «де буде мати завтра і де буде батько» |
+| 9 | 34 | «вседозволеність має бути дозволена, і всі ці речі мають бути дозволені» | «вседозволеність має бути дозволена і всі ці речі мають бути дозволені» |
+| 10 | 78 | «Ом сакшат суперего мардіні» | «Ом Сакшат суперего мардіні» |
+| 11 | 81 | «зробити Ґанеша [пуджу]» | «зробити Ґанеша [Пуджу]» |
 
 ## Summary
 
-- Language (L): 5 issues found, 2 approved by Critic
-- SY Domain (S): 4 issues found, 1 approved by Critic
-- Total corrections applied: 3
+- Language (L): 10 issues found, 7 approved by Critic
+- SY Domain (S): 5 issues found, 4 approved by Critic
+- Total corrections applied: 11
 
-**Overall:** The translation is of very high quality. Deity-pronoun
-capitalization is correct throughout — Shri Mataji always uppercase
-(`Я/Мене/Моєю/Сама/Своє`), singular Incarnations uppercase (Shiva, Buddha,
-Mahavira, Kalki: `Він/Його/Той/Хто`), plural Incarnations correctly lowercased
-(`обидва вони`, `вони не говорили`), and regular people lowercased (husband
-`він`, Paul `він`). Spiritual terms (`Дух`, `Самість`, `Стопи`, `Несвідоме`,
-`Безформне`, `Пуджа`) are correctly capitalized, while the personal unconscious
-(`своє несвідоме`, para 84) is correctly lowercased. Glossary terminology
-(`Войд`, `Вішуддхі`, `Вірата`, `Екадаша Рудра`, `Самореалізація`, `Атма`,
-`гхі`, `Вішну ґрантхі`, `ґани`, `СНІД`) is accurate and consistent. Language
-names (`англійська`) are lowercased. Punctuation (quotes, dashes, apostrophes,
-spacing) is clean apart from the two ellipsis chars now corrected.
+**Overall:** The translation is of high quality; this pass tightened grammar
+(verb government, predicate case, two comma rules) and closed the two
+lowercase «я» slips in Shri Mataji's speech (¶12, ¶19). Deity-pronoun
+capitalization is otherwise correct throughout — Shri Mataji uppercase
+(`Я/Мене/Мені/Сама/Своє`), singular Incarnations uppercase (Shiva, Shri
+Krishna, Buddha, Kalki, God: `Він/Його/Собі/Той, Хто/Ним/Який`), plural
+Incarnations lowercased (`обидва вони`, `вони не говорили`), regular people
+lowercased. Spiritual terms (`Дух`, `Стопи`, `Самість`, `Несвідоме`,
+`Безформний`, `Реалізація`, `Царство Боже`) are correctly capitalized, and the
+personal `своє несвідоме` (¶79) is correctly lowercased against the EN
+distinction. Glossary terminology (`Войд`, `Екадаша Рудра`, `Вішуддхі`,
+`Вірата`, `Калькі`, `Вішну ґрантхі`, `ґани`, `гхі`, `Аарті`, `абхішека`,
+`прохолодний вітерець`, `аскеза`, `колективність`, `Нехай Бог благословить
+усіх вас`) is accurate and consistent, including declension patterns
+(`Пуджу Ґанеші`, locative `в Сахаджа Йозі`, plural `сахаджа йоґи`). Language
+names (`англійська`, `гінді`, `санскритом`) are lowercased. Punctuation
+(quotes `«»` at all levels, ` – ` dashes, `’` apostrophes, `...` ellipsis)
+is fully conformant.

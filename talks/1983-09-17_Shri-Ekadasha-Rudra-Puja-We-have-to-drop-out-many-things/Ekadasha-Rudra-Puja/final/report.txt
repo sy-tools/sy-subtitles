@@ -4,7 +4,7 @@
   SRT: talks/1983-09-17_Shri-Ekadasha-Rudra-Puja-We-have-to-drop-out-many-things/Ekadasha-Rudra-Puja/final/uk.srt
   Transcript: talks/1983-09-17_Shri-Ekadasha-Rudra-Puja-We-have-to-drop-out-many-things/transcript_uk.txt
   EN SRT: talks/1983-09-17_Shri-Ekadasha-Rudra-Puja-We-have-to-drop-out-many-things/Ekadasha-Rudra-Puja/source/en.srt
-  SRT blocks: 300
+  SRT blocks: 301
   EN SRT blocks: 368
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -18,23 +18,23 @@
   CHECK 3: Time range (vs EN SRT)
 ============================================================
   EN SRT range: 00:00:19,550 — 00:26:30,234
-  SRT range:       00:00:19,550 — 00:26:23,417
+  SRT range:       00:00:19,550 — 00:26:32,234
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 300
+  Total blocks: 301
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 300
-  CPS: avg=11.8, median=12.3, max=19.0
-  CPS > target: 36 (12.0%)
+  Total blocks: 301
+  CPS: avg=11.8, median=12.6, max=17.6
+  CPS > target: 45 (15.0%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=55.2, max=84
+  CPL: avg=55.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -44,21 +44,21 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #261: CPS=19.0 (63ch/3.3s) "на вихваляння, ви можете сказати: «Ні-ні, постукати по дерев..."
-    #260: CPS=15.6 (78ch/5.0s) "Або ви можете сказати: «Постукати по каменю». [Сміх] Якщо ви..."
-    #225: CPS=15.0 (25ch/1.7s) "Він благословенний Богом."
-    #226: CPS=15.0 (25ch/1.7s) "Як ви можете таке робити?"
-    #196: CPS=15.0 (40ch/2.7s) "які вважають, що романтика дуже важлива."
-    #206: CPS=15.0 (40ch/2.7s) "Далі, без гороскопа вони не одружуються."
-    #192: CPS=15.0 (49ch/3.3s) "і насолоджуються [нерозбірливо], насолоджуються-."
-    #201: CPS=15.0 (52ch/3.5s) "Наприклад, ми можемо навчитися, як керувати камерою."
-    #209: CPS=15.0 (52ch/3.5s) "Ба більше, це влаштовано в такий колективний спосіб."
-    #168: CPS=15.0 (55ch/3.7s) "якщо ви одружуєтеся, то такого шлюбу й бути не повинно."
+    #261: CPS=17.6 (78ch/4.4s) "Або ви можете сказати: «Постукати по каменю». [Сміх] Якщо ви..."
+    #259: CPS=15.2 (30ch/2.0s) "«Постукати по дереву» означає,"
+    #77: CPS=15.0 (57ch/3.8s) "і обидва можуть бути представлені тут (на Екадаша Рудрі)."
+    #233: CPS=15.0 (35ch/2.3s) "Ось проблема, з якою ми стикаємося."
+    #225: CPS=15.0 (22ch/1.5s) "Таке це благословення."
+    #226: CPS=15.0 (25ch/1.7s) "Він благословенний Богом."
+    #227: CPS=15.0 (25ch/1.7s) "Як ви можете таке робити?"
+    #163: CPS=15.0 (37ch/2.5s) "Ось у чому проблема із Сахаджа Йоґою."
+    #197: CPS=15.0 (40ch/2.7s) "які вважають, що романтика дуже важлива."
+    #207: CPS=15.0 (40ch/2.7s) "Далі, без гороскопа вони не одружуються."
 
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 300
+  UK SRT blocks: 301
   EN SRT blocks: 368
   Ratio UK/EN: 0.82 (max allowed 2.0)
   Block count: OK
@@ -76,7 +76,7 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 11.8 (target ≤15.0)
-  CPS > 15.0: 36 blocks
+  CPS > 15.0: 45 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
