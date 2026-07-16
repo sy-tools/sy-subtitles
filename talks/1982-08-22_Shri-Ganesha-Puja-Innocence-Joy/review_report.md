@@ -1,11 +1,20 @@
-# Language Review – 1982-08-22 Shri Ganesha Puja: Innocence & Joy
+# Language Review – 1982-08-22_Shri-Ganesha-Puja-Innocence-Joy, 2026-07-16 (pass 2)
 
 ## Process
 
-2+1 agent review (Reviewer L + Reviewer S + Critic) of `transcript_uk.txt`
-against `transcript_en.txt`, `glossary/CLAUDE.md`, and `glossary/terms_lookup.yaml` /
-`terms_context.yaml`. Borderline conventions were calibrated against the existing
-62-talk corpus before deciding (see Critic notes).
+2+1 agent review (Reviewer L + Reviewer S + Critic) of `transcript_uk.txt` against
+`transcript_en.txt`, `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml` and
+`terms_context.yaml`, per `templates/language_review_template.md`.
+
+**Note:** this is a second review pass. A prior 2+1 review had already been applied
+to this transcript (24 corrections: «Пуджа» capitalization ×17, «благословлено»,
+deity pronoun «Він» for Hanumana, «Стопи» ×2, «руками», «панчамрута», doubled
+ellipsis). Those corrections were verified as present and correct. This pass
+re-reviewed the resulting text in full. Three items deferred by the prior Critic
+(ellipsis style, terminal periods, timestamp typo) were re-examined and this time
+approved — reasons given in the Critic table.
+
+Paragraph numbers refer to line numbers in `transcript_uk.txt`.
 
 ## Results
 
@@ -13,96 +22,108 @@ against `transcript_en.txt`, `glossary/CLAUDE.md`, and `glossary/terms_lookup.ya
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 14 | Wrong passive participle form | «вас може бути **благословенно** матеріально» – «благословенно» is the adverb of «благословенний»; the impersonal passive (parallel to «винагороджено» in the same sentence) is «благословлено» | благословлено |
-| L2 | 94 | Malformed/doubled ellipsis | «правильної речі**…….**» = `…` + `…` + `.` (7 dots) | речі… |
-| L3 | (whole text) | Single-char `…` vs glossary `...` | `…` (U+2026) used for ellipsis throughout instead of three dots | *(considered)* |
-| L4 | 10, 50 | Missing terminal period | «…перекладати італійською» / «Гадаю, що так» | *(considered)* |
-| L5 | 78 | Semicolon in timestamp | «(2:08**;**14)» (should be `:`) | *(considered)* |
+| L1 | 6 | Кома перед відкривною дужкою | «Труане, (Женева, Швейцарія), 22 серпня 1982.» | «Труане (Женева, Швейцарія), 22 серпня 1982.» |
+| L2 | 10 | Відсутня крапка в кінці завершеного речення | «Я також можу перекладати італійською» | «Я також можу перекладати італійською.» |
+| L3 | 11 | Неправильне поєднання знака оклику з трикрапкою: після «!» ставляться дві крапки | «Чудово!…» | «Чудово!..» |
+| L4 | 17 | Сумнівне відмінкове узгодження предикатива з давальним об’єктом | «їй слід поклонятися першою» | «їй слід поклонятися першій» |
+| L5 | 19 | Збірний числівник «двоє» з назвами неістот | «Ці двоє представляють звук» | «Ці два представляють звук» |
+| L6 | 25 | Зайва кома між однорідними підрядними, з’єднаними одиничним «і» | «ви її брати й сестри, і що ви належите» | «ви її брати й сестри і що ви належите» |
+| L7 | 26 | Порушене дієслівне керування: «намагатися» не приєднує «що» | «хоч би що ви намагалися» | «хоч би як ви намагалися» |
+| L8 | 29 | Вставне слово «припустімо» не виділено комами з обох боків | «Бо припустімо, в Індії Я не пояснюю їм» | «Бо, припустімо, в Індії Я не пояснюю їм» |
+| L9 | 36 | Неідіоматична калька з англ. "As it is" | «Як уже є, Я вам казала» | «Я вже казала вам» |
+| L10 | 38 | Зайва кома в цілісній порівняльній сполуці «все одно що» | «Це було б усе одно, що сказати» | «Це було б усе одно що сказати» |
+| L11 | 50 | Відсутня крапка в кінці завершеного речення | «Шрі Матаджі: Гадаю, що так» | «Шрі Матаджі: Гадаю, що так.» |
+| L12 | 78 | Одрук: крапка з комою замість двокрапки в часовій мітці | «(2:08;14)» | «(2:08:14)» |
+| L13 | 78 | Відсутня кома перед підрядним мети | «Рушники могли б бути тут просто щоб витерти Мої Стопи.» | «Рушники могли б бути тут, просто щоб витерти Мої Стопи.» |
+| L14 | 11, 57, 66, 72, 78, 83–86, 88, 93, 94 | Змішані стилі трикрапки в одному тексті: 21× типографський знак «…» (U+2026) проти «...» (¶11, ¶15, ¶25); правило глосарія — «...» | «літаків…», «(…)», «тобто…», «бачите…» тощо | Замінити всі «…» на «...» |
+| L15 | 93 | Займенник чол. роду після іменника жін. роду «дитина» | «Дитина бере рослину; йоґи навколо захоплено коментують його» | «…коментують її» |
+| L16 | 94 | Родова невідповідність: «заміжній» (чол. форма) щодо жінок | «Проходьте, усі ви, хто заміжній.» | «Проходьте, усі ви, хто заміжня.» |
 
-Orthography otherwise clean: all quotation marks are `«»` (no `" " „`),
-all dashes are en-dash ` – ` (U+2013, 96×; zero em-dashes), apostrophes all `’`
-(U+2019), no double spaces, no space-before-punctuation, no mixed Latin/Cyrillic.
-Lowercase `я` on line 38 is a generic hypothetical speaker (`«я можу»`) — correctly lowercase.
+Otherwise clean: quotation marks «» at all levels (no `„` `"` `"`), en-dash ` – `
+(U+2013) with spaces throughout, apostrophes `’` (U+2019), no double spaces, no
+Latin/Cyrillic mixing outside intentionally quoted words («fun», «Ora pro nobis»).
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 58 | Deity pronoun lowercase | «як-от Равана, – цілу Ланку **він** спалив» — «he» = Hanumana (Incarnation), must be uppercase | Він |
-| S2 | 84 | «Стопи» lowercase | «омити Мої **стопи** чи руки?» — Lotus Feet of Shri Mataji; uppercase per glossary | Мої Стопи |
-| S3 | 84 | «Стопи» lowercase | «(Йоґи: Ваші **стопи**.)» — same | Ваші Стопи |
-| S4 | 11,13,15,16,22,23,27,28,29,73,78,93 | «Пуджа» generic lowercase | «на пуджу», «роблячи пуджу», «суть пуджі», «система пуджі», «після пуджі», «робиш пуджу» etc. — ceremony name, uppercase per glossary | Пуджу / Пуджі / Пуджа (17 instances) |
-| S5 | 84 | Term capitalization inconsistency | «Так, **Панчамрута**.» — lowercase elsewhere (¶15, ¶30); not a glossary-capitalized term; mid-utterance | панчамрута |
-| S6 | 30 | «Руки» over-capitalized | «а лише Своїми **Руками**» — only Стопи is glossary-mandated uppercase; hands are lowercase in ¶84, ¶85, ¶94 (and corpus-wide) | Своїми руками |
-| S7 | 88 | «Кумкум» mid-sentence | «Цей Кумкум дуже червоний» | *(considered)* |
-| S8 | 62, 66 | «Дурва»/«дурва» mixed | grass name capitalized inconsistently | *(considered)* |
-| S9 | 33 | «Серце» capitalized | «праве Серце», «правому Серцю» | *(considered)* |
-| S10 | 59 | «Той, Хто» capital Х | «Стхіта – Той, Хто має бути осілим» | *(considered)* |
+| S1 | 25 | Хибний термін для "chant a mantra": «оспівувати» = «прославляти в піснях», а не «промовляти»; на початку того ж абзацу — «ми промовляємо мантри» | «Але лише реалізована душа повинна оспівувати мантру.» | «…повинна промовляти мантру.» |
+| S2 | 17 | «пуджа» з малої в складеному терміні при «Пуджа» з великої скрізь | «посудина, що називається ґхата-пуджа» | «ґхата-Пуджа»? |
+| S3 | 62, 66 | Непослідовна капіталізація назви священної трави «дурва»/«Дурва» | «бо дурва – Він любить Дурву, дурва, це називається дурва» | Уніфікувати |
+| S4 | 15 | Можливе звертання до Божества з малої, якщо "you" = Бог, що приймає підношення рису | «Коли ви його їсте, більше творчості потече» | «Коли Ти його їси…» |
+| S5 | 88 | «Кумкум» з великої (загальна назва, пор. «куркума») | «Цей Кумкум дуже червоний» | «кумкум» |
+| S6 | 43/56/58 vs 88/94 | Змішаний стиль ремарок «(Сміх)» / «(сміх)» | — | Уніфікувати регістр |
 
-Deity-pronoun capitalization was otherwise correct throughout: Shri Mataji
-(Я/Мене/Мої/Моя/Своїми/Вона) consistently uppercase; Ganesha, Hanumana, God,
-Gauri (Він/Його/Йому/Вона/Її/Свої) uppercase; regular people (він/йому/її — the
-yogis, the child, the bereaved widow, the maid, Vincent, Matthew) lowercase;
-language names (англійська, французька, італійська, латина, санскрит) lowercase.
-Glossary terms verified: Ґанеша/Ґанеші/Ґанешу declension, Свадхістхана, Кундаліні,
-Сахасрара, Аґія, бхути, Хануман(а), Шакті, Дух, гхі, стотра, Маха Ґанеша,
-«Нехай Бог благословить усіх вас» (fixed phrase) — all correct.
+Deity-pronoun capitalization verified correct throughout: Shri Mataji
+(Я/Мене/Мої/Своїми/Її) uppercase; Ganesha, Hanumana, Gauri, God (Він/Його/Йому/
+Вона/Її/Свої) uppercase; generic «ви» in the seeker's quoted objection (¶25
+«Мати, ви не можете отримати Реалізацію…») correctly lowercase — the "you" is the
+generic seeker, not Shri Mataji; regular people lowercase; language names
+lowercase. Glossary terms verified: Ґанеша/Ґанеші/Ґанешу declension, «в Сахаджа
+Йозі», «сахаджа йоґ/йоґи» lowercase, Свадхістхана чакра, Кундаліні, Сахасрара,
+Задня Аґія, бхути, Хануман(а), Лакшмана, Равана, Ґаурі, Шакті, Дух, Стопи, гхі,
+стотра, Маха Ґанеша (per Маха Ґанапаті pattern), Хаван, «Нехай Бог благословить
+усіх вас» (fixed phrase, ¶74) — all correct. ¶87 «Нехай Бог благословить вас»
+correctly *without* «усіх» (EN: "May God bless you", no "all").
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Genuine grammar error; «благословлено» is the correct impersonal passive, paralleling «винагороджено». |
-| L | L2 | **Keep** | Genuine punctuation typo (doubled ellipsis = 7 dots). Collapsed to a single ellipsis matching the talk's prevailing `…`. |
-| L | L3 | Remove | `…` (U+2026) appears 250× across the 62-talk corpus, including reviewed talks, alongside `...` (425×). Both are tolerated house practice — not a genuine error. Mass-normalizing one talk would impose a non-enforced preference. |
-| L | L4 | Remove | Conversational fragments mirroring the EN source; trailing-period omission in stage-direction-style dialogue is not a substantive error. |
-| L | L5 | Remove | Source transcription artifact inside a `(h:mm:ss)` time marker (identical in EN), not running prose. |
-| S | S1 | **Keep** | Clear deity-pronoun rule: Hanumana (singular Incarnation) → uppercase «Він». |
-| S | S2 | **Keep** | «Стопи» glossary-mandated uppercase; every other instance in the talk uses «Стопи». |
-| S | S3 | **Keep** | Same as S2. |
-| S | S4 | **Keep** | Explicitly within the Reviewer-S mandate (Пуджа listed); glossary rule «Пуджа – uppercase»; corpus norm 237 uppercase vs ~52 lowercase; resolves internal inconsistency (¶8/13/16/33/62 already uppercase). Compound `ґхата-пуджа` (¶17) left lowercase as a lexicalized transliteration. |
-| S | S5 | **Keep** | Internal consistency; term not glossary-capitalized; lowercase in 2 of its 3 uses. |
-| S | S6 | **Keep** | Glossary mandates uppercase only for «Стопи», not «Руки»; hands are lowercase in all other uses in the talk and across the corpus (sole uppercase-hands instance corpus-wide). |
-| S | S7 | Remove | Corpus split 7 «Кумкум» / 6 «кумкум» — tolerated either way; not in glossary. |
-| S | S8 | Remove | Mirrors EN («durva»/«Durva»); borderline proper noun (sacred grass name); capitalized when named, lowercase when descriptive — defensible. |
-| S | S9 | Remove | «Серце» denotes the Heart centre/chakra-region (subtle-system term), reasonably capitalized like other centres; consistent within the paragraph. |
-| S | S10 | Remove | «Той, Хто» is a reverential capitalization for the Deity; not against any explicit rule. Left as-is. |
+| L | L1 | **Keep** | Кома перед відкривною дужкою — однозначна пунктуаційна помилка; вада EN-джерела, яку не слід переносити в український текст. |
+| L | L2 | **Keep** | Завершене повне речення потребує кінцевого знака. Прибирає рябизну: усі сусідні репліки мають кінцеву пунктуацію. (Перегляд рішення попереднього Критика: це не «фрагмент», а повне речення.) |
+| L | L3 | **Keep** | Правопис (§ про поєднання розділових знаків): знак оклику + дві крапки → «Чудово!..». Заразом усуває один знак U+2026. |
+| L | L4 | Remove | Орудний предикатив («поклонятися першою») широко вживаний і не є однозначною помилкою; обидві конструкції в узусі. Не чіпати. |
+| L | L5 | Remove | Розмовна репліка, віддзеркалює усний оригінал ("These are two…"); заміна — стилістичне вподобання. |
+| L | L6 | **Keep** | Чинне правило: однорідні підрядні, з’єднані одиничним «і», комою не розділяються. |
+| L | L7 | **Keep** | «Намагатися що» — неможливе керування; «хоч би як ви намагалися» — мінімальна правка без зміни змісту. |
+| L | L8 | **Keep** | «Припустімо» тут — вставне слово (EN "supposing"), виділяється комами з обох боків. |
+| L | L9 | Remove | Дзеркалить анаколуф оригіналу ("As it is, already I've told you"); переклад свідомо зберігає усний злам. |
+| L | L10 | **Keep** | У цілісній сполуці «все одно що» кома перед «що» не ставиться (усталене правило). |
+| L | L11 | **Keep** | Те саме, що L2. |
+| L | L12 | **Keep** | Очевидний одрук (у EN той самий); усі інші часові мітки тексту мають формат із двокрапкою (2:00:54, 2:02:05, 2:13:51) — внутрішня консистентність вимагає виправлення. (Перегляд рішення попереднього Критика.) |
+| L | L13 | **Keep** | Підрядне мети відокремлюється комою. |
+| L | L14 | **Keep** | Правило `glossary/CLAUDE.md` однозначне: трикрапка — «...». У *цьому* тексті стилі змішані (21×«…» проти «...» у ¶11/15/25) — саме той «mixed styles within the same transcript», який шаблон велить усувати. Уніфікація в межах одного талька не залежить від строкатості корпусу. (Перегляд рішення попереднього Критика, який відхилив за корпусною статистикою.) |
+| L | L15 | Remove | Смислове узгодження за природною статтю (дитина — хлопчик Венсан) припустиме; «її» створило б двозначність (її = рослину?). |
+| L | L16 | **Keep** | «Заміжній» у чол. роді семантично неможливий (про чоловіків — «одружений»); звертання адресоване жінкам, смислове узгодження «хто заміжня» виправдане. |
+| S | S1 | **Keep** | «Оспівувати мантру» спотворює зміст (= «прославляти мантру піснями»); EN "chant". Правка уніфікує з «ми промовляємо мантри» на початку того самого абзацу. Конфліктів з L немає. |
+| S | S2 | Remove | «Ґхата-пуджа» — складений лексикалізований термін, у EN так само з малої ("ghatah-puja"); гібрид «ґхата-Пуджа» штучний. Так само вирішив і попередній Критик. |
+| S | S3 | Remove | Непослідовність точно віддзеркалює EN ("durva, He's fond of Durva, durva"); вирівнювання всупереч джерелу — не виправлення помилки перекладу. |
+| S | S4 | Remove | В оригіналі "you" з малої, референт неоднозначний (Божество чи люди); зміна особи — ризикована смислова правка, поза мандатом мовного review. |
+| S | S5 | Remove | Слідує оригіналу ("This Kum Kum" з великої в EN); корпус допускає обидва написання. |
+| S | S6 | Remove | Регістр ремарок точно відповідає EN ("(Laughter)"/"(laughter)"); не помилка перекладу. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 14 | благословенно (wrong participle) | благословлено |
-| 2 | 94 | …….  (doubled ellipsis) | … |
-| 3 | 58 | цілу Ланку він спалив | цілу Ланку **Він** спалив |
-| 4 | 84 | омити Мої стопи | омити Мої **Стопи** |
-| 5 | 84 | (Йоґи: Ваші стопи.) | (Йоґи: Ваші **Стопи**.) |
-| 6 | 30 | Своїми Руками | Своїми **руками** |
-| 7 | 84 | Так, Панчамрута. | Так, **панчамрута**. |
-| 8 | 11 | прийти на пуджу | прийти на **Пуджу** |
-| 9 | 11 | почнете пуджу | почнете **Пуджу** |
-| 10 | 13 | роблячи пуджу | роблячи **Пуджу** |
-| 11 | 15 | суть пуджі | суть **Пуджі** |
-| 12 | 16 | для пуджі | для **Пуджі** |
-| 13 | 22 | підтримувати пуджу | підтримувати **Пуджу** |
-| 14 | 23 | порушувати пуджу | порушувати **Пуджу** |
-| 15 | 23 | ось така пуджа | ось така **Пуджа** |
-| 16 | 27 | Після пуджі | Після **Пуджі** |
-| 17 | 27 | цінність пуджі | цінність **Пуджі** |
-| 18 | 28 | система пуджі | система **Пуджі** |
-| 19 | 29 | приходити на пуджу | приходити на **Пуджу** |
-| 20 | 29 | на одній пуджі | на одній **Пуджі** |
-| 21 | 29 | «На пуджі тепер | «На **Пуджі** тепер |
-| 22 | 73 | після пуджі | після **Пуджі** |
-| 23 | 78 | робиш пуджу | робиш **Пуджу** |
-| 24 | 93 | прийшов на пуджу | прийшов на **Пуджу** |
+| 1 | 6 | «Труане, (Женева, Швейцарія)» — кома перед дужкою | «Труане (Женева, Швейцарія)» |
+| 2 | 10 | «…перекладати італійською» без крапки | «…перекладати італійською.» |
+| 3 | 11 | «Чудово!…» | «Чудово!..» |
+| 4 | 25 | «повинна оспівувати мантру» | «повинна промовляти мантру» |
+| 5 | 25 | «брати й сестри, і що ви належите» | «брати й сестри і що ви належите» |
+| 6 | 26 | «хоч би що ви намагалися» | «хоч би як ви намагалися» |
+| 7 | 29 | «Бо припустімо, в Індії» | «Бо, припустімо, в Індії» |
+| 8 | 38 | «усе одно, що сказати» | «усе одно що сказати» |
+| 9 | 50 | «Гадаю, що так» без крапки | «Гадаю, що так.» |
+| 10 | 78 | «(2:08;14)» | «(2:08:14)» |
+| 11 | 78 | «тут просто щоб витерти Мої Стопи» | «тут, просто щоб витерти Мої Стопи» |
+| 12 | 94 | «усі ви, хто заміжній» | «усі ви, хто заміжня» |
+| 13 | 57, 66, 72, 78, 83, 84, 85, 86, 88, 93, 94 | 20 типографських знаків «…» (U+2026) упереміш зі стилем «...» | усі «…» → «...» |
 
 ## Summary
 
-- Language (L): 5 issues raised, **2 approved** by Critic (L1 grammar, L2 punctuation).
-- SY Domain (S): 10 issues raised, **6 approved** by Critic (S1 deity pronoun, S2–S3 Стопи,
-  S4 Пуджа capitalization, S5 панчамрута, S6 руки).
-- Total corrections applied: **24** edits across 18 paragraphs
-  (17 of which are the single Пуджа-capitalization finding, S4).
-- No structural changes: paragraph count unchanged (95); orthography (quotes, dashes,
-  apostrophes, spacing) was already clean and required no changes.
+- Language (L): 16 issues found, 12 approved by Critic
+- SY Domain (S): 6 issues found, 1 approved by Critic
+- Total corrections applied: 13 (correction #13 covers 20 ellipsis instances across 11 paragraphs)
+
+Not changed (Critic-removed): predicative case «першою» (both variants valid);
+colloquial «Ці двоє» / «Як уже є» / pronoun «його» after «дитина» (mirror the
+spoken source); «ґхата-пуджа», «дурва/Дурва», «Кумкум», «(сміх)» capitalization
+(faithful to the English source's own usage); the ambiguous "you" in «Коли ви
+його їсте» (meaning-level change, out of scope).
+
+Post-apply verification: 0 remaining U+2026 characters; no space-before-ellipsis
+introduced; quotes «», dashes ` – ` (U+2013), apostrophes «’» intact; paragraph
+count unchanged (95 lines); prior-pass corrections (Пуджа ×17, благословлено,
+Він/Стопи/руками/панчамрута) all still in place.
