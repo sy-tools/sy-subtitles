@@ -4,7 +4,7 @@
   SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-P2/final/uk.srt
   Transcript: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/transcript_uk.txt
   EN SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-P2/source/en.srt
-  SRT blocks: 511
+  SRT blocks: 510
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,36 +22,36 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 511
+  Total blocks: 510
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 511
-  CPS: avg=114.9, median=40.0, max=17500.0
-  CPS > target: 431 (84.3%)
-  CPS > hard max: 398 (77.9%)
-  CPL: avg=53.4, max=84
+  Total blocks: 510
+  CPS: avg=106.9, median=40.0, max=17500.0
+  CPS > target: 443 (86.9%)
+  CPS > hard max: 399 (78.2%)
+  CPL: avg=53.5, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 19
-  Duration > max: 25
+  Duration < min: 16
+  Duration > max: 23
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
     #40: CPS=17500.0 (70ch/0.0s) "щоб підкреслити красу того, що створив Бог, щоб прославити к..."
     #41: CPS=13250.0 (53ch/0.0s) "що створив Бог, щоб вшанувати красу, яку створив Бог."
-    #35: CPS=1391.3 (32ch/0.0s) "Несвідоме працювало через людей."
-    #57: CPS=999.0 (82ch/-8.3s) "То була авід’я, штучне знання, знання, що «я є щось», що «я ..."
-    #133: CPS=999.0 (73ch/-80.3s) "Але якщо це твердий, гарний фарфор – майсенський – тоді можл..."
-    #328: CPS=999.0 (52ch/-240.3s) "Шрі Матаджі: Гаразд. [Ґреґуар продовжує перекладати]"
-    #387: CPS=999.0 (73ch/-74.0s) "бо це дуже хитка стадія, на якій, Я помічаю, люди знову зіск..."
-    #26: CPS=762.4 (77ch/0.1s) "Усе, що створене людьми, що на перший погляд виглядає як зна..."
-    #34: CPS=612.9 (57ch/0.1s) "політичні інституції, щоб просунути механізм роботи Бога."
-    #59: CPS=611.1 (66ch/0.1s) "Ми можемо сказати, що це початок первородного гріха: що «я є..."
+    #479: CPS=1529.4 (26ch/0.0s) "Вона має мати якусь чашку."
+    #478: CPS=619.0 (39ch/0.1s) "що висить ось так у повітрі, розумієте."
+    #436: CPS=609.8 (75ch/0.1s) "проникливими, для чого людський розум досі не здатний побачи..."
+    #477: CPS=434.8 (60ch/0.1s) "Тож вони не можуть подумати, ми не можемо подумати про воду,"
+    #487: CPS=283.1 (62ch/0.2s) "Невинним воно може бути, але сама невинність для них не існу..."
+    #486: CPS=275.0 (55ch/0.2s) "Сама шубха – прикметник, немає іменника для невинності."
+    #435: CPS=262.2 (43ch/0.2s) "ви маєте бути справді дуже глибокими й дуже"
+    #488: CPS=236.5 (35ch/0.1s) "бо вона існує всюди, що є невинним."
 
 ============================================================
   SUMMARY
@@ -63,12 +63,12 @@
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
 
-  Avg CPS: 114.9 (target ≤15.0)
-  CPS > 15.0: 431 blocks
-  CPS > 20.0: 398 blocks
+  Avg CPS: 106.9 (target ≤15.0)
+  CPS > 15.0: 443 blocks
+  CPS > 20.0: 399 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 19 blocks
-  Duration > 21000ms: 25 blocks
+  Duration < 1200ms: 16 blocks
+  Duration > 21000ms: 23 blocks
   Gaps < 80ms: 0 blocks
 
   Overall: PASSED
