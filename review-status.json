@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-16T15:50:58.053351+00:00",
+  "updated_at": "2026-07-16T17:16:55.207037+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -378,7 +378,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 358,
-      "updated_at": "2026-06-14T15:46:57Z"
+      "updated_at": "2026-07-16T17:16:41Z"
     },
     "1982-08-22_Shri-Ganesha-Puja-Innocence-Joy": {
       "status": "pending",
