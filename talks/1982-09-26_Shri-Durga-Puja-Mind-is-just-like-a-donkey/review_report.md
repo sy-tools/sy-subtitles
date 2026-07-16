@@ -2,14 +2,27 @@
 
 **Talk:** Shri Durga Puja: Mind is just like a donkey — Vienna (Austria), 26 September 1982
 **Source:** English → **Target:** Ukrainian
-**Review date:** 2026-05-30
+**Review date:** 2026-07-16
 **Process:** 2+1 (Reviewer L + Reviewer S + Critic)
+
+> Second review round. A previous 2+1 round (2026-05-30, 10 corrections: Пуджа
+> capitalization, Сахаджа Йоґи transliteration, Кабіра accusative, Інкарнації,
+> lowercase «я» in the donkey quote, plural «з них», etc.) is preserved in git
+> history of this file; its fixes were verified as present and were not re-flagged.
 
 ## Process
 
 Reviewer L (Language) and Reviewer S (SY Domain) ran in parallel over the full
-paragraphed `transcript_uk.txt`. The Critic then filtered both tables, removing
-false positives and trivial style preferences, and applied the survivors.
+paragraphed `transcript_uk.txt`, cross-checked against `transcript_en.txt`,
+`glossary/CLAUDE.md`, `terms_lookup.yaml`, and `terms_context.yaml`. The Critic
+then filtered both tables, removing false positives and trivial style
+preferences. Paragraph numbers refer to line numbers of `transcript_uk.txt`.
+
+Character-level checks performed before review: ellipses are single-char `…`
+(U+2026; stray trailing ASCII periods in stage directions mirror the English
+source), apostrophes are `’` (U+2019), quotation marks `«»`, em-dash ` – `
+(U+2013 with spaces), no accidental Latin/Cyrillic mixing (the only Latin
+fragment, `(Priyaa)`, is an intentional gloss of the Sanskrit spelling).
 
 ## Results
 
@@ -17,74 +30,119 @@ false positives and trivial style preferences, and applied the survivors.
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 21 | Transliteration: Sanskrit *g* must be `ґ` (rule: Йоґа) | «небезпечні для Сахаджа **Йоги**» | Сахаджа **Йоґи** |
-| L2 | 32 | Transliteration: Sanskrit *g* must be `ґ` | «Для Сахаджа **Йоги** вам треба» | Для Сахаджа **Йоґи** |
-| L3 | 63 | Grammar: wrong accusative of masc. name Кабір | «можете взяти **Кабіру**» | взяти **Кабіра** |
-| L4 | 55 | Punctuation: closing `»` with no opening `«` | «…що це лише первородний гріх створив проблему**»**, –» | …що **«**це лише первородний гріх створив проблему», – |
-| L5 | 83 | Extra space (double space) | «нехай він підійде й …␣␣Усе гаразд» | …підійде й … Усе гаразд |
-| L6 | many | Ellipsis: glossary prescribes `...`, text uses single-char `…` | 66 occurrences of `…` | (considered) |
-| L7 | 45, 79, 80, 133, 145, 154… | Four-dot `….` (ellipsis + period) | stage-direction trailing dots | (considered) |
+| L1 | 9 | Кома перед одиничним «і» в переліку | «…краси й блаженства – його, і його родину, усіх його родичів…» | «його і його родину» |
+| L2 | 26 | Ненормативний займенник-заповнювач «те-то» | «Я є те-то й те-то» | «Я є такий-то й такий-то» |
+| L3 | 30 | Перехідне дієслово «блокувати» без додатка (синтаксична калька з «catching on») | «але він блокував на правій Свадхістхані» | «але він блокував праву Свадхістхану» |
+| L4 | 31 | Знак питання після непрямого питання (підрядне з «як» у розповідному реченні) | «бо Я не можу зрозуміти, як цвинтар може мати праву Свадхістхану?» | «…праву Свадхістхану».» (крапка) |
+| L5 | 52 | Калька «порочне коло» (рос. «порочный круг») | «пройти через усе це порочне коло» | «пройти через усе це зачароване коло» |
+| L6 | 85 | Подвійна крапка | «Тепер усе скінчено, усе гаразд.. Заберіть його.» | «усе гаразд. Заберіть його.» |
+| L7 | 121 | Порушення узгодження: зворот із «одне» вимагає однини в підрядному | «двадцять одне ім’я, які представляють двадцять одну силу» | «двадцять одне ім’я, яке представляє двадцять одну силу» |
+| L8 | 153 | Калькований порядок слів у редакторській ремарці («reads then» → «читає потім») | «(Ґреґуар читає потім Божественну Сутність…)» | «(Потім Ґреґуар читає Божественну Сутність…)» |
+| L9 | 154 | Калька «ні в якому разі» (рос. «ни в коем случае») | «Він не людина, ні в якому разі» | «Він не людина, у жодному разі» |
+| L10 | 161 | Мала літера на початку репліки після імені мовця | «Шрі Матаджі: так, ти принесеш воду для землі?» | «Шрі Матаджі: Так, ти принесеш…» |
+| L11 | 162 | Мала літера на початку репліки після імені мовця | «…до сахаджа йоґині: ти можеш зав’язати» | «…до сахаджа йоґині: Ти можеш зав’язати» |
+| L12 | 175 | Відсутні пробіли після трикрапки між реченнями | «Так….Шрі Шіва…Усе це лише для Його насолоди» | «Так…. Шрі Шіва… Усе це…» |
+| L13 | 201 | Непарна (незакрита) лапка — артефакт джерела | «на цьому? «Кхус, те саме.» | «на цьому? Кхус, те саме.» |
+| L14 | 213 | Відсутній пробіл після трикрапки між реченнями | «Тримайте його на тому боці….Той бік» | «на тому боці…. Той бік» |
+| L15 | 202 | Ненормативне «печінкові хворі» (калька «печеночные больные») | «перегріті, для печінкових хворих» | «перегріті, для хворих на печінку» |
+| L16 | 14 | Незграбна конструкція «повернув для людей в інший бік» | «і той гріх повернув для людей в інший бік» | «обернувся для людей іншим боком» |
+| L17 | 26 | Змішана конструкція з двома питальними словами | «Не знаю, як їм вдається доходити до якої межі» | перебудувати речення |
+| L18 | 29 | Модальна калька: «must have created» ≠ «мали створити» | «такі люди мали створити більше обумовленості» | «такі люди, мабуть, створили більше обумовленості» |
+| L19 | 14 | Родовий відмінок часу «того часу» | «і люди підвели Бога того часу» | «і люди підвели Бога в той час» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 16 | Divine Incarnations should be uppercase | «нам слід отримати **інкарнації** на цій землі» | отримати **Інкарнації** |
-| S2 | 33 | Capital `Я` reserved for Shri Mataji; here the practitioner speaks to his own mind | «тепер **Я** маю піднестися, і **Я** маю отримати… тоді **Я** не можу піднестися» | …тепер **я** маю… і **я** маю… тоді **я** не можу… |
-| S3 | 25 | Plural Incarnations mid-sentence → lowercase pronoun | «не треба приводити жодного з **Них**» | жодного з **них** |
-| S4 | 26 | Plural Incarnations mid-sentence → lowercase pronoun | «І у вас є всі **Вони**: Мойсей» | всі **вони**: Мойсей |
-| S5 | 7, 8, 21, 32, 33, 75, 76, 139, 156 | Ceremony term **Пуджа** must be capitalized (glossary + corpus convention); talk was internally inconsistent (title/protocol uppercase, prose lowercase) | пуджею / пуджу / пуджі / пуджа (17 occurrences) | **Пуджею / Пуджу / Пуджі / Пуджа** |
-| S6 | 27 | «немає ніякої **істини**» — capitalize Істина? | "There's nothing truth in it" | (considered) |
-| S7 | 191 | Latin letters in Cyrillic text: `(Priyaa)` | «якщо ти поставиш «Прія» (Priyaa)» | (considered) |
+| S1 | 131 | Друкарська помилка джерела «nomo» перенесена в переклад; глосарій: «намо намаха» | «Стхана-деватаб’йо номо намаха» | «Стхана-деватаб’йо намо намаха» |
+| S2 | 135 | Назва тексту не за глосарієм (Devi Mahatmayam → «Деві Махатм’ям»); у п. 155 вжито правильну форму | «з «Деві Махатм’я»]» | «з «Деві Махатм’ям»]» |
+| S3 | 136 | «Юґе» через «ґ» суперечить глосарію («Кріта Юга» через «г») і формам «Юга/Югою/Югу» в тому ж абзаці | «Кріта Юґе. Це Кріта Юга.» | «Кріта Юге. Це Кріта Юга.» |
+| S4 | 60 | Займенник множини для Інкарнацій усередині речення — з малої літери (пор. п. 25: «жодного з них») | «Ось чому кожен із Них мусив прийти до Індії» | «кожен із них» |
+| S5 | 14 | Транслітерація avidyā: «авід’я» непослідовна щодо глосарія («Нірмала Відья» — той самий санскр. корінь) | «То була авід’я, штучне знання» | «То була авідья» |
+| S6 | 39 | Транслітерація vaidya: «Вайд’ям» — той самий шаблон -dya → -дья | «Вайд’ям не дозволялося» | «Вайдьям не дозволялося» |
+| S7 | 27 | «істина» з малої — можливе порушення правила «Істина – uppercase»? | «У цьому немає ніякої істини» | (розглянуто) |
+| S8 | 29, 191 | «деви» з малої, глосарій подає «Дева» з великої | «ви деви», «його розуміють лише деви» | (розглянуто) |
+| S9 | 88–94 / 179–185 | Змішаний регістр «сакшат»/«Сакшат», «намо намаха»/«Намо Намаха» у мантрах | «Ом твамева сакшат…» / «Ом Твамева Сакшат…» | (розглянуто) |
+| S10 | 198–202 | Змішаний регістр «кхус»/«Кхус» | «(Матінка просить парфуми кхус)» / «це парфуми Кхус» | (розглянуто) |
+| S11 | 204 / 222 | «меч» з малої, «Меч» з великої (зброя Богині) | «коли Я триматиму меч» / «Шрі Матаджі бере Меч» | (розглянуто) |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Sanskrit *g* → `ґ` is a firm transliteration rule; every other "Йоґа/Йоґи" in the file already uses `ґ`. Genuine inconsistency. |
-| L | L2 | **Keep** | Same rule; only 2 stray `Йоги` (г) in the whole file — both fixed. |
-| L | L3 | **Keep** | Glossary form is *Кабір* (masc. 2nd decl.); accusative animate = *Кабіра*. «Кабіру» is not a valid accusative for «взяти». |
-| L | L4 | **Keep** | A closing guillemet without an opening one is malformed punctuation. Added the opening `«` to balance the reported clause (cleaner than deleting `»`). |
-| L | L5 | **Keep** | Double space is a genuine typographic error, not a style choice. |
-| L | L6 | **Remove** | Corpus is split (353 single-char `…` vs 439 `...`); this talk uses `…` consistently throughout. Not an error — established style; mass-replacing 66 chars would be over-reach. |
-| L | L7 | **Remove** | The `….` sequences sit only in editorial stage directions and mirror the English source notes; not part of the translated speech. |
-| S | S1 | **Keep** | These are the Divine Incarnations sent to earth — Інкарнація is on the capitalized-spiritual-term list. |
-| S | S2 | **Keep** | The quote is what the *practitioner* tells his own mind ("now **I** have to ascend"); the regular-person `я` must be lowercase. (Sentence-initial `Я` elsewhere correctly stays capitalized.) |
-| S | S3 | **Keep** | "any one of **Them**" = plural Incarnations mid-sentence → lowercase per rule. The two following `Вони` are sentence-initial and correctly remain capitalized. |
-| S | S4 | **Keep** | "all of **Them**" = plural Incarnations mid-sentence → lowercase. |
-| S | S5 | **Keep** | Glossary lists Пуджа as an uppercase ceremony term; corpus precedent is overwhelmingly uppercase (223 vs 54). Fixing brings the talk in line with its own title and protocol heading. |
-| S | S6 | **Remove** | Here "truth" means validity ("there's no truth in it"), not the absolute spiritual Істина. Lowercase is correct. |
-| S | S7 | **Remove** | The Latin `Priyaa` is an intentional contrastive gloss of the Sanskrit spelling Shri Mataji is explaining; not an accidental Latin/Cyrillic mix. |
+| L | L1 | Remove | Кома захищається як приєднувальна конструкція — передає паузу оригіналу «on him, and his family»; не однозначна помилка |
+| L | L2 | Keep | «те-то» — ненормативна форма; «такий-то й такий-то» — стандартний заповнювач для «I am XYZ» |
+| L | L3 | Keep | «блокувати» — перехідне; конструкція без додатка синтаксично неповна; стандартний SY-вжиток — «блокував праву Свадхістхану» |
+| L | L4 | Keep | Після непрямого питання («не можу зрозуміти, як…») знак питання не ставиться — чинне правило пунктуації |
+| L | L5 | Keep | Нормативний український ідіом — «зачароване коло»; «порочне коло» — калька |
+| L | L6 | Keep | Подвійна крапка — очевидна друкарська помилка |
+| L | L7 | Keep | Звороти з «одне» вимагають однини: «ім’я, яке представляє»; порушення узгодження — реальна граматична помилка |
+| L | L8 | Keep | Ремарка — редакторський текст, а не мовлення Шрі Матаджі; має бути природною українською; «читає потім» — послівна калька |
+| L | L9 | Keep | «у жодному разі» — рекомендована нормативна форма; «ні в якому разі» — калька |
+| L | L10 | Keep | Репліка після імені мовця починається з великої літери; так у всьому документі (пор. п. 139, 175) — уніфікація |
+| L | L11 | Keep | Те саме правило, що L10 |
+| L | L12 | Keep | Відсутність пробілу зліплює речення; правиться мінімально (лише пробіли, кількість крапок збережено за джерелом) |
+| L | L13 | Keep | Непарна лапка — артефакт незакритої лапки в англійському джерелі; в українському тексті їй немає пари |
+| L | L14 | Keep | Те саме правило, що L12 |
+| L | L15 | Keep | Нормативно «хворі на печінку»; «печінкові хворі» — калькований жаргон |
+| L | L16 | Remove | Вірно відтворює анаколуф оригіналу «that sin took a different turn»; граматично допустимо, зміна — питання стилю перекладу |
+| L | L17 | Remove | Оригінал так само зламаний («how they can manage to go to what limit») — переклад свідомо зберігає обірвану розмовну конструкцію |
+| L | L18 | Remove | «мали створити» граматично коректне; заміна модальності — стилістичне вподобання, зміст збережено |
+| L | L19 | Remove | Родовий відмінок часу («того часу», як «того дня») — засвідчена літературна конструкція; не помилка |
+| S | S1 | Keep | «nomo» — очевидна друкарська помилка джерела; у тому самому рядку всі інші «намо/намаха»; глосарій: «намо намаха» |
+| S | S2 | Keep | Пряма невідповідність глосарію та внутрішня неузгодженість (п. 155 має «Махатм’ям») |
+| S | S3 | Keep | Глосарій фіксує «Юга» через «г»; у тому ж абзаці «Юга/Югою/Югу» — «Юґе» ламає послідовність того самого слова |
+| S | S4 | Keep | Пряме правило глосарія: займенники множини Інкарнацій усередині речення — з малої; п. 25 уже дотримується («жодного з них») |
+| S | S5 | Keep | Уніфікація транслітерації санскр. vidyā за глосарієм («Нірмала Відья» → «авідья») |
+| S | S6 | Keep | Той самий шаблон транслітерації, що S5 (vaidya → «Вайдья») — одна політика на весь текст |
+| S | S7 | Remove | Хибне спрацювання: «немає ніякої істини» — родове значення («nothing truth in it»), не абсолютна Істина; мала літера правильна |
+| S | S8 | Remove | Родовий ужиток множини («ви деви», «створене девами»), послідовний у всьому тексті й відповідає малій літері оригіналу |
+| S | S9 | Remove | Регістр точно віддзеркалює англійське джерело в літургійних рядках (88–94 у джерелі з малої, 179–185 — з великої); уніфікація створила б розбіжність із джерелом |
+| S | S10 | Remove | Тривіальне: назва парфумів — не SY-термінологія; регістр віддзеркалює джерело |
+| S | S11 | Remove | Регістр віддзеркалює джерело (204 «the sword», 222 «the Sword»); не правити всупереч оригіналу |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 21 | Сахаджа Йоги (г) | Сахаджа **Йоґи** |
-| 2 | 32 | Для Сахаджа Йоги (г) | Для Сахаджа **Йоґи** |
-| 3 | 63 | взяти Кабіру | взяти **Кабіра** |
-| 4 | 55 | …створив проблему», – (orphan `»`) | …що **«**це лише первородний гріх створив проблему», – |
-| 5 | 83 | подвійний пробіл після `…` | одинарний пробіл |
-| 6 | 16 | отримати інкарнації | отримати **Інкарнації** |
-| 7 | 33 | Я / Я / Я (мова практикуючого до власного розуму) | **я / я / я** |
-| 8 | 25 | приводити жодного з Них | жодного з **них** |
-| 9 | 26 | І у вас є всі Вони: Мойсей | всі **вони**: Мойсей |
-| 10 | 7, 8, 21, 32, 33, 75, 76, 139, 156 | пуджею/пуджу/пуджі/пуджа (17×) | **Пуджею/Пуджу/Пуджі/Пуджа** |
+| 1 | 14 | авід’я | авідья |
+| 2 | 26 | Я є те-то й те-то | Я є такий-то й такий-то |
+| 3 | 30 | він блокував на правій Свадхістхані | він блокував праву Свадхістхану |
+| 4 | 31 | …як цвинтар може мати праву Свадхістхану?» | …як цвинтар може мати праву Свадхістхану». |
+| 5 | 39 | Вайд’ям не дозволялося | Вайдьям не дозволялося |
+| 6 | 52 | усе це порочне коло | усе це зачароване коло |
+| 7 | 60 | кожен із Них мусив прийти | кожен із них мусив прийти |
+| 8 | 85 | усе гаразд.. Заберіть його. | усе гаразд. Заберіть його. |
+| 9 | 121 | двадцять одне ім’я, які представляють | двадцять одне ім’я, яке представляє |
+| 10 | 131 | Стхана-деватаб’йо номо намаха | Стхана-деватаб’йо намо намаха |
+| 11 | 135 | з «Деві Махатм’я»] | з «Деві Махатм’ям»] |
+| 12 | 136 | Кріта Юґе. | Кріта Юге. |
+| 13 | 153 | (Ґреґуар читає потім Божественну Сутність…) | (Потім Ґреґуар читає Божественну Сутність…) |
+| 14 | 154 | ні в якому разі | у жодному разі |
+| 15 | 161 | Шрі Матаджі: так, ти принесеш | Шрі Матаджі: Так, ти принесеш |
+| 16 | 162 | до сахаджа йоґині: ти можеш зав’язати | до сахаджа йоґині: Ти можеш зав’язати |
+| 17 | 175 | Так….Шрі Шіва…Усе це | Так…. Шрі Шіва… Усе це |
+| 18 | 201 | на цьому? «Кхус, те саме. | на цьому? Кхус, те саме. |
+| 19 | 202 | для печінкових хворих | для хворих на печінку |
+| 20 | 213 | на тому боці….Той бік | на тому боці…. Той бік |
 
 ## Summary
 
-- **Language (L):** 7 issues considered, **5 approved** by Critic
-- **SY Domain (S):** 7 issues considered, **5 approved** by Critic
-- **Total corrections applied:** 10 distinct fixes
-  - of which **Пуджа** capitalization touches **17** occurrences, and the
-    donkey-quote `Я→я` touches **3** occurrences.
+- **Language (L):** 19 issues found, **14 approved** by Critic
+- **SY Domain (S):** 11 issues found, **6 approved** by Critic
+- **Total corrections applied: 20**
 
 ### Notes
-- The puja-protocol section (mantras, 21 names of Shri Vishnu, Ganesha Atharva
-  Sheersha, etc.) was left untouched — Sanskrit transliterations are not subject
-  to Ukrainian grammar correction.
-- Terminology was otherwise consistent with `terms_lookup.yaml` /
-  `terms_context.yaml` (Дхарма, Дух, Стопи, Богині, Нірвікальпа, ракшаси,
-  Вірата, Кріта Юга, бхути, Свадхістхана, Антар Йоґа — all correct).
-- Deity-pronoun capitalization for Shri Mataji (Я/Мене/Мої Стопи) and for
-  singular Incarnations (Він/Його — Sai Nath, Virat Ganesha) was already correct.
+
+Verified as correct during review (no change needed): deity-pronoun
+capitalization for Шрі Матаджі (Я/Мені/Мої/Вона/Її/Своїх/Стопи) and singular
+Incarnations (Він/Його — Саї Натх, Маркандея, Ґанеша, Шіва, Рудра); lowercase
+«сахаджа йоґ/йоґи/йоґиня» and language names (англійська, французькою,
+італійською, гінді); locative «в Сахаджа Йозі» and genitive «Ґанеші» per
+`terms_context.yaml`; uppercase spiritual terms (Пуджа, Дхарма, Дух,
+Інкарнації, Стопи, Божественне, Богиня); glossary transliteration (Ґ for
+Sanskrit g, дх aspirates, «Дурзі» dative with ґ→з alternation); the fixed
+blessing «Нехай Бог благословить усіх вас». The Sanskrit mantra blocks
+(21 names of Shri Vishnu, Gayatri, Ganesha Atharva Shirsha) were left as
+faithful transliterations of the source except the two glossary-backed fixes
+(S1, S2).
