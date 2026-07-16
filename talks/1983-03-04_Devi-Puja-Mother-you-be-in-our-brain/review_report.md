@@ -7,10 +7,17 @@
 `terms_context.yaml`. Reviewer L (Language) and Reviewer S (SY Domain) run in
 parallel; the Critic filters their findings and resolves conflicts.
 
-Pre-checks across the file: quotation marks balanced `«» 117/117`, all dashes are
-en-dash ` – ` (no `—`, no ` - `), no German/English quotes, no straight quotes,
-no double spaces, no Latin/Cyrillic mixing. Deity reflexives (`Сама` ¶15,
-`Собі` ¶23, `Своєю`/`Свою` ¶41) consistently capitalised — except ¶55.
+This is a **second review round** (2026-07-16). All corrections from the previous
+round (gender agreement `він завібрований` ¶35, ellipsis normalisation `…` → `...`,
+deity pronoun/reflexives `Я`/`Свої`/`Собою` ¶55, hyphenation `Махат-Аханкарі` ¶55)
+were verified as still applied before this round started.
+
+Pre-checks across the file (all clean): no Latin/Cyrillic mixing, no German/English
+quotes, no straight quotes/apostrophes, no `…` (U+2026), no double spaces, no space
+before punctuation, all dashes are en-dash ` – ` (no `—`, no ` - `), nested quotes
+use `«»`.
+
+Paragraph numbers (¶) below are file line numbers, as in the previous round.
 
 ## Results
 
@@ -18,44 +25,61 @@ no double spaces, no Latin/Cyrillic mixing. Deity reflexives (`Сама` ¶15,
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 35 | Gender disagreement | `ви ставите вогонь перед Моєю фотографією – вона завібрована` — feminine `вона` does not agree with masculine `вогонь`; parallel clause `Ви ставите світло – воно завіброване` confirms the subject is the object placed, not the photograph | `вогонь … – він завібрований` |
-| L2 | 26, 30, 31, 32, 55 (×4), 59, 62, 64 | Non-canonical ellipsis glyph | Single-character `…` (U+2026) used in 11 places; glossary orthography rule prescribes `...` (three dots), followed by the majority of the corpus | Normalise all `…` → `...` |
+| L1 | 16 | Calqued concessive «б не»; allows the opposite reading ("what God would NOT want") | `Чого б не захотів Бог, вони це роблять, щойно вони просвітлені.` (EN: "Whatever God wants, they do it") | `Хоч би чого захотів Бог, вони це роблять…` — matches the text's own dominant idiom (`хоч би що/ким/чого`, 5 uses: ¶18, 37, 40, 43, 55) |
+| L2 | 12 | (candidate) Concessive «б не» | `І якою б не була якість вогню, коли він просвітлений…` | `І хоч би якою була якість вогню…` (see Critic) |
+| L3 | 39 | (candidate) Concessive «б не» | `Якою б не була їхня якість, вони сповідують саме її.` | `Хоч би якою була їхня якість…` (see Critic) |
+| L4 | 30 | Exclamatory sentence after a colon starts lower-case | `…і раптом виявляєте: о! Злодій стоїть позаду вас!` — `О!` is a standalone exclamation (the next sentence `Злодій…` is already capitalised); EN: "you find: Oh! The thief…" | `…виявляєте: О! Злодій стоїть позаду вас!` |
+| L5 | 72 | Unmotivated comma between the conjunction `Але` and the main clause | `Але, Я сказала: «Щойно ви це зробили…` — mechanical carry-over of the English parenthetical commas ("But, I said,"); in the Ukrainian colon construction `Я сказала` is the main clause | `Але Я сказала: «Щойно ви це зробили…` |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 55 | Deity pronoun lower-cased | Mother quoting Herself: `«Я думаю, я принесла…»` — the second `я` (Shri Mataji) must be uppercase ("Я" ALWAYS uppercase for Shri Mataji) | `«Я думаю, Я принесла...»` |
-| S2 | 55 | Deity reflexives lower-cased | `Я принесла свої чаппали (сандалі) із собою` — both refer to Shri Mataji; the document capitalises deity reflexives everywhere else (`Сама`, `Собі`, `Своєю`, `Свою`) | `Свої чаппали … із Собою` |
-| S3 | 55 | Term formatting inconsistency | `Махат Аханкарі` written with a space; glossary canonical form is hyphenated `Махат-Аханкара` and the corpus uses `Махат-Аханкара`/`Махат-Аханкарою` | `Махат-Аханкарі` |
-| S4 | 9, 15 | (candidate) `Агні Девата` vs glossary `Агні Девта` | Glossary `terms_lookup.yaml` lists `Агні Девта` | (see Critic) |
-| S5 | 12 | (candidate) `істина` lower-cased | `це істина, а істина – це любов`; glossary lists `Істина` uppercase for absolute Truth | (see Critic) |
+| S1 | 6 | Ceremony name lower-cased; glossary rule: «Пуджа – uppercase (ceremony name)» | `«Мати, будь у нашому мозку» – пуджа в Аделаїді (Австралія)…` — the same transcript's title has `Деві Пуджа` uppercase; corpus convention mid-sentence is uppercase (`перед Пуджею`, `цю Пуджу`, `для цієї Пуджі`) | `…– Пуджа в Аделаїді (Австралія)…` |
+| S2 | 23 | Adjective «Божественний» (referring to the Divine) lower-cased — the lone exception in the transcript | `Нехай цей мозок керується Твоїм божественним, оцим` — everywhere else uppercase: `Божественної особистості` ¶8, `Божественного провідництва` ¶26, `Божественної Сили` ¶27, `Божественної вимоги` ¶36, `Божественними законами` ¶40 | `…керується Твоїм Божественним, оцим` |
+| S3 | 9, 15 | (candidate) `Агні Девата` vs glossary entry `Агні Девта` | `божество, що зветься Агні Девата` | (see Critic) |
+| S4 | 10, 12 | (candidate) `істина` lower-cased; glossary: «Істина – uppercase (absolute Truth)» | `що є істиною, а що неправдою`; `бо це істина, а істина – це любов` | (see Critic) |
+| S5 | 15 | (candidate) Singular form `з ракшасою` (glossary lists only plural `ракшаси`) | `Вона жила з ракшасою` | (see Critic) |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Genuine grammatical agreement error; the parallel `світло … воно завіброване` proves the placed object is the subject. |
-| L | L2 | **Keep** | The glossary explicitly prescribes `...` (three dots); 45/69 corpus transcripts already comply. Adherence to a written orthography rule, not a style preference. |
-| S | S1 | **Keep** | Direct application of the "Shri Mataji: ALWAYS uppercase (Я)" rule; the surrounding `Я думаю`/`Я маю`/`Я сказала` are already uppercase, so this is also an internal inconsistency. |
-| S | S2 | **Keep** | Internal-consistency fix: the same document capitalises every other deity reflexive (`Сама` ¶15, `Собі` ¶23, `Своєю`/`Свою` ¶41). Leaving `свої`/`собою` lower-case for Shri Mataji is the lone exception. |
-| S | S3 | **Keep** | Aligns to the glossary canonical hyphenation and the corpus convention; low-risk consistency fix. |
-| S | S4 | **Remove** | False positive. The corpus uses `Девата` (de-facto standard, 9 occurrences); the glossary spelling `Девта` appears in **no** translated transcript. `Девата` also matches the English source ("Agni Devata") and is internally consistent. Changing it would reduce source fidelity and break corpus consistency. |
-| S | S5 | **Remove** | False positive. Here `truth` is used in the discernment sense (truth vs. untruth), consistent with the lower-case `істиною`/`істину` in ¶10 and ¶12. It is not the named divine principle "the Truth", so uppercase is not warranted; lower-case is consistent and contextually correct. |
+| L | L1 | **Keep** | Genuine issue: `чого б не захотів Бог` admits the opposite reading ("that which God would not want, they do"). The normative `хоч би чого` removes the ambiguity and matches the transcript's own dominant usage (5× `хоч би що/ким/чого`). |
+| L | L2 | **Remove** | `якою б не була якість вогню` carries no misreading risk; the construction is widespread in edited modern Ukrainian. Changing it would be a style preference, not an error fix. |
+| L | L3 | **Remove** | Same as L2: no ambiguity, no genuine error. |
+| L | L4 | **Keep** | `О!` forms its own exclamatory sentence (the following sentence is capitalised), so the lower-case letter violates the sentence-initial capital rule; also matches the EN capital "Oh!". |
+| L | L5 | **Keep** | The comma after `Але` before the subject of the main clause has no syntactic basis in Ukrainian; it is a mechanical transfer of English parenthetical punctuation. |
+| S | S1 | **Keep** | Direct written rule in glossary/CLAUDE.md («Пуджа – uppercase»), internal consistency with the title line (`Деві Пуджа`), and corpus-wide mid-sentence convention. |
+| S | S2 | **Keep** | Mixed styles within one transcript — six uppercase adjectival uses vs one lower-case; identical meaning (the Mother's Divine guidance). Exactly the inconsistency the S-check exists to remove. |
+| S | S3 | **Remove** | False positive (same verdict as round 1). The EN source here reads "Agni Devata"; the corpus consistently uses `Девата`, and the glossary itself has `Джала Девата`, `Самудра Девата`, `Сур’я Девата`. |
+| S | S4 | **Remove** | False positive (same verdict as round 1). Discernment sense (truth vs untruth), lower-case in the EN source, and consistent across all three occurrences — not the named absolute Truth. |
+| S | S5 | **Remove** | False positive. Singular `ракшаса` (declined like Sanskrit-derived `асура` in the glossary) is legitimate; the instrumental `з ракшасою` is grammatically correct. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 35 | `вогонь … – вона завібрована` (gender) | `вогонь … – він завібрований` |
-| 2 | 26, 30, 31, 32, 55 (×4), 59, 62, 64 | `…` (U+2026) ellipsis | `...` (11 occurrences) |
-| 3 | 55 | `«Я думаю, я принесла…»` (deity pronoun) | `«Я думаю, Я принесла...»` |
-| 4 | 55 | `свої чаппали … із собою` (deity reflexives) | `Свої чаппали … із Собою` |
-| 5 | 55 | `Махат Аханкарі` (term formatting) | `Махат-Аханкарі` |
+| 1 | 6 | `…– пуджа в Аделаїді (Австралія)…` | `…– Пуджа в Аделаїді (Австралія)…` |
+| 2 | 16 | `Чого б не захотів Бог, вони це роблять…` | `Хоч би чого захотів Бог, вони це роблять…` |
+| 3 | 23 | `…керується Твоїм божественним, оцим` | `…керується Твоїм Божественним, оцим` |
+| 4 | 30 | `…раптом виявляєте: о! Злодій стоїть позаду вас!` | `…раптом виявляєте: О! Злодій стоїть позаду вас!` |
+| 5 | 72 | `Але, Я сказала: «Щойно ви це зробили…` | `Але Я сказала: «Щойно ви це зробили…` |
+
+All 5 approved corrections have been applied to `transcript_uk.txt`.
 
 ## Summary
 
-- Language (L): 2 issues found (1 grammar, 1 orthography covering 11 instances), 2 approved by Critic
-- SY Domain (S): 5 issues found, 3 approved by Critic (S4, S5 removed as false positives)
-- Total corrections applied: 16 individual changes across 5 finding categories
-  (1 gender, 11 ellipsis, 1 deity pronoun, 2 deity reflexives, 1 term hyphenation)
+- Language (L): 5 issues found, 3 approved by Critic (L2, L3 removed as style preferences)
+- SY Domain (S): 5 issues found, 2 approved by Critic (S3, S4, S5 removed as false positives)
+- Total corrections applied: 5
+
+Overall quality notes: the translation is strong and consistent. Deity-pronoun
+capitalization (`Я/Мені/Моїм/Собі/Твоїм` for Shri Mataji; `Вона/Її/Сама` for Sitaji;
+`Вона/Своєю/Свою` for Mother Earth; lower-case for regular people inside quotes) is
+correct throughout; glossary terms are used correctly (`сахаджа йоґ` lower-case,
+`Сахаджа Йоґа` / `в Сахаджа Йозі` declension, `Кундаліні`, `бхути`, `сваямбху`,
+`Реалізація`, `Дух`, `Стопи`, `прохолодний вітерець`, `вібраційне усвідомлення`,
+`віддатися на милість`, `обумовленість`, `блокування`, `его`/`суперего`); language
+names are lower-case (`англійська`); quotation marks `«»` (including nested),
+en-dash ` – `, apostrophe `’` and ellipsis `...` conform to the orthography rules.
