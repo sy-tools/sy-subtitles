@@ -7,9 +7,19 @@ Reviewer L (Language) + Reviewer S (SY Domain) run in parallel, then a Critic
 filters both tables, removing false positives and trivial style preferences and
 keeping only genuine, justified corrections.
 
+**Round 2 (2026-07-16).** A previous round had already reviewed this transcript
+and applied 3 corrections (Сахаджа Йоґи with ґ; two uppercase Shri Mataji
+pronouns — see git history of this file). Round 2 re-ran the full 2+1 process on
+the post-round-1 text; prior Critic rulings were respected as precedent where
+the same items resurfaced.
+
 Character-level sweeps confirmed clean: no Latin/Cyrillic mixing, no straight
-apostrophes (all `’` U+2019), quotation marks balanced (37 «, 37 ») and all
-`«»` yalynky — no `„"`/`""`. Em-dashes ` – ` with spaces throughout.
+apostrophes (all `’` U+2019), all quotation marks `«»` yalynky — no `„"`/`""`,
+en-dashes ` – ` with spaces throughout, no double spaces, no spaces before
+punctuation, no ellipsis issues.
+
+Paragraph references below are line numbers in `transcript_uk.txt`
+(body text starts at line 6).
 
 ## Results
 
@@ -17,51 +27,63 @@ apostrophes (all `’` U+2019), quotation marks balanced (37 «, 37 ») and all
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 47 | Possible extra comma before dash | «…одна чи дві адреси, – це не добра ідея.» | «…одна чи дві адреси – це не добра ідея.» |
-| L2 | 49 | Case agreement of proper name after «річкою» | «Вода стає річкою Ґанґа.» | «…річкою Ґанґою.» (instrumental) |
+| L1 | 42 | Зайва кома перед одиничним «або» між однорідними присудками зі спільним підметом | «Може сісти на голову короля, або може впасти до ніг когось.» | «Може сісти на голову короля або може впасти до ніг когось.» |
+| L2 | 33 | Хибний сполучник: «як-от» уживається лише при переліку/поясненні; тут порівняння (EN «Like in Gregoire’s book also») | «Як-от і в книзі Ґреґуара, Я зробила так…» | «Як і в книзі Ґреґуара, Я зробила так…» |
+| L3 | 49 | Узгодження прикладки після «річкою» | «Вода стає річкою Ґанґа.» | «…річкою Ґанґою.» (instrumental) |
+| L4 | 31 | Калька «зникатимуть від вас» (EN «disappearing from you») | «…сили, які ви отримали, поступово зникатимуть від вас.» | «…поступово вас покидатимуть.» |
+| L5 | 33 | Мала літера після двокрапки на початку цитати | «Тож якщо ви кажете: «так, дехто з нас отримав»» | «…кажете: «Так, дехто з нас отримав»» |
+| L6 | 40 | Незграбна конструкція «робить вас наче в шкаралупі горіха» | «…це его, знаєте, робить вас наче в шкаралупі горіха…» | «…закриває вас, наче в шкаралупу горіха…» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 34 | Transliteration/term consistency: «Йоги» with г, but Sanskrit *g* = ґ; every other instance is «Йоґа/Йоґи» | «тіло Сахаджа **Йоги**, які ми прекрасні» | «тіло Сахаджа **Йоґи**, які ми прекрасні» |
-| S2 | 42 | Shri Mataji's first-person pronoun must be uppercase (poem is Her own wish); inconsistent with «Я хочу бути» earlier in the same quote | «Але **я** хочу бути порошинкою» | «Але **Я** хочу бути порошинкою» |
-| S3 | 43 | Shri Mataji's first-person pronoun must be uppercase; surrounded by capital «Я написала / Я маю» | «вірш Я написала, **мені**, мабуть, було близько семи років» | «…**Мені**, мабуть, було близько семи років» |
-| S4 | 28 | Possible spiritual-term capitalization (Істина) | «усе може вибухнути від **істини**» | «…від **Істини**»? |
-| S5 | 29 | Capitalization style of «Реалізована Душа» | «оскільки ви **Реалізовані душі**» | fully cap or fully lc per glossary? |
-| S6 | 21 / 22 | «Природа» capitalized in §21 but lowercase «природа» in §22 | «форма **Природи**» … «нечисте в **природі**» | unify? |
+| S1 | 54 | Транслітерація назви мови: придиховий *th* → «тх» (конвенція глосарія: Hatha → Хатха, Atharva → Атхарва); словникова форма — «маратхі» | «[Англійський переклад з **мараті**]» | «[Англійський переклад з **маратхі**]» |
+| S2 | 28 | Possible spiritual-term capitalization (Істина) | «усе може вибухнути від **істини**» | «…від **Істини**»? |
+| S3 | 17 | Відмінювання обох частин назви чакри (за корпусом: «в Аґії чакрі», «в Муладхарі чакрі») | «якщо **Сур’я чакру** на рівні Аґії посідає Господь Ісус Христос» | «якщо **Сур’ю чакру**…»? |
+| S4 | 49 | Форма назви річки: стандартна українська — «Ґанґ» (чол.), глосарій — «Шрі Ґанґа» | «Вода стає річкою Ґанґа.» | Підтверджує форму «Ґанґа» за глосарієм; питання лише у відмінюванні (див. L3) |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | Remove | Combined «кома й тире» is admissible and mirrors Shri Mataji's spoken pause in the EN source («…one or two addresses, is not a good idea»). Stylistic, not an error. |
-| L | L2 | Remove | Naming construction «стає річкою Ґанґа» (proper name kept in base/nominative form as a label) is acceptable; not a clear grammatical error. Style preference. |
-| S | S1 | **Keep** | Genuine error. `glossary/CLAUDE.md`: Sanskrit *g* → ґ. Disambiguation context for *Sahaja Yoga* explicitly states «НЕ "Йоґі"» and mandates ґ throughout. Every other occurrence in this transcript uses «Йоґа/Йоґу/Йоґи/Йоґом/Йоґами/Йозі» (ґ); only this one slipped to г. Clear internal inconsistency + rule violation. |
-| S | S2 | **Keep** | Genuine error. Deity-pronoun rule: Shri Mataji's first-person is ALWAYS uppercase. The poem is Shri Mataji quoting Her own childhood wish; the opening «Я хочу бути» is already uppercase, so the later «я хочу» is an inconsistency. |
-| S | S3 | **Keep** | Genuine error. Same rule. «мені» here = Shri Mataji («I must have been about seven»), and it sits among four capitalized «Я» in the same and adjacent sentences. |
-| S | S4 | Remove | Borderline. EN keeps «truth» lowercase; the phrase reads as the forceful effect of truth rather than a titled standalone reference to the absolute *Істина*. No internal inconsistency (no other capitalized «Істина» in the text). Conservative: leave as the translator set it. |
-| S | S5 | Remove | Not an error. `terms_lookup.yaml` registers both «Реалізована Душа» and «реалізована душа»; the partial form «Реалізовані душі» (capital on the spiritual-state word, lowercase «душі») is standard, widely-used practice and is not internally inconsistent here. |
-| S | S6 | Remove | Not an error. The capitalization mirrors the EN source distinction precisely — §21 «purest form of **Nature**» (divine creative principle, capitalized) vs §22 «impure in **nature**» (general, lowercase). Intentional and faithful. |
+| L | L1 | **Keep** | Genuine punctuation error: single «або» joining homogeneous predicates with a shared subject («вона», the dust particle) takes no comma in Ukrainian. |
+| L | L2 | **Keep** | Genuine misuse: «як-от» introduces enumerations/examples only (SUM); the EN «Like in Gregoire’s book also» is a comparison — «Як і». Connector fixed, meaning preserved. |
+| L | L3 | Remove | Precedent from round 1 (same item, verdict Remove): non-agreement of foreign river names with the generic noun is sanctioned by Ukrainian usage handbooks («на річці Хуанхе»); the nominative label reading of «стає річкою Ґанґа» is acceptable. Style preference, not an error. |
+| L | L4 | Remove | Style preference, not an error: «зникатимуть від вас» is understandable spoken-register phrasing mirroring the EN; rewording is editorial. |
+| L | L5 | Remove | False positive: the lowercase quoted fragment mirrors EN «‘yes, some of us have got’» (lowercase citation, not full direct speech); the nearby «Кажіть: «Так…»» is uppercase because EN capitalizes there. Case follows the source in both places — consistent. |
+| L | L6 | Remove | Trivial: the EN itself is loose («makes you like a nutshell»); the translation mirrors the original’s spoken looseness. |
+| S | S1 | **Keep** | Genuine error: both the glossary aspirate convention (*th* → тх, cf. «Хатха Йога» in `terms_lookup.yaml`) and the Ukrainian orthographic dictionary give «маратхі». Also a language name — stays lowercase, which it already is. |
+| S | S2 | Remove | Same ruling as round 1: EN keeps «truth» lowercase in a generic verb phrase («blasted with truth»), not a titled reference to absolute Істина; no internal inconsistency. Follow the source. |
+| S | S3 | Remove | False positive: no glossary rule fixes declension for the occasional compound «Сур’я чакра»; «Сур’ю чакру» would read as the accusative of the deity Сур’я and confuse. The corpus examples («в Аґії чакрі») cover established chakra names. Original stands. |
+| S | S4 | Merge into L3 | Not a separate correction — confirms the glossary form «Ґанґа» (per «Shri Ganga → Шрі Ґанґа») over standard-Ukrainian «Ґанґ», and defers the declension question to L3 (Remove). |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 34 | «Сахаджа Йоги» (г) — transliteration/consistency | «Сахаджа Йоґи» (ґ) |
-| 2 | 42 | «Але я хочу бути порошинкою» — Mataji pronoun lowercase | «Але Я хочу бути порошинкою» |
-| 3 | 43 | «…мені, мабуть, було близько семи років» — Mataji pronoun lowercase | «…Мені, мабуть, було близько семи років» |
+| 1 | 33 | «Як-от і в книзі Ґреґуара, Я зробила так…» — хибний сполучник | «Як і в книзі Ґреґуара, Я зробила так…» |
+| 2 | 42 | «Може сісти на голову короля, або може впасти…» — зайва кома перед одиничним «або» | «Може сісти на голову короля або може впасти…» |
+| 3 | 54 | «[Англійський переклад з мараті]» — транслітерація (*th* → тх) | «[Англійський переклад з маратхі]» |
 
 ## Summary
 
-- Language (L): 2 issues found, 0 approved by Critic
-- SY Domain (S): 6 issues found, 3 approved by Critic
+- Language (L): 6 issues found, 2 approved by Critic
+- SY Domain (S): 4 issues found, 1 approved by Critic (1 merged into L3)
 - Total corrections applied: 3
 
-All three approved corrections concern hard rules from `glossary/CLAUDE.md`
-(Sanskrit *g* = ґ; Shri Mataji's first-person pronoun always uppercase) and were
-internal inconsistencies — every error had a correctly-rendered counterpart
-elsewhere in the same transcript. The translation is otherwise of high quality:
-terminology matches the glossary, deity pronouns are consistently capitalized,
-quotation marks and dashes follow Ukrainian orthography, and no
-spelling/Latin-character issues were found.
+Verified as correct (no findings): deity-pronoun capitalization for Shri Mataji
+(Я/Мені/Мене/Мій/Мої — uppercase throughout, 40+ occurrences), Saraswati
+(Вона/Її/Своїй), Surya (Сам/Він/Своє per EN «His»); lowercase «свій» for the
+astronomical Сонце follows EN «its». Glossary terms consistent: Сур’я
+(Сур’ї/Сур’ю/Сур’єю), Аґія/Аґії, права/ліва сторона, Вішуддхі, Махат-Аханкара,
+Екадаша/Екадашу, бхути/бхутів, Мати Земля, Аді Ґуру, Деві, Нарака, субуддхі,
+сахаджа йоґ/йоґи/йоґів/йоґам/йоґом (lowercase), Сахаджа Йоґа with correct
+locative «в Сахаджа Йозі», Дух/Духа, Пуджа/Пуджі/Пуджу, Реалізація/Реалізовані
+душі, «Нехай Бог благословить усіх вас» (exact fixed formula). Language names
+lowercase (англійська, маратхі). Place names consistent: Дхуле/Дхулія/Насік.
+Lowercase «ґуру» for false gurus correctly contrasts with «Аді Ґуру». The psalm
+quote «Обмий мене, і я стану біліший від снігу» matches the Ohienko rendering.
+
+Combined with round 1 (3 corrections), the transcript has now had 6 corrections
+total across both review rounds; the translation is otherwise of high quality.
