@@ -1,4 +1,4 @@
-# Language Review – 1987-04-19_Easter-Puja-Materialism, 2026-05-30
+# Language Review – 1987-04-19_Easter-Puja-Materialism, 2026-07-17
 
 ## Process
 
@@ -8,86 +8,96 @@ reviewers + 1 critic filter, against `transcript_en.txt`, `glossary/CLAUDE.md`,
 
 Paragraph numbers below refer to the content line numbers in `transcript_uk.txt`.
 
+A prior review round (2026-05-30, see git history of this file) normalized
+quote-period placement, ellipsis characters (`…` → `...`), apostrophe glyphs
+(`'` → `’`), and `Інкарнації` capitalization. An automated character-level scan
+this round confirms all of those fixes are intact: no Latin/Cyrillic mixing,
+`«»` balanced (21/21), apostrophe U+2019 word-internal only, en-dash ` – ` with
+spaces throughout, ellipses as `...` with no space before, no double spaces,
+periods after closing `»`.
+
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 18 | Period placed before closing guillemet | `…це не вишуканість.»` | `…це не вишуканість».` |
-| L2 | 37 | Period placed before closing guillemet | `…Я дуже щасливий.»` | `…Я дуже щасливий».` |
-| L3 | 47 | Period placed before closing guillemet | `…є трохи чорного.»` | `…є трохи чорного».` |
-| L4 | 14 | Single-char ellipsis `…` (U+2026) instead of three dots | `купуєте щось… усе без проб…` | `купуєте щось... усе без проб...` |
-| L5 | 21 | Single-char ellipsis `…` (U+2026) instead of three dots | `заощаджуйте… заради чого?` | `заощаджуйте... заради чого?` |
-| L6 | all | Apostrophe glyph: straight `'` (U+0027) instead of glossary `’` (U+2019) | `з'їли`, `прив'язаності`, `з'єднані` … (10×) | replace all `'` → `’` |
-| L7 | 16 | Comma placement `зберегти навіть, якщо` | `хочуть зберегти навіть, якщо є якась пластикова річ` | (consider) `зберегти, навіть якщо` |
-| L8 | 33 | Comma after `Але` before inserted `навіть тепер` | `Але, навіть тепер, якщо ваша увага…` | (consider) `Але навіть тепер, якщо…` |
-| L9 | 23 | Comma after `ще й` | `А тоді ще й, коли вони виявляють…` | (consider) drop comma |
-| L10 | 17 | Comma before single `або` | `із двох боків, або двох облич` | (consider) `із двох боків або двох облич` |
+| L1 | 14 | Commas at conjunction juncture before a subordinate clause resumed by `то` (pravopys: no comma between conjunctions when `то` follows) | `але, коли ви теж захочете будь-коли це продати, тобто, якщо вам треба це продати, то ви йдете на ринок` | `але коли … тобто якщо …, то ви йдете на ринок` |
+| L2 | 18 | `не культурно` written separately — adverb in -о with no contrast should merge with `не` | `так не годиться, це не культурно, це не вишуканість` | (consider) `це некультурно` |
+| L3 | 17 | Rhetorical question `Що таке X, як не Y` ends with a period instead of `?` | `Що таке антикультура, як не інша форма матеріалізму, яка є потворністю.` | `…яка є потворністю?` |
+| L4 | 34 | Relative clause not closed with a comma before the dash | `як ті божевільні люди, яких Я бачила вчора – вони приїхали на відпочинок` | `…яких Я бачила вчора, – вони приїхали…` |
+| L5 | 42 | `залежати на чомусь` — non-normative calque (Polish *zależeć na*); EN reads "why should you care for" | `То чому ж вам мало б залежати на чомусь, що нічого не варте?` | `То чому ж ви мали б дбати про щось, що нічого не варте?` (echoes `ви не дбаєте ні про що інше` in the same paragraph, as EN repeats *care*) |
+| L6 | 43 | Calqued `бачити це так багато довкола себе` (EN "see it so much around you") | `ви можете бачити це так багато довкола себе` | (consider) `ви можете бачити це повсюди довкола себе` |
+| L7 | 50 | Direct speech after a colon inside `«»` starts lowercase | `намагалися сказати це всім нам: «з’єднайтеся з Богом».` | `…всім нам: «З’єднайтеся з Богом».` |
+| L8 | 54 | Rhetorical question `Що таке X, як не Y` ends with a period (same as L3) | `Що таке мантра, як не думка, наповнена вібраціями.` | `…наповнена вібраціями?` |
+| L9 | 24 | `будь-де інде` — redundant compound (`інде` already means "elsewhere") | `бо будь-де інде вони можуть щось розбити` | (consider) `бо деінде вони можуть щось розбити` |
+| L10 | 68 | `так дуже добре` — `так дуже` + adverb is ungrammatical in Ukrainian (calque of EN "so very fine") | `і все так дуже добре` | `і все так добре` |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 50 | `Інкарнація` is a spiritual term requiring uppercase (Divine Incarnations who came to earth) | `великі святі, пророки, інкарнації, які приходили на цю землю` | `…пророки, Інкарнації, які приходили…` |
-| S2 | 7 | `воскресіння християнства` lowercase while `Воскресіння Христа` uppercase | `здійснити воскресіння християнства` | (consider) capitalize for parity with EN |
+| S1 | 58 | `Сахаджа Йоги` with `г` — violates transliteration convention (Sanskrit g → ґ) and internal consistency: the text elsewhere has `Сахаджа Йоґу` (52) and locative `в Сахаджа Йозі` (30, 47, 57, 59) | `Або ж вони влаштують із Сахаджа Йоги пікнік.` | `із Сахаджа Йоґи` |
+| S2 | 7 | `воскресіння християнства` lowercase while EN capitalizes "Resurrection of Christianity" and `Воскресіння` is uppercase elsewhere | `здійснити воскресіння християнства… від Воскресіння Христа` | (consider) capitalize for parity with EN |
+| S3 | 39 | `садху` lowercase while EN has "a Sadhu"; glossary capitalizes similar roles (Садхака, Авадхут) | `хтось, садху, що сидить сам-один у лісі` | (consider) `Садху` |
 
 #### S-domain items checked and confirmed CORRECT (no change)
-- Deity pronouns for Shri Mataji (`Я/Мені/Мій/Моя/Мене/Сама`) consistently uppercase. ✓
-- Christ's pronouns (`Він/Його/Себе/Своїм`) uppercase as a singular Incarnation. ✓
-- Pope's pronouns lowercase except sentence-initial (`Він не прийме Мене!` is sentence start; `його` lowercase). ✓
-- `Дух` (Spirit) consistently uppercase. ✓
-- `Чайтанья` consistently uppercase; pronoun `її` lowercase ("it") — correct. ✓
-- `Кундаліні … Вона` — reverential uppercase for the Goddess aspect, matching EN "She". ✓
-- `Воскресіння` (of Christ) uppercase throughout. ✓
-- `стопи` (para 54) lowercase — these are the practitioner's own feet, NOT the Lotus Feet of the Deity. ✓
-- `Аґії` (para 68) — chakra name, correct transliteration & capitalization. ✓
-- `Сахаджа Йозі / Йоґу` — correct locative (ґ→з) and accusative per glossary. ✓
-- `сахаджа йоґ / сахаджа йоґа` (practitioner) lowercase as a common noun. ✓
-- Language names `англійська`, `українська` (line 4) lowercase. ✓
-- Glossary terms (`Реалізація`, `Сахасрара`, `бхути`, `вібрації`) consistent. ✓
-- `Великодня Пуджа` (title) uppercase per glossary. ✓
+- Deity pronouns for Shri Mataji (`Я/Мені/Мій/Моя/Мене/Сама`) consistently uppercase (18 sentences checked). ✓
+- Christ's pronouns (`Він/Його/Себе/Своїм`) uppercase as a singular Incarnation (lines 8, 28–29, 68). ✓
+- Regular people's pronouns lowercase: the mother in the story (`я замкну вас`, line 24), the Pope (`його`, line 41; `Він не прийме Мене!` is sentence-initial), the meditator (`я з’єднаний`, line 58). ✓
+- `Дух/Духа` (Spirit) consistently uppercase; genitive `Духа` (personified) correct. ✓
+- `Кундаліні … Вона` (line 30) — reverential uppercase matching EN "She"; `Реалізацію` uppercase per glossary. ✓
+- `Чайтанья` declined consistently (`Чайтаньєю/Чайтаньї/Чайтанью`); pronoun `її` lowercase = EN "it". ✓
+- `Воскресіння` (of Christ) uppercase throughout; `Інкарнації` (line 50) uppercase per glossary. ✓
+- `стопи` (line 54) lowercase — the practitioner's own feet, NOT the Lotus Feet of the Deity. ✓
+- `Аґії` (line 68) — correct plural of `Аґія`; `У Сахасрарі` (line 61); `бхутами` (line 59). ✓
+- `сахаджа йоґ` lowercase common noun; genitive `сахаджа йоґа` (lines 59–60, 68). ✓
+- Language names lowercase (`англійська`, line 4); `Великодня Пуджа` per glossary; `до Рима` correct genitive. ✓
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Ukrainian rule: the period is placed *after* the closing `»`; `?`/`!`/`…` go inside. Genuine error; also inconsistent with para 50 (`…з Богом».`). |
-| L | L2 | **Keep** | Same rule as L1. |
-| L | L3 | **Keep** | Same rule as L1. |
-| L | L4 | **Keep** | `glossary/CLAUDE.md` mandates ellipsis as `...`; corpus survey confirms 46/71 files use `...` vs 13 using `…`. Normalize. |
-| L | L5 | **Keep** | Same as L4. |
-| L | L6 | **Keep** | Corpus survey: 49/71 UK transcripts already use `’` (U+2019) — the glossary/majority convention; this file was in the non-conforming minority. Safe global swap (all 10 are word-internal apostrophes; quotes use `«»`). |
-| L | L7 | **Remove** | Mirrors the deliberately garbled source ("they want to even preserve, if…"); `навіть` can attach to the verb, making the comma before `якщо` defensible. Not a clear error. |
-| L | L8 | **Remove** | Setting off the inserted `навіть тепер` with commas is stylistically acceptable. Not an error. |
-| L | L9 | **Remove** | Defensible interjection punctuation; not a clear error. |
-| L | L10 | **Remove** | The comma marks an appositive clarification ("two sides, or [rather] two faces"), mirroring the EN pause. Defensible. |
-| S | S1 | **Keep** | `Інкарнація` is in the explicit spiritual-term capitalization list; here it denotes the Divine Incarnations (Christ, Krishna, etc.) who came to earth. |
-| S | S2 | **Remove** | Defensible theological distinction: the sacred *Воскресіння Христа* (uppercase) vs. the metaphorical *воскресіння християнства* (lowercase). Not a clear error. |
+| L | L1 | **Keep** | Standing pravopys rule on conjunction juncture: the subordinate clause cannot be dropped (`…але то ви йдете…` is broken), so no comma after `але` or `тобто`. Genuine punctuation error. |
+| L | L2 | **Remove** | False positive: in the parallel negation series `так не годиться, це не культурно, це не вишуканість` the negation itself is stressed (as in `це не вишуканість`, necessarily separate); separate spelling is admissible. |
+| L | L3 | **Keep** | `Що таке X, як не Y` is formally an interrogative rhetorical construction; Ukrainian norm requires `?`. The period is an error, not an intonation choice. |
+| L | L4 | **Keep** | A subordinate clause must be closed with a comma regardless of a following dash (кома й тире). |
+| L | L5 | **Keep** | `залежати на` is a non-normative calque; `дбати про` renders EN "care for" exactly and reproduces the source's repetition of *care* within the paragraph. Genuine grammar error. |
+| L | L6 | **Remove** | Mirrors the source's spoken syntax ("see it so much around you"); `бачити багато` is grammatically possible and the meaning is clear. Style preference, not an error. |
+| L | L7 | **Keep** | After a colon, a full quoted sentence of direct speech starts with a capital. EN embeds the quote via "that", but the translation chose the colon construction, which mandates uppercase. |
+| L | L8 | **Keep** | Same rule as L3; both occurrences must be fixed for consistency. |
+| L | L9 | **Remove** | Unusual but intelligible; violates no orthography or grammar rule. Replacing with `деінде` is taste. |
+| L | L10 | **Keep** | `так дуже` + adverb does not combine grammatically in Ukrainian; `і все так добре` keeps the "so" emphasis without the calque. |
+| S | S1 | **Keep** | Transliteration convention (g → ґ) plus internal inconsistency of a proper name within one text. Unambiguous error. |
+| S | S2 | **Remove** | Deliberate semantic distinction inside one sentence: the sacred event `Воскресіння Христа` (proper) vs. the metaphorical, yet-to-be-done `воскресіння християнства`. Not an error. |
+| S | S3 | **Remove** | "Sadhu" has no glossary entry; in Ukrainian it is a common noun (wandering ascetic), lowercase is correct. EN capitalization is an English-usage artifact. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 18 | Period before closing `»` | `вишуканість.»` → `вишуканість».` |
-| 2 | 37 | Period before closing `»` | `щасливий.»` → `щасливий».` |
-| 3 | 47 | Period before closing `»` | `чорного.»` → `чорного».` |
-| 4 | 14 | `…` → `...` (two instances) | `щось… усе без проб…` → `щось... усе без проб...` |
-| 5 | 21 | `…` → `...` | `заощаджуйте…` → `заощаджуйте...` |
-| 6 | all | Apostrophe glyph → glossary `’` | `'` → `’` (10 instances) |
-| 7 | 50 | Capitalize Divine Incarnation | `інкарнації` → `Інкарнації` |
+| 1 | 14 | Extra commas at conjunction juncture | `але, коли … тобто, якщо` → `але коли … тобто якщо` |
+| 2 | 17 | Rhetorical question with period | `яка є потворністю.` → `яка є потворністю?` |
+| 3 | 34 | Unclosed relative clause before dash | `яких Я бачила вчора – вони` → `яких Я бачила вчора, – вони` |
+| 4 | 42 | Calque `залежати на чомусь` | `То чому ж вам мало б залежати на чомусь, що нічого не варте?` → `То чому ж ви мали б дбати про щось, що нічого не варте?` |
+| 5 | 50 | Lowercase start of direct speech after colon | `«з’єднайтеся з Богом»` → `«З’єднайтеся з Богом»` |
+| 6 | 54 | Rhetorical question with period | `наповнена вібраціями.` → `наповнена вібраціями?` |
+| 7 | 58 | `Йоги` with `г` in proper name | `із Сахаджа Йоги` → `із Сахаджа Йоґи` |
+| 8 | 68 | Calque `так дуже добре` | `і все так дуже добре` → `і все так добре` |
 
 ## Summary
 
-- Language (L): 10 issues found, 6 approved by Critic (3 quote-period + 3 ellipsis-char + 10 apostrophe-glyph instances).
-- SY Domain (S): 2 issues found, 1 approved by Critic.
-- Total individual corrections applied: **17** — 3 period-placement, 3 ellipsis-character,
-  10 apostrophe-glyph normalizations, 1 spiritual-term capitalization.
+- Language (L): 10 issues found, 7 approved by Critic
+- SY Domain (S): 3 issues found, 1 approved by Critic
+- Total corrections applied: **8**
 
-The translation is of high quality: terminology, transliteration, deity-pronoun
-capitalization, quotation-mark style (`«»`), em-dash usage (` – `), and language-name
-lowercasing are all consistent with the glossary. The genuine issues were a recurring
-punctuation slip (period inside the closing guillemet), the single `…` glyph instead of
-`...`, straight `'` apostrophes instead of `’`, and one spiritual-term capitalization —
-all brought into line with the canonical glossary and the majority corpus convention
-(verified by a 71-file survey).
+The translation is devoted and precise: deity-pronoun capitalization, glossary
+terminology, transliteration, quotation style (`«»`), dash and apostrophe
+conventions are all consistent, and the earlier review round's normalizations
+have held. This round's genuine issues were four punctuation slips (conjunction-
+juncture commas, two rhetorical questions ending in periods, an unclosed relative
+clause), one lowercase start of direct speech, two calques from the English
+(`залежати на`, `так дуже добре`), and a single `г`/`ґ` inconsistency in
+`Сахаджа Йоґа`. Deliberately preserved: the spoken-style anacolutha mirroring
+Shri Mataji's original phrasing, and the meaningful lowercase in
+`воскресіння християнства` as contrasted with `Воскресіння Христа`.
