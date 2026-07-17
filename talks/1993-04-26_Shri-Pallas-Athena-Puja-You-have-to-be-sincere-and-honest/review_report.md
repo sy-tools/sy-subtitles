@@ -2,12 +2,25 @@
 
 ## Process
 
-Review `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter.
+Review of `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter, per `templates/language_review_template.md`.
 
 Reviewers L (Language) and S (SY Domain) ran in parallel against `transcript_uk.txt`,
 the English original `transcript_en.txt`, `glossary/CLAUDE.md`, `terms_lookup.yaml` and
 `terms_context.yaml`. The Critic then filtered both tables, removing false positives and
 non-errors, and the approved corrections were applied to `transcript_uk.txt`.
+
+**This is review round 2.** A previous round applied 34 corrections (16× lowercase
+`я` → `Я` for Shri Mataji, 15× final period moved outside closing `»`, Latin `«atha»` →
+`«атха»`, `щасливі….` → `щасливі...`, `одної ночі` → `однієї ночі`) — all verified as
+present in the current text. This round reviews the already-corrected transcript.
+
+Paragraph numbers follow the previous round's convention (body paragraph = its line in
+the file): ¶7 = «Це дуже великий день для Мене…», ¶8 = «Тепер ви маєте зрозуміти…», etc.
+
+Mechanical typography checks (automated): no Latin/Cyrillic mixing, apostrophe `’`
+(U+2019) throughout, quotes `«»` only, en-dash ` – ` with spaces, no `—`/`""`/`„"`,
+no double spaces, no space before punctuation, ellipsis `...` without preceding space.
+All clean.
 
 ## Results
 
@@ -15,44 +28,60 @@ non-errors, and the approved corrections were applied to `transcript_uk.txt`.
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 7, 12 (×2), 14, 18, 21 (×5), 23, 35 (×3), 39 | Final period placed **inside** the closing `»` of declarative direct speech | `…це за люди.» Але`, `…пуп усього всесвіту.» Я`, `…Гаразд.»`, `…У нього его.»` etc. | Move period **outside**: `…це за люди». Але` (15 instances) |
-| L2 | 11 | Latin script mixed with Cyrillic — Sanskrit word left in Latin | `санскритською мовою «atha» означає «первинний»` | Transliterate per project convention (aspirate `th`→`тх`): `«атха»` |
-| L3 | 24 | Incorrect ellipsis — U+2026 ellipsis char `…` followed by an extra period (four dots) | `і вони дуже щасливі….` | Three ASCII dots: `і вони дуже щасливі...` |
-| L4 | 31 | Colloquial numeral variant; standard literary form differs and the same word appears as `однієї` two sentences later | `Припустімо, одної ночі ви не змогли` … `Якщо ви не зробили цього однієї ночі` | `одної ночі` → `однієї ночі` (consistency + standard form) |
+| L1 | 8 | Verb government: «керувати» requires the instrumental case (керувати *чим*), but shares an accusative object with «контролювати» | «зацікавлений у тому, щоб керувати й контролювати ці дві області» | «зацікавлений у тому, щоб керувати цими двома областями й контролювати їх» |
+| L2 | 19 | Verb government distorts the meaning: «повідомити її» = "notify her", but the original ("if it is informed") means "if it is reported (about her)" | «Таку людину, знаєте, якщо її повідомити, ми можемо вивести з Сахаджа Йоґи.» | «Таку людину, знаєте, якщо про неї повідомити, ми можемо вивести з Сахаджа Йоґи.» |
+| L3 | 21 | Extra comma before the closing dash of a dash-delimited parenthetical; the frame clause needs no comma there, and the marks are asymmetric (`– … , –`) | «але раптом Я приїхала туди, і – не знаю, – вони раптом упізнали Мене» | «але раптом Я приїхала туди, і – не знаю – вони раптом упізнали Мене» |
+| L4 | 29 | Wrong word: English "nail" here is a fingernail («ніготь»), not a metal spike («цвях») — the metaphor «якщо він зламається, то вже не росте» only works for something that grows | «Бо як цвях: якщо він зламається, то вже не росте.» | «Бо як ніготь: якщо він зламається, то вже не росте.» |
+| L5 | 23 | Calque «Це дуже правдиво щодо…» ("that's very true about…"); more idiomatic would be «слушно»/«справедливо» | «І це дуже правдиво щодо будь-якої демократичної країни» | (proposed) «І це дуже слушно щодо будь-якої демократичної країни» |
+| L6 | 31 | Doubled preposition «на … на» reads awkwardly | «сісти на медитацію на десять хвилин» | (proposed) «сісти помедитувати на десять хвилин» |
+| L7 | 21 | Non-idiomatic collocation «розв’язати багато речей» (natural: «вирішити багато питань») | «завдяки якому зможете розв’язати багато речей» | (proposed) «завдяки якому зможете залагодити багато речей» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 11, 14, 15, 16 (×2), 17, 22, 24, 33, 36 (×2), 37, 38 (×3), 39 | Shri Mataji's first-person pronoun written lowercase `я` — per `glossary/CLAUDE.md` it must **ALWAYS** be uppercase `Я` | `цього, я маю на увазі`, `те, що я кажу`, `Як-от в Америці – я бачу`, `Днями я сказала`, `бо те, що я про це знаю` etc. | `я` → `Я` (16 instances) |
-| S2 | 15 | Capitalization of `Церква` in named churches `Православна Церква` / `Грецька Церква` | `ваша Православна Церква`, `найгірше зробила Грецька Церква` | (proposed) lowercase `церква` |
-| S3 | 12 | Capitalized epithet `Дитини Бога` for the divine child; English original lowercase ("child of God") | `маленький храм для Дитини Бога. Це був Шрі Ґанеша` | (proposed) lowercase `дитини` |
+| S1 | 22, 30, 38 | Inconsistency «Сахадж Йоґа» vs «Сахаджа Йоґа» within one text | «так [???] швидко розуміють Сахадж Йоґу», «не за знання Сахадж Йоґи», «щодо Сахадж Йоґи» | (proposed) unify to «Сахаджа Йоґа» everywhere |
+| S2 | 21, 23 | Address to Shri Mataji rendered as «Мати»; glossary lists the vocative «Матінко» | «Усі місця зайняті, Мати…», «Мати, а як же ми?», «Мати, більше не треба науки» | (proposed) «Матінко» |
+| S3 | 15 | Capitalization «Православна Церква» / «Грецька Церква» — the 2019 orthography capitalizes only the first word of institutional church names | «ваша Православна Церква», «зробила Грецька Церква» | (proposed) lowercase «церква» |
+
+Verified correct (no findings): deity-pronoun capitalization for Shri Mataji
+(Я/Мене/Мені/Мій/Своєму/Моєю) and for Athena / Adi Shakti / the Goddess (Вона/Її/Своїй);
+the husband's «зі мною» correctly lowercase and his «Ти» to Shri Mataji correctly
+uppercase (¶7); genitive «статую Ґанеші» (not «Ґанеша»); locative «в Сахаджа Йозі»
+(not «Йоґі»); plural «сахаджа йоґи» lowercase (not «йоґі»); glossary terms Кундаліні,
+Аді Шакті, Набхі чакра, Маніпура, Аґія, «Деві Махатм’ям», Нірвічара, бандхан,
+блокування (catching), «стан усвідомлення без думок» (thoughtless awareness),
+живити (nourish), атака, Сатья Юга, бхутівський; spiritual-term capitalization Дух,
+Істина, Пуджа, Реалізація, Царство Боже; language names lowercase (англійська,
+санскритською); transliteration conventions (ґ, дх, тх) throughout.
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Genuine orthographic norm: in declarative direct speech the final period goes **after** the closing `»`. Confirmed by corpus house style (1429 `».` vs 221 `.»`). All 15 quotes are sentence-final and followed by a capitalized new sentence — safe. |
-| L | L2 | **Keep** | Project transliterates all Sanskrit to Cyrillic (ґ, дх, …) and these become on-screen subtitles; a lone Latin token is inconsistent. `атха` preserves the etymological point ("primordial" → Primordial Mother). |
-| L | L3 | **Keep** | Project orthography defines ellipsis as `...` (three dots). The `…` glyph plus a trailing period is a clear error. |
-| L | L4 | **Keep** | `однієї` is the standard modern literary genitive of `одна` (`одної` is colloquial) and matches the form used two sentences later in the same paragraph — both correctness and consistency. |
-| S | S1 | **Keep** | Core deity-pronoun rule: Shri Mataji's `Я/Мені/Мій/Моя/Вона` are always uppercase. All 16 instances are Shri Mataji's own narration (none inside another speaker's quote — verified), so all must be `Я`. |
-| S | S2 | **Remove** | Not an error here. The corpus consistently capitalizes named churches (`Православна Церква`, `Грецька Церква`, `Католицькою Церквою`); lowercasing would break corpus consistency. Treated as a reverential/institutional convention. |
-| S | S3 | **Remove** | `Дитина Бога` is a reverent reference to the divine child Shri Ganesha; capitalization of the epithet is defensible and not a clear error. |
-| — | — | — | **False positive (not flagged):** para 7 lowercase `мною` in `Що вони зі мною роблять?` is correct — it is the husband speaking about himself (a regular person), not Shri Mataji. `Ти кажеш` in the same quote (husband addressing Shri Mataji) is correctly uppercase. |
+| L | L1 | **Keep** | Genuine government error: «керувати» cannot take an accusative object; the shared-object construction is ungrammatical. |
+| L | L2 | **Keep** | Genuine error that inverts the meaning: as written, the clause says "if we notify her", contradicting the original "if it is reported". Minimal fix «про неї» restores the sense. |
+| L | L3 | **Keep** | Genuine punctuation error: the parenthetical «не знаю» is set off by dashes; nothing in the frame sentence requires a comma before the closing dash. |
+| L | L4 | **Keep** | Genuine lexical error: the growth metaphor identifies "nail" as «ніготь»; «цвях» makes the sentence meaningless (a metal nail never grows). |
+| L | L5 | **Remove** | Style preference. «правдиво» is understandable and faithful to the spoken register; not a real error. |
+| L | L6 | **Remove** | Style preference. «сісти на медитацію» is common SY usage; the doubled «на» is awkward but not incorrect. |
+| L | L7 | **Remove** | Style preference. Literal but grammatical; the transcript deliberately stays close to the spoken original. |
+| S | S1 | **Remove** | False positive: the English original itself alternates ("accept Sahaja Yoga … understand Sahaj Yoga" in the same sentence), and `terms_context.yaml` explicitly allows both forms «за оригіналом». The variation is faithful, not inconsistent. |
+| S | S2 | **Remove** | False positive: the glossary reserves «Матінко» for prayer address; in dialogue «Мати» is an allowed rendering of "Mother", and the vocative of «мати» coincides with the nominative. |
+| S | S3 | **Remove** | Not an error here (same ruling as round 1): the corpus consistently capitalizes named churches; lowercasing would break corpus consistency. Reverential/institutional convention. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 11, 14, 15, 16, 17, 22, 24, 33, 36, 37, 38, 39 | lowercase `я` for Shri Mataji | `Я` (16 instances) |
-| 2 | 7, 12, 14, 18, 21, 23, 35, 39 | period inside closing `»` | period moved outside `».` (15 instances) |
-| 3 | 11 | Latin `«atha»` | `«атха»` |
-| 4 | 24 | `щасливі….` (bad ellipsis) | `щасливі...` |
-| 5 | 31 | `одної ночі` | `однієї ночі` |
+| 1 | 8 | «щоб керувати й контролювати ці дві області» | «щоб керувати цими двома областями й контролювати їх» |
+| 2 | 19 | «якщо її повідомити» | «якщо про неї повідомити» |
+| 3 | 21 | «і – не знаю, – вони раптом упізнали Мене» | «і – не знаю – вони раптом упізнали Мене» |
+| 4 | 29 | «Бо як цвях: якщо він зламається, то вже не росте.» | «Бо як ніготь: якщо він зламається, то вже не росте.» |
 
 ## Summary
 
-- Language (L): 18 issues found (15 period-placement + 1 Latin + 1 ellipsis + 1 numeral), 18 approved by Critic
-- SY Domain (S): 19 issues found (16 pronoun `я→Я` + 2 церква + 1 Дитина Бога), 16 approved by Critic
-- Total corrections applied: **34**
+- Language (L): 7 issues found, 4 approved by Critic
+- SY Domain (S): 3 issues found, 0 approved by Critic
+- Total corrections applied: **4**
+- Cumulative across rounds 1–2: 38 corrections
