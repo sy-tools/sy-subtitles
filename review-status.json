@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-17T00:23:53.028307+00:00",
+  "updated_at": "2026-07-17T06:57:18.185068+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -354,7 +354,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 341,
-      "updated_at": "2026-06-15T05:06:58Z"
+      "updated_at": "2026-07-17T06:57:05Z"
     },
     "1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya": {
       "status": "pending",
