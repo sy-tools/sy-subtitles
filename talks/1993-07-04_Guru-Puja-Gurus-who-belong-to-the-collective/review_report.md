@@ -1,85 +1,123 @@
-# Language Review – 1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective, 4 July 1993
+# Language Review – 1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective, 2026-07-17 (round 2)
 
 ## Process
 
 2+1 agent language review (Reviewer L + Reviewer S + Critic) on `transcript_uk.txt`,
 with the English original (`transcript_en.txt`) as reference and `glossary/` as the
-canonical terminology/orthography source.
+canonical terminology/orthography source, per `templates/language_review_template.md`.
 
-Mechanical character checks were run across the whole file:
-- Quotation marks: all `«»`, no straight/German quotes ✓
-- Apostrophes: all `’` (U+2019), no straight `'` ✓
-- Dashes: all en-dash `–` (U+2013) with spaces, no em-dash `—`, no hyphen-as-dash ✓
-- No Latin/Cyrillic mixing in body text ✓
-- No double spaces, no space before punctuation ✓
-- Ellipsis: **inconsistent** — 3× single-char `…` (lines 10, 34) vs `...` (line 60) ✗
+**Previous round:** a round-1 review applied 7 corrections (ellipsis `…` → `...`,
+«Бо чому заздрити?», «Бхавасаґара», «їхні Інкарнації», «ліва Вішуддхі», «Мою Пуджу») —
+all verified as present in the current text. This round reviews the corrected text;
+its Critic independently reached the same verdicts as round 1 on the overlapping
+candidates (lowercase «істини» in §47, «реалізовані душі» in §68 mirroring the source).
+
+Paragraph numbers refer to line numbers in `transcript_uk.txt`.
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 10 | Single-char ellipsis `…` instead of three-dot `...` (glossary rule) | `…про навчання…` | `...про навчання...` → `навчання...` |
-| L2 | 34 | Single-char ellipsis `…` (×2) instead of `...` | `«Але…» «Але…»` | `«Але...» «Але...»` |
-| L3 | 49 | Ungrammatical `є` + infinitive construction | `Бо чому є заздрити?` | `Бо чому заздрити?` |
-| L4 | 49 | Euphony: `і інший` (vowel clash) | `ви – діамант, і інший – діамант` | (`й інший`) — considered |
-| L5 | 9 | `навчають музики` verb government | `ґуру, які навчають музики` | (no change — genitive valid) |
-| L6 | 20 | `сідати на медитацію` colloquial | `сідати на медитацію` | (no change — acceptable) |
+| L1 | 17 | Керування: «змусити» не приймає неживого прямого додатка | «Що можна змусити?» | «До чого можна змусити?» |
+| L2 | 20 | Калька «сідати на медитацію» | «вставати о четвертій годині, сідати на медитацію» | «сідати до медитації» |
+| L3 | 23 | Керування: «навчитися, що...» — калька з англ. "learn that" | «У цьому терпінні ви навчитеся, що можете витримувати...» | «ви зрозумієте, що можете витримувати» |
+| L4 | 24 | Милозвучність: «з» перед «с» | «ви з самими собою» | «ви із самими собою» |
+| L5 | 29 | Пропущена кома перед дієприслівниковим зворотом після «що» | «що навіть просто дивлячись на людей, ви можете» | «що, навіть просто дивлячись на людей, ви можете» |
+| L6 | 30 | «під страхом» означає «під загрозою покарання» (пор. «під страхом смерті»), а не «у стані страху» | «можуть весь час перебувати під страхом» | «перебувати в страху» |
+| L7 | 43 | Узгодження: «Ті, хто» + присудок у множині | «Ті, хто не можуть бути колективними» | «Ті, хто не може бути колективним» |
+| L8 | 43 | Керування: одн. «стосунок до», мн. «стосунки з»; «стосунку з» — контамінація | «не мають стосунку з Божественним» | «не мають стосунків із Божественним» |
+| L9 | 51 | Керування: «почуття про когось» — неправильно | «виражати свої почуття про інших сахаджа йоґів» | «почуття щодо інших сахаджа йоґів» |
+| L10 | 52 | Сполучуваність: «назавжди» + теперішній недоконаний час | «але ви назавжди засуджуєте себе» | «але ви постійно засуджуєте себе» |
+| L11 | 59 | Дієприслівниковий зворот з іншим суб’єктом (кажучи — «ви», дисциплінуватимуть — «вони») | «що, нічого людям не кажучи, вони самі себе дисциплінуватимуть» | «що, хоч ви нічого людям не казатимете, вони самі себе дисциплінуватимуть» |
+| L12 | 61 | Неоднозначне «так» (англ. "so aware") | «і так усвідомлюємо все» | «і настільки усвідомлюємо все» |
+| L13 | 64 | Контамінація прислівників «якось» + «днями» | «Якось днями Я поверталася» | «Днями Я поверталася» |
+| L14 | 68 | Надлишкова конструкція: сполучник «що» + двокрапка перед прямою мовою | «пам’ятати, що: «Я сахаджа йоґ»» | «пам’ятати: «Я сахаджа йоґ»» |
+| L15 | 70 | Узгодження зі «скільки + род. відм.»: присудок в однині | «Скільки людей були сахаджа йоґами раніше?» | «Скільки людей було сахаджа йоґами раніше?» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 21 | `Бхавасаґара` lowercased; glossary capitalizes it | `для бхавасаґари` | `для Бхавасаґари` |
-| S2 | 21 | Divine `Інкарнація` lowercased | `Аді Ґуру та їхні інкарнації` | `їхні Інкарнації` |
-| S3 | 25 | Directional adjective capitalized | `Ліва Вішуддхі` | `ліва Вішуддхі` |
-| S4 | 43 | `Пуджа` (ceremony) lowercased — inconsistent with l.2/6/7 | `роблять Мою пуджу` | `роблять Мою Пуджу` |
-| S5 | 47 | `істини` — possible absolute Truth | `ви не бачите істини` | (`Істини`) — considered |
-| S6 | 68 | `реалізовані душі` lowercase vs `Реалізовані Душі` elsewhere | `ви – реалізовані душі` | (`Реалізовані Душі`) — considered |
-| S7 | 35 / 65 | `Та, Хто` (l.35) vs `та, хто` (l.65) — pronoun-capital inconsistency | `Та, Хто має всі сили` / `Я та, хто поглинає` | (consistency) — considered |
+| S1 | 9 | Займенник Шрі Матаджі з малої літери (правило: ЗАВЖДИ з великої — Мій/Мого) | «і мого батька дуже поважав його ґуру» | «і Мого батька дуже поважав його ґуру» |
+| S2 | 40 | «Сахаджа Йоги» через «г»; глосарій: «Сахаджа Йоґа», чергування ґ→з лише в місц. відм. («в Сахаджа Йозі») | «Це не помилка Сахаджа Йоги.» | «Сахаджа Йоґи» |
+| S3 | 47 | Можливо «Істина» з великої (абсолютна Істина за глосарієм)? | «тоді ви не бачите істини» | «Істини» |
+| S4 | 60 | «Сахаджа Йоги» через «г» (род. відм.) | «У системі Сахаджа Йоги» | «У системі Сахаджа Йоґи» |
+| S5 | 63 | «Сахаджа Йоги» через «г» (род. відм.) | «порівняння Сахаджа Йоги з усім іншим» | «порівняння Сахаджа Йоґи» |
+| S6 | 65 | «кавач» з малої; у глосарії «Кавач» | «це кавач, це той бандхан» | «Кавач» |
+| S7 | 66 | «ґуру мантра» — дефіс за аналогією з «біджа-мантра»? | «є одна ґуру мантра» | «ґуру-мантра» |
+| S8 | 67 | «Сахаджа Йогою» через «г» (орудн. відм.) | «пов’язати це із Сахаджа Йогою» | «із Сахаджа Йоґою» |
+| S9 | 24/68 | Непослідовність регістру: «Реалізовані Душі» (24, 25, 33, 49) vs «реалізовані душі» (68) | — | уніфікувати |
 
 ### Critic Filter
+
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Glossary mandates `...` (three dots); file is self-inconsistent (l.60 uses `...`). |
-| L | L2 | **Keep** | Same rule; standardize both `…` to `...`. |
-| L | L3 | **Keep** | `чому є заздрити` is not valid Ukrainian; `є`+infinitive is broken. Minimal fix removes `є` → grammatical and keeps the rhetorical sense ("what is there to be jealous?"). |
-| L | L4 | **Remove** | `і` after consonant (`діамант`) before vowel is permitted; `і інший` is not an error, only mild euphonic preference. |
-| L | L5 | **Remove** | False positive — `навчати` + genitive (`навчати музики`) is correct. |
-| L | L6 | **Remove** | Colloquial but acceptable; not an error. |
-| S | S1 | **Keep** | Glossary UK column is `Бхавасаґара` (capital) — a named cosmological concept; align text to glossary. |
-| S | S2 | **Keep** | "their incarnations" = the Divine Incarnations of the Adi Guru principle (Janaka, Moses, Socrates…); rule: `Інкарнація` uppercase. |
-| S | S3 | **Keep** | `ліва/права` are descriptive directions, lowercase (cf. glossary `лівосторонній`, `права сторона`); only the chakra name `Вішуддхі` stays capital. |
-| S | S4 | **Keep** | Rule + glossary capitalize `Пуджа`; text capitalizes it everywhere else (`Пуджа Ґуру`, `Пуджу Ґуру`). l.43 is the lone outlier. |
-| S | S5 | **Remove** | "you don't see the truth [of the situation]" reads as ordinary truth/reality, not the absolute `Істина` concept; lowercase defensible. Avoid over-capitalization. |
-| S | S6 | **Remove** | English source is lowercase here ("realised souls"); glossary explicitly permits `реалізована душа`. Translation faithfully tracks the source; consistency-only, not an error. |
-| S | S7 | **Remove** | Contextually different: l.35 `Та, Хто` is a titular epithet of Аді Шакті (reverential), l.65 `та, хто` is a plain predicate relative clause. Both acceptable. |
+| L | L1 | **Keep** | «змусити що» — порушене керування; виправлення гармонує з попереднім реченням («як можна когось до цього змусити») |
+| L | L2 | **Remove** | Розмовна форма, усталена в йогівському вжитку; живе мовлення лекції, не помилка (same verdict as round 1) |
+| L | L3 | **Keep** | «навчитися, що...» — неунормоване керування, калька з англійської |
+| L | L4 | **Remove** | Правило про «із» перед с/з — рекомендаційне («переважно»); у транскрипті живого мовлення припустимо |
+| L | L5 | **Keep** | Дієприслівниковий зворот (разом із підсилювальною часткою «навіть») відокремлюється з обох боків |
+| L | L6 | **Keep** | Справжня зміна значення: «під страхом» = під загрозою; в оригіналі "be all the time under fear" = «у страху» |
+| L | L7 | **Remove** | «Ті, хто» з присудком у множині — допустимий варіант у сучасній нормі; тривіальна стилістична правка |
+| L | L8 | **Keep** | Порушене керування (контамінація «стосунок до» / «стосунки з») |
+| L | L9 | **Keep** | «почуття про когось» — неправильне керування; «щодо» зберігає зміст "feelings about" |
+| L | L10 | **Keep** | «назавжди» не поєднується з теперішнім недоконаним; "condemning yourself permanently" = «постійно засуджуєте» |
+| L | L11 | **Keep** | Суб’єкт дієприслівника («ви») не збігається з підметом («вони»); англійський оригінал сам «висить» ("without telling people, they'll discipline themselves"), але українська норма цього не дозволяє |
+| L | L12 | **Remove** | «так» у підсилювальному значенні перед дієсловом — нормативне розмовне вживання |
+| L | L13 | **Keep** | «Якось днями» — контамінація; в оригіналі "The other day" = «Днями» |
+| L | L14 | **Keep** | Сполучник «що» + двокрапка перед прямою мовою — надлишкова конструкція; достатньо двокрапки |
+| L | L15 | **Keep** | Зі «скільки + род. відм. мн.» присудок ставиться в однині середнього роду («було») |
+| S | S1 | **Keep** | Правило глосарію: займенники Шрі Матаджі ЗАВЖДИ з великої; єдиний пропуск у тексті (всюди інде «Я/Мені/Мою/Себе/Своїй» витримано) |
+| S | S2 | **Keep** | Глосарій: «Сахаджа Йоґа»; род. відм. — «Йоґи»; чергування ґ→з стосується лише місцевого відмінка («в Сахаджа Йозі») |
+| S | S3 | **Remove** | Хибне спрацювання: тут «істина» — фактична правда про близьких (прив’язаність засліплює), не абсолютна Істина; в оригіналі "the truth" з малої (same verdict as round 1) |
+| S | S4 | **Keep** | Як S2 — послідовність написання терміна в усьому тексті |
+| S | S5 | **Keep** | Як S2 |
+| S | S6 | **Remove** | Тут загальне значення «захисна оболонка», паралельно з «бандхан» з малої; у глосарії «Кавач» стосується назв текстів (Деві Кавач, Шрі Рама Кавач) |
+| S | S7 | **Remove** | Конвенції суперечливі: у глосарії «біджа-мантра» з дефісом, але «Ґаятрі Мантра» й «сахаджа культура / сахадж мова» — окремо; не однозначна помилка |
+| S | S8 | **Keep** | Як S2 (орудний відмінок: «Йоґою») |
+| S | S9 | **Remove** | Регістр віддзеркалює оригінал (EN §24 "Realised-souls", EN §68 "realised souls"); глосарій явно допускає обидві форми (same verdict as round 1) |
 
 ### Approved Corrections
+
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 10 | Ellipsis `…` → `...` | `навчання...` |
-| 2 | 34 | Ellipsis `…` ×2 → `...` | `«Але...» «Але...»` |
-| 3 | 49 | Broken `є`+infinitive | `Бо чому заздрити?` |
-| 4 | 21 | `Бхавасаґара` capitalization | `для Бхавасаґари` |
-| 5 | 21 | Divine `Інкарнація` capitalization | `їхні Інкарнації` |
-| 6 | 25 | Directional adjective lowercase | `ліва Вішуддхі` |
-| 7 | 43 | `Пуджа` capitalization | `роблять Мою Пуджу` |
+| 1 | 9 | і мого батька дуже поважав | і Мого батька дуже поважав |
+| 2 | 17 | Що можна змусити? | До чого можна змусити? |
+| 3 | 23 | ви навчитеся, що можете витримувати | ви зрозумієте, що можете витримувати |
+| 4 | 29 | що навіть просто дивлячись на людей, ви | що, навіть просто дивлячись на людей, ви |
+| 5 | 30 | перебувати під страхом | перебувати в страху |
+| 6 | 40 | помилка Сахаджа Йоги | помилка Сахаджа Йоґи |
+| 7 | 43 | не мають стосунку з Божественним | не мають стосунків із Божественним |
+| 8 | 51 | почуття про інших сахаджа йоґів | почуття щодо інших сахаджа йоґів |
+| 9 | 52 | ви назавжди засуджуєте себе | ви постійно засуджуєте себе |
+| 10 | 59 | що, нічого людям не кажучи, вони самі себе дисциплінуватимуть | що, хоч ви нічого людям не казатимете, вони самі себе дисциплінуватимуть |
+| 11 | 60 | У системі Сахаджа Йоги | У системі Сахаджа Йоґи |
+| 12 | 63 | порівняння Сахаджа Йоги | порівняння Сахаджа Йоґи |
+| 13 | 64 | Якось днями Я поверталася | Днями Я поверталася |
+| 14 | 67 | із Сахаджа Йогою | із Сахаджа Йоґою |
+| 15 | 68 | пам’ятати, що: «Я сахаджа йоґ» | пам’ятати: «Я сахаджа йоґ» |
+| 16 | 70 | Скільки людей були сахаджа йоґами | Скільки людей було сахаджа йоґами |
 
 ## Summary
 
-- Language (L): 6 issues raised, 3 approved by Critic
-- SY Domain (S): 7 issues raised, 4 approved by Critic
-- Total corrections applied: 7
+- Language (L): 15 issues found, 11 approved by Critic
+- SY Domain (S): 9 issues found, 5 approved by Critic
+- Total corrections applied: 16
 
-### Notes
-- Deity-pronoun capitalization was verified throughout and is **correct**, including the
-  tricky Buddha passage (l.18): `ображав Його` (Buddha, uppercase) vs the abuser's
-  `він/йому` (lowercase), with sentence-initial capitals handled properly.
-- Shri Mataji pronouns (`Я/Мені/Мого/Моя/Себе/Своїй`) consistently uppercase.
-- Plural incarnations mid-sentence (l.60 `вони/них` for Gyaneshwara/Blake/Sai Nath)
-  correctly lowercase.
-- Spiritual-term capitalization (`Дхарма`, `Реалізація/Самореалізація`, `Реалізовані Душі`,
-  `Дух`-adjacent `Божественна любов`, `Океан Любові`) and language names (`англійська`)
-  are consistent with glossary rules.
-</content>
-</invoke>
+### Notes (verified correct, no change needed)
+
+- Deity-pronoun capitalization is otherwise consistent: «Я/Мені/Мою/Себе/Своїй» for
+  Shri Mataji throughout (§9 was the lone miss); «Його/Він» for Lord Buddha (§18) with
+  the abuser's «він/йому» correctly lowercase; «Ти/Тобі/Тебе» uppercase in addresses
+  to Shri Mataji (§39, 64, 65) and to Buddha (§18); «Та, Хто» for Аді Шакті (§35).
+- Glossary terms match: «Кундаліні», «Аді Шакті», «Бхавасаґара», «Дхарма»,
+  «Інкарнації», «бхути», «ґани», «бандхан», «вібраційне усвідомлення», «блокування»,
+  «Г’янешвара», «Саї Натх», «его», «обумовленості», «прохолода», locative
+  «в Сахаджа Йозі» (ґ→з per glossary).
+- Punctuation system is uniform: «» quotes at all levels, en-dash ` – ` with spaces,
+  apostrophe ’ (U+2019), ellipsis `...` with no space before.
+- Language names lowercase («англійська», header §4).
+- Closing blessing matches the fixed formula «Нехай Бог благословить усіх вас.» with
+  the original's final period.
