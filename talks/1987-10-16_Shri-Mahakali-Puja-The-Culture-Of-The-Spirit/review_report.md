@@ -1,52 +1,70 @@
-# Language Review – 1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit, 2026-05-30
+# Language Review – 1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit, 2026-07-17
 
 ## Process
 
-Review `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter.
+Review of `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter, per `templates/language_review_template.md`.
 Source: `transcript_en.txt`. Rules: `CLAUDE.md`, `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`, `glossary/terms_context.yaml`.
 
-The text is mechanically very clean. Automated sweeps confirmed:
-- Quotation marks: only `«»` (no `„"`, `""`, or straight quotes).
-- Apostrophe: only `’` (U+2019), 12 occurrences.
-- Dashes: en-dash `–` (U+2013), always surrounded by spaces; no em-dash (U+2014).
-- No double spaces, no space-before-punctuation, ellipses `...` correct (no space before).
-- All Sanskrit-origin sacred names use ґ (Ґанеша, Ґуру, Ґатха, Ґрантх, Ґанапатіпуле, ґани, ґурудварах, Ґанеші).
-- Latin-script tokens are intentional: English wordplay (Germany/Germ/germ/Germinate, §8) and the Marathi original quote (Nirgunachya bheti alo sagunashi, §26).
+This is a follow-up pass after the 2026-05-30 review (which fixed «Сахаджа Йоґи» ×2 and «тієї Чайтаньї» — both confirmed correct in the current text).
+
+- **Reviewer L** – Language (Orthography + Grammar + Punctuation)
+- **Reviewer S** – SY Domain (Capitalization + Terminology + Consistency)
+- **Critic** – filters both tables, keeps only genuine errors
+
+Paragraph numbers (§) below are line numbers of `transcript_uk.txt`.
+
+Mechanical scan (automated): no double spaces, no space before punctuation, quotation marks only `«»`, apostrophe only `’` (U+2019), en-dash ` – ` (U+2013) with spaces throughout (no em-dash), ellipsis `...` without space before, no Latin/Cyrillic mixing inside words. Latin-script tokens are intentional citations: the English wordplay («Germ», «Germinate», §8) and the Marathi quote («Nirgunachya bheti alo sagunashi», §26).
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | §19 | Possible gender-agreement (neuter vs. fem. head noun) | «розсудливість, знання розсудливості, **вбудоване** у вас» | «вбудована» (agree with «розсудливість») |
-
-No spelling errors, no mixed-script slips, no punctuation/quote/dash/spacing issues were found.
+| L1 | §9 | Possibly missing dash before predicative «те, що» | «Але основне щодо них те, що вони можуть мислити» | «Але основне щодо них – те, що вони можуть мислити» |
+| L2 | §10 | Agreement violation: instrumental singular «Чудовим» with subject «ви» (formal plural) | «Чудовим були ви. Це ви робили всю роботу.» | «Чудовими були ви.» |
+| L3 | §19 | Predicate agreement: «розсудливість … вбудоване» (fem. head noun vs. neuter predicate) | «розсудливість, знання розсудливості, вбудоване у вас» | «розсудливість, знання розсудливості, вбудована у вас» |
+| L4 | §21 | Questionable relative «чим» opening the subordinate clause | «Ми граємо їм на руку, чим ми не зв’язані, а отримуємо допомогу.» | «Ми граємо їм на руку, і цим ми не зв’язані, а отримуємо допомогу.» |
+| L5 | §31 | Incoherent construction «турбота, якою воно має бути» (unclear antecedent of «воно») | «Це головне ставлення, головна турбота, якою воно має бути.» | «Це головне ставлення, головна турбота – такими вони мають бути.» |
+| L6 | §33 | Verb-government violation: «опікуватися» requires the instrumental case («ким»), not «про них» | «але ми повинні опікуватися й піклуватися про них» | «але ми повинні опікуватися ними й піклуватися про них» |
+| L7 | §37 | Undeclined title in accusative position; the text itself treats the title as declinable («Днями вони її читали») | «Ви всі знаєте Атхарва Шірша, чи не так?» | «Ви всі знаєте Атхарва Шіршу, чи не так?» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | §8 | Transliteration: «Йоги» spelled with г instead of ґ (glossary: «Сахаджа Йоґа»; rest of text uses ґ) | «Проростання Сахаджа **Йоги**…» and «…людей для Сахаджа **Йоги**.» | «Сахаджа **Йоґи**» (×2) |
-| S2 | §26 | Spiritual-term capitalization inconsistency: «чайтаньї» lowercase while «Чайтанью»/«Чайтаньї» are uppercase in the same passage; glossary capitalizes Чайтанья | «Ти той, хто є у формі тієї **чайтаньї**» | «тієї **Чайтаньї**» |
-| S3 | §26 / §28 | Saint-name spelling varies: «Намадева» (§26, §28) vs «Намдевом» (§28) | «…працювала з цим **Намдевом**…» | «Намадевом» (unify) |
+| S1 | §28 | Saint-name inconsistency: «Намадева» everywhere, but once «Намдевом» | «яка працювала з цим Намдевом» | «яка працювала з цим Намадевою» |
+| S2 | §28 | Title «Ґуру Ґрантх Сахіб» not declined in locative position | «їх співають у Ґуру Ґрантх Сахіб» | «їх співають у Ґуру Ґрантх Сахібі» |
+| S3 | §33 | Capital letter in common-noun «Йоґи», contrary to glossary and the rest of the text (§25: «ви йоґ», «вони йоґи» lowercase) | «ми йоґіджани, і ми маємо бути як Йоґи» | «ми йоґіджани, і ми маємо бути як йоґи» |
+| S4 | §35 | Inconsistent spelling within one paragraph: «Крішнапакша» (one word) vs. «Крішна пакша» (two words) | «Ми називаємо це Крішнапакша… а Крішна пакша [темні 14 днів]» | Unify spelling («Крішна пакша») |
 
-Deity-pronoun capitalization checked throughout and correct: Shri Mataji always uppercase (Я/Мені/Мою/Мене/Собі and Ти/Тебе when a yogi addresses Mother, §11); Guru Nanak singular uppercase (Він/Собою, §27); Mother Earth uppercase (Вона, §11); regular people / the yogi quoting himself lowercase (я, §11, §31). Language names lowercase (англійська §4, пенджабі/маратхі/пенджабською §27, санскритською §35). Spiritual terms correct: Дух/Духа, Пуджа, Реалізацію, Кундаліні, его, карма/акарма, бандхан, ашрам, Дівалі, Махакалі.
+Positive checks (no issues found): Shri Mataji pronouns uppercase throughout (Я/Мені/Мою/Мене/Собі; «Ти, Ти це робиш» when a yogi addresses Mother, §11); Guru Nanak singular uppercase (Він/Собою, §27); Mother Earth uppercase (Вона, §11); regular people lowercase in quotes (я, §10–11, §26, §31); «мати Махакалі» §35 correctly lowercase (verb «to have», not Mother). Language names lowercase (англійська §4, пенджабі/маратхі §27, гінді §36–37, санскритською §35). Terms match the glossary: Пуджа, Дух («культура Духа»), Реалізація, реалізована душа, Кундаліні, Вішуддхі, бандхан, блокується (catching), его, карма/акарма, ґани, ашрам, Дівалі, Мати Земля, Пашупаті, сахаджа йоґ/йоґи lowercase, Сахаджа Йоґа uppercase, родовий «Ґанеші», «Нехай Бог благословить усіх вас!» (fixed phrase). Transliteration with ґ/дх consistent (Ґанапатіпуле, Ґатха, ґурудвари, Ґуру Ґрантх Сахіб, Атхарва Шірша, Свадхістхана-family n/a).
 
 ### Critic Filter
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Remove** | Not a clear error. Neuter «вбудоване» agrees with the immediately preceding appositive «знання розсудливості»; this is acceptable Ukrainian and mirrors the loose source structure («the discretion, the knowledge of discretion, is built…»). A style preference, not a genuine error. |
-| S | S1 | **Keep** | Genuine transliteration error. Glossary mandates ґ for Sanskrit g («Сахаджа Йоґа»); the same root is spelled with ґ everywhere else in this transcript (йоґ, йоґа, йоґи, йоґів, йоґами, Йоґи §33). Two occurrences in §8. |
-| S | S2 | **Keep** | Genuine consistency error for a sacred term. Чайтанья (Divine vibrations) is capitalized in the glossary and is already uppercase twice in the same passage; the lone lowercase instance should match. |
-| S | S3 | **Remove** | The English source itself alternates «Namadeva» / «Namdev»; both are accepted transliterations of the same saint, and the variant faithfully mirrors the source. Not an error worth forcing. |
+| L | L1 | Remove | The dash before «те, що» is optional here; the same construction appears without a dash in §25 («найперше в культурі Духа те, що…») — the text is internally consistent, not an error. |
+| L | L2 | Keep | Genuine agreement error: with formal «ви», the instrumental predicate must be plural («Чудовими»). |
+| L | L3 | Remove | The predicate agrees with the immediately preceding appositive «знання» (neuter) — acceptable Ukrainian agreement, mirroring the loose source structure («the discretion, the knowledge of discretion, is built…»). |
+| L | L4 | Remove | Relative «чим» referring to the whole preceding clause is standard Ukrainian («Він запізнився, чим усіх засмутив»); no correction needed. |
+| L | L5 | Remove | The English source is itself elliptical and broken («That’s the main attitude, main concern should be»); the proposed fix invents meaning — keep as a faithful rendering of spoken speech. |
+| L | L6 | Keep | Genuine government error: «опікуватися про них» is impossible; with a shared object each verb must take its own form («опікуватися ними й піклуватися про них»). |
+| L | L7 | Keep | The title is declinable and the text itself declines it («її читали»); accusative «Атхарва Шіршу» makes the sentence grammatical and consistent with the paragraph. |
+| S | S1 | Remove | The English source itself alternates «Namadeva» / «this Namdev»; both are accepted variants of the saint’s name — the translation faithfully mirrors the source. |
+| S | S2 | Remove | The multi-word sacred title is consistently treated as indeclinable throughout the text («одну десяту Ґуру Ґрантх Сахіб») — an acceptable and internally consistent convention. |
+| S | S3 | Keep | Glossary: «йоґ/йоґи» lowercase as a common noun; §25 of this very text uses lowercase («ви йоґ», «вони йоґи») — unification required. |
+| S | S4 | Remove | The source contains the same inconsistency («Krishnapaksha» / «Krishna paksha») — the translation reproduces it faithfully. |
 
 ### Approved Corrections
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | §8 | «Сахаджа Йоги» (г) ×2 | «Сахаджа Йоґи» (ґ) |
-| 2 | §26 | «тієї чайтаньї» (lowercase) | «тієї Чайтаньї» (uppercase) |
+| 1 | §10 | «Чудовим були ви.» | «Чудовими були ви.» |
+| 2 | §33 | «ми повинні опікуватися й піклуватися про них» | «ми повинні опікуватися ними й піклуватися про них» |
+| 3 | §33 | «ми маємо бути як Йоґи» | «ми маємо бути як йоґи» |
+| 4 | §37 | «Ви всі знаєте Атхарва Шірша» | «Ви всі знаєте Атхарва Шіршу» |
 
 ## Summary
 
-- Language (L): 1 issue found, 0 approved by Critic
-- SY Domain (S): 3 issues found, 2 approved by Critic
-- Total corrections applied: 3 edits (2 distinct corrections; correction 1 applied to 2 occurrences)
+- Language (L): 7 issues found, 3 approved by Critic
+- SY Domain (S): 4 issues found, 1 approved by Critic
+- Total corrections applied: 4
+
+All 4 approved corrections have been applied to `transcript_uk.txt`.
