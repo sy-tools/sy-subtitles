@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-17T17:03:01.822617+00:00",
+  "updated_at": "2026-07-17T17:41:41.443250+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -456,7 +456,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 414,
-      "updated_at": "2026-06-15T17:00:07Z"
+      "updated_at": "2026-07-17T17:41:26Z"
     },
     "1991-05-05_Sahasrara-Puja-Realise-Your-Own-Divinity": {
       "status": "pending",
