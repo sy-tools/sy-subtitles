@@ -4,7 +4,7 @@
   SRT: talks/1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force/Hanumana-Puja-Schwetzingen-Frankfurt-Germany-DP/final/uk.srt
   Transcript: talks/1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force/transcript_uk.txt
   EN SRT: talks/1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force/Hanumana-Puja-Schwetzingen-Frankfurt-Germany-DP/source/en.srt
-  SRT blocks: 541
+  SRT blocks: 542
   EN SRT blocks: 812
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -24,17 +24,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 541
+  Total blocks: 542
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 541
-  CPS: avg=11.1, median=11.3, max=15.1
-  CPS > target: 22 (4.1%)
+  Total blocks: 542
+  CPS: avg=11.1, median=11.4, max=15.0
+  CPS > target: 17 (3.1%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=54.1, max=84
+  CPL: avg=54.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -44,21 +44,21 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #105: CPS=15.1 (47ch/3.1s) "Також сполучення – ми знаємо про це сполучення,"
-    #410: CPS=15.0 (31ch/2.1s) "То й що – ви помрете, що ж іще?"
-    #106: CPS=15.0 (37ch/2.5s) "яке ми маємо, можливо, можна сказати,"
-    #409: CPS=15.0 (37ch/2.5s) "Вони кажуть: «Ми не віримо, то й що»."
-    #288: CPS=15.0 (40ch/2.7s) "вибери, яку справу Ти хочеш виконувати»."
-    #379: CPS=15.0 (43ch/2.9s) "усі ці послання – звідки вони їх отримують?"
-    #507: CPS=15.0 (43ch/2.9s) "Тож хай би що Він носить, це доволі багато,"
-    #508: CPS=15.0 (46ch/3.1s) "і це зовсім не викликає у вас відчуття, що Він"
-    #387: CPS=15.0 (52ch/3.5s) "І негайно, ви здивуєтеся, упродовж трьох днів жінка,"
-    #506: CPS=15.0 (52ch/3.5s) "До того ж Він – мавпа: мавпи не повинні носити одяг."
+    #411: CPS=15.0 (31ch/2.1s) "То й що – ви помрете, що ж іще?"
+    #107: CPS=15.0 (37ch/2.5s) "яке ми маємо, можливо, можна сказати,"
+    #410: CPS=15.0 (37ch/2.5s) "Вони кажуть: «Ми не віримо, то й що»."
+    #289: CPS=15.0 (40ch/2.7s) "вибери, яку справу Ти хочеш виконувати»."
+    #509: CPS=15.0 (46ch/3.1s) "і це зовсім не викликає у вас відчуття, що Він"
+    #388: CPS=15.0 (52ch/3.5s) "І негайно, ви здивуєтеся, упродовж трьох днів жінка,"
+    #507: CPS=15.0 (52ch/3.5s) "До того ж Він – мавпа: мавпи не повинні носити одяг."
+    #506: CPS=15.0 (61ch/4.1s) "скільки одягу вона носить чи не носить, хіба це має значення..."
+    #401: CPS=15.0 (79ch/5.3s) "Коли вони чинять по-дурному, воно відбивається назад, і тоді..."
+    #405: CPS=15.0 (79ch/5.3s) "електромагнітну силу від цих людей, і вона не діє, вона не п..."
 
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 541
+  UK SRT blocks: 542
   EN SRT blocks: 812
   Ratio UK/EN: 0.67 (max allowed 2.0)
   Block count: OK
@@ -76,7 +76,7 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 11.1 (target ≤15.0)
-  CPS > 15.0: 22 blocks
+  CPS > 15.0: 17 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
