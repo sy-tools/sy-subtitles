@@ -4,18 +4,18 @@
   SRT: talks/1998-12-14_The-Revival-of-Indian-Spirituality/The-Revival-Of-Indian-Spirituality-Delhi-NITL-RAW/final/uk.srt
   Transcript: talks/1998-12-14_The-Revival-of-Indian-Spirituality/transcript_uk.txt
   Whisper: talks/1998-12-14_The-Revival-of-Indian-Spirituality/The-Revival-Of-Indian-Spirituality-Delhi-NITL-RAW/source/whisper.json
-  SRT blocks: 712
+  SRT blocks: 713
   Whisper segments: 654
   (duration hard fail skipped — builder mode)
 
 ============================================================
   CHECK 1: Text preservation
 ============================================================
-  Transcript chars: 35424
-  SRT chars: 35424
+  Transcript chars: 35422
+  SRT chars: 35422
   Exact normalized match: OK
-  Transcript words: 5822
-  SRT words: 5822
+  Transcript words: 5824
+  SRT words: 5824
   Word-level match: OK
 
 ============================================================
@@ -33,36 +33,36 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 712
+  Total blocks: 713
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 712
-  CPS: avg=12.3, median=13.4, max=20.0
-  CPS > target: 44 (6.2%)
+  Total blocks: 713
+  CPS: avg=12.3, median=13.5, max=20.0
+  CPS > target: 37 (5.2%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=48.8, max=84
+  CPL: avg=48.7, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 1
+  Duration < min: 0
   Duration > max: 0
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
     #400: CPS=20.0 (43ch/2.2s) "Тож тоді вони можуть навіть стати демонами."
+    #398: CPS=20.0 (42ch/2.1s) "Людські істоти мають надто багато свободи,"
     #401: CPS=17.4 (64ch/3.7s) "Розумієте, у демократії ви можете стати, розумієте, демонічн..."
-    #405: CPS=15.9 (28ch/1.8s) "Не можна їх навіть полічити."
-    #404: CPS=15.4 (50ch/3.2s) "Я маю на увазі, у Мене є, Я не знаю, – незліченно."
-    #398: CPS=15.2 (42ch/2.8s) "Людські істоти мають надто багато свободи,"
-    #81: CPS=15.2 (33ch/2.2s) "Тож у павутині слів усе губиться."
-    #396: CPS=15.1 (76ch/5.0s) "Тоді як коли ми маємо так звану свободу, ви впадаєте, розумі..."
-    #35: CPS=15.1 (41ch/2.7s) "Щойно ви отримаєте своє друге народження,"
-    #402: CPS=15.0 (52ch/3.5s) "Тож таке може статися, але в Росії Я була здивована,"
+    #396: CPS=15.7 (76ch/4.9s) "Тоді як коли ми маємо так звану свободу, ви впадаєте, розумі..."
+    #286: CPS=15.3 (21ch/1.4s) "Тож воно починається."
+    #414: CPS=15.0 (58ch/3.9s) "Чому ми маємо турбуватися про те, що відбувається в Росії?"
     #487: CPS=15.0 (22ch/1.5s) "Ви нікуди не доходите."
+    #485: CPS=15.0 (31ch/2.1s) "Вони дають вам розмірковування."
+    #392: CPS=15.0 (34ch/2.3s) "Вони не могли надто виражати себе."
+    #521: CPS=15.0 (34ch/2.3s) "Тож ви починаєте рухатися ось так."
 
 ============================================================
   SUMMARY
@@ -76,10 +76,10 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 12.3 (target ≤15.0)
-  CPS > 15.0: 44 blocks
+  CPS > 15.0: 37 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 1 blocks
+  Duration < 1200ms: 0 blocks
   Duration > 21000ms: 0 blocks
   Gaps < 80ms: 0 blocks
 
