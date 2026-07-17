@@ -32,7 +32,7 @@
   CPS: avg=9.9, median=9.9, max=15.0
   CPS > target: 15 (4.7%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=50.4, max=84
+  CPL: avg=50.5, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
