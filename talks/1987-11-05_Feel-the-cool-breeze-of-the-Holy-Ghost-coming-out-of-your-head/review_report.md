@@ -1,4 +1,4 @@
-# Language Review – 1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head, 2026-05-30
+# Language Review – 1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head, 2026-07-17
 
 ## Process
 
@@ -7,8 +7,18 @@
 Reviewer L (Language) and Reviewer S (SY Domain) ran in parallel; the Critic filtered
 both tables; approved corrections were applied to `transcript_uk.txt`.
 
-Corpus conventions were verified by grep across all `talks/*/transcript_uk.txt` for the
-borderline items (`Мати Земля` declension, `Інкарнація` capitalization, `Хатха Йога`).
+This is the second review round for this talk. The first round (2026-05-30, preserved in
+git history) applied 12 corrections (Мати Земля declension ×5, deity-pronoun and
+Інкарнація/Реалізація/Хатха Йога capitalization); all 12 were verified still intact
+before this round began.
+
+Mechanical pre-checks (regex, all clean): no Latin/Cyrillic homoglyph mixing (the only
+Latin run is the intentional «Spirit» in ¶10, discussed as an English word); no double
+spaces; apostrophe `’` (U+2019) throughout; quotation marks `«»` at all levels, no
+`„"`/`""`; dash ` – ` (U+2013) with spaces, no bare hyphen-as-dash; no space before
+punctuation; ellipsis `...` with no space before.
+
+Paragraph numbers below refer to line numbers in `transcript_uk.txt`.
 
 ## Results
 
@@ -16,82 +26,67 @@ borderline items (`Мати Земля` declension, `Інкарнація` capit
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 9 | Declension of "Мати" (acc.) | …як у **Мати Землю** ви кладете насінину… | у **Матір** Землю |
-| L2 | 9 | Declension of "Мати" (acc.) | Ви не можете змусити **Мати Землю** зробити це. | змусити **Матір** Землю |
-| L3 | 9 | Declension of "Мати" (dat.) | …не можете заплатити **Мати Землі** за це. | заплатити **Матері** Землі |
-| L4 | 9 | Declension of "Мати" (gen.) | …має статися спонтанно, силою **Мати Землі**. | силою **Матері** Землі |
-| L5 | 81 | Declension of "Мати" (acc.) | Праву руку на **Мати Землю**. | на **Матір** Землю |
-| L6 | 7 | Comma around comparison "як учні знання" | …ми повинні впокоритися, як учні знання, щоб… | (reviewed – no change) |
-| L7 | 11 | Comma+dash combination `, –` | …не мають миру всередині, – як вони можуть… | (reviewed – no change) |
-| L8 | 28 | Extra comma before single "і" | …з правого боку, і сім чакр з лівого боку. | (reviewed – no change) |
-
-Orthography spot-checks (all clean): apostrophe `’` (U+2019) used throughout (з’єднатися,
-м’якою, ім’я, п’ять); quotation marks `«»` at all levels, no `„"`/`""`; em-dash ` – `
-(U+2013) with spaces, no bare hyphen-as-dash; no double spaces; no Latin/Cyrillic mixing
-except the intentional «Spirit» (discussed as an English word). Imperative `розплющте`
-verified correct.
+| L1 | 15 | Broken correlative construction: «якнайбільше…, скільки… ніколи не зустрічала» is ungrammatical (якнайбільше cannot head a скільки-clause; negative clashes with the comparative sense) | Пам’ятаю, минулого разу в Іспанії поставили **якнайбільше запитань, скільки Я ще ніколи не зустрічала**. | поставили **більше запитань, ніж Я будь-коли зустрічала** |
+| L2 | 28 | Comma before a single conjunction «і» joining two homogeneous phrases | …з правого боку**, і** сім чакр з лівого боку. | (reviewed – no change) |
+| L3 | 34 | Neuter «одне» paired with collective «двоє» for persons | І лише **одне** чи двоє отримували її. | І лише **один** чи двоє |
+| L4 | 37 | Agreement: with polite/plural «ви» the emphatic pronoun must be plural «самі» (cf. ¶51 «Ви самі собі господар»), not singular «сам» | Якщо ви Дух, ви також **сам** собі господар. | ви також **самі** собі господар |
+| L5 | 43 | Unclosed quotation mark – opening « without closing » (interrupted utterance; the ellipsis already conveys the interruption, but the quote must be closed) | Шрі Матаджі: Ще раз: «Мати**...** | Ще раз: «Мати**...»** |
+| L6 | 63, 64 | Proper-name transliteration: tennis player John McEnroe (/ˈmækənroʊ/) is «Джон Макенро» in Ukrainian; «Макінрой» inserts a spurious «і» and a non-existent final «й» | Як Джон **Макінрой**. / **Макінрой** був реалізованою душею. | **Макенро** (both occurrences) |
+| L7 | 72 | Ungrammatical calque: adjectival «яке це грандіозне» has no head noun to agree with; EN «how tremendous it is» is fully grammatical, so this is a translation artifact, not preserved speaker disfluency | Тепер просто подивіться, **яке це грандіозне**. | подивіться, **як це грандіозно** |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 8 | Wrongly capitalized "Я" (hypothetical baptizer, NOT Shri Mataji) | «Гаразд, **Я** хрещу тебе тут…» | «Гаразд, **я** хрещу тебе тут…» |
-| S2 | 14 | Shri Mataji's pronoun must be uppercase | Це шанс життя, **я** б сказала, шанс багатьох життів | Це шанс життя, **Я** б сказала |
-| S3 | 12 | "Інкарнація" (Divine Incarnation) must be uppercase | …створені великими **інкарнаціями**… | великими **Інкарнаціями** |
-| S4 | 12 | "Інкарнація" (Divine Incarnation) must be uppercase | Усі ці великі **інкарнації**, пророки, реальні. | великі **Інкарнації** |
-| S5 | 12 | Inconsistent pronoun for Дух (Він/Він/він in one run) | …Він є джерелом… І коли **він** просвітлює… | коли **Він** просвітлює |
-| S6 | 36 | "Реалізація" inconsistent (lone lowercase vs ~12 uppercase) | …щойно ви отримуєте **реалізацію**. | отримуєте **Реалізацію** |
-| S7 | 77 | Glossary term capitalization | Хатха? **Хатха йога**? | **Хатха Йога** (per terms_lookup) |
-| S8 | 11 | "мир" lowercase vs Істина/Любов uppercase | Він є Істина і Він є Любов. Він є мир. | (reviewed – no change) |
-| S9 | 19 | "Жінку" capitalized (divine feminine) | …не хотіли знати про **Жінку**… | (reviewed – no change) |
-| S10 | 26 | Дух object-pronoun "його" lowercase | …ця сила, торкається **його**… | (reviewed – no change) |
-| S11 | 77 | "Кундаліні-йоги" form/case | Вона з **Кундаліні-йоги**. | (reviewed – no change) |
+| S1 | 18 | Accusative of «Святий Дух» (person of the Trinity) should be animate «Святого Духа» (cf. Biblical usage «вірую в Духа Святого»); inanimate accusative reads as an error for a divine person | Але індійські Писання називали **Святий Дух** Аді Шакті… | називали **Святого Духа** Аді Шакті |
+| S2 | 38 | Capitalization inconsistency vs ¶8 «Всепроникаюча Сила Божої Любові» | «Чи це **Божа сила любові**?» | capitalize «Сила Любові»? |
+| S3 | 77 | Styling inconsistency: «Хатха Йога» (glossary form, no hyphen) vs hyphenated «Кундаліні-йога» in the same paragraph | Хатха Йога? Вона з **Кундаліні-йоги**. | «Кундаліні йоги»? |
 
-Pronoun capitalization verified throughout: Shri Mataji (Я/Мені/Мій/Моя/Свого/Моїми),
-addresses to Her (Ти/Тебе/Тобі), Christ (Він/Його/Нього/Мене), the Trinity (Отець/Син/
-Мати/Той, Хто), Adi Shakti / Primordial Mother (Їй/Первинна Мати), and Kundalini (Її)
-all correct. Seekers' affirmations correctly use lowercase «я» (я Дух / я сам собі
-господар / я зовсім не винний / я прощаю всіх). `в Сахаджа Йозі` (ґ→з alternation),
-`сахаджа йоґи` (plural), and language names lowercase (англійська, іспанська) all correct.
+**S verification notes (no findings):** deity-pronoun capitalization fully correct
+throughout – Shri Mataji (Я/Мені/Мною/Моє/Свого/Моїми; addresses Ти/Тебе in ¶17, 20,
+31, 40–45, 65, 81), Christ (Він/Його/Нього/Мене in His own quote, ¶11, 13), God
+Almighty (Він/Його/Воно, ¶11, 17–18), Spirit (Він, ¶12), Kundalini (Її, ¶37 – mirrors
+EN «Her»), Adi Shakti / Primordial Mother (Їй/Первинна Мати); regular people lowercase
+(Марія Магдалина «перед нею», ¶13); seekers' affirmations correctly lowercase «я»
+(я Дух / я сам собі господар / я зовсім не винний / я прощаю всіх). Glossary terms
+consistent: Кундаліні, Сахаджа Йоґа (місц. «в Сахаджа Йозі» ✓ ¶19, 32; род. «Сахаджа
+Йоґи» ✓ ¶13), сахаджа йоґи lowercase plural ✓, Вішуддхі, чакра lowercase, вібрації,
+блокується (catching), прохолодний вітерець, Атма, Аді Шакті, его, Хатха Йога,
+реалізована душа lowercase (per EN register), Дух/Істина/Реалізація/Самореалізація/
+Інкарнації uppercase per rules. Language names lowercase ✓ (англійська, іспанська).
+«Нехай Бог благословить вас» matches EN «May God bless you» (without «all») ✓.
+Transliteration conventions ✓ (ґуру with ґ; Мохаммед consistent with glossary
+«Пророк Мохаммед»).
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1–L5 | **Keep** | Genuine grammar error. Corpus declines this sacred name: `Матері Землі` (27×), `Матір Землю` (11×); the only undeclined `Мати Землю/Землі` instances are from this very talk. Nominative «Мати Земля» (para 34) correctly left untouched. |
-| L | L6 | Remove | "як учні знання" reads as role ("in the capacity of"), comma is defensible; not a clear error. |
-| L | L7 | Remove | `, –` is acceptable Ukrainian before a rhetorical clause; style, not error. |
-| L | L8 | Remove | Faithful to Shri Mataji's disfluent enumeration; comma aids clarity. |
-| S | S1 | **Keep** | The "I" is a hypothetical priest ("somebody saying"), not Shri Mataji → lowercase. |
-| S | S2 | **Keep** | Shri Mataji's first-person pronoun is ALWAYS uppercase (cf. correct "Навпаки, Я б сказала" in para 11). |
-| S | S3–S4 | **Keep** | Explicit rule in glossary/CLAUDE.md: "Інкарнація – uppercase (Divine Incarnation)"; corpus supports uppercase. |
-| S | S5 | **Keep** | Same referent (Дух/Spirit) capitalized twice then lowercased once in adjacent sentences; normalized to the predominant, devotionally-correct uppercase. |
-| S | S6 | **Keep** | Glossary permits both cases, but the talk uses "Реалізація" uppercase ~12× for this same concept; lone outlier normalized for consistency. |
-| S | S7 | **Keep** | terms_lookup.yaml lists "Hatha Yoga → Хатха Йога" (capitalized). |
-| S | S8 | Remove | Mirrors EN capitalization (Love uppercase, peace/truth lowercase); "Істина" uppercase is mandatory. Internally defensible. |
-| S | S9 | Remove | Capitalized "Жінку" mirrors EN "Women" denoting the divine feminine; intentional. |
-| S | S10 | Remove | Impersonal object pronoun in a separate sentence; not part of the para-12 inconsistent run; ambiguous direction. |
-| S | S11 | Remove | No glossary entry for "Kundalini yoga"; hyphenated compound is an acceptable rendering of a non-SY school. |
+| L | L1 | **Keep** | Genuinely ungrammatical correlative; EN («the maximum questions that I have ever come across») is coherent, so the UK must be too. Fix preserves meaning and Shri Mataji's uppercase «Я». |
+| L | L2 | Remove | Intonational comma marking a spoken pause; defensible as a resumed «і»-series in disfluent enumeration. Not a genuine error. |
+| L | L3 | Remove | False positive: «одне» is acceptable literary Ukrainian for a person of unspecified gender («одне чи двоє з них»). |
+| L | L4 | **Keep** | Normative agreement: with «ви» (here a whole audience) the emphatic pronoun is «самі»; also restores consistency with ¶51 «Ви самі собі господар». |
+| L | L5 | **Keep** | Structural punctuation defect: an opened quote must be closed; the ellipsis already conveys the interruption. |
+| L | L6 | **Keep** | Established Ukrainian form is «Джон Макенро», matching the English pronunciation; «Макінрой» is a mis-transliteration with a final /й/ that does not exist in the name. Two occurrences (¶63, ¶64). |
+| L | L7 | **Keep** | Grammatically broken calque (adjective without a head noun); the EN source is fully grammatical, so this cannot be defended as preserved disfluency. |
+| S | S1 | **Keep** | Genuine case error: the Holy Spirit is a divine person; Ukrainian religious usage consistently takes the animate accusative («Духа Святого»). |
+| S | S2 | Remove | False positive: mirrors the EN register exactly – ¶8 has the capitalized title «All Pervading Power of God's Love», ¶38 has generic lowercase «the God's power of love». |
+| S | S3 | Remove | Not a genuine inconsistency: «Хатха Йога» is the fixed glossary form, while «Кундаліні-йога» (a non-SY school, absent from the glossary) follows general Ukrainian compound-noun hyphenation; same verdict as round 1 (S11). |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 9 | у Мати Землю | у **Матір** Землю |
-| 2 | 9 | змусити Мати Землю | змусити **Матір** Землю |
-| 3 | 9 | заплатити Мати Землі | заплатити **Матері** Землі |
-| 4 | 9 | силою Мати Землі | силою **Матері** Землі |
-| 5 | 81 | на Мати Землю | на **Матір** Землю |
-| 6 | 8 | «Гаразд, Я хрещу тебе…» | «Гаразд, **я** хрещу тебе…» |
-| 7 | 14 | я б сказала | **Я** б сказала |
-| 8 | 12 | великими інкарнаціями | великими **Інкарнаціями** |
-| 9 | 12 | великі інкарнації | великі **Інкарнації** |
-| 10 | 12 | коли він просвітлює | коли **Він** просвітлює |
-| 11 | 36 | отримуєте реалізацію | отримуєте **Реалізацію** |
-| 12 | 77 | Хатха йога | **Хатха Йога** |
+| 1 | 15 | поставили якнайбільше запитань, скільки Я ще ніколи не зустрічала | поставили **більше запитань, ніж Я будь-коли зустрічала** |
+| 2 | 18 | називали Святий Дух Аді Шакті | називали **Святого Духа** Аді Шакті |
+| 3 | 37 | ви також сам собі господар | ви також **самі** собі господар |
+| 4 | 43 | Ще раз: «Мати... (unclosed quote) | Ще раз: «Мати...**»** |
+| 5 | 63 | Як Джон Макінрой. | Як Джон **Макенро**. |
+| 6 | 64 | Макінрой був реалізованою душею. | **Макенро** був реалізованою душею. |
+| 7 | 72 | подивіться, яке це грандіозне | подивіться, **як це грандіозно** |
 
 ## Summary
 
-- Language (L): 8 issues raised, 5 approved by Critic (one grammar error across 5 instances)
-- SY Domain (S): 11 issues raised, 7 approved by Critic
-- Total corrections applied: **12**
+- Language (L): 7 issues raised, 5 approved by Critic (L6 spans two paragraphs → 6 edits)
+- SY Domain (S): 3 issues raised, 1 approved by Critic
+- Total corrections applied: **7**
