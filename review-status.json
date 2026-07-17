@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-17T17:00:47.835398+00:00",
+  "updated_at": "2026-07-17T17:03:01.822617+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -510,7 +510,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 471,
-      "updated_at": "2026-06-06T21:41:47Z"
+      "updated_at": "2026-07-17T17:02:48Z"
     },
     "1992-05-10_Sahasrara-Puja-The-Will-of-God": {
       "status": "pending",
