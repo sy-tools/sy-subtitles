@@ -1,4 +1,4 @@
-# Language Review – 2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else, 2026-06-06
+# Language Review – 2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else, 2026-07-17
 
 ## Process
 
@@ -8,9 +8,17 @@ rules in `glossary/CLAUDE.md`. Reviewers L (Language) and S (SY Domain) ran in
 parallel; the Critic filtered both tables, removing false positives and accepted
 variants; approved corrections were applied.
 
-Character-level checks were grounded in the corpus (86 existing
-`transcript_uk.txt` files) and the convention files, to distinguish genuine
-deviations from accepted variants.
+This is the **second review round** (it supersedes the 2026-06-06 report, kept in
+git history). All round-1 corrections were verified as still in place: en-dash
+` – ` (U+2013) throughout, `Я думаю` (¶22), `люди дао та дзен` (¶20),
+`духовного пробудження` (¶13), `духовний працівник` (¶45), `квантова теорія` (¶25).
+
+Mechanical scan (automated): no Latin/Cyrillic mixing, no double spaces, no spaces
+before punctuation, quotation marks `«»` at all levels, apostrophe `’` (U+2019)
+throughout, en-dash ` – ` with spaces, no stray `—`/`-` used as dash, no ellipsis
+issues, no trailing whitespace.
+
+Paragraph numbers below refer to line numbers in `transcript_uk.txt`.
 
 ## Results
 
@@ -18,65 +26,78 @@ deviations from accepted variants.
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | all (55×) | Wrong dash glyph: em-dash `—` (U+2014) used throughout; project convention and `glossary/CLAUDE.md` mandate en-dash `–` (U+2013) with spaces. Corpus uses U+2013 in 91% of dashes (7425 vs 710); convention files use U+2013 exclusively. This file is 100% em-dash, 0% en-dash. | `…цей цілісний всесвіт — всесвіти за всесвітами.` | `…цей цілісний всесвіт – всесвіти за всесвітами.` |
-| L2 | 3 | Place name hyphenation `Кабелла-Лігуре` | `Кампус, Кабелла-Лігуре (Італія)` | (candidate) `Кабелла Лігуре` |
-| L3 | 20 | Number agreement `більшість із них не знали` | `більшість із них не знали про Кундаліні` | (candidate) `більшість із них не знала` |
+| L1 | 27 | Хибне керування: «подбати, що» — дієслово «подбати» вимагає «щоб/аби» або «про + Зн.», а не з’ясувального «що» | «Лише в тому, щоб подбати, що ви всі створені і що ви всі – Мої руки.» | «Лише в тому, щоб подбати, аби ви всі були створені і аби ви всі були Моїми руками.» |
+| L2 | 27 | «тисками» — абстрактний іменник «тиск» (pressure) не має множини; «тиски» = лещата (інструмент) | «стикаючись з усілякими проблемами, усілякими сум’яттями, усілякими тисками» | «…усіляким тиском» |
+| L3 | 32 | Ненормативний підсилювач «так дуже» (послівна калька з «so very») | «чому це так дуже складно» | «чому це аж так складно» |
+| L4 | 35 | «Бо як є,» — неідіоматична послівна калька з «as it is» (словникове значення: «насправді, фактично») | «Бо як є, людство має бути врятоване через вас і нікого іншого.» | «Бо насправді людство має бути врятоване…» |
+| L5 | 41 | «так звано» — неіснуючий прислівник (від «так званий» прислівникової форми немає) | «до тих людей, які страждають так звано фізично, ментально…» | «які страждають, так би мовити, фізично, ментально…» |
+| L6 | 45 | Зайва кома після «Насамперед» (не вставне слово, комою не виділяється) | «Насамперед, ви – духовний працівник» | «Насамперед ви – духовний працівник» |
+| L7 | 48 | Порушення способової узгодженості: «хоч би» вимагає умовного способу («…мали»); з дійсним способом («мають») — «хоч яке / хай яке» | «Хоч би яке мале світло вони мають» | «Хоч яке мале світло вони мають» |
+| L8 | 49 | Зайва кома після сполучника «тобто» | «в обман – тобто, у всілякі злочинні дії» | «тобто у всілякі злочинні дії» |
+| L9 | 11 | Неузгодженість відмінків: «залишилися б просто як тварини… – можливо, трохи вищими тваринами» (Наз. → Ор.) | «…залишилися б просто як тварини, не знаючи жодних тонкощів життя, – можливо, трохи вищими тваринами.» | (candidate) «…– можливо, як трохи вищі тварини.» |
+| L10 | 25 | Зайве «що» після «як Я вам казала» | «І, як Я вам казала, що квантова теорія… полягає в тому, що…» | (candidate) вилучити перше «що» |
+| L11 | 32 | Правопис-2019 фіксує «Страшний суд» (друге слово з малої) | «яку ми називаємо Страшним Судом» | (candidate) «Страшним судом» |
+| L12 | 40 | «інакше всі писали Мені» — «інакше» у значенні «раніше» сумнівне | «люди покращилися, інакше всі писали Мені» | (candidate) «раніше ж усі писали Мені» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 22 | Shri Mataji's first-person pronoun `я` written lowercase. Per `glossary/CLAUDE.md`, the speaker's `Я` is ALWAYS uppercase. (Only lowercase standalone `я` in the file.) | `…з будь-якою співчутливою людиною, я думаю, –` | `…з будь-якою співчутливою людиною, Я думаю, –` |
-| S2 | 20 | `Дао`/`Дзен` capitalized, but para 17 has them lowercase (`люди дао`, `люди дзен`). Internal inconsistency; Ukrainian convention lowercases these teachings. | `ті люди — люди Дао та Дзен` | `ті люди – люди дао та дзен` |
-| S3 | 13 | Adjective `Духовного` over-capitalized. Glossary capitalizes only the noun `Дух`; corpus lowercases the adjective `духовний` in 187 of ~192 mid-sentence cases. | `…вашого Духовного пробудження…` | `…вашого духовного пробудження…` |
-| S4 | 45 | Same adjective rule: `Духовний працівник`. | `…ви — Духовний працівник, ви не соціальний працівник.` | `…ви – духовний працівник, ви не соціальний працівник.` |
-| S5 | 25 | `Квантова теорія` over-capitalized. A scientific term, not a spiritual proper name; lowercase in Ukrainian orthography. | `…що Квантова теорія, про яку зараз говорять учені…` | `…що квантова теорія, про яку зараз говорять учені…` |
-| S6 | 32 | `Страшним Судом` — both words capitalized | `…гри, яку ми називаємо Страшним Судом.` | (candidate) `Страшним судом` |
+| S1 | 33 | Неточний термін: «проникливою» (= кмітлива, гостра — про розум/погляд) для EN «penetrating» (сила, що проникає всюди) спотворює зміст | «силу Аді Шакті, яка є дуже великою, дуже проникливою» | «яка є дуже великою, дуже проникною» |
+| S2 | 21 | «кістку сакрум» — розглянути «крижову кістку (сакрум)» | «помістити Кундаліні у вашу кістку сакрум» | (candidate) «у вашу крижову кістку (сакрум)» |
+| S3 | 43 | «сахаджів» — транслітерація EN «Sahajis», у глосарії не зафіксована | «перетворювати людських істот на сахаджів» | (candidate) звірити з глосарієм |
+| S4 | 36 | Регістрова непослідовність: «Страшним Судом» (¶32, з великої) поруч із «у судному дні» (¶36, з малої) | «кого звинуватять у судному дні» | (candidate) уніфікувати |
+
+Позитивні перевірки S (без зауважень):
+- Займенники Шрі Матаджі (`Я`, `Мені`, `Мене`, `Мій`, `Моя`, `Мого`) — скрізь з великої ✓
+- Займенники Аді Шакті / Кундаліні (`Вона`, `Її`, `Сама`, `Своєю`) та Шрі Шіви (`Він`) — з великої ✓
+- Множина інкарнацій усередині речення («вони всі є», ¶33) — з малої ✓
+- Малі `мною`/`моїм`/`моєю` у ¶40 — цитоване мовлення звичайних людей, правильно з малої ✓
+- `сахаджа йоґ / йоґи / йоґів / йоґами` — з малої, правильна парадигма (не «йоґі») ✓
+- `Сахаджа Йоґа / Йоґу / Йоґи` — з великої, правильні відмінки ✓
+- Духовні терміни `Пуджа`, `Інкарнація`, `Істина`, `Дух`/`Духа`, `Стопи` (немає в тексті), `Самореалізація`/`Реалізація`, `Самопізнання`, `Творіння`, `Божественне` — послідовно ✓
+- Транслітерація за глосарієм: `Аді Шакті`, `Садашіва`, `Шрі Ґанеша`, `Кундаліні`, `Шрі Махадеви`, `аскези` (penances) ✓
+- `Матінко` у звертанні (¶41) — за глосарієм ✓
+- Назви мов (`англійська`, `українська`) — з малої ✓
+- `реалізовані душі` (загальна назва, мала літера за EN «realised-souls») ✓
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Documented convention (`glossary/CLAUDE.md`: "En-dash: `–` (U+2013) with spaces"; template lists it as a check). Corpus is 91% en-dash; this file is 0%. Genuine orthography conformance, not style preference. |
-| L | L2 | Remove | Corpus is split (`Кабелла-Лігуре` 9 × vs `Кабелла Лігуре` 7 ×). No dominant standard → accepted variant, not an error. |
-| L | L3 | Remove | `більшість + із них` legitimately licenses plural predicate agreement in Ukrainian; not an error. |
-| S | S1 | **Keep** | Unambiguous deity-pronoun rule. `я думаю` = Shri Mataji speaking ("I think"). Must be `Я`. |
-| S | S2 | **Keep** | Real internal inconsistency vs para 17; lowercase is the correct and consistent form. |
-| S | S3 | **Keep** | Glossary capitalizes the noun `Дух` only; adjective norm is lowercase (corpus 187:~5). |
-| S | S4 | **Keep** | Same rule as S3; applied consistently. |
-| S | S5 | **Keep** | `квантова теорія` is a common-noun phrase in Ukrainian; EN emphasis caps don't carry over. |
-| S | S6 | Remove | Corpus uses both `Страшний Суд`/`Страшним Судом` and `Страшний суд`/`Страшного суду`. Accepted variant in the sacred register → not flagged. |
+| L | L1 | **Keep** | Справжня помилка дієслівного керування; «подбати, що» неграматичне. «аби» уникає потроєння «щоб». |
+| L | L2 | **Keep** | «Тиски» в множині — лише інструмент (лещата); абстрактне «pressure» тільки в однині. |
+| L | L3 | **Keep** | «Так дуже» — ненормативна калька; «аж так» зберігає підсилення оригіналу «so very». |
+| L | L4 | **Keep** | «Бо як є,» не парситься українською; «as it is» = «насправді» — точний і мінімальний відповідник. |
+| L | L5 | **Keep** | Прислівника «звано» не існує; «так би мовити» точно передає адвербіальне «so-called». |
+| L | L6 | **Keep** | «Насамперед» не вставне слово — кома є пунктуаційною помилкою (калька з рос. «прежде всего,»). |
+| L | L7 | **Keep** | «Хоч би» + дійсний спосіб — граматичний конфлікт; мінімальне виправлення — вилучити «би» (пор. правильне «Хоч би що ви пробували» у ¶36). |
+| L | L8 | **Keep** | Кома після «тобто» — пунктуаційна помилка. |
+| L | L9 | Remove | Еліптична розмовна конструкція: орудний узгоджується безпосередньо із «залишилися б»; дзеркалить усний оригінал. Не помилка. |
+| L | L10 | Remove | Анаколуф точно відтворює оригінал («as I have told you, that…»); згладжувати усне мовлення не слід. |
+| L | L11 | Remove | Конфлікт із S: у корпусі проєкту сакральні назви подій уживаються і з великої; EN «The Last Judgement» — обидва слова з великої. Рішення на користь S — залишити «Страшним Судом» (так само вирішено в раунді 1). |
+| L | L12 | Remove | «Інакше» дзеркалить нестандартне «otherwise» мовця; заміна була б редакторською вільністю. |
+| S | S1 | **Keep** | «Прониклива» передусім «кмітлива» — спотворення змісту; «проникна» (СУМ: яка проникає в щось) відповідає «penetrating». |
+| S | S2 | Remove | «Сакрум» у SY-лекціях зберігається свідомо (Шрі Матаджі неодноразово посилається на етимологію «sacred»); не помилка. |
+| S | S3 | Remove | Прийнятна транслітерація EN «Sahajis»; однократне вживання, конфлікту з глосарієм немає. |
+| S | S4 | Remove | Різні поняття в оригіналі: «The Last Judgement» (власна назва події) і «doomsday» (загальна назва). Різний регістр виправданий. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | all (55×) | em-dash `—` (U+2014) | en-dash `–` (U+2013), spaces preserved |
-| 2 | 22 | `я думаю` (Shri Mataji) | `Я думаю` |
-| 3 | 20 | `люди Дао та Дзен` | `люди дао та дзен` |
-| 4 | 13 | `Духовного пробудження` | `духовного пробудження` |
-| 5 | 45 | `Духовний працівник` | `духовний працівник` |
-| 6 | 25 | `Квантова теорія` | `квантова теорія` |
+| 1 | 27 | подбати, що ви всі створені і що ви всі – Мої руки | подбати, аби ви всі були створені і аби ви всі були Моїми руками |
+| 2 | 27 | усілякими тисками | усіляким тиском |
+| 3 | 32 | чому це так дуже складно | чому це аж так складно |
+| 4 | 33 | дуже проникливою | дуже проникною |
+| 5 | 35 | Бо як є, людство має бути врятоване | Бо насправді людство має бути врятоване |
+| 6 | 41 | які страждають так звано фізично | які страждають, так би мовити, фізично |
+| 7 | 45 | Насамперед, ви – духовний працівник | Насамперед ви – духовний працівник |
+| 8 | 48 | Хоч би яке мале світло вони мають | Хоч яке мале світло вони мають |
+| 9 | 49 | тобто, у всілякі злочинні дії | тобто у всілякі злочинні дії |
 
 ## Summary
 
-- Language (L): 3 issues found, 1 approved by Critic (systematic, 55 occurrences)
-- SY Domain (S): 6 issues found, 5 approved by Critic
-- Total corrections applied: 6 distinct fixes (60 substitutions: 55 dash glyphs + 5 capitalization/terminology)
-
-### Notes (verified correct — no change)
-
-- Deity / Shri Mataji pronouns (`Я`, `Мене`, `Мені`, `Моя`, `Мій`, `Вона`, `Її`,
-  `Він`/`Його` for Shiva & Ganesha) — all correctly capitalized; plural Incarnations
-  `вони всі` (para 33) correctly lowercase.
-- Lowercase `мною`/`моїм`/`моєю` in para 40 are inside followers' quoted speech
-  (regular people) — correctly lowercase.
-- Spiritual nouns `Пуджа`, `Самореалізація`/`Реалізація`, `Істина`, `Інкарнація`,
-  `Дух`/`Духа`, `Творіння`, `Божественне` — correctly capitalized.
-- Language names `англійська`, `українська` — correctly lowercase.
-- Glossary terms (`Аді Шакті`, `Кундаліні`, `Шрі Ґанеша`, `Садашіва`, `Шіви`,
-  `Шрі Махадеви`, `Сахаджа Йоґа` + cases, `сахаджа йоґ`/`йоґи`/`йоґів`/`йоґам`/
-  `йоґами`) — consistent and correct; `Йоґ` always written with `ґ`.
-- Apostrophe is U+2019 throughout; quotation marks are `«»` (U+00AB/U+00BB) at all
-  levels; no Latin characters mixed into Cyrillic words; no double spaces, no
-  stray spacing before punctuation.
+- Language (L): 12 issues found, 8 approved by Critic
+- SY Domain (S): 4 issues found, 1 approved by Critic
+- Total corrections applied: 9
