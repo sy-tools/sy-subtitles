@@ -68,3 +68,33 @@ The translation is of high quality: orthography, punctuation, quotation/dash/apo
 conventions, deity-pronoun capitalization, and glossary terminology are all sound and
 internally consistent (prior-pass orthographic fixes confirmed in place). The single
 applied correction fixes a subject–verb number-agreement error in §45.
+
+---
+
+# Addendum – third pass, 2026-07-17 (run 29572341492)
+
+## Provenance
+
+This pass ran in CI (review=claude-fable-5, EXTRA account). The reviewer applied
+its Critic-approved corrections to `transcript_uk.txt` but hit the account session
+limit immediately afterwards (10:22 UTC, log: "You've hit your session limit"),
+so the report-writing step never executed. The corrections below were recovered
+verbatim from the run's job log (Edit tool calls); the full L/S/Critic
+deliberation tables for this pass were lost with the interrupted session.
+
+## Applied corrections (recovered from run log)
+
+| # | Category | Before | After |
+|---|----------|--------|-------|
+| 1 | Direct speech after colon: quotes + capital | «пояснити: сину, він б’є тебе, це неправильно. Але ти також не повинен робити те саме неправильне.» | «пояснити: «Сину, він б’є тебе, це неправильно. Але ти також не повинен робити те саме неправильне».» |
+| 2 | Comma closing subordinate clause before « – » | «яким ви можете судити їх – це через вібрації» | «яким ви можете судити їх, – це через вібрації» |
+| 3 | Gender agreement («людина» → fem.) | «лише одна людина була реалізованою душею; тож його закидали камінням» | «…тож її закидали камінням» |
+| 4 | No comma after conjunction «тобто» | «Тобто, що сталося?» | «Тобто що сталося?» |
+| 5 | Comma closing subordinate clause before « – » | «єдине, що вам потрібно – стати провідниками» | «єдине, що вам потрібно, – стати провідниками» |
+| 6 | Calque “X is okay” → natural predicative | «Поки що Сахаджа Йоґа гаразд» | «Поки що з Сахаджа Йоґою все гаразд» |
+| 7 | Calque “we are okay” → natural predicative | «Якщо ми одні, ми гаразд. Якщо нас багато, ми гаразд.» | «Якщо ми одні, все гаразд. Якщо нас багато, все гаразд.» |
+
+## Summary
+
+- Total corrections applied in this pass: **7** (all present in the committed
+  `transcript_uk.txt` and propagated into both videos' `final/uk.srt`).
