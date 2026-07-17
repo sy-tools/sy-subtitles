@@ -1,22 +1,27 @@
-# Language Review – 1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children, 2026-05-30
+# Language Review – 1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children, 2026-07-17
 
 ## Process
 
 2+1 agent review (Reviewer L + Reviewer S + Critic) of `transcript_uk.txt`
 against `transcript_en.txt`, the glossary (`terms_lookup.yaml`,
 `terms_context.yaml`), and the orthography/capitalization rules in
-`glossary/CLAUDE.md`.
+`glossary/CLAUDE.md`. Paragraph numbers = line numbers in `transcript_uk.txt`.
 
-Character-level audit confirmed before review:
-- Apostrophes: 32 × U+2019 `’`, 0 straight — correct.
-- Quotation marks: 36 × `«` / 36 × `»`, balanced; no `"`, `"`, `„` — correct.
-- No Latin/Cyrillic mixing.
-- **Dashes: 103 × U+2014 `—`, 0 × U+2013 `–`** — deviates from the rule.
-- **Ellipsis: 4 × U+2026 `…`, 0 × `...`** — deviates from the rule.
+Mechanical pre-checks (all clean): no Latin/Cyrillic mixing, no space before
+punctuation, no double spaces, quotation marks `«»` only, en-dash ` – ` (U+2013)
+only, apostrophe `’` (U+2019) only, ellipsis `...` (three dots, no space before).
 
-Corpus reference (61 talks): en-dash U+2013 dominates 5305 vs 592 em-dash;
-three-dot `...` dominates 418 vs 231 single-char `…`. The documented standard
-(`glossary/CLAUDE.md`) and the corpus convention agree: U+2013 ` – ` and `...`.
+Corpus conventions verified across `talks/*/transcript_uk.txt`:
+«Я Сама» 13 vs «Я сама» 8; «зі Шрі» 13 vs «з Шрі» 3; place name universally
+«Махараштра» (х); «так би мовити» consistently set off with commas elsewhere.
+
+**Relation to the previous review (2026-05-30).** All of its corrections stand
+(en-dashes, `...`, «Мати Земля» nominative, «Я», «принцип Шрі Ґанеші», «Пуджею»).
+Two of its decisions are superseded here with reasoning in the Critic table:
+sentence-initial «ґани» (glossary lowercase applies mid-sentence only — a sentence
+cannot begin with a lowercase letter) and «Самбхала» (common Hindi word, not a
+proper name; internal consistency with §80 outweighs mirroring the EN
+transcriber's casing).
 
 ## Results
 
@@ -24,55 +29,88 @@ three-dot `...` dominates 418 vs 231 single-char `…`. The documented standard
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | all (103×) | Em-dash U+2014 `—` used instead of en-dash U+2013 `–` (orthography rule: `En-dash: « – » (U+2013)`) | `Він — вічна дитина` (+102 more, all space-padded) | replace `—` → `–` (U+2013) globally |
-| L2 | 39, 49, 70, 76 | Single-char ellipsis U+2026 `…` instead of three dots (rule: `Ellipsis: ...`) | `своїми речами…`, `Вона… її обличчя`, `сказали, що…`, `музиці й…` | `...` |
-| L3 | 31 (×2) | Nominative grammar error — `Матір` is the **accusative** form of `мати`; nominative subject must be `Мати` | `Матір Земля вібрується`, `Така Матір Земля впливатиме` | `Мати Земля` |
+| L1 | 23 | Милозвучність: «з» перед збігом приголосних [шр] | «як далеко заходити з Шрі Ґанешею» | «як далеко заходити зі Шрі Ґанешею» |
+| L2 | 24 | Пряма мова після двокрапки починається з малої літери | «як це робить Сам Шрі Ґанеша: «поважай свою Матір»» | «…: «Поважай свою Матір»» |
+| L3 | 32 | Неузгодженість числа: «комусь» (одн.) → «вони» (мн.) | «коли Я вперше сказала комусь, що маргаритки мають аромат, вони не могли повірити» | «…той не міг повірити» |
+| L4 | 60 | Вставне сполучення «так би мовити» не виділене комами | «Але коли ви стаєте так би мовити сучасними» | «Але коли ви стаєте, так би мовити, сучасними» |
+| L5 | 61 | Речення починається з малої літери | «пішачі такого не робили. ґани здивовані:» | «…не робили. Ґани здивовані:» |
+| L6 | 69 | Змішана конструкція: «властиво» вимагає давального відмінка | «В Індії в простих людей не дуже властиво мати заздрощі» | «В Індії простим людям не дуже властиво мати заздрощі» |
+| L7 | 86 | Сумнівне слово «нащаддя» | «Він – моє нащаддя» | «Він – мій нащадок» |
+| L8 | 90 | Зміщена референція та розузгодження роду: «дитина… вона твій власний батько» (дитина = батько?) | «приходить, ніби вона твій власний батько, приходить і сідає просто тобі на коліна, не знаючи, що «Він – не мій батько»» | «приходить, ніби ти її власний батько, …» |
+| L9 | 92 | Розузгодження роду: «людина» (ж.) → «він» | «це те, що людина має відчувати: що він досі дитина» | «…: що вона досі дитина» |
+| L10 | 124 | Розузгодження роду з «речі» (ж.): «одне… інше… третє» | «ці три речі…: одне – це ваша голова, інше – ваше серце, а третє – ваша печінка» | «одна – … інша – … третя –» |
+| L11 | 125 | Цілісний вислів «що завгодно» не відокремлюється комою | «створить для вас усе, що завгодно, що ви захочете» | «створить для вас усе що завгодно, що ви захочете» |
+| L12 | 131 | Зайва кома перед одиничним «і» між однорідними членами | «ви станете дуже уважними, і дуже люблячими, ніжними й мудрими» | «ви станете дуже уважними і дуже люблячими, …» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 43 | Deity-pronoun capitalization — speaker is Shri Mataji (EN: "that also **I**'ve recently learned"); `Я` must be uppercase | `про це я теж нещодавно дізналася` | `про це Я теж нещодавно дізналася` |
-| S2 | 61 | Term capitalization — glossary lists `Ganas = ґани` (lowercase); also inconsistent with lowercase `ракшаси`/`пішачі` in the same passage | `Ґани здивовані` | `ґани здивовані` |
-| S3 | 91 | Consistency — `принцип Ґанеші` is lowercase in 8 places (incl. the deliberate contrast in §85 `Принцип Ґуру` … `принципом Ґанеші`); this lone capital is the outlier | `не що інше, як Принцип Шрі Ґанеші` | `принцип Шрі Ґанеші` |
-| S4 | 6 | Capitalization — `Пуджа` is uppercase per glossary and elsewhere in this talk (§107, §110); generic `пуджею` is the outlier | `Перед кожною пуджею` | `Перед кожною Пуджею` |
+| S1 | 11 | Відносний займенник щодо Шрі Ґанеші з малої літери — усюди в тексті «Який», «Той, Хто» з великої | «Тож Шрі Ґанеша – перший, хто був встановлений також і в матерії» | «…перший, Хто був встановлений…» |
+| S2 | 61 | Глосарій: «Pisachhas → Пішачі» (велика літера) | «пішачі такого не робили» | «Пішачі такого не робили» |
+| S3 | 72 | Транслітерація «maha» → «маха»: Махараштра, Махаґуру, Махакалі | «ми, магараштрійці, дуже добре знаємося на музиці» | «ми, махараштрійці, …» |
+| S4 | 73 | Займенники Шрі Матаджі ЗАВЖДИ з великої (пор. «Сам Шрі Ґанеша» §24, «Який Сам» §51 у цьому ж тексті) | «Я сама була збентежена» | «Я Сама була збентежена» |
+| S5 | 81 | «Самбхала» з великої — але це не власна назва, а слово гінді «подбай/підтримай»; у §80 введене з малої: «самбхала» | «Будь ласка, подбай про мене, Самбхала, подбай про мене» | «…подбай про мене, самбхала, подбай про мене» |
+| S6 | 81 | «Майстер» з великої — загальна назва (досвідчений музикант), не Божество; пор. «майстри цієї музики» (§70), «бути майстрами» (§112) | «сидить дуже досвідчений музикант, сидить Майстер» | «…сидить майстер» |
+| S7 | 135 | Займенники Шрі Матаджі ЗАВЖДИ з великої | «Бо Моя – Я сама, коли слухаю Свої лекції» | «Бо Моя – Я Сама, …» |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Explicit orthography rule (U+2013) + decisive corpus norm (5305:592). Systematic, all 103 are space-padded interjection dashes — safe glyph swap. |
-| L | L2 | **Keep** | Documented rule is three-dot `...`; corpus majority agrees (418:231). Low severity but a genuine, consistent normalization. |
-| L | L3 | **Keep** | Real grammar error. The translator correctly uses accusative `Матір Землю` in §30/§101, so `Матір Земля` in subject position (§31) is the accusative form misused as nominative. Glossary citation form is `Мати Земля`. |
-| S | S1 | **Keep** | Unambiguous deity-pronoun error — Shri Mataji is the first-person speaker. High confidence. |
-| S | S2 | **Keep** | Glossary mandates lowercase `ґани`; also restores internal consistency with the adjacent `ракшаси`/`пішачі`. |
-| S | S3 | **Keep** | Genuine internal inconsistency (8:1). §85 proves the lowercase `принцип Ґанеші` is deliberate (it is distinguished from the glossary term `Принцип Ґуру` in one sentence). Lowercasing the single outlier is the minimal fix. |
-| S | S4 | **Keep** | Glossary rule "Пуджа – uppercase (ceremony name)" is unconditional; 2 of 3 occurrences in this talk are already uppercase. |
-| — | FP1 | **Remove** | `Матір Землю` (§30, §101) — correct accusative after `завібрувати`/`живити`; not an error. |
-| — | FP2 | **Remove** | `принцип Ґанеші` lowercase (8×) — deliberate, consistent; only the §91 outlier corrected, the other 8 left untouched. |
-| — | FP3 | **Remove** | `вище Я` / `нижче я` (§48) — faithful to EN "higher Self" / "baser self"; intentional contrast, not an error. |
-| — | FP4 | **Remove** | `самбхала` (§80) vs `Самбхала` (§81) — mirrors the source's own casing (EN "sambhala" / "Sambhala"); faithful. |
-| — | FP5 | **Remove** | `батьківськість` / `материнськість` (§78), `безтурботне` for "serene" (§49), `неспокійна` for "troublesome" (§21) — acceptable lexical choices, style preferences, not errors. |
+| L | L1 | **Keep** | Правопис: «зі» перед словами, що починаються на [ш]+приголосний (зі школи, зі Шрі). Корпус проєкту: «зі Шрі» 13 vs «з Шрі» 3. |
+| L | L2 | **Keep** | Повне речення-цитата після двокрапки — з великої. У цьому ж тексті аналогічні цитати після «що:» з великої: «Подивіться…» (§75), «Подбай про мене» (§81). |
+| L | L3 | **Remove** | Хибний позитив: дзеркалить оригінал («I told somebody… they couldn’t believe»); неозначене «вони» — нормальний розмовний узус для транскрипту усної промови. |
+| L | L4 | **Keep** | Вставне сполучення обов’язково виділяється комами; в усьому корпусі «так би мовити» послідовно в комах. |
+| L | L5 | **Keep** | Безумовна орфографічна помилка: речення не може починатися з малої літери. Супересідить рішення огляду 2026-05-30 (глосарійне «ґани» з малої чинне лише всередині речення; тут — початок речення). |
+| L | L6 | **Keep** | Граматика: «властиво» керує давальним («людям властиво»); конструкція «в людей властиво» — контамінація двох зворотів. |
+| L | L7 | **Remove** | Хибний позитив: «наща́ддя» — нормативне рідковживане збірне (СУМ), точно відповідає збірному «progeny» оригіналу. |
+| L | L8 | **Keep** | Реальна помилка сенсу й роду: «дитина… вона твій власний батько» — беззмістовно (дитина не є батьком). Сенс оригіналу: дитина приходить так, ніби ТИ її батько — це підтверджує продовження: «сідає тобі на коліна, не знаючи, що «Він – не мій батько»». |
+| L | L9 | **Keep** | Граматика: «людина» — жіночий рід, анафоричний займенник має бути «вона». |
+| L | L10 | **Remove** | Тривіальне: абстрактний перелік «одне – … інше – … третє –» припустимий у розмовному мовленні незалежно від роду попередника; для транскрипту усної лекції правка не обов’язкова. |
+| L | L11 | **Keep** | Пунктуація: фразеологізоване «що завгодно» не відокремлюється комою («все що завгодно»); пор. у цьому ж тексті «куди завгодно» без коми (§28). |
+| L | L12 | **Keep** | Пунктуація: кома перед одиничним «і» між однорідними членами не ставиться; в оригіналі — англійська серійна кома, українською не відтворюється. |
+| S | S1 | **Keep** | Внутрішня послідовність тексту: всі відносні займенники щодо Шрі Ґанеші з великої («Який є символом» §6, «Той, Хто дарує» §18, «Який абсолютно розсудливий» §115); §11 — єдиний виняток. |
+| S | S2 | **Remove** | Хибний позитив: «пішачі» — загальна назва класу істот, як «ракшаси» (у глосарії з малої) у тому самому реченні; велика літера у глосарійному записі — артефакт списку, а не норма вжитку. Мала літера послідовна (так само вирішив і огляд 2026-05-30). |
+| S | S3 | **Keep** | Транслітераційна послідовність: топонім у корпусі виключно «Махараштра» (з «х»), похідний етнонім — «махараштрійці»; «мага-» суперечить правилу maha→маха («Махаґуру» §18 цього ж тексту). |
+| S | S4 | **Keep** | Правило: займенники Шрі Матаджі ЗАВЖДИ з великої; означальний «Сам/Сама» в тексті капіталізується для Божеств («Сам Шрі Ґанеша» §24, «Який Сам» §51). Корпус: «Я Сама» 13 vs «Я сама» 8. |
+| S | S5 | **Keep** | «самбхала» — загальне слово гінді (сенс «подбай»), не власна назва; §80 вводить його з малої, тож §81 — внутрішня неузгодженість. Велика літера в EN-транскрипті — вибір транскрибера, не норма для українського правопису. Супересідить вердикт FP4 огляду 2026-05-30. |
+| S | S6 | **Keep** | Загальна назва з великої без підстави; пор. малу літеру в «майстри цієї музики» (§70) та «бути майстрами» (§112). Капіталізація в EN-транскрипті не є нормою українського правопису. |
+| S | S7 | **Keep** | Те саме правило, що S4 — друге входження. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | all (103×) | em-dash `—` → en-dash | replace U+2014 `—` with U+2013 `–` |
-| 2 | 39, 49, 70, 76 | single-char ellipsis `…` | `...` |
-| 3 | 31 (×2) | `Матір Земля` (acc. form as nom.) | `Мати Земля` |
-| 4 | 43 | `я` (Shri Mataji) | `Я` |
-| 5 | 61 | `Ґани` | `ґани` |
-| 6 | 91 | `Принцип Шрі Ґанеші` | `принцип Шрі Ґанеші` |
-| 7 | 6 | `пуджею` | `Пуджею` |
+| 1 | 11 | перший, хто був встановлений | перший, Хто був встановлений |
+| 2 | 23 | заходити з Шрі Ґанешею | заходити зі Шрі Ґанешею |
+| 3 | 24 | «поважай свою Матір» | «Поважай свою Матір» |
+| 4 | 60 | стаєте так би мовити сучасними | стаєте, так би мовити, сучасними |
+| 5 | 61 | . ґани здивовані: | . Ґани здивовані: |
+| 6 | 69 | В Індії в простих людей не дуже властиво | В Індії простим людям не дуже властиво |
+| 7 | 72 | ми, магараштрійці | ми, махараштрійці |
+| 8 | 73 | Я сама була збентежена | Я Сама була збентежена |
+| 9 | 81 | сидить Майстер | сидить майстер |
+| 10 | 81 | подбай про мене, Самбхала | подбай про мене, самбхала |
+| 11 | 90 | ніби вона твій власний батько | ніби ти її власний батько |
+| 12 | 92 | що він досі дитина | що вона досі дитина |
+| 13 | 125 | усе, що завгодно, що ви захочете | усе що завгодно, що ви захочете |
+| 14 | 131 | дуже уважними, і дуже люблячими | дуже уважними і дуже люблячими |
+| 15 | 135 | Я сама, коли слухаю Свої лекції | Я Сама, коли слухаю Свої лекції |
 
 ## Summary
 
-- Language (L): 3 issues found (L1 spanning 103 dashes, L2 four ellipses, L3 two
-  `Мати Земля`), 3 approved by Critic.
-- SY Domain (S): 4 issues found, 4 approved by Critic.
-- False positives screened out by Critic: 5 categories (accusative `Матір Землю`,
-  the 8 deliberate lowercase `принцип Ґанеші`, `вище Я`/`нижче я`, `самбхала`
-  casing, lexical-choice items).
-- Total distinct corrections applied: 7 rules → 113 textual replacements
-  (103 dashes + 4 ellipses + 2 `Мати Земля` + 1 each for §6, §43, §61, §91).
+- Language (L): 12 issues found, 9 approved by Critic
+- SY Domain (S): 7 issues found, 6 approved by Critic
+- Total corrections applied: 15
+
+Glossary terms verified against `terms_lookup.yaml` / `terms_context.yaml` — all
+consistent: declension of Шрі Ґанеша (Ґанеші/Ґанешу/Ґанешею), «в Сахаджа Йозі»,
+«сахаджа йоґи» (мн. на -и), «Пуджа», «Парамчайтанья/Парамчайтаньєю», «бандхан»,
+«Омкара», «ватсалья», «Мати Земля / Матір Землю», «Аґія чакра», «Свадхістхана»,
+«Кундаліні», «Реалізація» (велика) / «реалізовані душі» (мала), «Принцип Ґуру»
+(велика) / «принцип Ґанеші» (послідовно мала), «ракшаси», «Царство Боже»,
+«віддача на милість». Deity-pronoun capitalization (Він/Його/Свою/Який/Хто for
+Shri Ganesha; Я/Мені/Мої/Свої/Сама for Shri Mataji; lowercase for regular people
+and for own mother vs «Свята Матір») is consistent after the fixes. Language
+names («англійська», «гінді») lowercase — correct.
