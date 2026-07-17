@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-17T07:06:29.135070+00:00",
+  "updated_at": "2026-07-17T07:07:33.432546+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -402,7 +402,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 371,
-      "updated_at": "2026-06-14T21:07:03Z"
+      "updated_at": "2026-07-17T07:07:20Z"
     },
     "2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state": {
       "status": "pending",
