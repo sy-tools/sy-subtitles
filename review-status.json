@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-17T14:17:25.915961+00:00",
+  "updated_at": "2026-07-17T16:54:08.902234+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -330,7 +330,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 317,
-      "updated_at": "2026-06-20T10:37:37Z"
+      "updated_at": "2026-07-17T16:53:56Z"
     },
     "1984-05-06_Questions-and-Answers-after-Maha-Sahasrara-Day": {
       "status": "pending",
