@@ -4,7 +4,7 @@
   SRT: talks/1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit/Mahakali-Puja/final/uk.srt
   Transcript: talks/1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit/transcript_uk.txt
   EN SRT: talks/1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit/Mahakali-Puja/source/en.srt
-  SRT blocks: 344
+  SRT blocks: 343
   EN SRT blocks: 345
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -18,23 +18,23 @@
   CHECK 3: Time range (vs EN SRT)
 ============================================================
   EN SRT range: 00:07:28,429 — 00:36:03,164
-  SRT range:       00:07:27,532 — 00:36:05,164
+  SRT range:       00:07:28,429 — 00:36:05,164
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 344
+  Total blocks: 343
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 344
-  CPS: avg=12.0, median=13.1, max=15.1
-  CPS > target: 65 (18.9%)
+  Total blocks: 343
+  CPS: avg=11.9, median=12.8, max=16.7
+  CPS > target: 55 (16.0%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=54.3, max=84
+  CPL: avg=54.5, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -44,23 +44,23 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
+    #223: CPS=16.7 (75ch/4.5s) "ось гарне місце для тебе, ходи, маєш це гарне місце». Ви хоч..."
+    #222: CPS=15.1 (46ch/3.0s) "Потім ви хочете провести свою Пуджу – «Гаразд,"
     #190: CPS=15.1 (52ch/3.4s) "Але спочатку ви маєте розвинутися, ви маєте дозріти."
-    #280: CPS=15.1 (48ch/3.2s) "щоб знищити цей світ, – поважають звичайні люди."
-    #180: CPS=15.1 (52ch/3.5s) "Ні, у її свідомості вбудовано, що щойно вас укололи,"
+    #332: CPS=15.1 (59ch/3.9s) "але ми повинні опікуватися ними й піклуватися про них, коли"
+    #236: CPS=15.0 (73ch/4.9s) "прагнуть робити все можливе, щоб догодити вам, щоб тримати в..."
+    #267: CPS=15.0 (53ch/3.5s) "Тепер у Мене є Ґатха Намадеви – вона ось така велика,"
     #200: CPS=15.0 (28ch/1.9s) "Тож вони казали: «Але, Мати,"
     #215: CPS=15.0 (20ch/1.3s) "Ви кажете: «Гаразд»."
     #302: CPS=15.0 (40ch/2.7s) "Скажімо, сахаджа йоґ повинен думати: «О,"
     #48: CPS=15.0 (43ch/2.9s) "де є проблема, а потім знову піднімається»."
-    #104: CPS=15.0 (46ch/3.1s) "Я сказала: «Тепер ідіть, дайте їм Реалізацію»."
-    #222: CPS=15.0 (46ch/3.1s) "Потім ви хочете провести свою Пуджу – «Гаразд,"
-    #68: CPS=15.0 (49ch/3.3s) "І ви кажете: «Мати, вона не піднімається, бачите,"
 
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 344
+  UK SRT blocks: 343
   EN SRT blocks: 345
-  Ratio UK/EN: 1.00 (max allowed 2.0)
+  Ratio UK/EN: 0.99 (max allowed 2.0)
   Block count: OK
 
 ============================================================
@@ -75,8 +75,8 @@
   [PASS] UK/EN block count ratio
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 12.0 (target ≤15.0)
-  CPS > 15.0: 65 blocks
+  Avg CPS: 11.9 (target ≤15.0)
+  CPS > 15.0: 55 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 1 blocks
