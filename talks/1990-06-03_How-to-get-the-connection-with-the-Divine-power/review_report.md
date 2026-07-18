@@ -1,17 +1,18 @@
 # Language Review – How to get the connection with the Divine power, 3 June 1990
 
+*Review round 2 (2026-07-18). Round 1 (see git history of this file) normalized
+304 em-dashes → en-dash `–`, 18 `…` → `...`, and fixed Incarnation-pronoun
+casing (Mohammed Saheb, Guru Nanak), `Істина` (para 118), `яма ньяма`,
+`Нірвічара/Нірвікальпа самадхі`, one stage direction, and `міністр`. All those
+fixes were verified as present and correct in the current text. This round is a
+fresh 2+1 pass over the whole transcript.*
+
 ## Process
 
 2+1 agent review (Reviewer L + Reviewer S + Critic) of `transcript_uk.txt`
 against `transcript_en.txt`, `glossary/CLAUDE.md`, `terms_lookup.yaml`, and
-`terms_context.yaml`.
-
-A whole-corpus scan was used to establish the canonical punctuation
-convention: across 76 UK transcripts the en-dash `–` (U+2013) is used 6515
-times in 73 files, vs the em-dash `—` (U+2014) only 959 times in 9 files. This
-file was an outlier, using the em-dash 304 times and the en-dash only once —
-contradicting both the corpus norm and the explicit `glossary/CLAUDE.md` rule
-(`En-dash: – (U+2013) with spaces`).
+`terms_context.yaml`. Paragraph numbers refer to line numbers in
+`transcript_uk.txt`.
 
 ## Results
 
@@ -19,75 +20,97 @@ contradicting both the corpus norm and the explicit `glossary/CLAUDE.md` rule
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | all (304×) | Em-dash `—` (U+2014) used instead of mandated en-dash `–` (U+2013) | `…цими обумовленостями, — ми є Дух…` | replace all `—` → `–` (spacing already correct) |
-| L2 | 44, 68, 82, 97, 99, 103, 108, 111, 134 (18×) | Single-char ellipsis `…` (U+2026) instead of three-dot `...` per glossary | `Власне, Я мала… була…` | replace all `…` → `...` |
-| L3 | 68 | Office title capitalized mid-sentence | `…спершу Міністр охорони здоров’я говорив зі Мною…` | `Міністр` → `міністр` |
-| L4 | 25 | `одягнути` vs prescriptive `надіти` (вбрання) | `…одягнути якесь кумедне вбрання…` | (proposed) `надіти` |
-| L5 | 67 | Doubled consonant in transliterated place name | `…у Коммершіал.` | (proposed) `Комершіал` |
+| L1 | 14 | Частка «би» після слова на голосний (норма чергування: після голосного — «б») | «бо ви мали би це передбачити» | «бо ви мали б це передбачити» |
+| L2 | 28 | Кома перед «або» між однорідними членами | «механізм, механіку, або, можна сказати, техніку» | «механіку або, можна сказати, техніку» |
+| L3 | 33 | Зайва кома перед одиничним «і» між однорідними підрядними означальними | «Хатха Йоґу, яку ми практикуємо, і яка є лише її фізичним боком» | «яку ми практикуємо і яка є лише її фізичним боком» |
+| L4 | 36 | Слововживання: «затопити» щодо людей | «думаємо, що нас затоплять хвилі» | (proposed) «нас потоплять хвилі» |
+| L5 | 39 | Написання іншомовної ініціальної абревіатури | «Навіть Бі-бі-сі в Англії» | «Навіть Бі-Бі-Сі в Англії» |
+| L6 | 51 | Тавтологія + хибна колокація («запалювання» не «запалюється») | «Як ваш автомобіль: запалюється запалювання, ви заводите машину» | «вмикається запалювання, ви заводите машину» |
+| L7 | 71, 76 | Знак питання після непрямого питання | «Вона запитує, що відбувається, коли Кундаліні піднімається?» | (proposed) крапка |
+| L8 | 89 | Прийменник із назвою гірської системи (норма: «в Гімалаях», пор. «в Карпатах», «в Альпах») | «шукають Істину в долинах і на Гімалаях» | «в долинах і в Гімалаях» |
+| L9 | 101 | Неузгоджений дієприслівниковий зворот («споживаючи м’ясо» не стосується підмета «війна») | «що, споживаючи м’ясо, війна колись зможе стати миром» | (proposed) переформулювати |
+| L10 | 104 | «воювати за» (= боротися заради) спотворює зміст EN "fighting on somethings" (= сваритися через щось) | «ви й далі воюватимете за якісь речі, вважаючи себе найкращими» | «воюватимете через якісь речі» |
+| L11 | 114 | Неузгодження числа: однина/множина | «ви маєте знати, що ви людська істота, а не боги» | (proposed) «ви людські істоти, а не боги» |
 
-*No spelling errors, mixed Latin/Cyrillic word-internal characters, missing/extra
-spaces, or quotation-mark deviations were found. Quotes are uniformly `«»`;
-apostrophe is uniformly `’` (U+2019). The lone `–` already in the file (para 54)
-was already correct and left untouched.*
+*No spelling errors, mixed Latin/Cyrillic word-internal characters, or spacing
+defects found. Quotes uniformly `«»` (nested included), dash ` – ` (U+2013)
+with spaces, apostrophe `’` (U+2019), ellipsis `...` — all per convention.
+Particle euphony elsewhere is correct («Я б сказала», «мав би», «могли б»,
+«хотіла б»).*
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 31 (3×) | Pronoun for an Individual Incarnation (Prophet Mohammed Saheb) lowercase | `…навіщо він говорив про воскресіння? Навіщо він говорив… Навіщо він казав…` | `він` → `Він` |
-| S2 | 80 (3×) | Pronoun for an Individual Incarnation (Guru Nanak) lowercase | `…і він сказав… Потім він розділив… він поділив…` | `він` → `Він` |
-| S3 | 118 | `істина` lowercase though it denotes the absolute Truth (uppercase everywhere else: paras 6, 30, 89, 102) | `…ось у чому істина.` | `істина` → `Істина` |
-| S4 | 33 | Glossary term capitalized; `terms_lookup` gives `яма та ньяма` (lowercase) | `…перша частина — це Яма Ньяма…` | `Яма Ньяма` → `яма ньяма` |
-| S5 | 34 (3×) | `Самадхі` capitalized; glossary gives `samadhi → самадхі` (lowercase), qualifier stays capitalized | `Нірвічара Самадхі`, `Нірвікальпа Самадхі` | → `Нірвічара самадхі`, `Нірвікальпа самадхі` |
-| S6 | 7 | Stage-direction casing inconsistent (only non-uppercase one of ~20) | `[Шрі Матаджі сміється]` | `[ШРІ МАТАДЖІ СМІЄТЬСЯ]` |
-| S7 | 102, 117 | Short form `Сахадж` for the org name vs dominant `Сахаджа` | `…суперечить Сахадж Йозі…`, `…ось що таке Сахадж Йоґа…` | (proposed) `Сахаджа` |
-| S8 | 110 | Predicate pronoun for Christ lowercase | `…Я кажу вам, що Він ним був…` | (proposed) `Ним` |
+| S1 | 27 | Транслітерація індійських слів: «г» замість «ґ» (конвенція: індійське g → ґ; пор. «Удранґ» абз. 8, «аґуру, куґуру» абз. 80, «Пінґала» в глосарії) | «Інга» (1×), «Пінга» (2×), «Тінга» (1×) | «Інґа», «Пінґа» (2×), «Тінґа» |
+| S2 | 30 | Те саме — узгодження з абз. 27 | «на такі дурниці, як Інга, Пінга, Тінга» | «як Інґа, Пінґа, Тінґа» |
+| S3 | 33 | Глосарій `terms_lookup.yaml`: "Hatha Yoga → Хатха Йога" (з «г») | «про так звану Хатха Йоґу» | (proposed) «Хатха Йогу» |
+| S4 | 29 | Глосарій: "Dwija → Двіджа" з великої | «називають «двіджаха», що означає «двічі народжений»» | (proposed) «Двіджаха» |
+| S5 | 114, 130 | Займенник до Божественної Сили з малої | «вона може розчинити»; «понад усе вона – океан прощення» | (proposed) «Вона» |
 
-*Deity-pronoun capitalization is otherwise consistent and correct: Shri Mataji
-(Я/Мене/Мій/Моя/Свій/Себе), God (Він/Його/Йому/Ним), Christ (Він/Його), Kundalini
-as Mother (Вона/Її/Їй/Себе), Mother Earth (Вона/Себе) are all uppercase; regular
-people (questioners, the captain, gurus, Sai Baba [portrayed as Maheshasura],
-Freud) are lowercase; reverential `Ви/Ваш` addressed to Shri Mataji by questioners
-is correctly uppercased. Language names (англійська, гінді) and religion adherents
-(християни, юдеї, мусульмани, індуси) are correctly lowercase. `Хатха Йоґу`
-(para 33) follows the ґ transliteration rule and the dominant `Йоґа` form, so it
-was kept (the glossary's `Хатха Йога` entry is internally inconsistent).*
+*Verified without findings this round: усі займенники Шрі Матаджі
+(Я/Мені/Мене/Мій/Моя/Свій/Себе/Мною) — з великої по всьому тексту, включно з
+довгою частиною ведення Реалізації (абз. 114–135); Він/Його — Бог, Христос,
+Мохаммед Сахеб, Ґуру Нанак; «вони» для Інкарнацій у множині (абз. 29) — з
+малої; Вона/Її/Їй для Кундаліні та Матері Землі — з великої, послідовно;
+займенники учасників зустрічі, фальшивих ґуру, Саї Баби, Фрейда — з малої;
+шанобливе «Ви/Вас» до Шрі Матаджі від запитувачів — з великої; «я» в
+афірмаціях шукачів («Матінко, я Дух») — правильно з малої; «сахаджа йоґи» з
+малої, множина на «-и» (абз. 65); Дух, Істина, Реалізація / Самореалізація,
+Інкарнація, Стопи (род. «Стіп», абз. 55), Царство Боже, Божественна Сила,
+Святий Дух — з великої, послідовно; мантра/тантра/янтра/крія/самадхі/аштанга —
+з малої за глосарієм; «Аґія чакра» (зн. «Аґію чакру»), «Калі Юга»,
+«Парамчайтанья», «прохолодний вітерець», «блокується» (catches), «сходження»,
+«живити», «масова Реалізація», «стан усвідомлення без думок» (адаптовано:
+«стаєте усвідомленими без думок») — за глосарієм; звертання «Матінко» в
+афірмаціях — за глосарієм; формули благословення (абз. 135): «Нехай Бог
+благословить усіх вас» — правильний фіксований порядок; назви мов і релігійних
+спільнот — з малої. «Сахадж Йоґа/Йозі» (абз. 102, 117) відповідає EN "Sahaj
+Yoga" і дозволеній варіантності сахадж/сахаджа з `terms_context.yaml`.*
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Glossary mandates `–` (U+2013); corpus norm 73/76 files. Genuine systematic deviation. |
-| L | L2 | **Keep** | Glossary mandates three-dot `...`; corpus plurality (48/76) uses it. Consistent normalization. |
-| L | L3 | **Keep** | Ukrainian orthography: posts/titles lowercase in running text. Mid-sentence → `міністр`. |
-| L | L4 | **Remove** | `одягнути` is widely accepted standard usage; prescriptive `надіти` is a style preference, not an error. |
-| L | L5 | **Remove** | Ukrainian orthography retains source-language doubling in proper names; `Коммершіал` is defensible. |
-| S | S1 | **Keep** | Rule: Individual Incarnations singular → uppercase (Moses is a listed example). Mohammed is a Primordial Master; Christ's pronouns are already uppercased — consistency requires it. |
-| S | S2 | **Keep** | Same rule; Guru Nanak is a Primordial Master / Adi Guru Incarnation. |
-| S | S3 | **Keep** | Glossary: Істина (absolute Truth) uppercase; matches the other 5 occurrences in this transcript. |
-| S | S4 | **Keep** | `terms_lookup.yaml` gives `яма та ньяма` lowercase. |
-| S | S5 | **Keep** | `terms_lookup.yaml` gives `самадхі` lowercase; qualifier `Нірвічара/Нірвікальпа` stays uppercase. |
-| S | S6 | **Keep** | Clear in-document style inconsistency (1 outlier vs ~20 all-caps directions). |
-| S | S7 | **Remove** | `terms_context.yaml` explicitly states `сахаджа`/`сахадж` are interchangeable, at translator's discretion — not an error. |
-| S | S8 | **Remove** | `ним` is a predicate pro-form standing for «Син Божий», not a direct personal reference; capitalizing it (`Він Ним був`) reads as «He was Him» and risks confusion. Original acceptable. |
+| L | L1 | **Keep** | Правило чергування б/би: після голосного — «б»; решта тексту нормі відповідає, це одиничний відхил. |
+| L | L2 | **Remove** | Хибне спрацювання: «або» тут пояснювальне (= «тобто», EN "or you can say"), кома перед пояснювальним «або» правильна. |
+| L | L3 | **Keep** | Однорідні підрядні означальні з одиничним «і» комою не розділяються — справжня пунктуаційна помилка. |
+| L | L4 | **Remove** | «Затопити» засвідчене у значенні «поглинути водою»; заміна — стилістичний смак, не помилка. |
+| L | L5 | **Keep** | Правопис-2019: іншомовні ініціальні абревіатури — з великих через дефіс: «Бі-Бі-Сі». |
+| L | L6 | **Keep** | Тавтологія з хибною колокацією; нормативно запалювання «вмикається». Зміст не зачеплено. |
+| L | L7 | **Remove** | Обидва місця — живе перепитування йоґа-перекладача з питальною інтонацією; в EN теж «?». Крапка зруйнувала б розмовний регістр. |
+| L | L8 | **Keep** | Норма сполучуваності: «в Гімалаях»; «на Гімалаях» — калька з EN "on the Himalayas". |
+| L | L9 | **Remove** | Оригінал так само зламаний ("if you believe that by eating meat, war can ever be at peace") — переклад свідомо віддзеркалює плутану репліку із зали; «виправлення» дописувало б за мовця. |
+| L | L10 | **Keep** | EN "fighting on somethings" = сваритися через щось; «воювати за» перевертає зміст (боротися заради). Мінімальна заміна прийменника відновлює сенс. |
+| L | L11 | **Remove** | Дзеркалить зламаний оригінал "you are a human being and you are not Gods"; вирівнювання числа — редагування мовлення Шрі Матаджі, не мовна правка. |
+| S | S1 | **Keep** | Конвенція транслітерації (індійське g → ґ) + внутрішня послідовність: у цьому ж тексті «Удранґ», «аґуру», «куґуру», «йоґа». |
+| S | S2 | **Keep** | Те саме виправлення в абз. 30 — інакше рознобій «Інґа» (27) / «Інга» (30). |
+| S | S3 | **Remove** | Словникова стаття внутрішньо суперечлива (той самий глосарій: "Yoga → Йоґа", "Sahaja Yoga → Сахаджа Йоґа"); заміна на «Йогу» створила б рознобій у межах абзацу («у Йозі… Хатха Йогу»). Те саме рішення ухвалив Критик у раунді 1. |
+| S | S4 | **Remove** | «двіджаха» — цитоване санскритське слово в поясненні, а не термін-заголовок; велика літера в глосарії стосується словникової форми. |
+| S | S5 | **Remove** | Правила великої літери охоплюють Шрі Матаджі та Інкарнації; для займенників Божественної Сили правило не визначене, текст внутрішньо послідовний (мала в обох місцях). Не помилка. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | all (304×) | em-dash `—` | `–` (en-dash, U+2013) |
-| 2 | 18× | ellipsis `…` | `...` (three dots) |
-| 3 | 68 | `Міністр охорони здоров’я` | `міністр охорони здоров’я` |
-| 4 | 31 (3×) | `він` (Mohammed Saheb) | `Він` |
-| 5 | 80 (3×) | `він` (Guru Nanak) | `Він` |
-| 6 | 118 | `ось у чому істина` | `ось у чому Істина` |
-| 7 | 33 | `Яма Ньяма` | `яма ньяма` |
-| 8 | 34 (3×) | `Нірвічара/Нірвікальпа Самадхі` | `Нірвічара/Нірвікальпа самадхі` |
-| 9 | 7 | `[Шрі Матаджі сміється]` | `[ШРІ МАТАДЖІ СМІЄТЬСЯ]` |
+| 1 | 14 | «бо ви мали би це передбачити» | «бо ви мали б це передбачити» |
+| 2 | 27 | «Інга», «Пінга» (2×), «Тінга» | «Інґа», «Пінґа» (2×), «Тінґа» |
+| 3 | 30 | «як Інга, Пінга, Тінга» | «як Інґа, Пінґа, Тінґа» |
+| 4 | 33 | «яку ми практикуємо, і яка є…» | «яку ми практикуємо і яка є…» (кому знято) |
+| 5 | 39 | «Бі-бі-сі» | «Бі-Бі-Сі» |
+| 6 | 51 | «запалюється запалювання» | «вмикається запалювання» |
+| 7 | 89 | «в долинах і на Гімалаях» | «в долинах і в Гімалаях» |
+| 8 | 104 | «воюватимете за якісь речі» | «воюватимете через якісь речі» |
 
 ## Summary
 
-- Language (L): 5 issues found, 3 approved by Critic
-- SY Domain (S): 8 issues found, 6 approved by Critic
-- Total corrections applied: 9 distinct fixes covering 335 textual edits
-  (304 em-dashes, 18 ellipses, and 13 targeted word/casing corrections)
+- Language (L): 11 issues found, 6 approved by Critic
+- SY Domain (S): 5 issues found, 2 approved by Critic
+- Total corrections applied: 8 distinct fixes (13 token replacements across 8 paragraphs)
+
+The translation is in strong shape after round 1: deity-pronoun capitalization,
+glossary terminology, and punctuation conventions are consistent throughout.
+Round 2 fixes are limited to one particle-euphony slip, two punctuation/
+orthography corrections, one collocation fix, one preposition norm, one
+meaning-restoring preposition, and the г→ґ transliteration of the three TM
+mantra names.
