@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-18T14:28:26.670972+00:00",
+  "updated_at": "2026-07-18T14:39:58.234439+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -492,7 +492,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 432,
-      "updated_at": "2026-06-15T05:39:34Z"
+      "updated_at": "2026-07-18T14:39:45Z"
     },
     "2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha": {
       "status": "pending",
