@@ -1,0 +1,56 @@
+// Pure helpers for the "my work" mine-filter extension: classify the
+// signed-in user's PRs/issues (one /issues?creator= query) and map them onto
+// talks. Loaded as a plain <script> by the SPA and require()d by the Node
+// test suite — single source, same pattern as talk_slug.js.
+
+// Title contracts (producers): edit_sync.js draft PRs, takeForReview issues,
+// marker_sync.js issues; fallback = first date-slug token anywhere in the
+// title (manual/legacy items). Extracted ids are validated against the
+// manifest by buildMyWork, so a false-positive fallback match is harmless.
+function parseTalkIdFromTitle(title) {
+  if (!title) return null;
+  var m = /^Edit sync: (\S+) \(/.exec(title)
+    || /^Review: (\S+)\s*$/.exec(title)
+    || /^Markers: (\S+) \/ /.exec(title)
+    || /(\d{4}-\d{2}-\d{2}_\S+)/.exec(title);
+  return m ? m[1] : null;
+}
+
+function classifyWorkRow(row) {
+  var talkId = parseTalkIdFromTitle(row && row.title);
+  if (!talkId) return null;
+  var isPr = !!(row.pull_request);
+  var state = (isPr && row.pull_request.merged_at) ? 'merged'
+    : row.state === 'open' ? 'open' : 'closed';
+  return { talkId: talkId, kind: isPr ? 'pr' : 'issue', state: state,
+    number: row.number, url: row.html_url };
+}
+
+function buildMyWork(rows, knownIds) {
+  var map = {};
+  (rows || []).forEach(function (row) {
+    var item = classifyWorkRow(row);
+    if (!item || !knownIds[item.talkId]) return;
+    (map[item.talkId] = map[item.talkId] || []).push(item);
+  });
+  Object.keys(map).forEach(function (id) {
+    map[id].sort(function (a, b) { return a.number - b.number; });
+  });
+  return map;
+}
+
+// Mode filter: normal mode counts only open items; expert counts all states.
+function myWorkItemsFor(workMap, talkId, expertMode) {
+  var items = (workMap && workMap[talkId]) || [];
+  if (expertMode) return items;
+  return items.filter(function (i) { return i.state === 'open'; });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    parseTalkIdFromTitle: parseTalkIdFromTitle,
+    classifyWorkRow: classifyWorkRow,
+    buildMyWork: buildMyWork,
+    myWorkItemsFor: myWorkItemsFor,
+  };
+}
