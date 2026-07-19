@@ -989,3 +989,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 .gh-avatar-wrap.gh-avatar--readonly .gh-avatar-badge {
   display: block;
 }
+
+/* "My work" mine-filter — separator between "assigned to me" and
+   "work I started" groups (both modes) */
+.talk-sep { display: flex; align-items: center; gap: 10px; margin: 18px 0 10px;
+  font-size: 12px; color: var(--fg5); text-transform: uppercase; letter-spacing: .06em; }
+.talk-sep::before, .talk-sep::after { content: ""; flex: 1; border-top: 1px solid var(--border2); }
+
+/* "My work" badges (expert mode only): PR/issue links on a talk card,
+   pushed to the right edge of the .talk-actions row */
+.work-badges { margin-left: auto; display: inline-flex; gap: 6px; }
+.talk-actions a.work-badge { border-radius: var(--radius-pill); font-family: var(--f-mono); }
+.talk-actions a.work-badge--open { color: var(--accent-orange); }
+.talk-actions a.work-badge--merged { color: var(--accent-green); }
+.talk-actions a.work-badge--closed { color: var(--fg5); }
