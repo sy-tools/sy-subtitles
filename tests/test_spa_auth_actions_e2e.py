@@ -59,6 +59,20 @@ MOCK_TREE = {
     ],
 }
 
+SECOND_TALK = "2002-02-02_Second-Talk"
+
+TWO_TALK_TREE = {
+    "sha": "tree2",
+    "tree": MOCK_TREE["tree"]
+    + [
+        {"path": f"talks/{SECOND_TALK}/Test-Video/final/uk.srt", "type": "blob"},
+        {"path": f"talks/{SECOND_TALK}/Test-Video/source/en.srt", "type": "blob"},
+        {"path": f"talks/{SECOND_TALK}/meta.yaml", "type": "blob"},
+        {"path": f"talks/{SECOND_TALK}/transcript_en.txt", "type": "blob"},
+        {"path": f"talks/{SECOND_TALK}/transcript_uk.txt", "type": "blob"},
+    ],
+}
+
 REVIEW_STATUS_UNASSIGNED = {
     "version": 1,
     "updated_at": "2026-07-12T00:00:00Z",
@@ -147,7 +161,7 @@ def _record(calls):
     return handler_for
 
 
-def _wire(pg, calls, review_status):
+def _wire(pg, calls, review_status, tree=None):
     """Read mocks first, then write mocks (later-registered routes win)."""
     h = _record(calls)
     pg.route(
@@ -156,7 +170,7 @@ def _wire(pg, calls, review_status):
             status=200,
             content_type="application/json",
             headers={"ETag": '"e2e"'},
-            body=json.dumps(MOCK_TREE),
+            body=json.dumps(tree if tree is not None else MOCK_TREE),
         ),
     )
     # Repo root: the write-access probe — full access, so the signed-in write
@@ -168,6 +182,13 @@ def _wire(pg, calls, review_status):
             content_type="application/json",
             body=json.dumps({"permissions": {"push": True, "pull": True}}),
         ),
+    )
+    # "My work" creator query — empty by default so signed-in tests keep the
+    # assigned-only behaviour unless a test overrides this route (a route
+    # registered later wins in Playwright).
+    pg.route(
+        "**/api.github.com/repos/**/issues?creator=*",
+        lambda r: r.fulfill(status=200, content_type="application/json", body="[]"),
     )
     pg.route("**/raw.githubusercontent.com/**", lambda r: r.fulfill(status=404, body="not found"))
     pg.route(
@@ -226,10 +247,10 @@ def _wire(pg, calls, review_status):
     )
 
 
-def _page(browser, calls, review_status, signed_in=True):
+def _page(browser, calls, review_status, signed_in=True, tree=None):
     ctx = browser.new_context()
     pg = ctx.new_page()
-    _wire(pg, calls, review_status)
+    _wire(pg, calls, review_status, tree=tree)
     pg.add_init_script(
         "localStorage.removeItem('sy_tree_cache__main');localStorage.removeItem('sy_review_status__main');"
     )
@@ -438,4 +459,146 @@ def test_add_talk_creates_pr_when_signed_in(server, browser):
     refs = next(c for c in calls if c["url"].endswith("/git/refs"))
     assert refs["body"]["ref"].startswith("refs/heads/add-talk/2002-02-02_Brand-New-Talk--tester--")
     assert pg.evaluate("window.__opened[0]") == "https://github.com/sy-tools/sy-subtitles/pull/9"
+    ctx.close()
+
+
+# ============================================================
+# "My work" mine-filter extension (assigned + my PRs/issues)
+# ============================================================
+
+
+def _my_work_rows_route(pg, rows):
+    pg.route(
+        "**/api.github.com/repos/**/issues?creator=*",
+        lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(rows)),
+    )
+
+
+def _mine_chip_num(pg):
+    return pg.locator(".stat-card[data-filter='mine'] .num").text_content()
+
+
+def test_mine_filter_groups_started_work_with_separator(server, browser):
+    # 2001 assigned to tester; 2002 has tester's open sync PR (not assigned).
+    review_status = {
+        "version": 1,
+        "talks": {
+            "2001-01-01_Test-Talk": {"status": "in-progress", "reviewer": "tester", "issue_number": 42},
+        },
+    }
+    ctx, pg = _page(browser, [], review_status, tree=TWO_TALK_TREE)
+    _my_work_rows_route(
+        pg,
+        [
+            {
+                "number": 101,
+                "title": f"Edit sync: {SECOND_TALK} (tester)",
+                "state": "open",
+                "html_url": "https://github.com/sy-tools/sy-subtitles/pull/101",
+                "pull_request": {"merged_at": None},
+            },
+        ],
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    # The creator query resolves async after first render — wait for the union count.
+    pg.wait_for_function(
+        "document.querySelector(\".stat-card[data-filter='mine'] .num\")"
+        " && document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent === '2'",
+        timeout=10000,
+    )
+    pg.click(".stat-card[data-filter='mine']")
+    pg.wait_for_selector(".talk-sep", timeout=5000)
+    items = pg.locator("#index-content .talk-item, #index-content .talk-sep")
+    # Order: assigned card, separator, started card.
+    assert items.count() == 3
+    assert "talk-sep" in items.nth(1).get_attribute("class")
+    # Normal mode renders no badges.
+    assert pg.locator(".work-badge").count() == 0
+    ctx.close()
+
+
+def test_expert_mode_shows_badges_and_counts_closed_items(server, browser):
+    # Only work item = a CLOSED marker issue on 2002: invisible in normal
+    # mode, counted + badged in expert mode.
+    review_status = {"version": 1, "talks": {}}
+    ctx, pg = _page(browser, [], review_status, tree=TWO_TALK_TREE)
+    _my_work_rows_route(
+        pg,
+        [
+            {
+                "number": 55,
+                "title": f"Markers: {SECOND_TALK} / Test-Video",
+                "state": "closed",
+                "html_url": "https://github.com/sy-tools/sy-subtitles/issues/55",
+            },
+        ],
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".stat-card[data-filter='mine']", timeout=10000)
+    assert _mine_chip_num(pg) == "0"
+    pg.evaluate("SPA.toggleExpert()")
+    pg.wait_for_function(
+        "document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent === '1'",
+        timeout=5000,
+    )
+    pg.click(".stat-card[data-filter='mine']")
+    badge = pg.wait_for_selector(".work-badge--closed", timeout=5000)
+    assert badge.get_attribute("href").endswith("/issues/55")
+    assert badge.text_content().strip() == "#55"
+    ctx.close()
+
+
+def test_mine_excludes_approved_talks_in_normal_mode(server, browser):
+    # 2002 is approved but has tester's OPEN PR: hidden in normal mode,
+    # shown in expert mode (spec decision).
+    review_status = {
+        "version": 1,
+        "talks": {
+            SECOND_TALK: {"status": "approved", "reviewer": "someone-else", "issue_number": 43},
+        },
+    }
+    ctx, pg = _page(browser, [], review_status, tree=TWO_TALK_TREE)
+    _my_work_rows_route(
+        pg,
+        [
+            {
+                "number": 101,
+                "title": f"Edit sync: {SECOND_TALK} (tester)",
+                "state": "open",
+                "html_url": "https://github.com/sy-tools/sy-subtitles/pull/101",
+                "pull_request": {"merged_at": None},
+            },
+        ],
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".stat-card[data-filter='mine']", timeout=10000)
+    # Give the async creator fetch time to land, then assert it stayed 0.
+    pg.wait_for_timeout(1500)
+    assert _mine_chip_num(pg) == "0"
+    pg.evaluate("SPA.toggleExpert()")
+    pg.wait_for_function(
+        "document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent === '1'",
+        timeout=5000,
+    )
+    ctx.close()
+
+
+def test_my_work_fetch_failure_falls_back_to_assigned_only(server, browser):
+    review_status = {
+        "version": 1,
+        "talks": {
+            "2001-01-01_Test-Talk": {"status": "in-progress", "reviewer": "tester", "issue_number": 42},
+        },
+    }
+    ctx, pg = _page(browser, [], review_status)
+    pg.route(
+        "**/api.github.com/repos/**/issues?creator=*",
+        lambda r: r.fulfill(status=500, content_type="application/json", body="{}"),
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_function(
+        "document.querySelector(\".stat-card[data-filter='mine'] .num\")"
+        " && document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent === '1'",
+        timeout=10000,
+    )
     ctx.close()
