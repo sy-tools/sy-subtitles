@@ -177,6 +177,30 @@ function listIssuesByLabel(api, token, label, fetchImpl) {
   return fetchPage(1, []);
 }
 
+// GET /issues?creator=<login>&state=all — the Issues LIST API returns both
+// issues and PRs (PR rows carry a pull_request key, merged_at when merged).
+// One paged query serves the "my work" mine-filter in both normal and expert
+// mode; open/closed filtering happens client-side. Same pagination contract
+// as listIssuesByLabel (short page stops, MAX_PAGES runaway backstop).
+function listIssuesByCreator(api, token, creator, fetchImpl) {
+  var PER_PAGE = 100, MAX_PAGES = 20;
+  var base = api + '/issues?creator=' + encodeURIComponent(creator)
+    + '&state=all&per_page=' + PER_PAGE;
+  function mapRow(r) {
+    return { number: r.number, title: r.title, state: r.state, html_url: r.html_url,
+      pull_request: r.pull_request ? { merged_at: r.pull_request.merged_at || null } : null };
+  }
+  function fetchPage(page, acc) {
+    return ghJson(base + '&page=' + page, token, null, fetchImpl).then(function (list) {
+      var rows = list || [];
+      acc = acc.concat(rows.map(mapRow));
+      if (rows.length === PER_PAGE && page < MAX_PAGES) return fetchPage(page + 1, acc);
+      return acc;
+    });
+  }
+  return fetchPage(1, []);
+}
+
 // POST /labels — idempotent; a 422 "already exists" is success.
 function ensureLabel(api, token, name, fetchImpl) {
   return ghJson(api + '/labels', token, { method: 'POST', body: { name: name } }, fetchImpl)
@@ -371,6 +395,7 @@ if (typeof module !== 'undefined' && module.exports) {
     updateIssue: updateIssue,
     setIssueState: setIssueState,
     listIssuesByLabel: listIssuesByLabel,
+    listIssuesByCreator: listIssuesByCreator,
     ensureLabel: ensureLabel,
     addAssignees: addAssignees,
     getBranchHeadSha: getBranchHeadSha,
