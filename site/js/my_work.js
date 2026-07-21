@@ -26,8 +26,17 @@ function classifyWorkRow(row) {
   var talkId = parseTalkIdFromTitle(row && row.title);
   if (!talkId) return null;
   var isPr = !!(row.pull_request);
-  var state = (isPr && row.pull_request.merged_at) ? 'merged'
-    : row.state === 'open' ? 'open' : 'closed';
+  var state;
+  if (isPr) {
+    // PR states the user cares about: draft / open / merged. A closed
+    // UNMERGED PR is noise (mostly sync PRs auto-closed by edit-sync
+    // teardown after a revert) — excluded entirely.
+    if (row.pull_request.merged_at) state = 'merged';
+    else if (row.state !== 'open') return null;
+    else state = row.draft ? 'draft' : 'open';
+  } else {
+    state = row.state === 'open' ? 'open' : 'closed';
+  }
   return { talkId: talkId, kind: isPr ? 'pr' : 'issue', state: state,
     number: row.number, url: row.html_url };
 }
@@ -45,11 +54,12 @@ function buildMyWork(rows, knownIds) {
   return map;
 }
 
-// Mode filter: normal mode counts only open items; expert counts all states.
+// Mode filter: normal mode counts only ACTIVE items (open + draft — draft
+// sync PRs are the primary kind of ongoing work); expert counts all states.
 function myWorkItemsFor(workMap, talkId, expertMode) {
   var items = (workMap && workMap[talkId]) || [];
   if (expertMode) return items;
-  return items.filter(function (i) { return i.state === 'open'; });
+  return items.filter(function (i) { return i.state === 'open' || i.state === 'draft'; });
 }
 
 if (typeof module !== 'undefined' && module.exports) {

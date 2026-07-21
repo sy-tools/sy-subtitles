@@ -555,19 +555,23 @@ describe('listIssuesByCreator', () => {
       });
     };
   }
-  it('GETs /issues?creator&state=all and maps rows (pull_request kept)', async () => {
+  it('GETs /issues?creator&state=all and maps rows (pull_request + draft kept)', async () => {
     const seen = [];
     const rows = await listIssuesByCreator(API, 't', 'tester', pagedFetch([[
       { number: 1, title: 'Review: x', state: 'open', html_url: 'u1', node_id: 'n1' },
       { number: 2, title: 'Edit sync: x (tester)', state: 'closed', html_url: 'u2',
         pull_request: { merged_at: '2026-07-01T00:00:00Z', url: 'p2' } },
+      { number: 3, title: 'Edit sync: y (tester)', state: 'open', html_url: 'u3', draft: true,
+        pull_request: { merged_at: null, url: 'p3' } },
     ]], seen));
     assert.strictEqual(seen.length, 1);
     assert.match(seen[0], /\/issues\?creator=tester&state=all&per_page=100&page=1$/);
     assert.deepStrictEqual(rows, [
-      { number: 1, title: 'Review: x', state: 'open', html_url: 'u1', pull_request: null },
-      { number: 2, title: 'Edit sync: x (tester)', state: 'closed', html_url: 'u2',
+      { number: 1, title: 'Review: x', state: 'open', html_url: 'u1', draft: false, pull_request: null },
+      { number: 2, title: 'Edit sync: x (tester)', state: 'closed', html_url: 'u2', draft: false,
         pull_request: { merged_at: '2026-07-01T00:00:00Z' } },
+      { number: 3, title: 'Edit sync: y (tester)', state: 'open', html_url: 'u3', draft: true,
+        pull_request: { merged_at: null } },
     ]);
   });
   it('pages until a short page', async () => {

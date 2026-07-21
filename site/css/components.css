@@ -1001,5 +1001,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 .work-badges { margin-left: auto; display: inline-flex; gap: 6px; }
 .talk-actions a.work-badge { border-radius: var(--radius-pill); font-family: var(--f-mono); }
 .talk-actions a.work-badge--open { color: var(--accent-orange); }
+.talk-actions a.work-badge--draft { color: var(--accent-orange); border-style: dashed; }
 .talk-actions a.work-badge--merged { color: var(--accent-green); }
 .talk-actions a.work-badge--closed { color: var(--fg5); }

@@ -43,14 +43,19 @@ describe('classifyWorkRow', () => {
     assert.strictEqual(r.kind, 'pr');
     assert.strictEqual(r.state, 'open');
   });
+  it('classifies a draft PR as its own state', () => {
+    const r = classifyWorkRow({ ...base, state: 'open', draft: true,
+      pull_request: { merged_at: null } });
+    assert.strictEqual(r.state, 'draft');
+  });
   it('classifies a merged PR (closed + merged_at)', () => {
     const r = classifyWorkRow({ ...base, state: 'closed',
       pull_request: { merged_at: '2026-07-01T00:00:00Z' } });
     assert.strictEqual(r.state, 'merged');
   });
-  it('classifies a closed-unmerged PR (teardown-closed sync PR)', () => {
-    const r = classifyWorkRow({ ...base, state: 'closed', pull_request: { merged_at: null } });
-    assert.strictEqual(r.state, 'closed');
+  it('excludes a closed-unmerged PR (teardown-closed sync noise)', () => {
+    assert.strictEqual(
+      classifyWorkRow({ ...base, state: 'closed', pull_request: { merged_at: null } }), null);
   });
   it('returns null for an unmappable title', () => {
     assert.strictEqual(classifyWorkRow({ number: 1, title: 'nope', state: 'open', html_url: 'u' }), null);
@@ -77,12 +82,13 @@ describe('myWorkItemsFor', () => {
     { talkId: TALK, kind: 'pr', state: 'open', number: 1, url: 'u1' },
     { talkId: TALK, kind: 'pr', state: 'merged', number: 2, url: 'u2' },
     { talkId: TALK, kind: 'issue', state: 'closed', number: 3, url: 'u3' },
+    { talkId: TALK, kind: 'pr', state: 'draft', number: 4, url: 'u4' },
   ] };
-  it('normal mode returns only open items', () => {
-    assert.deepStrictEqual(myWorkItemsFor(map, TALK, false).map((i) => i.number), [1]);
+  it('normal mode returns active items (open + draft)', () => {
+    assert.deepStrictEqual(myWorkItemsFor(map, TALK, false).map((i) => i.number), [1, 4]);
   });
   it('expert mode returns all states', () => {
-    assert.deepStrictEqual(myWorkItemsFor(map, TALK, true).map((i) => i.number), [1, 2, 3]);
+    assert.deepStrictEqual(myWorkItemsFor(map, TALK, true).map((i) => i.number), [1, 2, 3, 4]);
   });
   it('tolerates a null map and unknown talk', () => {
     assert.deepStrictEqual(myWorkItemsFor(null, TALK, true), []);

@@ -500,13 +500,22 @@ def test_mine_filter_groups_started_work_with_separator(server, browser):
                 "pull_request": {"merged_at": None},
             },
             # Merged PR on the assigned talk: invisible in normal mode
-            # (open-only), a --merged badge in expert mode.
+            # (active-only), a --merged badge in expert mode.
             {
                 "number": 90,
                 "title": "Edit sync: 2001-01-01_Test-Talk (tester)",
                 "state": "closed",
                 "html_url": "https://github.com/sy-tools/sy-subtitles/pull/90",
                 "pull_request": {"merged_at": "2026-07-01T00:00:00Z"},
+            },
+            # Draft PR on the assigned talk: a dashed --draft badge in expert.
+            {
+                "number": 102,
+                "title": "Edit sync: 2001-01-01_Test-Talk (tester)",
+                "state": "open",
+                "draft": True,
+                "html_url": "https://github.com/sy-tools/sy-subtitles/pull/102",
+                "pull_request": {"merged_at": None},
             },
         ],
     )
@@ -539,6 +548,8 @@ def test_mine_filter_groups_started_work_with_separator(server, browser):
     merged_badge = pg.locator(".work-badge--merged")
     assert merged_badge.get_attribute("href").endswith("/pull/90")
     assert merged_badge.text_content().strip() == "PR #90"
+    draft_badge = pg.locator(".work-badge--draft")
+    assert draft_badge.get_attribute("href").endswith("/pull/102")
     ctx.close()
 
 
@@ -557,6 +568,14 @@ def test_expert_mode_shows_badges_and_counts_closed_items(server, browser):
                 "state": "closed",
                 "html_url": "https://github.com/sy-tools/sy-subtitles/issues/55",
             },
+            # Closed-UNMERGED PR (teardown noise): excluded even in expert.
+            {
+                "number": 40,
+                "title": f"Edit sync: {SECOND_TALK} (tester)",
+                "state": "closed",
+                "html_url": "https://github.com/sy-tools/sy-subtitles/pull/40",
+                "pull_request": {"merged_at": None},
+            },
         ],
         calls=creator_calls,
     )
@@ -574,6 +593,8 @@ def test_expert_mode_shows_badges_and_counts_closed_items(server, browser):
     badge = pg.wait_for_selector(".work-badge--closed", timeout=5000)
     assert badge.get_attribute("href").endswith("/issues/55")
     assert badge.text_content().strip() == "#55"
+    # The closed-unmerged PR #40 renders no badge at all (excluded as noise).
+    assert pg.locator(".work-badge").count() == 1
     # The expert toggle filters cached data at read time — no refetch.
     assert len(creator_calls) == 1
     ctx.close()

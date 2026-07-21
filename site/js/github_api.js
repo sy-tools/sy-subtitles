@@ -188,6 +188,7 @@ function listIssuesByCreator(api, token, creator, fetchImpl) {
     + '&state=all&per_page=' + PER_PAGE;
   function mapRow(r) {
     return { number: r.number, title: r.title, state: r.state, html_url: r.html_url,
+      draft: !!r.draft,
       pull_request: r.pull_request ? { merged_at: r.pull_request.merged_at || null } : null };
   }
   function fetchPage(page, acc) {
