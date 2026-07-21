@@ -467,11 +467,13 @@ def test_add_talk_creates_pr_when_signed_in(server, browser):
 # ============================================================
 
 
-def _my_work_rows_route(pg, rows):
-    pg.route(
-        "**/api.github.com/repos/**/issues?creator=*",
-        lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(rows)),
-    )
+def _my_work_rows_route(pg, rows, calls=None):
+    def handle(route):
+        if calls is not None:
+            calls.append(route.request.url)
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(rows))
+
+    pg.route("**/api.github.com/repos/**/issues?creator=*", handle)
 
 
 def _mine_chip_num(pg):
@@ -497,6 +499,15 @@ def test_mine_filter_groups_started_work_with_separator(server, browser):
                 "html_url": "https://github.com/sy-tools/sy-subtitles/pull/101",
                 "pull_request": {"merged_at": None},
             },
+            # Merged PR on the assigned talk: invisible in normal mode
+            # (open-only), a --merged badge in expert mode.
+            {
+                "number": 90,
+                "title": "Edit sync: 2001-01-01_Test-Talk (tester)",
+                "state": "closed",
+                "html_url": "https://github.com/sy-tools/sy-subtitles/pull/90",
+                "pull_request": {"merged_at": "2026-07-01T00:00:00Z"},
+            },
         ],
     )
     pg.goto(f"{server}{SPA_URL}")
@@ -514,6 +525,20 @@ def test_mine_filter_groups_started_work_with_separator(server, browser):
     assert "talk-sep" in items.nth(1).get_attribute("class")
     # Normal mode renders no badges.
     assert pg.locator(".work-badge").count() == 0
+    # Expert mode: the separator still splits the mine list, and badges
+    # carry state-specific classes + GitHub links (open and merged here;
+    # the closed state is covered by the expert-badges test).
+    pg.evaluate("SPA.toggleExpert()")
+    pg.click(".stat-card[data-filter='mine']")
+    pg.wait_for_selector(".talk-sep", timeout=5000)
+    expert_items = pg.locator("#index-content .talk-item, #index-content .talk-sep")
+    assert expert_items.count() == 3
+    assert "talk-sep" in expert_items.nth(1).get_attribute("class")
+    open_badge = pg.wait_for_selector(".work-badge--open", timeout=5000)
+    assert open_badge.get_attribute("href").endswith("/pull/101")
+    merged_badge = pg.locator(".work-badge--merged")
+    assert merged_badge.get_attribute("href").endswith("/pull/90")
+    assert merged_badge.text_content().strip() == "PR #90"
     ctx.close()
 
 
@@ -521,6 +546,7 @@ def test_expert_mode_shows_badges_and_counts_closed_items(server, browser):
     # Only work item = a CLOSED marker issue on 2002: invisible in normal
     # mode, counted + badged in expert mode.
     review_status = {"version": 1, "talks": {}}
+    creator_calls = []
     ctx, pg = _page(browser, [], review_status, tree=TWO_TALK_TREE)
     _my_work_rows_route(
         pg,
@@ -532,6 +558,7 @@ def test_expert_mode_shows_badges_and_counts_closed_items(server, browser):
                 "html_url": "https://github.com/sy-tools/sy-subtitles/issues/55",
             },
         ],
+        calls=creator_calls,
     )
     pg.goto(f"{server}{SPA_URL}")
     pg.wait_for_selector(".stat-card[data-filter='mine']", timeout=10000)
@@ -541,10 +568,14 @@ def test_expert_mode_shows_badges_and_counts_closed_items(server, browser):
         "document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent === '1'",
         timeout=5000,
     )
+    # Badges show on any filter in expert mode — visible before entering 'mine'.
+    pg.wait_for_selector(".work-badge--closed", timeout=5000)
     pg.click(".stat-card[data-filter='mine']")
     badge = pg.wait_for_selector(".work-badge--closed", timeout=5000)
     assert badge.get_attribute("href").endswith("/issues/55")
     assert badge.text_content().strip() == "#55"
+    # The expert toggle filters cached data at read time — no refetch.
+    assert len(creator_calls) == 1
     ctx.close()
 
 
@@ -580,6 +611,30 @@ def test_mine_excludes_approved_talks_in_normal_mode(server, browser):
         "document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent === '1'",
         timeout=5000,
     )
+    ctx.close()
+
+
+def test_read_only_session_never_fires_the_creator_query(server, browser):
+    # A signed-in session WITHOUT repo write access is functionally signed
+    # out: no mine chip, and the my-work query must not fire at all.
+    creator_calls = []
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _my_work_rows_route(pg, [], calls=creator_calls)
+    # Degraded state: cached no-write flag + a probe that confirms it.
+    pg.route(
+        "**/api.github.com/repos/sy-tools/sy-subtitles",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"permissions": {"push": False, "pull": True}}),
+        ),
+    )
+    pg.add_init_script("localStorage.setItem('sy_gh_no_write', '1');")
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".stat-card", timeout=10000)
+    assert pg.locator(".stat-card[data-filter='mine']").count() == 0
+    pg.wait_for_timeout(800)
+    assert creator_calls == []
     ctx.close()
 
 
