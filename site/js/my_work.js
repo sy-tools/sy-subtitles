@@ -17,6 +17,12 @@ function parseTalkIdFromTitle(title) {
 }
 
 function classifyWorkRow(row) {
+  // "Review: <id>" issues are tracking artifacts: whoever clicks
+  // take-for-review first CREATES the issue, but the review belongs to the
+  // ASSIGNEE — and assignment is already the "mine" source via the
+  // review-status reviewer field. Counting them by creator pulled talks
+  // reviewed by OTHERS into "work I started" (live bug: issue #2).
+  if (row && /^Review: /.test(row.title || '')) return null;
   var talkId = parseTalkIdFromTitle(row && row.title);
   if (!talkId) return null;
   var isPr = !!(row.pull_request);

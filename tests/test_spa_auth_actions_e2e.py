@@ -657,3 +657,33 @@ def test_my_work_fetch_failure_falls_back_to_assigned_only(server, browser):
         timeout=10000,
     )
     ctx.close()
+
+
+def test_review_issue_i_created_for_someone_elses_review_is_not_my_work(server, browser):
+    # Live bug: the user CREATED "Review: <talk>" (take-for-review does that),
+    # the review was then taken over by another person. The talk must NOT
+    # land in "work I started" — creating the tracking issue is not doing
+    # the work; assignment (the reviewer field) is the only review signal.
+    review_status = {
+        "version": 1,
+        "talks": {
+            SECOND_TALK: {"status": "in-progress", "reviewer": "someone-else", "issue_number": 2},
+        },
+    }
+    ctx, pg = _page(browser, [], review_status, tree=TWO_TALK_TREE)
+    _my_work_rows_route(
+        pg,
+        [
+            {
+                "number": 2,
+                "title": f"Review: {SECOND_TALK}",
+                "state": "open",
+                "html_url": "https://github.com/sy-tools/sy-subtitles/issues/2",
+            },
+        ],
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".stat-card[data-filter='mine']", timeout=10000)
+    pg.wait_for_timeout(1500)  # let the async creator fetch land
+    assert _mine_chip_num(pg) == "0"
+    ctx.close()

@@ -22,7 +22,15 @@ describe('parseTalkIdFromTitle', () => {
 });
 
 describe('classifyWorkRow', () => {
-  const base = { number: 7, title: `Review: ${TALK}`, html_url: 'https://x/7' };
+  const base = { number: 7, title: `Markers: ${TALK} / Test-Video`, html_url: 'https://x/7' };
+  it('excludes "Review:" tracking issues — creating one is not doing the work', () => {
+    // A "Review: <id>" issue is a tracking artifact whoever clicks
+    // take-for-review first; the review's owner is the ASSIGNEE (the
+    // reviewer field), which the assigned source already covers. Without
+    // this exclusion, a talk someone else reviews shows up in the
+    // creator's "work I started" group (live bug: issue #2 Guru-Puja).
+    assert.strictEqual(classifyWorkRow({ number: 2, title: `Review: ${TALK}`, state: 'open', html_url: 'u2' }), null);
+  });
   it('classifies an open issue', () => {
     assert.deepStrictEqual(classifyWorkRow({ ...base, state: 'open' }),
       { talkId: TALK, kind: 'issue', state: 'open', number: 7, url: 'https://x/7' });
@@ -53,13 +61,14 @@ describe('buildMyWork', () => {
   const known = {}; known[TALK] = true;
   it('groups mapped rows by talk and drops unknown talk ids', () => {
     const map = buildMyWork([
-      { number: 9, title: `Review: ${TALK}`, state: 'open', html_url: 'u9' },
+      { number: 9, title: `Markers: ${TALK} / Test-Video`, state: 'open', html_url: 'u9' },
       { number: 3, title: `Edit sync: ${TALK} (t)`, state: 'open', html_url: 'u3', pull_request: { merged_at: null } },
-      { number: 5, title: 'Review: 1900-01-01_Deleted-Talk', state: 'open', html_url: 'u5' },
+      { number: 5, title: 'Markers: 1900-01-01_Deleted-Talk / V', state: 'open', html_url: 'u5' },
       { number: 6, title: 'unrelated', state: 'open', html_url: 'u6' },
+      { number: 2, title: `Review: ${TALK}`, state: 'open', html_url: 'u2' },
     ], known);
     assert.deepStrictEqual(Object.keys(map), [TALK]);
-    assert.deepStrictEqual(map[TALK].map((i) => i.number), [3, 9]); // sorted by number
+    assert.deepStrictEqual(map[TALK].map((i) => i.number), [3, 9]); // sorted; Review: #2 excluded
   });
 });
 
