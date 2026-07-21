@@ -128,6 +128,27 @@
   </div>
 </div>
 
+<h2>My work (mine filter)</h2>
+<p style="color:var(--fg4)">The mine filter lists talks in two groups — assigned to me, then a
+<code>.talk-sep</code> separator before "work I started" (my PRs/issues, not assigned) — in both
+modes. <code>.work-badge</code> links appear in expert mode only, right-aligned in the actions row;
+tone tracks the item state: draft (dashed) / open / merged for PRs, open / closed for issues.
+Closed-unmerged PRs are excluded as noise.</p>
+<div class="talk-sep">Work I started</div>
+<div class="talk-item sg-card">
+  <div class="talk-date">1979-09-27 <span class="review-badge in-review">in review</span></div>
+  <div class="talk-title">Shri Kundalini Shakti and Shri Jesus Christ</div>
+  <div class="talk-actions">
+    <a href="#" class="preview-link">▶ View translation</a>
+    <span class="work-badges">
+      <a class="work-badge work-badge--draft" href="#">PR #102</a>
+      <a class="work-badge work-badge--open" href="#">PR #101</a>
+      <a class="work-badge work-badge--merged" href="#">PR #90</a>
+      <a class="work-badge work-badge--closed" href="#">#55</a>
+    </span>
+  </div>
+</div>
+
 <h2>Sync status</h2>
 <p style="color:var(--fg4)">The <code>.sync-cloud</code> chip — one elegant cloud, three tones. Blue
 <em>progress</em> (two sync arrows), green when <em>synced</em>, red on <em>error</em>.
