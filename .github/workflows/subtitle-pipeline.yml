@@ -415,6 +415,10 @@ jobs:
           fi
           python -m tools.fake_llm review --snapshot "${snap%/}" --talk-dir "talks/${TALK_ID}"
 
+      - name: Stamp review sentinel
+        if: inputs.review != false && inputs.dry_run != true
+        run: touch /tmp/review_started
+
       - name: Review translation (2+1)
         if: inputs.review != false && inputs.dry_run != true
         uses: anthropics/claude-code-action@e90deca47693f9457b72f2b53c17d7c445a87342  # v1.0.171
@@ -462,10 +466,29 @@ jobs:
 
             Step 4 – Apply:
             Apply all Critic-approved corrections to talks/${{ matrix.talk_id }}/transcript_uk.txt
-            Save the full review report (with all tables) to talks/${{ matrix.talk_id }}/review_report.md
+            Then, as your FINAL action, save the full review report (with all
+            tables) to talks/${{ matrix.talk_id }}/review_report.md — write it
+            only after every approved correction has been applied, so a fresh
+            report file proves the correction pass completed.
 
             Be thorough but precise. Only change what genuinely needs correction.
             Do not use TodoWrite – this runs in CI, no one sees progress updates.
+
+      # A usage-limit stop (session or weekly) ends the Claude CLI with exit
+      # code 0, so the action step succeeds even when the agent died between
+      # applying corrections and writing the report — the transcript may hold
+      # a PARTIAL correction set while review_report.md stays stale (observed
+      # on run 29572341492). The prompt makes the report write the final
+      # action, so a report newer than the sentinel proves the pass completed.
+      - name: Verify review outputs
+        if: inputs.review != false && inputs.dry_run != true
+        env:
+          TALK_ID: ${{ matrix.talk_id }}
+        run: |
+          if [ ! "talks/${TALK_ID}/review_report.md" -nt /tmp/review_started ]; then
+            echo "::error::review_report.md was not rewritten by the review step — the agent likely hit a usage limit mid-review; transcript may contain a partial correction set"
+            exit 1
+          fi
 
       - name: Record glossary version
         if: "!cancelled()"
