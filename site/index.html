@@ -33,6 +33,7 @@
 <script src="js/edit_sync.js"></script>
 <script src="js/marker_sync.js"></script>
 <script src="js/sync_status_view.js"></script>
+<script src="js/my_work.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -918,6 +919,7 @@ var I18N = {
     'btn.create_pr': '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
     'btn.take_review': '\u0412\u0437\u044F\u0442\u0438 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'stat.mine': '\u043C\u043E\u0457',
+    'mine.sep_started': '\u0420\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u0430 \u043C\u043D\u043E\u044E \u0440\u043E\u0431\u043E\u0442\u0430',
     'pr.created': 'PR \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E',
     'pr.finalized': 'PR \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0434\u043E \u0440\u0435\u0432\u02BC\u044E',
     'pr.no_edits': '\u041D\u0435\u043C\u0430\u0454 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u044C \u0434\u043B\u044F PR',
@@ -1084,6 +1086,7 @@ var I18N = {
     'btn.create_pr': 'Create PR',
     'btn.take_review': 'Take for review',
     'stat.mine': 'mine',
+    'mine.sep_started': 'Work I started',
     'pr.created': 'PR created',
     'pr.finalized': 'PR marked ready for review',
     'pr.no_edits': 'No edits to submit as a PR',
@@ -2364,14 +2367,18 @@ function computeStats(talks, statuses, query) {
     var st = statuses[t.id] || null;
     var stages = getPipelineStages(t, st);
     var status = getOverallStatus(stages, st);
-    var isMine = !!(authLogin && st && st.reviewer === authLogin);
+    var isMine = !!(authLogin && ((st && st.reviewer === authLogin)
+      || myWorkItemsFor(myWork, t.id, expertMode).length));
+    // Completed talks stay out of the normal-mode mine set even with open
+    // PRs/issues (spec decision); expert mode keeps them.
+    var mineVisible = isMine && (expertMode || status !== 'approved');
     // Total counts
     total.talks++;
     if (status === 'ready-for-review') total.needs_review++;
     if (status === 'in-review') total.in_review++;
     if (status === 'approved') total.approved++;
     if (status === 'in-progress') total.pending++;
-    if (isMine) total.mine++;
+    if (mineVisible) total.mine++;
     // Filtered counts (by search)
     if (matchesSearch) {
       filtered.talks++;
@@ -2379,7 +2386,7 @@ function computeStats(talks, statuses, query) {
       if (status === 'in-review') filtered.in_review++;
       if (status === 'approved') filtered.approved++;
       if (status === 'in-progress') filtered.pending++;
-      if (isMine) filtered.mine++;
+      if (mineVisible) filtered.mine++;
     }
   });
   return { total: total, filtered: filtered };
@@ -2500,7 +2507,7 @@ function showIndex() {
   var statusEl = document.getElementById('index-status');
   var contentEl = document.getElementById('index-content');
 
-  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); maybeStaleToast(); statusEl.style.display = 'none'; return; }
+  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); maybeStaleToast(); statusEl.style.display = 'none'; loadMyWork(); return; }
 
   statusEl.textContent = t('index.loading');
   statusEl.style.display = 'block';
@@ -2514,6 +2521,7 @@ function showIndex() {
     maybeStaleToast();
     statusEl.style.display = 'none';
     statusEl.classList.remove('status-error');
+    loadMyWork();
   }).catch(function(err) {
     // No cache to fall back on. Phrase rate-limit failures helpfully instead of
     // dumping a raw "API 403".
@@ -2546,11 +2554,19 @@ function renderIndex(el) {
   var query = (document.getElementById('search-input').value || '').toLowerCase();
   var authLogin = (ghWriteUser() || {}).login || null;
 
+  // Mine filter renders as two groups: assigned first, then a labelled
+  // separator + "work I started" (my PRs/issues, not assigned) — both modes.
+  var mineGroups = activeFilter === 'mine'
+    ? { assigned: document.createDocumentFragment(), started: document.createDocumentFragment() }
+    : null;
+
   manifest.talks.forEach(function(tk) {
     var st = statuses[tk.id] || null;
     var stages = getPipelineStages(tk, st);
     var status = getOverallStatus(stages, st);
-    var isMine = !!(authLogin && st && st.reviewer === authLogin);
+    var isAssigned = !!(authLogin && st && st.reviewer === authLogin);
+    var workItems = authLogin ? myWorkItemsFor(myWork, tk.id, expertMode) : [];
+    var isMine = isAssigned || workItems.length > 0;
 
     // Filter by status
     if (activeFilter === 'all' && !expertMode) {
@@ -2561,7 +2577,12 @@ function renderIndex(el) {
       if (activeFilter === 'in-review' && status !== 'in-review') return;
       if (activeFilter === 'pending' && status !== 'in-progress') return;
       if (activeFilter === 'approved' && status !== 'approved') return;
-      if (activeFilter === 'mine' && !isMine) return;
+      if (activeFilter === 'mine') {
+        if (!isMine) return;
+        // Completed talks stay out of the normal-mode mine list even with
+        // open PRs/issues (spec decision); expert mode shows them.
+        if (!expertMode && status === 'approved') return;
+      }
     }
 
     // Search
@@ -2603,6 +2624,15 @@ function renderIndex(el) {
     if (authLogin && actions.review && status !== 'approved' && !(st && st.reviewer)) {
       takeBtn = '<button class="btn btn--sm btn--ghost take-review-btn">' + esc(t('btn.take_review')) + '</button>';
     }
+    // Expert mode: badge every card that has my PRs/issues (any filter),
+    // right-aligned in the actions row. Links go to GitHub.
+    var workBadges = '';
+    if (expertMode && workItems.length) {
+      workBadges = '<span class="work-badges">' + workItems.map(function(w) {
+        return '<a class="work-badge work-badge--' + w.state + '" target="_blank" href="'
+          + safeHref(w.url) + '">' + (w.kind === 'pr' ? 'PR ' : '') + '#' + w.number + '</a>';
+      }).join('') + '</span>';
+    }
     // Assemble card. amruta_url is attacker-influenceable (meta.yaml from a
     // PR / the amruta-scraping bookmarklet) so route it through safeHref;
     // dateStr is escaped too. The expert button's talk-id copy is bound via
@@ -2615,7 +2645,7 @@ function renderIndex(el) {
     var statusBadge = renderStatusBadge(status, st);
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
-      + ((videoLinks || reviewLink || takeBtn) ? '<div class="talk-actions">' + videoLinks + reviewLink + takeBtn + '</div>' : '');
+      + ((videoLinks || reviewLink || takeBtn || workBadges) ? '<div class="talk-actions">' + videoLinks + reviewLink + takeBtn + workBadges + '</div>' : '');
 
     var takeEl = div.querySelector('.take-review-btn');
     if (takeEl) takeEl.addEventListener('click', function(e) {
@@ -2666,8 +2696,19 @@ function renderIndex(el) {
       })(tk, stages, st, detailDiv);
     }
 
-    el.appendChild(div);
+    if (mineGroups) (isAssigned ? mineGroups.assigned : mineGroups.started).appendChild(div);
+    else el.appendChild(div);
   });
+  if (mineGroups) {
+    el.appendChild(mineGroups.assigned);
+    if (mineGroups.started.childNodes.length) {
+      var sep = document.createElement('div');
+      sep.className = 'talk-sep';
+      sep.textContent = t('mine.sep_started');
+      el.appendChild(sep);
+    }
+    el.appendChild(mineGroups.started);
+  }
   // Show/hide expert-only elements based on current mode
   if (typeof applyExpertMode === 'function') applyExpertMode();
   // Restore expanded card after re-render
@@ -5016,6 +5057,43 @@ function ghWriteUser() {
   return hasNoWrite() ? null : getAuthUser();
 }
 
+// ============================================================
+// "My work" — the viewer's PRs/issues mapped onto talks (mine filter).
+// One /issues?creator= query, classified by js/my_work.js; normal mode
+// counts open items only, expert mode all states (filtering happens at
+// read time via myWorkItemsFor, so an expert toggle needs no refetch).
+// ============================================================
+var myWork = null;         // { talkId: item[] } or null before first load
+var myWorkPromise = null;  // in-flight dedup
+var myWorkLogin = '';      // login the cache belongs to
+var myWorkAt = 0;          // epoch ms of the last successful load
+var MY_WORK_TTL_MS = 5 * 60 * 1000;
+
+function loadMyWork() {
+  var user = ghWriteUser();
+  if (!user || !manifest) return Promise.resolve();
+  var fresh = myWork && myWorkLogin === user.login && (Date.now() - myWorkAt) < MY_WORK_TTL_MS;
+  if (fresh) return Promise.resolve();
+  if (myWorkPromise) return myWorkPromise;
+  myWorkPromise = listIssuesByCreator(API, getAuthToken(), user.login).then(function(rows) {
+    var known = {};
+    manifest.talks.forEach(function(t) { known[t.id] = true; });
+    myWork = buildMyWork(rows, known);
+    myWorkLogin = user.login; myWorkAt = Date.now(); myWorkPromise = null;
+    // Same refresh idiom as updateAuthUI: the index DOM always exists.
+    if (manifest && document.getElementById('index-content')) {
+      renderStats();
+      renderIndex(document.getElementById('index-content'));
+    }
+  }).catch(function(err) {
+    // Silent fallback: assigned-only behaviour (the pre-feature UX). A dead
+    // token is handled by the existing checkWriteAccess/Trees 401 paths.
+    myWorkPromise = null;
+    console.warn('my-work load failed', err);
+  });
+  return myWorkPromise;
+}
+
 function updateAuthUI() {
   var loginBtn = document.getElementById('gh-login-btn');
   var avatar = document.getElementById('gh-avatar');
@@ -5051,6 +5129,8 @@ function updateAuthUI() {
   if (manifest && document.getElementById('index-content')) {
     // A saved 'mine' filter is meaningless without write access — fall back.
     if (!writeUser && activeFilter === 'mine') activeFilter = 'all';
+    if (!writeUser) { myWork = null; myWorkLogin = ''; myWorkAt = 0; }
+    else loadMyWork();
     renderStats();
     renderIndex(document.getElementById('index-content'));
   }

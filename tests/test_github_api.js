@@ -541,3 +541,46 @@ describe('getRepoPermissions', () => {
       (e) => e.status === 403 && /rate limit/.test(e.message));
   });
 });
+
+const { listIssuesByCreator } = require('../site/js/github_api');
+
+describe('listIssuesByCreator', () => {
+  const API = 'https://api.github.com/repos/o/r';
+  function pagedFetch(pages, seen) {
+    return async (url) => {
+      seen.push(url);
+      const page = Number(new URL(url).searchParams.get('page'));
+      return new Response(JSON.stringify(pages[page - 1] || []), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    };
+  }
+  it('GETs /issues?creator&state=all and maps rows (pull_request + draft kept)', async () => {
+    const seen = [];
+    const rows = await listIssuesByCreator(API, 't', 'tester', pagedFetch([[
+      { number: 1, title: 'Review: x', state: 'open', html_url: 'u1', node_id: 'n1' },
+      { number: 2, title: 'Edit sync: x (tester)', state: 'closed', html_url: 'u2',
+        pull_request: { merged_at: '2026-07-01T00:00:00Z', url: 'p2' } },
+      { number: 3, title: 'Edit sync: y (tester)', state: 'open', html_url: 'u3', draft: true,
+        pull_request: { merged_at: null, url: 'p3' } },
+    ]], seen));
+    assert.strictEqual(seen.length, 1);
+    assert.match(seen[0], /\/issues\?creator=tester&state=all&per_page=100&page=1$/);
+    assert.deepStrictEqual(rows, [
+      { number: 1, title: 'Review: x', state: 'open', html_url: 'u1', draft: false, pull_request: null },
+      { number: 2, title: 'Edit sync: x (tester)', state: 'closed', html_url: 'u2', draft: false,
+        pull_request: { merged_at: '2026-07-01T00:00:00Z' } },
+      { number: 3, title: 'Edit sync: y (tester)', state: 'open', html_url: 'u3', draft: true,
+        pull_request: { merged_at: null } },
+    ]);
+  });
+  it('pages until a short page', async () => {
+    const full = Array.from({ length: 100 }, (_, i) => (
+      { number: i, title: 't', state: 'open', html_url: 'u' }));
+    const seen = [];
+    const rows = await listIssuesByCreator(API, 'a b', 'a b', pagedFetch([full, [full[0]]], seen));
+    assert.strictEqual(rows.length, 101);
+    assert.strictEqual(seen.length, 2);
+    assert.match(seen[0], /creator=a%20b/); // creator is URI-encoded
+  });
+});
