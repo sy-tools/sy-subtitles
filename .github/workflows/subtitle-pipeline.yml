@@ -46,15 +46,17 @@ on:
         type: choice
         options:
           - claude-opus-4-8
+          - claude-opus-5
           - claude-fable-5
           - claude-sonnet-5
-        default: claude-opus-4-8
+        default: claude-opus-5
       build_model:
         description: 'Override model for the build step only (timecode alignment); same-as-model follows `model`'
         type: choice
         options:
           - same-as-model
           - claude-opus-4-8
+          - claude-opus-5
           - claude-fable-5
           - claude-sonnet-5
         default: same-as-model
@@ -95,7 +97,7 @@ on:
       model:
         description: 'Claude model for LLM steps (translate, review, build)'
         type: string
-        default: claude-opus-4-8
+        default: claude-opus-5
       build_model:
         description: 'Override model for the build step only; empty or same-as-model follows `model`'
         type: string
@@ -113,11 +115,11 @@ permissions:
 
 env:
   # Push-triggered runs have no inputs context — fall back to the default.
-  MODEL_HEAVY: ${{ inputs.model || 'claude-opus-4-8' }}
+  MODEL_HEAVY: ${{ inputs.model || 'claude-opus-5' }}
   # Build is mechanical timecode alignment — may run on a different model
   # than review (e.g. review=Fable, build=Opus). The 'same-as-model'
   # sentinel (choice inputs can't default to '') follows MODEL_HEAVY.
-  MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-4-8' }}
+  MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-5' }}
   # Claude account for the LLM steps. Convention: oauth_token=X reads
   # secrets.CLAUDE_CODE_OAUTH_TOKEN_X (option value is the literal
   # uppercase suffix — expressions have no upper()). The default secret is
