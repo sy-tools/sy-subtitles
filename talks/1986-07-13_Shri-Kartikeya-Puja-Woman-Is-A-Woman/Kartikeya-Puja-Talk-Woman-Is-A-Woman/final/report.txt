@@ -3,8 +3,8 @@
 ============================================================
   SRT: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/Kartikeya-Puja-Talk-Woman-Is-A-Woman/final/uk.srt
   Transcript: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/transcript_uk.txt
-  Whisper: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/Kartikeya-Puja-Talk-Woman-Is-A-Woman/source/whisper.json
-  SRT blocks: 487
+  EN SRT: talks/1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman/Kartikeya-Puja-Talk-Woman-Is-A-Woman/source/en.srt
+  SRT blocks: 483
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,36 +22,36 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 487
+  Total blocks: 483
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 487
-  CPS: avg=11.0, median=11.4, max=18.2
-  CPS > target: 52 (10.7%)
+  Total blocks: 483
+  CPS: avg=11.0, median=11.4, max=18.3
+  CPS > target: 59 (12.2%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=53.6, max=84
+  CPL: avg=54.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 0
-  Duration > max: 0
+  Duration < min: 1
+  Duration > max: 1
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #451: CPS=18.2 (41ch/2.2s) "Ми – навіщо нам брати якесь таке вбрання?"
-    #189: CPS=17.2 (55ch/3.2s) "Я тримала їх осторонь, бо лише вони можуть сперечатися,"
-    #448: CPS=17.0 (54ch/3.2s) "а тепер вони збираються відкрити її так само в Сіднеї."
-    #368: CPS=16.9 (65ch/3.8s) "Не вимагайте звітів і таке інше, дозвольте їм цим розпоряджа..."
-    #427: CPS=16.8 (64ch/3.8s) "А Я сказала: «А як називають чоловіка, який завжди тікає з д..."
-    #278: CPS=16.8 (43ch/2.6s) "«Ким ви хочете бути?» Вони зовсім маленькі."
-    #237: CPS=16.6 (67ch/4.0s) "Я сказала: «Чому ти не дозволиш їй сісти?» Він сказав: «Чому..."
-    #374: CPS=16.6 (45ch/2.7s) "їм треба думати про багато великих речей, але"
-    #435: CPS=16.5 (64ch/3.9s) "що навіть удома ви насолоджуєтеся, і назовні теж насолоджуєт..."
-    #363: CPS=16.5 (62ch/3.8s) "Інакше, у цій країні, вони можуть стати подібними до вампірі..."
+    #448: CPS=18.3 (41ch/2.2s) "Ми – навіщо нам брати якесь таке вбрання?"
+    #389: CPS=17.9 (35ch/2.0s) "Бо саме це її справжнє задоволення."
+    #219: CPS=17.8 (36ch/2.0s) "Але вона проєктує будинки для інших,"
+    #246: CPS=17.6 (56ch/3.2s) "Тепер вона дуже сильно заблокована й має певні проблеми."
+    #268: CPS=17.5 (45ch/2.6s) "що вони сахаджа йоґині і Мати подбає про них."
+    #105: CPS=17.2 (28ch/1.6s) "Я сказала: «Не має значення."
+    #276: CPS=17.0 (43ch/2.5s) "«Ким ви хочете бути?» Вони зовсім маленькі."
+    #374: CPS=17.0 (39ch/2.3s) "Чоловіки ніколи не можуть заощаджувати."
+    #432: CPS=16.9 (64ch/3.8s) "що навіть удома ви насолоджуєтеся, і назовні теж насолоджуєт..."
+    #365: CPS=16.8 (65ch/3.9s) "Не вимагайте звітів і таке інше, дозвольте їм цим розпоряджа..."
 
 ============================================================
   SUMMARY
@@ -64,11 +64,11 @@
   [PASS] Gap ≥ 80ms
 
   Avg CPS: 11.0 (target ≤15.0)
-  CPS > 15.0: 52 blocks
+  CPS > 15.0: 59 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 0 blocks
-  Duration > 21000ms: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 1 blocks
   Gaps < 80ms: 0 blocks
 
   Overall: PASSED

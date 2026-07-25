@@ -1,21 +1,18 @@
-# Language Review – 2002-10-27 Navaratri Puja: Develop Wisdom Through Meditation, Bhakti & Shraddha
-
-Review date: 2026-06-20.
-
-Paragraph numbers below refer to the body paragraphs of `transcript_uk.txt`
-(P1 = first content paragraph "Сьогодні ми будемо поклонятися Богині…", … P24 = final paragraph).
+# Language Review – 2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha, 2026-07-18
 
 ## Process
 
-`transcript_uk.txt` reviewed by 2 parallel reviewers (L – Language, S – SY Domain)
-plus a Critic filter, per `templates/language_review_template.md`, cross-checked
-against `transcript_en.txt`, `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`,
-and `glossary/terms_context.yaml`.
+Review of `transcript_uk.txt` (full paragraphed Ukrainian text) using 2 parallel reviewers + 1 critic filter, per `templates/language_review_template.md`, cross-checked against `transcript_en.txt`, `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`, and `glossary/terms_context.yaml`.
 
-Note: an earlier review pass on this talk already corrected the Shri Mataji
-self-reference markers (`я б сказала` / `я думаю` / `я вважаю` → uppercase `Я`,
-15 instances). Those are confirmed correct in the current text; this pass found
-no remaining capitalization errors.
+- **Reviewer L** – Language (Orthography + Grammar + Punctuation)
+- **Reviewer S** – SY Domain (Capitalization + Terminology + Consistency)
+- **Critic** – filters both tables, removes false positives and trivial style preferences, resolves conflicts
+
+Paragraph numbers refer to the body paragraphs of the transcript (¶1 = «Сьогодні ми будемо поклонятися Богині…», ¶24 = final paragraph).
+
+**Prior passes.** An earlier pass corrected Shri Mataji self-reference markers (`я` → `Я`, 15 instances). A 2026-06-20 pass (previous version of this report) applied 0 corrections: it removed its two L findings (one as out-of-scope, one as acceptable register) and one S finding as a false positive, and flagged `устаткуватися` (¶9) for translator attention without applying a fix. This pass supersedes that report; where it overrides a prior deferral, the Critic table says so explicitly.
+
+Mechanical pre-checks (script mixing, double spaces, quote style `«»`, dash style ` – `, apostrophe `’`, spaces around punctuation): **all clean**.
 
 ## Results
 
@@ -23,69 +20,96 @@ no remaining capitalization errors.
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | P9 | Lexical/usage — `устаткуватися` (lit. "to be fitted out with equipment/machinery") is a poor match for EN "settle down". Word is correctly spelled and correctly formed, but semantically wrong. | «людям потрібен час, щоб **устаткуватися**» … «щойно ви **устаткувалися**» (EN: "people take time to settle down … once you are settled down") | (translator pass) `освоїтися` / `усталитися` / `влаштуватися` |
-| L2 | P1 | Number agreement — «багато» + plural finite verb; normative Ukrainian prefers singular. | «у вас **можуть розвинутися** так багато хвороб» | (consider) «**може розвинутися** так багато хвороб» |
+| L1 | ¶1 | Неправильна прийменникова конструкція для значення засобу («за + Орудн.» не виражає «за допомогою») | «За цими двома важливими чинниками ви можете добре дати раду ґанам» | «Завдяки цим двом важливим чинникам ви можете добре дати раду ґанам» |
+| L2 | ¶1 | Множина присудка при звороті з «багато» | «у вас можуть розвинутися так багато хвороб» | «може розвинутися так багато хвороб» |
+| L3 | ¶1 | Назва хвороби без слова «хвороба» | «як-от Альцгеймер та інші хвороби» | «як-от хвороба Альцгеймера» |
+| L4 | ¶6 | Називний відмінок предикатива замість орудного | «Це має бути зрозуміле вашим інтелектом» | «Це має бути зрозумілим вашим інтелектом» |
+| L5 | ¶8 | Порушення узгодження числа: однина «людиною» + множинне «яких» | «мудрою людиною, яких у нас було так багато в минулому» | «мудрою людиною – таких у нас було так багато в минулому» |
+| L6 | ¶8 | Узгодження предикатива з підметом-підрядним | «І те, як вони говорили про все, дивовижне» | «І те, як вони говорили про все, – дивовижно» |
+| L7 | ¶9 | Знахідний відмінок після «це» в ролі присудка; незамкнене підрядне | «описав, що ви повинні мати перед віддачею на милість – це вашу Реалізацію» | «описав те, що ви повинні мати перед віддачею на милість, – це ваша Реалізація» |
+| L8 | ¶9 | Лексична помилка (неправильне слово): «устаткувати(ся)» = «обладнати технікою», а не «утвердитися/усталитися» (EN: settle down) | «людям потрібен час, щоб устаткуватися. Але щойно ви устаткувалися» | «людям потрібен час, щоб утвердитися. Але щойно ви утвердилися» |
+| L9 | ¶11 | Зайва кома між присудком і прямим додатком | «Я бачила тепер, учорашню виставу» | «Я бачила тепер учорашню виставу» |
+| L10 | ¶11 | Редакторська вставка у квадратних дужках у неправильному відмінку (підмет має бути в називному) | «Бо [того, чого] їм бракувало, – це мудрість» | «Бо [те, чого] їм бракувало, – це мудрість» |
+| L11 | ¶14 | Підрядне означальне відірване від означуваного слова присудком | «Шрі Ґанеша утверджується, який є не чим іншим…» | «утверджується Шрі Ґанеша, який є не чим іншим…» |
+| L12 | ¶14 | Невідповідність роду: «людина» (ж.р.) → «Він» | «така людина стає тихою… Він знає про все» | «Вона знає про все» |
+| L13 | ¶16 | Число після «ті, хто» | «Ті, хто поверхові, ніколи її не осягнуть» | «Ті, хто поверховий, ніколи її не осягнуть» |
+| L14 | ¶17 | Присвійний займенник «його» замість зворотного «свого» при збігу з підметом | «з його минулого життя він має це в собі» | «зі свого минулого життя він має це в собі» |
+| L15 | ¶19 | Знак питання після непрямого питання | «не розуміючи, чому вони це роблять?» | «не розуміючи, чому вони це роблять.» |
+| L16 | ¶20 | Непослідовність числа: «бхакті й шраддга… радісні» (мн.) → «Вона не втомлює» (одн.) | «ця бхакті й шраддга дуже радісні… Вона ніколи не втомлює вас» | «Вони ніколи не втомлюють вас» |
+| L17 | ¶22 | Чоловічий рід порядкових без опорного іменника в переліку | «Другий – це медитація. А третій – це сприймати вібрації» | «Друге – це медитація. А третє – це сприймати вібрації» |
+| L18 | ¶23 | Калькована конструкція «сліпі, щоб не розуміти» | «вони були сліпі, щоб не розуміти, що з ними йде не так» | «вони були настільки сліпі, що не розуміли…» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | P19 | (Suspected) transliteration `Йоги` → `Йоґи` (Sanskrit *g* = ґ). | «вони прийдуть до Сахаджа Йо[?]и» | — |
+| S1 | ¶1 | Мала літера відносного займенника щодо Шрі Ґанеші, тоді як для Матері/Христа в цьому ж тексті — велика («Виглядайте Матір, Яка має прийти», «Він є Тим, Хто сказав») | «поклоняєтеся Шрі Ґанеші, який є силою позаду Неї» | «поклоняєтеся Шрі Ґанеші, Який є силою позаду Неї» |
+| S2 | ¶13 | Конструкція «той, хто дає мудрість» щодо Ґанеші з малої, тоді як щодо Богині — «Та, Хто дає мудрість» (¶9, ¶21) | «Ґанеша – це той, хто дає мудрість» | «Ґанеша – це Той, Хто дає мудрість» |
+| S3 | ¶14 | Те саме: мала літера в «який… тим, хто дає мудрість» щодо Шрі Ґанеші | «Шрі Ґанеша…, який є не чим іншим, як тим, хто дає мудрість» | «Шрі Ґанеша, Який є не чим іншим, як Тим, Хто дає мудрість» |
+| S4 | ¶6 | Скорочена форма глосарного терміна surrender → «віддача на милість» | «ви знаєте, кому поклонятися й кому віддатися» | «кому віддатися на милість» |
+| S5 | всюди | Можлива невідповідність правилу транслітерації dh → дх («шраддга» ↔ «шраддха») | «бхакті й шраддга», «силу бхакті й шраддги» | «шраддха»? |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Remove** | Out of scope for a 2+1 *language* review. Per the template, Reviewer L covers spelling errors and incorrect word *forms*; `устаткуватися` is correctly spelled and correctly inflected, so it is a lexical/translation-accuracy issue, not a language-mechanics defect — and not capitalization/terminology/consistency either. Consistent with the prior review's documented decision. **Flagged for a translation-accuracy pass / translator attention.** |
-| L | L2 | **Remove** | Acceptable in this register. The text is a verbatim mirror of spoken English; «багато» + plural agreement is common in spoken Ukrainian and parallels the surrounding plural «можуть… подолати». Altering it is a stylistic preference, not a clear error. |
-| S | S1 | **Remove** | **False positive.** On direct byte-level re-verification the word already reads «Сахаджа Йо**ґ**и» (ґ = U+0491), consistent with every other occurrence in the transcript and with `terms_lookup.yaml`. The glyphs г / ґ are near-identical at a glance; the suspected error does not exist. No change. |
+| L | L1 | **Keep** | «За + орудний» не виражає засобу; конструкція неграматична, а зміст («with these two important factors» = завдяки цим чинникам) однозначний з оригіналу. |
+| L | L2 | **Remove** | При звороті «багато + Р.в.» допустимі і однина, і множина присудка; у тексті вживаються обидві форми («надходить так багато скарг», «так багато йоґів вийшли») — розмовний регістр. Той самий вердикт, що й у паса 2026-06-20. |
+| L | L3 | **Remove** | Дзеркалить розмовне «diseases like Alzheimer» оригіналу; зміст зрозумілий, виправлення — стилістичне вподобання. |
+| L | L4 | **Remove** | «Зрозумілий» тут — пасивний дієприкметник («зрозуміле інтелектом» = «осягнуте інтелектом»); називний предикатив при «має бути» допустимий. Не помилка. |
+| L | L5 | **Keep** | Реальне порушення узгодження (одн. «людиною» + мн. «яких»); мінімальна правка «– таких у нас було так багато» зберігає розмовний тон оригіналу «as we had so many in the past». |
+| L | L6 | **Remove** | Узгодження предикатива з «те» («те… дивовижне») граматично допустиме; заміна на «дивовижно» — смакова. |
+| L | L7 | **Keep** | Знахідний «це вашу Реалізацію» після «це» неграматичний; додання «те» замикає підрядне і відновлює синтаксис, не змінюючи змісту. |
+| L | L8 | **Keep** | Явна лексична помилка: «устаткуватися» стосується обладнання і в цьому контексті семантично неможливе. Пас 2026-06-20 визнав слово помилковим, але відклав правку як «поза скоупом»; цей пас застосовує її, бо інструкція Reviewer L прямо охоплює «incorrect word forms», а сама правильність заміни ніким не заперечувалася. Обрано «утвердитися» — усталений сахаджа-термін для "get established / settle down", узгоджений із «утверджується» (про Шрі Ґанешу) в цьому ж тексті. |
+| L | L9 | **Keep** | Кома між присудком і прямим додатком — помилка української пунктуації; кома в EN («I have seen now, yesterday's drama») — маркер паузи мовлення, який не переноситься в українську пунктуацію. |
+| L | L10 | **Keep** | Вставка у квадратних дужках — редакторська, тому має бути граматично правильною: підмет у називному відмінку («[те, чого] їм бракувало»). |
+| L | L11 | **Keep** | Відірване підрядне означальне («Шрі Ґанеша утверджується, який…») — синтаксична помилка; перестановка нічого не змінює у змісті. Застосовано одним редагуванням разом із S3. |
+| L | L12 | **Remove** | «Він» — узагальнений носій мудрості, як EN «He»; заміна на «Вона» створила б двозначність із «вона» = мудрість у попередньому реченні («щойно вона приходить»). Свідоме розведення займенників. |
+| L | L13 | **Remove** | Після «ті, хто» множина присудка/означення широко допустима в сучасній мові; розмовний регістр. |
+| L | L14 | **Keep** | Норма зворотного присвійного: якщо присвійність стосується підмета («він»), уживається «свого». |
+| L | L15 | **Remove** | Знак питання віддзеркалює риторичну питальну інтонацію оригіналу («not understanding why they are doing it?»); у транскриптах промови пунктуація інтонації зберігається. |
+| L | L16 | **Remove** | «Вона» послідовно веде ланцюжок «бхакті» (найближчий опорний іменник) далі по абзацу («вона дуже живильна», «вона повинна бути в правильному місці»); точкова заміна на множину розірвала б ланцюжок. Дзеркалить EN «it». |
+| L | L17 | **Keep** | «Другий/третій» (ч.р.) не мають опорного іменника; у переліках без опорного слова нормативний середній рід («друге», «третє»). Інакше читається як хибне узгодження з «самоаналіз». |
+| L | L18 | **Remove** | Дзеркалить зламаний синтаксис оригіналу «they were blind here not to understand»; вирівнювання — стилістичне згладжування мовлення. |
+| S | S1 | **Keep** | Внутрішня послідовність документа: відносні займенники щодо Божеств у цьому транскрипті пишуться з великої («Виглядайте Матір, Яка має прийти»; «Він є Тим, Хто сказав» — про Христа). Шрі Ґанеша — Божество; мала літера тут — розбіжність стилю в межах одного тексту. Пас 2026-06-20 цього місця не розглядав. |
+| S | S2 | **Keep** | Пряма паралель у цьому ж тексті: «Вона – Та, Хто дає мудрість» (про Богиню, ¶21) ↔ «Ґанеша – це той, хто дає мудрість». Однакова конструкція про Божеств має писатися однаково. |
+| S | S3 | **Keep** | Те саме обґрунтування, що S1/S2; застосовано разом із перестановкою L11 одним редагуванням речення. |
+| S | S4 | **Remove** | «Кому віддатися» — прийнятна коротка дієслівна форма в переліку («кому поклонятися й кому віддатися»); повний глосарний термін «віддача на милість» ужито тричі в сусідньому абзаці. Не помилка. |
+| S | S5 | **Remove** | **False positive.** `terms_lookup.yaml` явно фіксує «shraddha → шраддга» (виняток із загального правила dh → дх); текст усюди відповідає глосарію, включно з назвою талька. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| — | — | None. All candidate findings were removed by the Critic (out-of-scope, acceptable register, or false positive). | — |
+| 1 | ¶1 | «За цими двома важливими чинниками ви можете добре дати раду ґанам» | «Завдяки цим двом важливим чинникам ви можете добре дати раду ґанам» |
+| 2 | ¶1 | «поклоняєтеся Шрі Ґанеші, який є силою позаду Неї» | «поклоняєтеся Шрі Ґанеші, Який є силою позаду Неї» |
+| 3 | ¶8 | «мудрою людиною, яких у нас було так багато в минулому» | «мудрою людиною – таких у нас було так багато в минулому» |
+| 4 | ¶9 | «описав, що ви повинні мати перед віддачею на милість – це вашу Реалізацію» | «описав те, що ви повинні мати перед віддачею на милість, – це ваша Реалізація» |
+| 5 | ¶9 | «щоб устаткуватися» | «щоб утвердитися» |
+| 6 | ¶9 | «Але щойно ви устаткувалися» | «Але щойно ви утвердилися» |
+| 7 | ¶11 | «Я бачила тепер, учорашню виставу» | «Я бачила тепер учорашню виставу» |
+| 8 | ¶11 | «Бо [того, чого] їм бракувало» | «Бо [те, чого] їм бракувало» |
+| 9 | ¶13 | «Ґанеша – це той, хто дає мудрість» | «Ґанеша – це Той, Хто дає мудрість» |
+| 10 | ¶14 | «Шрі Ґанеша утверджується, який є не чим іншим, як тим, хто дає мудрість» | «утверджується Шрі Ґанеша, Який є не чим іншим, як Тим, Хто дає мудрість» |
+| 11 | ¶17 | «з його минулого життя він має це в собі» | «зі свого минулого життя він має це в собі» |
+| 12 | ¶22 | «Другий – це медитація. А третій – це сприймати вібрації» | «Друге – це медитація. А третє – це сприймати вібрації» |
 
 ## Summary
 
-- Language (L): 2 issues found, 0 approved by Critic
-- SY Domain (S): 1 issue found, 0 approved by Critic (false positive)
-- Total corrections applied this pass: **0**
-
-The translation is already in good shape; the in-scope capitalization issues were
-fixed in a prior pass and verified correct here.
-
-## Notes / flagged for translator's attention (not applied)
-
-- **P9** — `устаткуватися` / `устаткувалися` is the wrong verb for "settle down".
-  Recommend `освоїтися` / `усталитися` in a translation-accuracy pass. Left
-  unchanged here because it is outside the orthography/grammar/punctuation and
-  capitalization/terminology/consistency scope of a 2+1 language review.
+- Language (L): 18 issues found, 9 approved by Critic (L1, L5, L7, L8 ×2 occurrences, L9, L10, L11, L14, L17)
+- SY Domain (S): 5 issues found, 3 approved by Critic (S1, S2, S3)
+- Total corrections applied: **12**
 
 ## Verified correct (no change needed)
 
-- **Shri Mataji self-references** uniformly uppercase: every «Я б сказала / Я
-  думаю / Я вважаю / Я бачила / Мене / Мені / Мою» is correct.
-- **Goddess / Mother pronouns** uppercase: Вона/Її/Їй/Нею/Свою/Своїх/Сама,
-  «Та, Хто», Богиня, Мати, Деві, Шакті, Матір'ю, Матінко (vocative).
-- **Individual Incarnation pronouns** uppercase: Христа/Він/Його/Нього,
-  «Тим, Хто», «Яка»; Ganesha/Ganapati singular «Самого».
-- **`Сила` vs `сила`** correctly split: capital for the Divine Power (Уся Сила,
-  Божественна Сила, Сила Богині, Цієї Сили, Цю Силу — mirroring EN "the Whole
-  Power / Power of the Goddess / This Power / That Power"), lowercase for
-  ordinary power (сила бхакті, силу над ґанами, керівна сила).
-- **Spiritual terms** capitalized: Дух/Духа/Духом, Істина, Реалізація,
-  Божественне, Пуджа.
-- **Generic / listener `я`** correctly lowercase inside quoted self-checks
-  («Чи я мудрий?», «чому я це роблю?», «я можу робити це», «я дуже мудрий»,
-  «як це я отримав цю проблему?»).
-- **Transliteration** consistent (ґ for Sanskrit *g*, дг for *dh*):
-  ґани/Ґанапаті/Ґанеша/ґуру, шраддга, Сахаджа Йоґа/Йоґи/Йоґу/Йоґою, locative
-  «в Сахаджа Йозі» (ґ→з alternation), Деві Махатм'ям, Сакшат, Кундаліні,
-  Аді Шакті, ракшасів, Мохаммед Сахіб.
-- **Glossary terms** match `terms_lookup.yaml`: бхакті, шраддга, его,
-  віддача на милість, реалізована душа, сахаджа йоґ(и) (lowercase, hard stem -и),
-  Наваратрі Пуджа, Деві.
-- **Language names** lowercase (англійська, українська); `іслам` lowercase.
-- **Punctuation/orthography**: «» quotation marks at all levels, spaced en-dash
-  « – », apostrophe ', three-dot ellipsis; no mixed Latin/Cyrillic characters.
+Carried forward from the 2026-06-20 pass and re-confirmed on the current text:
+
+- **Shri Mataji self-references** uniformly uppercase (Я/Мене/Мені/Мою/Моя).
+- **Goddess / Mother pronouns** uppercase: Вона/Її/Їй/Нею/Свою/Своїх/Сама, «Та, Хто», Богиня, Мати, Деві, Шакті, Матір’ю, Матінко (vocative).
+- **Individual Incarnation pronouns** uppercase: Христа/Він/Його/Нього, «Тим, Хто», «Яка»; «Самого Ґанапаті». (Relative pronouns for Shri Ganesha now harmonized to uppercase — corrections 2, 9, 10.)
+- **«Сила» vs «сила»** correctly split: capital for the Divine Power (Уся Сила, Божественна Сила, Сила Богині, Цієї Сили, Цю Силу), lowercase for ordinary power (сила бхакті, силу над ґанами, керівна сила).
+- **Spiritual terms** capitalized: Дух/Духа/Духом, Істина, Реалізація, Божественне, Пуджа, Сакшат.
+- **Generic / listener «я»** correctly lowercase inside quoted self-checks («Чи я мудрий?», «я можу робити це», «як це я отримав цю проблему?»).
+- **Transliteration & glossary** consistent: ґани (lowercase), Ґанапаті, Ґанеша, ґуру, шраддга (glossary-fixed spelling), Сахаджа Йоґа/Йоґи/Йоґу/Йоґою, locative «в Сахаджа Йозі» (ґ→з alternation), Деві Махатм’ям, Кундаліні, Аді Шакті, ракшаси, Мохаммед Сахіб, бхакті, его, віддача на милість, реалізована душа, сахаджа йоґ/йоґи (lowercase, hard stem -и), лівосторонній, самоаналіз, Наваратрі Пуджа.
+- **Language names** lowercase (англійська, українська); «іслам» lowercase.
+- **Punctuation/orthography**: «» quotation marks at all levels (incl. nested), spaced en-dash ` – `, apostrophe ’, no mixed Latin/Cyrillic characters, no double spaces.

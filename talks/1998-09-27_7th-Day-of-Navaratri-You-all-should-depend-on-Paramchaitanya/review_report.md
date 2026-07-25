@@ -1,4 +1,4 @@
-# Language Review – 1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya, 2026-06-20
+# Language Review – 1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya, 2026-07-17
 
 ## Process
 
@@ -7,16 +7,19 @@ the glossary (`glossary/CLAUDE.md`, `terms_lookup.yaml`, `terms_context.yaml`) a
 convention. Reviewer L (orthography/grammar/punctuation) and Reviewer S (SY domain /
 capitalization / terminology) ran in parallel; the Critic filtered both tables.
 
-**Re-review note.** A prior pass (2026-05-30) already applied 4 corrections, now verified
-present in the text: em-dash `—` → en-dash ` – ` (88×), single-char ellipsis `…` → `...`,
-§69 «Це оману» → «Це омана», §55 «Божественною силою» → «Божественною Силою». This pass
-re-checks the whole text independently and adds any remaining genuine errors.
+**Re-review note.** Two prior passes are already incorporated in the text and were
+re-verified as present: 2026-05-30 (em-dash → ` – ` ×88, `…` → `...`, §69 «Це омана»,
+§55 «Божественною Силою») and 2026-06-20 (§58 «Мою Матір» / «Своєї Матері»). Prior
+Critic *removals* (§12 «доводиться», §51 «гальма не гальмують», §69 «такими, якими вони
+є», §56/57 «Божества/божества», §43/§64 knowledge casing) were re-examined and upheld —
+see the Critic table. This pass focuses on grammar/agreement and non-normative commas
+the earlier passes did not adjudicate. Paragraph numbers (§N) = file line numbers, as in
+prior reports.
 
-Automated pre-checks (all clean): em-dash `—` 0 / en-dash ` – ` 88; single-char ellipsis
-`…` 0; quotation marks 64 balanced `«»`, no German/English quotes; apostrophes 52 × `’`
-(U+2019), 0 ASCII; no mixed Latin/Cyrillic; deity-pronoun casing verified
-character-by-character (every lowercase `я/вона/він/його/її/вони` refers to a regular
-person, natural force, or abstraction — never to Shri Mataji or a Deity).
+Automated pre-checks (all clean): no Latin/Cyrillic mixing; quotes exclusively `«»`;
+apostrophes exclusively `’` (U+2019); dashes exclusively ` – `; ellipsis `...` without
+preceding space; no double/trailing spaces, no space-before-punctuation, no missing
+space after commas.
 
 ## Results
 
@@ -24,57 +27,96 @@ person, natural force, or abstraction — never to Shri Mataji or a Deity).
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | §12 | Word-choice for passive «is proved»; reflexive «доводиться» reads ambiguously («one has to») | «...доводиться, що ми не маємо знання» | «...це доводить, що ми не маємо знання» |
-| L2 | §51 | Tautological/clunky verb pair | «...гальма не гальмують...» | «...гальма не працюють...» |
-| L3 | §69 | Loose case in parenthetical «as they are» | «...через людських істот, такими, якими вони є...» | «...таких, якими вони є...» |
-
-*No spelling, Latin/Cyrillic-mixing, apostrophe, em-dash, ellipsis, or quotation-mark
-issues found. Punctuation (`«»`, ` – `, `...`, `’`) is consistent throughout.*
+| L1 | §20 | Зайва кома перед одиничним «і» між однорідними підрядними означальними | «бачити речі, які добрі, і які погані» | «…які добрі і які погані» |
+| L2 | §21 | «так званий» відокремлено комами (норма: без ком) | «за це комфортне, так зване, місце» | «за це комфортне так зване місце» |
+| L3 | §24 | Керування «божеволіти за кимось» (нормативно «шаленіти за», «божеволіти від») | «Вони божеволіють за кимось» | «Вони шаленіють за кимось» |
+| L4 | §31 | Порушення узгодження: множина «існують» із одниною «це» | «Поки існують це «моє» і «я»» | «Поки існує це «моє» і «я»» (одн., як в оригіналі "there is this 'my' and 'I'") |
+| L5 | §32 | Зайва кома після обставини «Тепер» (не вставне слово; в оригіналі коми немає) | «Тепер, вібрації можуть вводити в оману» | «Тепер вібрації можуть вводити в оману» |
+| L6 | §35 | Зайва кома після «Тепер» | «Тепер, як розвинути цю мудрість?» | «Тепер як розвинути цю мудрість?» |
+| L7 | §38 | Калька "learn that": «навчитися» не керує з’ясувальним «що»-підрядним | «ми повинні навчитися, що ми робили помилки» | «ми повинні усвідомити, що ми робили помилки» |
+| L8 | §50 | Сполучуваність: «зазнати» вживається з негативними поняттями (втрат, поразки), не з «досвідом» | «навіть після того, як зазнали досвіду» | «…як набули досвіду» |
+| L9 | §55 | Неперехідне вживання «зрушити» без додатка | «Ніщо не може зрушити, доки…» | «Ніщо не може зрушитися, доки…» |
+| L10 | §56 | Пряма мова після двокрапки без лапок і з малої літери (усюди в тексті — «») | «Я сказала: гаразд.» | «Я сказала: «Гаразд».» |
+| L11 | §58 | Зайва кома після сполучника «Тож» | «Тож, щодо поклоніння Матері – історія…» | «Тож щодо поклоніння Матері…» |
+| L12 | §69 | Неузгоджений безособовий присудок «усунуто» при підметі в називному («ця дурість і все таке») | «ця дурість і все таке може бути усунуто цією бхранті» | «ця дурість і все таке можуть бути усунуті цією бхранті» |
+| L13 | §70 | Зайва кома після «Тепер» | «Тепер, що ми самі збираємося зробити…» | «Тепер що ми самі збираємося зробити…» |
+| L14 | §70 | «такий собі» має конотацію «посередній», що суперечить «глибоку відданість» і знижує зміст (EN "a kind of a deep devotion") | «розвинути таку собі глибоку відданість» | «розвинути свого роду глибоку відданість» |
+| L15 | §71 | Зайва кома перед одиничним «і» між однорідними присудками | «Я підхопив блокування від цієї людини, і підхопив блокування від тієї людини» | «…від цієї людини і підхопив блокування від тієї людини» |
+| L16 | §71 | Узгодження: «багато хто» вимагає присудка в однині | «як передбачали багато хто» | «як передбачав багато хто» |
+| L17 | §51 | Тавтологія «гальма не гальмують» | «в її машині гальма не гальмують» | «гальма не працюють» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | §58 | Divine Mother written lowercase «матір»/«матері» while «Моя Мати» is uppercase in the same paragraph and all other 5 Divine-Mother refs are uppercase (§57 «Матері» ×2, §58 «Мати»/«Матері Землі», §69 «Матері») | «Хто величніший за Мою матір?» … «навколо Своєї матері» | «Мою Матір» … «Своєї Матері» |
-| S2 | §56 / §57 | «усі ці Божества» (cap, §56) vs «всі ці божества» (lc, §57) | §57 «всі ці божества й усі є Її дітьми» | (proposed) standardize casing |
-| S3 | §43, §64 | «чисте знання» / «справжнє знання» lowercase vs «Чисте Знання» / «Справжнє Знання» elsewhere | §43 «це чисте знання», §64 «справжнє знання» | (proposed) capitalize |
+| S1 | §58 | Займенник Божества (Шрі Картікейя, брат Шрі Ґанеші) з малої літери, тоді як займенники Шрі Ґанеші в цьому ж абзаці — з великої (Він/Своїм/Я/Своєї) | «Коли той повернувся, він виявив, що подарунок уже втрачено» | «Коли той повернувся, Він виявив…» |
+| S2 | §43 | «чисте знання» з малої на тлі «Чисте Знання» (12+ вживань) | «Тут Я скажу, що це чисте знання» | (пропоновано) «Чисте Знання» |
+| S3 | §64 | «справжнє знання» ×3 з малої на тлі «Справжнє Знання» (§7, §8, §14, §23) | «бо вони знаходять справжнє знання» та ін. | (пропоновано) «Справжнє Знання» |
+| S4 | §67 | «у центральному серці» з малої — пор. глосарій «Центральне Серце чакра» | «Богиня перебуває в серці, у центральному серці» | (пропоновано) «у Центральному Серці» |
+| S5 | §56/§57 | «усі ці Божества» (§56, велика) проти «всі ці божества» (§57, мала) | «всі ці божества й усі є Її дітьми» | (пропоновано) уніфікувати |
 
-*Glossary terms verified correct: Кундаліні, Парамчайтанья (+ reverent «Вона/Її/Себе»),
-Сахаджа Йоґа / в Сахаджа Йозі, сахаджа йоґ / йоґи / йоґів, Шрі Ґанеша → Ґанеші (род.) /
-Ґанешу (знах.) / Ґанеша (наз.), Хануман, Шіва → Шіви, Майя, бхути, блокування (catching),
-Наваратрі, Реалізація, Шакті, Богиня, шлоки, паріпаква, бхранті. Language names
-«англійська/українська» lowercase ✓. Spiritual terms Пуджа, Дух/Божественне, Істина,
-Останній Суд capitalized ✓.*
+*Glossary terms re-verified correct this pass: Парамчайтанья — нaз./знах./род.-дав.
+Парамчайтаньї/орудн. Парамчайтаньєю, всі 30+ вживань однакові, реверентне «Вона/Її/Себе»
+послідовно з великої; Кундаліні; Шрі Ґанеша (род. «до Шрі Ґанеші» ✓ за
+`terms_context.yaml`); Шіва → «благословення Шіви» ✓; Хануман ✓; Майя/Майю ✓; Шакті ✓;
+бхут/бхутів ✓; блокування (catching) ✓; сахаджа йоґ / сахаджа йоґи / йоґів (мала літера,
+тверда основа) ✓; Сахаджа Йоґа → «в Сахаджа Йозі» (ґ→з) ✓, «до Сахаджа Йоґи» ✓; Мати
+Земля → «навколо Матері Землі» ✓; шлоки ✓; паріпаква, бхранті — транслітерація за
+конвенціями (короткий i → і, bh → бх) ✓; Реалізація з великої (корпусна конвенція,
+пор. «масова Реалізація» у глосарії) ✓; Пуджа, Істина, Останній Суд, Божественна Сила,
+Богиня — з великої ✓; назви мов «англійська/українська» з малої ✓. Займенники Шрі
+Матаджі (Я/Мені/Мене/Моя/Мною/Своїй/Себе/Сама, звертання «Ти») — усі з великої,
+перевірено повним проходом ✓; звертання «Матінко» послідовне ✓.*
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | Remove | «доводиться» is understandable as reflexive passive; rephrase is stylistic, not an orthographic/grammatical error. Faithful to the source's own loose construction. |
-| L | L2 | Remove | Mirrors the source's deliberate repetition («the brakes weren't braking»). Understandable; style preference. |
-| L | L3 | Remove | «такими, якими вони є» is a set parenthetical ("as they are") faithful to source; not a clear-cut error worth a mechanical edit. |
-| S | S1 | **Keep** | Genuine error. The Divine Mother (the Goddess worshipped in §57–58 = Adi Shakti / Shri Mataji) is **always uppercase** per `glossary/CLAUDE.md` — independent of source casing. 5 of 7 references are already uppercase; §58's two are the sole outliers, breaking an explicit rule. Same logic the prior review used to capitalize «Божественною Силою» (§55, S1-Keep). Ganesha's possessives «Мою»/«Своєї» are already uppercased (deity convention) — the noun must match. The regular human mothers in §40–41 correctly stay lowercase. |
-| S | S2 | Remove | EN distinguishes «Deities» (§56, the great Deities as part of Paramchaitanya) from «deities» (§57, subordinate "Her children"); a generic **plural** noun may be lowercase (rule: Incarnations plural mid-sentence → lowercase). Both forms defensible; not a clear error. |
-| S | S3 | Remove | Translation consistently tracks EN casing of Knowledge terms — capitalized where EN writes «Pure/True/Real Knowledge», lowercase where EN is lowercase (incl. §43, §64). Faithful methodology; no project rule forces these terms always-uppercase. |
-
-*Note on revisiting §58 (was removed by the 2026-05-30 Critic as "source mirrors deliberate
-variation"). On re-examination the source casing is an artifact, not intent: the same
-speaker's quoted words appear as both "my mother" and "My Mother". The Divine-Mother
-convention overrides source casing — exactly as the prior review itself enforced for
-«Божественна Сила» (§55). With 5 of 7 references already uppercase and §57–58 explicitly
-about worshipping the Mother, the two lowercase forms are an isolated rule violation, so
-S1 is approved this pass.*
+| L | L1 | Keep | Однорідні підрядні з одиничним «і» — кома не ставиться; з комою прочитується, ніби ті самі речі «і добрі, і погані». Реальна пунктуаційна помилка, що зачіпає зміст. |
+| L | L2 | Remove | Коми відтворюють навмисну іронічну паузацію оригіналу ("comfortable, so-called, place"); зняття ком дає нагромадження означень без виграшу. Стиль, не помилка (та сама логіка, що й прецедент «гальма не гальмують»). |
+| L | L3 | Remove | «Божеволіти за кимось» — засвідчене розмовне керування; пасує до розмовного регістру лекції та кострубатого "get mad after someone" оригіналу. Не помилка. |
+| L | L4 | Keep | Граматичне неузгодження підмета з присудком. Виправлення на однину («існує») точніше відповідає оригіналу "there is this 'my' and 'I'". |
+| L | L5 | Keep | «Тепер» — обставина, не вставне слово; кома не мотивована ні нормою, ні оригіналом (EN без коми). |
+| L | L6 | Keep | Те саме, що L5. |
+| L | L7 | Keep | На відміну від вилученого раніше «доводиться» (§12, граматично можливого), «навчитися, що…» — неграматична калька: «навчитися» не приєднує з’ясувального підрядного. Справжня помилка керування. |
+| L | L8 | Keep | «Зазнати досвіду» — порушення лексичної сполучуваності (СУМ: зазнати — «пережити щось, перев. неприємне»); «набути досвіду» — нормативна колокація, зміст той самий. |
+| L | L9 | Remove | Неперехідне «зрушити» засвідчене (пор. «крига зрушила»); зрозуміле й у розмовному регістрі прийнятне. Не помилка. |
+| L | L10 | Keep | Після двокрапки пряма мова мусить бути в лапках; в усьому тексті пряма мова оформлена «» (пор. §41 «Я сказала: «Гаразд»»). Змішування стилів в одному транскрипті — критерій шаблону. |
+| L | L11 | Keep | «Тож» — сполучник, кома після нього не ставиться; єдиний такий випадок у тексті (інші 10+ «Тож…» без коми). І норма, і внутрішня консистентність. |
+| L | L12 | Keep | Безособова форма на -то не поєднується з підметом у називному («ця дурість»); потрібне узгодження — множина за сукупним підметом «дурість і все таке». |
+| L | L13 | Keep | Те саме, що L5. |
+| L | L14 | Keep | Не суто стилістика: «така собі відданість» читається як «посередня відданість» — спотворення змісту в ключовому духовному місці. «Свого роду» передає "a kind of" без зниження. |
+| L | L15 | Keep | Однорідні присудки зі спільним підметом «Я» та одиничним «і» — кома не ставиться (кома оригіналу — факт англійської пунктуації, не української). |
+| L | L16 | Keep | «Багато хто» узгоджується з присудком в однині («багато хто передбачав»). Граматична помилка. |
+| L | L17 | Remove | Підтверджено вердикт попереднього проходу (2026-06-20, L2): свідома тавтологія оригіналу "the brakes weren't braking". |
+| S | S1 | Keep | Правило `glossary/CLAUDE.md`: займенники окремого Божества в однині — з великої (Він/Його/Йому). Шрі Картікейя — Божество (є в глосарії), у цьому ж абзаці Шрі Ґанеша послідовно «Він/Своїм/Я». Попередній прохід задекларував «жодне мале він не стосується Божества» — це недогляд саме тут; та ж логіка, за якою той прохід виправив «Мою Матір». Вказівний «той» правилом не охоплюється — лишається малим. |
+| S | S2 | Remove | Підтверджено вердикт 2026-06-20 (S3): переклад послідовно віддзеркалює регістр оригіналу для термінів Знання — у §43 в EN «pure knowledge» з малої; «Знання» не входить до глосарного переліку обов’язкових великих літер. Кореляція з EN 100% по всьому тексту — це методологія, не непослідовність. |
+| S | S3 | Remove | Те саме, що S2: у §64 всі три «true knowledge» в EN з малої. |
+| S | S4 | Remove | В оригіналі «centre heart» з малої; тут це опис розташування, а не назва чакри з глосарія. Віддзеркалення регістру оригіналу — не помилка. |
+| S | S5 | Remove | Підтверджено вердикт 2026-06-20 (S2): EN сам розрізняє «Deities» (§56) і «deities» (§57, «Її діти»); обидві форми вмотивовані. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | §58 | Divine Mother noun lowercase (accusative) | «за Мою матір?» → «за Мою Матір?» |
-| 2 | §58 | Divine Mother noun lowercase (genitive) | «навколо Своєї матері» → «навколо Своєї Матері» |
+| 1 | §20 | Зайва кома перед одиничним «і» | «які добрі, і які погані» → «які добрі і які погані» |
+| 2 | §31 | Неузгодження «існують це» | «Поки існують це «моє» і «я»» → «Поки існує це «моє» і «я»» |
+| 3 | §32 | Зайва кома після «Тепер» | «Тепер, вібрації можуть» → «Тепер вібрації можуть» |
+| 4 | §35 | Зайва кома після «Тепер» | «Тепер, як розвинути» → «Тепер як розвинути» |
+| 5 | §38 | Калька «навчитися, що» | «повинні навчитися, що ми робили помилки» → «повинні усвідомити, що…» |
+| 6 | §50 | Сполучуваність «зазнати досвіду» | «як зазнали досвіду» → «як набули досвіду» |
+| 7 | §56 | Пряма мова без лапок | «Я сказала: гаразд.» → «Я сказала: «Гаразд».» |
+| 8 | §58 | Зайва кома після «Тож» | «Тож, щодо поклоніння» → «Тож щодо поклоніння» |
+| 9 | §58 | Займенник Божества (Шрі Картікейя) з малої | «Коли той повернувся, він виявив» → «…Він виявив» |
+| 10 | §69 | Неузгоджене «може бути усунуто» | «може бути усунуто цією бхранті» → «можуть бути усунуті цією бхранті» |
+| 11 | §70 | Зайва кома після «Тепер» | «Тепер, що ми самі» → «Тепер що ми самі» |
+| 12 | §70 | Конотація «таку собі» | «таку собі глибоку відданість» → «свого роду глибоку відданість» |
+| 13 | §71 | Зайва кома перед одиничним «і» | «від цієї людини, і підхопив» → «від цієї людини і підхопив» |
+| 14 | §71 | Узгодження з «багато хто» | «як передбачали багато хто» → «як передбачав багато хто» |
 
 ## Summary
 
-- Language (L): 3 issues found, 0 approved by Critic
-- SY Domain (S): 3 issues found, 1 approved by Critic (= 2 text edits)
-- Total corrections applied this pass: 1 correction (Divine Mother capitalization, §58, 2 instances)
-- Prior pass (2026-05-30): 4 corrections, 91 textual replacements (already in text)
+- Language (L): 17 issues found, 13 approved by Critic
+- SY Domain (S): 5 issues found, 1 approved by Critic
+- Total corrections applied this pass: 14
+- Prior passes (2026-05-30: 4 corrections; 2026-06-20: 1 correction) re-verified as present; prior Critic removals re-examined and upheld

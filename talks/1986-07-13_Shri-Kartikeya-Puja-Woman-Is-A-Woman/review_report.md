@@ -1,28 +1,20 @@
-# Language Review – 1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman, 2026-06-30
+# Language Review – 1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman, 2026-07-18
 
 ## Process
 
 2+1 agent review of `transcript_uk.txt` (full paragraphed Ukrainian text):
 Reviewer L (Language) + Reviewer S (SY Domain) run in parallel, then a Critic
 filters both tables and only genuine, well-justified errors are applied.
+English original (`transcript_en.txt`) used as reference. Paragraph numbers
+below refer to line numbers in `transcript_uk.txt`.
 
-> **Note on prior pass.** A previous review (2026-06-29) already applied 21
-> textual corrections — genitive `Сахаджа Йоґи` (ґ ×13), `Мати Земля`
-> de-hyphenation (×6), Shri Mataji's `Свій пісок` (×1), and `Майю` (×1). All are
-> verified present in the current transcript, so this pass starts from an already
-> well-corrected text. This run re-examines the whole transcript fresh and
-> records one further correction the prior pass had deferred.
-
-The translation is of high quality. Mechanical checks are clean: 64 balanced
-`«»` pairs (incl. nested `«…«ґхар-ґхусна»…»` and Latin `«klin»`/`«kiln»` editor
-notes), 14 typographic apostrophes `’` and **0** straight ones, no ellipses, no
-Latin letters mixed into Cyrillic words, no double spaces, no space before
-punctuation, em-dash uniformly ` – `. Sanskrit `ґ` is used consistently across
-every Yoga/deity term (`Сахаджа Йоґа`, `сахаджа йоґи`, `Ґанеша`, `Пінґалі`,
-`Екадаша Рудри`). Deity-pronoun capitalization is correct throughout — Shri
-Mataji (Я/Мене/Моя/Свого/Самій), singular Incarnations (Картікейя, Ґанеша,
-Нішкаланка → Він/Його/Свою), and generic people lowercase (the Sahaja Yogini,
-husband, the brick-seller, workers).
+> **Note on prior passes.** Two earlier reviews are on record: 2026-06-29
+> (21 corrections: genitive `Сахаджа Йоґи` ґ ×13, `Мати Земля` de-hyphenation ×6,
+> `Свій пісок` ×1, `Майю` ×1) and 2026-06-30 (1 correction: `Боги` → `боги`, ¶24).
+> All 22 are verified still in place. The 2026-06-30 Critic also explicitly
+> **rejected** replacing the participle `прощаюча` (¶16) and **rejected**
+> lowercasing `Прана` (¶37); this pass re-examined both and upholds those
+> precedents. This run re-reviewed the whole transcript fresh.
 
 ## Results
 
@@ -30,49 +22,98 @@ husband, the brick-seller, workers).
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 16 | Non-normative active participle `прощаюча` | «терпляча, любляча, прощаюча» (forbearing, loving, forgiving) | `усепрощальна` / `схильна прощати` |
-
-*Checked and found clean:* spelling and word forms; quotation marks (all `«»`,
-incl. nested); em-dash ` – ` with spaces; apostrophes `’` (U+2019); hyphenated
-compounds (`те-се`, `по-справжньому`, `навіки-віків`, `будь-який`, `як-от`,
-`Тадж-Махал`, `прем’єр-міністром`); number formatting (`5 000`, `50 000`,
-`180 футів`, `108`); feminine verb agreement for Shri Mataji throughout;
-case government and gender agreement.
+| L1 | 11 | Зайва кома перед одиничним «або» між однорідними підрядними | «Якщо піч не вдасться, або з нею щось буде не так» | «Якщо піч не вдасться або з нею щось буде не так» |
+| L2 | 13 | Милозвучність: «з» перед словом на «з-» (збіг «з за-») | «А що з залізом?» | «А що із залізом?» |
+| L3 | 14 | «й» перед словом на «ї-» (й не вживається перед я, ю, є, ї, й) | «п’ятьма вітальнями й їдальнями» | «п’ятьма вітальнями та їдальнями» |
+| L4 | 16 | Ненормативний активний дієприкметник теперішнього часу «прощаюча» | «терпляча, любляча, прощаюча» | «готова прощати» |
+| L5 | 18 | Стара орфографія: «проектує» (за правописом 2019 – єдина форма «проєкт») | «Але вона проектує будинки для інших» | «Але вона проєктує будинки для інших» |
+| L6 | 18 | Непослідовність форм: «у штанях» / «в штанах» в одному абзаці | «Вона теж у штанях… вона в штанах, я в штанах» | Уніфікувати до однієї форми |
+| L7 | 19 | Можливо пропущена кома перед порівняльним зворотом «як звичайні жінки» | «Ми просто думаємо як звичайні жінки» | «Ми просто думаємо, як звичайні жінки» |
+| L8 | 23 | Дієприслівниковий зворот не стосується підмета головного речення («ніхто… бігаючи») | «хто був чиновником у той час, бігаючи туди-сюди з паперами» | «хто був чиновником у той час і бігав туди-сюди з паперами» |
+| L9 | 24 | Зайва кома між присудком і додатком «за те» | «винуватити й західних чоловіків, за те, як вони погано поводилися» | «винуватити й західних чоловіків за те, як вони погано поводилися» |
+| L10 | 28 | Пропущена кома на стику сполучників «що» + «щойно» (далі немає «то») | «ви помітите, що щойно потяг зупиниться, усі чоловіки виходять» | «ви помітите, що, щойно потяг зупиниться, усі чоловіки виходять» |
+| L11 | 28 | «слово на гінді» – калька; в решті тексту тричі «говорить мовою гінді» | «[слово на гінді, домосід]», «[слово на гінді, той, що тікає]» | «[слово мовою гінді, …]» (×2) |
+| L12 | 29 | «назовні» у значенні місця (де?), а не напрямку | «і назовні теж насолоджуєтеся… а також назовні» | «поза домом» |
+| L13 | 32 | Неузгодження роду: далі в тексті «Та, що зробила Ґанешу, – вона теж німкеня?» – авторка фігурки жінка | «Ти зробив це – цього Ґанешу? … Ти дуже добрий, мушу сказати.» | «Ти зробила це – цього Ґанешу? … Ти дуже добра, мушу сказати.» |
+| L14 | 37 | Двозначність: «боротися з цією здатністю» читається як боротьба ПРОТИ здатності (EN: «with that capacity we have to fight» = за допомогою неї) | «І з цією здатністю ми маємо боротися.» | «І, володіючи цією здатністю, ми маємо боротися.» |
+| L15 | 40 | Норма слововживання: «одягати/вдягати когось», але «надягати щось на когось» | «коли тобі треба буде вдягнути на Мене гірлянду» | «коли тобі треба буде надягнути на Мене гірлянду» |
+| L16 | 41 | Неграматичне нанизування інтенсифікаторів «так дуже» | «Так дуже мило.» | «Так мило.» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 24 | `Боги` (plural deities / devatas) capitalized | «…там перебувають **Боги**». | `боги` |
-| S2 | 37 | `Прана`/`Прану`/`Праною` capitalized; `terms_lookup.yaml` lists `прана` lowercase | «…пов’язано з **Праною**. Він дає вам **Прану**…» | (consider `прана`) |
-
-*Checked and found clean:* Shri Mataji pronouns/possessives (Я/Мені/Мій/Своїх/
-Самій); singular-Incarnation pronouns (Картікейя/Ґанеша/Нішкаланка → Він/Його/
-Свою/Своїм); `Цар`, `Господу`, `Він перебуває в серцях` for Kartikeya correctly
-uppercase; `Мати Земля` glossary form (no hyphen, ×8); spiritual-term caps
-(Пуджа, Дхарма, Інкарнація, Стопи, Реалізована Душа, Реалізація); `ego → его`
-lowercase (×8); `Maya → Майю`, `Shakti → Шакті`, `Nishkalanka → Нішкаланка`,
-`Kalki → Калькі`, `Shesha → Шеша`, `Ganesha Atharva Shirsha → Ґанеша Атхарва
-Шірша` per glossary; language names lowercase (англійська, гінді, санскрит);
-nationalities lowercase (індійці, британці, арії, нацистка, німкеня).
+| S1 | 34 | «сакшат» з малої: глосарій фіксує «Сакшат»; у ¶39 цього ж тексту – «Нірмала Сакшат» з великої | «Ом твамева сакшат, Шрі», «Ом твамева сакшат» – це | «Ом твамева Сакшат» (×2) |
+| S2 | 39 | «Кі» з великої: глосарій фіксує «кі Джай» (пор. також «Джхансі кі Рані» з малої в цьому ж тексті) | «Шрі Нірмала Деві Кі – Джай!» (×3) | «Шрі Нірмала Деві кі – Джай!» (×3) |
+| S3 | 40 | «Бутешу»: санскр. bhūteṣu, придиховий «bh» за конвенцією передається «бх» (пор. «бхут», «бхаджан») | «Я Деві Сарва Бутешу» | «Я Деві Сарва Бхутешу» |
+| S4 | 31 | Можливо «духом» слід писати з великої (Дух як божественна сутність) | «чоловіки командуватимуть своїм духом» | «своїм Духом» |
+| S5 | 37 | «Прана/Праною/Прану» з великої, тоді як `terms_lookup.yaml` дає «прана» з малої | «пов’язано з Праною. Він дає вам Прану. Прана – це життєве дихання» | «прана» (×3) |
+| S6 | 32/41 | Непослідовність: «ім’я богині» (мала) у ¶32 проти «гімн Богині» (велика) у ¶41 | «Камала – це ім’я богині» | «ім’я Богині» |
+| S7 | 37 | Глосарій: «Right Side → права сторона»; у тексті «з правого боку», «з правим боком» | «діє з правого боку – у Пінґалі», «пов’язано з правим боком» | «з правої сторони», «з правою стороною» |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Remove** | `прощаюча` stands parallel to the fully-lexicalised `любляча` and mirrors the source's single-word list of qualities (sacrificing, giving, forbearing, loving, forgiving); meaning is clear. Replacing it is a stylistic substitution, not an error correction. |
-| S | S1 | **Keep** | Genuine orthographic error. The verse renders Sanskrit *devatāḥ* — a plurality of deities. Український правопис (2019) §53: names of deities are capitalized, **but in the plural and in figurative meaning they are lowercase** (`боги Олімпу`, `давні боги`). The project rule "Incarnations plural mid-sentence: lowercase" agrees. English over-capitalizes "Gods" devotionally; that does not transfer. This refines the prior pass's "defensible/keep" note with the dispositive orthographic rule. |
-| S | S2 | **Remove** | Here Prana is *named and defined* as the specific principle Kartikeya bestows ("Prana is the vital breath…"), functioning as a proper term like the glossary's capitalized `Кундаліні`, `Чітта`, `Шакті`, `Прана Шакті`. The lowercase `прана` lookup entry covers generic inline mention in the prana/mana/laya triad. The source capitalizes Prana consistently here. Not a clear error. |
+| L | L1 | Keep | Одиничне «або» між однорідними підрядними, що мають спільне «якщо», коми не потребує – кома зайва. |
+| L | L2 | Keep | Правопис (чергування з/із/зі) рекомендує «із» перед словами на з-, с-, ш-, щ-; збіг «з за-» немилозвучний. |
+| L | L3 | Keep | Чітке правило чергування: «й» не вживається перед я, ю, є, ї; заміна на «та» усуває збіг [й-йі]. |
+| L | L4 | **Remove** | Уже розглянуто Критиком 2026-06-30 і відхилено: «прощаюча» стоїть паралельно до лексикалізованого «любляча» й віддзеркалює однослівний перелік якостей оригіналу; заміна – стилістична субституція, а не виправлення помилки. Прецедент підтримано. |
+| L | L5 | Keep | Правопис 2019 закріпив єдину форму «проєкт»; «проектує» – застаріле написання, помилка за чинною нормою. |
+| L | L6 | Remove | Хибнопозитив: обидві форми («штанах»/«штанях») нормативні; варіювання віддзеркалює оригінал («a pant» → «trousers»). |
+| L | L7 | Remove | Хибнопозитив: зворот тісно пов’язаний із присудком («думати як звичайні жінки» – спосіб дії, змістове ядро присудка), кома не обов’язкова – помилки немає. |
+| L | L8 | Keep | Реальна граматична помилка: дієприслівник «бігаючи» формально стосується «ніхто не пам’ятає», хоча біг стосується чиновника. |
+| L | L9 | Keep | Кома між присудком і прийменниковим додатком («винуватити за те, як…») не ставиться; підрядне починається лише з «як». |
+| L | L10 | Keep | На стику сполучників «що» + «щойно» кома ставиться, якщо далі немає співвідносного «то» – тут його немає. |
+| L | L11 | Keep | Реальна непослідовність у межах тексту: тричі «говорить мовою гінді» і двічі «слово на гінді»; «мовою гінді» – нормативна конструкція. |
+| L | L12 | Remove | Тривіальне: словники фіксують за «назовні» також значення місця («зовні»); розмовний стиль промови це допускає. |
+| L | L13 | Keep | Реальна суперечність усередині тексту: далі прямо сказано «Та, що зробила Ґанешу, – вона теж німкеня?» – отже, звертання має бути в жіночому роді. |
+| L | L14 | Keep | «Боротися з X» в українській однозначно читається як боротьба проти X – зміст протилежний оригіналу («with that capacity we have to fight»); перебудова необхідна. |
+| L | L15 | Keep | Класична норма слововживання: «надягати щось (на когось)», «одягати/вдягати когось»; «вдягнути на Мене гірлянду» – помилка. |
+| L | L16 | Keep | «Так дуже мило» – неможливе поєднання інтенсифікаторів в українській; «Так мило» природно передає «So very sweet». |
+| S | S1 | Keep | Глосарій: «sakshat → Сакшат»; внутрішня консистентність із ¶39 («Нірмала Сакшат»). |
+| S | S2 | Keep | Глосарій явно фіксує «кі Джай» з малої; підтверджується написанням «Джхансі кі Рані» в цьому ж тексті. |
+| S | S3 | Keep | Термінологічна точність: bhūteṣu («у всіх істотах», від bhūta – пор. «бхут») за конвенцією придихових – «Бхутешу»; «Бутешу» – механічне перенесення огріху EN-транскрипту у відомій мантрі. |
+| S | S4 | Remove | Хибнопозитив: в EN множина «their spirits» поряд із «manly qualities» – ідеться про внутрішній/бойовий дух чоловіків, а не про Дух (Атму); мала літера правильна. |
+| S | S5 | Remove | Уже розглянуто Критиком 2026-06-30 і відхилено: тут Прана – названий і визначений принцип, який дарує Картікейя (пор. «Прана Шакті», «Кундаліні»); рядок глосарія з малої стосується тріади прана/мана/лая. Прецедент підтримано. |
+| S | S6 | Remove | Хибнопозитив: різні референти – у ¶32 «ім’я богині» описове (ім’я однієї з богинь – Лакшмі), у ¶41 «гімн Богині» – конкретно Деві; обидва написання виправдані. |
+| S | S7 | Remove | Тривіальне: «з правого боку» – природна українська прислівникова конструкція; глосарій фіксує термін-лему («права сторона», «правосторонній»), а не заборону слова «бік»; помилки немає. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 24 | `Боги` (plural deities) wrongly capitalized | `боги` |
+| 1 | 11 | «Якщо піч не вдасться, або з нею щось буде не так» | «Якщо піч не вдасться або з нею щось буде не так» |
+| 2 | 13 | «А що з залізом?» | «А що із залізом?» |
+| 3 | 14 | «п’ятьма вітальнями й їдальнями» | «п’ятьма вітальнями та їдальнями» |
+| 4 | 18 | «вона проектує будинки» | «вона проєктує будинки» |
+| 5 | 23 | «хто був чиновником у той час, бігаючи туди-сюди з паперами» | «хто був чиновником у той час і бігав туди-сюди з паперами» |
+| 6 | 24 | «винуватити й західних чоловіків, за те, як» | «винуватити й західних чоловіків за те, як» |
+| 7 | 28 | «ви помітите, що щойно потяг зупиниться» | «ви помітите, що, щойно потяг зупиниться» |
+| 8 | 28 | «[слово на гінді, домосід]», «[слово на гінді, той, що тікає]» | «[слово мовою гінді, …]» (×2) |
+| 9 | 32 | «Ти зробив це – цього Ґанешу? … Ти дуже добрий, мушу сказати.» | «Ти зробила це – цього Ґанешу? … Ти дуже добра, мушу сказати.» |
+| 10 | 34 | «Ом твамева сакшат» (×2) | «Ом твамева Сакшат» (×2) |
+| 11 | 37 | «І з цією здатністю ми маємо боротися.» | «І, володіючи цією здатністю, ми маємо боротися.» |
+| 12 | 39 | «Шрі Нірмала Деві Кі – Джай!» (×3) | «Шрі Нірмала Деві кі – Джай!» (×3) |
+| 13 | 40 | «Я Деві Сарва Бутешу» | «Я Деві Сарва Бхутешу» |
+| 14 | 40 | «вдягнути на Мене гірлянду» | «надягнути на Мене гірлянду» |
+| 15 | 41 | «Так дуже мило.» | «Так мило.» |
 
 ## Summary
 
-- Language (L): 1 issue found, 0 approved by Critic
-- SY Domain (S): 2 issues found, 1 approved by Critic
-- Total corrections applied this pass: **1** (`Боги` → `боги`, ¶24)
-- (Prior pass 2026-06-29: 21 corrections, all verified still in place.)
+- Language (L): 16 issues found, 12 approved by Critic
+- SY Domain (S): 7 issues found, 3 approved by Critic
+- Total corrections applied this pass: **15**
+- (Prior passes 2026-06-29/30: 22 corrections, all verified still in place.)
+
+Verified as correct during this pass (no changes needed): deity-pronoun
+capitalization throughout (Я/Мені/Своїх/Самій for Shri Mataji; Він/Його/Ньому
+for Kartikeya, Ganesha, Christ, Nishkalanka; lowercase for regular people);
+«Стопи» uppercase; spiritual-term caps (Пуджа, Дхарма, Інкарнація, Дух-related
+usage, Реалізація, Реалізовані Душі); «сахаджа йоґ/йоґиня/йоґи» lowercase;
+language names lowercase (англійська, гінді, санскрит); glossary
+transliterations (Картікейя, Ґанеша, Пінґала, Вішуддхі, Екадаша Рудра,
+Нішкаланка, Калькі, Шеша, ґани, бхути, Сварупа, Шакті, Мати Земля);
+«Нехай Бог благословить вас» with exclamation/period matching the original in
+every instance; quotation marks «» at all levels including nested; em-dash
+` – `, apostrophe ’ (U+2019), and laughter-annotation casing conventions.

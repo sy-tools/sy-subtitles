@@ -4,7 +4,7 @@
   SRT: talks/2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha/Navaratri-Puja/final/uk.srt
   Transcript: talks/2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha/transcript_uk.txt
   EN SRT: talks/2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha/Navaratri-Puja/source/en.srt
-  SRT blocks: 489
+  SRT blocks: 490
   EN SRT blocks: 485
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
@@ -24,17 +24,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 489
+  Total blocks: 490
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 489
+  Total blocks: 490
   CPS: avg=10.9, median=10.8, max=15.1
-  CPS > target: 58 (11.9%)
+  CPS > target: 48 (9.8%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=56.3, max=84
+  CPL: avg=56.2, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -44,21 +44,21 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #351: CPS=15.1 (34ch/2.3s) "Бо Я сказала: «Ці люди божевільні!"
-    #78: CPS=15.0 (28ch/1.9s) "хоча це й рух лівої сторони."
-    #152: CPS=15.0 (37ch/2.5s) "що божевільна людина не має мудрості."
-    #310: CPS=15.0 (37ch/2.5s) "а воно може належати багатьом із них."
+    #374: CPS=15.1 (46ch/3.0s) "ким завгодно, але вони можуть дуже помилятися."
+    #421: CPS=15.0 (39ch/2.6s) "що реальне, а не за нереальними речами."
+    #186: CPS=15.0 (31ch/2.1s) "(20.37) Якщо ви починаєте діяти"
+    #351: CPS=15.0 (34ch/2.3s) "Бо Я сказала: «Ці люди божевільні!"
     #175: CPS=15.0 (40ch/2.7s) "Ми ніколи не очікували, що це станеться."
+    #253: CPS=15.0 (40ch/2.7s) "самій релігії, і в тих релігійних людях,"
     #350: CPS=15.0 (40ch/2.7s) "[тільки] через дев’ять років Я приїхала."
-    #481: CPS=15.0 (40ch/2.7s) "завжди в біді, бо це відбивається назад."
-    #95: CPS=15.0 (43ch/2.9s) "але в той час радість бхакті всередині вас."
-    #323: CPS=15.0 (46ch/3.1s) "як його називають, це святий, як це називають."
-    #462: CPS=15.0 (46ch/3.1s) "які зовсім не розуміють, що таке Сахаджа Йоґа."
+    #463: CPS=15.0 (46ch/3.1s) "які зовсім не розуміють, що таке Сахаджа Йоґа."
+    #213: CPS=15.0 (49ch/3.3s) "Звичайно, якщо хтось старий, доводиться помирати,"
+    #135: CPS=15.0 (52ch/3.5s) "яку люди роблять як божевільні, не може бути бхакті."
 
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 489
+  UK SRT blocks: 490
   EN SRT blocks: 485
   Ratio UK/EN: 1.01 (max allowed 2.0)
   Block count: OK
@@ -76,7 +76,7 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 10.9 (target ≤15.0)
-  CPS > 15.0: 58 blocks
+  CPS > 15.0: 48 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks

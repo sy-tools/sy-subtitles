@@ -1,66 +1,109 @@
 # Language Review – 1991-09-15 Shri Ganesha Puja: Shri Ganesha and His Qualities
 
+_Review date: 2026-07-17. This is a follow-up 2+1 pass; an earlier round already
+normalized dashes (`—` → ` – `), ellipses (`…` → `...`), and applied 4 targeted
+edits (`римський «ашрам»`, `слухняним Своїй Матері`, `Сахаджа Йоґи`, `Інкарнації`).
+Those fixes were verified as present and correct in the current text._
+
 ## Process
 
 2+1 review (Reviewer L + Reviewer S + Critic) of `transcript_uk.txt`
 against `transcript_en.txt`, `glossary/CLAUDE.md`, `terms_lookup.yaml`,
-and `terms_context.yaml`. The whole corpus was sampled to confirm
-house-style conventions for punctuation, transliteration, and
-capitalization.
+and `terms_context.yaml`, per `templates/language_review_template.md`.
+Corpus was sampled to confirm house-style conventions (vocative usage for
+deity names, «порочне/зачароване коло» variants).
+
+Paragraph numbering: ¶1 = first body paragraph («Сьогодні найщасливіший
+день…»), counting non-empty paragraphs after the 4-line header.
+
+Mechanical checks (automated): no Latin/Cyrillic mixing, no `„"`/`""` quotes,
+no U+2026 ellipsis, no space before punctuation, no double spaces, no straight
+apostrophes. Quotation marks `«»`, en-dash ` – `, apostrophe `’` — all clean.
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | all | Em-dash `—` (U+2014) used for interjections instead of en-dash `–` (U+2013) — 85 occurrences. Violates `glossary/CLAUDE.md` (En-dash ` – ` U+2013) and house style (corpus 6514 en-dash vs 740 em-dash). | `…вічна істота, вічне дитя` etc. | Replace ` — ` → ` – ` (85×) |
-| L2 | all | Single-character ellipsis `…` (U+2026) instead of three dots `...` — 20 occurrences. Violates `glossary/CLAUDE.md` (Ellipsis `...` three dots). | `що… нині існує велика мода` | Replace `…` → `...` (20×) |
-| L3 | 17 | Relative adjective from a city name wrongly capitalized | `Я хотіла купити Римський «ашрам»` | `римський «ашрам»` |
-| L4 | 26 | Wrong case government — `слухняний` governs the dative, not `до` + genitive (corpus: `слухняний своїй…`) | `Чому Він був таким слухняним до Своєї Матері?` | `слухняним Своїй Матері` |
-| L5 | 11 | `порочне коло` flagged as a possible calque for "vicious circle" | `Це порочне коло, мушу сказати` | (consider `замкнене коло`) |
+| L1 | ¶4 | Порушена сполучуваність: «створити … враження **на** інших»; нормативно «справити враження на когось» | «не намагаєтесь створити певне становище чи враження на інших» | «…чи справити враження на інших» |
+| L2 | ¶5 | Повтор вказівного займенника; в оригіналі протиставлення “let us become this, let us become that” | «або станьмо тим, станьмо тим» | «або станьмо цим, станьмо тим» |
+| L3 | ¶13 | Повтор вказівного займенника; в оригіналі “with all their planning, this, that” | «з усім їхнім плануванням, тим, тим» | «з усім їхнім плануванням, цим, тим» |
+| L4 | ¶16 | Помилкове керування: «хизуватися» вимагає «перед кимось», а не давального «нікому» | «Йому не треба нікому хизуватися Своїм «Лінкольном»…» | «Йому не треба ні перед ким хизуватися…» |
+| L5 | ¶21 | Помилковий прийменник: «перебувати **в** стані», не «на стані» | «Ви на... доволі високому стані.» | «Ви в... доволі високому стані.» |
+| L6 | ¶22 | «Страждати» не керує орудним відмінком («страждати нічим» — неграматично) | «нічим, вам не треба нічим страждати» | «нічим, вам не треба страждати» |
+| L7 | ¶5 | Конотація: «самозадоволений» ≈ пихатий; за змістом — «задоволений собою» | «Він був самодостатнім, самозадоволеним» | «задоволеним собою» |
+| L8 | ¶6 | Можлива калька: «порочне коло» замість «зачароване коло» | «Це порочне коло, мушу сказати» | «зачароване коло» |
+| L9 | ¶3 | Сумнівний слововжиток: «царственості» | «тієї величі, тієї царственості, тієї гідності» | «величності» |
+| L10 | ¶17 | Написання «не» з прикметником: разом як єдине поняття | «поверхова поведінка не приваблива» | «неприваблива» |
+| L11 | ¶16 | Зворотна форма «вражаються» сумнівна | «люди дуже вражаються ним» | «люди дуже вражені ним» |
+| L12 | ¶22 | Звертання без кличного відмінка | «Шрі Ґанеша, будь ласка, дай нам Божественну Мудрість» | «Шрі Ґанешо, будь ласка…» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
+
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 26 | `Йоги` written with `г` instead of `ґ` — breaks the Sanskrit-g → ґ rule and is inconsistent with `Сахаджа Йоґа` / `Йозі` / `йоґ` used everywhere else in this very text | `стійкість у ваших досягненнях Сахаджа Йоги` | `Сахаджа Йоґи` |
-| S2 | 10 | Divine Incarnation should be capitalized per `glossary/CLAUDE.md` (`Інкарнація – uppercase`); corpus 47 uppercase vs 2 lowercase | `Обидві ці речі цілком відсутні в інкарнації Шрі Ґанеші` | `в Інкарнації Шрі Ґанеші` |
-| S3 | 24 | `моє его` lowercase vs `Я дам Чайтанью` uppercase within the same hypothetical attributed to Shri Ganesha — possible inconsistency | `«…Я дам Чайтанью, дам життя цій людині, — і моє его підніметься»` | (consider `Моє его`) |
-| S4 | 6, 24 | `«Чайтанью»` quoted on first use but `Чайтанья`/`Чайтанью` later unquoted — quoting inconsistency | `Він дає Чайтанью` | (consider unify) |
+| S1 | ¶19 | Непослідовна капіталізація займенників в одній цитаті, синтаксично приписаній Шрі Ґанеші («Він не каже... не думає: «…»»): «Я» з великої (не на початку речення — після «Ось припустімо,»), але «моє» з малої | «Ось припустімо, Я дам Чайтанью, дам життя цій людині, – і моє его підніметься» | «…цій людині, – і Моє его підніметься» |
+| S2 | ¶11 | Капіталізація: «принцип Ґанеші» з малої (пор. глосарій: «Guru Principle → Принцип Ґуру») | «Якщо увага на вашому Дусі, на принципі Ґанеші» | «на Принципі Ґанеші» |
+| S3 | ¶21 | Регістр «девами» (глосарій: «Deva → Дева») | «міг піти й воювати з усіма девами» | «з усіма Девами» |
+
+Terminology audit (no issues found): Муладхара, Кундаліні, Чайтанья, бхути,
+Калі Юга, ашрам (мала), ґани (мала), Шакті, Брахмадева, Мати Земля (Матері
+Землі / Матір Землю), сахаджа йоґ / сахаджа йоґи (множина, не «йоґі») /
+сахаджа йоґиня, в Сахаджа Йозі (місц.), Адхістхан (дх/стх за конвенцією),
+Дух, Стопи (Стіп), Пуджа, Інкарнація, Самореалізація, реалізовані душі (мала
+за оригіналом) — усі відповідають глосарію. Займенники Шрі Матаджі
+(Я/Мені/Мене/Мною/Мій), Христа та Шрі Ґанеші (Він/Його/Йому/Себе/Свій) — з
+великої послідовно; звертання йоґів до Матері (Ти/Тебе/Тобою/Твоїй) — з
+великої; звичайні люди та внутрішня мова йоґів у цитатах — з малої. Назви мов
+— з малої. Благословення «Нехай Бог благословить вас» відповідає оригіналу
+(“May God bless you”, без “all”).
 
 ### Critic Filter
+
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | **Keep** | Explicit glossary rule + overwhelming house style. Real, systematic orthography error. |
-| L | L2 | **Keep** | Explicit glossary rule (`...` three dots). Real, systematic orthography error. |
-| L | L3 | **Keep** | Relative adjectives from toponyms are lowercase in Ukrainian (`римський`); it is not part of an official proper name. |
-| L | L4 | **Keep** | `слухняний` + dative is the normative government; `слухняний до` is non-standard. Corpus confirms `слухняний своїй`. |
-| L | L5 | **Remove** | `порочне коло` is established in this corpus (5 occurrences, equal to `замкнене коло`). Acceptable variant, not an error. |
-| S | S1 | **Keep** | Transliteration rule (Sanskrit g → ґ) and internal consistency: every other `Йоґ-` form in the text uses `ґ`. |
-| S | S2 | **Keep** | Glossary explicitly capitalizes `Інкарнація`; strong corpus precedent (47:2). |
-| S | S3 | **Remove** | Voice is ambiguous (doubt voiced by yogis vs. Ganesha); original not clearly wrong; correction debatable either direction. |
-| S | S4 | **Remove** | The English source is itself inconsistent (`'Chaitanya'` then `Chaitanya`); the translation faithfully mirrors it. Style, not error. |
+| L | L1 | **Keep** | Реальне порушення сполучуваності: «враження на інших» вимагає «справити»; спільне дієслово «створити» на обидва додатки тут неграматичне |
+| L | L2 | **Keep** | Оригінал протиставляє “this / that”; повтор «тим, тим» — помилка відтворення, а не варіант |
+| L | L3 | **Keep** | Те саме: “this, that” → «цим, тим» |
+| L | L4 | **Keep** | Помилкове дієслівне керування; нормативно лише «хизуватися перед кимось» |
+| L | L5 | **Keep** | «На стані» — помилковий прийменник; заміна «на» → «в» зберігає розмовну паузу оригіналу |
+| L | L6 | **Keep** | «Страждати нічим» — неграматична конструкція; вилучення «нічим» — мінімальне виправлення |
+| L | L7 | **Remove** | «Самозадоволений» зафіксовано словником; “self-satisfied” в оригіналі так само двозначне — заміна є стилістичним рішенням, не мовною помилкою |
+| L | L8 | **Remove** | «Порочне коло» вживане в українських текстах і в корпусі проєкту (1978-12-09); допустимий варіант, не помилка |
+| L | L9 | **Remove** | «Царствений/царственість» зафіксовано в СУМ; вживання допустиме |
+| L | L10 | **Remove** | Роздільне написання допустиме в присудковій позиції з наголошеним запереченням; не однозначна помилка |
+| L | L11 | **Remove** | Розмовна форма в транскрипті усної промови; однозначної помилки немає |
+| L | L12 | **Remove** | У корпусі проєкту кличні форми імен Божеств не вживаються (жодного «Ґанешо» у 100+ бесідах); звертання до Божества в називній формі — усталена практика перекладів СЙ |
+| S | S1 | **Keep** | Попередній раунд відклав цю правку як «неоднозначну», але: цитату вводить «Він не каже... не думає:» — мовець синтаксично Шрі Ґанеша; в оригіналі «I» = Той, хто «дає Чайтанью, дає життя» (попереднє речення: «Він знає, що Він є джерелом життя»). «Я» всередині речення вже свідомо з великої — «моє» мусить бути узгоджене: «Моє». Наступна цитата («Мати, я не хочу…») — мова людини, там мала літера правильна |
+| S | S2 | **Remove** | В оригіналі “the Ganesha principle” з малої; глосарій фіксує велику літеру лише для «Принципу Ґуру» — підстав змінювати немає |
+| S | S3 | **Remove** | Множина божеств усередині речення — з малої, узгоджено з «з усіма богами й богинями» в цьому ж тексті; правило глосарія для множини — мала літера |
 
 ### Approved Corrections
+
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | all | Em-dash `—` → en-dash `–` (interjections) | ` – ` (85×) |
-| 2 | all | Single-char ellipsis `…` → `...` | `...` (20×) |
-| 3 | 17 | `Римський «ашрам»` | `римський «ашрам»` |
-| 4 | 26 | `слухняним до Своєї Матері` | `слухняним Своїй Матері` |
-| 5 | 26 | `Сахаджа Йоги` (`г`) | `Сахаджа Йоґи` (`ґ`) |
-| 6 | 10 | `в інкарнації Шрі Ґанеші` | `в Інкарнації Шрі Ґанеші` |
+| 1 | ¶4 | «створити певне становище чи враження на інших» | «створити певне становище чи справити враження на інших» |
+| 2 | ¶5 | «або станьмо тим, станьмо тим» | «або станьмо цим, станьмо тим» |
+| 3 | ¶13 | «з усім їхнім плануванням, тим, тим» | «з усім їхнім плануванням, цим, тим» |
+| 4 | ¶16 | «Йому не треба нікому хизуватися Своїм…» | «Йому не треба ні перед ким хизуватися Своїм…» |
+| 5 | ¶19 | «…цій людині, – і моє его підніметься» | «…цій людині, – і Моє его підніметься» |
+| 6 | ¶21 | «Ви на... доволі високому стані.» | «Ви в... доволі високому стані.» |
+| 7 | ¶22 | «нічим, вам не треба нічим страждати» | «нічим, вам не треба страждати» |
 
 ## Summary
 
-- Language (L): 5 issues found, 4 approved by Critic
-- SY Domain (S): 4 issues found, 2 approved by Critic
-- Total corrections applied: 6 (105 punctuation-character replacements + 4 targeted edits)
+- Language (L): 12 issues found, 6 approved by Critic
+- SY Domain (S): 3 issues found, 1 approved by Critic
+- Total corrections applied: 7
 
 ### Notes
-The translation is otherwise of high quality. Deity-pronoun capitalization
-is handled correctly throughout (Shri Mataji `Я/Мені/Мене/Мною`; Shri Ganesha
-and Christ `Він/Його/Йому/Себе/Свою`; yogis addressing the Mother `Ти/Тебе/Тобою`;
-regular people lowercase). Quotation marks (`«»`, 52 balanced pairs), the
-apostrophe (`’`, U+2019), spacing, and term transliteration (`Ґанеша`, `Чайтанья`,
-`Муладхара`, `Адхістхан`, `Калі Юга`, `Стіп`, `Дух`) are all correct. No mixed
-Latin/Cyrillic characters, no stray Russian letters, no spacing defects were found.
+
+The translation is of high quality; all corrections in this pass are point
+fixes (verb government, prepositions, demonstrative pairs mirroring the
+English “this/that”, and one pronoun-capitalization consistency fix inside
+Shri Ganesha's quoted speech). Punctuation, transliteration, glossary
+terminology, and deity-pronoun capitalization are otherwise consistent
+throughout. The tricky voice-switching passage in ¶12 (generic speaker's
+«мені треба йти…» lowercase vs. Shri Mataji's «Коли Я туди дістануся…»
+uppercase) was checked against the English and is rendered correctly.

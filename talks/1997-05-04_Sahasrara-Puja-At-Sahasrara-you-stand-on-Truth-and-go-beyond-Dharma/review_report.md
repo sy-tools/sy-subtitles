@@ -1,11 +1,24 @@
-# Language Review – 1997-05-04_Sahasrara-Puja-At-Sahasrara-you-stand-on-Truth-and-go-beyond-Dharma, 2026-05-31
+# Language Review – 1997-05-04_Sahasrara-Puja-At-Sahasrara-you-stand-on-Truth-and-go-beyond-Dharma, 2026-07-17
 
 ## Process
 
-2+1 agent language review of `transcript_uk.txt` (Ukrainian translation of the
-Sahasrara Puja talk, Cabella, 4 May 1997). Reviewer L (Language) and Reviewer S
-(SY Domain) ran in parallel; the Critic filtered both tables. Paragraph numbers
-refer to the body lines of `transcript_uk.txt`.
+2+1 agent language review of `transcript_uk.txt` per `templates/language_review_template.md`:
+Reviewer L (Language) and Reviewer S (SY Domain) ran in parallel; the Critic filtered both tables.
+Reference materials: `transcript_en.txt` (original), `glossary/CLAUDE.md`, `glossary/terms_lookup.yaml`,
+`glossary/terms_context.yaml`, and corpus conventions cross-checked against other `talks/*/transcript_uk.txt`.
+
+This is the **second review round**. The first round (2026-05-31, see git history of this file) applied
+18 corrections (Shri Mataji pronoun capitalization, ellipsis normalization, `сахаджа йоги → йоґи`,
+`Ваша → ваша Мати`, footnote `прій → прі’я`); all of those are confirmed still in place. Two round-1
+verdicts are superseded below with justification (L1, part of correction 4).
+
+Paragraph numbers (¶) refer to line numbers of `transcript_uk.txt` (title block ¶1–4, body ¶6–38,
+translated-terms appendix ¶39–49).
+
+Automated pre-checks — all clean: mixed Latin/Cyrillic characters, forbidden quote glyphs (`„“”"`),
+double spaces, missing/extra spaces around punctuation, hyphen-as-dash or em-dash U+2014, straight
+apostrophes, single-char ellipsis `…` (U+2026), unbalanced «». One automated finding (apostrophe after
+a vowel) is reported as L4.
 
 ## Results
 
@@ -13,82 +26,82 @@ refer to the body lines of `transcript_uk.txt`.
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 24 | Ellipsis as single char `…` (U+2026); project convention is three dots `...` | `«Ти, Ти, Ти»… Кабір сказав` | `«Ти, Ти, Ти»... Кабір сказав` |
-| L2 | 30 | Ellipsis as single char `…` (U+2026) | `бо ви потрапили на холод, бо це…»` | `...бо це...»` |
-| L3 | 15 | Active present participle `-уюч-` (stylistically discouraged) | `Істину, яка всепронизуюча` | `всепроникна` |
-| L4 | 29 | Referent/gender mismatch: framing `вона скаже` vs quoted masc. `я зробив` | `Але зрештою вона скаже: «...я зробив щось досконале»` | `він скаже` |
+| L1 | ¶29 | Intra-sentence gender mismatch: feminine framing «вона скаже» with masculine «я зробив» inside the same quoted speech; EN «he will say» | «Але зрештою вона скаже: «…адже я зробив щось досконале»» | «Але зрештою він скаже: …» |
+| L2 | ¶38 | Missing case marker for indeclinable language name — bare «Гінді це сказано краще» is ungrammatical | «Гінді це сказано краще: «Апне ме самає хує…»» | «Мовою гінді це сказано краще: …» |
+| L3 | ¶28 | Colon after conjunction «що» before direct speech is non-standard punctuation | «Це дуже важливо усвідомити, що: «Мене немає…» | «Це дуже важливо усвідомити: «Мене немає…» |
+| L4 | ¶28, ¶45–47 | Apostrophe after a vowel is impossible in Ukrainian orthography (the apostrophe marks a hard *consonant* before я/ю/є/ї); corpus standard is «Прія» (10×) | «прі’ям вадет» (4×), «прі’я» (2×) | «пріям вадет», «прія» |
+| L5 | ¶20 | Comma between non-homogeneous adjectives (qualitative «чиста» + relational «колективна» qualify the noun as a unit) | «а чиста, колективна свідомість і її любов» | «а чиста колективна свідомість і її любов» |
+| L6 | ¶16 | «не правда» possibly should be one word «неправда» | «Так-от, насправді це не правда.» | «…це неправда.» |
+| L7 | ¶34 | Tautology «подарувати … подарунок» | «Я хочу подарувати якийсь подарунок певним людям» | «зробити якийсь подарунок» |
+| L8 | ¶25 | Inconsistent case of stage directions «(сміх)» vs «(Сміх)» | «Я сказала: «Що?» (сміх) … То чим тут пишатися?» (Сміх)» | unify lowercase |
+| L9 | ¶10 | Euphony: «йти» after a consonant, «іти» preferred | «наш обов’язок – йти» | «наш обов’язок – іти» |
+| L10 | ¶28 | Awkward word order | «ну є ти сахаджа йоґом, є ти сахаджа йоґом, то й що?» | «ну ти є сахаджа йоґом…» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 10 | Shri Mataji 1st-person pronoun lowercase | `ми, я б сказала, ще не повні` | `ми, Я б сказала` |
-| S2 | 12 | Shri Mataji pronoun lowercase | `Це я називаю «завершенням...»` | `Це Я називаю` |
-| S3 | 14 | Shri Mataji pronoun lowercase | `різниця, я б сказала, між Дхармою` | `різниця, Я б сказала` |
-| S4 | 15 | Shri Mataji pronoun lowercase | `Також я бачила деяких сахаджа йоґів` | `Також Я бачила` |
-| S5 | 15 | Shri Mataji pronoun lowercase | `проявами, я маю на увазі` | `проявами, Я маю на увазі` |
-| S6 | 15 | Shri Mataji pronoun lowercase | `подібного, я можу вказати вам` | `подібного, Я можу вказати` |
-| S7 | 16 | Shri Mataji pronoun lowercase | `Припустімо, я зустрічаю когось` | `Припустімо, Я зустрічаю` |
-| S8 | 16 | Shri Mataji pronoun lowercase | `Тож я відчуваю безмежну любов` | `Тож Я відчуваю` |
-| S9 | 16 | Shri Mataji pronoun lowercase | `І ось я вдаюся до брехні` | `І ось Я вдаюся` |
-| S10 | 18 | Shri Mataji pronoun lowercase | `А потім я побачила, як ізраїльтяни` | `А потім Я побачила` |
-| S11 | 20 | Shri Mataji pronoun lowercase | `від приватності, я не можу зрозуміти` | `Я не можу зрозуміти` |
-| S12 | 20 | Shri Mataji pronoun lowercase | `Гаразд, я казала, що ви можете` | `Гаразд, Я казала` |
-| S13 | 33 | Shri Mataji pronoun lowercase | `абсолютно, я б сказала, наче бруд` | `абсолютно, Я б сказала` |
-| S14 | 23 | Transliteration `г` instead of `ґ` for Sahaja Yoga (glossary: Йоґа) | `інший різновид сахаджа йоги` | `сахаджа йоґи` |
-| S15 | 20 | Listeners' possessive over-capitalized (cf. para 23 `вашої Матері`) | `а Ваша Мати – ще одна` | `а ваша Мати` |
-| S16 | 47 (footnote) | Transliteration inconsistent with body (para 28) and footnotes 45/46 (`прі’ям`) | `прій – те, що цінують` | `прі’я – те, що цінують` |
+| S1 | ¶2 | Title subtitle omitted; corpus convention mirrors the full EN «X: subtitle» form (cf. «Пуджа Ґуру: Закони Господа», «Шрі Дурґа Пуджа: Розум – це наче віслюк», «Пуджа Аді Шакті: Мати, зроби мене таким…») | «Сахасрара Пуджа» vs EN «Sahasrara Puja: At Sahasrara you stand on Truth and go beyond Dharma» | «Сахасрара Пуджа: На Сахасрарі ви стоїте на Істині й виходите за межі Дхарми» |
+| S2 | ¶29 | «Sahaja Yoga» lowercase; `terms_context.yaml`: always capitalized; the 6 other in-text instances are «в Сахаджа Йозі» | «якщо ви достатньо зрілі в сахаджа йозі» | «зрілі в Сахаджа Йозі» |
+| S3 | ¶28, ¶45–46 | «сат’ям» vs glossary «Сатья Юга» (same Sanskrit *satya*) — suggest «сатьям» | «сат’ям вадет…» (4×) | «сатьям вадет»? |
+| S4 | ¶23 | «сахаджа йоґа» lowercase | «започаткували інший різновид сахаджа йоґи» | «Сахаджа Йоґи»? |
+| S5 | ¶23 | «лінгамів Шіви» / «Шіва-лінгама» vs glossary «Shiva Linga → Лінгам Шіви» | «один із цих лінгамів Шіви…», «прийшов гнів Шіва-лінгама» | «Лінгамів Шіви» / «Лінгама Шіви»? |
+| S6 | ¶24 | Uppercase «Мені» inside the quote «Це Мені подобається…» — if the quote mimics a generic ego-person’s speech, lowercase is required | «Це Мені подобається, те Мені подобається. Мені подобається бути такою» | «Це мені подобається…»? |
+| S7 | ¶24 | «сахаджа культура» lowercase vs EN «Sahaj Culture» | «ось що таке сахаджа культура» | «Сахаджа культура»? |
 
 ### Critic Filter
 
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | Keep | `glossary/CLAUDE.md` orthography mandates ellipsis as three dots `...`; template L explicitly lists `…`-style as incorrect. |
-| L | L2 | Keep | Same rule as L1. |
-| L | L3 | Remove | `всепронизуюча` is established SY-register usage (all-pervading power); a stylistic preference, not an orthographic error. |
-| L | L4 | Remove | `вона` is grammatically valid (agrees with feminine `людина`); EN "he" is generic; "correcting" requires an interpretive choice — not a clear error. |
-| S | S1–S13 | Keep | Explicit rule (CLAUDE.md / template): Shri Mataji's 1st-person pronoun is ALWAYS uppercase. All 13 are her own narration ("I would say", "I have seen", "I meet", "I feel", etc.), not quoted/generic speech. |
-| S | S14 | Keep | Glossary fixes `Sahaja Yoga → Сахаджа Йоґа` (ґ); the text already uses ґ in every other instance (paras 8, 10, 15, 18, 25, 30). Lowercase retained (deviant practice, per EN). |
-| S | S15 | Keep | `ваш-` is the listeners' possessive (→ lowercase); the parallel phrase in para 23 (`любов вашої Матері`, twice) is already lowercase. `Мати` stays capital (Shri Mataji's title). |
-| S | S16 | Keep | Body (para 28) and footnotes 45/46 use the `прі’я`/`прі’ям` stem; only footnote 47 had `прій`. Aligning the gloss to the form actually used in the body. |
+| L | L1 | Keep | Supersedes the round-1 «Remove» verdict, which judged the framing pronoun alone («вона» could agree with an implied «людина»). There is no explicit feminine antecedent (chain: «людям … вони скажуть … вона скаже»), and either way the sentence is internally broken: feminine «вона скаже» + masculine «я зробив» in the same reported speech. EN «he will say» fixes the reading → «він скаже». |
+| L | L2 | Keep | Bare «Гінді це сказано краще» lacks any case marker; the indeclinable language name requires «Мовою гінді» (lowercase language name mid-sentence preserved). |
+| L | L3 | Keep | «, що:» before direct speech is a genuine punctuation error; dropping «, що» yields the standard direct-speech colon, matching «Хтось запитав Мене: «…»» elsewhere in the text. |
+| L | L4 | Keep | Rule-backed: an apostrophe never follows a vowel in Ukrainian; corpus uses «Прія» (10×). All 6 occurrences fixed, including appendix ¶45–47, so body and appendix stay consistent (round 1 had aligned the appendix to «прі’я» for internal consistency without assessing the orthography itself — superseded). |
+| L | L5 | Keep | Qualitative + relational adjectives are non-homogeneous — no comma per Ukrainian punctuation rules; the EN comma («the pure, collective consciousness») is a speech-pause artifact. |
+| L | L6 | Remove | False positive: separate «не правда» is valid where the negation is emphasized — «насправді це не правда» renders EN «this is not the truth, actually». |
+| L | L7 | Remove | Trivial style: mirrors EN «give some present»; oral register, not an error. |
+| L | L8 | Remove | Stage directions mirror the EN source exactly («(laughter)» / «(Laughter)»); source fidelity, not an error. |
+| L | L9 | Remove | і/й euphonic alternation is a recommendation, not an orthographic error; oral register. |
+| L | L10 | Remove | Colloquial inversion faithfully renders EN «once you are a sahaja yogi, you are a sahaja yogi, so what?»; style, not grammar. |
+| S | S1 | Keep | Genuine omission: half the talk title is missing. Corpus convention (all checked talks with «X: subtitle» EN titles translate the full title) confirms. Wording reuses the talk’s own renderings: «ви стоїте на Істині» (¶13), «виходимо за межі Дхарми» (¶10). |
+| S | S2 | Keep | Real inconsistency: refers to the actual practice (always uppercase per `terms_context.yaml`); the 6 other in-text instances are capitalized. Locative «Йозі» (ґ→з) already correct. |
+| S | S3 | Remove | Not clearly an error: the corpus uses the identical apostrophe transliteration in verbatim Sanskrit quotes — «Ом сат’ям, Ом тат-Савітру-варен’ям…» (Gayatri Mantra, 1982-08-01 talk). Glossary «Сатья Юга» governs the assimilated epoch name, not shloka transliteration; changing would create cross-corpus inconsistency. |
+| S | S4 | Remove | False positive: lowercase is deliberate — EN pointedly writes «another kind of sahaja yoga» (a deviant imitation, not the organization). Uppercasing would distort the meaning. Round 1 reached the same conclusion. |
+| S | S5 | Remove | «one of these lingas» is a generic plural (lowercase natural); «Шіва-лінгама» mirrors EN «Shiva-linga». No genuine glossary conflict. |
+| S | S6 | Remove | Ambiguous speaker: the adjacent sentences («Що Мені подобається? Мені важко вирішити…») are Shri Mataji’s own voice, and the feminine «такою» supports that reading; uppercase is defensible. No change on an interpretive guess. |
+| S | S7 | Remove | Per `terms_context.yaml`, the register of «сахаджа/Сахаджа» as an adjective is at the translator’s discretion. |
 
 ### Approved Corrections
 
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 10 | `я б сказала` (Shri Mataji) | `Я б сказала` |
-| 2 | 12 | `Це я називаю` | `Це Я називаю` |
-| 3 | 14 | `я б сказала` | `Я б сказала` |
-| 4 | 15 | `Також я бачила` | `Також Я бачила` |
-| 5 | 15 | `я маю на увазі` | `Я маю на увазі` |
-| 6 | 15 | `я можу вказати` | `Я можу вказати` |
-| 7 | 16 | `я зустрічаю` | `Я зустрічаю` |
-| 8 | 16 | `я відчуваю` | `Я відчуваю` |
-| 9 | 16 | `я вдаюся` | `Я вдаюся` |
-| 10 | 18 | `я побачила` | `Я побачила` |
-| 11 | 20 | `я не можу зрозуміти` | `Я не можу зрозуміти` |
-| 12 | 20 | `Гаразд, я казала` | `Гаразд, Я казала` |
-| 13 | 33 | `я б сказала` | `Я б сказала` |
-| 14 | 23 | `сахаджа йоги` (г) | `сахаджа йоґи` (ґ) |
-| 15 | 20 | `Ваша Мати` | `ваша Мати` |
-| 16 | 47 | `прій` (footnote) | `прі’я` |
-| 17 | 24 | `«Ти, Ти, Ти»…` | `«Ти, Ти, Ти»...` |
-| 18 | 30 | `бо це…»` | `бо це...»` |
+| 1 | ¶2 | «Сахасрара Пуджа» (subtitle omitted) | «Сахасрара Пуджа: На Сахасрарі ви стоїте на Істині й виходите за межі Дхарми» |
+| 2 | ¶20 | «а чиста, колективна свідомість і її любов» | «а чиста колективна свідомість і її любов» |
+| 3 | ¶28 | «Це дуже важливо усвідомити, що: «Мене немає…» | «Це дуже важливо усвідомити: «Мене немає…» |
+| 4 | ¶28, ¶45–47 | «прі’ям» (4×), «прі’я» (2×) | «пріям», «прія» |
+| 5 | ¶29 | «Але зрештою вона скаже: «…я зробив…»» | «Але зрештою він скаже: …» |
+| 6 | ¶29 | «зрілі в сахаджа йозі» | «зрілі в Сахаджа Йозі» |
+| 7 | ¶38 | «Гінді це сказано краще:» | «Мовою гінді це сказано краще:» |
 
 ## Summary
 
-- Language (L): 4 issues found, 2 approved by Critic
-- SY Domain (S): 16 issues found, 16 approved by Critic
-- Total corrections applied: 18
+- Language (L): 10 issues found, 5 approved by Critic
+- SY Domain (S): 7 issues found, 2 approved by Critic
+- Total corrections applied: 7 (12 text edits counting repeated occurrences)
 
 ### Notes
-- Quotation marks (`«»`), apostrophe (`’`, U+2019) and em-/en-dash (` – `) usage
-  were verified clean across the whole transcript — no straight `'`/`"` or
-  German/English quote glyphs present.
-- Christ, Shiva and other singular Incarnation pronouns (`Він/Його/Свою/Мене`)
-  and all Shri-Mataji self-references in oblique cases (`Мене/Мені/Мною/Собі/Моя`)
-  were already correctly capitalized.
-- Spiritual terms (Дхарма, Істина, Дух, Пуджа, Сахасрара, Реалізація) and
-  glossary terminology (Кундаліні, Набхі, Свадхістхана, Пітха, дхарматіт,
-  адхармі, Лінгам Шіви, Ґанапатіпуле, Кабір, Крішна) verified consistent.
-- Language names (`англійська`, `гінді`) correctly lowercase.
+
+- Deity-pronoun capitalization was re-verified across the whole text and is consistent and correct:
+  Я/Мені/Мою/Себе/Собі/«у Неї» for Shri Mataji; Він/Його/Свою/«у Мене» for Christ; Він/Свій for Shiva;
+  Ти/Тобою addressed to God or Shri Mataji — with correctly *lowercase* pronouns for regular people
+  inside quotes («я мушу зустрітися з Тобою», «а як же я?», «мені це подобається» in generic speech).
+- Glossary terms verified consistent: Кундаліні, Сахасрара, Войд, Набхі чакра, Свадхістхана (locative
+  «у Свадхістхані»), Дхарма uppercase throughout with lowercase derivatives (адхармі, дхарматіт,
+  дхармічний — per glossary), Істина, Дух, Пуджа (instrumental «Пуджею» — correct mixed-group form),
+  Реалізація, шраддга (genitive «шраддги»), пітха, его, блокування, Аді Шакті, Шрі Ґанеша (genitive
+  «Ґанеші» — correct per `terms_context.yaml`), Ґанапатіпуле, Мати Земля, Кабір, Крішна,
+  сахаджа йоґ/йоґи lowercase with correct plural/oblique forms, «в Сахаджа Йозі» declension.
+- Language names («англійська», «гінді») correctly lowercase; «Ґуру» correctly uppercase for the divine
+  Guru (¶24) and lowercase for false gurus (¶30).
+- Quotation marks «» at all levels (incl. nested «прія (प्रिय)»»), apostrophe U+2019, en-dash ` – `,
+  and ellipsis `...` verified clean.
