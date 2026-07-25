@@ -416,3 +416,48 @@ def test_integration_403_blames_missing_repo_access_not_the_app(auth_server, aut
         timeout=5000,
     )
     assert page.evaluate("localStorage.getItem('sy_gh_no_write')") == "1"
+
+
+# ============================================================
+# Signed-in "enlightenment" marks: avatar aura + dawn thread
+# ============================================================
+
+
+def test_signed_in_write_gets_enlightenment_marks(auth_server, auth_page):
+    """A signed-in WRITE session carries body.gh-write: the 2px dawn thread
+    (body::after, fixed, non-interactive) and a warm aura on the avatar."""
+    page = auth_page  # fixture default: push=true
+    _seed_session(page)
+    page.goto(f"{auth_server}/index.html")
+    page.wait_for_function("document.body.classList.contains('gh-write')", timeout=10000)
+    assert page.evaluate("getComputedStyle(document.body, '::after').height") == "2px"
+    assert page.evaluate("getComputedStyle(document.body, '::after').position") == "fixed"
+    assert page.evaluate("getComputedStyle(document.body, '::after').pointerEvents") == "none"
+    assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).boxShadow") != "none"
+
+
+def test_signed_out_has_no_enlightenment_marks(plain_server):
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        pytest.skip("playwright not installed")
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context()
+        pg = ctx.new_page()
+        _route_github(pg, plain_server)
+        pg.goto(f"{plain_server}/index.html")
+        pg.wait_for_function("document.title.includes('Index')", timeout=10000)
+        assert not pg.evaluate("document.body.classList.contains('gh-write')")
+        assert pg.evaluate("getComputedStyle(document.body, '::after').content") == "none"
+        ctx.close()
+
+
+def test_readonly_session_has_no_enlightenment_marks(auth_server, auth_page):
+    page = auth_page
+    _route_repo_permissions(page, False)
+    _seed_session(page)
+    page.goto(f"{auth_server}/index.html")
+    page.wait_for_function("localStorage.getItem('sy_gh_no_write') === '1'", timeout=10000)
+    assert not page.evaluate("document.body.classList.contains('gh-write')")
+    assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).boxShadow") == "none"

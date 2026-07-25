@@ -5103,6 +5103,9 @@ function updateAuthUI() {
   loginBtn.style.display = (ghClientId() && !user) ? '' : 'none';
   var wrap = document.getElementById('gh-avatar-wrap');
   if (wrap) wrap.classList.toggle('gh-avatar--readonly', !!user && !writeUser);
+  // Enlightenment marks (avatar aura + dawn thread, pure CSS off this class)
+  // — write sessions only; read-only keeps the grayscale degraded look.
+  document.body.classList.toggle('gh-write', !!writeUser);
   if (user) {
     avatar.src = user.avatar_url;
     avatar.title = t('auth.signed_in') + ' ' + user.login + (writeUser ? '' : ' ' + t('auth.readonly_title'));
