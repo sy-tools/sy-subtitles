@@ -1004,3 +1004,19 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 .talk-actions a.work-badge--draft { color: var(--accent-orange); border-style: dashed; }
 .talk-actions a.work-badge--merged { color: var(--accent-green); }
 .talk-actions a.work-badge--closed { color: var(--fg5); }
+
+/* Signed-in "enlightenment" marks (body.gh-write, toggled by updateAuthUI):
+   a dawn thread across the top of the viewport + a warm aura on the avatar.
+   Write sessions only (read-only stays grayscale, no marks). Static glow —
+   deliberately subtle, no animation. */
+body.gh-write::after {
+  content: '';
+  position: fixed; top: 0; left: 0; right: 0; height: 2px;
+  pointer-events: none;
+  z-index: var(--z-toast);
+  background: linear-gradient(90deg, transparent, var(--aura) 20%, var(--aura-core) 50%, var(--aura) 80%, transparent);
+  box-shadow: 0 1px 6px var(--aura);
+}
+body.gh-write .gh-avatar-wrap #gh-avatar {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 10px 2px var(--aura);
+}

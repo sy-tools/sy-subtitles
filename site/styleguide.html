@@ -128,6 +128,17 @@
   </div>
 </div>
 
+<h2>Enlightenment marks (signed-in)</h2>
+<p style="color:var(--fg4)">A write-access session carries <code>body.gh-write</code> (toggled by
+<code>updateAuthUI</code>): a 2px <em>dawn thread</em> across the top of the viewport
+(<code>body.gh-write::after</code>, tokens <code>--aura</code>/<code>--aura-core</code>) and a warm
+<em>aura</em> around the header avatar. Read-only and signed-out sessions carry neither.
+Toggle it live on this page:</p>
+<button class="btn btn--sm" onclick="document.body.classList.toggle('gh-write');this.textContent=document.body.classList.contains('gh-write')?'Signed-in (write) — ON':'Signed-in (write) — OFF'">Signed-in (write) — OFF</button>
+<div class="gh-avatar-wrap" style="display:inline-block;position:relative;margin-left:var(--space-4);vertical-align:middle;">
+  <img id="gh-avatar" alt="demo avatar" src="icon.png" style="width:26px;height:26px;border-radius:50%;">
+</div>
+
 <h2>My work (mine filter)</h2>
 <p style="color:var(--fg4)">The mine filter lists talks in two groups — assigned to me, then a
 <code>.talk-sep</code> separator before "work I started" (my PRs/issues, not assigned) — in both
@@ -188,7 +199,7 @@ catalog can't drift from the app.</p>
   }
   function renderSwatches() {
     swatches('sw-neutral', ['--bg','--bg2','--bg3','--bg4','--bg5','--fg','--fg2','--fg3','--fg4','--fg5','--fg6','--border','--border2','--border3']);
-    swatches('sw-accent', ['--link','--accent-green','--accent-orange','--accent-red','--sync-progress','--stat-active-bg','--mark-bg']);
+    swatches('sw-accent', ['--link','--accent-green','--accent-orange','--accent-red','--sync-progress','--stat-active-bg','--mark-bg','--aura','--aura-core']);
     swatches('sw-semantic', ['--primary-bg','--primary-border','--primary-fg','--issue-bg','--issue-border','--issue-fg','--danger-bg','--danger-border','--danger-fg','--cell-hover','--cell-edit-bg','--cell-edited-bg']);
   }
   renderSwatches();
