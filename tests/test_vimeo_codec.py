@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.vimeo_codec import decode_video_ref, encode_video_ref, main
+from tools.vimeo_codec import decode_video_ref, encode_video_ref, main, to_player_url
 
 VECTORS_PATH = Path(__file__).parent / "fixtures" / "vimeo_codec_vectors.json"
 
@@ -85,6 +85,40 @@ def test_cli_encode_then_decode_round_trip(capsys):
     assert ref.startswith("r1")
     main(["decode", ref])
     assert capsys.readouterr().out.strip() == url
+
+
+def test_to_player_url_moves_private_hash_into_query():
+    """yt-dlp must be handed the embed form.
+
+    Vimeo answers 401 on the internal "macos" API that yt-dlp uses for the
+    ``vimeo.com/<id>/<hash>`` form; the ``player.vimeo.com`` form goes through
+    the player config endpoint and still works.
+    """
+    assert (
+        to_player_url("https://vimeo.com/111111111/aaaaaaaaaa")
+        == "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"
+    )
+
+
+def test_to_player_url_without_private_hash():
+    assert to_player_url("https://vimeo.com/123456789") == "https://player.vimeo.com/video/123456789"
+
+
+def test_to_player_url_is_idempotent():
+    player = "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"
+    assert to_player_url(player) == player
+
+
+def test_to_player_url_leaves_unrecognized_urls_unchanged():
+    # Never silently rewrite something we do not understand — let yt-dlp decide.
+    assert to_player_url("https://example.com/video/1") == "https://example.com/video/1"
+
+
+def test_cli_decode_player_emits_embed_url(capsys):
+    # The workflows call `python -m tools.vimeo_codec decode --player "$VIDEO_REF"`.
+    ref = encode_video_ref("https://vimeo.com/111111111/aaaaaaaaaa")
+    main(["decode", "--player", ref])
+    assert capsys.readouterr().out.strip() == "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"
 
 
 def test_cross_language_vectors_match():

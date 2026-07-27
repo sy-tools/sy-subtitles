@@ -183,8 +183,10 @@ jobs:
       - name: Download video (temporary)
         run: |
           # Decode the obfuscated video_ref at the last moment and mask the
-          # plaintext URL from the logs.
-          VIMEO_URL=$(python3 -m tools.vimeo_codec decode "$VIDEO_REF")
+          # plaintext URL from the logs. --player emits the player.vimeo.com
+          # form: Vimeo answers 401 on the internal API yt-dlp uses for the
+          # canonical vimeo.com/<id>/<hash> links.
+          VIMEO_URL=$(python3 -m tools.vimeo_codec decode --player "$VIDEO_REF")
           echo "::add-mask::$VIMEO_URL"
           mkdir -p /tmp/whisper_work
           yt-dlp \
