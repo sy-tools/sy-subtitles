@@ -1,0 +1,771 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "id": 0,
+      "start": 0.21,
+      "end": 7.21,
+      "text": "On a Guru Puja, the guru doesn't give any presence to the disciple.",
+      "words": [
+        {
+          "start": 0.21,
+          "end": 0.81,
+          "word": "On"
+        },
+        {
+          "start": 0.81,
+          "end": 1.01,
+          "word": "a"
+        },
+        {
+          "start": 1.01,
+          "end": 1.21,
+          "word": "Guru"
+        },
+        {
+          "start": 1.21,
+          "end": 2.05,
+          "word": "Puja,"
+        },
+        {
+          "start": 2.59,
+          "end": 2.77,
+          "word": "the"
+        },
+        {
+          "start": 2.77,
+          "end": 2.95,
+          "word": "guru"
+        },
+        {
+          "start": 2.95,
+          "end": 3.41,
+          "word": "doesn't"
+        },
+        {
+          "start": 3.41,
+          "end": 3.83,
+          "word": "give"
+        },
+        {
+          "start": 3.83,
+          "end": 5.23,
+          "word": "any"
+        },
+        {
+          "start": 5.23,
+          "end": 5.87,
+          "word": "presence"
+        },
+        {
+          "start": 5.87,
+          "end": 6.57,
+          "word": "to"
+        },
+        {
+          "start": 6.57,
+          "end": 6.77,
+          "word": "the"
+        },
+        {
+          "start": 6.77,
+          "end": 7.21,
+          "word": "disciple."
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 8.9,
+      "end": 13.46,
+      "text": "Mother can give but not the guru and that's why I'm sorry today",
+      "words": [
+        {
+          "start": 8.9,
+          "end": 9.16,
+          "word": "Mother"
+        },
+        {
+          "start": 9.16,
+          "end": 9.46,
+          "word": "can"
+        },
+        {
+          "start": 9.46,
+          "end": 9.74,
+          "word": "give"
+        },
+        {
+          "start": 9.74,
+          "end": 9.98,
+          "word": "but"
+        },
+        {
+          "start": 9.98,
+          "end": 10.28,
+          "word": "not"
+        },
+        {
+          "start": 10.28,
+          "end": 10.5,
+          "word": "the"
+        },
+        {
+          "start": 10.5,
+          "end": 10.8,
+          "word": "guru"
+        },
+        {
+          "start": 10.8,
+          "end": 11.44,
+          "word": "and"
+        },
+        {
+          "start": 11.44,
+          "end": 11.76,
+          "word": "that's"
+        },
+        {
+          "start": 11.76,
+          "end": 12.18,
+          "word": "why"
+        },
+        {
+          "start": 12.18,
+          "end": 12.66,
+          "word": "I'm"
+        },
+        {
+          "start": 12.66,
+          "end": 13.02,
+          "word": "sorry"
+        },
+        {
+          "start": 13.02,
+          "end": 13.46,
+          "word": "today"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 13.46,
+      "end": 15.66,
+      "text": "–I won' be giving you any presents",
+      "words": [
+        {
+          "start": 13.46,
+          "end": 13.88,
+          "word": "–I"
+        },
+        {
+          "start": 13.88,
+          "end": 14.16,
+          "word": "won'"
+        },
+        {
+          "start": 14.18,
+          "end": 14.28,
+          "word": "be"
+        },
+        {
+          "start": 14.28,
+          "end": 14.58,
+          "word": "giving"
+        },
+        {
+          "start": 14.58,
+          "end": 14.92,
+          "word": "you"
+        },
+        {
+          "start": 14.92,
+          "end": 15.24,
+          "word": "any"
+        },
+        {
+          "start": 15.24,
+          "end": 15.66,
+          "word": "presents"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 15.66,
+      "end": 18.54,
+      "text": "But have given very good lecture for it",
+      "words": [
+        {
+          "start": 15.66,
+          "end": 16.34,
+          "word": "But"
+        },
+        {
+          "start": 16.34,
+          "end": 16.66,
+          "word": "have"
+        },
+        {
+          "start": 16.66,
+          "end": 16.86,
+          "word": "given"
+        },
+        {
+          "start": 16.86,
+          "end": 17.18,
+          "word": "very"
+        },
+        {
+          "start": 17.18,
+          "end": 17.46,
+          "word": "good"
+        },
+        {
+          "start": 17.46,
+          "end": 17.88,
+          "word": "lecture"
+        },
+        {
+          "start": 17.88,
+          "end": 18.16,
+          "word": "for"
+        },
+        {
+          "start": 18.16,
+          "end": 18.54,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 37.99,
+      "end": 41.58,
+      "text": "Thank You Very Much from all countries",
+      "words": [
+        {
+          "start": 37.99,
+          "end": 38.67,
+          "word": "Thank"
+        },
+        {
+          "start": 38.67,
+          "end": 38.87,
+          "word": "You"
+        },
+        {
+          "start": 38.87,
+          "end": 39.13,
+          "word": "Very"
+        },
+        {
+          "start": 39.13,
+          "end": 39.89,
+          "word": "Much"
+        },
+        {
+          "start": 39.92,
+          "end": 40.56,
+          "word": "from"
+        },
+        {
+          "start": 40.56,
+          "end": 40.84,
+          "word": "all"
+        },
+        {
+          "start": 40.84,
+          "end": 41.58,
+          "word": "countries"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 42.48,
+      "end": 45.08,
+      "text": "Beautiful Presence they've given Me",
+      "words": [
+        {
+          "start": 42.48,
+          "end": 43.3,
+          "word": "Beautiful"
+        },
+        {
+          "start": 43.3,
+          "end": 43.8,
+          "word": "Presence"
+        },
+        {
+          "start": 43.8,
+          "end": 44.16,
+          "word": "they've"
+        },
+        {
+          "start": 44.16,
+          "end": 44.36,
+          "word": "given"
+        },
+        {
+          "start": 44.36,
+          "end": 45.08,
+          "word": "Me"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 45.5,
+      "end": 50.9,
+      "text": "It is very surprising how beautifully people are creating things",
+      "words": [
+        {
+          "start": 45.5,
+          "end": 46.12,
+          "word": "It"
+        },
+        {
+          "start": 46.12,
+          "end": 46.26,
+          "word": "is"
+        },
+        {
+          "start": 46.26,
+          "end": 46.56,
+          "word": "very"
+        },
+        {
+          "start": 46.56,
+          "end": 47.2,
+          "word": "surprising"
+        },
+        {
+          "start": 47.2,
+          "end": 48.16,
+          "word": "how"
+        },
+        {
+          "start": 48.16,
+          "end": 48.88,
+          "word": "beautifully"
+        },
+        {
+          "start": 48.88,
+          "end": 49.64,
+          "word": "people"
+        },
+        {
+          "start": 49.64,
+          "end": 49.96,
+          "word": "are"
+        },
+        {
+          "start": 49.96,
+          "end": 50.32,
+          "word": "creating"
+        },
+        {
+          "start": 50.32,
+          "end": 50.9,
+          "word": "things"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 51.2,
+      "end": 55.24,
+      "text": "And you now, as self-realized people are creators.",
+      "words": [
+        {
+          "start": 51.2,
+          "end": 51.76,
+          "word": "And"
+        },
+        {
+          "start": 51.76,
+          "end": 52.12,
+          "word": "you"
+        },
+        {
+          "start": 52.12,
+          "end": 52.5,
+          "word": "now,"
+        },
+        {
+          "start": 52.92,
+          "end": 53.04,
+          "word": "as"
+        },
+        {
+          "start": 53.04,
+          "end": 53.3,
+          "word": "self"
+        },
+        {
+          "start": 53.3,
+          "end": 53.72,
+          "word": "-realized"
+        },
+        {
+          "start": 53.72,
+          "end": 54.16,
+          "word": "people"
+        },
+        {
+          "start": 54.16,
+          "end": 54.66,
+          "word": "are"
+        },
+        {
+          "start": 54.66,
+          "end": 55.24,
+          "word": "creators."
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 56.14,
+      "end": 60.32,
+      "text": "You have to create Sahaja Yogis first and all other things",
+      "words": [
+        {
+          "start": 56.14,
+          "end": 56.28,
+          "word": "You"
+        },
+        {
+          "start": 56.28,
+          "end": 56.5,
+          "word": "have"
+        },
+        {
+          "start": 56.5,
+          "end": 56.78,
+          "word": "to"
+        },
+        {
+          "start": 56.78,
+          "end": 57.18,
+          "word": "create"
+        },
+        {
+          "start": 57.18,
+          "end": 57.52,
+          "word": "Sahaja"
+        },
+        {
+          "start": 57.52,
+          "end": 58.12,
+          "word": "Yogis"
+        },
+        {
+          "start": 58.12,
+          "end": 58.58,
+          "word": "first"
+        },
+        {
+          "start": 58.58,
+          "end": 59.44,
+          "word": "and"
+        },
+        {
+          "start": 59.44,
+          "end": 59.64,
+          "word": "all"
+        },
+        {
+          "start": 59.64,
+          "end": 59.9,
+          "word": "other"
+        },
+        {
+          "start": 59.9,
+          "end": 60.32,
+          "word": "things"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 60.32,
+      "end": 63.14,
+      "text": "so your creators can do it",
+      "words": [
+        {
+          "start": 60.32,
+          "end": 61.18,
+          "word": "so"
+        },
+        {
+          "start": 61.18,
+          "end": 61.66,
+          "word": "your"
+        },
+        {
+          "start": 61.66,
+          "end": 62.14,
+          "word": "creators"
+        },
+        {
+          "start": 62.14,
+          "end": 62.44,
+          "word": "can"
+        },
+        {
+          "start": 62.44,
+          "end": 62.68,
+          "word": "do"
+        },
+        {
+          "start": 62.68,
+          "end": 63.14,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 63.27,
+      "end": 66.19,
+      "text": "It's nothing difficult for them",
+      "words": [
+        {
+          "start": 63.27,
+          "end": 64.49,
+          "word": "It's"
+        },
+        {
+          "start": 64.49,
+          "end": 64.85,
+          "word": "nothing"
+        },
+        {
+          "start": 64.85,
+          "end": 65.43,
+          "word": "difficult"
+        },
+        {
+          "start": 65.43,
+          "end": 65.73,
+          "word": "for"
+        },
+        {
+          "start": 65.73,
+          "end": 66.19,
+          "word": "them"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 66.19,
+      "end": 67.51,
+      "text": "Its very simple",
+      "words": [
+        {
+          "start": 66.19,
+          "end": 66.71,
+          "word": "Its"
+        },
+        {
+          "start": 66.71,
+          "end": 67.05,
+          "word": "very"
+        },
+        {
+          "start": 67.05,
+          "end": 67.51,
+          "word": "simple"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "start": 67.51,
+      "end": 69.81,
+      "text": "& we'll learn the art soon",
+      "words": [
+        {
+          "start": 67.51,
+          "end": 68.29,
+          "word": "&"
+        },
+        {
+          "start": 68.29,
+          "end": 68.51,
+          "word": "we'll"
+        },
+        {
+          "start": 68.51,
+          "end": 68.73,
+          "word": "learn"
+        },
+        {
+          "start": 68.73,
+          "end": 69.01,
+          "word": "the"
+        },
+        {
+          "start": 69.01,
+          "end": 69.21,
+          "word": "art"
+        },
+        {
+          "start": 69.21,
+          "end": 69.81,
+          "word": "soon"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "start": 70.33,
+      "end": 72.85,
+      "text": "I'm sure that will work out very fast",
+      "words": [
+        {
+          "start": 70.33,
+          "end": 70.95,
+          "word": "I'm"
+        },
+        {
+          "start": 70.95,
+          "end": 71.21,
+          "word": "sure"
+        },
+        {
+          "start": 71.21,
+          "end": 71.45,
+          "word": "that"
+        },
+        {
+          "start": 71.45,
+          "end": 71.57,
+          "word": "will"
+        },
+        {
+          "start": 71.57,
+          "end": 71.89,
+          "word": "work"
+        },
+        {
+          "start": 71.89,
+          "end": 72.17,
+          "word": "out"
+        },
+        {
+          "start": 72.17,
+          "end": 72.49,
+          "word": "very"
+        },
+        {
+          "start": 72.49,
+          "end": 72.85,
+          "word": "fast"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 72.85,
+      "end": 74.67,
+      "text": "So y'all go ahead now",
+      "words": [
+        {
+          "start": 72.85,
+          "end": 73.51,
+          "word": "So"
+        },
+        {
+          "start": 73.51,
+          "end": 73.73,
+          "word": "y"
+        },
+        {
+          "start": 73.73,
+          "end": 73.87,
+          "word": "'all"
+        },
+        {
+          "start": 73.87,
+          "end": 74.09,
+          "word": "go"
+        },
+        {
+          "start": 74.09,
+          "end": 74.37,
+          "word": "ahead"
+        },
+        {
+          "start": 74.37,
+          "end": 74.67,
+          "word": "now"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 74.67,
+      "end": 77.71,
+      "text": "creating more sahajogies all over world",
+      "words": [
+        {
+          "start": 74.67,
+          "end": 75.67,
+          "word": "creating"
+        },
+        {
+          "start": 75.67,
+          "end": 76.13,
+          "word": "more"
+        },
+        {
+          "start": 76.13,
+          "end": 76.73,
+          "word": "sahajogies"
+        },
+        {
+          "start": 76.73,
+          "end": 77.03,
+          "word": "all"
+        },
+        {
+          "start": 77.03,
+          "end": 77.27,
+          "word": "over"
+        },
+        {
+          "start": 77.27,
+          "end": 77.71,
+          "word": "world"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "start": 77.71,
+      "end": 79.01,
+      "text": "Thankyou very much",
+      "words": [
+        {
+          "start": 77.71,
+          "end": 78.49,
+          "word": "Thankyou"
+        },
+        {
+          "start": 78.49,
+          "end": 78.73,
+          "word": "very"
+        },
+        {
+          "start": 78.73,
+          "end": 79.01,
+          "word": "much"
+        }
+      ]
+    }
+  ]
+}
