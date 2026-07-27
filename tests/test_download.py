@@ -3,6 +3,7 @@
 import yaml
 from bs4 import BeautifulSoup
 
+from tools import download
 from tools.download import AmrutaDownloader, setup_talk
 from tools.vimeo_codec import decode_video_ref
 
@@ -346,3 +347,35 @@ def test_setup_talk_writes_obfuscated_video_ref(tmp_path):
     assert decode_video_ref(video["video_ref"]) == url
     # And the raw file text must not leak the link.
     assert "vimeo.com" not in (talk_dir / "meta.yaml").read_text(encoding="utf-8")
+
+
+# --- yt-dlp is handed the embed URL form ---
+
+
+def _capture_ytdlp_cmd(monkeypatch):
+    """Record the argv of the next subprocess.run call instead of running it."""
+    captured = []
+
+    def fake_run(cmd, **kwargs):
+        captured.append(cmd)
+        return None
+
+    monkeypatch.setattr(download.subprocess, "run", fake_run)
+    return captured
+
+
+def test_download_video_uses_player_url(monkeypatch, tmp_path):
+    """Vimeo 401s on the API yt-dlp uses for vimeo.com/<id>/<hash> links."""
+    captured = _capture_ytdlp_cmd(monkeypatch)
+    dl = AmrutaDownloader.__new__(AmrutaDownloader)
+    dl.download_video("https://vimeo.com/111111111/aaaaaaaaaa", str(tmp_path / "video.mp4"))
+    assert captured[0][-1] == "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"
+
+
+def test_download_vimeo_subs_uses_player_url(monkeypatch, tmp_path):
+    captured = _capture_ytdlp_cmd(monkeypatch)
+    monkeypatch.setattr(download.shutil, "which", lambda name: "/usr/bin/yt-dlp")
+    monkeypatch.setattr(download.globmod, "glob", lambda pattern: [])
+    dl = AmrutaDownloader.__new__(AmrutaDownloader)
+    dl.download_vimeo_subs("https://vimeo.com/111111111/aaaaaaaaaa", str(tmp_path))
+    assert captured[0][-1] == "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"

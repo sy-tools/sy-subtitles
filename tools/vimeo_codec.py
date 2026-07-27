@@ -37,6 +37,9 @@ _VERSION = "r1"
 # slash. The decode always reconstructs the canonical ``https://vimeo.com/...``.
 _PATH_RE = re.compile(r"^(?:https?://)?(?:www\.)?vimeo\.com/(.+?)/?$", re.IGNORECASE)
 
+# Canonical decoded form: numeric id plus an optional private hash.
+_CANONICAL_RE = re.compile(r"^(?:https?://)?(?:www\.)?vimeo\.com/(\d+)(?:/([0-9a-z]+))?/?$", re.IGNORECASE)
+
 
 def _xor(data: bytes) -> bytes:
     return bytes(b ^ _KEY[i % len(_KEY)] for i, b in enumerate(data))
@@ -71,6 +74,24 @@ def decode_video_ref(ref: str) -> str:
     return "https://vimeo.com/" + path
 
 
+def to_player_url(url: str) -> str:
+    """Convert a canonical Vimeo URL into the ``player.vimeo.com`` embed form.
+
+    ``https://vimeo.com/<id>/<hash>`` → ``https://player.vimeo.com/video/<id>?h=<hash>``
+
+    This is the form to hand to yt-dlp: for the canonical form yt-dlp goes
+    through Vimeo's internal "macos" API, which now answers ``401 Unauthorized``,
+    while the embed form resolves via the player config endpoint. URLs that do
+    not match the canonical form (including already-embed ones) are returned
+    unchanged.
+    """
+    match = _CANONICAL_RE.match((url or "").strip())
+    if not match:
+        return url
+    video_id, private_hash = match.group(1), match.group(2)
+    return f"https://player.vimeo.com/video/{video_id}" + (f"?h={private_hash}" if private_hash else "")
+
+
 def main(argv: list[str] | None = None) -> None:
     """CLI used by workflows: ``vimeo_codec encode <url>`` / ``decode <ref>``.
 
@@ -85,12 +106,18 @@ def main(argv: list[str] | None = None) -> None:
     enc.add_argument("url")
     dec = sub.add_parser("decode", help="video_ref -> vimeo url")
     dec.add_argument("ref")
+    dec.add_argument(
+        "--player",
+        action="store_true",
+        help="emit the player.vimeo.com embed form (the one yt-dlp can resolve)",
+    )
     args = parser.parse_args(argv)
 
     if args.cmd == "encode":
         print(encode_video_ref(args.url))
     else:
-        print(decode_video_ref(args.ref))
+        url = decode_video_ref(args.ref)
+        print(to_player_url(url) if args.player else url)
 
 
 if __name__ == "__main__":
