@@ -3,14 +3,20 @@
 import pytest
 
 from tools.burn_subtitles import (
+    DEFAULT_GRADIENT_STEPS,
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
     ROBOTO_WIN_FACTOR,
     WRAP_SAFETY,
+    ass_alpha_byte,
     ass_timestamp,
+    band_event,
+    band_geometry,
     build_ass_header,
+    dialogue_event,
     escape_ass_text,
     font_size_for,
+    gradient_alpha_at,
     wrap_text,
 )
 
@@ -173,3 +179,127 @@ class TestWrapText:
 
     def test_empty_text_yields_single_empty_line(self):
         assert wrap_text("", fake_measure, 100) == [""]
+
+
+class TestGradientAlpha:
+    def test_transparent_at_top(self):
+        assert gradient_alpha_at(0.0) == pytest.approx(0.0)
+
+    def test_matches_css_stops(self):
+        assert gradient_alpha_at(0.35) == pytest.approx(0.35)
+        assert gradient_alpha_at(0.70) == pytest.approx(0.72)
+        assert gradient_alpha_at(1.0) == pytest.approx(0.92)
+
+    def test_interpolates_between_stops(self):
+        # Midway between (0.35, 0.35) and (0.70, 0.72).
+        assert gradient_alpha_at(0.525) == pytest.approx(0.535, abs=1e-3)
+
+    def test_monotonically_increases(self):
+        values = [gradient_alpha_at(i / 100) for i in range(101)]
+        assert all(b >= a for a, b in zip(values, values[1:], strict=False))
+
+
+class TestAssAlphaByte:
+    def test_inverted_relative_to_css(self):
+        # ASS: 00 = opaque, FF = transparent — the opposite of CSS opacity.
+        assert ass_alpha_byte(1.0) == "00"
+        assert ass_alpha_byte(0.0) == "FF"
+
+    def test_css_checkpoints(self):
+        assert ass_alpha_byte(0.35) == "A6"
+        assert ass_alpha_byte(0.72) == "47"
+        assert ass_alpha_byte(0.92) == "14"
+
+    def test_always_two_uppercase_hex_digits(self):
+        for i in range(101):
+            byte = ass_alpha_byte(i / 100)
+            assert len(byte) == 2 and byte == byte.upper()
+
+
+class TestBandGeometry:
+    def test_band_encloses_text_and_padding(self):
+        top, height = band_geometry(
+            height=1080,
+            font_size=92,
+            line_count=2,
+            margin_v=36,
+            padtop_px=80,
+        )
+        # libass line advance is FontSize, so text occupies line_count * 92.
+        assert height == 80 + 2 * 92 + 36
+        assert top == 1080 - height
+
+    def test_more_lines_grow_the_band_upward(self):
+        one_top, one_h = band_geometry(1080, 92, 1, 36, 80)
+        two_top, two_h = band_geometry(1080, 92, 2, 36, 80)
+        assert two_h == one_h + 92
+        assert two_top < one_top
+
+    def test_band_is_clamped_into_the_frame(self):
+        top, height = band_geometry(480, 92, 8, 36, 80)
+        assert top == 0
+        assert height == 480
+
+
+class TestBandEvent:
+    def _event(self, steps=4):
+        return band_event(1000, 2000, width=1920, band_top=800, band_height=200, steps=steps)
+
+    def test_is_layer_zero_band_style_with_cue_timings(self):
+        ev = self._event()
+        assert ev.startswith("Dialogue: 0,0:00:01.00,0:00:02.00,Band,")
+
+    def test_positioned_at_band_top_from_the_corner(self):
+        assert r"\an7\pos(0,800)" in self._event()
+
+    def test_emits_one_rectangle_per_step(self):
+        assert self._event(steps=4).count(r"\p1") == 4
+
+    def test_spans_full_width(self):
+        assert "l 1920 " in self._event()
+
+    def test_strips_tile_without_gaps(self):
+        # Every strip's top must equal the previous strip's bottom, or seams show.
+        ev = self._event(steps=8)
+        import re as _re
+
+        rects = _re.findall(r"m 0 (\d+) l \d+ \d+ \d+ (\d+) 0 \d+", ev)
+        tops = [int(a) for a, _ in rects]
+        bottoms = [int(b) for _, b in rects]
+        assert tops[0] == 0
+        assert bottoms[-1] == 200
+        assert tops[1:] == bottoms[:-1]
+
+    def test_alpha_darkens_toward_the_bottom(self):
+        import re as _re
+
+        alphas = _re.findall(r"\\1a&H([0-9A-F]{2})&", self._event(steps=8))
+        values = [int(a, 16) for a in alphas]
+        # Inverted alpha: smaller byte = more opaque, so it must decrease.
+        assert all(b <= a for a, b in zip(values, values[1:], strict=False))
+
+    def test_rejects_too_few_steps(self):
+        with pytest.raises(ValueError):
+            band_event(0, 1000, 1920, 800, 200, steps=0)
+
+
+class TestDialogueEvent:
+    def test_joins_lines_with_hard_break(self):
+        ev = dialogue_event(1000, 2000, ["one", "two"], font_size=92)
+        assert ev.endswith("one\\Ntwo")
+
+    def test_is_layer_one_default_style(self):
+        ev = dialogue_event(0, 1000, ["x"], font_size=92)
+        assert ev.startswith("Dialogue: 1,0:00:00.00,0:00:01.00,Default,")
+
+    def test_carries_vertical_only_blurred_shadow(self):
+        # The style Shadow field offsets diagonally; CSS is purely vertical.
+        ev = dialogue_event(0, 1000, ["x"], font_size=92)
+        assert r"\xshad0" in ev
+        assert r"\yshad" in ev
+        assert r"\blur" in ev
+
+
+class TestDefaults:
+    def test_gradient_steps_default_is_64(self):
+        assert DEFAULT_GRADIENT_STEPS == 64

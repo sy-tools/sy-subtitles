@@ -30,6 +30,13 @@ WRAP_SAFETY = 0.98
 
 _WS_RUN = re.compile(r"\s+")
 
+# The CSS band: linear-gradient(rgba(0,0,0,0) 0%, .35 35%, .72 70%, .92 100%).
+GRADIENT_STOPS = ((0.0, 0.0), (0.35, 0.35), (0.70, 0.72), (1.0, 0.92))
+
+# 64 strips put the alpha step at ~3.7/255 — below visibility over moving
+# video, and the CSS gradient is quantized to the same 8-bit levels anyway.
+DEFAULT_GRADIENT_STEPS = 64
+
 
 def ass_timestamp(ms):
     """Format milliseconds as an ASS timestamp (H:MM:SS.cc, centiseconds)."""
@@ -150,4 +157,74 @@ def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
             "[Events]",
             "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
         ]
+    )
+
+
+def gradient_alpha_at(u):
+    """CSS opacity at relative depth u (0 = band top, 1 = frame bottom)."""
+    u = max(0.0, min(1.0, float(u)))
+    for (u0, a0), (u1, a1) in zip(GRADIENT_STOPS, GRADIENT_STOPS[1:], strict=False):
+        if u0 <= u <= u1:
+            span = u1 - u0
+            t = (u - u0) / span if span else 0.0
+            return a0 + (a1 - a0) * t
+    return GRADIENT_STOPS[-1][1]
+
+
+def ass_alpha_byte(alpha):
+    """ASS alpha is inverted: 00 fully opaque, FF fully transparent."""
+    alpha = max(0.0, min(1.0, float(alpha)))
+    return f"{round((1.0 - alpha) * 255):02X}"
+
+
+def band_geometry(height, font_size, line_count, margin_v, padtop_px):
+    """Return (band_top, band_height) in frame pixels.
+
+    libass advances one FontSize per line, so text height is line_count *
+    font_size — not the CSS line-height. Clamped into the frame so a cue that
+    wrapped unusually wide cannot place the band off-screen.
+    """
+    text_h = max(1, line_count) * font_size
+    band_h = min(height, padtop_px + text_h + margin_v)
+    return height - band_h, band_h
+
+
+def band_event(start_ms, end_ms, width, band_top, band_height, steps=DEFAULT_GRADIENT_STEPS):
+    """One Layer-0 event drawing the gradient as stacked stepped-alpha strips.
+
+    Sharing the cue's timings reproduces the CSS behaviour of the band being
+    visible only while a subtitle is on screen.
+    """
+    if steps < 1:
+        raise ValueError(f"steps must be >= 1, got {steps}")
+    parts = [
+        f"{{\\an7\\pos(0,{band_top})\\bord0\\shad0\\1c&H000000&}}",
+    ]
+    prev_bottom = 0
+    for i in range(steps):
+        # Integer edges shared between neighbours: no seams, no double-coverage.
+        bottom = round(band_height * (i + 1) / steps)
+        if bottom <= prev_bottom:
+            continue
+        centre = (prev_bottom + bottom) / 2 / band_height
+        alpha = ass_alpha_byte(gradient_alpha_at(centre))
+        parts.append(
+            f"{{\\1a&H{alpha}&\\p1}}m 0 {prev_bottom} l {width} {prev_bottom} {width} {bottom} 0 {bottom}{{\\p0}}"
+        )
+        prev_bottom = bottom
+    return f"Dialogue: 0,{ass_timestamp(start_ms)},{ass_timestamp(end_ms)},Band,,0,0,0,,{''.join(parts)}"
+
+
+def dialogue_event(start_ms, end_ms, lines, font_size):
+    """The text event, with the CSS soft drop shadow expressed in ASS.
+
+    The style Shadow field offsets diagonally, so a purely vertical CSS shadow
+    needs an explicit \\xshad0 plus \\yshad override.
+    """
+    blur = max(1, round(font_size * 0.045))
+    yshad = max(1, round(font_size * 0.033))
+    text = "\\N".join(lines)
+    return (
+        f"Dialogue: 1,{ass_timestamp(start_ms)},{ass_timestamp(end_ms)},Default,,"
+        f"0,0,0,,{{\\blur{blur}\\xshad0\\yshad{yshad}}}{text}"
     )
