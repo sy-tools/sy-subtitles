@@ -108,7 +108,8 @@ sy-subtitles/
     ├── glossary-release.yml        # Glossary releases
     ├── golden-talks.yml            # Full-corpus golden tests (manual)
     ├── new-talk.yml                # PR-triggered setup for new talks
-    └── pipeline-matrix-dryrun.yml  # Matrix dry-run validation
+    ├── pipeline-matrix-dryrun.yml  # Matrix dry-run validation
+    └── burn-subtitles.yml          # Render uk.srt into the video (SPA-dispatched)
 ```
 
 ## Workflows
@@ -157,6 +158,14 @@ Triggered when a PR adds a new talk directory; bootstraps metadata.
 ### pipeline-matrix-dryrun.yml
 Replays the subtitle pipeline using `tools.fake_llm` snapshots — exercises
 the build/sync stack without burning Claude calls.
+
+### burn-subtitles.yml
+`workflow_dispatch` from the preview SPA: downloads the video, burns
+`final/uk.srt` into the picture with ffmpeg+libass reproducing the fullscreen
+subtitle look, and uploads the MP4 as a 7-day artifact. Sizing arrives as
+ratios measured in the browser (see `tools/burn_subtitles.py`). `run-name`
+carries the caller's `request_id` — `workflow_dispatch` returns no run id, so
+that is how the SPA finds its own run.
 
 ## Subtitle Builder (V2)
 
