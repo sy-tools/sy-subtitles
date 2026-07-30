@@ -190,16 +190,24 @@ def band_geometry(height, font_size, line_count, margin_v, padtop_px):
 
 
 def band_event(start_ms, end_ms, width, band_top, band_height, steps=DEFAULT_GRADIENT_STEPS):
-    """One Layer-0 event drawing the gradient as stacked stepped-alpha strips.
+    """Return the LIST of Layer-0 events drawing the gradient band, one per strip.
 
-    Sharing the cue's timings reproduces the CSS behaviour of the band being
-    visible only while a subtitle is on screen.
+    One event per strip, not one event holding every strip: libass lays each
+    drawing out like a glyph and advances the pen by its bounding-box width, so
+    strips packed into a single event render at x=0, W, 2W, ... and all but the
+    first fall off the frame. Rendered through libass 0.17.5 on a grey 1920x1080
+    clip, three strips in one event drew only the first, while the same three as
+    separate \\pos-ed events drew the full-width gradient correctly. Each strip
+    therefore draws from its own origin and carries its absolute frame Y in \\pos.
+
+    All strips share the cue's exact timings, which reproduces the CSS behaviour
+    of the band being visible only while a subtitle is on screen. The caller
+    joins them into the document with the rest of the events.
     """
     if steps < 1:
         raise ValueError(f"steps must be >= 1, got {steps}")
-    parts = [
-        f"{{\\an7\\pos(0,{band_top})\\bord0\\shad0\\1c&H000000&}}",
-    ]
+    start, end = ass_timestamp(start_ms), ass_timestamp(end_ms)
+    events = []
     prev_bottom = 0
     for i in range(steps):
         # Integer edges shared between neighbours: no seams, no double-coverage.
@@ -208,11 +216,14 @@ def band_event(start_ms, end_ms, width, band_top, band_height, steps=DEFAULT_GRA
             continue
         centre = (prev_bottom + bottom) / 2 / band_height
         alpha = ass_alpha_byte(gradient_alpha_at(centre))
-        parts.append(
-            f"{{\\1a&H{alpha}&\\p1}}m 0 {prev_bottom} l {width} {prev_bottom} {width} {bottom} 0 {bottom}{{\\p0}}"
+        strip_h = bottom - prev_bottom
+        events.append(
+            f"Dialogue: 0,{start},{end},Band,,0,0,0,,"
+            f"{{\\an7\\pos(0,{band_top + prev_bottom})\\bord0\\shad0\\1c&H000000&\\1a&H{alpha}&\\p1}}"
+            f"m 0 0 l {width} 0 {width} {strip_h} 0 {strip_h}{{\\p0}}"
         )
         prev_bottom = bottom
-    return f"Dialogue: 0,{ass_timestamp(start_ms)},{ass_timestamp(end_ms)},Band,,0,0,0,,{''.join(parts)}"
+    return events
 
 
 def dialogue_event(start_ms, end_ms, lines, font_size):

@@ -1,5 +1,7 @@
 """Tests for burn_subtitles.py — SRT to ASS conversion for burned-in subtitles."""
 
+import re
+
 import pytest
 
 from tools.burn_subtitles import (
@@ -242,39 +244,69 @@ class TestBandGeometry:
 
 
 class TestBandEvent:
-    def _event(self, steps=4):
+    def _events(self, steps=4):
         return band_event(1000, 2000, width=1920, band_top=800, band_height=200, steps=steps)
 
+    def _strips(self, steps=8):
+        """Parse each strip's absolute top and its height out of the emitted events."""
+        strips = []
+        for ev in self._events(steps=steps):
+            pos_y = int(re.search(r"\\pos\(0,(\d+)\)", ev).group(1))
+            height = int(re.search(r"m 0 0 l \d+ 0 \d+ (\d+) 0 \d+", ev).group(1))
+            strips.append((pos_y, height))
+        return strips
+
+    def test_emits_one_event_per_strip(self):
+        # libass lays consecutive drawings out horizontally like glyphs, so N
+        # strips crammed into a single event march off the right edge of the
+        # frame and the band vanishes. Verified by rendering through libass
+        # 0.17.5: three strips in one event drew only the first.
+        events = self._events(steps=4)
+        assert isinstance(events, list)
+        assert len(events) == 4
+
+    def test_every_event_holds_exactly_one_drawing(self):
+        # The invariant that breaks if anyone re-merges the strips into one event.
+        for ev in self._events(steps=8):
+            assert ev.count(r"\p1") == 1
+
+    def test_degenerate_strips_are_dropped_not_emitted(self):
+        # 64 steps over a 10px band: only 10 strips can have a non-zero height.
+        assert len(band_event(0, 1000, 1920, 800, 10, steps=64)) == 10
+
     def test_is_layer_zero_band_style_with_cue_timings(self):
-        ev = self._event()
-        assert ev.startswith("Dialogue: 0,0:00:01.00,0:00:02.00,Band,")
+        assert all(ev.startswith("Dialogue: 0,0:00:01.00,0:00:02.00,Band,") for ev in self._events())
 
-    def test_positioned_at_band_top_from_the_corner(self):
-        assert r"\an7\pos(0,800)" in self._event()
+    def test_all_strips_share_the_cue_timings(self):
+        # A strip that outlived its cue would leave part of the band on a bare frame.
+        stamps = {tuple(ev.split(",")[1:3]) for ev in self._events(steps=8)}
+        assert stamps == {("0:00:01.00", "0:00:02.00")}
 
-    def test_emits_one_rectangle_per_step(self):
-        assert self._event(steps=4).count(r"\p1") == 4
+    def test_first_strip_is_positioned_at_the_band_top_from_the_corner(self):
+        assert r"\an7\pos(0,800)" in self._events()[0]
 
     def test_spans_full_width(self):
-        assert "l 1920 " in self._event()
+        assert all("l 1920 " in ev for ev in self._events())
 
-    def test_strips_tile_without_gaps(self):
-        # Every strip's top must equal the previous strip's bottom, or seams show.
-        ev = self._event(steps=8)
-        import re as _re
+    def test_each_strip_is_drawn_from_its_own_origin(self):
+        # Vertical placement lives in \pos, not in the path, so every path starts at 0 0.
+        assert all("m 0 0 l " in ev for ev in self._events())
 
-        rects = _re.findall(r"m 0 (\d+) l \d+ \d+ \d+ (\d+) 0 \d+", ev)
-        tops = [int(a) for a, _ in rects]
-        bottoms = [int(b) for _, b in rects]
-        assert tops[0] == 0
-        assert bottoms[-1] == 200
+    def test_strip_positions_tile_without_gaps(self):
+        # Each strip's absolute top must equal the previous strip's bottom, or seams show.
+        strips = self._strips(steps=8)
+        tops = [y for y, _ in strips]
+        bottoms = [y + h for y, h in strips]
+        assert tops[0] == 800
+        assert bottoms[-1] == 800 + 200
         assert tops[1:] == bottoms[:-1]
 
-    def test_alpha_darkens_toward_the_bottom(self):
-        import re as _re
+    def test_strip_positions_strictly_increase(self):
+        tops = [y for y, _ in self._strips(steps=8)]
+        assert all(b > a for a, b in zip(tops, tops[1:], strict=False))
 
-        alphas = _re.findall(r"\\1a&H([0-9A-F]{2})&", self._event(steps=8))
-        values = [int(a, 16) for a in alphas]
+    def test_alpha_darkens_toward_the_bottom(self):
+        values = [int(re.search(r"\\1a&H([0-9A-F]{2})&", ev).group(1), 16) for ev in self._events(steps=8)]
         # Inverted alpha: smaller byte = more opaque, so it must decrease.
         assert all(b <= a for a, b in zip(values, values[1:], strict=False))
 
