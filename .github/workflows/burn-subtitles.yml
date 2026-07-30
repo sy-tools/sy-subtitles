@@ -122,7 +122,10 @@ jobs:
           VIDEO_URL=$(python3 -m tools.vimeo_codec decode --player "$VIDEO_REF")
           echo "::add-mask::$VIDEO_URL"
           mkdir -p /tmp/burn
+          # --merge-output-format pins the container: merging into source.mkv
+          # would exit 0 and leave the check below blaming an absent .mp4.
           yt-dlp --referer "https://www.amruta.org/" \
+            --merge-output-format mp4 \
             -o /tmp/burn/source.mp4 "$VIDEO_URL" \
             || { echo "::error::video download failed (Vimeo often answers 401)"; exit 1; }
           test -s /tmp/burn/source.mp4 \
@@ -156,6 +159,9 @@ jobs:
           # '__' delimits: talk ids contain hyphens.
           name: burned__${{ inputs.talk_id }}__${{ inputs.video_slug }}
           path: /tmp/burn/out/*.mp4
+          # The MP4 is the deliverable: a glob that matches nothing must fail
+          # the job, not warn and hand the SPA an empty ZIP.
+          if-no-files-found: error
           retention-days: 7
           # Uncompressed so the SPA can slice the MP4 straight out of the ZIP.
           compression-level: 0

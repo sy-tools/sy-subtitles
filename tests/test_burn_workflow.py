@@ -1,5 +1,9 @@
 """Guards on burn-subtitles.yml — the SPA depends on its run-name and step names."""
 
+import os
+import subprocess
+
+import pytest
 import yaml
 
 WORKFLOW = ".github/workflows/burn-subtitles.yml"
@@ -70,7 +74,8 @@ class TestSteps:
         assert any("install -y ffmpeg" in run for run in _runs())
 
     def test_installs_yt_dlp(self):
-        assert any("yt-dlp" in run for run in _step("Install dependencies")["run"].split("\n"))
+        # An actual install command, not a passing mention in a comment.
+        assert "pip install yt-dlp" in _step("Install dependencies")["run"]
 
     def test_does_not_apt_install_a_font(self):
         # Roboto is vendored under assets/fonts/ and handed to libass via fontsdir.
@@ -84,7 +89,8 @@ class TestSteps:
     def test_no_step_masks_a_non_zero_exit(self):
         # A font that libass cannot resolve must fail the run loudly.
         joined = "\n".join(_runs())
-        assert "|| true" not in joined
+        for masker in ("|| true", "|| :", "set +e"):
+            assert masker not in joined, masker
         assert "continue-on-error" not in _raw()
 
 
@@ -98,14 +104,36 @@ class TestValidation:
     def test_requires_the_ukrainian_srt_to_exist(self):
         assert "final/uk.srt" in _step("Validate inputs")["run"]
 
-    def test_rejects_out_of_range_ratios_before_python_runs(self):
+    @pytest.mark.integration
+    @pytest.mark.parametrize(
+        ("ratios", "exit_code"),
+        [
+            (("0.0711", "0.0741", "0.0333"), 0),  # the SPA defaults
+            (("0.02", "0.0", "0.0"), 0),  # lower bounds are inclusive
+            (("0.12", "0.5", "0.5"), 0),  # upper bounds are inclusive
+            (("abc", "0.0741", "0.0333"), 1),
+            (("", "0.0741", "0.0333"), 1),
+            (("nan", "0.0741", "0.0333"), 1),
+            (("inf", "0.0741", "0.0333"), 1),
+            (("-0.05", "0.0741", "0.0333"), 1),
+            (("0.5", "0.0741", "0.0333"), 1),  # font_ratio clamp is 0.12
+            (("0.0711", "0.9", "0.0333"), 1),
+            (("0.0711", "0.0741", "-0.1"), 1),
+        ],
+    )
+    def test_ratio_guard_accepts_sane_values_and_rejects_the_rest(self, ratios, exit_code):
+        # Execute the real guard, not a grep over it: bounds written backwards
+        # would sail past a string check.
         run = _step("Validate inputs")["run"]
-        for ratio in ("FONT_RATIO", "PADTOP_RATIO", "PADBOT_RATIO"):
-            assert ratio in run, ratio
-        # font_ratio bounds mirror the clamp inside tools/burn_subtitles.py.
-        assert "0.02" in run and "0.12" in run
-        assert "0.5" in run
-        assert "::error::" in run
+        script = "set -euo pipefail\n" + run[run.index("python3 - <<") :]
+        env = dict(
+            os.environ,
+            FONT_RATIO=ratios[0],
+            PADTOP_RATIO=ratios[1],
+            PADBOT_RATIO=ratios[2],
+        )
+        done = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True)
+        assert done.returncode == exit_code, f"{ratios} -> {done.returncode}: {done.stdout}"
 
 
 class TestDownload:
@@ -121,6 +149,11 @@ class TestDownload:
 
     def test_downloads_with_the_amruta_referer(self):
         assert '--referer "https://www.amruta.org/"' in _step("Download video")["run"]
+
+    def test_forces_the_mp4_container(self):
+        # Without this yt-dlp may merge into source.mkv, exit 0, and leave the
+        # empty-file check complaining about an .mp4 that was never written.
+        assert "--merge-output-format mp4" in _step("Download video")["run"]
 
     def test_download_failure_is_loud(self):
         # A silent empty file would produce a video with no audio track.
@@ -156,6 +189,11 @@ class TestArtifact:
         # talk_id contains hyphens, so '-' cannot delimit.
         assert "__" in self._upload()["with"]["name"]
 
+    def test_an_empty_artifact_fails_the_job(self):
+        # The MP4 IS the deliverable: the default 'warn' would report success
+        # and hand the SPA a zero-entry ZIP.
+        assert self._upload()["with"]["if-no-files-found"] == "error"
+
 
 class TestPinnedActions:
     def test_uses_the_versions_the_rest_of_the_repo_pins(self):
@@ -163,6 +201,7 @@ class TestPinnedActions:
         for action in (
             "actions/checkout@v7",
             "actions/setup-python@v6",
+            "actions/cache@v6",
             "actions/upload-artifact@v7",
         ):
             assert action in raw, action
