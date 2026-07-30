@@ -1,24 +1,35 @@
 """Tests for burn_subtitles.py — SRT to ASS conversion for burned-in subtitles."""
 
 import re
+import subprocess
 
 import pytest
 
+from tools import burn_subtitles
 from tools.burn_subtitles import (
+    DEFAULT_FONT_FILE,
+    DEFAULT_FONT_NAME,
     DEFAULT_GRADIENT_STEPS,
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
     ROBOTO_WIN_FACTOR,
+    SIDE_INSET_RATIO,
     WRAP_SAFETY,
     ass_alpha_byte,
     ass_timestamp,
     band_event,
     band_geometry,
+    build_ass_document,
     build_ass_header,
+    build_ffmpeg_command,
+    css_font_px,
     dialogue_event,
     escape_ass_text,
     font_size_for,
     gradient_alpha_at,
+    main,
+    probe_dimensions,
+    text_measurer,
     wrap_text,
 )
 
@@ -335,3 +346,270 @@ class TestDialogueEvent:
 class TestDefaults:
     def test_gradient_steps_default_is_64(self):
         assert DEFAULT_GRADIENT_STEPS == 64
+
+    def test_side_inset_ratio_is_ten_percent(self):
+        # Fullscreen's horizontal insets; also the wrap width the SPA showed.
+        assert SIDE_INSET_RATIO == 0.10
+
+    def test_font_defaults_point_at_the_vendored_roboto(self):
+        assert DEFAULT_FONT_FILE == "assets/fonts/Roboto-Regular.ttf"
+        assert DEFAULT_FONT_NAME == "Roboto"
+
+
+class TestCssFontPx:
+    """The module carries two sizes; conflating them mis-wraps every cue.
+
+    CSS px is the real em size on screen and is what Pillow's `truetype(size=)`
+    wants; the ASS FontSize is that value scaled by the Win-metric factor.
+    """
+
+    def test_pins_the_fullscreen_baseline(self):
+        # 0.0711 * 1080 = 76.788 — the SPA's measured 76.8px overlay font.
+        assert css_font_px(0.0711, 1080) == pytest.approx(76.788)
+
+    def test_font_size_is_css_px_times_the_win_factor(self):
+        for ratio, height in ((0.0711, 1080), (0.05, 480), (0.11, 2160)):
+            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * ROBOTO_WIN_FACTOR)
+
+    def test_shares_the_clamp_with_font_size_for(self):
+        assert css_font_px(0.001, 1000) == pytest.approx(FONT_RATIO_MIN * 1000)
+        assert css_font_px(0.9, 1000) == pytest.approx(FONT_RATIO_MAX * 1000)
+
+    def test_rejects_non_positive_height(self):
+        with pytest.raises(ValueError):
+            css_font_px(0.05, 0)
+
+
+CUES = [
+    {"idx": 1, "start_ms": 0, "end_ms": 2000, "text": "Перше речення."},
+    {"idx": 2, "start_ms": 2000, "end_ms": 4000, "text": "Друге {речення}."},
+]
+
+
+def _doc(cues=None, width=1920, height=1080):
+    return build_ass_document(
+        cues if cues is not None else CUES,
+        width=width,
+        height=height,
+        font_ratio=0.0711,
+        padtop_ratio=0.0741,
+        padbot_ratio=0.0333,
+        measure=fake_measure,
+        font_name="Roboto",
+        steps=DEFAULT_GRADIENT_STEPS,
+    )
+
+
+class TestBuildAssDocument:
+    def test_emits_a_full_band_and_one_text_event_per_cue(self):
+        doc = _doc()
+        assert doc.count("Dialogue: 1,") == 2  # text
+        # One Layer-0 event per gradient strip, not one per cue: libass lays
+        # several drawings inside one event out horizontally, off the frame.
+        assert doc.count("Dialogue: 0,") == 2 * DEFAULT_GRADIENT_STEPS
+
+    def test_events_interleave_band_group_then_text_per_cue(self):
+        layers = [ln.split(",")[0] for ln in _doc().splitlines() if ln.startswith("Dialogue:")]
+        assert layers == (["Dialogue: 0"] * DEFAULT_GRADIENT_STEPS + ["Dialogue: 1"]) * 2
+
+    def test_band_and_text_share_exact_timings(self):
+        band_times = None
+        checked = 0
+        for line in _doc().splitlines():
+            if line.startswith("Dialogue: 0,"):
+                band_times = line.split(",")[1:3]
+            if line.startswith("Dialogue: 1,"):
+                assert line.split(",")[1:3] == band_times
+                checked += 1
+        assert checked == 2
+
+    def test_escapes_braces_in_cue_text(self):
+        assert r"\{речення\}" in _doc()
+
+    def test_wraps_long_cues_itself(self):
+        # 200 chars at 10 units each = 2000 > the 1536 px wrap width.
+        long_cue = [{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "аб " * 100}]
+        text_line = next(ln for ln in _doc(long_cue).splitlines() if ln.startswith("Dialogue: 1,"))
+        assert "\\N" in text_line
+
+    def test_taller_cues_get_a_taller_band(self):
+        one = _doc([{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "аб"}])
+        many = _doc([{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "аб " * 100}])
+
+        def band_top(doc):
+            first = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 0,"))
+            return int(re.search(r"\\pos\(0,(\d+)\)", first).group(1))
+
+        assert band_top(many) < band_top(one)
+
+    def test_side_margins_are_ten_percent_of_width(self):
+        line = next(ln for ln in _doc().splitlines() if ln.startswith("Style: Default,"))
+        assert line.split(",")[19] == "192"  # MarginL, 10% of 1920
+
+    def test_skips_cues_with_no_text(self):
+        doc = _doc([{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "   "}])
+        assert "Dialogue:" not in doc
+
+    def test_header_precedes_events(self):
+        doc = _doc()
+        assert doc.index("[Events]") < doc.index("Dialogue:")
+
+    def test_ends_with_a_newline(self):
+        assert _doc().endswith("\n")
+
+
+class TestBuildFfmpegCommand:
+    def _cmd(self):
+        return build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "assets/fonts")
+
+    def test_burns_via_the_ass_filter_with_fontsdir(self):
+        assert "ass=subs.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
+
+    def test_copies_audio_untouched(self):
+        cmd = self._cmd()
+        assert cmd[cmd.index("-c:a") + 1] == "copy"
+
+    def test_uses_the_agreed_video_settings(self):
+        joined = " ".join(self._cmd())
+        for flag in ("-c:v libx264", "-preset veryfast", "-crf 20", "-pix_fmt yuv420p", "-movflags +faststart"):
+            assert flag in joined
+
+    def test_input_and_output_present_and_ordered(self):
+        cmd = self._cmd()
+        assert cmd[cmd.index("-i") + 1] == "in.mp4"
+        assert cmd[-1] == "out.mp4"
+
+
+class TestProbeDimensions:
+    def test_reads_the_first_video_stream(self, monkeypatch):
+        payload = '{"streams": [{"width": 854, "height": 480}]}'
+        monkeypatch.setattr(
+            burn_subtitles.subprocess,
+            "run",
+            lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, payload, ""),
+        )
+        assert probe_dimensions("in.mp4") == (854, 480)
+
+
+class TestMain:
+    """Wiring checks: the parts no unit test above can see."""
+
+    def _invoke(self, tmp_path, monkeypatch, extra_args=(), returncode=0, stderr=""):
+        srt = tmp_path / "uk.srt"
+        srt.write_text("1\n00:00:00,000 --> 00:00:02,000\nПерше речення.\n\n", encoding="utf-8")
+        ass_out = tmp_path / "subs.ass"
+        seen = {}
+        commands = []
+
+        def fake_measurer(font_file, font_px):
+            seen["font_file"] = font_file
+            seen["font_px"] = font_px
+            return fake_measure
+
+        def fake_run(cmd, **kwargs):
+            commands.append(cmd)
+            return subprocess.CompletedProcess(cmd, returncode, "", stderr)
+
+        monkeypatch.setattr(burn_subtitles, "text_measurer", fake_measurer)
+        monkeypatch.setattr(burn_subtitles, "probe_dimensions", lambda video: (1920, 1080))
+        monkeypatch.setattr(burn_subtitles.subprocess, "run", fake_run)
+        main(
+            [
+                "--srt",
+                str(srt),
+                "--video",
+                "in.mp4",
+                "--output",
+                str(tmp_path / "out.mp4"),
+                "--font-ratio",
+                "0.0711",
+                "--padtop-ratio",
+                "0.0741",
+                "--padbot-ratio",
+                "0.0333",
+                "--ass-out",
+                str(ass_out),
+                *extra_args,
+            ]
+        )
+        return seen, commands, ass_out
+
+    def test_measures_in_css_pixels_not_in_ass_font_size(self, tmp_path, monkeypatch):
+        # Pillow's truetype(size=) takes the CSS em size. Handing it the ASS
+        # FontSize would inflate every measurement by ~20% and wrap a word early.
+        seen, _, _ = self._invoke(tmp_path, monkeypatch)
+        assert seen["font_px"] == pytest.approx(css_font_px(0.0711, 1080))
+        assert seen["font_px"] != font_size_for(0.0711, 1080)
+
+    def test_measures_with_the_font_that_will_be_rendered(self, tmp_path, monkeypatch):
+        seen, _, _ = self._invoke(tmp_path, monkeypatch)
+        assert seen["font_file"] == DEFAULT_FONT_FILE
+
+    def test_writes_the_ass_document_and_runs_ffmpeg(self, tmp_path, monkeypatch):
+        _, commands, ass_out = self._invoke(tmp_path, monkeypatch)
+        doc = ass_out.read_text(encoding="utf-8")
+        assert "[Events]" in doc and "Dialogue: 1," in doc
+        assert commands and commands[0][0] == "ffmpeg"
+        assert str(ass_out) in " ".join(commands[0])
+
+    def test_points_fontsdir_at_the_font_file_directory(self, tmp_path, monkeypatch):
+        _, commands, _ = self._invoke(tmp_path, monkeypatch)
+        import os
+
+        assert f"fontsdir={os.path.dirname(os.path.abspath(DEFAULT_FONT_FILE))}" in " ".join(commands[0])
+
+    def test_ffmpeg_failure_is_fatal(self, tmp_path, monkeypatch):
+        with pytest.raises(SystemExit):
+            self._invoke(tmp_path, monkeypatch, returncode=1, stderr="boom")
+
+    def test_font_fallback_is_fatal(self, tmp_path, monkeypatch):
+        # A silent substitution re-wraps every line; it must never pass as success.
+        with pytest.raises(SystemExit):
+            self._invoke(tmp_path, monkeypatch, stderr="fontselect: font not found")
+
+
+class TestTextMeasurer:
+    def test_returns_a_callable_measuring_the_real_font(self):
+        measure = text_measurer(DEFAULT_FONT_FILE, css_font_px(0.0711, 1080))
+        assert callable(measure)
+        assert measure("Слово") > 0
+
+    def test_measurements_grow_with_string_length(self):
+        measure = text_measurer(DEFAULT_FONT_FILE, 76.788)
+        assert measure("Слово слово") > measure("Слово") > measure("С")
+
+    def test_measurements_scale_with_the_font_size(self):
+        small = text_measurer(DEFAULT_FONT_FILE, 40)("Слово")
+        large = text_measurer(DEFAULT_FONT_FILE, 80)("Слово")
+        assert large == pytest.approx(2 * small, rel=0.05)
+
+
+class TestVendoredFont:
+    def test_font_file_is_committed(self):
+        import os
+
+        assert os.path.exists(DEFAULT_FONT_FILE), (
+            "the vendored TTF must be committed: a silent libass fallback would change every line break"
+        )
+
+    def test_font_family_name_matches_the_style(self):
+        from fontTools.ttLib import TTFont
+
+        assert TTFont(DEFAULT_FONT_FILE)["name"].getDebugName(1) == DEFAULT_FONT_NAME
+
+    def test_font_win_metrics_back_the_size_factor(self):
+        # ROBOTO_WIN_FACTOR is derived from these three numbers; a font swap
+        # that changed them would silently resize every burned subtitle.
+        from fontTools.ttLib import TTFont
+
+        font = TTFont(DEFAULT_FONT_FILE)
+        assert font["head"].unitsPerEm == 2048
+        assert font["OS/2"].usWinAscent == 1946
+        assert font["OS/2"].usWinDescent == 512
+
+    def test_font_covers_ukrainian(self):
+        from fontTools.ttLib import TTFont
+
+        cmap = TTFont(DEFAULT_FONT_FILE).getBestCmap()
+        for cp in (0x0404, 0x0454, 0x0406, 0x0456, 0x0407, 0x0457, 0x0490, 0x0491, 0x02BC):
+            assert cp in cmap, f"missing U+{cp:04X}"

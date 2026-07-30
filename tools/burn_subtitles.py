@@ -12,7 +12,26 @@ happened to trigger the render.
 See docs/superpowers/specs/2026-07-30-burned-in-subtitle-video-design.md.
 """
 
+import argparse
+import json
+import os
 import re
+import subprocess
+import tempfile
+
+from .srt_utils import parse_srt
+
+# Vendored rather than apt-installed: the typeface was chosen because its
+# Ukrainian text is 101% of Georgia's width, so line breaks match the preview.
+# A silent substitution would re-wrap the entire corpus.
+# Source: Google Fonts static Roboto Regular v51, Apache-2.0 (LICENSE-Roboto.txt).
+# Its Win metrics (upm 2048, ascent 1946, descent 512) are what make
+# ROBOTO_WIN_FACTOR correct and are pinned by tests.
+DEFAULT_FONT_FILE = "assets/fonts/Roboto-Regular.ttf"
+DEFAULT_FONT_NAME = "Roboto"
+
+# Fullscreen's 10% horizontal insets.
+SIDE_INSET_RATIO = 0.10
 
 # ASS FontSize is mapped onto the font's Win cell height, not CSS pixels:
 #   FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm
@@ -64,12 +83,23 @@ def escape_ass_text(text):
     return flat.replace("{", r"\{").replace("}", r"\}")
 
 
-def font_size_for(font_ratio, height, win_factor=ROBOTO_WIN_FACTOR):
-    """ASS FontSize for a font-height-to-frame-height ratio."""
+def css_font_px(font_ratio, height):
+    """The em size in CSS pixels — what the overlay renders at on screen.
+
+    This, not `font_size_for`, is what a text measurer wants: Pillow's
+    `ImageFont.truetype(size=...)` takes the em size, so feeding it the ASS
+    FontSize would inflate every width by the Win-metric factor (~20%) and wrap
+    cues a word early. The clamp lives here so both sizes share it.
+    """
     if height <= 0:
         raise ValueError(f"height must be positive, got {height}")
     ratio = max(FONT_RATIO_MIN, min(FONT_RATIO_MAX, float(font_ratio)))
-    return round(ratio * height * win_factor)
+    return ratio * height
+
+
+def font_size_for(font_ratio, height, win_factor=ROBOTO_WIN_FACTOR):
+    """ASS FontSize for a font-height-to-frame-height ratio."""
+    return round(css_font_px(font_ratio, height) * win_factor)
 
 
 def wrap_text(text, measure, max_width):
@@ -239,3 +269,140 @@ def dialogue_event(start_ms, end_ms, lines, font_size):
         f"Dialogue: 1,{ass_timestamp(start_ms)},{ass_timestamp(end_ms)},Default,,"
         f"0,0,0,,{{\\blur{blur}\\xshad0\\yshad{yshad}}}{text}"
     )
+
+
+def build_ass_document(
+    cues,
+    width,
+    height,
+    font_ratio,
+    padtop_ratio,
+    padbot_ratio,
+    measure,
+    font_name=DEFAULT_FONT_NAME,
+    steps=DEFAULT_GRADIENT_STEPS,
+):
+    """Assemble the full ASS document for a cue list.
+
+    Each cue contributes its band — one Layer-0 event per gradient strip — and
+    then a single Layer-1 text event, all sharing the cue's timings. Cues whose
+    text is blank are skipped entirely: a band with nothing on it would flash a
+    dark strip across an otherwise clean frame.
+    """
+    font_size = font_size_for(font_ratio, height)
+    margin_h = round(SIDE_INSET_RATIO * width)
+    margin_v = round(padbot_ratio * height)
+    padtop_px = round(padtop_ratio * height)
+    wrap_width = width - 2 * margin_h
+
+    lines = [build_ass_header(width, height, font_size, font_name, margin_h, margin_v)]
+    for cue in cues:
+        # Escape first: wrapping measures the text libass will actually lay out.
+        text = escape_ass_text(cue["text"])
+        if not text:
+            continue
+        wrapped = wrap_text(text, measure, wrap_width)
+        band_top, band_height = band_geometry(height, font_size, len(wrapped), margin_v, padtop_px)
+        lines.extend(band_event(cue["start_ms"], cue["end_ms"], width, band_top, band_height, steps))
+        lines.append(dialogue_event(cue["start_ms"], cue["end_ms"], wrapped, font_size))
+    return "\n".join(lines) + "\n"
+
+
+def build_ffmpeg_command(video, ass_path, output, fonts_dir):
+    """ffmpeg argv. Audio is copied, never re-encoded."""
+    return [
+        "ffmpeg",
+        "-nostdin",
+        "-y",
+        "-i",
+        video,
+        "-vf",
+        f"ass={ass_path}:fontsdir={fonts_dir}",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-crf",
+        "20",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "copy",
+        "-movflags",
+        "+faststart",
+        output,
+    ]
+
+
+def probe_dimensions(video):
+    """Real pixel dimensions of the first video stream."""
+    out = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=width,height",
+            "-of",
+            "json",
+            video,
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    stream = json.loads(out)["streams"][0]
+    return int(stream["width"]), int(stream["height"])
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Burn subtitles into a video.")
+    parser.add_argument("--srt", required=True)
+    parser.add_argument("--video", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--font-ratio", type=float, required=True)
+    parser.add_argument("--padtop-ratio", type=float, required=True)
+    parser.add_argument("--padbot-ratio", type=float, required=True)
+    parser.add_argument("--font-file", default=DEFAULT_FONT_FILE)
+    parser.add_argument("--font-name", default=DEFAULT_FONT_NAME)
+    parser.add_argument("--gradient-steps", type=int, default=DEFAULT_GRADIENT_STEPS)
+    parser.add_argument("--ass-out", help="keep the generated .ass for inspection")
+    args = parser.parse_args(argv)
+
+    width, height = probe_dimensions(args.video)
+    font_size = font_size_for(args.font_ratio, height)
+    # The measurer takes CSS pixels, not the ASS FontSize — see css_font_px.
+    measure = text_measurer(args.font_file, css_font_px(args.font_ratio, height))
+    doc = build_ass_document(
+        parse_srt(args.srt),
+        width,
+        height,
+        args.font_ratio,
+        args.padtop_ratio,
+        args.padbot_ratio,
+        measure,
+        args.font_name,
+        args.gradient_steps,
+    )
+
+    ass_path = args.ass_out or os.path.join(tempfile.mkdtemp(), "subs.ass")
+    with open(ass_path, "w", encoding="utf-8") as f:
+        f.write(doc)
+    print(f"[burn] {width}x{height}, FontSize {font_size}, ASS at {ass_path}")
+
+    fonts_dir = os.path.dirname(os.path.abspath(args.font_file))
+    cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir)
+    print("[burn] " + " ".join(cmd))
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise SystemExit(f"ffmpeg failed:\n{proc.stderr[-4000:]}")
+    # A font fallback silently changes every line break — treat it as fatal.
+    if "fontselect" in proc.stderr and "not found" in proc.stderr.lower():
+        raise SystemExit(f"font fallback detected, aborting:\n{proc.stderr[-2000:]}")
+    print(f"[burn] wrote {args.output}")
+
+
+if __name__ == "__main__":
+    main()

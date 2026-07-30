@@ -184,6 +184,12 @@ python -m tools.build_map prepare        --talk-dir PATH --video-slug SLUG [--la
 python -m tools.build_map prepare-timing --talk-dir PATH --video-slug SLUG [--timing-source whisper|en-srt]
 python -m tools.build_map assemble       --talk-dir PATH --video-slug SLUG [--lang uk]
 
+# Burn subtitles into a video (SRT -> ASS -> ffmpeg+libass). Sizing comes from
+# ratios measured by the SPA against the displayed video, not pixels.
+python -m tools.burn_subtitles --srt PATH --video PATH --output PATH \
+  --font-ratio 0.0711 --padtop-ratio 0.0741 --padbot-ratio 0.0333 \
+  [--font-file assets/fonts/Roboto-Regular.ttf] [--gradient-steps 64] [--ass-out PATH]
+
 # Validate SRT subtitles (timing source: --whisper-json OR --en-srt, en-srt preferred)
 python -m tools.validate_subtitles --srt PATH --transcript PATH \
   [--whisper-json PATH | --en-srt PATH] --report PATH \
