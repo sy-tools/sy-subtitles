@@ -24,6 +24,10 @@ ROBOTO_WIN_FACTOR = 1.2002
 FONT_RATIO_MIN = 0.02
 FONT_RATIO_MAX = 0.12
 
+# Rendering measures glyph advances slightly differently from our layout maths;
+# 2% of headroom keeps a line from spilling a hair past the margin.
+WRAP_SAFETY = 0.98
+
 _WS_RUN = re.compile(r"\s+")
 
 
@@ -59,6 +63,43 @@ def font_size_for(font_ratio, height, win_factor=ROBOTO_WIN_FACTOR):
         raise ValueError(f"height must be positive, got {height}")
     ratio = max(FONT_RATIO_MIN, min(FONT_RATIO_MAX, float(font_ratio)))
     return round(ratio * height * win_factor)
+
+
+def wrap_text(text, measure, max_width):
+    """Wrap greedily, the way CSS does, using a caller-supplied measurer.
+
+    `measure` takes a string and returns its rendered width. Injecting it keeps
+    the wrapping logic testable without a font file.
+
+    A word wider than the whole line is kept on a line of its own rather than
+    dropped or split: overflowing by a few pixels beats losing the word.
+    """
+    limit = max_width * WRAP_SAFETY
+    words = text.split()
+    if not words:
+        # Callers count lines to size the band behind the text, so an empty
+        # cue must still be one line, not zero.
+        return [""]
+    lines = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if not current or measure(candidate) <= limit:
+            current = candidate
+        else:
+            lines.append(current)
+            current = word
+    lines.append(current)
+    return lines
+
+
+def text_measurer(font_file, font_px):
+    """Width measurer backed by the very TTF libass will render with."""
+    # Imported lazily so the pure-logic helpers stay usable without Pillow.
+    from PIL import ImageFont
+
+    font = ImageFont.truetype(font_file, font_px)
+    return font.getlength
 
 
 def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):

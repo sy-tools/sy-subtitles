@@ -6,10 +6,12 @@ from tools.burn_subtitles import (
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
     ROBOTO_WIN_FACTOR,
+    WRAP_SAFETY,
     ass_timestamp,
     build_ass_header,
     escape_ass_text,
     font_size_for,
+    wrap_text,
 )
 
 
@@ -135,3 +137,39 @@ class TestBuildAssHeader:
         # Task 3 sets the soft drop shadow per event via \blur/\yshad overrides;
         # a style-level offset here would double it.
         assert self._default_style_fields()[17] == "0"
+
+
+def fake_measure(text):
+    """10 units per character — makes expected break points obvious."""
+    return len(text) * 10
+
+
+class TestWrapText:
+    def test_short_text_stays_one_line(self):
+        assert wrap_text("abc def", fake_measure, 1000) == ["abc def"]
+
+    def test_breaks_greedily_not_balanced(self):
+        # Greedy fills the first line as far as it fits: "aaa bbb" (70 units)
+        # then "cc". A balancing wrapper would even the lines out instead.
+        assert wrap_text("aaa bbb cc", fake_measure, 75 / WRAP_SAFETY) == ["aaa bbb", "cc"]
+
+    def test_three_lines(self):
+        assert wrap_text("aaaa bbbb cccc", fake_measure, 45 / WRAP_SAFETY) == [
+            "aaaa",
+            "bbbb",
+            "cccc",
+        ]
+
+    def test_word_longer_than_line_is_not_dropped(self):
+        assert wrap_text("aaaaaaaaaa bb", fake_measure, 50 / WRAP_SAFETY) == [
+            "aaaaaaaaaa",
+            "bb",
+        ]
+
+    def test_applies_safety_margin(self):
+        # Exactly at the raw limit must still wrap, because the effective
+        # width is max_width * WRAP_SAFETY.
+        assert wrap_text("aaa bbb", fake_measure, 70) == ["aaa", "bbb"]
+
+    def test_empty_text_yields_single_empty_line(self):
+        assert wrap_text("", fake_measure, 100) == [""]
