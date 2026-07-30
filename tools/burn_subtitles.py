@@ -45,6 +45,9 @@ def escape_ass_text(text):
     Braces would otherwise be read as an override block and disappear. Incoming
     line breaks are dropped because the generator re-wraps the text itself.
     """
+    # The literal below is U+00A0. _WS_RUN would fold it too, so this replace
+    # is redundant today and spelled out on purpose: if anyone ever narrows the
+    # regex to [ \t]+, NBSP handling must not disappear silently with it.
     flat = text.replace(" ", " ")
     flat = _WS_RUN.sub(" ", flat).strip()
     return flat.replace("{", r"\{").replace("}", r"\}")
@@ -59,13 +62,20 @@ def font_size_for(font_ratio, height, win_factor=ROBOTO_WIN_FACTOR):
 
 
 def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
-    """Script/style header. PlayRes equals the real frame so units are pixels.
+    r"""Script/style header. PlayRes equals the real frame so units are pixels.
 
-    Two styles: Default draws the text (soft blurred shadow, no hard outline —
-    the gradient band behind it does the legibility work), Band draws the
-    gradient rectangles with no border or shadow of its own.
+    Two styles. Default draws the text with a thin, near-opaque outline — the
+    ASS counterpart of the SPA's `0 0 2px rgba(0,0,0,.9)` halo; the gradient
+    band behind the text does the rest of the legibility work. Its Shadow field
+    is 0 on purpose, not by oversight: the soft vertical drop shadow is applied
+    per event in Task 3 through `{\blur...\xshad0\yshad...}` override tags, and
+    a style-level offset here would draw a second, unblurred copy underneath.
+    Band draws the gradient rectangles with no border or shadow of its own.
     """
-    outline = max(1, round(font_size * 0.07))
+    # The CSS halo is 0 0 2px at a ~77px font — ~2.5% of the font size, which
+    # is 2 px at font_size 92. The max(1, ...) floor keeps a visible edge on
+    # small frames, where the ratio alone would round to nothing.
+    outline = max(1, round(font_size * 0.025))
     return "\n".join(
         [
             "[Script Info]",
@@ -84,8 +94,11 @@ def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
             "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
             "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
             "Alignment, MarginL, MarginR, MarginV, Encoding",
-            # OutlineColour alpha 1A ~ the CSS 0 0 2px rgba(0,0,0,.9) halo;
-            # BackColour alpha 26 ~ the 0 2px 8px rgba(0,0,0,.85) drop shadow.
+            # OutlineColour alpha 1A ~ the CSS 0 0 2px rgba(0,0,0,.9) halo.
+            # BackColour (alpha 26 ~ the 0 2px 8px rgba(0,0,0,.85) drop shadow)
+            # is the shadow's colour. It draws nothing while the Shadow field
+            # below is 0, and comes alive when Task 3's per-event \yshad
+            # override gives the shadow a non-zero offset — it is not dead.
             f"Style: Default,{font_name},{font_size},&H00FFFFFF,&H00FFFFFF,"
             f"&H1A000000,&H26000000,0,0,0,0,100,100,0,0,1,{outline},0,"
             f"2,{margin_h},{margin_h},{margin_v},1",
