@@ -13,11 +13,13 @@ See docs/superpowers/specs/2026-07-30-burned-in-subtitle-video-design.md.
 """
 
 import argparse
+import contextlib
 import json
 import os
 import re
 import subprocess
 import tempfile
+from pathlib import Path
 
 from .srt_utils import parse_srt
 
@@ -27,7 +29,9 @@ from .srt_utils import parse_srt
 # Source: Google Fonts static Roboto Regular v51, Apache-2.0 (LICENSE-Roboto.txt).
 # Its Win metrics (upm 2048, ascent 1946, descent 512) are what make
 # ROBOTO_WIN_FACTOR correct and are pinned by tests.
-DEFAULT_FONT_FILE = "assets/fonts/Roboto-Regular.ttf"
+# Absolute: the CLI is run from wherever the caller stands, and a relative
+# default would only resolve from the repo root.
+DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "assets" / "fonts" / "Roboto-Regular.ttf")
 DEFAULT_FONT_NAME = "Roboto"
 
 # Fullscreen's 10% horizontal insets.
@@ -297,7 +301,11 @@ def build_ass_document(
 
     lines = [build_ass_header(width, height, font_size, font_name, margin_h, margin_v)]
     for cue in cues:
-        # Escape first: wrapping measures the text libass will actually lay out.
+        # Escape first: wrapping then measures the escaped form, so the two
+        # backslashes an escaped brace adds are counted although libass will
+        # not draw them. Braces are vanishingly rare here, and the 2% wrap
+        # safety margin absorbs it; measuring the raw text would instead let a
+        # line grow past the margin.
         text = escape_ass_text(cue["text"])
         if not text:
             continue
@@ -332,6 +340,122 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir):
         "+faststart",
         output,
     ]
+
+
+# libass logs the face it settled on as "fontselect: (<request>) -> <path>, <index>,
+# <face>". ffmpeg prefixes the line with "[Parsed_ass_0 @ 0x...]".
+_FONTSELECT_RESULT = re.compile(r"fontselect:\s*\([^)]*\)\s*->\s*(?P<result>.+)")
+
+# Supplementary to the positive check below, not a substitute for it: these are
+# the three trouble messages libass 0.17.5 emits (ass_fontselect.c). The first
+# two are also caught by the face comparison; the third is not, because the
+# family resolves correctly and only a single glyph has nowhere to come from —
+# which still puts a tofu box on screen.
+_FONTSELECT_TROUBLE = (
+    "Using default font family",
+    "Using default font:",
+    "failed to find any fallback with glyph",
+)
+
+
+def _normalized_face(name):
+    """Fold a face name for comparison: 'Roboto-Regular' ~ 'Roboto Regular'."""
+    return re.sub(r"[\s_-]+", "", name).casefold()
+
+
+def font_selection_error(stderr, font_name, require_evidence=True):
+    """Return a message if libass did not render with `font_name`, else None.
+
+    Checked *positively* — the resolution line libass logs on success is stable
+    across versions, whereas the wording it uses on a miss is not: 0.17.5 says
+    "Using default font family", which contains none of the words an earlier
+    blocklist-style check looked for. Since a substituted face changes every
+    measured width, and therefore every line break in every burned video, a
+    result that cannot be proven correct is treated as a failure.
+
+    `require_evidence` is the one deliberate exception, used after the encode:
+    the pre-flight probe has already proven the font by then, so a log that
+    happens to carry no fontselect line — a quieter build, a truncated capture —
+    must not condemn a finished render. Proof is demanded where it is free.
+    """
+    faces = [m.group("result").split(",")[-1].strip() for m in _FONTSELECT_RESULT.finditer(stderr)]
+    trouble = [phrase for phrase in _FONTSELECT_TROUBLE if phrase in stderr]
+    if trouble:
+        used = ", ".join(sorted(set(faces))) or "an unknown face"
+        return f"libass could not render with {font_name} ({'; '.join(trouble)}; resolved to {used})"
+    if not faces:
+        if require_evidence:
+            return f"could not verify that libass selected {font_name}: no fontselect lines in the log"
+        return None
+    wanted = _normalized_face(font_name)
+    unexpected = sorted({face for face in faces if not _normalized_face(face).startswith(wanted)})
+    if unexpected:
+        return f"libass resolved {font_name} to {', '.join(unexpected)}"
+    return None
+
+
+# A throwaway frame just big enough to lay a line of text out on.
+FONT_PROBE_SIZE = 320
+
+# Includes the letters unique to Ukrainian: if the font resolves but lacks them,
+# libass selects a second face for those glyphs and the probe sees it.
+FONT_PROBE_TEXT = "Ґґ Її Єє Іі A"
+
+
+def font_probe_document(font_name, font_size=48):
+    """A one-cue ASS document whose only job is to make libass resolve a font.
+
+    It starts at t=0 so the very first rendered frame draws it — the probe would
+    otherwise have nothing to report on.
+    """
+    header = build_ass_header(FONT_PROBE_SIZE, FONT_PROBE_SIZE, font_size, font_name, 0, 0)
+    return header + "\n" + dialogue_event(0, 1000, [FONT_PROBE_TEXT], font_size) + "\n"
+
+
+def build_font_probe_command(ass_path, fonts_dir):
+    """One frame rendered to the null muxer, purely to read the font selection.
+
+    ffmpeg maps libass MSGL_INFO to AV_LOG_INFO (vf_subtitles.c), so the
+    resolution line is already visible at the default level; `-v verbose` is
+    belt and braces, so an inherited quieter default cannot turn the check into
+    silence. Rendering to `-f null -` costs a moment and, unlike a post-encode
+    check, cannot leave a wrongly wrapped file on disk.
+    """
+    return [
+        "ffmpeg",
+        "-nostdin",
+        "-v",
+        "verbose",
+        "-f",
+        "lavfi",
+        "-i",
+        f"color=c=black:s={FONT_PROBE_SIZE}x{FONT_PROBE_SIZE}:d=0.1",
+        "-vf",
+        f"ass={ass_path}:fontsdir={fonts_dir}",
+        "-frames:v",
+        "1",
+        "-f",
+        "null",
+        "-",
+    ]
+
+
+def verify_font_selection(font_name, fonts_dir):
+    """Fail before encoding if libass will not use `font_name` from `fonts_dir`."""
+    with tempfile.TemporaryDirectory() as tmp:
+        probe_ass = os.path.join(tmp, "probe.ass")
+        with open(probe_ass, "w", encoding="utf-8") as f:
+            f.write(font_probe_document(font_name))
+        proc = subprocess.run(
+            build_font_probe_command(probe_ass, fonts_dir),
+            capture_output=True,
+            text=True,
+        )
+    if proc.returncode != 0:
+        raise SystemExit(f"font probe failed:\n{proc.stderr[-2000:]}")
+    error = font_selection_error(proc.stderr, font_name)
+    if error:
+        raise SystemExit(f"{error}\nA substituted font re-wraps every line; refusing to burn.")
 
 
 def probe_dimensions(video):
@@ -393,14 +517,23 @@ def main(argv=None):
     print(f"[burn] {width}x{height}, FontSize {font_size}, ASS at {ass_path}")
 
     fonts_dir = os.path.dirname(os.path.abspath(args.font_file))
+    # Pre-flight: prove the font resolves before spending an encode on it.
+    verify_font_selection(args.font_name, fonts_dir)
+
     cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir)
     print("[burn] " + " ".join(cmd))
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise SystemExit(f"ffmpeg failed:\n{proc.stderr[-4000:]}")
-    # A font fallback silently changes every line break — treat it as fatal.
-    if "fontselect" in proc.stderr and "not found" in proc.stderr.lower():
-        raise SystemExit(f"font fallback detected, aborting:\n{proc.stderr[-2000:]}")
+    # Second net: the probe proves the family resolves, but only the real
+    # document can reveal a glyph in some cue that pulled in another face.
+    # Silence is tolerated here — see font_selection_error.
+    error = font_selection_error(proc.stderr, args.font_name, require_evidence=False)
+    if error:
+        # Never leave a wrongly wrapped file behind: it looks like a finished burn.
+        with contextlib.suppress(OSError):
+            os.remove(args.output)
+        raise SystemExit(f"{error}\nA substituted font re-wraps every line; removed {args.output}.")
     print(f"[burn] wrote {args.output}")
 
 

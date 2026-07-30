@@ -1,5 +1,6 @@
 """Tests for burn_subtitles.py — SRT to ASS conversion for burned-in subtitles."""
 
+import os
 import re
 import subprocess
 
@@ -22,9 +23,12 @@ from tools.burn_subtitles import (
     build_ass_document,
     build_ass_header,
     build_ffmpeg_command,
+    build_font_probe_command,
     css_font_px,
     dialogue_event,
     escape_ass_text,
+    font_probe_document,
+    font_selection_error,
     font_size_for,
     gradient_alpha_at,
     main,
@@ -352,8 +356,13 @@ class TestDefaults:
         assert SIDE_INSET_RATIO == 0.10
 
     def test_font_defaults_point_at_the_vendored_roboto(self):
-        assert DEFAULT_FONT_FILE == "assets/fonts/Roboto-Regular.ttf"
+        assert DEFAULT_FONT_FILE.endswith(os.path.join("assets", "fonts", "Roboto-Regular.ttf"))
         assert DEFAULT_FONT_NAME == "Roboto"
+
+    def test_default_font_path_is_absolute(self):
+        # `python -m tools.burn_subtitles` runs from wherever the caller stands;
+        # a CWD-relative default fails inside Pillow anywhere but the repo root.
+        assert os.path.isabs(DEFAULT_FONT_FILE)
 
 
 class TestCssFontPx:
@@ -491,48 +500,173 @@ class TestProbeDimensions:
         assert probe_dimensions("in.mp4") == (854, 480)
 
 
+# Verbatim libass 0.17.5 output, captured locally by rendering this project's own
+# .ass through mpv on a machine without Roboto installed. Both lines are emitted
+# on a fallback: the warning, and then a resolution line naming the wrong face.
+LIBASS_FALLBACK_STDERR = (
+    "[Parsed_ass_0 @ 0x7f8e1c] fontselect: Using default font family: "
+    "(Roboto, 400, 0) -> /System/Library/Fonts/Helvetica.ttc, -1, Helvetica\n"
+    "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (Roboto, 400, 0) -> "
+    "/System/Library/Fonts/Helvetica.ttc, -1, Helvetica\n"
+)
+
+# The success case, captured the same way with --sub-fonts-dir=assets/fonts.
+LIBASS_SUCCESS_STDERR = "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (Roboto, 400, 0) -> Roboto-Regular, 0, Roboto-Regular\n"
+
+
+class TestFontSelectionError:
+    """The only net under a silent font substitution.
+
+    Checked positively — libass's *failure* wording moves between versions,
+    while the resolution line it logs on success is stable — because a
+    substitution silently moves every line break in every burned video.
+    """
+
+    def test_default_family_warning_is_fatal(self):
+        assert font_selection_error(LIBASS_FALLBACK_STDERR, "Roboto")
+
+    def test_resolution_to_the_requested_face_passes(self):
+        assert font_selection_error(LIBASS_SUCCESS_STDERR, "Roboto") is None
+
+    def test_resolution_to_another_face_is_fatal(self):
+        # The warning line alone is not what we key on: a resolution naming a
+        # different face must fail even if the wording of the warning changes.
+        only_resolution = LIBASS_FALLBACK_STDERR.splitlines()[1]
+        assert font_selection_error(only_resolution, "Roboto")
+
+    def test_the_second_default_font_wording_is_fatal(self):
+        # libass 0.17.5 has two of these, checked in ass_fontselect.c:
+        # "Using default font family: ..." and "Using default font: ...".
+        stderr = (
+            "fontselect: Using default font: (Roboto, 400, 0) -> /System/Library/Fonts/Helvetica.ttc, -1, Helvetica"
+        )
+        assert font_selection_error(stderr, "Roboto")
+
+    def test_a_missing_glyph_is_fatal_even_when_the_family_resolved(self):
+        # The face is right, so the positive check alone would pass this — but
+        # the frame would show tofu where Ґ should be.
+        stderr = (
+            LIBASS_SUCCESS_STDERR
+            + "fontselect: failed to find any fallback with glyph 0x490 for font: (Roboto, 400, 0)\n"
+        )
+        assert font_selection_error(stderr, "Roboto")
+
+    def test_silence_is_not_success(self):
+        # No fontselect lines at all = no proof. Refuse rather than assume.
+        assert font_selection_error("", "Roboto")
+
+    def test_silence_can_be_tolerated_where_evidence_is_optional(self):
+        # The encode runs at ffmpeg's default log level, which may withhold the
+        # resolution line; the pre-flight probe is where proof is demanded.
+        assert font_selection_error("", "Roboto", require_evidence=False) is None
+
+    def test_ignores_the_case_and_hyphenation_of_the_face_name(self):
+        assert font_selection_error(LIBASS_SUCCESS_STDERR, "roboto") is None
+
+    def test_message_names_the_offending_face(self):
+        assert "Helvetica" in font_selection_error(LIBASS_FALLBACK_STDERR, "Roboto")
+
+
+class TestFontProbeCommand:
+    def _cmd(self):
+        return build_font_probe_command("probe.ass", "assets/fonts")
+
+    def test_pins_the_log_level_so_font_selection_is_visible(self):
+        # The check reads ffmpeg's stderr; an inherited quieter level would turn
+        # a verifiable fallback into silence.
+        cmd = self._cmd()
+        assert cmd[cmd.index("-v") + 1] == "verbose"
+
+    def test_renders_a_single_frame_to_the_null_muxer(self):
+        cmd = self._cmd()
+        assert cmd[cmd.index("-frames:v") + 1] == "1"
+        assert cmd[cmd.index("-f", cmd.index("-frames:v")) + 1] == "null"
+        assert cmd[-1] == "-"
+
+    def test_uses_the_same_ass_filter_and_fontsdir(self):
+        assert "ass=probe.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
+
+
+class TestFontProbeDocument:
+    def test_names_the_requested_font(self):
+        assert "Style: Default,Roboto," in font_probe_document("Roboto")
+
+    def test_draws_ukrainian_glyphs_so_a_partial_font_is_caught_too(self):
+        doc = font_probe_document("Roboto")
+        text = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 1,"))
+        for ch in "Ґґ Її Єє":
+            assert ch in text
+
+    def test_starts_at_zero_so_the_first_frame_renders_it(self):
+        assert "Dialogue: 1,0:00:00.00," in font_probe_document("Roboto")
+
+
 class TestMain:
     """Wiring checks: the parts no unit test above can see."""
 
-    def _invoke(self, tmp_path, monkeypatch, extra_args=(), returncode=0, stderr=""):
+    def _harness(
+        self,
+        tmp_path,
+        monkeypatch,
+        extra_args=(),
+        returncode=0,
+        stderr="",
+        probe_returncode=0,
+        probe_stderr=LIBASS_SUCCESS_STDERR,
+    ):
+        """Return (run, state); state survives a SystemExit raised inside main."""
         srt = tmp_path / "uk.srt"
         srt.write_text("1\n00:00:00,000 --> 00:00:02,000\nПерше речення.\n\n", encoding="utf-8")
         ass_out = tmp_path / "subs.ass"
-        seen = {}
-        commands = []
+        output = tmp_path / "out.mp4"
+        state = {"seen": {}, "commands": [], "ass_out": ass_out, "output": output}
 
         def fake_measurer(font_file, font_px):
-            seen["font_file"] = font_file
-            seen["font_px"] = font_px
+            state["seen"]["font_file"] = font_file
+            state["seen"]["font_px"] = font_px
             return fake_measure
 
         def fake_run(cmd, **kwargs):
-            commands.append(cmd)
+            state["commands"].append(cmd)
+            if "-frames:v" in cmd:  # the pre-flight font probe
+                return subprocess.CompletedProcess(cmd, probe_returncode, "", probe_stderr)
+            output.write_bytes(b"encoded")  # ffmpeg would have written the file by now
             return subprocess.CompletedProcess(cmd, returncode, "", stderr)
 
         monkeypatch.setattr(burn_subtitles, "text_measurer", fake_measurer)
         monkeypatch.setattr(burn_subtitles, "probe_dimensions", lambda video: (1920, 1080))
         monkeypatch.setattr(burn_subtitles.subprocess, "run", fake_run)
-        main(
-            [
-                "--srt",
-                str(srt),
-                "--video",
-                "in.mp4",
-                "--output",
-                str(tmp_path / "out.mp4"),
-                "--font-ratio",
-                "0.0711",
-                "--padtop-ratio",
-                "0.0741",
-                "--padbot-ratio",
-                "0.0333",
-                "--ass-out",
-                str(ass_out),
-                *extra_args,
-            ]
-        )
-        return seen, commands, ass_out
+
+        def run():
+            main(
+                [
+                    "--srt",
+                    str(srt),
+                    "--video",
+                    "in.mp4",
+                    "--output",
+                    str(output),
+                    "--font-ratio",
+                    "0.0711",
+                    "--padtop-ratio",
+                    "0.0741",
+                    "--padbot-ratio",
+                    "0.0333",
+                    "--ass-out",
+                    str(ass_out),
+                    *extra_args,
+                ]
+            )
+
+        return run, state
+
+    def _invoke(self, tmp_path, monkeypatch, **kwargs):
+        run, state = self._harness(tmp_path, monkeypatch, **kwargs)
+        run()
+        return state["seen"], state["commands"], state["ass_out"]
+
+    def _encode_command(self, commands):
+        return next(cmd for cmd in commands if "-frames:v" not in cmd)
 
     def test_measures_in_css_pixels_not_in_ass_font_size(self, tmp_path, monkeypatch):
         # Pillow's truetype(size=) takes the CSS em size. Handing it the ASS
@@ -549,23 +683,64 @@ class TestMain:
         _, commands, ass_out = self._invoke(tmp_path, monkeypatch)
         doc = ass_out.read_text(encoding="utf-8")
         assert "[Events]" in doc and "Dialogue: 1," in doc
-        assert commands and commands[0][0] == "ffmpeg"
-        assert str(ass_out) in " ".join(commands[0])
+        encode = self._encode_command(commands)
+        assert encode[0] == "ffmpeg"
+        assert str(ass_out) in " ".join(encode)
 
     def test_points_fontsdir_at_the_font_file_directory(self, tmp_path, monkeypatch):
         _, commands, _ = self._invoke(tmp_path, monkeypatch)
-        import os
+        expected = f"fontsdir={os.path.dirname(os.path.abspath(DEFAULT_FONT_FILE))}"
+        assert all(expected in " ".join(cmd) for cmd in commands)
 
-        assert f"fontsdir={os.path.dirname(os.path.abspath(DEFAULT_FONT_FILE))}" in " ".join(commands[0])
+    def test_probes_the_font_before_encoding(self, tmp_path, monkeypatch):
+        # Pre-flight, not post-mortem: a fallback caught after the encode has
+        # already written a wrongly-wrapped file.
+        _, commands, _ = self._invoke(tmp_path, monkeypatch)
+        assert "-frames:v" in commands[0]
+        assert len(commands) == 2
+
+    def test_probe_fallback_aborts_before_the_encode(self, tmp_path, monkeypatch):
+        run, state = self._harness(tmp_path, monkeypatch, probe_stderr=LIBASS_FALLBACK_STDERR)
+        with pytest.raises(SystemExit):
+            run()
+        assert len(state["commands"]) == 1  # nothing was encoded
+        assert not state["output"].exists()
+
+    def test_probe_without_font_evidence_aborts(self, tmp_path, monkeypatch):
+        # Silence at verbose level means the check could not be made. Refuse.
+        run, state = self._harness(tmp_path, monkeypatch, probe_stderr="")
+        with pytest.raises(SystemExit):
+            run()
+        assert len(state["commands"]) == 1
+
+    def test_probe_failure_is_fatal(self, tmp_path, monkeypatch):
+        run, state = self._harness(tmp_path, monkeypatch, probe_returncode=1, probe_stderr="boom")
+        with pytest.raises(SystemExit):
+            run()
+        assert len(state["commands"]) == 1
 
     def test_ffmpeg_failure_is_fatal(self, tmp_path, monkeypatch):
+        run, _ = self._harness(tmp_path, monkeypatch, returncode=1, stderr="boom")
         with pytest.raises(SystemExit):
-            self._invoke(tmp_path, monkeypatch, returncode=1, stderr="boom")
+            run()
 
     def test_font_fallback_is_fatal(self, tmp_path, monkeypatch):
         # A silent substitution re-wraps every line; it must never pass as success.
+        run, _ = self._harness(tmp_path, monkeypatch, stderr=LIBASS_FALLBACK_STDERR)
         with pytest.raises(SystemExit):
-            self._invoke(tmp_path, monkeypatch, stderr="fontselect: font not found")
+            run()
+
+    def test_a_fallback_during_the_encode_leaves_no_output_behind(self, tmp_path, monkeypatch):
+        # A wrongly-wrapped MP4 on disk is worse than no MP4: it looks finished.
+        run, state = self._harness(tmp_path, monkeypatch, stderr=LIBASS_FALLBACK_STDERR)
+        with pytest.raises(SystemExit):
+            run()
+        assert not state["output"].exists()
+
+    def test_silence_from_the_encode_is_not_treated_as_a_fallback(self, tmp_path, monkeypatch):
+        # ffmpeg's default log level may withhold the resolution line; the probe
+        # already proved the font, so silence here must not fail the run.
+        _, _, _ = self._invoke(tmp_path, monkeypatch, stderr="frame= 1 fps=0.0\n")
 
 
 class TestTextMeasurer:
