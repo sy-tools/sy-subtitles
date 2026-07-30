@@ -301,11 +301,11 @@ def build_ass_document(
 
     lines = [build_ass_header(width, height, font_size, font_name, margin_h, margin_v)]
     for cue in cues:
-        # Escape first: wrapping then measures the escaped form, so the two
-        # backslashes an escaped brace adds are counted although libass will
-        # not draw them. Braces are vanishingly rare here, and the 2% wrap
-        # safety margin absorbs it; measuring the raw text would instead let a
-        # line grow past the margin.
+        # Escape first: wrapping then measures the escaped form, so the one
+        # backslash each escaped brace adds is counted although libass will not
+        # draw it. Braces are vanishingly rare here, and the 2% wrap safety
+        # margin absorbs it; measuring the raw text would instead let a line
+        # grow past the margin.
         text = escape_ass_text(cue["text"])
         if not text:
             continue
@@ -363,7 +363,37 @@ def _normalized_face(name):
     return re.sub(r"[\s_-]+", "", name).casefold()
 
 
-def font_selection_error(stderr, font_name, require_evidence=True):
+# Style words that name the plain cut of a family, so "Roboto" and
+# "Roboto Regular" mean the same face. Deliberately short: "Light" and
+# "Condensed" are *different* widths and must not be folded away.
+_NEUTRAL_STYLE_WORDS = ("regular", "book", "roman", "normal")
+
+
+def accepted_faces(font_name, font_file=None):
+    """Folded names a font provider may legitimately report for our font.
+
+    Read out of the TTF when we have it, because a name that merely *looks*
+    related is not evidence: "Roboto Condensed" and "Roboto Slab" both begin
+    with "Roboto", and Condensed is 10-15% narrower — the very corpus-wide
+    re-wrap this module exists to prevent. Matching is exact over this set.
+
+    Pillow reads the family, not fontTools: fontTools is a test-only dependency,
+    and Pillow is already required at run time to measure with this same file.
+    """
+    if font_file:
+        from PIL import ImageFont
+
+        family, style = ImageFont.truetype(font_file, 16).getname()
+        names = {family}
+        if style:
+            names.add(f"{family} {style}")
+        return {_normalized_face(name) for name in names}
+    # No file to read: accept the requested family and its plain cuts only.
+    folded = _normalized_face(font_name)
+    return {folded} | {folded + word for word in _NEUTRAL_STYLE_WORDS}
+
+
+def font_selection_error(stderr, font_name, font_file=None, require_evidence=True):
     """Return a message if libass did not render with `font_name`, else None.
 
     Checked *positively* — the resolution line libass logs on success is stable
@@ -387,29 +417,58 @@ def font_selection_error(stderr, font_name, require_evidence=True):
         if require_evidence:
             return f"could not verify that libass selected {font_name}: no fontselect lines in the log"
         return None
-    wanted = _normalized_face(font_name)
-    unexpected = sorted({face for face in faces if not _normalized_face(face).startswith(wanted)})
+    wanted = accepted_faces(font_name, font_file)
+    unexpected = sorted({face for face in faces if _normalized_face(face) not in wanted})
     if unexpected:
         return f"libass resolved {font_name} to {', '.join(unexpected)}"
     return None
 
 
-# A throwaway frame just big enough to lay a line of text out on.
-FONT_PROBE_SIZE = 320
+# A throwaway frame, sized so a capped probe text fits inside it: every probed
+# glyph should be rasterized, not merely shaped.
+FONT_PROBE_WIDTH = 640
+FONT_PROBE_HEIGHT = 480
+FONT_PROBE_FONT_SIZE = 24
+FONT_PROBE_LINE_CHARS = 32
 
-# Includes the letters unique to Ukrainian: if the font resolves but lacks them,
-# libass selects a second face for those glyphs and the probe sees it.
-FONT_PROBE_TEXT = "Ґґ Її Єє Іі A"
+# The letters unique to Ukrainian, always probed even if the subtitles happen
+# not to use them: if the font resolves but lacks them, libass reaches for
+# another face and the probe sees it.
+FONT_PROBE_FLOOR = "ҐґЄєІіЇїʼ"
+
+# Purely a guard against a pathological file; a Ukrainian talk uses ~100 distinct
+# characters, so this never bites in practice.
+FONT_PROBE_MAX_CHARS = 400
+
+# Braces and backslashes are ASS syntax rather than text, and every font has
+# them; probing them would mean escaping them.
+_PROBE_EXCLUDED = set("{}\\")
 
 
-def font_probe_document(font_name, font_size=48):
+def probe_text_for(cues, floor=FONT_PROBE_FLOOR, limit=FONT_PROBE_MAX_CHARS):
+    """The distinct characters to prove the font can draw, for these subtitles.
+
+    Probing a fixed string would only prove the family plus a handful of letters;
+    a stray № or ♪ in one cue out of four hundred would then surface only after
+    a full encode. Sorted, so the probe document is deterministic.
+    """
+    chars = {ch for cue in cues for ch in cue.get("text", "")} | set(floor)
+    usable = sorted(ch for ch in chars if not ch.isspace() and ch not in _PROBE_EXCLUDED)
+    return "".join(usable[:limit])
+
+
+def font_probe_document(font_name, probe_text=FONT_PROBE_FLOOR, font_size=FONT_PROBE_FONT_SIZE):
     """A one-cue ASS document whose only job is to make libass resolve a font.
 
     It starts at t=0 so the very first rendered frame draws it — the probe would
-    otherwise have nothing to report on.
+    otherwise have nothing to report on — and the text is broken into short
+    lines so it stays on the probe frame.
     """
-    header = build_ass_header(FONT_PROBE_SIZE, FONT_PROBE_SIZE, font_size, font_name, 0, 0)
-    return header + "\n" + dialogue_event(0, 1000, [FONT_PROBE_TEXT], font_size) + "\n"
+    lines = [probe_text[i : i + FONT_PROBE_LINE_CHARS] for i in range(0, len(probe_text), FONT_PROBE_LINE_CHARS)] or [
+        ""
+    ]
+    header = build_ass_header(FONT_PROBE_WIDTH, FONT_PROBE_HEIGHT, font_size, font_name, 0, 0)
+    return header + "\n" + dialogue_event(0, 1000, lines, font_size) + "\n"
 
 
 def build_font_probe_command(ass_path, fonts_dir):
@@ -429,7 +488,7 @@ def build_font_probe_command(ass_path, fonts_dir):
         "-f",
         "lavfi",
         "-i",
-        f"color=c=black:s={FONT_PROBE_SIZE}x{FONT_PROBE_SIZE}:d=0.1",
+        f"color=c=black:s={FONT_PROBE_WIDTH}x{FONT_PROBE_HEIGHT}:d=0.1",
         "-vf",
         f"ass={ass_path}:fontsdir={fonts_dir}",
         "-frames:v",
@@ -440,12 +499,12 @@ def build_font_probe_command(ass_path, fonts_dir):
     ]
 
 
-def verify_font_selection(font_name, fonts_dir):
-    """Fail before encoding if libass will not use `font_name` from `fonts_dir`."""
+def verify_font_selection(font_name, fonts_dir, font_file=None, probe_text=FONT_PROBE_FLOOR):
+    """Fail before encoding if libass will not draw `probe_text` in `font_name`."""
     with tempfile.TemporaryDirectory() as tmp:
         probe_ass = os.path.join(tmp, "probe.ass")
         with open(probe_ass, "w", encoding="utf-8") as f:
-            f.write(font_probe_document(font_name))
+            f.write(font_probe_document(font_name, probe_text))
         proc = subprocess.run(
             build_font_probe_command(probe_ass, fonts_dir),
             capture_output=True,
@@ -453,7 +512,7 @@ def verify_font_selection(font_name, fonts_dir):
         )
     if proc.returncode != 0:
         raise SystemExit(f"font probe failed:\n{proc.stderr[-2000:]}")
-    error = font_selection_error(proc.stderr, font_name)
+    error = font_selection_error(proc.stderr, font_name, font_file=font_file)
     if error:
         raise SystemExit(f"{error}\nA substituted font re-wraps every line; refusing to burn.")
 
@@ -499,8 +558,9 @@ def main(argv=None):
     font_size = font_size_for(args.font_ratio, height)
     # The measurer takes CSS pixels, not the ASS FontSize — see css_font_px.
     measure = text_measurer(args.font_file, css_font_px(args.font_ratio, height))
+    cues = parse_srt(args.srt)
     doc = build_ass_document(
-        parse_srt(args.srt),
+        cues,
         width,
         height,
         args.font_ratio,
@@ -517,18 +577,20 @@ def main(argv=None):
     print(f"[burn] {width}x{height}, FontSize {font_size}, ASS at {ass_path}")
 
     fonts_dir = os.path.dirname(os.path.abspath(args.font_file))
-    # Pre-flight: prove the font resolves before spending an encode on it.
-    verify_font_selection(args.font_name, fonts_dir)
+    # Pre-flight: prove the font can draw *these* subtitles before spending an
+    # encode on them. Probing a fixed string would leave a stray character in
+    # one cue to be discovered twenty minutes later.
+    verify_font_selection(args.font_name, fonts_dir, args.font_file, probe_text_for(cues))
 
     cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir)
     print("[burn] " + " ".join(cmd))
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise SystemExit(f"ffmpeg failed:\n{proc.stderr[-4000:]}")
-    # Second net: the probe proves the family resolves, but only the real
-    # document can reveal a glyph in some cue that pulled in another face.
+    # Second net, now that the probe covers the content too: this catches only
+    # what a single frame of the real document could still differ on.
     # Silence is tolerated here — see font_selection_error.
-    error = font_selection_error(proc.stderr, args.font_name, require_evidence=False)
+    error = font_selection_error(proc.stderr, args.font_name, font_file=args.font_file, require_evidence=False)
     if error:
         # Never leave a wrongly wrapped file behind: it looks like a finished burn.
         with contextlib.suppress(OSError):

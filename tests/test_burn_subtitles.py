@@ -11,6 +11,8 @@ from tools.burn_subtitles import (
     DEFAULT_FONT_FILE,
     DEFAULT_FONT_NAME,
     DEFAULT_GRADIENT_STEPS,
+    FONT_PROBE_FLOOR,
+    FONT_PROBE_MAX_CHARS,
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
     ROBOTO_WIN_FACTOR,
@@ -33,6 +35,7 @@ from tools.burn_subtitles import (
     gradient_alpha_at,
     main,
     probe_dimensions,
+    probe_text_for,
     text_measurer,
     wrap_text,
 )
@@ -500,9 +503,11 @@ class TestProbeDimensions:
         assert probe_dimensions("in.mp4") == (854, 480)
 
 
-# Verbatim libass 0.17.5 output, captured locally by rendering this project's own
-# .ass through mpv on a machine without Roboto installed. Both lines are emitted
-# on a fallback: the warning, and then a resolution line naming the wrong face.
+# The libass 0.17.5 message bodies are verbatim, captured locally by rendering
+# this project's own .ass on a machine without Roboto installed; only the line
+# prefix was adapted, because the capture came through mpv ("[sub/ass] ") while
+# production reads ffmpeg's stderr ("[Parsed_ass_0 @ 0x...] "). Both lines are
+# emitted on a fallback: the warning, then a resolution naming the wrong face.
 LIBASS_FALLBACK_STDERR = (
     "[Parsed_ass_0 @ 0x7f8e1c] fontselect: Using default font family: "
     "(Roboto, 400, 0) -> /System/Library/Fonts/Helvetica.ttc, -1, Helvetica\n"
@@ -512,6 +517,13 @@ LIBASS_FALLBACK_STDERR = (
 
 # The success case, captured the same way with --sub-fonts-dir=assets/fonts.
 LIBASS_SUCCESS_STDERR = "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (Roboto, 400, 0) -> Roboto-Regular, 0, Roboto-Regular\n"
+
+# Third of libass 0.17.5's trouble messages (ass_fontselect.c): the family
+# resolved, but nothing on the system can draw one character. 0x490 is Ґ.
+LIBASS_MISSING_GLYPH_STDERR = (
+    LIBASS_SUCCESS_STDERR
+    + "[Parsed_ass_0 @ 0x7f8e1c] fontselect: failed to find any fallback with glyph 0x490 for font: (Roboto, 400, 0)\n"
+)
 
 
 class TestFontSelectionError:
@@ -566,6 +578,29 @@ class TestFontSelectionError:
     def test_message_names_the_offending_face(self):
         assert "Helvetica" in font_selection_error(LIBASS_FALLBACK_STDERR, "Roboto")
 
+    def test_a_narrower_relative_of_the_family_is_rejected(self):
+        # The whole point of the guard. "Roboto Condensed" begins with "Roboto"
+        # and is 10-15% narrower, so a prefix match would wave through exactly
+        # the corpus-wide re-wrap this exists to prevent. Same for Roboto Slab.
+        for face in ("Roboto Condensed", "Roboto Slab", "Roboto Mono", "Robotoesque"):
+            stderr = f"fontselect: (Roboto, 400, 0) -> /usr/share/fonts/x.ttf, 0, {face}"
+            assert font_selection_error(stderr, "Roboto"), f"{face} must not pass as Roboto"
+
+    def test_accepts_the_face_names_read_from_the_font_file(self):
+        # With the TTF in hand the accepted names come from the file itself
+        # (family + "family style"), not from a pattern over the requested name.
+        assert font_selection_error(LIBASS_SUCCESS_STDERR, "Roboto", font_file=DEFAULT_FONT_FILE) is None
+
+    def test_rejects_a_relative_of_the_family_against_the_font_file_too(self):
+        stderr = "fontselect: (Roboto, 400, 0) -> /usr/share/fonts/x.ttf, 0, Roboto Condensed"
+        assert font_selection_error(stderr, "Roboto", font_file=DEFAULT_FONT_FILE)
+
+    def test_rejects_another_weight_of_the_same_family(self):
+        # Roboto Light is narrower than Roboto Regular; the vendored file is
+        # Regular, so anything else is not what Pillow measured with.
+        stderr = "fontselect: (Roboto, 400, 0) -> /usr/share/fonts/x.ttf, 0, Roboto Light"
+        assert font_selection_error(stderr, "Roboto", font_file=DEFAULT_FONT_FILE)
+
 
 class TestFontProbeCommand:
     def _cmd(self):
@@ -587,6 +622,40 @@ class TestFontProbeCommand:
         assert "ass=probe.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
 
 
+class TestProbeTextFor:
+    """The pre-flight must cover the characters actually being burned.
+
+    A fixed probe string proves the family and nine Ukrainian letters; a stray
+    № or ♪ in one cue out of four hundred would then only surface after a
+    twenty-minute encode.
+    """
+
+    def test_includes_characters_taken_from_the_cues(self):
+        text = probe_text_for([{"text": "Слово № 5 — ось"}])
+        for ch in "№5—ось":
+            assert ch in text
+
+    def test_keeps_the_ukrainian_floor_for_an_ascii_only_srt(self):
+        text = probe_text_for([{"text": "hello"}])
+        for ch in FONT_PROBE_FLOOR:
+            assert ch in text
+
+    def test_is_deduplicated_and_deterministic(self):
+        text = probe_text_for([{"text": "ааабббв"}])
+        assert len(text) == len(set(text))
+        assert text == probe_text_for([{"text": "вбааабб"}])
+
+    def test_drops_whitespace_and_ass_syntax_characters(self):
+        text = probe_text_for([{"text": "a b\tc\\d{e}f"}])
+        assert not any(ch.isspace() for ch in text)
+        for ch in "{}\\":
+            assert ch not in text
+
+    def test_is_capped_so_a_pathological_file_cannot_bloat_the_probe(self):
+        cues = [{"text": "".join(chr(0x4E00 + i) for i in range(2000))}]
+        assert len(probe_text_for(cues)) <= FONT_PROBE_MAX_CHARS
+
+
 class TestFontProbeDocument:
     def test_names_the_requested_font(self):
         assert "Style: Default,Roboto," in font_probe_document("Roboto")
@@ -594,8 +663,20 @@ class TestFontProbeDocument:
     def test_draws_ukrainian_glyphs_so_a_partial_font_is_caught_too(self):
         doc = font_probe_document("Roboto")
         text = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 1,"))
-        for ch in "Ґґ Її Єє":
+        for ch in FONT_PROBE_FLOOR:
             assert ch in text
+
+    def test_draws_the_text_it_is_given(self):
+        doc = font_probe_document("Roboto", "№♪")
+        text = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 1,"))
+        assert "№" in text and "♪" in text
+
+    def test_breaks_long_probe_text_into_lines(self):
+        # One 400-character line would run off the probe frame; every glyph must
+        # be rasterized, not merely shaped.
+        doc = font_probe_document("Roboto", "я" * 200)
+        text = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 1,"))
+        assert "\\N" in text
 
     def test_starts_at_zero_so_the_first_frame_renders_it(self):
         assert "Dialogue: 1,0:00:00.00," in font_probe_document("Roboto")
@@ -613,10 +694,17 @@ class TestMain:
         stderr="",
         probe_returncode=0,
         probe_stderr=LIBASS_SUCCESS_STDERR,
+        cue_text="Перше речення.",
+        missing_glyph=None,
     ):
-        """Return (run, state); state survives a SystemExit raised inside main."""
+        """Return (run, state); state survives a SystemExit raised inside main.
+
+        `missing_glyph` stands in for libass: if the probe document contains that
+        character, the fake probe answers the way libass does when no font can
+        supply it.
+        """
         srt = tmp_path / "uk.srt"
-        srt.write_text("1\n00:00:00,000 --> 00:00:02,000\nПерше речення.\n\n", encoding="utf-8")
+        srt.write_text(f"1\n00:00:00,000 --> 00:00:02,000\n{cue_text}\n\n", encoding="utf-8")
         ass_out = tmp_path / "subs.ass"
         output = tmp_path / "out.mp4"
         state = {"seen": {}, "commands": [], "ass_out": ass_out, "output": output}
@@ -629,6 +717,11 @@ class TestMain:
         def fake_run(cmd, **kwargs):
             state["commands"].append(cmd)
             if "-frames:v" in cmd:  # the pre-flight font probe
+                probe_ass = cmd[cmd.index("-vf") + 1].split("ass=")[1].split(":fontsdir=")[0]
+                with open(probe_ass, encoding="utf-8") as probe:
+                    state["probe_document"] = probe.read()
+                if missing_glyph and missing_glyph in state["probe_document"]:
+                    return subprocess.CompletedProcess(cmd, 0, "", LIBASS_MISSING_GLYPH_STDERR)
                 return subprocess.CompletedProcess(cmd, probe_returncode, "", probe_stderr)
             output.write_bytes(b"encoded")  # ffmpeg would have written the file by now
             return subprocess.CompletedProcess(cmd, returncode, "", stderr)
@@ -735,6 +828,20 @@ class TestMain:
         run, state = self._harness(tmp_path, monkeypatch, stderr=LIBASS_FALLBACK_STDERR)
         with pytest.raises(SystemExit):
             run()
+        assert not state["output"].exists()
+
+    def test_probe_covers_the_characters_of_the_subtitles(self, tmp_path, monkeypatch):
+        run, state = self._harness(tmp_path, monkeypatch, cue_text="Слово № 5 — ось")
+        run()
+        for ch in "№5—ось":
+            assert ch in state["probe_document"], f"{ch!r} was never probed"
+
+    def test_a_character_missing_from_the_font_is_caught_before_encoding(self, tmp_path, monkeypatch):
+        # One stray ♪ in one cue must cost a second, not a whole encode.
+        run, state = self._harness(tmp_path, monkeypatch, cue_text="Перше ♪ речення.", missing_glyph="♪")
+        with pytest.raises(SystemExit):
+            run()
+        assert len(state["commands"]) == 1  # the probe; nothing was encoded
         assert not state["output"].exists()
 
     def test_silence_from_the_encode_is_not_treated_as_a_fallback(self, tmp_path, monkeypatch):
