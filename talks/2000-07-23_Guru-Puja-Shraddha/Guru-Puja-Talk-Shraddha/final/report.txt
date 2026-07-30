@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja-Talk-Shraddha/final/uk.srt
+  Transcript: talks/2000-07-23_Guru-Puja-Shraddha/transcript_uk.txt
+  EN SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja-Talk-Shraddha/source/en.srt
+  SRT blocks: 490
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 490
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 490
+  CPS: avg=9.5, median=9.2, max=20.0
+  CPS > target: 23 (4.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #396: CPS=20.0 (28ch/1.4s) "«Що ми робимо для колективу?"
+    #285: CPS=19.8 (52ch/2.6s) "мені те не подобається!» Це дуже поширено на Заході."
+    #239: CPS=18.7 (42ch/2.2s) "це означає, що їм треба розвинути шраддгу."
+    #487: CPS=17.9 (60ch/3.4s) "а ви станете Ґуру, якщо спробуєте наслідувати їхній приклад."
+    #199: CPS=17.7 (37ch/2.1s) "то ви скористаєтеся своїм співчуттям."
+    #302: CPS=17.5 (83ch/4.8s) "неправильно і створює колективне негативне ставлення до цієї..."
+    #301: CPS=17.2 (49ch/2.9s) "вона зробила те, вона зробила се», – це дуже-дуже"
+    #279: CPS=17.1 (43ch/2.5s) "«Мені це подобається, мені те подобається»."
+    #489: CPS=17.0 (33ch/1.9s) "Я знаю, що дехто вже цього досяг,"
+    #267: CPS=16.9 (47ch/2.8s) "Мене це трохи турбує, і Я говорю про це лідеру."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.5 (target ≤15.0)
+  CPS > 15.0: 23 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

@@ -3,20 +3,11 @@
 ============================================================
   SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja/final/uk.srt
   Transcript: talks/2000-07-23_Guru-Puja-Shraddha/transcript_uk.txt
-  Whisper: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja/source/whisper.json
-  SRT blocks: 514
-  Whisper segments: 808
+  EN SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja/source/en.srt
+  SRT blocks: 491
+  EN SRT blocks: 463
+  (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
-
-============================================================
-  CHECK 1: Text preservation
-============================================================
-  Transcript chars: 27080
-  SRT chars: 27080
-  Exact normalized match: OK
-  Transcript words: 4476
-  SRT words: 4476
-  Word-level match: OK
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -24,45 +15,53 @@
   Overlapping blocks: 0
 
 ============================================================
-  CHECK 3: Time range (vs whisper)
+  CHECK 3: Time range (vs EN SRT)
 ============================================================
-  whisper range: 00:01:23,250 — 03:29:10,350
-  SRT range:       00:06:02,840 — 03:29:14,350
+  EN SRT range: 00:00:00,001 — 00:58:18,436
+  SRT range:       00:06:02,346 — 00:58:20,436
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 514
+  Total blocks: 491
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 514
-  CPS: avg=9.2, median=8.8, max=15.0
-  CPS > target: 0 (0.0%)
+  Total blocks: 491
+  CPS: avg=9.4, median=9.0, max=15.1
+  CPS > target: 14 (2.9%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=51.7, max=84
+  CPL: avg=51.9, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
   Duration < min: 0
-  Duration > max: 0
+  Duration > max: 1
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #266: CPS=15.0 (72ch/4.8s) "Але в іншому разі, якщо одна людина приходить і розповідає М..."
-    #513: CPS=15.0 (79ch/5.3s) "Тож ідіть тепер усі вперед, щоб створювати більше сахадж йоґ..."
-    #387: CPS=15.0 (70ch/4.7s) "Ви зайняті своїми щоденними мирськими справами, і своєю іншо..."
-    #282: CPS=15.0 (67ch/4.5s) "Вони й далі говорять: «Мені це подобається, мені це не подоб..."
-    #284: CPS=15.0 (64ch/4.3s) "Ось погляньте, деякі жінки зробили для Мене ці прекрасні кил..."
-    #39: CPS=15.0 (58ch/3.9s) "Щоб пізнати Бога, ви спершу повинні пізнати свою Сутність."
-    #388: CPS=15.0 (58ch/3.9s) "і всім іншим; це гаразд, у Сахаджа Йозі жодних заперечень."
-    #458: CPS=15.0 (58ch/3.9s) "Повністю припинилися – Я вас запевняю, це можна припинити."
-    #511: CPS=15.0 (58ch/3.9s) "Це дуже просто, і ви дуже скоро навчитеся цього мистецтва."
-    #163: CPS=15.0 (55ch/3.7s) "інший літак, що летів до Вашингтона, а не до Нью-Йорка,"
+    #424: CPS=15.1 (39ch/2.6s) "для сахаджа йоґа це не матиме значення."
+    #279: CPS=15.0 (43ch/2.9s) "«Мені це подобається, мені те подобається»."
+    #271: CPS=15.0 (46ch/3.1s) "Вони ніколи не бачать своїх власних недоліків."
+    #203: CPS=15.0 (58ch/3.9s) "Наскільки далеко ви просунулися на цьому шляху, Я не знаю."
+    #75: CPS=15.0 (64ch/4.3s) "гарячкувата й повна его, починає ставати дуже лагідною й м’я..."
+    #457: CPS=15.0 (76ch/5.1s) "Деякі люди казали Мені: «Матінко, якщо Ти прийдеш, то все бу..."
+    #73: CPS=15.0 (44ch/2.9s) "стиль такої людини поступово змінюється. Як?"
+    #437: CPS=15.0 (44ch/2.9s) "Ви маєте врятувати людей, які на ній живуть."
+    #267: CPS=15.0 (47ch/3.1s) "Мене це трохи турбує, і Я говорю про це лідеру."
+    #253: CPS=15.0 (50ch/3.3s) "завдяки якій знайдете рішення для різних ситуацій."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 491
+  EN SRT blocks: 463
+  Ratio UK/EN: 1.06 (max allowed 2.0)
+  Block count: OK
 
 ============================================================
   SUMMARY
@@ -73,14 +72,15 @@
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 9.2 (target ≤15.0)
-  CPS > 15.0: 0 blocks
+  Avg CPS: 9.4 (target ≤15.0)
+  CPS > 15.0: 14 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
-  Duration > 21000ms: 0 blocks
+  Duration > 21000ms: 1 blocks
   Gaps < 80ms: 0 blocks
 
   Overall: PASSED
