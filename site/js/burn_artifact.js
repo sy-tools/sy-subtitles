@@ -23,6 +23,31 @@ function zipView(bytes) {
 
 var EOCD_SIGNATURE = 0x06054b50;
 var CDH_SIGNATURE = 0x02014b50;
+var LFH_SIGNATURE = 0x04034b50;
+
+// A range request hands the reader a WINDOW rather than the file: `bytes`
+// holds the archive from absolute offset `baseOffset` onwards. Every offset a
+// ZIP stores is an absolute file offset, so each one has to be translated —
+// and a window that does not contain the structure being asked for must
+// refuse. Reading whatever bytes happen to sit at that index would produce a
+// plausible-looking entry list and, downstream, a corrupt mp4.
+//
+// The thrown error carries needsLargerWindow so the caller can tell "fetch
+// more" apart from "this archive is not something we can read" (ZIP64) and
+// retry exactly once, instead of retrying its way through a real failure.
+function windowIndex(bytes, baseOffset, absolute, length, label) {
+  var base = baseOffset || 0;
+  var at = absolute - base;
+  if (at < 0 || at + length > bytes.byteLength) {
+    var err = new Error(
+      'burn_artifact: ' + label + ' at offset ' + absolute + ' lies outside ' +
+      'the fetched window (' + base + '..' + (base + bytes.byteLength) + ')',
+    );
+    err.needsLargerWindow = true;
+    throw err;
+  }
+  return at;
+}
 
 function findEocd(bytes) {
   var view = zipView(bytes);
@@ -48,21 +73,30 @@ function assertNotZip64Sentinel(value, label) {
   return value;
 }
 
-function readCentralDirectory(bytes, eocdOffset) {
+// `eocdOffset` indexes into `bytes` (it is what findEocd returned); `baseOffset`
+// is the absolute file offset `bytes` starts at — 0, and omitted, when `bytes`
+// is the whole ZIP.
+function readCentralDirectory(bytes, eocdOffset, baseOffset) {
   if (eocdOffset < 0) return [];
   var view = zipView(bytes);
   var count = assertNotZip64Sentinel(
     view.getUint16(eocdOffset + 10, true), 'central directory entry count',
   );
-  var at = assertNotZip64Sentinel(
+  var absolute = assertNotZip64Sentinel(
     view.getUint32(eocdOffset + 16, true), 'central directory offset',
   );
   var entries = [];
   for (var i = 0; i < count; i++) {
+    // 46 bytes is the fixed part of a central-directory header; the name,
+    // extra and comment that follow are checked once their lengths are known.
+    var label = 'central directory entry ' + (i + 1);
+    var at = windowIndex(bytes, baseOffset, absolute, 46, label);
     if (view.getUint32(at, true) !== CDH_SIGNATURE) break;
     var nameLen = view.getUint16(at + 28, true);
     var extraLen = view.getUint16(at + 30, true);
     var commentLen = view.getUint16(at + 32, true);
+    windowIndex(bytes, baseOffset, absolute,
+                46 + nameLen + extraLen + commentLen, label + ' name');
     var nameBytes = bytes.slice(at + 46, at + 46 + nameLen);
     var name = '';
     for (var c = 0; c < nameBytes.length; c++) {
@@ -88,7 +122,7 @@ function readCentralDirectory(bytes, eocdOffset) {
         view.getUint32(at + 42, true), 'entry local header offset',
       ),
     });
-    at += 46 + nameLen + extraLen + commentLen;
+    absolute += 46 + nameLen + extraLen + commentLen;
   }
   return entries;
 }
@@ -101,10 +135,24 @@ function pickMp4Entry(entries) {
   return null;
 }
 
-function localDataOffset(bytes, localHeaderOffset) {
+// Returns the ABSOLUTE offset the entry's data starts at. The name and extra
+// lengths are read from the entry's OWN local header, which may differ from
+// the central directory's copy — that difference is exactly why this function
+// exists. `baseOffset` works as it does in readCentralDirectory.
+function localDataOffset(bytes, localHeaderOffset, baseOffset) {
+  var at = windowIndex(bytes, baseOffset, localHeaderOffset, 30,
+                       'local file header');
   var view = zipView(bytes);
-  var nameLen = view.getUint16(localHeaderOffset + 26, true);
-  var extraLen = view.getUint16(localHeaderOffset + 28, true);
+  // Two arbitrary uint16s read as the name and extra lengths would shift the
+  // data range by a plausible amount and write a corrupt file, so check that
+  // the window really is positioned on a local header before trusting them.
+  if (view.getUint32(at, true) !== LFH_SIGNATURE) {
+    throw new Error(
+      'burn_artifact: no local file header at offset ' + localHeaderOffset,
+    );
+  }
+  var nameLen = view.getUint16(at + 26, true);
+  var extraLen = view.getUint16(at + 28, true);
   return localHeaderOffset + 30 + nameLen + extraLen;
 }
 
@@ -112,6 +160,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     EOCD_SIGNATURE: EOCD_SIGNATURE,
     CDH_SIGNATURE: CDH_SIGNATURE,
+    LFH_SIGNATURE: LFH_SIGNATURE,
     findEocd: findEocd,
     readCentralDirectory: readCentralDirectory,
     pickMp4Entry: pickMp4Entry,

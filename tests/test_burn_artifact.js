@@ -98,3 +98,82 @@ describe('localDataOffset', () => {
     );
   });
 });
+
+// ============================================================
+// Windowed reads — the same reader over a byte RANGE
+//
+// Streaming the mp4 out of a multi-gigabyte artifact means never holding the
+// ZIP: the driver range-requests a few kilobytes of tail, then the local
+// header, then pipes the data range to disk. Every offset a ZIP stores is an
+// ABSOLUTE file offset, so the reader has to be told where its window starts —
+// and a window that does not actually contain what is being asked for must
+// refuse rather than read whatever bytes happen to sit at that index.
+// ============================================================
+describe('windowed reads', () => {
+  // The fixture's own geometry, so the windows below are cut at real
+  // boundaries rather than guessed ones.
+  const WHOLE = fixture();
+  const CD_AT = 273;          // central directory
+  const EOCD_AT = 393;        // end-of-central-directory record
+
+  function tail(n) {
+    const base = WHOLE.byteLength - n;
+    return { bytes: WHOLE.slice(base), base: base };
+  }
+
+  it('reads the central directory out of a tail window', () => {
+    const win = tail(WHOLE.byteLength - CD_AT);   // directory + EOCD, nothing else
+    assert.ok(win.base > 0, 'precondition: this is a window, not the whole file');
+    const entries = readCentralDirectory(win.bytes, findEocd(win.bytes), win.base);
+    assert.deepStrictEqual(entries,
+      readCentralDirectory(WHOLE, findEocd(WHOLE)),
+      'a tail window must yield exactly the whole-buffer entries');
+  });
+
+  it('computes the data offset from a local-header window', () => {
+    // The second entry, so the window base is non-zero and a reader that
+    // forgot to translate the offset would land somewhere else entirely.
+    const entry = readCentralDirectory(WHOLE, findEocd(WHOLE))
+      .find((e) => e.name === 'extra.txt');
+    const win = { bytes: WHOLE.slice(entry.localHeaderOffset,
+                                    entry.localHeaderOffset + 64),
+                  base: entry.localHeaderOffset };
+    assert.strictEqual(
+      localDataOffset(win.bytes, entry.localHeaderOffset, win.base),
+      localDataOffset(WHOLE, entry.localHeaderOffset),
+      'the windowed answer must be the same ABSOLUTE offset');
+  });
+
+  it('refuses a window that stops short of the central directory', () => {
+    // A 100-byte tail holds the EOCD but not the directory it points at.
+    const win = tail(100);
+    assert.ok(win.base > CD_AT && win.base < EOCD_AT,
+      'precondition: the EOCD is inside the window, the directory is not');
+    assert.throws(
+      () => readCentralDirectory(win.bytes, findEocd(win.bytes), win.base),
+      (err) => {
+        assert.match(err.message, /central directory/,
+          'the message must name what was missing');
+        assert.match(err.message, /window/);
+        assert.strictEqual(err.needsLargerWindow, true,
+          'the driver retries once on exactly this — it must be recognisable');
+        return true;
+      });
+  });
+
+  it('refuses a window that does not contain the local header', () => {
+    const win = tail(100);
+    assert.throws(() => localDataOffset(win.bytes, 0, win.base),
+      (err) => {
+        assert.match(err.message, /local file header/);
+        assert.strictEqual(err.needsLargerWindow, true);
+        return true;
+      });
+  });
+
+  it('refuses a window that is not positioned on a local file header', () => {
+    // Misreading two arbitrary uint16s as the name and extra lengths would
+    // silently shift the data range and write a corrupt mp4.
+    assert.throws(() => localDataOffset(WHOLE, CD_AT), /local file header/);
+  });
+});
