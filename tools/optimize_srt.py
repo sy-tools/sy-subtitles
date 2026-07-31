@@ -561,7 +561,41 @@ def split_blocks_by_cps(blocks, config):
     return new_blocks, splits
 
 
-def merge_sparse_blocks(blocks, config):
+def _whisper_word_intervals(whisper_segments):
+    """Flatten whisper segments into a list of (start_ms, end_ms) word spans."""
+    intervals = []
+    for seg in whisper_segments or []:
+        for w in seg.get("words", []) or []:
+            intervals.append((w["start"] * 1000, w["end"] * 1000))
+    return intervals
+
+
+def _speech_gap_ms(block_a, block_b, word_intervals):
+    """Silence between the last word spoken inside ``block_a`` and the first
+    inside ``block_b``.
+
+    Timecodes alone under-report pauses: a block inherited from a padded EN
+    SRT runs on well past its last word, so the SRT-level gap to the next
+    block reads as ~0 while the speaker was silent for seconds. Merging on
+    that reading puts a single subtitle over the pause.
+
+    Falls back to the SRT-level gap when there are no words to anchor to
+    (no whisper supplied, or a block covering no speech at all — a stage
+    direction, applause, music).
+    """
+    srt_gap = block_b["start_ms"] - block_a["end_ms"]
+    if not word_intervals:
+        return srt_gap
+
+    ends = [e for s, e in word_intervals if s < block_a["end_ms"] and e > block_a["start_ms"]]
+    starts = [s for s, e in word_intervals if s < block_b["end_ms"] and e > block_b["start_ms"]]
+    if not ends or not starts:
+        return srt_gap
+
+    return max(srt_gap, min(starts) - max(ends))
+
+
+def merge_sparse_blocks(blocks, config, word_intervals=None):
     """Merge ultra-sparse blocks (CPS < threshold AND chars < 20) with neighbors.
 
     Only targets blocks that are clearly under-filled — single words or tiny fragments
@@ -597,7 +631,7 @@ def merge_sparse_blocks(blocks, config):
             if is_sparse and i + 1 < len(blocks):
                 # Try merge forward (only if gap is small)
                 next_b = blocks[i + 1]
-                gap = next_b["start_ms"] - b["end_ms"]
+                gap = _speech_gap_ms(b, next_b, word_intervals)
                 next_chars = len(next_b["text"].replace("\n", ""))
                 combined_chars = b_chars + next_chars + 1
                 if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP:
@@ -617,7 +651,7 @@ def merge_sparse_blocks(blocks, config):
             if is_sparse and new_blocks:
                 # Try merge backward (only if gap is small)
                 prev_b = new_blocks[-1]
-                gap = b["start_ms"] - prev_b["end_ms"]
+                gap = _speech_gap_ms(prev_b, b, word_intervals)
                 prev_chars = len(prev_b["text"].replace("\n", ""))
                 combined_chars = prev_chars + b_chars + 1
                 if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP:
@@ -664,7 +698,7 @@ def merge_sparse_blocks(blocks, config):
     return blocks, total_merged
 
 
-def merge_short_blocks(blocks, config):
+def merge_short_blocks(blocks, config, word_intervals=None):
     """Merge very short adjacent blocks if combined they are within limits. Multi-pass."""
     total_merged = 0
     for _pass in range(5):
@@ -678,10 +712,14 @@ def merge_short_blocks(blocks, config):
                 b_chars = len(b["text"].replace("\n", ""))
                 next_chars = len(next_b["text"].replace("\n", ""))
                 combined_chars = b_chars + next_chars + 1
-                gap = next_b["start_ms"] - b["end_ms"]
+                srt_gap = next_b["start_ms"] - b["end_ms"]
+                # Merge eligibility is judged on the SILENCE between the two
+                # blocks' words; the combined duration still uses the real
+                # timecode gap.
+                gap = _speech_gap_ms(b, next_b, word_intervals)
                 b_dur = b["end_ms"] - b["start_ms"]
                 next_dur = next_b["end_ms"] - next_b["start_ms"]
-                combined_dur = b_dur + next_dur + gap
+                combined_dur = b_dur + next_dur + srt_gap
                 b_cps = b_chars / (b_dur / 1000.0) if b_dur > 0 else 999
                 next_cps = next_chars / (next_dur / 1000.0) if next_dur > 0 else 999
                 sparse_current = b_chars < 20 and b_cps < config.sparse_cps_threshold
@@ -902,8 +940,12 @@ def optimize_readability(blocks, whisper_segments, config, report):
     report.append("  STEP 4: Optimizing readability")
     report.append("=" * 60)
 
+    # Word timestamps let the merge phases tell "timecodes touch" apart from
+    # "speech is continuous" — see _speech_gap_ms.
+    word_intervals = _whisper_word_intervals(whisper_segments)
+
     # Phase 0: Merge ultra-sparse blocks (single words on long segments)
-    blocks, sparse_merged = merge_sparse_blocks(blocks, config)
+    blocks, sparse_merged = merge_sparse_blocks(blocks, config, word_intervals)
     report.append(f"  Phase 0 - Sparse block merge: {sparse_merged} merged → {len(blocks)} blocks")
 
     # Phase 1: Join multi-line blocks (single-line mode)
@@ -923,11 +965,6 @@ def optimize_readability(blocks, whisper_segments, config, report):
         seg_intervals = (
             [(seg["start"] * 1000, seg["end"] * 1000) for seg in whisper_segments] if whisper_segments else []
         )
-        word_intervals = []
-        if whisper_segments and any("words" in seg for seg in whisper_segments):
-            for seg in whisper_segments:
-                for w in seg.get("words", []):
-                    word_intervals.append((w["start"] * 1000, w["end"] * 1000))
         blocks, dur_splits = split_blocks_by_duration(blocks, config, seg_intervals, word_intervals)
         report.append(f"  Phase 1b - Duration splits (>{config.max_duration_ms}ms): {dur_splits}")
 
@@ -949,7 +986,7 @@ def optimize_readability(blocks, whisper_segments, config, report):
         report.append(f"  Phase 4 - CPS splits (> {config.hard_max_cps}): {cps_splits}")
 
     # Phase 5: Merge very short blocks
-    blocks, merged = merge_short_blocks(blocks, config)
+    blocks, merged = merge_short_blocks(blocks, config, word_intervals)
     report.append(f"  Phase 5 - Merged short blocks: {merged}")
 
     # Phase 6: Multi-pass CPS extension (3 passes)
@@ -1227,7 +1264,7 @@ def optimize(srt_path, json_path, output_path, report_path=None, config=None, uk
     # gaps, which can push a block's CPS across the sparse threshold. Run
     # merge_short_blocks one more time so the output is a fixed point of
     # optimize() — re-running on its own output yields the same blocks.
-    blocks, late_merged = merge_short_blocks(blocks, config)
+    blocks, late_merged = merge_short_blocks(blocks, config, _whisper_word_intervals(whisper_segments))
     if late_merged:
         report.append(f"  Post-chain short-block merge (idempotency): {late_merged}")
 
