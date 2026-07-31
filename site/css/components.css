@@ -1079,8 +1079,13 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 .burn-seg:last-child { border-top-right-radius: var(--radius-pill); border-bottom-right-radius: var(--radius-pill); }
 /* .6s glide, so a 5s poll reads as one continuous act instead of a jump. */
 .burn-seg__fill { height: 100%; width: 0; background: var(--sync-progress); transition: width 0.6s ease; }
-/* A running phase that has earned no fraction yet still has to look alive. */
-.burn-seg--active::after {
+/* A running phase that has earned NOTHING yet still has to look alive, and there
+   the tint's extent is the phase's own extent — it claims nothing more than "we
+   are somewhere inside this phase". The moment a phase has credited fill the
+   overlay comes off: two shades of the same hue read as a buffered progress bar,
+   and on the 70%-wide render segment a measured 44% looked ~78% done. From then
+   on the fill is the whole truth and the elapsed counter is the alive-signal. */
+.burn-seg--active.burn-seg--empty::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -1115,6 +1120,7 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 @media (prefers-reduced-motion: reduce) {
   .burn-seg__fill { transition: none; }
   /* The feedback that the run is alive falls back to the elapsed counter — a
-     text update, which needs no motion. */
-  .burn-seg--active::after { animation: none; opacity: 0.35; }
+     text update, which needs no motion. The tint stays: on an empty segment it
+     still says which phase is running. */
+  .burn-seg--active.burn-seg--empty::after { animation: none; opacity: 0.35; }
 }

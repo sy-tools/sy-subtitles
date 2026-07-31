@@ -1263,6 +1263,9 @@ function translatePage() {
   });
   // Update html lang attribute
   document.documentElement.lang = currentLang;
+  // The burn panel's status line is composed at render time ("done in 21 min"),
+  // so no data-i18n attribute above can reach it — it has to be drawn again.
+  retranslateBurnPanel();
 }
 
 var SyncPlayer = (function() {
@@ -3897,15 +3900,18 @@ function showBurnError(msg) {
   if (panel) panel.hidden = false;
   var err = document.getElementById('burn-error');
   if (err) { err.textContent = msg; err.hidden = false; }
-  // The panel has stopped being a progress report, so its status line goes: a
-  // frozen phase and a frozen clock next to an error read as "still working".
-  clearBurnStatusLine();
+  // Over a terminal panel nothing comes off: a failure AFTER a successful render
+  // (the download, an expired artifact) keeps both its title and the duration it
+  // earned — the render really did succeed, and the error line says what went
+  // wrong since. Anywhere else the panel has stopped being a progress report, so
+  // the title names the failure and the status line goes: a frozen phase and a
+  // frozen clock beside an error read as "still working".
+  //
   // Errors raised before any job step ran — dispatch, permissions,
-  // run-not-found — never reach renderBurnProgress, so the title would keep
-  // promising a render in flight. A failure AFTER a successful render (the
-  // download, an expired artifact) must keep its finished title, though: the
-  // render really did succeed, and the error line says what went wrong since.
-  if (panel && !/burn-panel--(done|expired)/.test(panel.className)) {
+  // run-not-found — never reach renderBurnProgress, which is why the title has
+  // to be corrected here at all.
+  if (!panel || !/burn-panel--(done|expired)/.test(panel.className)) {
+    clearBurnStatusLine();
     renderBurnTitle({ done: false, failed: true });
   }
 }
@@ -3943,6 +3949,30 @@ function showBurnExpired() {
 // widths cannot drift from the workflow. Built once and then only updated: a
 // rebuild would restart the CSS width transition and make the fill jump.
 var burnTrack = null;   // {track: element, parts: [{seg, fill}]} once built
+
+// The payload the panel was last drawn from. The status line is composed text
+// (burn.done_in with a minute count substituted in), which no data-i18n
+// attribute can repaint — so a UI-language switch has to draw the panel again.
+var burnLastProgress = null;
+
+// Called by translatePage() on a UI-language switch.
+function retranslateBurnPanel() {
+  var panel = document.getElementById('burn-panel');
+  // A hidden panel is repainted too — it is one cheap write, not a poll, and it
+  // closes the window where "Hide" then a language switch would leave stale text
+  // waiting to be revealed. Never drawn at all is the only nothing-to-do case.
+  if (!panel || !burnLastProgress) return;
+  // The expired state is deliberately frozen: its track is muted, its times are
+  // gone and its download is hidden. A repaint would put all three back.
+  if (/burn-panel--expired/.test(panel.className)) return;
+  var err = document.getElementById('burn-error');
+  // An error report must not become a progress report again: redrawing a
+  // non-terminal payload would resurrect the phase line showBurnError took down.
+  // A finished payload is safe — its status line is the duration fact alone,
+  // which is exactly what should follow the language.
+  if (err && !err.hidden && !burnLastProgress.done) return;
+  renderBurnProgress(burnLastProgress);
+}
 
 function ensureBurnTrack() {
   var track = document.getElementById('burn-track');
@@ -4010,17 +4040,18 @@ function renderBurnProgress(p) {
   var pct = p.done ? 100 : Math.round((Number(p.fraction) || 0) * 100);
   var track = ensureBurnTrack();
   if (track) {
+    // Every state — including the discovery window's breathing first phase —
+    // comes from burnSegments(). The driver only sets classes and geometry.
     var segs = burnSegments(p);
-    // The discovery window: the run was dispatched but no step of ours is named
-    // yet, and that lasts up to a minute. Breathe the phase that is about to
-    // run rather than showing an inert track. Presentation only — the model
-    // stays literal about what the API has actually confirmed.
-    if (!p.done && !p.failed && !segs.some(function(s) { return s.state !== 'idle'; })) {
-      segs[0] = Object.assign({}, segs[0], { state: 'active' });
-    }
     for (var i = 0; i < segs.length; i++) {
       var part = burnTrack.parts[i];
-      part.seg.className = 'burn-seg burn-seg--' + segs[i].state;
+      // 'empty' is the one case the breathing overlay is for: a phase that IS
+      // running and has earned nothing to show. Once it has credited fill, the
+      // fill is the whole truth — a tint over the rest of a 70%-wide segment
+      // reads as a second, paler shade of progress (a measured 44% looked ~78%
+      // done), and the alive-signal is the elapsed counter and the fill itself.
+      var empty = segs[i].fill === 0 ? ' burn-seg--empty' : '';
+      part.seg.className = 'burn-seg burn-seg--' + segs[i].state + empty;
       part.fill.style.width = Math.round(segs[i].fill * 100) + '%';
     }
     // A CSS width says nothing to a screen reader, so the progressbar publishes
@@ -4030,6 +4061,9 @@ function renderBurnProgress(p) {
   setBurnPanelState(p.done ? 'done' : '');
   renderBurnTitle(p);
   renderBurnStatus(p);
+  // Remembered for retranslateBurnPanel(): the status line is composed text, so
+  // a UI-language switch can only be honoured by drawing it again.
+  burnLastProgress = p;
 }
 
 function renderBurnTitle(p) {
@@ -4041,6 +4075,17 @@ function renderBurnTitle(p) {
   // to burn.title, the still-rendering one.
   el.setAttribute('data-i18n', key);
   el.textContent = t(key);
+}
+
+// Where a run died, said in the language and the vocabulary of the panel: the
+// PHASE, not the workflow's own "Render 40%". A step we cannot map to a phase
+// gets the generic sentence rather than a name we have no translation for — the
+// View-run link carries the gate-level detail for anyone who wants it.
+function burnFailureMessage(p) {
+  var key = burnPhaseKey(p && p.failedStep);
+  return key
+    ? t('burn.failed_step').replace('{step}', t('burn.step.' + key))
+    : t('burn.failed');
 }
 
 function renderBurnStatus(p) {
@@ -4148,9 +4193,7 @@ function pollBurn() {
     // mid-render still carries a render rate that must not be shown.
     if (p.failed) {
       clearBurnState(watch.talkId, watch.videoSlug);
-      showBurnError(p.failedStep
-        ? t('burn.failed_step').replace('{step}', p.failedStep)
-        : t('burn.failed'));
+      showBurnError(burnFailureMessage(p));
       return;
     }
     if (p.done) { onBurnFinished(p); return; }

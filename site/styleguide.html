@@ -205,29 +205,46 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
   (function () {
     // Built from the REAL phase model in js/burn_video.js (it is pure — no DOM),
     // so these example widths cannot drift from the workflow's step weights.
-    var GATE = 0.065;   // one render gate's weight
+    //
+    // The fractions are summed from BURN_STEP_WEIGHTS as well: a hand-written
+    // gate weight would keep describing a granularity the workflow no longer
+    // has, in the one place that promises it cannot drift.
+    function fractionThrough(stepName) {
+      var sum = 0;
+      for (var i = 0; i < BURN_STEP_WEIGHTS.length; i++) {
+        sum += BURN_STEP_WEIGHTS[i].weight;
+        if (BURN_STEP_WEIGHTS[i].name === stepName) break;
+      }
+      return sum;
+    }
     var STATES = [
       { name: 'early', tint: '', title: 'Rendering video with subtitles',
-        p: { fraction: 0.05, label: 'Download video' },
+        p: { fraction: fractionThrough('Install dependencies'),
+             label: 'Download video' },
         status: ['Step 2 of 4 — Fetching the video', '1 min elapsed', ''] },
+      // Four gates are through; the fifth is the one being waited on.
       { name: 'mid-render', tint: '', title: 'Rendering video with subtitles',
-        p: { fraction: 0.20 + 0.05 + 4 * GATE, label: 'Render 40%' },
+        p: { fraction: fractionThrough('Render 40%'), label: 'Render 50%' },
         status: ['Step 3 of 4 — Burning in the subtitles', '12 min elapsed',
                  'about 9 min to go'] },
       { name: 'done', tint: 'burn-panel--done', title: 'The video is ready',
         p: { fraction: 1, done: true },
         status: ['', '', 'done in 21 min'], download: true },
+      // The message names the PHASE, as the app does — never the raw step.
       { name: 'failed', tint: '', title: 'The render failed',
-        p: { fraction: 0.20 + 0.05, label: 'Render 10%', failed: true,
-             failedStep: 'Render 10%' },
-        status: ['', '', ''], error: 'Failed at step "Render 10%"' },
+        p: { fraction: fractionThrough('Start render'), label: 'Render 10%',
+             failed: true, failedStep: 'Render 10%' },
+        status: ['', '', ''], error: 'Failed at step "Burning in the subtitles"' },
       { name: 'expired', tint: 'burn-panel--expired', title: 'The video is ready',
         p: { fraction: 1, done: true }, status: ['', '', ''],
         error: 'The artifact expired (7 days) — render again' }
     ];
     function trackHtml(state, id) {
       var segs = burnSegments(state.p).map(function (s) {
-        return '<div class="burn-seg burn-seg--' + s.state + '" aria-hidden="true"'
+        // --empty exactly as the driver sets it: only a running phase with no
+        // credited fill carries the breathing overlay.
+        var empty = s.fill === 0 ? ' burn-seg--empty' : '';
+        return '<div class="burn-seg burn-seg--' + s.state + empty + '" aria-hidden="true"'
           + ' style="flex-grow:' + (s.weight * 100) + '">'
           + '<div class="burn-seg__fill" style="width:' + Math.round(s.fill * 100)
           + '%"></div></div>';

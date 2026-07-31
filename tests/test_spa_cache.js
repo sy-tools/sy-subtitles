@@ -3439,7 +3439,7 @@ describe('burn video wiring', () => {
   it('words the remaining time softly and drops the superseded keys', () => {
     // The ETA is extrapolated from a rate ffmpeg's own progress file measured,
     // so it no longer needs the italic apology — but it is still an
-    // extrapolation, hence «ще близько».
+    // extrapolation, hence the soft "about N min to go" wording.
     assert.ok(html.includes('burn.estimate_soft'),
       'the panel must carry the soft-worded remaining-time key');
     assert.ok(!/burn\.estimate'/.test(html),
@@ -3460,8 +3460,16 @@ describe('burn video wiring', () => {
     // vouch for themselves. Three call shapes count: t('…'), the data-i18n
     // attributes applyI18N paints, and bare key literals — the title key is
     // picked by a conditional and never appears inside a t(...) call.
+    //
+    // The site/js modules are scanned too: they carry no burn key today, but a
+    // key used from one later must not fail the "no unused key" clause below for
+    // the wrong reason.
     const at = html.indexOf(i18n[0]);
-    const code = html.slice(0, at) + html.slice(at + i18n[0].length);
+    const modules = fs.readdirSync('site/js')
+      .filter((f) => f.endsWith('.js'))
+      .map((f) => fs.readFileSync('site/js/' + f, 'utf8'))
+      .join('\n');
+    const code = html.slice(0, at) + html.slice(at + i18n[0].length) + '\n' + modules;
     const found = new Set([
       ...[...code.matchAll(new RegExp("'(" + KEY + ")'", 'g'))].map((m) => m[1]),
       ...[...code.matchAll(new RegExp('data-i18n="(' + KEY + ')"', 'g'))].map((m) => m[1])
@@ -3557,8 +3565,28 @@ describe('burn video wiring', () => {
       'the italic apologised for a guess; the ETA is now a measured extrapolation');
   });
 
+  it('gates the breathing overlay on a phase having earned nothing', () => {
+    // An ungated overlay tints everything the active phase has not earned, which
+    // on the 70%-wide render segment reads as a second shade of progress: a
+    // measured 44% looked ~78% done (verified by pixel-diffing the panel).
+    assert.match(css, /\.burn-seg--active\.burn-seg--empty::after\s*\{/,
+      'the overlay must be gated on the empty modifier');
+    assert.ok(!/(^|\})\s*\.burn-seg--active::after\s*\{/m.test(css),
+      'an ungated .burn-seg--active::after would tint the unearned remainder');
+  });
+
+  it('repaints the burn panel when the interface language changes', () => {
+    // The status line carries composed strings ("done in 21 min"), which no
+    // data-i18n attribute can repaint — so translatePage has to redraw it.
+    const idx = html.indexOf('function translatePage()');
+    assert.ok(idx > -1, 'translatePage() not found');
+    const chunk = html.slice(idx, html.indexOf('\nfunction ', idx + 1));
+    assert.ok(chunk.includes('retranslateBurnPanel()'),
+      'translatePage() must redraw the burn panel from its last payload');
+  });
+
   it('holds the segment animation still under prefers-reduced-motion', () => {
-    assert.match(css, /prefers-reduced-motion[\s\S]{0,300}\.burn-seg--active::after\s*\{[^}]*animation:\s*none/,
+    assert.match(css, /prefers-reduced-motion[\s\S]{0,300}\.burn-seg--active\.burn-seg--empty::after\s*\{[^}]*animation:\s*none/,
       'the breathing segment must stop for readers who asked for less motion');
   });
 
@@ -3590,6 +3618,13 @@ describe('burn video wiring', () => {
       assert.ok(sg.includes(state),
         'the catalog must show the ' + state + ' state');
     }
+    // The example FRACTIONS have to be derived too, not hand-computed: a
+    // restated 0.065 would keep describing a gate granularity the workflow no
+    // longer has, in the one place that claims it cannot drift.
+    assert.ok(sg.includes('BURN_STEP_WEIGHTS'),
+      'the example fractions must be summed from the real weight table');
+    assert.ok(!/0\.065/.test(sg),
+      'a hand-computed gate weight restates the table this section derives from');
   });
 
   it('stops the burn poll when the router leaves the preview', () => {
@@ -3754,7 +3789,8 @@ describe('burn video driver behaviour', () => {
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
       'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
-      'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned'];
+      'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned',
+      'retranslateBurnPanel'];
     const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
       ', getWatch: function () { return burnWatch; } };';
     env.api = new Function(names.join(','), html.slice(start, end) + tail)
@@ -3931,6 +3967,37 @@ describe('burn video driver behaviour', () => {
     }
   });
 
+  it('breathes only a running phase that has earned nothing', () => {
+    // The breathing overlay tinted the whole active segment, so the 70%-wide
+    // render segment showed a second, paler shade of blue across everything it
+    // had NOT earned — two shades read as a buffered progress bar, and a
+    // measured 44% looked ~78% done. Once a phase has credited fill, the fill is
+    // the whole truth; the alive-signal is the elapsed counter and the fill's own
+    // movement. The overlay stays for the case it was written for: a running
+    // phase with nothing to show yet, where the tint's extent is the phase's own
+    // extent and claims nothing more.
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.05 + 0.15 + 0.05 + 0.065, label: 'Render 20%' }));
+    assert.match(classes(env)[2], /burn-seg--active/, 'precondition: it is running');
+    assert.ok(!/burn-seg--empty/.test(classes(env)[2]),
+      'a phase with credited fill must not tint the part it has not earned');
+  });
+
+  it('marks a running phase that has earned nothing as empty', () => {
+    // The run-discovery window, and any short phase before its step completes.
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
+    assert.match(classes(env)[0], /burn-seg--active/);
+    assert.match(classes(env)[0], /burn-seg--empty/);
+    assert.strictEqual(widths(env)[0], '0%');
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.05, label: 'Download video' }));
+    assert.match(classes(env)[1], /burn-seg--active burn-seg--empty|burn-seg--empty/);
+    assert.ok(!/burn-seg--empty/.test(classes(env)[0]),
+      'a completed phase is not empty — it is done');
+  });
+
   it('names the phase, never the English workflow step', () => {
     const env = makeHarness({
       t: function (k) { return k === 'burn.step_of' ? '{n} of {total} — {step}' : k; }
@@ -3998,8 +4065,8 @@ describe('burn video driver behaviour', () => {
 
   it('clears the stale progress line when it reports an error', () => {
     // The panel stops being a progress report the moment it becomes an error
-    // report: «Запускаємо…» under "the render failed" invites the belief that
-    // something is still being followed.
+    // report: a "Starting..." line under "the render failed" invites the
+    // belief that something is still being followed.
     const env = makeHarness();
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
       { fraction: 0.3, label: 'Render 20%', startedMs: Date.now() - 8 * MIN_MS }));
@@ -4008,6 +4075,67 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['burn-step'].textContent, '');
     assert.strictEqual(env.els['burn-elapsed'].textContent, '');
     assert.strictEqual(env.els['burn-eta'].textContent, '');
+  });
+
+  // ---- a UI-language switch must reach the composed status line ----
+
+  it('redraws the finished status line when the UI language changes', () => {
+    // "done in 21 min" is composed at render time, so no data-i18n attribute can
+    // repaint it: translatePage() has to redraw the panel from its last payload.
+    const env = makeHarness();
+    env.api.onBurnFinished({ startedMs: Date.now() - 21 * MIN_MS });
+    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in');
+    env.els['burn-eta'].textContent = 'STALE';
+    env.api.retranslateBurnPanel();
+    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in',
+      'the duration line must follow the interface language');
+  });
+
+  it('does not turn an error report back into a progress report', () => {
+    // Repainting a non-terminal payload would resurrect the phase line that
+    // showBurnError deliberately took down.
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.3, label: 'Render 20%', startedMs: Date.now() - 8 * MIN_MS }));
+    env.api.showBurnError('boom');
+    env.api.retranslateBurnPanel();
+    assert.strictEqual(env.els['burn-step'].textContent, '');
+    assert.strictEqual(env.els['burn-elapsed'].textContent, '');
+  });
+
+  it('leaves an expired panel frozen across a language switch', async () => {
+    // Its track is muted and its times are gone on purpose; a repaint would put
+    // both back and offer a download that cannot work.
+    const env = makeHarness({
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9, expired: true }]); }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
+                                 startedMs: Date.now() - 21 * MIN_MS });
+    await env.api.downloadBurned();
+    env.api.retranslateBurnPanel();
+    assert.match(env.els['burn-panel'].className, /burn-panel--expired/);
+    assert.strictEqual(env.els['burn-eta'].textContent, '');
+    assert.strictEqual(env.els['btn-burn-download'].hidden, true);
+  });
+
+  it('does not touch a panel that was never drawn', () => {
+    const env = makeHarness();
+    env.api.retranslateBurnPanel();
+    assert.strictEqual(env.els['burn-track'].children.length, 0,
+      'no payload yet means nothing to redraw');
+  });
+
+  it('keeps the duration a finished run earned when the download fails', () => {
+    // The exception that preserves the finished title must preserve the fact
+    // beneath it too: the render really did take 5 minutes.
+    const env = makeHarness();
+    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS });
+    env.api.showBurnError('no mp4 inside the archive');
+    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in',
+      'preserve the title and the duration together, or neither');
   });
 
   it('keeps the finished title when only the download failed', () => {
@@ -4031,8 +4159,8 @@ describe('burn video driver behaviour', () => {
   });
 
   it('carries the run start into the finished panel', async () => {
-    // «готово за 21 хв» has to come from the API's own start instant — the
-    // finished payload the driver synthesises must not lose it.
+    // The "done in 21 min" line has to come from the API's own start instant —
+    // the finished payload the driver synthesises must not lose it.
     const start = Date.now() - 21 * MIN_MS;
     const env = makeHarness({
       matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
@@ -4054,6 +4182,39 @@ describe('burn video driver behaviour', () => {
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
     assert.strictEqual(env.els['burn-panel'].className, 'burn-panel',
       'a fresh run must not inherit the previous run\'s green');
+  });
+
+  // ---- the failure message speaks in phases too ----
+
+  function failingHarness(failedStep, over) {
+    return makeHarness(Object.assign({
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          { fraction: 0.25, label: failedStep, failed: true, failedStep: failedStep });
+      }
+    }, over || {}));
+  }
+
+  it('names the failed phase in the message, not the raw Actions step', async () => {
+    // 'Failed at step "Render 40%"' was the last place an English step name
+    // leaked into the Ukrainian UI — the whole reason burn.step.* exists. The
+    // View-run link carries the gate-level detail for anyone who wants it.
+    const env = failingHarness('Render 40%', {
+      t: function (k) { return k === 'burn.failed_step' ? 'failed at [{step}]' : k; }
+    });
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.els['burn-error'].textContent,
+      'failed at [burn.step.render]');
+  });
+
+  it('falls back to the generic failure when the step maps to no phase', async () => {
+    // Rather than print a name we cannot translate.
+    const env = failingHarness('Post Run actions/checkout');
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.els['burn-error'].textContent, 'T:burn.failed');
   });
 
   it('marks only the phase that failed', () => {
