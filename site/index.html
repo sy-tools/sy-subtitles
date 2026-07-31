@@ -4435,9 +4435,9 @@ function fetchZipWindow(url, token, start, end) {
       // exposed cross-origin (on a 206 it is not), so it can name the real
       // length and the caller can ask again from there.
       var over = parseContentRange(resp.headers && resp.headers.get('Content-Range'));
-      var short = new Error('burn: requested range is past the end of the artifact');
-      short.artifactTotal = over && over.total;
-      throw short;
+      var past = new Error('burn: requested range is past the end of the artifact');
+      past.artifactTotal = over && over.total;
+      throw past;
     }
     if (!resp.ok) throw new Error(t('burn.download_failed').replace('{status}', resp.status));
     if (resp.status !== 206) {
