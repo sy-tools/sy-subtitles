@@ -4627,35 +4627,44 @@ describe('burn video driver behaviour', () => {
     } };
   }
 
-  // Serves byte ranges out of `zip`, recording every range asked for and the
-  // bytes it handed back — those counts are what "does not buffer the whole
-  // artifact" actually means.
+  // Serves byte ranges out of `zip` the way the real host does — measured
+  // against the artifact the API redirects to (Azure Blob):
+  //   * a SUFFIX range (bytes=-N) is ignored: 200 with the whole file;
+  //   * an explicit bytes=a-b is honoured with 206, the end clamped to EOF;
+  //   * a start past EOF is 416, and only there is Content-Range exposed;
+  //   * on a 206, Content-Range is NOT among the exposed headers, so a browser
+  //     cannot read it — hence null here, and the driver must not need it.
+  // It also records every range asked for and the bytes handed back, which is
+  // what "does not buffer the whole artifact" actually means.
   function rangeServer(zip, over) {
     const opt = Object.assign({ pipeTo: true, ignoreRange: false }, over || {});
     const server = { ranges: [], served: 0 };
     server.fetch = function (url, init) {
       const range = (init && init.headers && init.headers.Range) || '';
       server.ranges.push(range);
-      const suffix = /^bytes=-(\d+)$/.exec(range);
       const span = /^bytes=(\d+)-(\d+)$/.exec(range);
+      const honoured = !opt.ignoreRange && !!span;
       let start = 0;
       let end = zip.length - 1;
-      if (!opt.ignoreRange && suffix) start = Math.max(0, zip.length - Number(suffix[1]));
-      else if (!opt.ignoreRange && span) {
+      if (honoured) {
         start = Number(span[1]);
         end = Math.min(Number(span[2]), zip.length - 1);
       }
-      const honoured = !opt.ignoreRange && !!range;
+      if (honoured && start >= zip.length) {
+        return Promise.resolve({
+          ok: false, status: 416,
+          headers: { get: function (k) {
+            return /^content-range$/i.test(k) ? 'bytes */' + zip.length : null; } },
+          arrayBuffer: function () { return Promise.resolve(new ArrayBuffer(0)); },
+          body: null
+        });
+      }
       const slice = zip.slice(start, end + 1);
       server.served += slice.length;
-      const status = honoured ? 206 : 200;
       return Promise.resolve({
         ok: true,
-        status: status,
-        headers: { get: function (k) {
-          return (/^content-range$/i.test(k) && honoured)
-            ? 'bytes ' + start + '-' + end + '/' + zip.length : null;
-        } },
+        status: honoured ? 206 : 200,
+        headers: { get: function () { return null; } },
         arrayBuffer: function () {
           return Promise.resolve(slice.buffer.slice(
             slice.byteOffset, slice.byteOffset + slice.byteLength));
@@ -4718,7 +4727,9 @@ describe('burn video driver behaviour', () => {
 
   it('streams the mp4 to disk without ever fetching the whole artifact', async () => {
     // 20 KB of payload, so the 4 KB tail window is a real window rather than
-    // an accidental whole-file read.
+    // an accidental whole-file read. The server exposes no Content-Range on
+    // its 206s, as the real one does not: the driver has to place the window
+    // from the range it asked for.
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
     const env = savingHarness(zip.bytes);
     await settle();
@@ -4726,11 +4737,24 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['burn-error'].textContent, '', 'nothing may have failed');
     assert.strictEqual(env.server.ranges.length, 3,
       'tail, local header, data — three small requests, no fourth');
-    assert.ok(env.server.ranges.every(function (r) { return /^bytes=/.test(r); }),
-      'every request must carry a Range header');
     assert.ok(env.server.served < zip.bytes.length + 6000,
       'the artifact must not be transferred more than once over: served ' +
       env.server.served + ' of ' + zip.bytes.length);
+  });
+
+  it('asks for the tail as an explicit range, never as bytes=-N', async () => {
+    // Measured: the blob host the API redirects to ignores a suffix range and
+    // answers 200 with the whole file. Asking for one would send every
+    // download down the buffered path — the very thing being removed here.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.server.ranges[0],
+      'bytes=' + (zip.bytes.length - 4096) + '-' + (zip.bytes.length - 1));
+    assert.ok(env.server.ranges.every(function (r) { return /^bytes=\d+-\d+$/.test(r); }),
+      'every range must name both ends: an open-ended one is unbounded if the ' +
+      'reported size is short');
   });
 
   it('writes the entry data byte for byte, from its OWN local header', async () => {
@@ -4779,15 +4803,35 @@ describe('burn video driver behaviour', () => {
     await env.api.downloadBurned();
     assert.deepStrictEqual(env.sink.saved(), payload, 'the retry must succeed');
     assert.strictEqual(env.server.ranges.filter(function (r) {
-      return r === 'bytes=-4096';
+      return r === 'bytes=' + (zip.bytes.length - 4096) + '-' + (zip.bytes.length - 1);
     }).length, 1, 'the small tail must be tried once, not looped over');
     assert.strictEqual(env.server.ranges.length, 4,
       'small tail, larger tail, local header, data');
   });
 
+  it('asks again from the length the server reports when the API size is stale', async () => {
+    // A start past the end is a 416 — and a 416 is the one response whose
+    // Content-Range the blob host exposes, so it can say how long the file
+    // really is instead of leaving the download stuck.
+    const payload = Buffer.alloc(20000, 8);
+    const zip = skewedZip(payload, 3);
+    const env = savingHarness(zip.bytes, {
+      listRunArtifacts: function () {
+        return Promise.resolve([{ id: 9, size_in_bytes: zip.bytes.length + 500000 }]);
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+    assert.deepStrictEqual(env.sink.saved(), payload);
+    assert.strictEqual(env.server.ranges.length, 4,
+      'the 416, then the corrected tail, the local header and the data');
+  });
+
   it('streams a video far too large to hold in memory', async () => {
     // The size guard exists because the buffered path allocates the whole
     // file; the streaming path allocates nothing, so it must not inherit it.
+    // (The stand-in archive is small, so the first tail lands past its end and
+    // the 416 correction above carries the download through.)
     const payload = Buffer.alloc(4096, 1);
     const zip = skewedZip(payload, 0);
     const env = savingHarness(zip.bytes, {

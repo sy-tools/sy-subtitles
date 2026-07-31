@@ -4409,66 +4409,91 @@ function burnRangeFetch(url, token, range) {
   return fetch(url, { headers: { Authorization: 'Bearer ' + token, Range: range } });
 }
 
-// "bytes 1000-1999/28978456" -> {start, total}. A response without this header
-// is not a range response, whatever its status line claims.
+// "bytes 1000-1999/28978456" -> {start, end, total}. A 416 answers with the
+// unsatisfied form "bytes */28978456", which carries no window but does say
+// how long the file is — the one thing that response is useful for.
 function parseContentRange(value) {
-  var m = /bytes\s+(\d+)-(\d+)\/(\d+)/.exec(String(value || ''));
-  return m ? { start: Number(m[1]), end: Number(m[2]), total: Number(m[3]) } : null;
+  var m = /bytes\s+(?:(\d+)-(\d+)|\*)\/(\d+)/.exec(String(value || ''));
+  if (!m) return null;
+  return { start: m[1] === undefined ? null : Number(m[1]),
+           end: m[2] === undefined ? null : Number(m[2]),
+           total: Number(m[3]) };
 }
 
-// One window of the artifact — or null when the server ignored the Range
-// header and answered 200 with the WHOLE file. Writing that as if it were the
-// requested slice would produce garbage, so null means "fall back".
-function fetchZipWindow(url, token, range) {
-  return burnRangeFetch(url, token, range).then(function(resp) {
+// One window of the artifact, `start` to `end` inclusive and both absolute —
+// or null when the server ignored the Range header and answered 200 with the
+// WHOLE file, which written as if it were the slice would produce garbage.
+//
+// The range is always explicit. Measured against the real artifact: the blob
+// host the API redirects to ignores a suffix range (bytes=-N) and sends
+// everything, and an open-ended bytes=N- would be unbounded whenever the size
+// the API reported is short of the truth.
+function fetchZipWindow(url, token, start, end) {
+  return burnRangeFetch(url, token, 'bytes=' + start + '-' + end).then(function(resp) {
+    if (resp.status === 416) {
+      // The artifact is shorter than the API said. Content-Range on a 416 is
+      // exposed cross-origin (on a 206 it is not), so it can name the real
+      // length and the caller can ask again from there.
+      var over = parseContentRange(resp.headers && resp.headers.get('Content-Range'));
+      var short = new Error('burn: requested range is past the end of the artifact');
+      short.artifactTotal = over && over.total;
+      throw short;
+    }
     if (!resp.ok) throw new Error(t('burn.download_failed').replace('{status}', resp.status));
-    var cr = parseContentRange(resp.headers && resp.headers.get('Content-Range'));
-    if (resp.status !== 206 || !cr) {
+    if (resp.status !== 206) {
       // Don't leave a whole-artifact download running for a body we discard.
       if (resp.body && resp.body.cancel) resp.body.cancel();
       return null;
     }
+    // Content-Range is not a CORS-safelisted response header and the blob host
+    // does not expose it on a 206, so the window sits where we asked for it —
+    // the header only corroborates that, where it can be read at all.
+    var cr = parseContentRange(resp.headers && resp.headers.get('Content-Range'));
     // These windows are kilobytes; the prohibition on arrayBuffer() is about
     // the data range below, which is the one that would be gigabytes.
     return resp.arrayBuffer().then(function(buf) {
-      return { bytes: new Uint8Array(buf), base: cr.start };
+      return { bytes: new Uint8Array(buf),
+               base: (cr && cr.start !== null) ? cr.start : start };
     });
   });
 }
 
 // Locates the mp4's data range, or returns null when this artifact cannot be
-// streamed and the buffered path should take it.
-function locateBurnedMp4(url, token, tailBytes) {
-  return fetchZipWindow(url, token, 'bytes=-' + tailBytes).then(function(win) {
+// streamed and the buffered path should take it. `total` is the artifact's
+// length as the API reported it.
+function locateBurnedMp4(url, token, total, tailBytes) {
+  var from = Math.max(0, total - tailBytes);
+  return fetchZipWindow(url, token, from, total - 1).then(function(win) {
     if (!win) return null;
-    var entries;
+    var entries = null;
     try {
       var at = findEocd(win.bytes);
-      if (at < 0) {
-        var missing = new Error('burn: no end-of-central-directory record in the ' +
-                                'last ' + tailBytes + ' bytes');
-        missing.needsLargerWindow = true;
-        throw missing;
-      }
-      entries = readCentralDirectory(win.bytes, at, win.base);
+      if (at >= 0) entries = readCentralDirectory(win.bytes, at, win.base);
     } catch (err) {
-      // A ZIP comment or extra entries can push the directory out of a 4 KB
-      // tail. One larger window covers that; anything still missing after it
-      // is a real failure, and a ZIP64 refusal is not a window problem at all.
-      if (err && err.needsLargerWindow && tailBytes < BURN_TAIL_RETRY_BYTES) {
-        return locateBurnedMp4(url, token, BURN_TAIL_RETRY_BYTES);
+      // A window that stops short of the directory is a "fetch more" problem;
+      // a ZIP64 refusal is not, and must not be retried into silence.
+      if (!err || !err.needsLargerWindow) throw err;
+    }
+    if (!entries || !entries.length) {
+      // A ZIP comment, more entries than one, or a reported size that is not
+      // quite the archive's: one larger window covers all of those. Past that,
+      // hand the archive to the buffered path rather than guess at its shape.
+      if (tailBytes < BURN_TAIL_RETRY_BYTES) {
+        return locateBurnedMp4(url, token, total, BURN_TAIL_RETRY_BYTES);
       }
-      throw err;
+      return null;
     }
     var entry = pickMp4Entry(entries);
+    // The directory parsed cleanly and holds no mp4 — downloading the whole
+    // archive would only reach the same answer more slowly.
     if (!entry) throw new Error(t('burn.no_mp4'));
     // A deflated entry must never be streamed: piping those bytes to disk
     // writes a file that looks fine until it is played. upload-artifact runs
     // at compression-level: 0, so this does not arise — and if it ever did,
     // the buffered path below decompresses it properly.
     if (entry.method !== 0) return null;
-    return fetchZipWindow(url, token, 'bytes=' + entry.localHeaderOffset + '-' +
-                          (entry.localHeaderOffset + BURN_LFH_BYTES - 1))
+    return fetchZipWindow(url, token, entry.localHeaderOffset,
+        Math.min(entry.localHeaderOffset + BURN_LFH_BYTES - 1, total - 1))
       .then(function(hdr) {
         if (!hdr) return null;
         // From the entry's OWN local header: its name and extra lengths can
@@ -4477,6 +4502,15 @@ function locateBurnedMp4(url, token, tailBytes) {
         return { name: entry.name, size: entry.compressedSize,
                  start: localDataOffset(hdr.bytes, entry.localHeaderOffset, hdr.base) };
       });
+  }, function(err) {
+    // Exactly one correction: ask again from the length the server itself
+    // reported. A second 416 against that length would mean something we
+    // cannot reason about, so the buffered path takes it.
+    if (err && err.artifactTotal && err.artifactTotal !== total) {
+      return locateBurnedMp4(url, token, err.artifactTotal, tailBytes);
+    }
+    if (err && err.artifactTotal !== undefined) return null;
+    throw err;
   });
 }
 
@@ -4547,8 +4581,12 @@ function downloadBurned() {
     // Artifacts vanish after the 7-day retention — name that, don't show a 404.
     if (art.expired) { showBurnExpired(); throw new Error(t('burn.expired')); }
     var url = API + '/actions/artifacts/' + art.id + '/zip';
-    if (!window.showSaveFilePicker) return downloadBurnedBuffered(url, token, art);
-    return locateBurnedMp4(url, token, BURN_TAIL_BYTES).then(function(file) {
+    // Streaming needs a save dialog to write into and a length to count the
+    // tail back from; without either, the buffered path is the only one.
+    if (!window.showSaveFilePicker || !art.size_in_bytes) {
+      return downloadBurnedBuffered(url, token, art);
+    }
+    return locateBurnedMp4(url, token, art.size_in_bytes, BURN_TAIL_BYTES).then(function(file) {
       if (!file) return downloadBurnedBuffered(url, token, art);
       return streamBurnedMp4(url, token, file);
     });
