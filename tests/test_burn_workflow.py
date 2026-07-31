@@ -146,6 +146,26 @@ class TestValidation:
         done = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True)
         assert done.returncode == exit_code, f"{ratios} -> {done.returncode}: {done.stdout}"
 
+    def test_the_font_ratio_band_is_the_same_number_in_all_three_files(self):
+        """YAML guard, Python clamp and browser clamp, or the SPA dispatches a refusal.
+
+        The browser measures the ratio, the burner clamps it and this step
+        rejects it. When those three disagree the failure lands in Actions,
+        minutes after the click, with a generic message.
+        """
+        from tools import burn_subtitles
+
+        run = _step("Validate inputs")["run"]
+        match = re.search(r'"FONT_RATIO":\s*\(([0-9.]+),\s*([0-9.]+)\)', run)
+        assert match, "the ratio bounds are no longer readable out of the guard"
+        low, high = float(match.group(1)), float(match.group(2))
+        assert (low, high) == (burn_subtitles.FONT_RATIO_MIN, burn_subtitles.FONT_RATIO_MAX)
+
+        with open("site/js/burn_video.js", encoding="utf-8") as f:
+            source = f.read()
+        js = {name: float(value) for name, value in re.findall(r"var (FONT_RATIO_(?:MIN|MAX)) = ([0-9.]+);", source)}
+        assert js == {"FONT_RATIO_MIN": low, "FONT_RATIO_MAX": high}
+
 
 class TestDownload:
     def test_masks_the_decoded_video_url(self):

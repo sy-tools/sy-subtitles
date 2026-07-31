@@ -86,6 +86,8 @@ describe('BURN_WORKFLOW', () => {
 });
 
 const {
+  FONT_RATIO_MAX,
+  FONT_RATIO_MIN,
   FS_FONT_MAX_PX,
   FS_PADBOT_PX,
   FS_PADTOP_PX,
@@ -169,6 +171,37 @@ describe('measureBurnRatios', () => {
   it('grows the font ratio when the user enlarged the subtitles', () => {
     const bigger = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.5 }));
     assert.ok(bigger.font_ratio > measureBurnRatios(geometry).font_ratio);
+  });
+
+  it('clamps a ratio the workflow would refuse', () => {
+    // The resize handle allows --preview-subs-scale up to 4, which measures
+    // 0.22 on a 1920x1080 screen — outside the [0.02, 0.12] band the workflow's
+    // "Validate inputs" step enforces, so the run would die before it started.
+    const huge = measureBurnRatios(Object.assign({}, geometry, { subsScale: 4 }));
+    assert.strictEqual(huge.font_ratio, FONT_RATIO_MAX);
+    // Just past the point where the raw measurement leaves the band (scale 1.7
+    // measured 0.1209 on this geometry) — the boundary a reviewer really hits.
+    const past = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.7 }));
+    assert.strictEqual(past.font_ratio, FONT_RATIO_MAX);
+  });
+
+  it('leaves a legal ratio exactly as measured', () => {
+    // The clamp must be a guard, not a rounding: scale 1.5 measures 0.1067,
+    // which is inside the band and must travel untouched.
+    const legal = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.5 }));
+    assert.ok(Math.abs(legal.font_ratio - (76.8 * 1.5) / 1080) < 1e-12);
+    assert.ok(legal.font_ratio < FONT_RATIO_MAX);
+  });
+
+  it('clamps up to the floor when the measurement is absurdly small', () => {
+    // A 4K screen with the subtitles shrunk to 0.5x measures 40px over a 2250px
+    // displayed height = 0.0178, below the floor the workflow accepts. The
+    // burner clamps the same way, so the render is unaffected either way.
+    const tiny = measureBurnRatios({
+      viewportWidth: 4000, viewportHeight: 2400,
+      videoWidth: 16, videoHeight: 9, subsScale: 0.5,
+    });
+    assert.strictEqual(tiny.font_ratio, FONT_RATIO_MIN);
   });
 
   it('returns numbers, never NaN, for degenerate geometry', () => {
@@ -354,6 +387,30 @@ describe('computeProgress', () => {
     assert.strictEqual(p.failedStep, 'Render 40%');
   });
 
+  it('surfaces a failure in a weightless step it can still name', () => {
+    // 'Validate inputs' carries no weight, so the weighted loop never sees it.
+    // Without this the one step whose job is to report bad input would come back
+    // as "failed, somewhere" and the panel could say nothing about where.
+    const p = computeProgress(job([
+      done('Install dependencies'),
+      { name: 'Validate inputs', status: 'completed', conclusion: 'failure' },
+    ], 'completed', 'failure'), T0);
+    assert.strictEqual(p.failed, true);
+    assert.strictEqual(p.failedStep, 'Validate inputs');
+    assert.strictEqual(p.done, false);
+    // It still earns no weight of its own: the bar stops at Install dependencies.
+    assert.ok(Math.abs(p.fraction - 0.05) < 1e-9, 'got ' + p.fraction);
+  });
+
+  it('does not invent a weightless failure on a healthy run', () => {
+    const p = computeProgress(job([
+      done('Install dependencies'), done('Validate inputs'),
+      { name: 'Download video', status: 'in_progress' },
+    ]), T0);
+    assert.strictEqual(p.failed, false);
+    assert.strictEqual(p.failedStep, '');
+  });
+
   it('tolerates a null job while the run is still being created', () => {
     const p = computeProgress(null, T0);
     assert.strictEqual(p.fraction, 0);
@@ -533,6 +590,21 @@ describe('burnPhaseKey', () => {
     assert.equal(burnPhaseKey('Set up job'), null);
     assert.equal(burnPhaseKey(''), null);
     assert.equal(burnPhaseKey(undefined), null);
+  });
+
+  it('names a phase for the weightless steps that are still ours', () => {
+    // 'Validate inputs' is the one step whose entire job is to report bad user
+    // input — the SPA can send a font_ratio it refuses — so its failure must
+    // name a phase instead of falling through to the generic "render failed".
+    assert.equal(burnPhaseKey('Validate inputs'), 'prepare');
+  });
+
+  it('keeps the weightless steps out of the weight table', () => {
+    // Giving 'Validate inputs' weight would change BURN_STEP_WEIGHTS, whose sum,
+    // order and name-for-name contract with burn-subtitles.yml are pinned by
+    // tests/test_burn_workflow_steps.py and verified against a real run.
+    assert.ok(!BURN_STEP_WEIGHTS.some((s) => s.name === 'Validate inputs'),
+      'the alias must name a phase without earning any of the bar');
   });
 });
 

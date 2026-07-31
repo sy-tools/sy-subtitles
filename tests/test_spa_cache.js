@@ -4209,6 +4209,21 @@ describe('burn video driver behaviour', () => {
       'failed at [burn.step.render]');
   });
 
+  it('names the phase when the run was rejected in Validate inputs', async () => {
+    // The one step whose entire job is to report bad user input used to be the
+    // one step whose failure the panel could not name: it carries no weight, so
+    // burnPhaseKey returned null and the message fell through to the generic
+    // "the render failed". The real phase model is wired into this harness, so
+    // this exercises the alias rather than a stub.
+    const env = failingHarness('Validate inputs', {
+      t: function (k) { return k === 'burn.failed_step' ? 'failed at [{step}]' : k; }
+    });
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.els['burn-error'].textContent,
+      'failed at [burn.step.prepare]');
+  });
+
   it('falls back to the generic failure when the step maps to no phase', async () => {
     // Rather than print a name we cannot translate.
     const env = failingHarness('Post Run actions/checkout');

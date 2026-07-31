@@ -67,6 +67,20 @@ var FS_FONT_VH_CAP = 0.22;
 var FS_PADTOP_PX = 80;
 var FS_PADBOT_PX = 36;
 
+// The band the workflow's "Validate inputs" step accepts for font_ratio
+// (.github/workflows/burn-subtitles.yml). The subtitle resize handle allows
+// --preview-subs-scale from 0.5 to 4, and past ~1.69x the measurement leaves
+// this band — so without a clamp here an enlarged preview dispatches a run that
+// dies minutes later in validation.
+//
+// The clamp is silent, which is acceptable only because it is exactly what
+// tools/burn_subtitles.py already does to the same value (FONT_RATIO_MIN /
+// FONT_RATIO_MAX there, applied in ass_font_size): the burned output is
+// identical whether the ratio is clamped here or there. Keep all three in step —
+// tests/test_burn_workflow.py pins the numbers across the three files.
+var FONT_RATIO_MIN = 0.02;
+var FONT_RATIO_MAX = 0.12;
+
 function clampNum(min, value, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -92,7 +106,9 @@ function measureBurnRatios(geometry) {
   var vh = g.viewportHeight > 0 ? g.viewportHeight : 1080;
   var shown = displayedVideoHeight(vw, vh, g.videoWidth, g.videoHeight) || vh;
   return {
-    font_ratio: fullscreenFontPx(vw, vh, g.subsScale) / shown,
+    font_ratio: clampNum(FONT_RATIO_MIN,
+                         fullscreenFontPx(vw, vh, g.subsScale) / shown,
+                         FONT_RATIO_MAX),
     padtop_ratio: FS_PADTOP_PX / shown,
     padbot_ratio: FS_PADBOT_PX / shown,
   };
@@ -156,6 +172,28 @@ function burnStepIndex(name) {
 var BURN_PHASE_PREPARE = 'Install dependencies';
 var BURN_PHASE_FETCH = 'Download video';
 
+// Named workflow steps that carry NO weight but still belong to a phase.
+//
+// 'Validate inputs' is the whole reason this table exists: it is the one step
+// whose job is to report bad user input, and without an entry here its failure
+// would be the one failure the panel could not name. Deliberately NOT an entry
+// in BURN_STEP_WEIGHTS — that table's sum, its order and its name-for-name
+// contract with burn-subtitles.yml are pinned by
+// tests/test_burn_workflow_steps.py, which lists the same step under
+// UNWEIGHTED_STEPS.
+var BURN_STEP_PHASE_ALIASES = [
+  { name: 'Validate inputs', phase: 'prepare' }
+];
+
+function burnAliasPhase(stepName) {
+  for (var i = 0; i < BURN_STEP_PHASE_ALIASES.length; i++) {
+    if (BURN_STEP_PHASE_ALIASES[i].name === stepName) {
+      return BURN_STEP_PHASE_ALIASES[i].phase;
+    }
+  }
+  return null;
+}
+
 // Derived from BURN_STEP_WEIGHTS on every call, never hardcoded and never
 // cached: the weight table is the single source of truth, and a stale cache
 // would let the drawn widths drift away from the workflow.
@@ -202,7 +240,7 @@ function burnPhaseKey(stepName) {
   for (var i = 0; i < phases.length; i++) {
     if (phases[i].stepNames.indexOf(stepName) > -1) return phases[i].key;
   }
-  return null;
+  return burnAliasPhase(stepName);
 }
 
 // 1-based position of the phase whose step is running — the "step 3 of 4"
@@ -341,6 +379,20 @@ function computeProgress(job, nowMs) {
     // Do not "fix" this into a break.
   }
 
+  // The weighted loop above cannot see a weightless step, so a run rejected in
+  // 'Validate inputs' would arrive as "failed, we cannot say where". It maps to
+  // a phase (BURN_STEP_PHASE_ALIASES), so name it — and still credit it nothing.
+  if (!result.failed) {
+    for (var a = 0; a < BURN_STEP_PHASE_ALIASES.length; a++) {
+      var alias = byName[BURN_STEP_PHASE_ALIASES[a].name];
+      if (alias && (alias.conclusion === 'failure' || alias.conclusion === 'cancelled')) {
+        result.failed = true;
+        result.failedStep = BURN_STEP_PHASE_ALIASES[a].name;
+        break;
+      }
+    }
+  }
+
   // null until the encode has actually begun: an ETA computed from a block
   // that has not started would divide by nothing.
   if (result.renderStartedMs !== null || renderCredited > 0) {
@@ -382,6 +434,8 @@ if (typeof module !== 'undefined' && module.exports) {
     buildBurnInputs: buildBurnInputs,
     matchRun: matchRun,
     burnStateKey: burnStateKey,
+    FONT_RATIO_MIN: FONT_RATIO_MIN,
+    FONT_RATIO_MAX: FONT_RATIO_MAX,
     FS_FONT_MAX_PX: FS_FONT_MAX_PX,
     FS_PADTOP_PX: FS_PADTOP_PX,
     FS_PADBOT_PX: FS_PADBOT_PX,
