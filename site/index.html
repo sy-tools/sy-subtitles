@@ -3988,15 +3988,41 @@ function renderVideoItem() {
   label.textContent = t(key);
   item.disabled = s.disabled;
   item.title = s.reasonKey === 'burn.wrong_lang' ? burnWrongLangText() : '';
+  // A render the item has DISOWNED: it succeeded, but the item is no longer
+  // standing behind it — the subtitles moved on, or it cannot be matched to
+  // them at all — and there is no error explaining the offer either. Its whole
+  // readout has to go with it. Left up, a full green track, "done in N min"
+  // and a link to the run sat directly under "Create the video with subtitles",
+  // saying the opposite of the label above them.
+  //
+  // A FAILED run is not disowned: there the readout is why the offer is there,
+  // so the error line and the run link stay.
+  var err = document.getElementById('burn-error');
+  var explained = !!(err && !err.hidden && err.textContent);
+  // Only a run that actually FINISHED can be disowned. onBurnFinished() drops
+  // the follow flag before it writes the result, so for one paint the item
+  // looks like a plain start face — and taking the run link down there would
+  // hide a link nothing puts back.
+  var disowned = s.state === 'start' && !explained
+    && !!(burnLastProgress && burnLastProgress.done);
   // The progress parts belong to a run: an item merely offering to start one
   // shows a bare label, with no empty track and no stale times under it.
-  var showProgress = s.state !== 'start' || !!burnLastProgress;
+  var showProgress = !disowned && (s.state !== 'start' || !!burnLastProgress);
   var track = document.getElementById('burn-track');
   if (track) track.hidden = !showProgress;
   // `terminal` is read for the meta line alone — a finished run keeps its
   // "done in N min", a start-state item has nothing to say.
   var meta = group.querySelector('.export-item__meta');
-  if (meta) meta.hidden = !showProgress && !terminal;
+  if (meta) meta.hidden = disowned || (!showProgress && !terminal);
+  // Only ever hidden here — setBurnRunLink() owns showing it, and it alone
+  // knows whether there is a run to point at yet.
+  var link = document.getElementById('burn-run-link');
+  if (link && disowned) link.hidden = true;
+  // The green belonged to that same disowned video. Left on, it tints a track
+  // that is about to be hidden and comes back the moment anything reveals it.
+  if (disowned && /export-item-group--done/.test(group.className)) {
+    setVideoItemTint('');
+  }
 }
 
 function burnWrongLangText() {

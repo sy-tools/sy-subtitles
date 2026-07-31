@@ -4451,6 +4451,54 @@ describe('burn video driver behaviour', () => {
       'the subtitles moved on — offer to build the ones now on screen');
   });
 
+  it('clears the disowned render out from under the offer to rebuild', async () => {
+    // An item offering to build carried the PREVIOUS render's readout beneath
+    // it: a full green track, "done in N min", and a link to the run — under
+    // the words "Create the video with subtitles". Every one of those belongs
+    // to a video the item has just stopped offering, so together they said the
+    // opposite of the label directly above them.
+    const env = makeHarness(previewing({ edits: {} }));
+    await env.api.startBurn('t', 'v');
+    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'precondition: the finished video is on offer');
+    assert.strictEqual(env.els['burn-track'].hidden, false, 'precondition: its track shows');
+
+    // The subtitles move on, so the finished video is no longer this video.
+    env.previewState.edits.uk = { 3: 'edited after the render' };
+    env.api.updateExportUi();
+
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
+    assert.strictEqual(env.els['burn-track'].hidden, true,
+      'the finished track belongs to the render we stopped offering');
+    assert.strictEqual(env.meta.hidden, true,
+      '"done in N min" is about that same render');
+    assert.strictEqual(env.els['burn-run-link'].hidden, true,
+      'and so is the link to the run that produced it');
+    assert.ok(!/export-item-group--done/.test(env.els['export-video'].className),
+      'the green tint has to go with them');
+  });
+
+  it('keeps a failure on screen under the offer to try again', async () => {
+    // The one case where a start-face item SHOULD carry the previous run's
+    // readout: the error is why the offer is there at all, and the run link is
+    // the only way to see what the gate actually said.
+    const env = makeHarness(Object.assign(previewing({ edits: {} }), {
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; }
+    }));
+    await env.api.startBurn('t', 'v');
+    await settle();   // the run is discovered, so there is a link to keep
+    assert.strictEqual(env.els['burn-run-link'].hidden, false, 'precondition: linked');
+    env.api.showBurnError('the render failed');
+
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
+    assert.strictEqual(env.els['burn-error'].hidden, false, 'the reason stays');
+    // The link is the only way to see what the gate actually said, so the
+    // disown sweep must not take it — the error line is not a disowned result.
+    assert.strictEqual(env.els['burn-run-link'].hidden, false,
+      'a failure keeps its run link — it explains the offer above it');
+  });
+
   it('will not vouch for a run recorded before signatures existed', async () => {
     // Watches persisted by an older build carry no signature, so there is
     // nothing to compare the current subtitles against — we cannot know what
