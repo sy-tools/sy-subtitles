@@ -100,11 +100,17 @@ describe('fullscreenFontPx', () => {
   });
 
   it('pins to the 80px ceiling on a wide monitor', () => {
-    assert.strictEqual(fullscreenFontPx(2560, 1440, 1), FS_FONT_MAX_PX);
+    assert.strictEqual(fullscreenFontPx(2560, 1440, 1), 80);
   });
 
   it('respects the 28px floor on a narrow window', () => {
     assert.strictEqual(fullscreenFontPx(500, 800, 1), 28);
+  });
+
+  it('respects the 20px floor when even the inner clamp is squeezed by height', () => {
+    // Inner clamp gives base 28, but 22% of a very short 80px viewport is
+    // 17.6, so the outer floor of 20 is what actually wins.
+    assert.strictEqual(fullscreenFontPx(500, 80, 1), 20);
   });
 
   it('multiplies by the user subtitle scale after the inner clamp', () => {
@@ -144,16 +150,19 @@ describe('measureBurnRatios', () => {
     const r = measureBurnRatios(geometry);
     // 4vw of 1920 = 76.8; displayed height 1080 -> 0.0711.
     assert.ok(Math.abs(r.font_ratio - 76.8 / 1080) < 1e-9);
-    assert.ok(Math.abs(r.padtop_ratio - FS_PADTOP_PX / 1080) < 1e-9);
-    assert.ok(Math.abs(r.padbot_ratio - FS_PADBOT_PX / 1080) < 1e-9);
+    assert.ok(Math.abs(r.padtop_ratio - 80 / 1080) < 1e-9);   // approved 0.0741
+    assert.ok(Math.abs(r.padbot_ratio - 36 / 1080) < 1e-9);   // approved 0.0333
   });
 
-  it('is monitor-independent for the same scale and aspect', () => {
+  it('holds while 4vw stays inside the 28-80px band', () => {
     const wide = measureBurnRatios(geometry);
     const narrow = measureBurnRatios(Object.assign({}, geometry, {
       viewportWidth: 1280, viewportHeight: 720,
     }));
-    // Both pin differently in px but 4vw/height is the same fraction.
+    // Neither case is clamped (76.8 and 51.2 are both inside 28-80); only in
+    // the linear region does 4vw/height stay the same fraction regardless of
+    // monitor size. Once 4vw pins to the 80px ceiling this equality breaks —
+    // see the 2560-wide case in the fullscreenFontPx suite above.
     assert.ok(Math.abs(wide.font_ratio - narrow.font_ratio) < 1e-9);
   });
 
