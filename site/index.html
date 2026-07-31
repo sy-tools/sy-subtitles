@@ -3933,9 +3933,14 @@ function burnEditsSignature() {
 }
 
 function burnStale() {
-  // A run recorded before signatures existed carries none; treat it as current
-  // rather than declaring every resumed render stale on sight.
-  if (!burnWatch || burnWatch.editsSig === undefined) return false;
+  if (!burnWatch) return false;
+  // A run recorded before signatures existed carries none, so there is nothing
+  // to compare against: we cannot know which subtitles that video was built
+  // from. Offering it as "the video with subtitles" would claim a match we
+  // cannot prove — and since an unsigned watch can never BECOME stale, the
+  // claim would be permanent and leave no way to build again. The run is kept
+  // either way; only the promise about it is withheld.
+  if (burnWatch.editsSig === undefined) return true;
   return burnWatch.editsSig !== burnEditsSignature();
 }
 

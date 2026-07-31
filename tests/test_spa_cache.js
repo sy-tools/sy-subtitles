@@ -4451,17 +4451,23 @@ describe('burn video driver behaviour', () => {
       'the subtitles moved on — offer to build the ones now on screen');
   });
 
-  it('does not call a run recorded before signatures existed stale', async () => {
-    // Watches persisted by an older build carry no signature at all. Comparing
-    // "nothing" against the current subtitles would declare every resumed
-    // render stale on sight and throw away a finished video for nothing.
+  it('will not vouch for a run recorded before signatures existed', async () => {
+    // Watches persisted by an older build carry no signature, so there is
+    // nothing to compare the current subtitles against — we cannot know what
+    // that video was built from. Offering it as "the video with subtitles"
+    // claims a match we cannot prove, and because an unsigned watch can never
+    // BECOME stale, that claim would also be permanent: the item would sit on
+    // its download face forever and there would be no way left to build again.
     const env = makeHarness(previewing({ edits: { uk: { 3: 'edited' } } }));
     env.localStorage.setItem('burn:t:v', savedWatch(7));   // no editsSig field
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'an unsigned watch is current, not stale');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'an unprovable run offers a rebuild, not a download');
+    // The run itself is not thrown away — the link to it survives, so the
+    // artifact is still reachable from the run page.
+    assert.ok(env.api.getWatch(), 'the recorded run is kept, only not vouched for');
   });
 
   it('dispatches nothing while a language other than Ukrainian is previewed', async () => {
