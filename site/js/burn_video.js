@@ -55,6 +55,49 @@ function burnStateKey(talkId, videoSlug) {
   return 'sy.burn.' + talkId + '.' + videoSlug;
 }
 
+// Mirrors the fullscreen CSS in components.css:
+//   font-size: clamp(20px, calc(clamp(28px, 4vw, 80px) * var(--preview-subs-scale, 1)), 22vh)
+//   padding-top: 80px; padding-bottom: 36px
+// Kept as named constants so a CSS change has one obvious counterpart here.
+var FS_FONT_MIN_PX = 28;
+var FS_FONT_MAX_PX = 80;
+var FS_FONT_VW = 0.04;
+var FS_FONT_FLOOR_PX = 20;
+var FS_FONT_VH_CAP = 0.22;
+var FS_PADTOP_PX = 80;
+var FS_PADBOT_PX = 36;
+
+function clampNum(min, value, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function fullscreenFontPx(viewportWidth, viewportHeight, subsScale) {
+  var scale = (typeof subsScale === 'number' && isFinite(subsScale) && subsScale > 0)
+    ? subsScale : 1;
+  var base = clampNum(FS_FONT_MIN_PX, FS_FONT_VW * viewportWidth, FS_FONT_MAX_PX);
+  return clampNum(FS_FONT_FLOOR_PX, base * scale, FS_FONT_VH_CAP * viewportHeight);
+}
+
+// A <video>/iframe letterboxes: whichever axis binds first decides the height
+// the viewer actually sees, and that is what the ratios are relative to.
+function displayedVideoHeight(viewportWidth, viewportHeight, videoWidth, videoHeight) {
+  if (!(videoWidth > 0) || !(videoHeight > 0)) return viewportHeight;
+  var byWidth = viewportWidth * (videoHeight / videoWidth);
+  return Math.min(viewportHeight, byWidth);
+}
+
+function measureBurnRatios(geometry) {
+  var g = geometry || {};
+  var vw = g.viewportWidth > 0 ? g.viewportWidth : 1920;
+  var vh = g.viewportHeight > 0 ? g.viewportHeight : 1080;
+  var shown = displayedVideoHeight(vw, vh, g.videoWidth, g.videoHeight) || vh;
+  return {
+    font_ratio: fullscreenFontPx(vw, vh, g.subsScale) / shown,
+    padtop_ratio: FS_PADTOP_PX / shown,
+    padbot_ratio: FS_PADBOT_PX / shown,
+  };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     BURN_WORKFLOW: BURN_WORKFLOW,
@@ -63,5 +106,11 @@ if (typeof module !== 'undefined' && module.exports) {
     buildBurnInputs: buildBurnInputs,
     matchRun: matchRun,
     burnStateKey: burnStateKey,
+    FS_FONT_MAX_PX: FS_FONT_MAX_PX,
+    FS_PADTOP_PX: FS_PADTOP_PX,
+    FS_PADBOT_PX: FS_PADBOT_PX,
+    fullscreenFontPx: fullscreenFontPx,
+    displayedVideoHeight: displayedVideoHeight,
+    measureBurnRatios: measureBurnRatios,
   };
 }

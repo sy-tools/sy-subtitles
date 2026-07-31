@@ -84,3 +84,91 @@ describe('BURN_WORKFLOW', () => {
     assert.strictEqual(BURN_WORKFLOW, 'burn-subtitles.yml');
   });
 });
+
+const {
+  FS_FONT_MAX_PX,
+  FS_PADBOT_PX,
+  FS_PADTOP_PX,
+  displayedVideoHeight,
+  fullscreenFontPx,
+  measureBurnRatios,
+} = require('../site/js/burn_video');
+
+describe('fullscreenFontPx', () => {
+  it('is 4% of viewport width in the middle of the range', () => {
+    assert.strictEqual(fullscreenFontPx(1200, 900, 1), 48);
+  });
+
+  it('pins to the 80px ceiling on a wide monitor', () => {
+    assert.strictEqual(fullscreenFontPx(2560, 1440, 1), FS_FONT_MAX_PX);
+  });
+
+  it('respects the 28px floor on a narrow window', () => {
+    assert.strictEqual(fullscreenFontPx(500, 800, 1), 28);
+  });
+
+  it('multiplies by the user subtitle scale after the inner clamp', () => {
+    // Inner clamp pins at 80, then scale 2 doubles it.
+    assert.strictEqual(fullscreenFontPx(2560, 1440, 2), 160);
+  });
+
+  it('is capped by 22vh so tall text cannot overflow the screen', () => {
+    // 22% of 300px viewport height = 66px, below the scaled 160.
+    assert.strictEqual(fullscreenFontPx(2560, 300, 2), 66);
+  });
+
+  it('treats a missing scale as 1', () => {
+    assert.strictEqual(fullscreenFontPx(1200, 900, undefined), 48);
+  });
+});
+
+describe('displayedVideoHeight', () => {
+  it('fills the height when the video is narrower than the window', () => {
+    // 4:3 video in a 16:9 window is letterboxed on the sides: height fills.
+    assert.strictEqual(displayedVideoHeight(1920, 1080, 640, 480), 1080);
+  });
+
+  it('is limited by width when the video is wider than the window', () => {
+    // 16:9 video in a 4:3 window: width binds, height is 1000 * 9/16.
+    assert.strictEqual(displayedVideoHeight(1000, 1000, 1920, 1080), 562.5);
+  });
+});
+
+describe('measureBurnRatios', () => {
+  const geometry = {
+    viewportWidth: 1920, viewportHeight: 1080,
+    videoWidth: 640, videoHeight: 480, subsScale: 1,
+  };
+
+  it('reproduces the approved fullscreen baseline', () => {
+    const r = measureBurnRatios(geometry);
+    // 4vw of 1920 = 76.8; displayed height 1080 -> 0.0711.
+    assert.ok(Math.abs(r.font_ratio - 76.8 / 1080) < 1e-9);
+    assert.ok(Math.abs(r.padtop_ratio - FS_PADTOP_PX / 1080) < 1e-9);
+    assert.ok(Math.abs(r.padbot_ratio - FS_PADBOT_PX / 1080) < 1e-9);
+  });
+
+  it('is monitor-independent for the same scale and aspect', () => {
+    const wide = measureBurnRatios(geometry);
+    const narrow = measureBurnRatios(Object.assign({}, geometry, {
+      viewportWidth: 1280, viewportHeight: 720,
+    }));
+    // Both pin differently in px but 4vw/height is the same fraction.
+    assert.ok(Math.abs(wide.font_ratio - narrow.font_ratio) < 1e-9);
+  });
+
+  it('grows the font ratio when the user enlarged the subtitles', () => {
+    const bigger = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.5 }));
+    assert.ok(bigger.font_ratio > measureBurnRatios(geometry).font_ratio);
+  });
+
+  it('returns numbers, never NaN, for degenerate geometry', () => {
+    const r = measureBurnRatios({
+      viewportWidth: 0, viewportHeight: 0,
+      videoWidth: 0, videoHeight: 0, subsScale: 0,
+    });
+    Object.keys(r).forEach((k) => {
+      assert.ok(isFinite(r[k]) && r[k] > 0, k + ' must be a positive number');
+    });
+  });
+});
