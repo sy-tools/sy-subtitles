@@ -181,3 +181,135 @@ describe('measureBurnRatios', () => {
     });
   });
 });
+
+const {
+  BURN_STEP_WEIGHTS,
+  RENDER_SPEED,
+  computeProgress,
+  renderEtaSeconds,
+} = require('../site/js/burn_video');
+
+// A third arg lets tests express a job that completed WITHOUT success
+// (failure/cancelled outside any named step) — see computeProgress's
+// job.conclusion check.
+function job(steps, status, conclusion) {
+  return {
+    status: status || 'in_progress',
+    conclusion: conclusion || (status === 'completed' ? 'success' : null),
+    steps: steps,
+  };
+}
+const T0 = 1700000000000;
+const HOUR_MS = 3600 * 1000;
+
+describe('BURN_STEP_WEIGHTS', () => {
+  it('sums to exactly 1', () => {
+    const total = BURN_STEP_WEIGHTS.reduce((a, s) => a + s.weight, 0);
+    assert.ok(Math.abs(total - 1) < 1e-9);
+  });
+
+  it('names match the workflow step names', () => {
+    assert.deepStrictEqual(BURN_STEP_WEIGHTS.map((s) => s.name), [
+      'Install dependencies', 'Download video', 'Burn subtitles', 'Upload result',
+    ]);
+  });
+});
+
+describe('RENDER_SPEED', () => {
+  it('is calibrated to 2.5x realtime', () => {
+    // Pin the literal: renderEtaSeconds's own test recomputes its expectation
+    // from RENDER_SPEED, which pins nothing about the constant's value itself.
+    assert.strictEqual(RENDER_SPEED, 2.5);
+  });
+});
+
+describe('renderEtaSeconds', () => {
+  it('scales the talk duration by the render speed', () => {
+    assert.strictEqual(renderEtaSeconds(HOUR_MS), 3600 / RENDER_SPEED);
+  });
+
+  it('never returns zero for a missing duration', () => {
+    assert.ok(renderEtaSeconds(0) > 0);
+    assert.ok(renderEtaSeconds(undefined) > 0);
+  });
+});
+
+describe('computeProgress', () => {
+  it('is zero before anything starts', () => {
+    const p = computeProgress(job([]), T0, HOUR_MS);
+    assert.strictEqual(p.fraction, 0);
+    assert.strictEqual(p.done, false);
+  });
+
+  it('credits completed steps by their weight', () => {
+    const p = computeProgress(job([
+      { name: 'Install dependencies', status: 'completed', conclusion: 'success' },
+      { name: 'Download video', status: 'completed', conclusion: 'success' },
+    ]), T0, HOUR_MS);
+    assert.ok(Math.abs(p.fraction - 0.20) < 1e-9);
+  });
+
+  it('interpolates inside the render step and marks it an estimate', () => {
+    const halfEta = (renderEtaSeconds(HOUR_MS) / 2) * 1000;
+    const p = computeProgress(job([
+      { name: 'Install dependencies', status: 'completed', conclusion: 'success' },
+      { name: 'Download video', status: 'completed', conclusion: 'success' },
+      { name: 'Burn subtitles', status: 'in_progress',
+        started_at: new Date(T0).toISOString() },
+    ]), T0 + halfEta, HOUR_MS);
+    // 0.20 credited + about half of the 0.70 render weight.
+    assert.ok(p.fraction > 0.5 && p.fraction < 0.6, 'got ' + p.fraction);
+    assert.strictEqual(p.estimated, true);
+  });
+
+  it('never reaches 1 while the render step is still running', () => {
+    const p = computeProgress(job([
+      { name: 'Burn subtitles', status: 'in_progress',
+        started_at: new Date(T0).toISOString() },
+    ]), T0 + 10 * HOUR_MS, HOUR_MS);
+    assert.ok(p.fraction < 1, 'an overrunning render must not report 100%');
+    assert.strictEqual(p.done, false);
+  });
+
+  it('reports done only when the job succeeded', () => {
+    const p = computeProgress(job([
+      { name: 'Upload result', status: 'completed', conclusion: 'success' },
+    ], 'completed'), T0, HOUR_MS);
+    assert.strictEqual(p.done, true);
+    assert.strictEqual(p.fraction, 1);
+  });
+
+  it('surfaces which step failed', () => {
+    const p = computeProgress(job([
+      { name: 'Download video', status: 'completed', conclusion: 'failure' },
+    ], 'completed'), T0, HOUR_MS);
+    assert.strictEqual(p.failed, true);
+    assert.strictEqual(p.failedStep, 'Download video');
+    assert.strictEqual(p.done, false);
+  });
+
+  it('tolerates a null job while the run is still being created', () => {
+    const p = computeProgress(null, T0, HOUR_MS);
+    assert.strictEqual(p.fraction, 0);
+    assert.strictEqual(p.failed, false);
+  });
+
+  it('ignores unknown step names instead of throwing', () => {
+    const p = computeProgress(job([
+      { name: 'Set up job', status: 'completed', conclusion: 'success' },
+    ]), T0, HOUR_MS);
+    assert.strictEqual(p.fraction, 0);
+  });
+
+  it('does not report done when the job failed outside a named step', () => {
+    const p = computeProgress(job([], 'completed', 'failure'), T0, HOUR_MS);
+    assert.strictEqual(p.done, false);
+    assert.strictEqual(p.failed, true);
+  });
+
+  it('does not report done when the job was cancelled outside a named step', () => {
+    const p = computeProgress(job([], 'completed', 'cancelled'), T0, HOUR_MS);
+    assert.strictEqual(p.done, false);
+    assert.strictEqual(p.failed, true);
+  });
+});

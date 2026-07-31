@@ -98,6 +98,100 @@ function measureBurnRatios(geometry) {
   };
 }
 
+// Weights per workflow step. Names must match burn-subtitles.yml exactly —
+// tests/test_burn_workflow.py guards the workflow side.
+var BURN_STEP_WEIGHTS = [
+  { name: 'Install dependencies', weight: 0.05 },
+  { name: 'Download video', weight: 0.15 },
+  { name: 'Burn subtitles', weight: 0.70 },
+  { name: 'Upload result', weight: 0.10 }
+];
+
+var RENDER_STEP_NAME = 'Burn subtitles';
+
+// Rendering runs at roughly this multiple of realtime on a 2-core runner
+// (veryfast x264, ~24 min for an hour-long talk). Calibrate from real runs.
+var RENDER_SPEED = 2.5;
+
+// Never claim the interpolated render step is finished — only the API can say so.
+var RENDER_CAP = 0.97;
+
+function renderEtaSeconds(durationMs) {
+  var ms = (typeof durationMs === 'number' && durationMs > 0) ? durationMs : 30 * 60 * 1000;
+  return (ms / 1000) / RENDER_SPEED;
+}
+
+// Turns a GitHub job object into a fraction/label/terminal-state summary.
+// Pure: no DOM, no network. ffmpeg has no channel into the Actions API, so
+// progress inside the render step is interpolated from elapsed time and
+// flagged `estimated: true` — never overstate certainty in a progress bar.
+//
+// Steps are looked up BY NAME from BURN_STEP_WEIGHTS and every other step is
+// ignored. This is deliberate: actions/cache and actions/setup-python each
+// append a "Post ..." step AFTER "Upload result" in the job's step list, so a
+// "last step in the list means finished" heuristic would never report done.
+// Terminal state comes only from job.status/job.conclusion, never from step
+// position.
+function computeProgress(job, nowMs, durationMs) {
+  var result = { fraction: 0, label: '', estimated: false, done: false,
+                 failed: false, failedStep: '' };
+  var steps = (job && job.steps) || [];
+  var byName = {};
+  for (var i = 0; i < steps.length; i++) {
+    if (steps[i] && steps[i].name) byName[steps[i].name] = steps[i];
+  }
+
+  var fraction = 0;
+  for (var w = 0; w < BURN_STEP_WEIGHTS.length; w++) {
+    var spec = BURN_STEP_WEIGHTS[w];
+    var step = byName[spec.name];
+    if (!step) continue;
+    if (step.conclusion === 'failure' || step.conclusion === 'cancelled') {
+      result.failed = true;
+      result.failedStep = spec.name;
+      result.fraction = fraction;
+      result.label = spec.name;
+      return result;
+    }
+    if (step.status === 'completed') {
+      fraction += spec.weight;
+      result.label = spec.name;
+      continue;
+    }
+    if (step.status === 'in_progress') {
+      result.label = spec.name;
+      if (spec.name === RENDER_STEP_NAME) {
+        // No true percentage exists here — interpolate and say so.
+        var started = Date.parse(step.started_at || '') || nowMs;
+        var elapsed = Math.max(0, (nowMs - started) / 1000);
+        var share = Math.min(RENDER_CAP, elapsed / renderEtaSeconds(durationMs));
+        fraction += spec.weight * share;
+        result.estimated = true;
+      }
+      break;
+    }
+  }
+
+  if (job && job.status === 'completed') {
+    // status: 'completed' alone is not success — GitHub sets it the same way
+    // on a job that failed, was cancelled, or died in "Set up job" before any
+    // named step ran. Only conclusion: 'success' means the artifact exists.
+    if (job.conclusion === 'success') {
+      result.done = true;
+      result.fraction = 1;
+      result.estimated = false;
+      return result;
+    }
+    if (!result.failed) {
+      // Completed without success and no named step already flagged it —
+      // still a failure, not a silent stall at 0%.
+      result.failed = true;
+    }
+  }
+  result.fraction = Math.min(fraction, RENDER_CAP);
+  return result;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     BURN_WORKFLOW: BURN_WORKFLOW,
@@ -112,5 +206,9 @@ if (typeof module !== 'undefined' && module.exports) {
     fullscreenFontPx: fullscreenFontPx,
     displayedVideoHeight: displayedVideoHeight,
     measureBurnRatios: measureBurnRatios,
+    BURN_STEP_WEIGHTS: BURN_STEP_WEIGHTS,
+    RENDER_SPEED: RENDER_SPEED,
+    renderEtaSeconds: renderEtaSeconds,
+    computeProgress: computeProgress,
   };
 }
