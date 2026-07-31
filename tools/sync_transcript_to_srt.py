@@ -21,7 +21,13 @@ import sys
 from pathlib import Path
 
 from .srt_utils import parse_srt, write_srt
-from .text_segmentation import MAX_CPL, build_blocks_from_paragraphs, load_transcript
+from .text_segmentation import (
+    MAX_CPL,
+    build_blocks_from_paragraphs,
+    global_omit_phrases,
+    load_transcript,
+    talk_omit_phrases,
+)
 
 
 def prepare_blocks(paragraphs: list) -> list:
@@ -182,8 +188,13 @@ def sync_transcript(talk_dir: str, video_slug: str, old_transcript: str, new_tra
     This works even when SRT block boundaries differ from what prepare_blocks
     would produce (e.g. whisper-built SRTs).
     """
-    old_paras = load_transcript(old_transcript)
-    new_paras = load_transcript(new_transcript)
+    # Declared omissions belong to the TALK, not to the directory a transcript
+    # copy happens to sit in: sync_pr stages the base transcript in a temp dir,
+    # where talk_omit_phrases() would find no meta.yaml and silently read the
+    # remarks back in — making identical bytes compare unequal.
+    omit_phrases = global_omit_phrases() + talk_omit_phrases(Path(talk_dir) / "transcript_uk.txt")
+    old_paras = load_transcript(old_transcript, omit_phrases)
+    new_paras = load_transcript(new_transcript, omit_phrases)
     srt_path = Path(talk_dir) / video_slug / "final" / "uk.srt"
 
     if not srt_path.exists():
