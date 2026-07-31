@@ -3992,14 +3992,24 @@ describe('burn video driver behaviour', () => {
       REPO: 'o/r',
       BURN_WORKFLOW: 'burn-subtitles.yml',
       getAuthToken: function () { return 'tok'; },
-      dispatchWorkflow: function (api, tok, wf, ref) {
-        env.dispatched++; env.dispatchedRef = ref; return Promise.resolve();
+      dispatchWorkflow: function (api, tok, wf, ref, inputs) {
+        env.dispatched++; env.dispatchedRef = ref;
+        env.dispatchedInputs = inputs || {};
+        return Promise.resolve();
       },
       burnRef: PHASE_MODEL.burnRef,
       editSync: null,
-      measureBurnRatios: function () { return {}; },
+      // Real ratios and the REAL input builder: a stub returning {} cannot tell
+      // a dispatch that names its content ref from one that silently lets the
+      // workflow default to main — which is the bug that shipped a 12-byte mp4.
+      measureBurnRatios: function () {
+        return { font_ratio: 0.0711, padtop_ratio: 0.0741, padbot_ratio: 0.0333 };
+      },
       makeRequestId: function () { return 'rid'; },
-      buildBurnInputs: function () { return {}; },
+      buildBurnInputs: PHASE_MODEL.buildBurnInputs,
+      // The manifest is where the human title of a run comes from.
+      manifest: { talks: [{ id: 't', title: 'Ganesha Puja',
+                            videos: [{ slug: 'v', title: 'Talk, Cabella' }] }] },
       listWorkflowRuns: function () { return Promise.resolve([]); },
       matchRun: function () { return null; },
       getRunJobs: function () { return Promise.resolve([{}]); },
@@ -4041,7 +4051,7 @@ describe('burn video driver behaviour', () => {
     assert.ok(start > -1 && end > start, 'burn driver block not found in index.html');
     const names = ['document', 'window', 'localStorage', 'getComputedStyle',
       'previewState', 't', 'pluralFor', 'SPA', 'API', 'REPO', 'BURN_WORKFLOW',
-      'getAuthToken', 'dispatchWorkflow', 'burnRef', 'editSync',
+      'getAuthToken', 'dispatchWorkflow', 'burnRef', 'editSync', 'manifest',
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
@@ -4332,13 +4342,13 @@ describe('burn video driver behaviour', () => {
     });
     await env.api.startBurn('t', 'v');
     assert.strictEqual(env.confirms.length, 0, 'no warning is due');
-    assert.strictEqual(env.dispatchedRef, 'sync/me/t--v-uk');
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'sync/me/t--v-uk');
   });
 
   it('renders from main when nothing is syncing', async () => {
     const env = makeHarness();
     await env.api.startBurn('t', 'v');
-    assert.strictEqual(env.dispatchedRef, 'main');
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'main');
   });
 
   it('renders from the autosync branch once the cloud is green', async () => {
@@ -4347,8 +4357,54 @@ describe('burn video driver behaviour', () => {
         return { status: 'synced', branch: 'sync/me/t--v-uk' }; } },
     });
     await env.api.startBurn('t', 'v');
-    assert.strictEqual(env.dispatchedRef, 'sync/me/t--v-uk',
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'sync/me/t--v-uk',
       'a green cloud means the branch holds the edited srt');
+  });
+
+  // ---- the renderer and the subtitles come from two different refs ----
+  //
+  // edit_sync.js cuts its branch from main once and never fast-forwards it, so
+  // that branch carries whatever workflow and tools/ main had on the day the
+  // reviewer first edited. Dispatching the WORKFLOW against it ran main's probe
+  // stub and produced a 12-byte placeholder .mp4 that the UI reported as a
+  // finished render.
+  it('runs the dispatched version of the workflow, not the edit branch copy', async () => {
+    const env = makeHarness({
+      editSync: { talkId: 't', getInfo: function () {
+        return { status: 'synced', branch: 'sync/me/t--v-uk' }; } },
+    });
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedRef, 'main',
+      'the workflow file must come from the ref the SPA was built against');
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'sync/me/t--v-uk',
+      'only the subtitles come from the edit branch');
+  });
+
+  it('keeps the two refs apart under a local workflow override', async () => {
+    // The stand case that exposed it: code from the branch under test, content
+    // from the reviewer's sync branch. One ref cannot be both.
+    const env = makeHarness({
+      editSync: { talkId: 't', getInfo: function () {
+        return { status: 'synced', branch: 'sync/me/t--v-uk' }; } },
+    });
+    env.window.__SY_BURN_REF = 'worktree-burn-subtitles';
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedRef, 'worktree-burn-subtitles');
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'sync/me/t--v-uk');
+  });
+
+  it('names the run after the talk, the way a PR is named', async () => {
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedInputs.run_label,
+      'Ganesha Puja — Talk, Cabella');
+  });
+
+  it('sends an empty label rather than a wrong one for an unknown talk', async () => {
+    const env = makeHarness({ manifest: { talks: [] } });
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedInputs.run_label, '');
+    assert.strictEqual(env.dispatched, 1, 'a missing title must not block a render');
   });
 
   it('refuses while the cloud is not green, rather than rendering stale text', async () => {
@@ -4403,10 +4459,10 @@ describe('burn video driver behaviour', () => {
         return { status: 'pending', branch: 'sync/me/other' }; } },
     });
     await env.api.startBurn('t', 'v');
-    assert.strictEqual(env.dispatchedRef, 'main');
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'main');
   });
 
-  it('takes the subtitle file from the same ref the render is dispatched against', async () => {
+  it('takes the subtitle file from the same ref the render burns', async () => {
     // Two downloads of "the subtitles" that disagree would be the worst kind of
     // bug here: the .srt a reviewer opens and the .srt burned into the video
     // must be the same bytes, so both read whatever burnSourceRef() picked.
@@ -4433,7 +4489,7 @@ describe('burn video driver behaviour', () => {
 
       assert.strictEqual(urls.length, 1, 'one fetch, of one file');
       assert.ok(urls[0].includes('/' + ref + '/'), 'expected ref ' + ref + ' in ' + urls[0]);
-      assert.ok(urls[0].includes('/' + env.dispatchedRef + '/'),
+      assert.ok(urls[0].includes('/' + env.dispatchedInputs.source_ref + '/'),
         'the file and the render must not be read off two different refs');
       assert.ok(urls[0].endsWith(MENU_MODEL.exportSrtPath('t', 'v', 'uk')),
         'the path is the published subtitle file, not an SPA-side reconstruction');

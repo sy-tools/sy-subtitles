@@ -4397,6 +4397,18 @@ function startBurn() {
   });
 }
 
+// The human titles that name the run in the Actions list. A talk missing from
+// the manifest yields empty strings, and the workflow falls back to
+// talk_id/video_slug — a nameless run is better than a blocked render.
+function burnRunTitles(talkId, videoSlug) {
+  var talk = manifest
+    ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
+  var video = talk
+    ? (talk.videos || []).find(function(v) { return v.slug === videoSlug; }) : null;
+  return { talkTitle: (talk && talk.title) || '',
+           videoTitle: (video && video.title) || '' };
+}
+
 function dispatchBurn(talkId, videoSlug) {
   stopBurnTimer();
   // Drop the old watch BEFORE the first await: an already-scheduled pollBurn
@@ -4411,8 +4423,18 @@ function dispatchBurn(talkId, videoSlug) {
   return burnGeometry().then(function(geometry) {
     var ratios = measureBurnRatios(geometry);
     var requestId = makeRequestId(Date.now());
-    var inputs = buildBurnInputs(talkId, videoSlug, ratios, requestId);
-    return dispatchWorkflow(API, getAuthToken(), BURN_WORKFLOW, burnSourceRef(), inputs)
+    var titles = burnRunTitles(talkId, videoSlug);
+    var inputs = buildBurnInputs(talkId, videoSlug, ratios, requestId, {
+      sourceRef: burnSourceRef(),
+      talkTitle: titles.talkTitle,
+      videoTitle: titles.videoTitle,
+    });
+    // TWO refs, deliberately: the workflow file and tools/ come from the ref
+    // this SPA was built against, the subtitles from `source_ref` above. An
+    // edit-sync branch is cut from main ONCE and never fast-forwarded, so
+    // dispatching against it would run whatever renderer main happened to have
+    // on the day the reviewer first edited.
+    return dispatchWorkflow(API, getAuthToken(), BURN_WORKFLOW, burnRef(window), inputs)
       .then(function() {
         // editsSig freezes what this run was asked to burn: the moment the
         // reviewer edits (or un-edits) a block afterwards, the video it produces

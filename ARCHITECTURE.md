@@ -168,9 +168,17 @@ the build/sync stack without burning Claude calls.
 `workflow_dispatch` from the preview SPA: downloads the video, burns
 `final/uk.srt` into the picture with ffmpeg+libass reproducing the fullscreen
 subtitle look, and uploads the MP4 as a 7-day artifact. Sizing arrives as
-ratios measured in the browser (see `tools/burn_subtitles.py`). `run-name`
-carries the caller's `request_id` — `workflow_dispatch` returns no run id, so
-that is how the SPA finds its own run.
+ratios measured in the browser (see `tools/burn_subtitles.py`). `run-name` is
+the talk's human title, so a run is found by eye in the Actions list; the
+caller's `request_id` rides along at the end because `workflow_dispatch`
+returns no run id, and that is how the SPA finds its own run.
+
+**Two refs, on purpose.** The workflow file and `tools/` come from the ref the
+dispatch names — always the deployed SPA's own version. The subtitles come from
+the `source_ref` input, checked out separately into `content/`, because a
+reviewer's edit-sync branch is cut from `main` once and never fast-forwarded:
+dispatching against it would run whatever renderer `main` happened to carry on
+the day they first edited.
 
 The job runs ffmpeg **once**, detached, writing an `-progress` file, and then
 declares twenty cheap named steps (`Render 5%` … `Render 95%`, `Finish render`)

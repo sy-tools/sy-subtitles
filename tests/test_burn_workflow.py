@@ -84,11 +84,75 @@ class TestInputs:
             "padtop_ratio",
             "padbot_ratio",
             "request_id",
+            "source_ref",
+            "run_label",
         }
 
     def test_run_name_embeds_request_id(self):
         # workflow_dispatch returns no run id; this is how the SPA finds its run.
         assert "inputs.request_id" in _doc()["run-name"]
+
+    def test_run_name_leads_with_the_human_label(self):
+        # A run is found by eye in the Actions list, the way a PR is found by
+        # its title. The talk_id/video_slug fallback keeps a hand-started run
+        # from being nameless.
+        run_name = _doc()["run-name"]
+        assert "inputs.run_label" in run_name
+        assert "inputs.talk_id" in run_name and "inputs.video_slug" in run_name
+        assert run_name.index("inputs.run_label") < run_name.index("inputs.request_id")
+
+    def test_the_content_ref_defaults_to_the_published_subtitles(self):
+        # A hand-started run that names no ref renders what is on main, which is
+        # the same thing the SPA does for a talk with no edits.
+        assert _doc()[True]["workflow_dispatch"]["inputs"]["source_ref"]["default"] == "main"
+
+
+class TestTwoRefs:
+    """The renderer comes from the dispatched ref; the subtitles from an input.
+
+    Edit-sync cuts its branch from main once and never fast-forwards it
+    (site/js/edit_sync.js), so a reviewer's branch carries whatever workflow and
+    tools main had on the day they first edited. Checking that branch out as the
+    WORKFLOW would render with a months-old renderer — which is exactly how this
+    was found: a render dispatched against a sync branch ran main's probe stub
+    and returned a 12-byte placeholder .mp4.
+    """
+
+    def _content_checkout(self):
+        for s in _steps():
+            with_ = s.get("with") or {}
+            if str(s.get("uses", "")).startswith("actions/checkout") and with_.get("ref"):
+                return s
+        raise AssertionError("no checkout of the content ref")
+
+    def test_checks_the_subtitles_out_from_the_input_ref(self):
+        with_ = self._content_checkout()["with"]
+        assert "inputs.source_ref" in with_["ref"]
+        assert with_["path"] == "content"
+
+    def test_the_code_checkout_pins_no_ref(self):
+        # Bare = the ref the dispatch names, i.e. the version the SPA asked for.
+        first = next(s for s in _steps() if str(s.get("uses", "")).startswith("actions/checkout"))
+        assert not (first.get("with") or {}).get("ref")
+
+    def test_the_ref_is_validated_before_it_is_checked_out(self):
+        steps = _steps()
+        guard = next(i for i, s in enumerate(steps) if "--source-ref" in (s.get("run") or ""))
+        checkout = steps.index(self._content_checkout())
+        assert guard < checkout, "a ref must be rejected before anything fetches it"
+
+    def test_both_checkouts_stay_unnamed(self):
+        # Naming either would wedge a step into the list the SPA credits.
+        for s in _steps():
+            if str(s.get("uses", "")).startswith("actions/checkout"):
+                assert "name" not in s
+
+    def test_every_talk_file_is_read_from_the_content_checkout(self):
+        # The regression guard: one unprefixed `talks/` is a render of the wrong
+        # subtitles, and it looks like a success.
+        for run in _runs():
+            stray = re.search(r"(?<!content/)\btalks/", _commands(run))
+            assert not stray, f"reads talks/ outside the content checkout:\n{run}"
 
     def test_only_needs_read_access(self):
         assert _doc()["permissions"] == {"contents": "read"}

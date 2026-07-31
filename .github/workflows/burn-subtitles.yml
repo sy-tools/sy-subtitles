@@ -1,9 +1,12 @@
 name: Burn subtitles
 
+# Named after the talk, so a run is found by eye in the Actions list the way a
+# PR is found by its title. The trailing request_id is machinery, not decoration:
 # workflow_dispatch returns no run id, so the caller (the preview SPA) finds its
-# own run by matching request_id in the run name.
+# own run by matching that token in the run name.
 run-name: >-
-  Burn ${{ inputs.talk_id }}/${{ inputs.video_slug }} · ${{ inputs.request_id }}
+  ${{ inputs.run_label || format('{0}/{1}', inputs.talk_id, inputs.video_slug) }}
+  · ${{ inputs.request_id }}
 
 on:
   workflow_dispatch:
@@ -29,6 +32,18 @@ on:
       request_id:
         description: Opaque token so the caller can find this run
         required: true
+      source_ref:
+        description: >-
+          Branch holding the subtitles to burn. The RENDERER always comes from
+          the ref this workflow was dispatched against; only talks/ is read from
+          here, so a reviewer's edit branch never supplies the code.
+        required: false
+        default: main
+      run_label:
+        description: Human name for this run (talk — video); the run name falls
+          back to talk_id/video_slug without it
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -38,7 +53,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
+      # The renderer: tools/, assets/fonts/, requirements.txt, at the ref this
+      # run was dispatched against. Deliberately unpinned and unnamed.
       - uses: actions/checkout@v7
+
+      # Reject the content ref before anything fetches it. Stdlib-only, so it
+      # runs before setup-python and before dependencies exist.
+      - env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          python3 -m tools.workflow_validation_cli --source-ref "$SOURCE_REF"
+
+      # The subtitles, from wherever the caller is showing them — usually an
+      # edit-sync branch. Only talks/ is read from this tree: those branches are
+      # cut from main once and never fast-forwarded, so their copy of this
+      # workflow and of tools/ can be months old.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref }}
+          path: content
 
       - uses: actions/setup-python@v6
         with:
@@ -76,7 +110,7 @@ jobs:
           set -euo pipefail
           python3 -m tools.workflow_validation_cli \
             --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG"
-          test -f "talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
+          test -f "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
             || { echo "::error::no final/uk.srt for $TALK_ID/$VIDEO_SLUG"; exit 1; }
           # The ratios are measured in the browser. Reject nonsense here, with a
           # legible message, rather than deep inside ffmpeg. The font_ratio
@@ -110,7 +144,7 @@ jobs:
           set -euo pipefail
           VIDEO_REF=$(python3 -c "
           import os, yaml
-          with open('talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
+          with open('content/talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
               meta = yaml.safe_load(f)
           for v in meta.get('videos', []):
               if v.get('slug') == os.environ['VIDEO_SLUG']:
@@ -193,7 +227,7 @@ jobs:
           # shellcheck disable=SC2016
           nohup bash -c '
             python -m tools.burn_subtitles \
-              --srt "talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
+              --srt "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
               --video /tmp/burn/source.mp4 \
               --output "/tmp/burn/out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4" \
               --font-ratio "$FONT_RATIO" \

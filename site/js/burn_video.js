@@ -35,9 +35,43 @@ function makeRequestId(now, rand) {
   return 'req-' + stamp + '-' + noise;
 }
 
-function buildBurnInputs(talkId, videoSlug, ratios, requestId) {
+// The longest run name that still scans in the Actions list. Titles in the
+// corpus run to 80 characters on their own ("Adi Shakti puja: Mother make me
+// such that I suck more of the Divine"), so a talk + video pair needs cutting.
+var RUN_LABEL_MAX = 120;
+
+// The human name for a run: what the preview heading shows, on one line.
+// Titles come from meta.yaml, so treat them as text a person typed — collapse
+// whitespace, drop control characters, and cut to a length a list can show.
+function burnRunLabel(talkTitle, videoTitle) {
+  var parts = [talkTitle, videoTitle].map(function(part) {
+    return String(part == null ? '' : part)
+      // Whitespace first: a newline is itself a control character, so
+      // stripping controls before collapsing would weld the words around
+      // it together.
+      .replace(/\s+/g, ' ')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\u0000-\u001f\u007f]/g, '')
+      .trim();
+  }).filter(Boolean);
+  var label = parts.join(' — ');
+  if (label.length <= RUN_LABEL_MAX) return label;
+  return label.slice(0, RUN_LABEL_MAX - 1) + '…';
+}
+
+// `opts.sourceRef` is the ref holding the subtitles to burn; the workflow file
+// itself comes from the ref the dispatch names (see burnRef). It is REQUIRED
+// even though the workflow defaults it to main: a caller that forgot would
+// render the published subtitles while showing the reviewer their edits, and
+// the run would look like a success.
+function buildBurnInputs(talkId, videoSlug, ratios, requestId, opts) {
+  var sourceRef = opts && opts.sourceRef;
+  if (typeof sourceRef !== 'string' || !sourceRef) {
+    throw new Error('burn: missing source ref');
+  }
   var inputs = { talk_id: String(talkId), video_slug: String(videoSlug),
-                 request_id: String(requestId) };
+                 request_id: String(requestId), source_ref: sourceRef,
+                 run_label: burnRunLabel(opts.talkTitle, opts.videoTitle) };
   for (var i = 0; i < BURN_RATIO_KEYS.length; i++) {
     var key = BURN_RATIO_KEYS[i];
     var value = ratios ? ratios[key] : undefined;
@@ -507,6 +541,8 @@ if (typeof module !== 'undefined' && module.exports) {
     BURN_RATIO_KEYS: BURN_RATIO_KEYS,
     makeRequestId: makeRequestId,
     buildBurnInputs: buildBurnInputs,
+    burnRunLabel: burnRunLabel,
+    RUN_LABEL_MAX: RUN_LABEL_MAX,
     matchRun: matchRun,
     burnStateKey: burnStateKey,
     FONT_RATIO_MIN: FONT_RATIO_MIN,

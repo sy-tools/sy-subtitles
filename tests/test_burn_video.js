@@ -4,6 +4,7 @@ const {
   BURN_WORKFLOW,
   makeRequestId,
   buildBurnInputs,
+  burnRunLabel,
   matchRun,
   burnStateKey,
 } = require('../site/js/burn_video');
@@ -25,23 +26,82 @@ describe('makeRequestId', () => {
 
 describe('buildBurnInputs', () => {
   const ratios = { font_ratio: 0.0711, padtop_ratio: 0.0741, padbot_ratio: 0.0333 };
+  const opts = { sourceRef: 'main' };
 
   it('sends every input the workflow declares', () => {
-    const inputs = buildBurnInputs('talk', 'slug', ratios, 'req-1');
+    const inputs = buildBurnInputs('talk', 'slug', ratios, 'req-1', opts);
     assert.deepStrictEqual(Object.keys(inputs).sort(), [
       'font_ratio', 'padbot_ratio', 'padtop_ratio', 'request_id',
-      'talk_id', 'video_slug',
+      'run_label', 'source_ref', 'talk_id', 'video_slug',
     ]);
   });
 
   it('stringifies the ratios — workflow_dispatch inputs are strings', () => {
-    const inputs = buildBurnInputs('talk', 'slug', ratios, 'req-1');
+    const inputs = buildBurnInputs('talk', 'slug', ratios, 'req-1', opts);
     assert.strictEqual(typeof inputs.font_ratio, 'string');
     assert.strictEqual(inputs.font_ratio, '0.0711');
   });
 
   it('rejects a missing ratio instead of sending undefined', () => {
-    assert.throws(() => buildBurnInputs('talk', 'slug', { font_ratio: 0.05 }, 'r'));
+    assert.throws(() => buildBurnInputs('talk', 'slug', { font_ratio: 0.05 }, 'r', opts));
+  });
+
+  it('demands the content ref rather than letting the workflow default it', () => {
+    // The workflow defaults source_ref to main so a hand-started run works.
+    // A SPA that forgot to send it would therefore render the PUBLISHED
+    // subtitles while showing the reviewer their edits, and look successful.
+    assert.throws(() => buildBurnInputs('talk', 'slug', ratios, 'req-1'),
+                  /source ref/i);
+    assert.throws(() => buildBurnInputs('talk', 'slug', ratios, 'req-1', { sourceRef: '' }),
+                  /source ref/i);
+  });
+
+  it('passes the content ref through untouched', () => {
+    const inputs = buildBurnInputs('talk', 'slug', ratios, 'req-1',
+                                   { sourceRef: 'sync/me/talk--slug-uk' });
+    assert.strictEqual(inputs.source_ref, 'sync/me/talk--slug-uk');
+  });
+
+  it('sends an empty label rather than omitting the input', () => {
+    // An absent input is not the same as an empty one: the run-name expression
+    // needs a value to fall back from.
+    assert.strictEqual(buildBurnInputs('talk', 'slug', ratios, 'r', opts).run_label, '');
+  });
+});
+
+describe('burnRunLabel', () => {
+  it('reads like the preview heading: talk — video', () => {
+    assert.strictEqual(burnRunLabel('Ganesha Puja', 'Talk, Cabella'),
+                       'Ganesha Puja — Talk, Cabella');
+  });
+
+  it('falls back to whichever part it has', () => {
+    assert.strictEqual(burnRunLabel('Ganesha Puja', ''), 'Ganesha Puja');
+    assert.strictEqual(burnRunLabel('', 'Talk, Cabella'), 'Talk, Cabella');
+    assert.strictEqual(burnRunLabel('', ''), '');
+    assert.strictEqual(burnRunLabel(null, undefined), '');
+  });
+
+  it('collapses whitespace so the run name stays one line', () => {
+    assert.strictEqual(burnRunLabel('  Ganesha\n\tPuja  ', 'Cabella'),
+                       'Ganesha Puja — Cabella');
+  });
+
+  it('drops control characters', () => {
+    // Titles come from meta.yaml, which humans edit. Escaped here on purpose:
+    // a raw control byte in a source file makes grep treat it as binary.
+    assert.strictEqual(burnRunLabel('Gan\u0001esha\u001b', ''), 'Ganesha');
+  });
+
+  it('truncates a long title instead of flooding the run list', () => {
+    const label = burnRunLabel('x'.repeat(300), 'y'.repeat(300));
+    assert.ok(label.length <= 120, 'label is ' + label.length + ' chars');
+    assert.ok(label.endsWith('…'));
+  });
+
+  it('leaves a label that already fits exactly alone', () => {
+    const label = burnRunLabel('x'.repeat(120), '');
+    assert.strictEqual(label, 'x'.repeat(120));
   });
 });
 
