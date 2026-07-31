@@ -187,6 +187,10 @@ const {
   BURN_RENDER_BLOCK,
   computeProgress,
   renderEtaSeconds,
+  burnPhases,
+  burnSegments,
+  burnPhaseKey,
+  burnPhaseNumber,
 } = require('../site/js/burn_video');
 
 // A third arg lets tests express a job that completed WITHOUT success
@@ -361,6 +365,32 @@ describe('computeProgress', () => {
     assert.strictEqual(p.fraction, 0);
   });
 
+  it('startedMs is the earliest weighted step start', () => {
+    const j = {steps: [
+      {name: 'Set up job', status: 'completed', started_at: '2026-07-31T09:59:00Z'},
+      {name: 'Install dependencies', status: 'completed', started_at: '2026-07-31T10:00:00Z'},
+      {name: 'Download video', status: 'in_progress', started_at: '2026-07-31T10:01:00Z'}
+    ]};
+    // Only weighted steps count — 'Set up job' is runner overhead, not our work.
+    assert.equal(computeProgress(j, 0).startedMs, Date.parse('2026-07-31T10:00:00Z'));
+  });
+
+  it('startedMs is null before anything of ours has started', () => {
+    assert.equal(computeProgress(null, 0).startedMs, null);
+  });
+
+  it('startedMs survives the finished-job early return', () => {
+    // The elapsed counter turns into «готово за N хв» on success, so the start
+    // instant has to be there on the done path too.
+    const p = computeProgress(job([
+      {name: 'Install dependencies', status: 'completed',
+       started_at: '2026-07-31T10:00:00Z'},
+      done('Upload result'),
+    ], 'completed'), T0);
+    assert.strictEqual(p.done, true);
+    assert.equal(p.startedMs, Date.parse('2026-07-31T10:00:00Z'));
+  });
+
   it('does not report done when the job failed outside a named step', () => {
     const p = computeProgress(job([], 'completed', 'failure'), T0);
     assert.strictEqual(p.done, false);
@@ -371,5 +401,123 @@ describe('computeProgress', () => {
     const p = computeProgress(job([], 'completed', 'cancelled'), T0);
     assert.strictEqual(p.done, false);
     assert.strictEqual(p.failed, true);
+  });
+});
+
+// The panel draws four phases, not fourteen steps: three short certainties and
+// one long stretch. The mapping from a progress fraction to per-segment
+// geometry is arithmetic, so it lives here and is tested here — index.html only
+// sets classes and widths from it.
+describe('burnPhases', () => {
+  it('the phases partition the weight table exactly', () => {
+    const phases = burnPhases();
+    assert.deepEqual(phases.map(p => p.key), ['prepare', 'fetch', 'render', 'upload']);
+    const sum = phases.reduce((a, p) => a + p.weight, 0);
+    assert.ok(Math.abs(sum - 1) < 1e-9, `phase weights sum to ${sum}`);
+    // Every weighted step belongs to exactly one phase.
+    const owned = phases.reduce((a, p) => a + p.stepNames.length, 0);
+    assert.equal(owned, BURN_STEP_WEIGHTS.length);
+  });
+
+  it('the render phase carries the whole render block', () => {
+    const render = burnPhases().find(p => p.key === 'render');
+    assert.ok(Math.abs(render.weight - 0.70) < 1e-9);
+    assert.equal(render.stepNames.length, 11);          // Start render + 9 gates + Finish render
+    assert.ok(Math.abs(render.start - 0.20) < 1e-9);    // prepare 0.05 + fetch 0.15
+  });
+
+  it('refuses to guess when the weight table stops grouping into four phases', () => {
+    // Four wrong widths drawn confidently would be worse than a loud failure:
+    // the whole point of the form is that it says something true.
+    const saved = BURN_STEP_WEIGHTS.slice();
+    BURN_STEP_WEIGHTS.splice(1, 1);   // drop 'Download video' — no fetch phase left
+    try {
+      assert.throws(() => burnPhases(), /four phases/);
+    } finally {
+      BURN_STEP_WEIGHTS.length = 0;
+      saved.forEach((s) => BURN_STEP_WEIGHTS.push(s));
+    }
+    assert.equal(burnPhases().length, 4, 'the table must be restored for later tests');
+  });
+});
+
+describe('burnSegments', () => {
+  it('a phase fills only with its own credited weight', () => {
+    // Install + Download done, Start render + one gate done: render is 0.115/0.70 full.
+    const p = {fraction: 0.05 + 0.15 + 0.05 + 0.065, label: 'Render 20%',
+               done: false, failed: false, failedStep: ''};
+    const segs = burnSegments(p);
+    assert.equal(segs[0].fill, 1);
+    assert.equal(segs[1].fill, 1);
+    assert.ok(Math.abs(segs[2].fill - 0.115 / 0.70) < 1e-9);
+    assert.equal(segs[3].fill, 0);
+  });
+
+  it('the phase containing the running step is the active one', () => {
+    const segs = burnSegments({fraction: 0.2, label: 'Render 10%',
+                               done: false, failed: false, failedStep: ''});
+    assert.deepEqual(segs.map(s => s.state), ['done', 'done', 'active', 'idle']);
+  });
+
+  it('a failed step paints its own phase and no other', () => {
+    const segs = burnSegments({fraction: 0.2, label: 'Render 10%',
+                               done: false, failed: true, failedStep: 'Render 10%'});
+    assert.deepEqual(segs.map(s => s.state), ['done', 'done', 'failed', 'idle']);
+  });
+
+  it('a failure with no named step marks nothing', () => {
+    // We do not know where it died, so we do not claim a location.
+    const segs = burnSegments({fraction: 0, label: '', done: false,
+                               failed: true, failedStep: ''});
+    assert.ok(segs.every(s => s.state !== 'failed'));
+  });
+
+  it('a finished run shows every phase complete', () => {
+    const segs = burnSegments({fraction: 1, label: '', done: true,
+                               failed: false, failedStep: ''});
+    assert.ok(segs.every(s => s.fill === 1 && s.state === 'done'));
+  });
+
+  it('an unknown label leaves no phase active', () => {
+    // "Post Run actions/checkout" and friends are not ours to display.
+    const segs = burnSegments({fraction: 1, label: 'Post Run actions/checkout',
+                               done: false, failed: false, failedStep: ''});
+    assert.ok(segs.every(s => s.state !== 'active'));
+  });
+
+  it('carries the geometry the track needs, in phase order', () => {
+    // The driver sets flex-grow from these weights, so a segment that forgot
+    // its weight would silently draw four equal widths.
+    const segs = burnSegments({fraction: 0, label: '', done: false,
+                               failed: false, failedStep: ''});
+    assert.deepEqual(segs.map(s => s.key), ['prepare', 'fetch', 'render', 'upload']);
+    assert.deepEqual(segs.map(s => s.weight), burnPhases().map(p => p.weight));
+    assert.deepEqual(segs.map(s => s.start), burnPhases().map(p => p.start));
+  });
+});
+
+describe('burnPhaseKey', () => {
+  it('names the phase a workflow step belongs to', () => {
+    assert.equal(burnPhaseKey('Install dependencies'), 'prepare');
+    assert.equal(burnPhaseKey('Download video'), 'fetch');
+    assert.equal(burnPhaseKey('Start render'), 'render');
+    assert.equal(burnPhaseKey('Render 90%'), 'render');
+    assert.equal(burnPhaseKey('Finish render'), 'render');
+    assert.equal(burnPhaseKey('Upload result'), 'upload');
+  });
+
+  it('is null for steps that are not ours', () => {
+    assert.equal(burnPhaseKey('Set up job'), null);
+    assert.equal(burnPhaseKey(''), null);
+    assert.equal(burnPhaseKey(undefined), null);
+  });
+});
+
+describe('burnPhaseNumber', () => {
+  it('burnPhaseNumber is the 1-based position of the active phase', () => {
+    assert.equal(burnPhaseNumber({label: 'Download video'}), 2);
+    assert.equal(burnPhaseNumber({label: 'Render 40%'}), 3);
+    assert.equal(burnPhaseNumber({label: 'Upload result'}), 4);
+    assert.equal(burnPhaseNumber({label: ''}), null);
   });
 });

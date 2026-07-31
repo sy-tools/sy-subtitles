@@ -144,6 +144,108 @@ function burnStepIndex(name) {
   return -1;
 }
 
+// ------------------------------------------------------------------
+// Four phases, not fourteen steps.
+//
+// Fourteen uniform ticks say nothing true about the wait: three of the steps
+// are short certainties and one is a twenty-minute stretch. The panel draws one
+// segment per phase, width proportional to phase weight, so the form itself
+// says "three quick things, then one patient one" — and the English Actions
+// step names never reach the Ukrainian UI, because a phase has its own name.
+// ------------------------------------------------------------------
+var BURN_PHASE_PREPARE = 'Install dependencies';
+var BURN_PHASE_FETCH = 'Download video';
+
+// Derived from BURN_STEP_WEIGHTS on every call, never hardcoded and never
+// cached: the weight table is the single source of truth, and a stale cache
+// would let the drawn widths drift away from the workflow.
+function burnPhases() {
+  var prepare = burnStepIndex(BURN_PHASE_PREPARE);
+  var fetch = burnStepIndex(BURN_PHASE_FETCH);
+  var first = burnStepIndex(BURN_RENDER_BLOCK.firstStep);
+  var last = burnStepIndex(BURN_RENDER_BLOCK.lastStep);
+  // Four confidently-drawn wrong widths would be worse than a crash: throw so
+  // a future weight-table change is a loud failure, not a quiet lie.
+  if (prepare !== 0 || fetch !== 1 || first !== 2 || last <= first
+      || last >= BURN_STEP_WEIGHTS.length - 1) {
+    throw new Error('burn: BURN_STEP_WEIGHTS no longer groups into four phases');
+  }
+  var groups = [
+    { key: 'prepare', from: prepare, to: fetch },
+    { key: 'fetch', from: fetch, to: first },
+    { key: 'render', from: first, to: last + 1 },
+    { key: 'upload', from: last + 1, to: BURN_STEP_WEIGHTS.length }
+  ];
+  var phases = [];
+  var start = 0;
+  for (var g = 0; g < groups.length; g++) {
+    var steps = BURN_STEP_WEIGHTS.slice(groups[g].from, groups[g].to);
+    var weight = 0;
+    var names = [];
+    for (var s = 0; s < steps.length; s++) {
+      weight += steps[s].weight;
+      names.push(steps[s].name);
+    }
+    phases.push({ key: groups[g].key, weight: weight, start: start,
+                  stepNames: names });
+    start += weight;
+  }
+  return phases;
+}
+
+// Which phase a workflow step belongs to, or null for steps that are not ours
+// ('Set up job', the trailing 'Post ...' steps). null is what stops the panel
+// from claiming a phase is running when nothing of ours is.
+function burnPhaseKey(stepName) {
+  if (!stepName) return null;
+  var phases = burnPhases();
+  for (var i = 0; i < phases.length; i++) {
+    if (phases[i].stepNames.indexOf(stepName) > -1) return phases[i].key;
+  }
+  return null;
+}
+
+// 1-based position of the phase whose step is running — the «Крок 3 з 4»
+// landmark. null when no phase of ours is running.
+function burnPhaseNumber(progress) {
+  var key = burnPhaseKey(progress && progress.label);
+  if (!key) return null;
+  var phases = burnPhases();
+  for (var i = 0; i < phases.length; i++) {
+    if (phases[i].key === key) return i + 1;
+  }
+  return null;
+}
+
+// Per-segment geometry and state for one poll's worth of progress.
+//
+// A phase fills only with weight credited to its OWN steps, so the render
+// segment advances in ten crisp gate increments while the segments around it
+// stay put. Exactly one phase can be 'active' and at most one 'failed'.
+function burnSegments(progress) {
+  var p = progress || {};
+  var fraction = Number(p.fraction) || 0;
+  var activeKey = (p.done || p.failed) ? null : burnPhaseKey(p.label);
+  // An empty failedStep means the job died somewhere we cannot name (before any
+  // named step, say). We do not know where, so we mark nothing.
+  var failedKey = (p.failed && p.failedStep) ? burnPhaseKey(p.failedStep) : null;
+  return burnPhases().map(function(phase) {
+    var full = phase.start + phase.weight;
+    // The epsilon is float hygiene, not slack: summed weights land a bit shy
+    // of their own total, and a last segment stuck at 99.99% would read as
+    // "almost done forever".
+    var fill = (p.done || fraction >= full - 1e-9)
+      ? 1
+      : clampNum(0, (fraction - phase.start) / phase.weight, 1);
+    var state = 'idle';
+    if (phase.key === failedKey) state = 'failed';
+    else if (fill >= 1) state = 'done';
+    else if (phase.key === activeKey) state = 'active';
+    return { key: phase.key, weight: phase.weight, start: phase.start,
+             fill: fill, state: state };
+  });
+}
+
 // Seconds left in the render, extrapolated from the rate actually observed:
 // `renderFraction` of the block took `elapsedSeconds`, so the rest takes
 // proportionally longer. This is a MEASURED rate, which is why no calibrated
@@ -170,11 +272,24 @@ function renderEtaSeconds(renderFraction, elapsedSeconds) {
 // position.
 function computeProgress(job, nowMs) {
   var result = { fraction: 0, label: '', done: false, failed: false,
-                 failedStep: '', renderFraction: null, renderStartedMs: null };
+                 failedStep: '', renderFraction: null, renderStartedMs: null,
+                 startedMs: null };
   var steps = (job && job.steps) || [];
   var byName = {};
   for (var i = 0; i < steps.length; i++) {
     if (steps[i] && steps[i].name) byName[steps[i].name] = steps[i];
+  }
+
+  // When OUR work began, as the API reports it — not when this browser tab
+  // dispatched, which a reload or a second device would get wrong. Runner
+  // overhead ('Set up job') is excluded: it is not part of the wait we promised.
+  for (var b = 0; b < BURN_STEP_WEIGHTS.length; b++) {
+    var began = byName[BURN_STEP_WEIGHTS[b].name];
+    // Date.parse('') is NaN, which || turns into null.
+    var beganMs = began ? (Date.parse(began.started_at || '') || null) : null;
+    if (beganMs !== null && (result.startedMs === null || beganMs < result.startedMs)) {
+      result.startedMs = beganMs;
+    }
   }
 
   var firstRender = burnStepIndex(BURN_RENDER_BLOCK.firstStep);
@@ -264,6 +379,10 @@ if (typeof module !== 'undefined' && module.exports) {
     measureBurnRatios: measureBurnRatios,
     BURN_STEP_WEIGHTS: BURN_STEP_WEIGHTS,
     BURN_RENDER_BLOCK: BURN_RENDER_BLOCK,
+    burnPhases: burnPhases,
+    burnPhaseKey: burnPhaseKey,
+    burnPhaseNumber: burnPhaseNumber,
+    burnSegments: burnSegments,
     renderEtaSeconds: renderEtaSeconds,
     computeProgress: computeProgress,
   };
