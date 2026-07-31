@@ -380,8 +380,8 @@ describe('computeProgress', () => {
   });
 
   it('startedMs survives the finished-job early return', () => {
-    // The elapsed counter turns into «готово за N хв» on success, so the start
-    // instant has to be there on the done path too.
+    // The elapsed counter turns into the burn.done_in line on success, so the
+    // start instant has to be there on the done path too.
     const p = computeProgress(job([
       {name: 'Install dependencies', status: 'completed',
        started_at: '2026-07-31T10:00:00Z'},
@@ -483,6 +483,29 @@ describe('burnSegments', () => {
     const segs = burnSegments({fraction: 1, label: 'Post Run actions/checkout',
                                done: false, failed: false, failedStep: ''});
     assert.ok(segs.every(s => s.state !== 'active'));
+  });
+
+  it('breathes the first phase through the run-discovery window', () => {
+    // Dispatched, but no step of ours is named yet, and that lasts up to a
+    // minute. An inert track reads as broken, so the phase about to run is the
+    // active one. This is a model rule, not a driver touch-up: it is derived
+    // from the same facts as every other state.
+    const segs = burnSegments({fraction: 0, label: '', done: false,
+                               failed: false, failedStep: ''});
+    assert.deepEqual(segs.map(s => s.state), ['active', 'idle', 'idle', 'idle']);
+  });
+
+  it('does not breathe the first phase once any phase has earned something', () => {
+    const segs = burnSegments({fraction: 0.05, label: 'Download video',
+                               done: false, failed: false, failedStep: ''});
+    assert.deepEqual(segs.map(s => s.state), ['done', 'active', 'idle', 'idle']);
+  });
+
+  it('does not breathe the first phase on a terminal state', () => {
+    const failed = burnSegments({fraction: 0, label: '', done: false,
+                                 failed: true, failedStep: ''});
+    assert.ok(failed.every(s => s.state === 'idle'),
+      'a failure we cannot locate must not breathe an arbitrary phase');
   });
 
   it('carries the geometry the track needs, in phase order', () => {

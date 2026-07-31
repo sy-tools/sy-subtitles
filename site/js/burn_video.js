@@ -205,8 +205,9 @@ function burnPhaseKey(stepName) {
   return null;
 }
 
-// 1-based position of the phase whose step is running — the «Крок 3 з 4»
-// landmark. null when no phase of ours is running.
+// 1-based position of the phase whose step is running — the "step 3 of 4"
+// landmark the status line is built around. null when no phase of ours is
+// running.
 function burnPhaseNumber(progress) {
   var key = burnPhaseKey(progress && progress.label);
   if (!key) return null;
@@ -229,11 +230,12 @@ function burnSegments(progress) {
   // An empty failedStep means the job died somewhere we cannot name (before any
   // named step, say). We do not know where, so we mark nothing.
   var failedKey = (p.failed && p.failedStep) ? burnPhaseKey(p.failedStep) : null;
-  return burnPhases().map(function(phase) {
+  var segments = burnPhases().map(function(phase) {
     var full = phase.start + phase.weight;
-    // The epsilon is float hygiene, not slack: summed weights land a bit shy
-    // of their own total, and a last segment stuck at 99.99% would read as
-    // "almost done forever".
+    // The epsilon is float hygiene, not slack. computeProgress clamps the
+    // all-steps-complete sum to 0.9999999999999997, and at that instant `label`
+    // is still 'Upload result' — so without it the last segment would breathe
+    // as 'active' over a visually full fill instead of settling to 'done'.
     var fill = (p.done || fraction >= full - 1e-9)
       ? 1
       : clampNum(0, (fraction - phase.start) / phase.weight, 1);
@@ -244,6 +246,15 @@ function burnSegments(progress) {
     return { key: phase.key, weight: phase.weight, start: phase.start,
              fill: fill, state: state };
   });
+  // The run-discovery window: dispatched, but the API names no step of ours yet,
+  // and that lasts up to a minute. An inert track reads as broken, so the phase
+  // about to run becomes the active one. Terminal states are excluded — a
+  // failure we cannot locate must not breathe an arbitrary phase.
+  var idle = !p.done && !p.failed && segments.every(function(s) {
+    return s.state === 'idle';
+  });
+  if (idle) segments[0].state = 'active';
+  return segments;
 }
 
 // Seconds left in the render, extrapolated from the rate actually observed:
