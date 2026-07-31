@@ -36,6 +36,12 @@ _find_in_transcript = find_in_text
 _delete_from_transcript = delete_from_text
 
 
+def _joined(slice_: list[str]) -> str:
+    """Block texts as one whitespace-normalised string, for comparing content
+    independently of how it is split into blocks."""
+    return " ".join(" ".join(t.split()) for t in slice_)
+
+
 def _match_blocks_by_similarity(old_slice: list[str], new_slice: list[str]) -> list[int | None]:
     """Pair each old block with the most similar new block (ratio > 0.5).
 
@@ -112,6 +118,17 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
             # a real insertion and errors out.
             old_slice = old_texts[i1:i2]
             new_slice = new_texts[j1:j2]
+
+            # Pure re-blocking: the same words redistributed over a different
+            # number of blocks (the optimizer's merge guard keeps sentences
+            # apart that used to share a subtitle). Nothing was edited, so the
+            # transcript needs no change — and the cursor still has to walk
+            # past this text for later find()s to land correctly.
+            if _joined(old_slice) == _joined(new_slice):
+                pos = find_in_text_lenient(text, old_slice[0], cursor)
+                if pos != -1:
+                    cursor = pos + len(_joined(old_slice))
+                continue
             matches = (
                 list(range(i2 - i1)) if (i2 - i1) == (j2 - j1) else _match_blocks_by_similarity(old_slice, new_slice)
             )

@@ -679,3 +679,46 @@ class TestMain:
         with pytest.raises(SystemExit, match="1"):
             main()
         assert "FAIL" in capsys.readouterr().err
+
+
+class TestOmitContext:
+    """Declared omissions come from the TALK, not from wherever a transcript
+    copy happens to sit.
+
+    sync_pr stages the base transcript in a temp dir to build its
+    effective-old baseline. talk_omit_phrases() looks for meta.yaml next to
+    the file it is given, so that copy silently loads with no omissions while
+    the working transcript loads with them — two different readings of
+    identical bytes, reported as a changed paragraph that can never be found
+    in the SRT (2000-07-23 Guru Puja, run 30655645861).
+    """
+
+    def _talk_with_omit(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        (video / "uk.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nПерше речення.\n\n2\n00:00:05,100 --> 00:00:10,000\nДруге речення.\n",
+            encoding="utf-8",
+        )
+        (talk / "meta.yaml").write_text('title: Test\nsubtitle_omit:\n- "(легкий сміх)"\n', encoding="utf-8")
+        (talk / "transcript_uk.txt").write_text(
+            HEADER + "Перше речення. (легкий сміх) Друге речення.\n", encoding="utf-8"
+        )
+        return talk
+
+    def test_old_transcript_staged_outside_the_talk_dir(self, tmp_path):
+        talk = self._talk_with_omit(tmp_path)
+        staged = tmp_path / "staging" / "effective_old.txt"
+        staged.parent.mkdir()
+        staged.write_text((talk / "transcript_uk.txt").read_text(encoding="utf-8"), encoding="utf-8")
+
+        result = sync_transcript(
+            talk_dir=str(talk),
+            video_slug="Video",
+            old_transcript=str(staged),
+            new_transcript=str(talk / "transcript_uk.txt"),
+        )
+
+        assert "error" not in result, result.get("error")
+        assert result["changed"] == 0
