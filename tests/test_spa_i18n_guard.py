@@ -61,6 +61,12 @@ ALLOWLIST = {
     "reveal.title = t('gate.reveal');",
     "reveal.setAttribute('aria-label', show ? t('gate.hide') : t('gate.reveal'));",
     "reveal.title = show ? t('gate.hide') : t('gate.reveal');",
+    # The render button's tooltip names the previewed subtitle language ({lang}
+    # is substituted in), so it cannot be a plain data-i18n-title.
+    # translatePage() calls updateBurnButton(), which re-composes it in the
+    # current language — pinned by tests/test_spa_cache.js
+    # ("re-composes the render button's tooltip on a language toggle").
+    "btn.title = mismatch ? burnWrongLangText() : '';",
 }
 
 

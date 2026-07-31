@@ -117,11 +117,18 @@ function measureBurnRatios(geometry) {
 // Weights per workflow step. Names must match burn-subtitles.yml exactly —
 // tests/test_burn_workflow_steps.py pins the two files against each other.
 //
-// The nine "Render NN%" entries and "Finish render" are not work in their own
-// right: each is a step that blocks until the detached ffmpeg encode passes
+// The nineteen "Render NN%" entries and "Finish render" are not work in their
+// own right: each is a step that blocks until the detached ffmpeg encode passes
 // that percentage (tools/render_gate.py). A step COMPLETING is the only live,
 // CORS-clean signal a browser has into a running job, and it is one the SPA
 // already polls — so the render percentage below is ffmpeg's own, not a guess.
+//
+// The grid is 5%, not 10%: a real run measured 33.0 Mpixel/s, i.e. 4.29x
+// realtime at the 640x480 the corpus's longest talks resolve to, so its
+// 213-minute talk encodes in ~50 minutes. At ten gates that is ~5.5 minutes of
+// a motionless bar per tick; at twenty it is ~2.75, and a typical 60-minute
+// talk ticks about every 45 s. Each gate step costs about a second of runner
+// overhead, which is nothing against an encode of that length.
 //
 // Written out literally on purpose: a generated `Render NN%` loop would be
 // clever and would hide a typo'd name behind matching-but-wrong output.
@@ -129,16 +136,26 @@ var BURN_STEP_WEIGHTS = [
   { name: 'Install dependencies', weight: 0.05 },
   { name: 'Download video', weight: 0.15 },
   { name: 'Start render', weight: 0.05 },
-  { name: 'Render 10%', weight: 0.065 },
-  { name: 'Render 20%', weight: 0.065 },
-  { name: 'Render 30%', weight: 0.065 },
-  { name: 'Render 40%', weight: 0.065 },
-  { name: 'Render 50%', weight: 0.065 },
-  { name: 'Render 60%', weight: 0.065 },
-  { name: 'Render 70%', weight: 0.065 },
-  { name: 'Render 80%', weight: 0.065 },
-  { name: 'Render 90%', weight: 0.065 },
-  { name: 'Finish render', weight: 0.065 },
+  { name: 'Render 5%', weight: 0.0325 },
+  { name: 'Render 10%', weight: 0.0325 },
+  { name: 'Render 15%', weight: 0.0325 },
+  { name: 'Render 20%', weight: 0.0325 },
+  { name: 'Render 25%', weight: 0.0325 },
+  { name: 'Render 30%', weight: 0.0325 },
+  { name: 'Render 35%', weight: 0.0325 },
+  { name: 'Render 40%', weight: 0.0325 },
+  { name: 'Render 45%', weight: 0.0325 },
+  { name: 'Render 50%', weight: 0.0325 },
+  { name: 'Render 55%', weight: 0.0325 },
+  { name: 'Render 60%', weight: 0.0325 },
+  { name: 'Render 65%', weight: 0.0325 },
+  { name: 'Render 70%', weight: 0.0325 },
+  { name: 'Render 75%', weight: 0.0325 },
+  { name: 'Render 80%', weight: 0.0325 },
+  { name: 'Render 85%', weight: 0.0325 },
+  { name: 'Render 90%', weight: 0.0325 },
+  { name: 'Render 95%', weight: 0.0325 },
+  { name: 'Finish render', weight: 0.0325 },
   { name: 'Upload result', weight: 0.10 }
 ];
 

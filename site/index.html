@@ -1274,6 +1274,9 @@ function translatePage() {
   // The burn panel's status line is composed at render time ("done in 21 min"),
   // so no data-i18n attribute above can reach it — it has to be drawn again.
   retranslateBurnPanel();
+  // Same reason for the render button's tooltip: it names the previewed
+  // subtitle language, so it is composed text, not a fixed key.
+  updateBurnButton();
 }
 
 var SyncPlayer = (function() {

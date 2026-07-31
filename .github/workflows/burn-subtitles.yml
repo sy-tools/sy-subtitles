@@ -131,8 +131,8 @@ jobs:
           test -s /tmp/burn/source.mp4 \
             || { echo "::error::downloaded file is empty"; exit 1; }
 
-      # The render is one detached ffmpeg run, followed by ten cheap steps that
-      # each block until it passes a threshold. Rationale: a step *completing*
+      # The render is one detached ffmpeg run, followed by twenty cheap steps
+      # that each block until it passes a threshold. Rationale: a step *completing*
       # is the only live, CORS-clean progress channel a browser has into a
       # running job (the log blob 404s mid-run, annotations appear only at
       # finalisation), and the SPA already polls the job's step list. See the
@@ -195,13 +195,36 @@ jobs:
             --exit-file /tmp/burn/exit_code \
             --log-file /tmp/burn/render.log
 
-      # Nine gates, written out literally. A loop or a matrix cannot produce
-      # nine *named* steps, and the names are the entire mechanism: the SPA
-      # credits each completed name a fixed slice of the bar.
+      # Nineteen gates, written out literally. A loop or a matrix cannot
+      # produce nineteen *named* steps, and the names are the entire mechanism:
+      # the SPA credits each completed name a fixed slice of the bar.
+      #
+      # 5% apart, not 10%: measured on a real run the corpus's longest talk
+      # (213 min, 640x480) encodes in ~50 min, so ten gates would leave the bar
+      # motionless for ~5.5 min at a time. Nineteen halves that; the extra
+      # runner overhead is about a second per step.
+      - name: Render 5%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 5 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
       - name: Render 10%
         run: |
           set -euo pipefail
           python -m tools.render_gate --percent 10 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 15%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 15 \
             --progress-file /tmp/burn/progress.txt \
             --duration-file /tmp/burn/duration_s.txt \
             --exit-file /tmp/burn/exit_code \
@@ -216,10 +239,28 @@ jobs:
             --exit-file /tmp/burn/exit_code \
             --log-file /tmp/burn/render.log
 
+      - name: Render 25%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 25 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
       - name: Render 30%
         run: |
           set -euo pipefail
           python -m tools.render_gate --percent 30 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 35%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 35 \
             --progress-file /tmp/burn/progress.txt \
             --duration-file /tmp/burn/duration_s.txt \
             --exit-file /tmp/burn/exit_code \
@@ -234,10 +275,28 @@ jobs:
             --exit-file /tmp/burn/exit_code \
             --log-file /tmp/burn/render.log
 
+      - name: Render 45%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 45 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
       - name: Render 50%
         run: |
           set -euo pipefail
           python -m tools.render_gate --percent 50 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 55%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 55 \
             --progress-file /tmp/burn/progress.txt \
             --duration-file /tmp/burn/duration_s.txt \
             --exit-file /tmp/burn/exit_code \
@@ -252,10 +311,28 @@ jobs:
             --exit-file /tmp/burn/exit_code \
             --log-file /tmp/burn/render.log
 
+      - name: Render 65%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 65 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
       - name: Render 70%
         run: |
           set -euo pipefail
           python -m tools.render_gate --percent 70 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 75%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 75 \
             --progress-file /tmp/burn/progress.txt \
             --duration-file /tmp/burn/duration_s.txt \
             --exit-file /tmp/burn/exit_code \
@@ -270,10 +347,28 @@ jobs:
             --exit-file /tmp/burn/exit_code \
             --log-file /tmp/burn/render.log
 
+      - name: Render 85%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 85 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
       - name: Render 90%
         run: |
           set -euo pipefail
           python -m tools.render_gate --percent 90 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 95%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 95 \
             --progress-file /tmp/burn/progress.txt \
             --duration-file /tmp/burn/duration_s.txt \
             --exit-file /tmp/burn/exit_code \

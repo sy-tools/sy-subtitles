@@ -3458,6 +3458,16 @@ describe('burn video wiring', () => {
       'no bare confirm() may survive in the burn driver');
   });
 
+  it("re-composes the render button's tooltip on a language toggle", () => {
+    // The tooltip substitutes the previewed language into its sentence, so no
+    // data-i18n-title can carry it; translatePage() has to re-run the composer,
+    // exactly as it already does for the panel's composed status line.
+    const fn = html.slice(html.indexOf('function translatePage()'),
+                          html.indexOf('var SyncPlayer'));
+    assert.ok(fn.includes('updateBurnButton()'),
+      'without this the tooltip sticks in the language it was written in');
+  });
+
   it('refreshes the render button when the subtitle language changes', () => {
     // The refusal is keyed on previewState.srtLang, which switchSubLang mutates
     // — without this the button would stay disabled after switching back to UK.
@@ -4081,9 +4091,15 @@ describe('burn video driver behaviour', () => {
     const env = makeHarness();
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
     assert.strictEqual(segs(env).length, 4, 'four phases, four segments');
-    assert.deepStrictEqual(segs(env).map(function (s) { return s.style.flexGrow; }),
-      ['5', '15', '70', '10'],
-      'flex-grow must come from the weight table — equal quarters would lie');
+    // Compared as numbers, not as spellings: summing twenty 0.0325 gates lands
+    // on 69.99999999999997, which is the same ratio to flexbox and the same
+    // 70% of the bar. The literals are still written out — equal quarters, or a
+    // render block that quietly stopped being 0.70, must fail here.
+    segs(env).map(function (s) { return parseFloat(s.style.flexGrow); })
+      .forEach(function (grow, i) {
+        assert.ok(Math.abs(grow - [5, 15, 70, 10][i]) < 1e-9,
+          'flex-grow must come from the weight table, got ' + grow + ' at ' + i);
+      });
     assert.ok(segs(env).every(function (s) { return s.getAttribute('aria-hidden') === 'true'; }),
       'the segments are decoration: the value lives on the track (one control)');
   });
@@ -4101,8 +4117,8 @@ describe('burn video driver behaviour', () => {
   it('fills a phase only with its own credited weight', () => {
     const env = makeHarness();
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
-      { fraction: 0.05 + 0.15 + 0.05 + 0.065, label: 'Render 20%' }));
-    assert.deepStrictEqual(widths(env), ['100%', '100%', '16%', '0%']);
+      { fraction: 0.05 + 0.15 + 0.05 + 0.0325, label: 'Render 20%' }));
+    assert.deepStrictEqual(widths(env), ['100%', '100%', '12%', '0%']);
     assert.match(classes(env)[2], /burn-seg--active/,
       'the phase whose step is running is the active one');
   });
@@ -4136,7 +4152,7 @@ describe('burn video driver behaviour', () => {
     // extent and claims nothing more.
     const env = makeHarness();
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
-      { fraction: 0.05 + 0.15 + 0.05 + 0.065, label: 'Render 20%' }));
+      { fraction: 0.05 + 0.15 + 0.05 + 0.0325, label: 'Render 20%' }));
     assert.match(classes(env)[2], /burn-seg--active/, 'precondition: it is running');
     assert.ok(!/burn-seg--empty/.test(classes(env)[2]),
       'a phase with credited fill must not tint the part it has not earned');

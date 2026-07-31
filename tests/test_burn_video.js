@@ -251,8 +251,10 @@ describe('BURN_STEP_WEIGHTS', () => {
     // spelled out here too so a rename shows up in the SPA suite as well.
     assert.deepStrictEqual(BURN_STEP_WEIGHTS.map((s) => s.name), [
       'Install dependencies', 'Download video', 'Start render',
-      'Render 10%', 'Render 20%', 'Render 30%', 'Render 40%', 'Render 50%',
-      'Render 60%', 'Render 70%', 'Render 80%', 'Render 90%',
+      'Render 5%', 'Render 10%', 'Render 15%', 'Render 20%', 'Render 25%',
+      'Render 30%', 'Render 35%', 'Render 40%', 'Render 45%', 'Render 50%',
+      'Render 55%', 'Render 60%', 'Render 65%', 'Render 70%', 'Render 75%',
+      'Render 80%', 'Render 85%', 'Render 90%', 'Render 95%',
       'Finish render', 'Upload result',
     ]);
   });
@@ -318,12 +320,12 @@ describe('computeProgress', () => {
       {name: 'Render 20%', status: 'in_progress'}
     ]};
     const p = computeProgress(j, 0);
-    assert.ok(Math.abs(p.fraction - (0.05 + 0.15 + 0.05 + 0.065)) < 1e-9);
+    assert.ok(Math.abs(p.fraction - (0.05 + 0.15 + 0.05 + 0.0325)) < 1e-9);
     assert.equal(p.estimated, undefined);   // the fraction is a fact now
   });
 
   it('the render share is the position inside the render block', () => {
-    // Start render + one gate done = 0.05 + 0.065 of the block's 0.70
+    // Start render + one gate done = 0.05 + 0.0325 of the block's 0.70
     const j = {steps: [
       {name: 'Install dependencies', status: 'completed'},
       {name: 'Download video', status: 'completed'},
@@ -332,7 +334,7 @@ describe('computeProgress', () => {
       {name: 'Render 20%', status: 'in_progress'}
     ]};
     const p = computeProgress(j, Date.parse('2026-07-31T10:10:00Z'));
-    assert.ok(Math.abs(p.renderFraction - (0.05 + 0.065) / 0.70) < 1e-9);
+    assert.ok(Math.abs(p.renderFraction - (0.05 + 0.0325) / 0.70) < 1e-9);
     assert.equal(p.renderStartedMs, Date.parse('2026-07-31T10:00:00Z'));
   });
 
@@ -479,7 +481,7 @@ describe('burnPhases', () => {
   it('the render phase carries the whole render block', () => {
     const render = burnPhases().find(p => p.key === 'render');
     assert.ok(Math.abs(render.weight - 0.70) < 1e-9);
-    assert.equal(render.stepNames.length, 11);          // Start render + 9 gates + Finish render
+    assert.equal(render.stepNames.length, 21);          // Start render + 19 gates + Finish render
     assert.ok(Math.abs(render.start - 0.20) < 1e-9);    // prepare 0.05 + fetch 0.15
   });
 
@@ -500,13 +502,13 @@ describe('burnPhases', () => {
 
 describe('burnSegments', () => {
   it('a phase fills only with its own credited weight', () => {
-    // Install + Download done, Start render + one gate done: render is 0.115/0.70 full.
-    const p = {fraction: 0.05 + 0.15 + 0.05 + 0.065, label: 'Render 20%',
+    // Install + Download done, Start render + one gate done: render is 0.0825/0.70 full.
+    const p = {fraction: 0.05 + 0.15 + 0.05 + 0.0325, label: 'Render 20%',
                done: false, failed: false, failedStep: ''};
     const segs = burnSegments(p);
     assert.equal(segs[0].fill, 1);
     assert.equal(segs[1].fill, 1);
-    assert.ok(Math.abs(segs[2].fill - 0.115 / 0.70) < 1e-9);
+    assert.ok(Math.abs(segs[2].fill - 0.0825 / 0.70) < 1e-9);
     assert.equal(segs[3].fill, 0);
   });
 
