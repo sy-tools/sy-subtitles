@@ -306,7 +306,12 @@ function isRunnerStep(stepName) {
   return stepName === 'Set up job'
     || stepName === 'Complete job'
     || /^Post /.test(stepName)
-    || /^Run actions\//.test(stepName);
+    // GitHub titles an UNNAMED step after its command: "Run actions/checkout@v7",
+    // "Run set -euo pipefail". The workflow uses unnamed steps deliberately, so
+    // that nothing named sits between the steps the progress bar is built from —
+    // which makes every "Run ..." title ours-but-uncredited rather than evidence
+    // of a foreign workflow. A version skew still shows up as a NAMED step.
+    || /^Run /.test(stepName);
 }
 
 function burnPhaseKey(stepName) {

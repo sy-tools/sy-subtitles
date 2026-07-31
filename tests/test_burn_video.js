@@ -590,6 +590,30 @@ describe('computeProgress', () => {
     assert.strictEqual(p.unknownStep, '');
   });
 
+  it('ignores our own unnamed steps, which GitHub titles after the command', () => {
+    // An unnamed `run:` step shows up as "Run <first line>", and the workflow
+    // uses unnamed steps on purpose (the cache, the content-ref guard) so that
+    // nothing named sits between the steps the bar is built from. Reporting one
+    // as unrecognised would flash "this run is not from this version" over a
+    // perfectly healthy render — the poll interval is 5s, the step lasts ~1s,
+    // so it lands there sooner or later.
+    for (const name of ['Run set -euo pipefail', 'Run actions/checkout@v7']) {
+      const p = computeProgress(job([
+        done('Install dependencies'), { name: name, status: 'in_progress' },
+      ]), T0);
+      assert.strictEqual(p.unknownStep, '', name);
+    }
+  });
+
+  it('still reports a NAMED step it does not know', () => {
+    // The diagnostic must survive the rule above: a version skew shows up as a
+    // named step (main's stub had one called 'Burn subtitles').
+    const p = computeProgress(job([
+      done('Install dependencies'), { name: 'Burn subtitles', status: 'in_progress' },
+    ]), T0);
+    assert.strictEqual(p.unknownStep, 'Burn subtitles');
+  });
+
   it('does not report done when the job was cancelled outside a named step', () => {
     const p = computeProgress(job([], 'completed', 'cancelled'), T0);
     assert.strictEqual(p.done, false);
