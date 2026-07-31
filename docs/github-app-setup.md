@@ -17,7 +17,13 @@ Org **sy-tools** → Settings → Developer settings → GitHub Apps → New Git
 - **Expire user authorization tokens**: OFF (the SPA has no refresh logic)
 - **Request user authorization (OAuth) during installation**: ON
 - **Webhook**: Inactive (uncheck Active)
-- **Repository permissions**: Issues RW, Contents RW, Pull requests RW
+- **Repository permissions**: Issues RW, Contents RW, Pull requests RW, Actions RW
+  `Actions` is what lets the preview view render a video with burned-in
+  subtitles: dispatching `burn-subtitles.yml`, polling run progress, and
+  downloading the resulting artifact all go through the Actions API. Without it
+  the button returns 403. After changing permissions, accept the organization's
+  permission-update request; users may need to sign in again for their token to
+  carry the new scope.
 - **Where can this app be installed**: Only on this account
 
 After creation: note the **Client ID** (`Iv1.…`), generate a **client secret**.
