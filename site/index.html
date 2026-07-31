@@ -3691,6 +3691,12 @@ SPA.deleteEdit = function(idx) {
 };
 
 function updateClearBtn() {
+  // Every path that changes previewState.edits ends here (add, typing, undo,
+  // clear-all, remote merge) — and those edits are burnEditsSignature()'s
+  // input, so the export item is repainted here too: a finished render must
+  // stop being offered the moment the subtitles stop matching it. Marker-only
+  // changes take the call as well; it is idempotent and cheap.
+  updateExportUi();
   var btn = document.getElementById('btn-clear-all');
   if (!btn) return;
   var n = 0;
@@ -4570,12 +4576,19 @@ function saveBlob(blob, name) {
 function resumeBurnWatch(talkId, videoSlug) {
   stopBurnTimer();
   // Every early return below means "nothing is being followed here", so reset
-  // first and only re-arm once a run is actually picked back up.
-  setBurnFollowing(false);
+  // first and only re-arm once a run is actually picked back up. The state —
+  // the previous video's run, result, run link and error line included — is
+  // cleared BEFORE setBurnFollowing() repaints: painting first left video A's
+  // "Download" face (and its error) on a video B that never rendered, because
+  // the early returns repaint nothing after the clear.
   burnWatch = null;
   burnLastProgress = null;
   setVideoItemTint('');
+  setBurnRunLink('');
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = ''; err.hidden = true; }
   closeExportMenu();
+  setBurnFollowing(false);
   var raw = null;
   try { raw = localStorage.getItem(burnStateKey(talkId, videoSlug)); } catch (e) {}
   if (!raw) return;
@@ -5886,6 +5899,13 @@ function renderSyncStatus(status, info) {
   // The edit chip is suppressed while preview marker mode is active (the marker
   // chip takes over) and whenever there is no engine attached.
   paintSyncChip('sync', (!editSync || previewMarkerModeActive()) ? 'idle' : status);
+  // The export control reads the same engine (burnSourceRef), and every status
+  // transition, engine attach and teardown funnels through this paint — so the
+  // export writer runs here too. Without it the download button, disabled with
+  // "wait for the sync" while edits were pushing, stayed dead after the cloud
+  // turned green. (Safe to call from here: updateExportUi() never paints the
+  // chip back, so there is no cycle.)
+  updateExportUi();
 }
 
 // The chip is the whole signed-in lifecycle: its dropdown carries the PR
@@ -6305,6 +6325,13 @@ function updateAuthUI() {
   // Edit auto-sync lives only in a signed-in session on a talk view.
   ensureEditSync();
   ensureMarkerSync();
+  // ghWriteUser() gates the whole export video item (videoItemState), and this
+  // function is the one funnel every auth transition takes — sign-in, sign-out,
+  // write granted or lost. ensureEditSync() repaints the control only on the
+  // branches that touch the engine (its view-not-ready branch paints nothing),
+  // so the transition is honoured here explicitly, AFTER the engine was
+  // re-keyed so burnSourceRef() reads the new one.
+  updateExportUi();
   // Index cards/chips render auth-dependent bits ("take for review", the
   // 'mine' chip, own-talk highlight) — refresh them on login/logout.
   if (manifest && document.getElementById('index-content')) {

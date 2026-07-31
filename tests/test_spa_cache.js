@@ -5554,4 +5554,261 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.server.ranges.length, 2,
       'the video must not be fetched for a save the user called off');
   });
+
+  // ---- the writer must be CALLED when its inputs change ----
+  //
+  // updateExportUi() computes the right answer from whatever it reads — every
+  // test above proves that. It shipped broken anyway, because nothing proved
+  // it RUNS when an input moves: the button stayed dead after the sync it was
+  // waiting for turned green. These tests fire the real trigger code (extracted
+  // the same way as the driver) and assert on the control's observable state.
+
+  // The sync wiring outside the driver block: onSyncStatus() is what the edit
+  // engine calls on every status transition, and renderSyncStatus() is the one
+  // paint that engine attach (ensureEditSync) and teardown (destroyEditSync)
+  // also funnel through.
+  function makeSyncWiring(env) {
+    const s1 = html.indexOf('function onSyncStatus(');
+    const e1 = html.indexOf('// Remote edits just landed');
+    const s2 = html.indexOf('function renderSyncStatus(');
+    const e2 = html.indexOf('// The chip is the whole signed-in lifecycle');
+    assert.ok(s1 > -1 && e1 > s1 && s2 > -1 && e2 > s2,
+      'sync wiring blocks not found in index.html');
+    const names = ['destroyEditSync', 'clearAuth', 'updateAuthUI', 'showToast',
+      't', 'paintSyncChip', 'editSync', 'previewMarkerModeActive', 'updateExportUi'];
+    const stubs = {
+      destroyEditSync: function () {},
+      clearAuth: function () {},
+      updateAuthUI: function () {},
+      showToast: function (m) { env.toasts.push(m); },
+      t: env.t,
+      paintSyncChip: function () {},
+      editSync: env.editSync,
+      previewMarkerModeActive: function () { return false; },
+      updateExportUi: env.api.updateExportUi
+    };
+    return new Function(names.join(','),
+      html.slice(s1, e1) + '\n' + html.slice(s2, e2) +
+      '\nreturn { onSyncStatus: onSyncStatus, renderSyncStatus: renderSyncStatus };')
+      .apply(null, names.map(function (n) { return stubs[n]; }));
+  }
+
+  it('re-enables the download control when the sync it was waiting for finishes', () => {
+    // The live bug: the control went quiet while the edits were syncing —
+    // correctly — and then stayed dead forever, because onSyncStatus() painted
+    // the cloud chip and stopped there.
+    let status = 'pending';
+    const engine = { talkId: 't', getInfo: function () {
+      return { status: status, branch: 'sync/me/t--v-uk' }; } };
+    const env = makeHarness({ editSync: engine });
+    const sync = makeSyncWiring(env);
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['btn-export'].disabled, true,
+      'precondition: the control waits for the sync');
+    status = 'synced';
+    sync.onSyncStatus('synced', engine.getInfo());
+    assert.strictEqual(env.els['btn-export'].disabled, false,
+      'the sync finished — no later event will re-enable the control for the user');
+    assert.strictEqual(env.els['btn-export'].title, 'T:export.title',
+      'and the wait-for-sync reason must come off with the disablement');
+  });
+
+  it('takes the open menu down when a fresh edit puts the branch behind again', () => {
+    // The reverse transition, driven by the trigger itself rather than by a
+    // manual updateExportUi() call — and it walks the updateExportUi ->
+    // closeExportMenu -> setBurnFollowing re-entry path from a NEW call site,
+    // so it also proves the cycle stays broken.
+    let status = 'synced';
+    const engine = { talkId: 't', getInfo: function () {
+      return { status: status, branch: 'sync/me/t--v-uk' }; } };
+    const env = makeHarness({ editSync: engine });
+    const sync = makeSyncWiring(env);
+    env.api.openExportMenu();
+    assert.strictEqual(env.els['export-menu'].hidden, false, 'precondition: open');
+    status = 'pending';
+    sync.onSyncStatus('pending', engine.getInfo());
+    assert.strictEqual(env.els['export-menu'].hidden, true,
+      'the menu must not stay open over downloads of text nobody is looking at');
+    assert.strictEqual(env.els['btn-export'].disabled, true);
+    assert.strictEqual(env.els['btn-export'].title, 'T:burn.wait_for_sync');
+  });
+
+  it('re-enables the control when the engine is torn down mid-sync', () => {
+    // destroyEditSync() paints the chip idle through renderSyncStatus() — with
+    // no engine the source ref falls back to main, so the control must come
+    // back through the same funnel.
+    const engine = { talkId: 't', getInfo: function () {
+      return { status: 'pending', branch: 'sync/me/t--v-uk' }; } };
+    const env = makeHarness({ editSync: engine });
+    const sync = makeSyncWiring(env);
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['btn-export'].disabled, true,
+      'precondition: mid-sync the control waits');
+    engine.talkId = 'some-other-talk';   // what a torn-down engine looks like here
+    sync.renderSyncStatus('idle', null);
+    assert.strictEqual(env.els['btn-export'].disabled, false,
+      'no engine means the published subtitles on main — nothing to wait for');
+  });
+
+  // The one function every path that changes previewState.edits already ends
+  // in (add, typing, undo, clear-all, remote merge). It runs against the same
+  // previewState and document the driver reads.
+  function makeEditsFunnel(env) {
+    const s = html.indexOf('function updateClearBtn(');
+    const e = html.indexOf('SPA.clearAll =');
+    assert.ok(s > -1 && e > s, 'updateClearBtn block not found in index.html');
+    env.els['btn-clear-all'] = makeEl('btn-clear-all');
+    const names = ['document', 'previewState', 't', 'updateExportUi'];
+    const stubs = {
+      document: env.document,
+      previewState: env.previewState,
+      t: env.t,
+      updateExportUi: env.api.updateExportUi
+    };
+    return new Function(names.join(','),
+      html.slice(s, e) + '\nreturn { updateClearBtn: updateClearBtn };')
+      .apply(null, names.map(function (n) { return stubs[n]; }));
+  }
+
+  it('takes a finished render stale the moment an edit lands, and back when it is undone', async () => {
+    const env = makeHarness();
+    env.previewState.mode = 'edit';
+    const funnel = makeEditsFunnel(env);
+    await env.api.startBurn('t', 'v');   // records editsSig for zero edits
+    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'precondition: the run finished and the item became the download');
+
+    env.previewState.edits = { uk: { 3: 'a later correction' } };   // what SPA.onEditInput does
+    funnel.updateClearBtn();                                        // ...and the funnel it ends in
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'the subtitles moved on — the finished video no longer matches the screen');
+
+    env.previewState.edits = { uk: {} };   // the edit is undone
+    funnel.updateClearBtn();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'the subtitles match the run again — the file is a valid answer once more');
+  });
+
+  it('routes every edit path through the funnel that repaints the export item', () => {
+    // Source-level guard, deliberately: these handlers move the live caret and
+    // selection, open the confirm dialog and drive the player, so they cannot
+    // run in this harness. The behavioural half is the test above — the funnel
+    // repaints the item; this half pins that each path that moves
+    // previewState.edits reaches the funnel.
+    const paths = [
+      ['SPA.addEdit = function', 'SPA.onEditInput ='],
+      ['SPA.onEditInput = function', 'SPA.deleteEdit ='],
+      ['SPA.deleteEdit = function', 'function updateClearBtn('],
+      ['SPA.clearAll = function', 'SPA.copyMarkers = function'],
+      ['function onSyncRemoteApplied(', '// The preview shows one sync chip']
+    ];
+    for (const [from, to] of paths) {
+      const s = html.indexOf(from);
+      const e = html.indexOf(to);
+      assert.ok(s > -1 && e > s, from + ' not found in index.html');
+      assert.match(html.slice(s, e), /updateClearBtn\(\)/,
+        from + ' must reach updateClearBtn() — the one place the export item ' +
+        'is repainted after the edits change');
+    }
+  });
+
+  // updateAuthUI() is the single funnel for sign-in, sign-out and a token
+  // gaining or losing repo write access.
+  function makeAuthFunnel(env, over) {
+    const s = html.indexOf('function updateAuthUI(');
+    const e = html.indexOf('// Probe the viewer');
+    assert.ok(s > -1 && e > s, 'updateAuthUI block not found in index.html');
+    const authEls = {};
+    ['gh-login-btn', 'gh-avatar', 'gh-avatar-wrap'].forEach(function (id) {
+      const el = makeEl(id);
+      el.classList = { toggle: function () {} };
+      authEls[id] = el;
+    });
+    const names = ['document', 'getAuthUser', 'ghWriteUser', 'ghClientId', 't',
+      'updatePreviewSubmitButtons', 'ensureEditSync', 'ensureMarkerSync',
+      'manifest', 'updateExportUi'];
+    const stubs = Object.assign({
+      document: {
+        getElementById: function (id) { return authEls[id] || null; },
+        querySelectorAll: function () { return []; },
+        body: { classList: { toggle: function () {} } }
+      },
+      getAuthUser: function () { return null; },
+      ghWriteUser: env.ghWriteUser,
+      ghClientId: function () { return 'cid'; },
+      t: env.t,
+      updatePreviewSubmitButtons: function () {},
+      // Inert ON PURPOSE: the real ensureEditSync() usually repaints through
+      // renderSyncStatus(), but its view-not-ready branch returns without
+      // painting anything — the explicit call in updateAuthUI() is what has to
+      // cover that window, so the engine hooks must not cover for it here.
+      ensureEditSync: function () {},
+      ensureMarkerSync: function () {},
+      manifest: null,
+      updateExportUi: env.api.updateExportUi
+    }, over || {});
+    return new Function(names.join(','),
+      html.slice(s, e) + '\nreturn { updateAuthUI: updateAuthUI };')
+      .apply(null, names.map(function (n) { return stubs[n]; }));
+  }
+
+  it('repaints the export control on a write-access flip, without help from the engine hooks', () => {
+    let write = true;
+    const user = function () { return write ? { login: 'me', avatar_url: 'a' } : null; };
+    const env = makeHarness({ ghWriteUser: user });
+    const auth = makeAuthFunnel(env, { getAuthUser: user, ghWriteUser: user });
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
+      'precondition: a write session may render');
+
+    write = false;
+    auth.updateAuthUI();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, true,
+      'the session lost write access — the item must stop offering a dispatch');
+
+    write = true;
+    auth.updateAuthUI();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
+      'write regained — the item comes back without a reload');
+  });
+
+  it('drops the previous video\'s finished face when a video without a run is entered', async () => {
+    // showPreview() calls resumeBurnWatch() on every entry. When the new video
+    // has no recorded run, the reset must actually reach the screen: the item
+    // kept video A\'s "Download" label, track, and run link over video B.
+    const env = makeHarness({
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; }
+    });
+    await env.api.startBurn('t', 'v');
+    await settle();
+    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'precondition: video v finished and offers its file');
+    assert.strictEqual(env.els['burn-run-link'].hidden, false,
+      'precondition: the run link is on screen');
+
+    env.previewState.videoSlug = 'v2';
+    env.api.resumeBurnWatch('t', 'v2');   // nothing recorded for v2
+    await settle();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'video v2 never rendered — it must not wear v\'s download face');
+    assert.strictEqual(env.els['burn-track'].hidden, true,
+      'nor show v\'s finished track');
+    assert.strictEqual(env.els['burn-run-link'].hidden, true,
+      'nor link to v\'s run');
+  });
+
+  it('drops the previous video\'s error when another video is entered', async () => {
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    env.api.showBurnError('boom');
+    assert.strictEqual(env.els['burn-error'].hidden, false, 'precondition: v failed');
+
+    env.previewState.videoSlug = 'v2';
+    env.api.resumeBurnWatch('t', 'v2');
+    assert.strictEqual(env.els['burn-error'].hidden, true,
+      'v\'s failure is not v2\'s — the error line must not survive the switch');
+    assert.strictEqual(env.els['burn-error'].textContent, '');
+  });
 });
