@@ -806,12 +806,14 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   );
   height: auto;
   line-height: 1.25;
-  /* Re-assert the fullscreen side inset. The embedded rule
-     `#view-preview[data-subs-tuned="1"] #subtitle-overlay` sets `padding: 16px 24px`
-     and ties this rule's specificity while sitting earlier in the file, so without
-     these longhands a tuned fullscreen silently falls back to a 24px inset. The
-     burned-in subtitle renderer wraps at the same 10%, so the two must agree or the
-     video breaks lines differently than the app. */
+  /* Re-assert the fullscreen side inset. `:373` (`#view-preview.fs-mode
+     #subtitle-overlay`) gives fullscreen a 10% side inset, but
+     `#view-preview[data-subs-tuned="1"] #subtitle-overlay` (`:668`, written for
+     the embedded resized block) has equal specificity, sits later, and its
+     `padding: 16px 24px` shorthand wins once the user has dragged the subtitle
+     handle. This rule is more specific than both, so re-asserting the inset here
+     restores it. Keep in sync with the 10% at `:373` and with SIDE_INSET_RATIO in
+     tools/burn_subtitles.py. */
   padding-left: 10%;
   padding-right: 10%;
 }
