@@ -103,6 +103,12 @@
   <button class="btn btn--primary" disabled>Disabled</button>
   <button class="btn btn--primary" autofocus>Focus (tab to me)</button>
 </div>
+<h3>Icon only (<code>.btn--icon</code>)</h3>
+<p style="color:var(--fg4)">A square target for a glyph that says it all — the accessible
+name lives on the button (<code>aria-label</code>), so nothing is lost. Stroke SVG, never an
+emoji: emoji render as someone else's artwork and ignore the theme. The glyph below comes
+from the real <code>exportIconSvg()</code>, so it cannot drift from the app.</p>
+<div class="sg-row" id="sg-icon-buttons"></div>
 
 <h2>Controls</h2>
 <div class="sg-row" style="max-width:420px;flex-direction:column;align-items:stretch">
@@ -167,16 +173,37 @@ The edit + marker chips both use it; glyphs come from <code>syncCloudSvg()</code
 catalog can't drift from the app.</p>
 <div class="sg-row" id="sync-clouds" style="gap:var(--space-6)"></div>
 
-<h2>Burn track</h2>
-<p style="color:var(--fg4)">Progress for a burned-in subtitle render — one track split into
-<strong>four phase segments with visible seams</strong>, each as wide as its share of the work
-(5 / 15 / 70 / 10). The long middle is visibly the long middle: the form itself says "three
-quick certainties, then one patient stretch". Fills reuse <code>--sync-progress</code>, the
-same in-progress tone as the sync cloud, and the render segment advances in ten crisp
-increments as ffmpeg's own progress gates complete.</p>
-<p style="color:var(--fg4)">The status line is dot-separated and every dot is earned: the
-separators are <code>::before</code> on adjacent <em>non-empty</em> spans, so a missing elapsed
-or remaining time leaves no stray dot. The remaining time is the only estimated wording —
+<h2>Export menu</h2>
+<p style="color:var(--fg4)">Everything a reviewer takes away from a video, behind one icon
+button in the preview header: the subtitle file, and the video with those subtitles burned
+in. <code>.export-pop</code> wraps the button and the menu and is the containing block the
+menu is positioned against — so the menu opens directly beneath the button, floats over the
+page on <code>--z-dropdown</code>, and moves nothing. The caret is a rotated square, so the
+menu's own border carries on around it.</p>
+<p style="color:var(--fg4)">It carries <strong>no dismiss control</strong>: a click anywhere
+outside the anchor closes it, the button is its toggle, and Escape closes it too. Closing
+keeps a running render — reopening picks the polling back up.</p>
+<!-- Right-aligned and top-aligned, because the menu hangs from the anchor's
+     right edge as it does in the header, and the anchor must keep the icon
+     button's own height instead of stretching to this reserved block.
+     The height reserves room for the floating menu so it cannot land on
+     the next section. -->
+<div id="sg-export-pop" style="height: 210px; display: flex; justify-content: flex-end; align-items: flex-start"></div>
+
+<h3>The video item is the progress readout</h3>
+<p style="color:var(--fg4)">The second row is not a button beside a progress panel. It wears
+one of four faces — <em>create</em>, <em>building… please wait</em>, <em>download</em>, or
+absent for a session that cannot dispatch — and the render's track, times, run link and
+error line are that row's own continuation, indented to its text.</p>
+<p style="color:var(--fg4)">The track is <strong>four phase segments with visible seams</strong>,
+each as wide as its share of the work (5 / 15 / 70 / 10). The long middle is visibly the long
+middle: the form itself says "three quick certainties, then one patient stretch". Fills reuse
+<code>--sync-progress</code>, the same in-progress tone as the sync cloud, and the render
+segment advances in ten crisp increments as ffmpeg's own progress gates complete.</p>
+<p style="color:var(--fg4)">The meta line is dot-separated and every dot is earned: the
+separators are <code>::before</code> on adjacent <em>non-empty</em> spans, so a missing
+elapsed or remaining time leaves no stray dot. In this narrow a menu the phase takes its own
+line and the two times share the next. The remaining time is the only estimated wording —
 faintest AA-passing <code>--fg5</code>, softly worded, and <em>not</em> italic, because it is
 extrapolated from a measured rate rather than guessed.</p>
 <p style="color:var(--fg4)">A render runs for ~25 minutes, so the component is announced as
@@ -189,7 +216,14 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
 
 <script src="js/sync_status_view.js"></script>
 <script src="js/burn_video.js"></script>
+<script src="js/export_menu.js"></script>
 <script>
+  (function () {
+    document.getElementById('sg-icon-buttons').innerHTML =
+      '<button class="btn btn--icon" aria-label="Download">' + exportIconSvg() + '</button>'
+      + '<button class="btn btn--icon" aria-label="Download" disabled>' + exportIconSvg() + '</button>';
+  })();
+
   (function () {
     var tones = [{ tone: 'progress' }, { tone: 'ok' }, { tone: 'error' }];
     document.getElementById('sync-clouds').innerHTML = tones.map(function (x) {
@@ -218,24 +252,28 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
       return sum;
     }
     var STATES = [
-      { name: 'early', tint: '', title: 'Rendering video with subtitles',
+      { name: 'early', tint: '', label: 'Building the video with subtitles, please wait',
         p: { fraction: fractionThrough('Install dependencies'),
              label: 'Download video' },
-        status: ['Step 2 of 4 — Fetching the video', '1 min elapsed', ''] },
+        status: ['Step 2 of 4 — Fetching the video', '1 min elapsed', ''], link: true },
       // Four gates are through; the fifth is the one being waited on.
-      { name: 'mid-render', tint: '', title: 'Rendering video with subtitles',
+      { name: 'mid-render', tint: '', label: 'Building the video with subtitles, please wait',
         p: { fraction: fractionThrough('Render 40%'), label: 'Render 50%' },
         status: ['Step 3 of 4 — Burning in the subtitles', '12 min elapsed',
-                 'about 9 min to go'] },
-      { name: 'done', tint: 'burn-panel--done', title: 'The video is ready',
+                 'about 9 min to go'], link: true },
+      { name: 'done', tint: 'export-item-group--done',
+        label: 'Download the video with subtitles',
         p: { fraction: 1, done: true },
-        status: ['', '', 'done in 21 min'], download: true },
-      // The message names the PHASE, as the app does — never the raw step.
-      { name: 'failed', tint: '', title: 'The render failed',
+        status: ['', '', 'done in 21 min'], link: true },
+      // A failed run offers to build again — the error line says what went
+      // wrong, and it names the PHASE, as the app does, never the raw step.
+      { name: 'failed', tint: '', label: 'Create the video with subtitles',
         p: { fraction: fractionThrough('Start render'), label: 'Render 10%',
              failed: true, failedStep: 'Render 10%' },
-        status: ['', '', ''], error: 'Failed at step "Burning in the subtitles"' },
-      { name: 'expired', tint: 'burn-panel--expired', title: 'The video is ready',
+        status: ['', '', ''], link: true,
+        error: 'Failed at step "Burning in the subtitles"' },
+      { name: 'expired', tint: 'export-item-group--expired',
+        label: 'Create the video with subtitles',
         p: { fraction: 1, done: true }, status: ['', '', ''],
         error: 'The artifact expired (7 days) — render again' }
     ];
@@ -254,28 +292,48 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
         + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '">'
         + segs + '</div>';
     }
-    document.getElementById('sg-burn-panels').innerHTML = STATES.map(function (s, i) {
-      var id = 'sg-burn-title-' + i;
-      // Mirrors the shipped markup, whitespace included: no text nodes between
-      // the status spans, or the dot separators double up.
-      return '<div class="sg-card">'
-        + '<p style="font-family:var(--f-mono);font-size:var(--text-2xs);color:var(--fg5);'
-        + 'margin:var(--space-5) 0 var(--space-2)">' + s.name + '</p>'
-        + '<div class="burn-panel ' + s.tint + '">'
-        + '<div class="burn-panel__head"><span id="' + id
-        + '" class="burn-panel__title">' + s.title + '</span>'
-        + '<a class="burn-panel__link" href="#">View run</a>'
-        + '<button class="btn btn--ghost btn--sm">Hide</button></div>'
+    // Mirrors the shipped markup, whitespace included: no text nodes between
+    // the meta spans, or the dot separators double up.
+    function videoItemHtml(s, id) {
+      return '<div class="export-item-group ' + s.tint + '">'
+        + '<button class="export-item"><span id="' + id
+        + '" class="export-item__label">' + s.label + '</span></button>'
         + trackHtml(s, id)
-        + '<p class="burn-panel__status">'
+        + '<p class="export-item__meta">'
         + '<span aria-live="polite">' + s.status[0] + '</span>'
         + '<span>' + s.status[1] + '</span>'
         + '<span class="burn-panel__eta">' + s.status[2] + '</span></p>'
-        + (s.download ? '<button class="btn btn--primary">Download MP4</button>' : '')
+        + (s.link ? '<a class="burn-panel__link" href="#">View run</a>' : '')
         + (s.error ? '<p class="burn-panel__error" role="alert">'
             + s.error.replace(/"/g, '&quot;') + '</p>' : '')
-        + '</div></div>';
+        + '</div>';
+    }
+    // The subtitle row is the same .export-item, without a render's baggage.
+    function srtItemHtml() {
+      return '<button class="export-item">'
+        + '<span class="export-item__label">Subtitle file (.srt)</span></button>';
+    }
+    document.getElementById('sg-burn-panels').innerHTML = STATES.map(function (s, i) {
+      var id = 'sg-burn-label-' + i;
+      // A menu-sized surface, so the rows are read at the width they ship at.
+      return '<div class="sg-card" style="max-width:320px;margin-top:var(--space-5)">'
+        + '<p style="font-family:var(--f-mono);font-size:var(--text-2xs);color:var(--fg5);'
+        + 'margin:0 0 var(--space-2)">' + s.name + '</p>'
+        + '<div style="background:var(--bg2);border:1px solid var(--border2);'
+        + 'border-radius:var(--radius-md);padding:var(--space-2)">'
+        + videoItemHtml(s, id) + '</div></div>';
     }).join('');
+
+    // The whole control in the form the app ships it: the icon button with its
+    // menu open beneath. Built by the same builders and the same icon function,
+    // so the catalog cannot disagree with the app. Right-aligned, because the
+    // menu hangs from the anchor's right edge as it does in the header.
+    var anchored = STATES[1];
+    document.getElementById('sg-export-pop').innerHTML =
+      '<span class="export-pop">'
+      + '<button class="btn btn--icon" aria-label="Download">' + exportIconSvg() + '</button>'
+      + '<div class="export-menu">' + srtItemHtml()
+      + videoItemHtml(anchored, 'sg-export-pop-label') + '</div></span>';
   })();
 
   function setTheme(t) {

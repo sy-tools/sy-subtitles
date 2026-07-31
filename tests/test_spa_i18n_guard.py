@@ -61,12 +61,14 @@ ALLOWLIST = {
     "reveal.title = t('gate.reveal');",
     "reveal.setAttribute('aria-label', show ? t('gate.hide') : t('gate.reveal'));",
     "reveal.title = show ? t('gate.hide') : t('gate.reveal');",
-    # The render button's tooltip names the previewed subtitle language ({lang}
-    # is substituted in), so it cannot be a plain data-i18n-title.
-    # translatePage() calls updateBurnButton(), which re-composes it in the
+    # The export button's tooltip is one of two whole sentences chosen by the
+    # sync state, and the video item's names the previewed subtitle language
+    # ({lang} is substituted in) — neither can be a plain data-i18n-title.
+    # translatePage() calls updateExportUi(), which re-composes both in the
     # current language — pinned by tests/test_spa_cache.js
     # ("re-composes the render button's tooltip on a language toggle").
-    "btn.title = (!reopen && mismatch) ? burnWrongLangText() : '';",
+    "btn.title = unsettled ? t('burn.wait_for_sync') : t('export.title');",
+    "item.title = s.reasonKey === 'burn.wrong_lang' ? burnWrongLangText() : '';",
 }
 
 

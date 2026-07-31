@@ -3396,7 +3396,7 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
 });
 
 // ============================================================
-// Burned-in subtitle render: button, panel, download wiring
+// Burned-in subtitle render: the export menu, its video item, download wiring
 // ============================================================
 describe('burn video wiring', () => {
   const fs = require('fs');
@@ -3407,6 +3407,12 @@ describe('burn video wiring', () => {
 
   // Two modules, not one: the run driver and the artifact ZIP reader.
   const BURN_MODULES = ['js/burn_video.js', 'js/burn_artifact.js'];
+
+  // The export control's own markup: its anchor up to the next sibling in the
+  // header row. Taken as far as the player container it would also swallow
+  // #btn-clear-all, whose onclick would then read as part of the menu.
+  const EXPORT_POP = html.slice(html.indexOf('<span class="export-pop"'),
+                                html.indexOf('<button id="btn-clear-all"'));
 
   it('loads both burn modules as plain script tags', () => {
     for (const mod of BURN_MODULES) {
@@ -3422,11 +3428,23 @@ describe('burn video wiring', () => {
     }
   });
 
-  it('shows the burn button only to signed-in users with write access', () => {
-    const button = html.match(/<button[^>]*id="btn-burn-video"[^>]*>/);
-    assert.ok(button, 'the burn button must exist');
-    assert.ok(button[0].includes('data-gh-only'),
-      'burn must be gated by data-gh-only: read-only sessions cannot dispatch');
+  it('shows the video item only to signed-in users with write access', () => {
+    // Only the VIDEO half is gated: the subtitle file is a plain download that
+    // a signed-out reader can take, so gating the whole menu would withhold it
+    // for no reason. The gate sits on the #export-video GROUP rather than on
+    // the button, because the group is the whole readout — track, status line,
+    // run link, error — and a session that cannot dispatch has no use for any
+    // of it, not merely for a disabled button.
+    assert.ok(html.match(/<button[^>]*id="btn-burn-video"[^>]*>/),
+      'the video item must exist');
+    const group = html.match(/<div[^>]*id="export-video"[^>]*>/);
+    assert.ok(group, 'the #export-video group must exist');
+    assert.ok(group[0].includes('data-gh-only'),
+      'the render belongs to sessions that can dispatch: gate it with data-gh-only');
+    const anchor = html.match(/<span class="export-pop"[^>]*>/);
+    assert.ok(anchor, 'the .export-pop anchor must exist');
+    assert.ok(!anchor[0].includes('data-gh-only'),
+      'gating the anchor would take the subtitle download away from readers too');
   });
 
   it('places the button in the preview header actions', () => {
@@ -3454,29 +3472,29 @@ describe('burn video wiring', () => {
     // SPA.confirm exists precisely so the app's voice and language carry
     // through; a native confirm() would be an untranslated browser chrome box.
     const driver = html.slice(html.indexOf('var BURN_POLL_MS'),
-                              html.indexOf('SPA.startBurn = startBurn;'));
+                              html.indexOf('SPA.toggleExportMenu = toggleExportMenu;'));
     assert.ok(driver.includes('SPA.confirm('),
       'the pending-edits warning must use the house dialog');
     assert.ok(!/(^|[^.\w])confirm\s*\(/.test(driver.replace(/SPA\.confirm\s*\(/g, '')),
       'no bare confirm() may survive in the burn driver');
   });
 
-  it("re-composes the render button's tooltip on a language toggle", () => {
+  it("re-composes the video item's tooltip on a language toggle", () => {
     // The tooltip substitutes the previewed language into its sentence, so no
     // data-i18n-title can carry it; translatePage() has to re-run the composer,
-    // exactly as it already does for the panel's composed status line.
+    // exactly as it already does for the item's composed status line.
     const fn = html.slice(html.indexOf('function translatePage()'),
                           html.indexOf('var SyncPlayer'));
-    assert.ok(fn.includes('updateBurnButton()'),
+    assert.ok(fn.includes('updateExportUi()'),
       'without this the tooltip sticks in the language it was written in');
   });
 
-  it('refreshes the render button when the subtitle language changes', () => {
+  it('refreshes the export control when the subtitle language changes', () => {
     // The refusal is keyed on previewState.srtLang, which switchSubLang mutates
-    // — without this the button would stay disabled after switching back to UK.
+    // — without this the item would stay disabled after switching back to UK.
     const fn = html.slice(html.indexOf('SPA.switchSubLang = function'),
                           html.indexOf('function ensureManifest'));
-    assert.ok(fn.includes('updateBurnButton()'),
+    assert.ok(fn.includes('updateExportUi()'),
       'a language switch must re-evaluate whether a render is possible');
   });
 
@@ -3485,17 +3503,21 @@ describe('burn video wiring', () => {
     // so it no longer needs the italic apology — but it is still an
     // extrapolation, hence the soft "about N min to go" wording.
     assert.ok(html.includes('burn.estimate_soft'),
-      'the panel must carry the soft-worded remaining-time key');
+      'the item must carry the soft-worded remaining-time key');
     assert.ok(!/burn\.estimate'/.test(html),
       'burn.estimate is superseded by burn.estimate_soft — it must be gone');
     assert.ok(!html.includes('burn.overrun'),
       'burn.overrun existed for the 97% interpolation cap, which no longer exists');
   });
 
-  it('defines every burn i18n key exactly once in BOTH language tables', () => {
+  it('defines every export i18n key exactly once in BOTH language tables', () => {
     // t() falls back to English, so a key missing from uk would silently ship
     // English text into a Ukrainian UI. Check each table separately.
-    const KEY = '(?:burn\\.[a-z_.]+|btn\\.burn[a-z_]*)';
+    //
+    // The export.* family is in scope alongside burn.*: the two used to be one
+    // control's worth of keys under one prefix, and the retired btn.burn_* names
+    // are only provably gone if this guard still looks for them.
+    const KEY = '(?:burn\\.[a-z_.]+|export\\.[a-z_.]+|btn\\.burn[a-z_]*)';
     const i18n = html.match(/var I18N\s*=\s*\{([\s\S]*?)\n\};/);
     assert.ok(i18n, 'I18N table not found');
     const uk = i18n[1].slice(i18n[1].indexOf('uk:'), i18n[1].indexOf('\n  en:'));
@@ -3526,10 +3548,12 @@ describe('burn video wiring', () => {
       .concat(require('../site/js/burn_video').burnPhases().map((p) => PREFIX + p.key));
     // Guard the harvest itself: a regex that silently matched nothing would
     // make every assertion below vacuous.
-    for (const wanted of ['btn.burn_video', 'btn.burn_download', 'burn.title',
-                          'burn.view_run', 'burn.hide', 'burn.queued',
-                          'burn.title_done', 'burn.title_failed', 'burn.step_of',
+    for (const wanted of ['export.title', 'export.srt', 'export.srt_failed',
+                          'export.video_make', 'export.video_working',
+                          'export.video_download',
+                          'burn.view_run', 'burn.queued', 'burn.step_of',
                           'burn.elapsed', 'burn.estimate_soft', 'burn.done_in',
+                          'burn.wait_for_sync', 'burn.wrong_lang',
                           'burn.step.render']) {
       assert.ok(keys.includes(wanted), 'i18n key not harvested: ' + wanted);
     }
@@ -3554,31 +3578,35 @@ describe('burn video wiring', () => {
   it('gives the track a progressbar role and keeps the ticker out of the live region', () => {
     // A ~25-minute operation whose only feedback is a track and an error line is
     // unusable without a progressbar role and live regions.
-    const panel = html.slice(html.indexOf('<div id="burn-panel"'),
-                             html.indexOf('<!-- === REVIEW VIEW === -->'));
-    assert.ok(panel, 'burn panel markup not found');
-    const track = panel.match(/<div[^>]*id="burn-track"[^>]*>/);
+    const group = html.slice(html.indexOf('<div id="export-video"'),
+                             html.indexOf('<div class="player-container"'));
+    assert.ok(group, 'the video item group markup not found');
+    const track = group.match(/<div[^>]*id="burn-track"[^>]*>/);
     assert.ok(track, '#burn-track element not found');
     assert.ok(track[0].includes('role="progressbar"'),
       'the track must expose role="progressbar" — one control, not four segments');
     for (const attr of ['aria-valuemin="0"', 'aria-valuemax="100"', 'aria-valuenow=']) {
       assert.ok(track[0].includes(attr), 'the track must carry ' + attr);
     }
-    const step = panel.match(/<span[^>]*id="burn-step"[^>]*>/);
+    // The track has no visible text of its own, and the item's label is the one
+    // thing that names what is being measured.
+    assert.ok(track[0].includes('aria-labelledby="burn-item-label"'),
+      'the progressbar must borrow the item label as its accessible name');
+    const step = group.match(/<span[^>]*id="burn-step"[^>]*>/);
     assert.ok(step && step[0].includes('aria-live="polite"'),
       'the phase line must be the polite live region');
     // The elapsed counter ticks on every 5s poll for ~25 minutes: inside a live
     // region that is ~300 announcements of a number nobody asked to hear.
-    const status = panel.match(/<p[^>]*class="burn-panel__status"[^>]*>/);
+    const status = group.match(/<p[^>]*class="export-item__meta"[^>]*>/);
     assert.ok(status && !status[0].includes('aria-live'),
       'aria-live belongs on #burn-step alone, not on the whole status line');
     for (const id of ['burn-elapsed', 'burn-eta']) {
-      const span = panel.match(new RegExp('<span[^>]*id="' + id + '"[^>]*>'));
+      const span = group.match(new RegExp('<span[^>]*id="' + id + '"[^>]*>'));
       assert.ok(span, '#' + id + ' not found');
       assert.ok(!span[0].includes('aria-live'),
         '#' + id + ' must sit outside the live region');
     }
-    const err = panel.match(/<p[^>]*id="burn-error"[^>]*>/);
+    const err = group.match(/<p[^>]*id="burn-error"[^>]*>/);
     assert.ok(err && (err[0].includes('role="alert"') ||
                       err[0].includes('aria-live="assertive"')),
       'the error line must be an assertive live region');
@@ -3619,14 +3647,14 @@ describe('burn video wiring', () => {
       'an ungated .burn-seg--active::after would tint the unearned remainder');
   });
 
-  it('repaints the burn panel when the interface language changes', () => {
+  it('repaints the video item when the interface language changes', () => {
     // The status line carries composed strings ("done in 21 min"), which no
     // data-i18n attribute can repaint — so translatePage has to redraw it.
     const idx = html.indexOf('function translatePage()');
     assert.ok(idx > -1, 'translatePage() not found');
     const chunk = html.slice(idx, html.indexOf('\nfunction ', idx + 1));
     assert.ok(chunk.includes('retranslateBurnPanel()'),
-      'translatePage() must redraw the burn panel from its last payload');
+      'translatePage() must redraw the video item from its last payload');
   });
 
   it('holds the segment animation still under prefers-reduced-motion', () => {
@@ -3637,8 +3665,8 @@ describe('burn video wiring', () => {
   it('mirrors the a11y semantics into the styleguide entry', () => {
     // The catalog is the contract: an example without the roles teaches the
     // wrong markup to the next component author.
-    const at = styleguide.indexOf('<h2>Burn track</h2>');
-    assert.ok(at > -1, 'the styleguide must carry a Burn track section');
+    const at = styleguide.indexOf('<h2>Export menu</h2>');
+    assert.ok(at > -1, 'the styleguide must carry an Export menu section');
     const sg = styleguide.slice(at);
     assert.ok(sg.includes('role="progressbar"'),
       'the styleguide track must show role="progressbar"');
@@ -3651,8 +3679,8 @@ describe('burn video wiring', () => {
   });
 
   it('builds the styleguide tracks from the real weight table', () => {
-    const at = styleguide.indexOf('<h2>Burn track</h2>');
-    assert.ok(at > -1, 'the styleguide must carry a Burn track section');
+    const at = styleguide.indexOf('<h2>Export menu</h2>');
+    assert.ok(at > -1, 'the styleguide must carry an Export menu section');
     const sg = styleguide.slice(at);
     assert.ok(styleguide.includes('<script src="js/burn_video.js"></script>'),
       'the catalog must include the real phase model, not hand-drawn widths');
@@ -3687,27 +3715,116 @@ describe('burn video wiring', () => {
       'route() must NOT clear the persisted burn state');
   });
 
-  it('keeps the panel hidden while [hidden] (display:flex would defeat it)', () => {
-    // .burn-panel sets display:flex; an author display always beats the UA
-    // [hidden]{display:none}, so the attribute needs its own rule.
-    assert.match(css, /\.burn-panel\[hidden\]\s*\{[^}]*display:\s*none/,
-      '.burn-panel[hidden] must set display:none, else hidden panels render');
-    assert.match(css, /\.btn\[hidden\]\s*\{[^}]*display:\s*none/,
-      '.btn[hidden] must set display:none — .btn is display:inline-flex');
+  it('keeps every flex surface hidden while [hidden] (display:flex would defeat it)', () => {
+    // Each of these sets its own display; an author display always beats the UA
+    // [hidden]{display:none}, so every one of them needs its own rule. The menu
+    // ships hidden, so without its rule the whole surface renders on first load.
+    for (const sel of ['.export-menu', '.export-item-group', '.export-item__meta',
+                       '.btn']) {
+      assert.match(css, new RegExp('\\' + sel + '\\[hidden\\]\\s*\\{[^}]*display:\\s*none'),
+        sel + '[hidden] must set display:none, or a hidden ' + sel + ' still renders');
+    }
   });
 
-  it('documents the panel in the styleguide, rendered by the real CSS', () => {
-    assert.match(styleguide, /class="burn-panel[ "]/,
+  it('documents the video item in the styleguide, rendered by the real CSS', () => {
+    assert.match(styleguide, /class="export-item-group[ "]/,
       'a new component must ship a live styleguide example');
     assert.ok(styleguide.includes('burn-seg__fill'),
       'the styleguide example must show the filled segments themselves');
+    assert.ok(styleguide.includes('class="export-item__meta"'),
+      'the status line is part of the item — the catalog must show it in place');
   });
 
-  it('exposes the three entry points the markup calls on SPA', () => {
-    for (const fn of ['startBurn', 'cancelBurnWatch', 'downloadBurned']) {
+  it('anchors the menu to the download button that opens it', () => {
+    // The progress panel used to sit at the foot of the preview, a full screen
+    // below the button that opened it — pressing Render moved nothing the eye
+    // could see. The menu is the button's own surface now, so the two share one
+    // anchor element: that anchor is what the CSS positions the popover against.
+    const at = html.indexOf('<span class="export-pop"');
+    assert.ok(at > -1, 'the .export-pop anchor is not in the markup');
+    const pop = EXPORT_POP;
+    assert.ok(pop.includes('id="btn-export"'),
+      'the anchor must hold the button that toggles the menu');
+    assert.ok(pop.includes('id="export-menu"'),
+      'the anchor must hold the menu it positions');
+    assert.ok(html.indexOf('<div class="header-actions">') < at,
+      'the anchor belongs in the preview header, beside the other actions');
+    // The button is the menu's control, and a screen reader has to be told so:
+    // without these it is an unlabelled icon that opens something unannounced.
+    const btn = html.match(/<button[^>]*id="btn-export"[\s\S]*?>/);
+    assert.ok(btn, '#btn-export not found');
+    assert.match(btn[0], /aria-haspopup="true"/, 'the button opens a menu — say so');
+    assert.match(btn[0], /aria-controls="export-menu"/,
+      'the button must name the surface it controls');
+    assert.match(btn[0], /aria-expanded="/, 'the toggle must publish its state');
+    assert.match(btn[0], /data-i18n-aria-label="export\.title"/,
+      'an icon-only button carries no text — it needs a translated label');
+  });
+
+  it('floats the menu over the page instead of reflowing it', () => {
+    assert.match(css, /\.export-pop\s*\{[^}]*position:\s*relative/,
+      '.export-pop must be the containing block the menu is positioned against');
+    const rule = css.match(/\.export-menu\s*\{([^}]*)\}/);
+    assert.ok(rule, '.export-menu rule not found');
+    assert.match(rule[1], /position:\s*absolute/,
+      'in flow the menu pushes the whole preview down — it must be lifted out');
+    assert.match(rule[1], /z-index:\s*var\(--z-[a-z-]+\)/,
+      'the menu paints over the page, so it needs a z-index from the scale');
+    assert.match(rule[1], /box-shadow:\s*var\(--shadow-[a-z]+\)/,
+      'a floating surface needs a shadow to lift off the page beneath it');
+  });
+
+  it('keeps the menu out of the header row touch-target rule', () => {
+    // The menu lives inside .header-actions now, so a DESCENDANT selector also
+    // reaches its rows and would stretch them to the header's 44px metrics
+    // inside the menu, where nothing is a header control.
+    assert.ok(!/\.header-actions\s+button\s*\{/.test(css),
+      '.header-actions button also matches the menu rows — scope it to the row');
+    assert.ok(!/\.header-actions\s+\.export-item\b/.test(css),
+      'the menu rows are not header controls: no header rule may reach them');
+  });
+
+  it('ships the icon-button variant in the button catalog', () => {
+    // .btn--icon is a new variant of an existing component, so it belongs with
+    // the other variants rather than only inside the one control that uses it —
+    // otherwise the next author reinvents it.
+    assert.match(css, /\.btn--icon\s*\{/, '.btn--icon must be a real button variant');
+    assert.ok(styleguide.includes('<code>.btn--icon</code>'),
+      'the buttons section must name the icon-only variant');
+  });
+
+  it('documents the anchored menu in the styleguide', () => {
+    assert.match(styleguide, /class="export-pop"/,
+      'the anchored menu is the shipped form of this control — show it in the catalog');
+    assert.match(styleguide, /class="export-menu"/,
+      'the catalog must show the menu open, which is the only state worth drawing');
+    assert.ok(styleguide.includes('<script src="js/export_menu.js"></script>'),
+      'the icon must come from the real module, or the catalog can drift from it');
+    assert.ok(styleguide.includes('exportIconSvg()'),
+      'a hand-drawn copy of the glyph is exactly the drift this section denies');
+  });
+
+  it('exposes exactly the entry points the markup calls on SPA', () => {
+    // Harvested from the markup rather than listed by hand: an onclick naming a
+    // function nobody defined is a dead control that no other test can see.
+    const called = [...EXPORT_POP.matchAll(/onclick="SPA\.(\w+)\(/g)].map((m) => m[1]);
+    assert.deepStrictEqual([...new Set(called)].sort(),
+      ['downloadSrt', 'toggleExportMenu', 'videoItemAction'],
+      'the control is one toggle and two menu items — nothing else');
+    for (const fn of called) {
       assert.ok(new RegExp('SPA\\.' + fn + '\\s*=').test(html),
-        'SPA.' + fn + ' must exist — the panel markup calls it inline');
+        'SPA.' + fn + ' must exist — the markup calls it inline');
     }
+  });
+
+  it('carries no dismiss control of its own', () => {
+    // A menu is dismissed by leaving it: a click anywhere outside, the download
+    // button again, or Escape. A Hide button inside the surface was a third way
+    // to say the same thing, and it crowded a two-item head row.
+    assert.ok(!/SPA\.(cancelBurnWatch|closeExportMenu)\(/.test(EXPORT_POP),
+      'the menu must not carry its own Hide button');
+    assert.ok(!/'burn\.hide'/.test(html),
+      'burn.hide is no longer used — a key with no caller rots');
   });
 });
 
@@ -3728,13 +3845,17 @@ describe('burn video driver behaviour', () => {
   function makeEl(id) {
     const el = {
       id: id, hidden: false, disabled: false, href: '', className: '',
-      style: {}, attrs: {}, children: [], writes: 0,
+      style: {}, attrs: {}, children: [], writes: 0, htmlWrites: 0,
+      // The flat element map has no tree, so a descendant a selector reaches
+      // has to be registered here by the harness that owns it.
+      byCss: {},
       setAttribute: function (k, v) { this.attrs[k] = String(v); },
       getAttribute: function (k) { return k in this.attrs ? this.attrs[k] : null; },
       appendChild: function (c) { this.children.push(c); return c; },
+      querySelector: function (sel) { return this.byCss[sel] || null; },
       click: function () {}
     };
-    // textContent counts its writes: #burn-step is the panel's live region, so
+    // textContent counts its writes: #burn-step is the item's live region, so
     // "written only when the text actually changes" is a behaviour, not a
     // detail — a re-write makes a screen reader announce it again.
     let text = '';
@@ -3743,20 +3864,35 @@ describe('burn video driver behaviour', () => {
       set: function (v) { text = String(v); el.writes++; },
       enumerable: true, configurable: true
     });
-    // The driver clears the track before (re)building its segments.
+    // The driver clears the track before (re)building its segments, and writes
+    // the download glyph into the button exactly once. Both go through here, so
+    // assigned markup has to leave the node with a firstChild — that is the
+    // whole condition guarding the second write.
+    let markup = '';
     Object.defineProperty(el, 'innerHTML', {
-      get: function () { return ''; },
-      set: function () { el.children.length = 0; },
+      get: function () { return markup; },
+      set: function (v) {
+        markup = String(v);
+        el.htmlWrites++;
+        el.children.length = 0;
+        if (markup) el.children.push({ html: markup });
+      },
+      enumerable: true, configurable: true
+    });
+    Object.defineProperty(el, 'firstChild', {
+      get: function () { return el.children[0] || null; },
       enumerable: true, configurable: true
     });
     return el;
   }
 
-  // Mirrors the shipped markup, including which nodes start [hidden].
-  const EL_IDS = ['burn-panel', 'burn-panel-title', 'burn-error',
-                  'btn-burn-download', 'burn-track', 'burn-step', 'burn-elapsed',
-                  'burn-eta', 'burn-run-link', 'btn-burn-video'];
-  const HIDDEN_IDS = ['burn-panel', 'burn-error', 'btn-burn-download', 'burn-run-link'];
+  // Mirrors the shipped markup, including which nodes start [hidden]. The
+  // progress parts belong to a run: an item merely offering to start one shows
+  // a bare label, so the track, the run link and the error line all ship closed.
+  const EL_IDS = ['btn-export', 'export-menu', 'export-video', 'btn-burn-video',
+                  'burn-item-label', 'burn-track', 'burn-step', 'burn-elapsed',
+                  'burn-eta', 'burn-run-link', 'burn-error', 'view-preview'];
+  const HIDDEN_IDS = ['export-menu', 'burn-track', 'burn-run-link', 'burn-error'];
 
   const NO_PROGRESS = { fraction: 0, label: '', done: false, failed: false,
                         failedStep: '', renderFraction: null, renderStartedMs: null,
@@ -3764,22 +3900,35 @@ describe('burn video driver behaviour', () => {
   const MIN_MS = 60000;
 
   // The phase model is pure and tested directly in tests/test_burn_video.js, so
-  // the driver gets the REAL functions: a stub would let the panel draw four
+  // the driver gets the REAL functions: a stub would let the item draw four
   // equal segments and still pass.
   const PHASE_MODEL = require('../site/js/burn_video');
   const ZIP_READER = require('../site/js/burn_artifact');
+  // Same reasoning for the menu model (tests/test_export_menu.js): videoItemState
+  // decides which of the four faces the item wears, and a stub would let it show
+  // "Download" over a run that never happened and still pass.
+  const MENU_MODEL = require('../site/js/export_menu');
 
   function makeHarness(over) {
     const els = {};
     EL_IDS.forEach(function (id) { els[id] = makeEl(id); });
     HIDDEN_IDS.forEach(function (id) { els[id].hidden = true; });
-    els['burn-panel'].className = 'burn-panel';   // as the markup ships it
+    els['export-video'].className = 'export-item-group';   // as the markup ships it
+    // The status line has no id in the markup — it is reached from the group by
+    // class, so the harness has to hang it there for querySelector to find.
+    const meta = makeEl('export-item__meta');
+    els['export-video'].byCss['.export-item__meta'] = meta;
     const store = {};
     const env = {
       els: els,
+      meta: meta,
       timers: [],
       dispatched: 0,
       toasts: [],
+      // Every element document.createElement() handed out, newest last: the
+      // subtitle download builds its anchor that way, and the name it saves
+      // under is only observable there.
+      created: [],
       // Every SPA.confirm() the driver opens, and the answer it gets back.
       // Recorded rather than auto-approved: the declined case has to be able to
       // assert that NOTHING was dispatched, which a stub that always says yes
@@ -3789,7 +3938,11 @@ describe('burn video driver behaviour', () => {
       document: {
         getElementById: function (id) { return els[id] || null; },
         documentElement: {},
-        createElement: function () { return makeEl('a'); }
+        createElement: function () {
+          const el = makeEl('created');
+          env.created.push(el);
+          return el;
+        }
       },
       window: { screen: { width: 1280, height: 720 } },
       localStorage: {
@@ -3811,6 +3964,7 @@ describe('burn video driver behaviour', () => {
         }
       },
       API: 'https://api.example/repos/o/r',
+      REPO: 'o/r',
       BURN_WORKFLOW: 'burn-subtitles.yml',
       getAuthToken: function () { return 'tok'; },
       dispatchWorkflow: function (api, tok, wf, ref) {
@@ -3830,6 +3984,10 @@ describe('burn video driver behaviour', () => {
       burnPhaseKey: PHASE_MODEL.burnPhaseKey,
       burnPhaseNumber: PHASE_MODEL.burnPhaseNumber,
       burnSegments: PHASE_MODEL.burnSegments,
+      videoItemState: MENU_MODEL.videoItemState,
+      exportIconSvg: MENU_MODEL.exportIconSvg,
+      exportSrtPath: MENU_MODEL.exportSrtPath,
+      exportSrtName: MENU_MODEL.exportSrtName,
       burnStateKey: function (a, b) { return 'burn:' + a + ':' + b; },
       listRunArtifacts: function () { return Promise.resolve([]); },
       ghWriteUser: function () { return true; },
@@ -3854,20 +4012,22 @@ describe('burn video driver behaviour', () => {
     Object.assign(env, over || {});
 
     const start = html.indexOf('var BURN_POLL_MS');
-    const end = html.indexOf('SPA.startBurn = startBurn;');
+    const end = html.indexOf('SPA.toggleExportMenu = toggleExportMenu;');
     assert.ok(start > -1 && end > start, 'burn driver block not found in index.html');
     const names = ['document', 'window', 'localStorage', 'getComputedStyle',
-      'previewState', 't', 'pluralFor', 'SPA', 'API', 'BURN_WORKFLOW', 'getAuthToken',
-      'dispatchWorkflow', 'burnRef', 'editSync',
+      'previewState', 't', 'pluralFor', 'SPA', 'API', 'REPO', 'BURN_WORKFLOW',
+      'getAuthToken', 'dispatchWorkflow', 'burnRef', 'editSync',
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
+      'videoItemState', 'exportIconSvg', 'exportSrtPath', 'exportSrtName',
       'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout',
       'findEocd', 'readCentralDirectory', 'pickMp4Entry', 'localDataOffset'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
-      'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned',
-      'retranslateBurnPanel', 'updateBurnButton', 'extractBurnedMp4',
-      'burnElapsedMinutes'];
+      'showBurnError', 'resumeBurnWatch', 'saveMp4', 'downloadBurned', 'downloadSrt',
+      'openExportMenu', 'closeExportMenu', 'toggleExportMenu', 'videoItemAction',
+      'retranslateBurnPanel', 'updateExportUi', 'extractBurnedMp4',
+      'burnElapsedMinutes', 'onBurnKeydown', 'onBurnDocumentClick'];
     const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
       ', getWatch: function () { return burnWatch; } };';
     env.api = new Function(names.join(','), html.slice(start, end) + tail)
@@ -3900,7 +4060,7 @@ describe('burn video driver behaviour', () => {
 
   // ---- the render must not quietly disagree with the preview ----
   //
-  // The panel promises a video "matching what the fullscreen preview shows",
+  // The item promises a video "matching what the fullscreen preview shows",
   // and two things could silently make that false: the workflow always burns
   // final/uk.srt (it has no language input), and it checks out `main`, so
   // edits still sitting in the browser cannot appear. Both are minutes-long
@@ -3931,52 +4091,204 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(shown, 1, 'a finished run must not grow with the wall clock');
   });
 
-  // "Hide" used to be a one-way door: the panel vanished, the render button
-  // went live again, and the only way back was to leave the preview and return.
-  // A control called Hide must have an Unhide, and while a run is in flight
-  // that same control is what stops a second one being dispatched by accident.
-  it('offers a way back after hiding, instead of just re-enabling render', async () => {
+  // Tidying the menu away used to be a one-way door: the panel vanished, the
+  // render button went live again, and the only way back to a run in flight was
+  // to leave the preview and return. Closing is now only closing — the run is
+  // still recorded, and reopening picks the polling back up where it left off.
+  it('keeps the recorded run when the menu is closed, and resumes it on reopen', async () => {
     const env = makeHarness();
+    env.api.openExportMenu();
     await env.api.startBurn('t', 'v');
+    await settle();
     env.api.renderBurnProgress({ fraction: 0.3, label: 'Render 20%', done: false,
       failed: false, failedStep: '', unknownStep: '', startedMs: Date.now() - 60000 });
-    env.api.cancelBurnWatch();
 
-    assert.strictEqual(env.els['burn-panel'].hidden, true, 'the panel is hidden');
-    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_show_progress',
-      'the button must offer the panel back, not a second render');
-    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+    env.api.closeExportMenu();
+    assert.strictEqual(env.els['export-menu'].hidden, true, 'the menu is closed');
+    assert.ok(env.api.getWatch(), 'the run itself must survive being tidied away');
+    assert.strictEqual(armedTimers(env), 0,
+      'nothing is on screen to write into — the 5s poll must stop with the menu');
+
+    env.api.openExportMenu();
+    await settle();
+    assert.strictEqual(env.els['export-menu'].hidden, false, 'the menu is back');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working',
+      'the item picks the run back up rather than offering a second one');
+    assert.strictEqual(armedTimers(env), 1, 'and the poll is following again');
   });
 
-  it('reopens the hidden panel rather than dispatching again', async () => {
+  it('reopens the menu rather than dispatching again', async () => {
     const env = makeHarness();
+    env.api.openExportMenu();
     await env.api.startBurn('t', 'v');
     env.api.renderBurnProgress({ fraction: 0.3, label: 'Render 20%', done: false,
       failed: false, failedStep: '', unknownStep: '', startedMs: Date.now() - 60000 });
-    env.api.cancelBurnWatch();
+    env.api.closeExportMenu();
     const before = env.dispatched;
 
-    await env.api.startBurn('t', 'v');
+    env.api.toggleExportMenu();
     assert.strictEqual(env.dispatched, before, 'reopening must not dispatch a run');
-    assert.strictEqual(env.els['burn-panel'].hidden, false, 'the panel is back');
-    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_video',
-      'once visible the button is a render button again');
+    assert.strictEqual(env.els['export-menu'].hidden, false, 'the menu is back');
   });
 
-  it('names the result, not the progress, when a finished panel is hidden', async () => {
+  it('does not resume polling a run that already reached a terminal state', async () => {
+    // A finished item is a result, not a progress report: re-arming the loop
+    // over it would poll a run that can no longer change, every 5 seconds, for
+    // as long as the menu stays open.
     const env = makeHarness();
+    env.api.openExportMenu();
+    await env.api.startBurn('t', 'v');
+    await settle();
+    env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
+    env.api.closeExportMenu();
+
+    env.api.openExportMenu();
+    await settle();
+    assert.strictEqual(armedTimers(env), 0, 'a finished run must not be polled again');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'and it still offers the file it produced');
+  });
+
+  // A surface that floats over the page is expected to close on Escape: a menu
+  // that can only be dismissed by aiming at a small button reads as stuck.
+  it('closes the menu on Escape, without touching the render', async () => {
+    const env = makeHarness();
+    env.api.openExportMenu();
+    await env.api.startBurn('t', 'v');
+    const before = env.dispatched;
+
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['export-menu'].hidden, true, 'Escape closes the menu');
+    assert.ok(env.api.getWatch(), 'the run goes on — the button is the way back to it');
+    assert.strictEqual(env.dispatched, before, 'Escape must not dispatch anything');
+  });
+
+  it('leaves Escape alone when no menu is open', () => {
+    const env = makeHarness();
+    // Nothing is on screen: Escape belongs to whatever else is listening (the
+    // CSS-only fullscreen exit shares this key).
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['btn-export'].getAttribute('aria-expanded'), null,
+      'a closed menu must not be re-closed — that write is proof the key was taken');
+  });
+
+  it('leaves Escape to fullscreen while the header is not on screen', () => {
+    // In fs-mode the header, and with it this whole control, is display:none.
+    // Escape there means "leave fullscreen"; closing an invisible menu would
+    // swallow the key and strand the user in it.
+    const env = makeHarness();
+    env.api.openExportMenu();
+    env.els['view-preview'].className = 'view fs-mode';
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['export-menu'].hidden, false,
+      'the invisible menu must not consume the fullscreen exit key');
+  });
+
+  // The menu has no dismiss control of its own: leaving it IS closing it.
+  it('closes when the click lands outside the anchor', async () => {
+    const env = makeHarness();
+    env.api.openExportMenu();
+    await env.api.startBurn('t', 'v');
+    const asked = [];
+    env.api.onBurnDocumentClick({ target: { closest: function (sel) { asked.push(sel); return null; } } });
+
+    assert.deepStrictEqual(asked, ['.export-pop'],
+      'inside-ness is decided against the anchor, not the menu alone — the ' +
+      'download button is inside the anchor and is the toggle');
+    assert.strictEqual(env.els['export-menu'].hidden, true, 'the menu closes');
+    assert.ok(env.api.getWatch(), 'the run goes on — the button is the way back to it');
+  });
+
+  it('stays open for a click on its own surface', async () => {
+    const env = makeHarness();
+    env.api.openExportMenu();
+    await env.api.startBurn('t', 'v');
+    // Both menu items and the run link live inside the anchor, and an item must
+    // not dismiss the surface it is on before it has acted.
+    env.api.onBurnDocumentClick({ target: { closest: function () { return {}; } } });
+    assert.strictEqual(env.els['export-menu'].hidden, false,
+      'clicking the menu itself must not dismiss it');
+  });
+
+  it('makes the download button a toggle, never a second dispatch', async () => {
+    const env = makeHarness();
+    env.api.openExportMenu();
     await env.api.startBurn('t', 'v');
     env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
-    env.api.cancelBurnWatch();
-    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_show_result',
-      'a finished run offers the RESULT back — the download lives in that panel');
+    const before = env.dispatched;
+
+    env.api.toggleExportMenu();
+    assert.strictEqual(env.dispatched, before, 'the toggle must not dispatch a run');
+    assert.strictEqual(env.els['export-menu'].hidden, true, 'the menu closes');
+    assert.strictEqual(env.els['btn-export'].getAttribute('aria-expanded'), 'false',
+      'assistive tech is told the surface closed, not left claiming it is open');
+
+    env.api.toggleExportMenu();
+    assert.strictEqual(env.els['export-menu'].hidden, false, 'and opens again');
+    assert.strictEqual(env.els['btn-export'].getAttribute('aria-expanded'), 'true');
   });
 
-  it('goes back to offering a render once there is nothing to reopen', () => {
+  it('names the result, not the progress, once the run has finished', async () => {
     const env = makeHarness();
-    env.api.cancelBurnWatch();   // nothing was ever started
-    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_video');
+    env.api.openExportMenu();
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working',
+      'precondition: the item was the progress readout');
+    env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'a finished run offers the RESULT — the item itself becomes the download');
+    assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'),
+      'export.video_download',
+      'the key travels with the text, or a language toggle reverts the face');
+  });
+
+  it('offers a render when nothing has been started', () => {
+    const env = makeHarness();
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
     assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+    // A run's progress parts belong to a run: an item merely offering to start
+    // one must not carry an empty track or a stale time under it.
+    assert.strictEqual(env.els['burn-track'].hidden, true, 'no track before a run');
+    assert.strictEqual(env.meta.hidden, true, 'no status line before a run');
+  });
+
+  it('asks the same question the label answered when the item is pressed', async () => {
+    // One item, two errands. The click must not decide again from scratch: it
+    // reads the face videoItemState() picked, or a press on "Download" could
+    // start a 25-minute render instead of handing over the finished file.
+    const listed = [];
+    const env = makeHarness({
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
+      listRunArtifacts: function (api, token, runId) {
+        listed.push(runId);
+        return Promise.resolve([{ id: 9, size_in_bytes: 100 }]);
+      }
+    });
+
+    await env.api.videoItemAction();
+    await settle();
+    assert.strictEqual(env.dispatched, 1, 'the start face means "build it"');
+    assert.deepStrictEqual(listed, [], 'and asks for no artifact — there is none yet');
+
+    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    await env.api.videoItemAction();
+    assert.strictEqual(env.dispatched, 1, 'the download face must not start a second run');
+    assert.deepStrictEqual(listed, [5],
+      'it goes to the artifact of the run it followed, by that run id');
+  });
+
+  it('writes the download glyph once, not on every poll', () => {
+    // updateExportUi() runs on every 5s poll for ~25 minutes. The icon is a
+    // constant, so rewriting it would churn the DOM ~300 times for nothing.
+    const env = makeHarness();
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['btn-export'].innerHTML, MENU_MODEL.exportIconSvg(),
+      'the glyph must come from the shared module, never a copy in the driver');
+    env.api.updateExportUi();
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['btn-export'].htmlWrites, 1,
+      'the button already has its icon — leave it alone');
   });
 
   // The rendered video must be the subtitles the user is LOOKING AT. The SPA
@@ -4022,18 +4334,42 @@ describe('burn video driver behaviour', () => {
       });
       await env.api.startBurn('t', 'v');
       assert.strictEqual(env.dispatched, 0, status + ' must not dispatch');
-      assert.strictEqual(env.els['btn-burn-video'].disabled, true, status + ' disables');
+      // BOTH downloads read this ref, so the whole control goes quiet — not
+      // just the render. The subtitle file on that branch is stale too.
+      assert.strictEqual(env.els['btn-export'].disabled, true, status + ' disables');
     }
   });
 
-  it('says why the button is disabled while syncing', () => {
+  it('says why the control is disabled while syncing', () => {
     const env = makeHarness({
       editSync: { talkId: 't', getInfo: function () {
         return { status: 'pending', branch: 'b' }; } },
     });
-    env.api.updateBurnButton();
-    assert.strictEqual(env.els['btn-burn-video'].title, 'T:burn.wait_for_sync',
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['btn-export'].disabled, true);
+    assert.strictEqual(env.els['btn-export'].title, 'T:burn.wait_for_sync',
       'a dead control with no reason is indistinguishable from a bug');
+  });
+
+  it('closes the menu when the ref goes behind the screen', () => {
+    // The cloud can turn amber while the menu is open — a fresh edit lands, and
+    // the branch is behind the preview again. An open menu offering two
+    // downloads of text nobody is looking at is worse than no menu.
+    //
+    // Closing has to happen WITHOUT re-entering updateExportUi(): it reaches
+    // closeExportMenu(), which reaches setBurnFollowing(), which calls
+    // updateExportUi() again — and while the menu is still on screen that cycle
+    // has nothing to stop it.
+    let info = null;   // nothing syncing yet, so the ref is main
+    const env = makeHarness({
+      editSync: { talkId: 't', getInfo: function () { return info; } }
+    });
+    env.api.openExportMenu();
+    assert.strictEqual(env.els['export-menu'].hidden, false, 'precondition: open');
+    info = { status: 'syncing', branch: 'b' };
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['export-menu'].hidden, true,
+      'the menu must not stay open over a ref that is behind the screen');
   });
 
   it('ignores a sync engine that belongs to another talk', async () => {
@@ -4043,6 +4379,42 @@ describe('burn video driver behaviour', () => {
     });
     await env.api.startBurn('t', 'v');
     assert.strictEqual(env.dispatchedRef, 'main');
+  });
+
+  it('takes the subtitle file from the same ref the render is dispatched against', async () => {
+    // Two downloads of "the subtitles" that disagree would be the worst kind of
+    // bug here: the .srt a reviewer opens and the .srt burned into the video
+    // must be the same bytes, so both read whatever burnSourceRef() picked.
+    const cases = [
+      [null, 'main'],
+      [{ status: 'synced', branch: 'sync/me/t--v-uk' }, 'sync/me/t--v-uk']
+    ];
+    for (const [info, ref] of cases) {
+      const urls = [];
+      const env = makeHarness({
+        editSync: info ? { talkId: 't', getInfo: function () { return info; } } : null,
+        fetch: function (url) {
+          urls.push(url);
+          return Promise.resolve({
+            ok: true,
+            blob: function () { return Promise.resolve(new Blob(['1\n'])); }
+          });
+        }
+      });
+      await env.api.downloadSrt();
+      // Read before the render dispatches: that path builds elements of its own.
+      const anchor = env.created[env.created.length - 1];
+      await env.api.startBurn('t', 'v');
+
+      assert.strictEqual(urls.length, 1, 'one fetch, of one file');
+      assert.ok(urls[0].includes('/' + ref + '/'), 'expected ref ' + ref + ' in ' + urls[0]);
+      assert.ok(urls[0].includes('/' + env.dispatchedRef + '/'),
+        'the file and the render must not be read off two different refs');
+      assert.ok(urls[0].endsWith(MENU_MODEL.exportSrtPath('t', 'v', 'uk')),
+        'the path is the published subtitle file, not an SPA-side reconstruction');
+      assert.strictEqual(anchor.download, MENU_MODEL.exportSrtName('t', 'v', 'uk'),
+        'a reviewer downloads several of these into one folder — name them so');
+    }
   });
 
   it('dispatches against the default branch, and against an override when set', async () => {
@@ -4060,6 +4432,38 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env2.dispatchedRef, 'worktree-burn-subtitles');
   });
 
+  // ---- a finished video is only an answer while it still matches the screen ----
+
+  it('offers a render again once the subtitles move on from the one it built', async () => {
+    // The file is "this video with THESE subtitles" only for as long as the
+    // subtitles are these. Edit a block afterwards and the rendered video no
+    // longer matches the preview, so the item must stop handing it over as
+    // though it did — a wrong file is worse than a wait.
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'precondition: the run finished and the item became the download');
+
+    env.previewState.edits = { uk: { 3: 'a later correction' } };
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'the subtitles moved on — offer to build the ones now on screen');
+  });
+
+  it('does not call a run recorded before signatures existed stale', async () => {
+    // Watches persisted by an older build carry no signature at all. Comparing
+    // "nothing" against the current subtitles would declare every resumed
+    // render stale on sight and throw away a finished video for nothing.
+    const env = makeHarness(previewing({ edits: { uk: { 3: 'edited' } } }));
+    env.localStorage.setItem('burn:t:v', savedWatch(7));   // no editsSig field
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'an unsigned watch is current, not stale');
+  });
+
   it('dispatches nothing while a language other than Ukrainian is previewed', async () => {
     const env = makeHarness(previewing({ srtLang: 'en' }));
     env.api.startBurn();
@@ -4071,11 +4475,11 @@ describe('burn video driver behaviour', () => {
       'nothing may be recorded for a run that was never started');
   });
 
-  it('says why the render is unavailable rather than leaving a dead button', () => {
+  it('says why the render is unavailable rather than leaving a dead item', () => {
     const env = makeHarness(Object.assign(previewing({ srtLang: 'en' }), {
       t: function (k) { return k === 'burn.wrong_lang' ? 'UK only, not {lang}' : k; }
     }));
-    env.api.updateBurnButton();
+    env.api.updateExportUi();
     assert.strictEqual(env.els['btn-burn-video'].disabled, true);
     assert.strictEqual(env.els['btn-burn-video'].title, 'UK only, not EN',
       'a disabled control with no explanation is indistinguishable from a bug');
@@ -4083,9 +4487,9 @@ describe('burn video driver behaviour', () => {
 
   it('takes the explanation back off once Ukrainian is previewed again', () => {
     const env = makeHarness(previewing({ srtLang: 'en' }));
-    env.api.updateBurnButton();
+    env.api.updateExportUi();
     env.previewState.srtLang = 'uk';
-    env.api.updateBurnButton();
+    env.api.updateExportUi();
     assert.strictEqual(env.els['btn-burn-video'].disabled, false);
     assert.strictEqual(env.els['btn-burn-video'].title, '',
       'a stale reason on a working button is worse than none');
@@ -4111,10 +4515,12 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.confirms.length, 1, 'precondition: it was asked');
     assert.strictEqual(env.dispatched, 0, 'declining must not start a run anyway');
     assert.strictEqual(env.api.getWatch(), null);
-    assert.strictEqual(env.els['burn-panel'].hidden, true,
-      'no progress panel for a render that never started');
+    assert.strictEqual(env.els['burn-track'].hidden, true,
+      'no progress track for a render that never started');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'the item goes back to offering the render it did not start');
     assert.strictEqual(env.els['btn-burn-video'].disabled, false,
-      'declining must leave the button usable — the user may edit and retry');
+      'declining must leave the item usable — the user may edit and retry');
   });
 
   it('does not ask when nothing is pending', async () => {
@@ -4146,43 +4552,47 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.dispatched, 1);
   });
 
-  it('disables the render button while the run is followed', async () => {
+  it('becomes the progress readout while the run is followed', async () => {
     const env = makeHarness();
     env.api.startBurn();
     await settle();
     assert.strictEqual(env.els['btn-burn-video'].disabled, true,
-      'the button must be disabled while a run is being followed');
+      'there is nothing to click while the run it is reporting on runs');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working');
   });
 
-  it('re-enables the button when the run finishes, fails or is hidden', async () => {
-    for (const finish of ['onBurnFinished', 'showBurnError', 'cancelBurnWatch']) {
+  it('lets the item be pressed again when the run finishes, fails or the menu closes', async () => {
+    for (const finish of ['onBurnFinished', 'showBurnError', 'closeExportMenu']) {
       const env = makeHarness();
+      env.api.openExportMenu();
       env.api.startBurn();
       await settle();
       assert.strictEqual(env.els['btn-burn-video'].disabled, true,
-        'precondition: the button is disabled while the run is followed');
+        'precondition: the item is disabled while the run is followed');
       env.api[finish]('boom');
       assert.strictEqual(env.els['btn-burn-video'].disabled, false,
-        finish + '() must re-enable the render button');
+        finish + '() must leave the item pressable again');
     }
   });
 
-  it('keeps the button disabled for a run resumed on page load', async () => {
+  it('keeps the item disabled for a run resumed on page load', async () => {
     const env = makeHarness();
     env.localStorage.setItem('burn:t:v', savedWatch(7));
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     assert.strictEqual(env.els['btn-burn-video'].disabled, true,
-      'a resumed in-flight run must keep the button disabled');
+      'a resumed in-flight run must keep the item on its working face');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working');
   });
 
-  it('enables the button when there is nothing to resume', async () => {
+  it('enables the item when there is nothing to resume', async () => {
     const env = makeHarness();
     env.els['btn-burn-video'].disabled = true;   // left over from another video
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     assert.strictEqual(env.els['btn-burn-video'].disabled, false,
-      'no recorded run means the button must be usable');
+      'no recorded run means the item must offer to start one');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
   });
 
   it('drops the previous watch before dispatching a new one', async () => {
@@ -4191,8 +4601,8 @@ describe('burn video driver behaviour', () => {
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     assert.ok(env.api.getWatch(), 'precondition: a watch is being followed');
-    // Hide no longer opens a path to a second dispatch — the button reopens the
-    // panel instead. A NEW render is legitimate once the old one is terminal,
+    // Closing the menu no longer opens a path to a second dispatch — the button
+    // only reopens it. A NEW render is legitimate once the old one is terminal,
     // which is the path this guard has to hold on.
     env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
     env.api.startBurn();
@@ -4201,24 +4611,26 @@ describe('burn video driver behaviour', () => {
       'continuation fails its watch === burnWatch check instead of re-arming');
   });
 
-  it('does not re-arm the poll timer from a continuation that lands after Hide', async () => {
+  it('does not re-arm the poll timer from a continuation that lands after the menu closes', async () => {
     let resolveJobs;
     const env = makeHarness({
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
       getRunJobs: function () { return new Promise(function (r) { resolveJobs = r; }); }
     });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
+    env.api.openExportMenu();
+    env.api.startBurn();
     await settle();
-    env.api.cancelBurnWatch();
+    assert.strictEqual(armedTimers(env), 0, 'precondition: the poll is mid-flight');
+    env.api.closeExportMenu();
     resolveJobs([{}]);
     await settle();
     assert.strictEqual(armedTimers(env), 0,
-      'a poll continuation resolving after Hide must not restart the loop');
+      'a poll continuation resolving after the menu closed must not restart the loop');
   });
 
   it('shows the queued label instead of a blank status during run discovery', () => {
     const env = makeHarness();
-    // computeProgress(null) legitimately returns label:'' — the panel must not
+    // computeProgress(null) legitimately returns label:'' — the item must not
     // go blank at 0% for the whole discovery window.
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
     assert.strictEqual(env.els['burn-step'].textContent, 'T:burn.queued');
@@ -4285,7 +4697,7 @@ describe('burn video driver behaviour', () => {
 
   it('breathes the first segment while the run is still being discovered', () => {
     // Dispatched, run not found yet: no fraction, no named step, and up to 60s
-    // of it. The panel must not look inert — the phase about to run breathes.
+    // of it. The item must not look inert — the phase about to run breathes.
     const env = makeHarness();
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
     assert.match(classes(env)[0], /burn-seg--active/);
@@ -4370,35 +4782,45 @@ describe('burn video driver behaviour', () => {
       'a re-write of identical text makes a screen reader announce it again');
   });
 
-  it('moves the title i18n key with the title text', () => {
+  it('moves the label i18n key with the label text', async () => {
     // translatePage() repaints every [data-i18n] element on a language toggle,
-    // so a stale key reverts a finished run's title to "Rendering…".
+    // so a stale key would revert a finished run's label to "Create the video".
     const env = makeHarness();
-    env.api.renderBurnProgress({ fraction: 1, label: '', done: true });
-    assert.strictEqual(env.els['burn-panel-title'].textContent, 'T:burn.title_done');
-    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
-      'burn.title_done');
-    env.api.renderBurnProgress({ fraction: 0.3, label: 'Render 40%', done: false,
-                                 failed: true, failedStep: 'Render 40%' });
-    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
-      'burn.title_failed');
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'),
+      'export.video_working');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working');
+
+    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'),
+      'export.video_download');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download');
+
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
       { fraction: 0.1, label: 'Download video' }));
-    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'), 'burn.title');
+    assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'),
+      'export.video_make');
   });
 
-  it('names the failure in the title when no job step ever ran', () => {
+  it('stops claiming a render is in flight when no job step ever ran', () => {
     // A dispatch/permission/run-not-found error never reaches
-    // renderBurnProgress, so the title would keep promising a render in flight.
+    // renderBurnProgress, so without correcting the item here it would go on
+    // reporting on a run that does not exist — and offer nothing to retry with.
     const env = makeHarness();
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
     env.api.showBurnError('boom');
-    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
-      'burn.title_failed');
+    assert.strictEqual(env.els['burn-error'].textContent, 'boom');
+    assert.strictEqual(env.els['burn-error'].hidden, false,
+      'the error line is the only thing that says what happened');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'a failure is not a result: the item goes back to offering the render');
+    assert.strictEqual(env.els['burn-track'].hidden, true,
+      'and a track frozen at 0% under an error still reads as "working"');
   });
 
   it('clears the stale progress line when it reports an error', () => {
-    // The panel stops being a progress report the moment it becomes an error
+    // The item stops being a progress report the moment it becomes an error
     // report: a "Starting..." line under "the render failed" invites the
     // belief that something is still being followed.
     const env = makeHarness();
@@ -4438,7 +4860,7 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['burn-elapsed'].textContent, '');
   });
 
-  it('leaves an expired panel frozen across a language switch', async () => {
+  it('leaves an expired item frozen across a language switch', async () => {
     // Its track is muted and its times are gone on purpose; a repaint would put
     // both back and offer a download that cannot work.
     const env = makeHarness({
@@ -4452,12 +4874,13 @@ describe('burn video driver behaviour', () => {
                                  finishedMs: Date.now() });
     await env.api.downloadBurned();
     env.api.retranslateBurnPanel();
-    assert.match(env.els['burn-panel'].className, /burn-panel--expired/);
+    assert.match(env.els['export-video'].className, /export-item-group--expired/);
     assert.strictEqual(env.els['burn-eta'].textContent, '');
-    assert.strictEqual(env.els['btn-burn-download'].hidden, true);
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'the item must not go back to offering a file that no longer exists');
   });
 
-  it('does not touch a panel that was never drawn', () => {
+  it('does not touch an item that was never drawn', () => {
     const env = makeHarness();
     env.api.retranslateBurnPanel();
     assert.strictEqual(env.els['burn-track'].children.length, 0,
@@ -4475,14 +4898,15 @@ describe('burn video driver behaviour', () => {
       'preserve the title and the duration together, or neither');
   });
 
-  it('keeps the finished title when only the download failed', () => {
+  it('keeps offering the finished video when only the download failed', () => {
     const env = makeHarness();
     env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS,
                              finishedMs: Date.now() });
     env.api.showBurnError('no mp4 inside the archive');
-    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
-      'burn.title_done',
+    assert.match(env.els['export-video'].className, /export-item-group--done/,
       'the render did succeed — it was the download that failed');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'the file is still there: taking the download away would strand the user');
   });
 
   it('greens the whole track on a finished run and says how long it took', () => {
@@ -4490,14 +4914,15 @@ describe('burn video driver behaviour', () => {
     env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
                                  startedMs: Date.now() - 21 * MIN_MS,
                                  finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-panel'].className, 'burn-panel burn-panel--done');
+    assert.strictEqual(env.els['export-video'].className,
+      'export-item-group export-item-group--done');
     assert.deepStrictEqual(widths(env), ['100%', '100%', '100%', '100%']);
     assert.ok(classes(env).every(function (c) { return /burn-seg--done/.test(c); }));
     assert.strictEqual(env.els['burn-track'].getAttribute('aria-valuenow'), '100');
     assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in');
   });
 
-  it('carries the run start into the finished panel', async () => {
+  it('carries the run start into the finished item', async () => {
     // The "done in 21 min" line has to come from the API's own start instant —
     // the finished payload the driver synthesises must not lose it.
     const start = Date.now() - 21 * MIN_MS;
@@ -4519,7 +4944,7 @@ describe('burn video driver behaviour', () => {
     const env = makeHarness();
     env.api.renderBurnProgress({ fraction: 1, label: '', done: true });
     env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
-    assert.strictEqual(env.els['burn-panel'].className, 'burn-panel',
+    assert.strictEqual(env.els['export-video'].className, 'export-item-group',
       'a fresh run must not inherit the previous run\'s green');
   });
 
@@ -4550,7 +4975,7 @@ describe('burn video driver behaviour', () => {
 
   it('names the phase when the run was rejected in Validate inputs', async () => {
     // The one step whose entire job is to report bad user input used to be the
-    // one step whose failure the panel could not name: it carries no weight, so
+    // one step whose failure the item could not name: it carries no weight, so
     // burnPhaseKey returned null and the message fell through to the generic
     // "the render failed". The real phase model is wired into this harness, so
     // this exercises the alias rather than a stub.
@@ -4599,16 +5024,14 @@ describe('burn video driver behaviour', () => {
                                  startedMs: Date.now() - 21 * MIN_MS,
                                  finishedMs: Date.now() });
     await env.api.downloadBurned();
-    assert.match(env.els['burn-panel'].className, /burn-panel--expired/,
+    assert.match(env.els['export-video'].className, /export-item-group--expired/,
       'nothing here can be downloaded any more — the track must stop looking ready');
-    assert.strictEqual(env.els['btn-burn-download'].hidden, true,
-      'a download button that can only fail is worse than none');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'a download that can only fail is worse than none — offer the render again');
     assert.strictEqual(env.els['burn-eta'].textContent, '',
       'no time claims survive an expired artifact');
-    assert.strictEqual(env.els['burn-error'].textContent, 'T:burn.expired');
-    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
-      'burn.title_done',
-      'the render did not fail — its file expired, which the error line says');
+    assert.strictEqual(env.els['burn-error'].textContent, 'T:burn.expired',
+      'the render did not fail — its file expired, which only this line can say');
   });
 
   // The remaining time is now extrapolated from the rate the render is actually
