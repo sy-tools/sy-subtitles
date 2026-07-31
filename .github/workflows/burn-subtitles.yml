@@ -1,0 +1,123 @@
+name: Burn subtitles
+
+# PLACEHOLDER. The real implementation lives on the burn-subtitles feature branch
+# and replaces this file wholesale when that PR merges. This stub exists for one
+# reason: `workflow_dispatch` only works for a workflow that is present on the
+# DEFAULT branch. Until this file is on main, the feature branch's version cannot
+# be dispatched at all — not even against its own ref — so the SPA side of the
+# feature is untestable.
+#
+# With this merged, `gh workflow run burn-subtitles.yml --ref <branch>` runs the
+# version of the file that exists on <branch>, i.e. the real renderer.
+#
+# It is deliberately more than an empty job: it mirrors the real workflow's
+# dispatch contract and step names, so the preview SPA's whole flow
+# (dispatch -> find the run by request_id -> follow step progress -> download the
+# artifact and unwrap the ZIP) can be exercised end to end in about two minutes
+# without spending 20 minutes of ffmpeg on a real render.
+
+# workflow_dispatch returns no run id, so the caller (the preview SPA) finds its
+# own run by matching request_id in the run name.
+run-name: >-
+  Burn ${{ inputs.talk_id }}/${{ inputs.video_slug }} · ${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      talk_id:
+        description: Talk folder name, e.g. 1993-09-19_Ganesha-Puja-Cabella
+        required: true
+      video_slug:
+        description: Video subfolder name
+        required: true
+      font_ratio:
+        description: Subtitle font height as a fraction of frame height
+        required: true
+        default: "0.0711"
+      padtop_ratio:
+        description: Gradient band padding above the text, fraction of frame height
+        required: true
+        default: "0.0741"
+      padbot_ratio:
+        description: Gap below the text, fraction of frame height
+        required: true
+        default: "0.0333"
+      request_id:
+        description: Opaque token so the caller can find this run
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  burn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Dispatch inputs reach `run:` blocks only through env, never through direct
+    # ${{ }} interpolation, which would let a crafted talk_id inject shell.
+    env:
+      TALK_ID: ${{ inputs.talk_id }}
+      VIDEO_SLUG: ${{ inputs.video_slug }}
+      REQUEST_ID: ${{ inputs.request_id }}
+    steps:
+      # Step names below are a load-bearing contract: the SPA's progress model
+      # (BURN_STEP_WEIGHTS in site/js/burn_video.js) looks steps up BY NAME and
+      # ignores everything else. They must match the real workflow exactly.
+      - name: Install dependencies
+        run: |
+          echo "placeholder: the real workflow installs ffmpeg, yt-dlp and Pillow here"
+          sleep 5
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          # Same shape of guard as the real workflow, minus the repo lookups the
+          # placeholder cannot do (it does not check out the talk).
+          printf 'talk_id=%s\n' "$TALK_ID"
+          printf 'video_slug=%s\n' "$VIDEO_SLUG"
+          printf 'request_id=%s\n' "$REQUEST_ID"
+          case "$TALK_ID" in
+            */*|"") echo "::error::talk_id must be a single path segment"; exit 1 ;;
+          esac
+          case "$VIDEO_SLUG" in
+            */*|"") echo "::error::video_slug must be a single path segment"; exit 1 ;;
+          esac
+
+      - name: Download video
+        run: |
+          echo "placeholder: the real workflow fetches the Vimeo source here"
+          sleep 10
+
+      - name: Burn subtitles
+        run: |
+          # The real step runs ffmpeg, which emits `-progress` key=value blocks
+          # continuously. Emitting the same shape here lets the live-progress
+          # channels be probed against a genuinely running job: does the REST
+          # job-logs endpoint serve a partial body mid-run, and do ::notice::
+          # annotations show up live?
+          for i in $(seq 0 10 100); do
+            printf 'out_time_us=%s\n' "$((i * 600000))"
+            printf 'speed=1.0x\nprogress=continue\n'
+            echo "::notice title=burn-progress::${i}"
+            echo "placeholder render ${i}%"
+            sleep 6
+          done
+          echo "progress=end"
+
+      - name: Prepare result
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          # Not a real MP4 — just an ftyp box header, so the SPA's ZIP reader has
+          # something recognisable to extract and hand to the download path.
+          printf '\000\000\000\030ftypisom' > "out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4"
+          ls -l out
+
+      - name: Upload result
+        uses: actions/upload-artifact@v7
+        with:
+          name: burned__${{ inputs.talk_id }}__${{ inputs.video_slug }}
+          path: out/
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
