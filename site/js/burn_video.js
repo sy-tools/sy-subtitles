@@ -363,7 +363,7 @@ function renderEtaSeconds(renderFraction, elapsedSeconds) {
 function computeProgress(job, nowMs) {
   var result = { fraction: 0, label: '', done: false, failed: false,
                  failedStep: '', renderFraction: null, renderStartedMs: null,
-                 startedMs: null, unknownStep: '' };
+                 startedMs: null, finishedMs: null, unknownStep: '' };
   var steps = (job && job.steps) || [];
   var byName = {};
   for (var i = 0; i < steps.length; i++) {
@@ -462,6 +462,14 @@ function computeProgress(job, nowMs) {
   // that has not started would divide by nothing.
   if (result.renderStartedMs !== null || renderCredited > 0) {
     result.renderFraction = renderCredited / BURN_RENDER_BLOCK.weight;
+  }
+
+  // When the job ENDED, not "how long ago it started". A finished run took a
+  // fixed amount of time; measuring it against Date.now() makes the panel claim
+  // "done in 17 min" for a run that took one, and the number grows for as long
+  // as the tab stays open.
+  if (job && job.completed_at) {
+    result.finishedMs = Date.parse(job.completed_at) || null;
   }
 
   if (job && job.status === 'completed') {

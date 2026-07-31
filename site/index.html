@@ -4082,9 +4082,17 @@ function burnEtaMinutes(p) {
 // Whole minutes since our first step started, FLOORED so the counter can never
 // overstate, and null below one minute: "1 min elapsed" after ten seconds is a
 // small lie, and the phase name carries the first minute on its own.
+// Whole minutes since the job started, floored — empty below one, because
+// "1 min elapsed" after ten seconds is a small lie and the phase name already
+// carries the first minute.
+//
+// A FINISHED run is measured to when it finished, never to now: Date.now()
+// keeps ticking after the run ends, so "done in N min" would grow for as long
+// as the tab stays open (a one-minute run read as 17).
 function burnElapsedMinutes(p) {
   if (!p.startedMs) return null;
-  var minutes = Math.floor(Math.max(0, Date.now() - p.startedMs) / 60000);
+  var until = (p.done || p.failed) ? (p.finishedMs || p.startedMs) : Date.now();
+  var minutes = Math.floor(Math.max(0, until - p.startedMs) / 60000);
   return minutes >= 1 ? minutes : null;
 }
 
@@ -4322,8 +4330,13 @@ function pollBurn() {
 function onBurnFinished(p) {
   stopBurnTimer();
   setBurnFollowing(false);   // the run is terminal — rendering again is allowed
+  // Both instants have to survive: the duration is finishedMs - startedMs, and
+  // dropping either one turns "done in 21 min" into silence or into a number
+  // that grows with the wall clock.
   renderBurnProgress({ fraction: 1, label: '', done: true, failed: false,
-                       failedStep: '', startedMs: (p && p.startedMs) || null });
+                       failedStep: '', unknownStep: '',
+                       startedMs: (p && p.startedMs) || null,
+                       finishedMs: (p && p.finishedMs) || null });
   // Success must never sit under a leftover error line.
   var err = document.getElementById('burn-error');
   if (err) { err.textContent = ''; err.hidden = true; }

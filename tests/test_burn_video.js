@@ -483,6 +483,25 @@ describe('computeProgress', () => {
   // fraction was right; the phase was a lie. Saying nothing beats saying the
   // wrong thing, so an unrecognised running step must clear the label and
   // announce itself.
+  it('reports when the job finished, so "done in N min" cannot keep growing', () => {
+    // The elapsed line may tick off the wall clock while the run is live, but
+    // a FINISHED run took a fixed amount of time. Measuring it against
+    // Date.now() makes the panel say "done in 17 min" for a run that took one,
+    // and worse the longer the tab stays open.
+    const j = job([done('Install dependencies'), done('Upload result')], 'completed');
+    j.steps[0].started_at = '2026-07-31T13:48:23Z';
+    j.completed_at = '2026-07-31T13:49:47Z';
+    const p = computeProgress(j, Date.parse('2026-07-31T14:06:00Z'));
+    assert.strictEqual(p.startedMs, Date.parse('2026-07-31T13:48:23Z'));
+    assert.strictEqual(p.finishedMs, Date.parse('2026-07-31T13:49:47Z'));
+    assert.ok((p.finishedMs - p.startedMs) / 60000 < 2, 'the run took under two minutes');
+  });
+
+  it('has no finish instant while the job is still running', () => {
+    const p = computeProgress(job([{ name: 'Download video', status: 'in_progress' }]), T0);
+    assert.strictEqual(p.finishedMs, null);
+  });
+
   it('does not name a phase while a step we do not know is running', () => {
     const p = computeProgress(job([
       done('Install dependencies'), done('Download video'),

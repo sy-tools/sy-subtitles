@@ -3760,7 +3760,7 @@ describe('burn video driver behaviour', () => {
 
   const NO_PROGRESS = { fraction: 0, label: '', done: false, failed: false,
                         failedStep: '', renderFraction: null, renderStartedMs: null,
-                        startedMs: null };
+                        startedMs: null, finishedMs: null };
   const MIN_MS = 60000;
 
   // The phase model is pure and tested directly in tests/test_burn_video.js, so
@@ -3865,7 +3865,8 @@ describe('burn video driver behaviour', () => {
       'findEocd', 'readCentralDirectory', 'pickMp4Entry', 'localDataOffset'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
       'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned',
-      'retranslateBurnPanel', 'updateBurnButton', 'extractBurnedMp4'];
+      'retranslateBurnPanel', 'updateBurnButton', 'extractBurnedMp4',
+      'burnElapsedMinutes'];
     const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
       ', getWatch: function () { return burnWatch; } };';
     env.api = new Function(names.join(','), html.slice(start, end) + tail)
@@ -3908,6 +3909,26 @@ describe('burn video driver behaviour', () => {
     return { previewState: Object.assign({ talkId: 't', videoSlug: 'v', player: null,
                                            subtitles: [], srtLang: 'uk', edits: {} }, over) };
   }
+
+  it('measures a finished run to when it finished, not to now', () => {
+    // Regression: the panel said "done in 17 min" for a run that took 84
+    // seconds, because a finished run was still measured against Date.now().
+    const env = makeHarness();
+    const started = Date.now() - 17 * 60000;
+    env.api.renderBurnProgress({
+      fraction: 1, label: '', done: true, failed: false, failedStep: '',
+      unknownStep: '', renderFraction: 1, renderStartedMs: started,
+      startedMs: started, finishedMs: started + 84 * 1000,
+    });
+    // 84 s floors to 1 minute; the wall clock would have said 17.
+    assert.match(env.els['burn-eta'].textContent, /^T:burn\.done_in$/);
+    // The t() stub drops the {min} placeholder, so the rendered string is the
+    // same either way — assert the NUMBER, which is what actually regressed.
+    const shown = env.api.burnElapsedMinutes({
+      done: true, failed: false, startedMs: started, finishedMs: started + 84 * 1000,
+    });
+    assert.strictEqual(shown, 1, 'a finished run must not grow with the wall clock');
+  });
 
   it('dispatches against the default branch, and against an override when set', async () => {
     // The ref decides WHICH burn-subtitles.yml runs. Getting it from a hook is
@@ -4278,7 +4299,8 @@ describe('burn video driver behaviour', () => {
     // "done in 21 min" is composed at render time, so no data-i18n attribute can
     // repaint it: translatePage() has to redraw the panel from its last payload.
     const env = makeHarness();
-    env.api.onBurnFinished({ startedMs: Date.now() - 21 * MIN_MS });
+    env.api.onBurnFinished({ startedMs: Date.now() - 21 * MIN_MS,
+                             finishedMs: Date.now() });
     assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in');
     env.els['burn-eta'].textContent = 'STALE';
     env.api.retranslateBurnPanel();
@@ -4308,7 +4330,8 @@ describe('burn video driver behaviour', () => {
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
-                                 startedMs: Date.now() - 21 * MIN_MS });
+                                 startedMs: Date.now() - 21 * MIN_MS,
+                                 finishedMs: Date.now() });
     await env.api.downloadBurned();
     env.api.retranslateBurnPanel();
     assert.match(env.els['burn-panel'].className, /burn-panel--expired/);
@@ -4327,7 +4350,8 @@ describe('burn video driver behaviour', () => {
     // The exception that preserves the finished title must preserve the fact
     // beneath it too: the render really did take 5 minutes.
     const env = makeHarness();
-    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS });
+    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS,
+                             finishedMs: Date.now() });
     env.api.showBurnError('no mp4 inside the archive');
     assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in',
       'preserve the title and the duration together, or neither');
@@ -4335,7 +4359,8 @@ describe('burn video driver behaviour', () => {
 
   it('keeps the finished title when only the download failed', () => {
     const env = makeHarness();
-    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS });
+    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS,
+                             finishedMs: Date.now() });
     env.api.showBurnError('no mp4 inside the archive');
     assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
       'burn.title_done',
@@ -4345,7 +4370,8 @@ describe('burn video driver behaviour', () => {
   it('greens the whole track on a finished run and says how long it took', () => {
     const env = makeHarness();
     env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
-                                 startedMs: Date.now() - 21 * MIN_MS });
+                                 startedMs: Date.now() - 21 * MIN_MS,
+                                 finishedMs: Date.now() });
     assert.strictEqual(env.els['burn-panel'].className, 'burn-panel burn-panel--done');
     assert.deepStrictEqual(widths(env), ['100%', '100%', '100%', '100%']);
     assert.ok(classes(env).every(function (c) { return /burn-seg--done/.test(c); }));
@@ -4361,7 +4387,7 @@ describe('burn video driver behaviour', () => {
       matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
       computeProgress: function () {
         return Object.assign({}, NO_PROGRESS,
-          { fraction: 1, done: true, startedMs: start });
+          { fraction: 1, done: true, startedMs: start, finishedMs: Date.now() });
       },
       t: function (k) { return k === 'burn.done_in' ? '{min} min' : k; }
     });
@@ -4452,7 +4478,8 @@ describe('burn video driver behaviour', () => {
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
-                                 startedMs: Date.now() - 21 * MIN_MS });
+                                 startedMs: Date.now() - 21 * MIN_MS,
+                                 finishedMs: Date.now() });
     await env.api.downloadBurned();
     assert.match(env.els['burn-panel'].className, /burn-panel--expired/,
       'nothing here can be downloaded any more — the track must stop looking ready');
