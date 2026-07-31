@@ -5327,6 +5327,41 @@ describe('burn video driver behaviour', () => {
     return env;
   }
 
+  it('says the video was saved, since nothing else will', async () => {
+    // The streaming path writes through the save dialog's own file handle, so
+    // Chrome files it under NOTHING: no entry in the downloads list, no shelf,
+    // no progress. A reviewer who waited ~25 minutes for the render is left
+    // watching a menu that never changes while a few hundred MB land silently
+    // on disk. The subtitle file, saved through an anchor, DOES appear there —
+    // so the two downloads behaved differently for no reason the user can see.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned();
+
+    assert.ok(env.toasts.some(function (m) { return m.indexOf('T:burn.saved') === 0; }),
+      'a finished stream must announce itself: got ' + JSON.stringify(env.toasts));
+  });
+
+  it('stays quiet when the save dialog was dismissed', async () => {
+    // Cancelling the dialog is a deliberate no-op, and "saved" over a file the
+    // user declined to create would be a plain lie.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const abort = new Error('user cancelled');
+    abort.name = 'AbortError';
+    const env = savingHarness(zip.bytes, {
+      window: {
+        screen: { width: 1280, height: 720 },
+        showSaveFilePicker: function () { return Promise.reject(abort); }
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+
+    assert.ok(!env.toasts.some(function (m) { return m.indexOf('T:burn.saved') === 0; }),
+      'a cancelled save must not claim a file was written');
+  });
+
   it('streams the mp4 to disk without ever fetching the whole artifact', async () => {
     // 20 KB of payload, so the 4 KB tail window is a real window rather than
     // an accidental whole-file read. The server exposes no Content-Range on
