@@ -3817,6 +3817,7 @@ describe('burn video driver behaviour', () => {
         env.dispatched++; env.dispatchedRef = ref; return Promise.resolve();
       },
       burnRef: PHASE_MODEL.burnRef,
+      editSync: null,
       measureBurnRatios: function () { return {}; },
       makeRequestId: function () { return 'rid'; },
       buildBurnInputs: function () { return {}; },
@@ -3857,7 +3858,7 @@ describe('burn video driver behaviour', () => {
     assert.ok(start > -1 && end > start, 'burn driver block not found in index.html');
     const names = ['document', 'window', 'localStorage', 'getComputedStyle',
       'previewState', 't', 'pluralFor', 'SPA', 'API', 'BURN_WORKFLOW', 'getAuthToken',
-      'dispatchWorkflow', 'burnRef',
+      'dispatchWorkflow', 'burnRef', 'editSync',
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
@@ -3976,6 +3977,72 @@ describe('burn video driver behaviour', () => {
     env.api.cancelBurnWatch();   // nothing was ever started
     assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_video');
     assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+  });
+
+  // The rendered video must be the subtitles the user is LOOKING AT. The SPA
+  // commits the edited final/<lang>.srt to its autosync branch inside
+  // pushFiles(), which runs BEFORE the status becomes 'synced' — so a green
+  // cloud means that branch already carries the edits, and rendering from it is
+  // exactly what the preview shows. Not green means the branch is behind.
+  it('does not warn about edits a synced render will actually include', async () => {
+    // The warning exists for a render that reads main. From a synced branch the
+    // edits ARE in the video, so asking "render without them?" would be a lie.
+    const env = makeHarness({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                      edits: { uk: { 3: 'edited' } } },
+      editSync: { talkId: 't', getInfo: function () {
+        return { status: 'synced', branch: 'sync/me/t--v-uk' }; } },
+    });
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.confirms.length, 0, 'no warning is due');
+    assert.strictEqual(env.dispatchedRef, 'sync/me/t--v-uk');
+  });
+
+  it('renders from main when nothing is syncing', async () => {
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedRef, 'main');
+  });
+
+  it('renders from the autosync branch once the cloud is green', async () => {
+    const env = makeHarness({
+      editSync: { talkId: 't', getInfo: function () {
+        return { status: 'synced', branch: 'sync/me/t--v-uk' }; } },
+    });
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedRef, 'sync/me/t--v-uk',
+      'a green cloud means the branch holds the edited srt');
+  });
+
+  it('refuses while the cloud is not green, rather than rendering stale text', async () => {
+    for (const status of ['pending', 'syncing', 'error']) {
+      const env = makeHarness({
+        editSync: { talkId: 't', getInfo: function () {
+          return { status: status, branch: 'sync/me/t--v-uk' }; } },
+      });
+      await env.api.startBurn('t', 'v');
+      assert.strictEqual(env.dispatched, 0, status + ' must not dispatch');
+      assert.strictEqual(env.els['btn-burn-video'].disabled, true, status + ' disables');
+    }
+  });
+
+  it('says why the button is disabled while syncing', () => {
+    const env = makeHarness({
+      editSync: { talkId: 't', getInfo: function () {
+        return { status: 'pending', branch: 'b' }; } },
+    });
+    env.api.updateBurnButton();
+    assert.strictEqual(env.els['btn-burn-video'].title, 'T:burn.wait_for_sync',
+      'a dead control with no reason is indistinguishable from a bug');
+  });
+
+  it('ignores a sync engine that belongs to another talk', async () => {
+    const env = makeHarness({
+      editSync: { talkId: 'OTHER', getInfo: function () {
+        return { status: 'pending', branch: 'sync/me/other' }; } },
+    });
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedRef, 'main');
   });
 
   it('dispatches against the default branch, and against an override when set', async () => {
