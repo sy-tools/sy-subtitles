@@ -3436,15 +3436,18 @@ describe('burn video wiring', () => {
       'the button belongs in the preview .header-actions cluster');
   });
 
-  it('does not claim the save-picker path streams to disk', () => {
-    // Both save paths assemble the whole file in memory; only the destination
-    // differs. The old wording blamed the browser for the one thing neither
-    // path does, exactly where a user is being told why the tab is straining.
+  it('says what THIS browser does, now that the picker path streams', () => {
+    // The toast is shown on exactly one path: the browser with no save dialog,
+    // which is the one that still holds the whole video in memory. It has to
+    // name that cost — it is why a large render can fail here and not in
+    // Chrome — and it must not borrow the streaming path's behaviour.
     const en = html.slice(html.indexOf("\n  en:"));
     const line = en.match(/'burn\.memory_fallback':\s*'([^']*)'/);
     assert.ok(line, 'burn.memory_fallback must exist');
+    assert.ok(/memory/i.test(line[1]),
+      'this path buffers the whole file — the message must say so');
     assert.ok(!/stream/i.test(line[1]),
-      'the showSaveFilePicker path buffers in memory too — saying otherwise is false');
+      'the path that streams is the one that never shows this message');
   });
 
   it('warns through the house dialog, never native confirm()', () => {
@@ -4562,5 +4565,291 @@ describe('burn video driver behaviour', () => {
     };
     await assert.rejects(function () { return env.api.saveMp4(new Uint8Array([1]), 'x.mp4'); },
       /disk full/, 'only AbortError may be swallowed');
+  });
+
+  // ---- and, where the browser can, must not buffer it even once ----
+  //
+  // A Range header survives the API's 302 to the pre-signed blob (measured
+  // against the real artifact), so the mp4 can go from the network into the
+  // file handle a chunk at a time: a small tail window for the central
+  // directory, the entry's own local header, then the data range. The whole
+  // ZIP is never held, so the video's size stops mattering.
+
+  const ZIP_NAME = 'burned__t__v.mp4';
+
+  // A streaming ZIP whose LOCAL header carries an extra field the central
+  // directory does not. A reader that computed the data offset from the
+  // central directory's lengths would start `localExtra` bytes early and write
+  // a file that only reveals itself as corrupt on playback.
+  function skewedZip(payload, localExtra, comment) {
+    const name = Buffer.from(ZIP_NAME);
+    const lfh = Buffer.alloc(30 + name.length + localExtra);
+    lfh.writeUInt32LE(0x04034b50, 0);
+    lfh.writeUInt16LE(name.length, 26);
+    lfh.writeUInt16LE(localExtra, 28);
+    name.copy(lfh, 30);
+    const cdh = Buffer.alloc(46 + name.length);
+    cdh.writeUInt32LE(0x02014b50, 0);
+    cdh.writeUInt16LE(0, 10);                 // STORED
+    cdh.writeUInt32LE(payload.length, 20);
+    cdh.writeUInt32LE(payload.length, 24);
+    cdh.writeUInt16LE(name.length, 28);
+    cdh.writeUInt16LE(0, 30);                 // no extra field here — the skew
+    cdh.writeUInt32LE(0, 42);                 // local header offset
+    name.copy(cdh, 46);
+    const tail = Buffer.alloc(comment || 0);  // a ZIP comment, if asked for
+    const eocd = Buffer.alloc(22);
+    eocd.writeUInt32LE(0x06054b50, 0);
+    eocd.writeUInt16LE(1, 8);
+    eocd.writeUInt16LE(1, 10);
+    eocd.writeUInt32LE(cdh.length, 12);
+    eocd.writeUInt32LE(lfh.length + payload.length, 16);
+    eocd.writeUInt16LE(tail.length, 20);
+    return { bytes: new Uint8Array(Buffer.concat([lfh, payload, cdh, eocd, tail])),
+             dataAt: lfh.length, payload: payload };
+  }
+
+  // Two chunks, so the pump has to handle more than one.
+  function makeBody(bytes, withPipeTo) {
+    const half = Math.ceil(bytes.length / 2);
+    const chunks = [bytes.slice(0, half), bytes.slice(half)];
+    if (withPipeTo) {
+      return new ReadableStream({
+        start: function (c) { chunks.forEach(function (x) { c.enqueue(x); }); c.close(); }
+      });
+    }
+    let i = 0;
+    return { getReader: function () {
+      return { read: function () {
+        return Promise.resolve(i < chunks.length
+          ? { done: false, value: chunks[i++] } : { done: true });
+      } };
+    } };
+  }
+
+  // Serves byte ranges out of `zip`, recording every range asked for and the
+  // bytes it handed back — those counts are what "does not buffer the whole
+  // artifact" actually means.
+  function rangeServer(zip, over) {
+    const opt = Object.assign({ pipeTo: true, ignoreRange: false }, over || {});
+    const server = { ranges: [], served: 0 };
+    server.fetch = function (url, init) {
+      const range = (init && init.headers && init.headers.Range) || '';
+      server.ranges.push(range);
+      const suffix = /^bytes=-(\d+)$/.exec(range);
+      const span = /^bytes=(\d+)-(\d+)$/.exec(range);
+      let start = 0;
+      let end = zip.length - 1;
+      if (!opt.ignoreRange && suffix) start = Math.max(0, zip.length - Number(suffix[1]));
+      else if (!opt.ignoreRange && span) {
+        start = Number(span[1]);
+        end = Math.min(Number(span[2]), zip.length - 1);
+      }
+      const honoured = !opt.ignoreRange && !!range;
+      const slice = zip.slice(start, end + 1);
+      server.served += slice.length;
+      const status = honoured ? 206 : 200;
+      return Promise.resolve({
+        ok: true,
+        status: status,
+        headers: { get: function (k) {
+          return (/^content-range$/i.test(k) && honoured)
+            ? 'bytes ' + start + '-' + end + '/' + zip.length : null;
+        } },
+        arrayBuffer: function () {
+          return Promise.resolve(slice.buffer.slice(
+            slice.byteOffset, slice.byteOffset + slice.byteLength));
+        },
+        body: makeBody(slice, opt.pipeTo)
+      });
+    };
+    return server;
+  }
+
+  // Stands in for the FileSystemWritableFileStream: a real WritableStream (so
+  // response.body.pipeTo() works on it) that also carries the write()/close()
+  // sugar the real one has, which the reader-loop path uses.
+  function makeSink() {
+    const chunks = [];
+    const stream = new WritableStream({
+      write: function (c) { chunks.push(Buffer.from(c)); }
+    });
+    stream.write = function (c) {
+      const w = stream.getWriter();
+      const done = (typeof Blob !== 'undefined' && c instanceof Blob)
+        ? c.arrayBuffer().then(function (b) { return w.write(new Uint8Array(b)); })
+        : w.write(c);
+      return done.then(function () { w.releaseLock(); });
+    };
+    stream.close = function () {
+      const w = stream.getWriter();
+      return w.close().then(function () { w.releaseLock(); });
+    };
+    return { stream: stream, chunks: chunks,
+             saved: function () { return Buffer.concat(chunks); } };
+  }
+
+  function savingHarness(zip, over, serverOver) {
+    const server = rangeServer(zip, serverOver);
+    const sink = makeSink();
+    const picked = {};
+    const env = makeHarness(Object.assign({
+      fetch: server.fetch,
+      window: {
+        screen: { width: 1280, height: 720 },
+        showSaveFilePicker: function (opts) {
+          picked.suggestedName = opts && opts.suggestedName;
+          return Promise.resolve({
+            createWritable: function () { return Promise.resolve(sink.stream); }
+          });
+        }
+      },
+      listRunArtifacts: function () {
+        return Promise.resolve([{ id: 9, size_in_bytes: zip.length }]);
+      }
+    }, over || {}));
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    env.server = server;
+    env.sink = sink;
+    env.picked = picked;
+    return env;
+  }
+
+  it('streams the mp4 to disk without ever fetching the whole artifact', async () => {
+    // 20 KB of payload, so the 4 KB tail window is a real window rather than
+    // an accidental whole-file read.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-error'].textContent, '', 'nothing may have failed');
+    assert.strictEqual(env.server.ranges.length, 3,
+      'tail, local header, data — three small requests, no fourth');
+    assert.ok(env.server.ranges.every(function (r) { return /^bytes=/.test(r); }),
+      'every request must carry a Range header');
+    assert.ok(env.server.served < zip.bytes.length + 6000,
+      'the artifact must not be transferred more than once over: served ' +
+      env.server.served + ' of ' + zip.bytes.length);
+  });
+
+  it('writes the entry data byte for byte, from its OWN local header', async () => {
+    // The local header's extra field is 11 bytes the central directory does
+    // not know about: reusing the central lengths shifts the data range.
+    const payload = Buffer.from(Array.from({ length: 20000 },
+      function (_, i) { return i % 251; }));
+    const zip = skewedZip(payload, 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.server.ranges.length, 3,
+      'precondition: this came down the streaming path');
+    assert.deepStrictEqual(env.sink.saved(), payload,
+      'the saved file must be the entry data exactly');
+    assert.strictEqual(env.picked.suggestedName, ZIP_NAME,
+      'the save dialog must suggest the name from the archive');
+  });
+
+  it('asks for the data range the local header points at, and no more', async () => {
+    const zip = skewedZip(Buffer.alloc(20000, 3), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.server.ranges[2],
+      'bytes=' + zip.dataAt + '-' + (zip.dataAt + 20000 - 1));
+  });
+
+  it('writes through a reader loop when the body cannot pipeTo', async () => {
+    const payload = Buffer.alloc(9000, 5);
+    const zip = skewedZip(payload, 4);
+    const env = savingHarness(zip.bytes, null, { pipeTo: false });
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.server.ranges.length, 3,
+      'precondition: this came down the streaming path');
+    assert.deepStrictEqual(env.sink.saved(), payload);
+  });
+
+  it('retries once with a larger window when the tail misses the directory', async () => {
+    // An 8 KB ZIP comment pushes the EOCD out of the 4 KB tail entirely.
+    const payload = Buffer.alloc(20000, 9);
+    const zip = skewedZip(payload, 6, 8192);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned();
+    assert.deepStrictEqual(env.sink.saved(), payload, 'the retry must succeed');
+    assert.strictEqual(env.server.ranges.filter(function (r) {
+      return r === 'bytes=-4096';
+    }).length, 1, 'the small tail must be tried once, not looped over');
+    assert.strictEqual(env.server.ranges.length, 4,
+      'small tail, larger tail, local header, data');
+  });
+
+  it('streams a video far too large to hold in memory', async () => {
+    // The size guard exists because the buffered path allocates the whole
+    // file; the streaming path allocates nothing, so it must not inherit it.
+    const payload = Buffer.alloc(4096, 1);
+    const zip = skewedZip(payload, 0);
+    const env = savingHarness(zip.bytes, {
+      listRunArtifacts: function () {
+        return Promise.resolve([{ id: 9, size_in_bytes: 2469606195 }]);
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-error'].textContent, '',
+      'a 2.3 GB video is exactly what streaming is for');
+    assert.deepStrictEqual(env.sink.saved(), payload);
+  });
+
+  it('falls back to the buffered path when the server ignores Range', async () => {
+    // A 200 carries the WHOLE file: writing it as if it were the slice would
+    // save a ZIP with an .mp4 name on it.
+    const payload = Buffer.alloc(300, 2);
+    const zip = skewedZip(payload, 5);
+    const env = savingHarness(zip.bytes, null, { ignoreRange: true });
+    await settle();
+    await env.api.downloadBurned();
+    assert.deepStrictEqual(env.sink.saved(), payload,
+      'the fallback must still produce the mp4, not the archive around it');
+  });
+
+  it('never streams a deflated entry raw — it decompresses it instead', async () => {
+    // Piping compressed bytes to disk writes a file that looks fine until it
+    // is played. compression-level: 0 makes this unreachable today; it must
+    // stay impossible if that ever changes.
+    const zlib = require('node:zlib');
+    const payload = Buffer.from('what a deflated entry decompresses to');
+    const deflated = zlib.deflateRawSync(payload);
+    const zip = skewedZip(deflated, 0);
+    // Turn the entry DEFLATED in the central directory the driver reads.
+    const cdAt = zip.dataAt + deflated.length;
+    new DataView(zip.bytes.buffer).setUint16(cdAt + 10, 8, true);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned();
+    assert.ok(env.server.ranges.includes(''),
+      'the entry cannot be streamed, so it must go down the buffered path ' +
+      'that decompresses it');
+    assert.deepStrictEqual(env.sink.saved(), payload,
+      'the saved bytes must be the decompressed mp4, never the raw entry');
+  });
+
+  it('downloads nothing when the save dialog is cancelled', async () => {
+    const abort = new Error('The user aborted a request.');
+    abort.name = 'AbortError';
+    const zip = skewedZip(Buffer.alloc(20000, 4), 0);
+    const env = savingHarness(zip.bytes, {
+      window: {
+        screen: { width: 1280, height: 720 },
+        showSaveFilePicker: function () { return Promise.reject(abort); }
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-error'].textContent, '',
+      'a deliberate cancel is not a failure');
+    assert.strictEqual(env.server.ranges.length, 2,
+      'the video must not be fetched for a save the user called off');
   });
 });
