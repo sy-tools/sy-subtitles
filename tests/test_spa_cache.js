@@ -4479,6 +4479,37 @@ describe('burn video driver behaviour', () => {
       'the green tint has to go with them');
   });
 
+  it('shows nothing under the offer, even from a run never marked finished', async () => {
+    // The stand caught this one as a screenshot: "Create the video with
+    // subtitles" with a near-full blue track and a run link under it. The
+    // earlier fix only swept up runs flagged done, and this readout came from
+    // a run that was drawn but never reached a terminal payload — so it slipped
+    // through. The label is the whole test: if it offers to build, nothing of
+    // any render may sit beneath it.
+    const env = makeHarness(Object.assign(previewing({ edits: {} }), {
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; }
+    }));
+    await env.api.startBurn('t', 'v');
+    await settle();
+    // A drawn, unfinished render: track filled, link up, nothing terminal.
+    env.api.renderBurnProgress({ fraction: 0.9, label: 'Render 80%', done: false,
+      failed: false, failedStep: '', unknownStep: '', startedMs: Date.now() - MIN_MS });
+    assert.strictEqual(env.els['burn-track'].hidden, false, 'precondition: drawn');
+    assert.strictEqual(env.els['burn-run-link'].hidden, false, 'precondition: linked');
+
+    // The follow ends without a terminal payload — the menu is opened, then
+    // closed, which stops the poll — and the subtitles moved on, so the item
+    // goes back to offering while that drawn readout is still on screen.
+    env.api.openExportMenu();
+    env.api.closeExportMenu();
+    env.previewState.edits.uk = { 3: 'edited' };
+    env.api.updateExportUi();
+
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
+    assert.strictEqual(env.els['burn-track'].hidden, true, 'no track under an offer');
+    assert.strictEqual(env.els['burn-run-link'].hidden, true, 'no run link either');
+  });
+
   it('keeps a failure on screen under the offer to try again', async () => {
     // The one case where a start-face item SHOULD carry the previous run's
     // readout: the error is why the offer is there at all, and the run link is
