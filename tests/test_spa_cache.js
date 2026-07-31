@@ -3930,6 +3930,54 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(shown, 1, 'a finished run must not grow with the wall clock');
   });
 
+  // "Hide" used to be a one-way door: the panel vanished, the render button
+  // went live again, and the only way back was to leave the preview and return.
+  // A control called Hide must have an Unhide, and while a run is in flight
+  // that same control is what stops a second one being dispatched by accident.
+  it('offers a way back after hiding, instead of just re-enabling render', async () => {
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    env.api.renderBurnProgress({ fraction: 0.3, label: 'Render 20%', done: false,
+      failed: false, failedStep: '', unknownStep: '', startedMs: Date.now() - 60000 });
+    env.api.cancelBurnWatch();
+
+    assert.strictEqual(env.els['burn-panel'].hidden, true, 'the panel is hidden');
+    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_show_progress',
+      'the button must offer the panel back, not a second render');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+  });
+
+  it('reopens the hidden panel rather than dispatching again', async () => {
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    env.api.renderBurnProgress({ fraction: 0.3, label: 'Render 20%', done: false,
+      failed: false, failedStep: '', unknownStep: '', startedMs: Date.now() - 60000 });
+    env.api.cancelBurnWatch();
+    const before = env.dispatched;
+
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatched, before, 'reopening must not dispatch a run');
+    assert.strictEqual(env.els['burn-panel'].hidden, false, 'the panel is back');
+    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_video',
+      'once visible the button is a render button again');
+  });
+
+  it('names the result, not the progress, when a finished panel is hidden', async () => {
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
+    env.api.cancelBurnWatch();
+    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_show_result',
+      'a finished run offers the RESULT back — the download lives in that panel');
+  });
+
+  it('goes back to offering a render once there is nothing to reopen', () => {
+    const env = makeHarness();
+    env.api.cancelBurnWatch();   // nothing was ever started
+    assert.strictEqual(env.els['btn-burn-video'].textContent, 'T:btn.burn_video');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+  });
+
   it('dispatches against the default branch, and against an override when set', async () => {
     // The ref decides WHICH burn-subtitles.yml runs. Getting it from a hook is
     // the only way to exercise a workflow change from the UI before it is on
@@ -4076,7 +4124,10 @@ describe('burn video driver behaviour', () => {
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     assert.ok(env.api.getWatch(), 'precondition: a watch is being followed');
-    env.api.cancelBurnWatch();   // Hide keeps the recorded run
+    // Hide no longer opens a path to a second dispatch — the button reopens the
+    // panel instead. A NEW render is legitimate once the old one is terminal,
+    // which is the path this guard has to hold on.
+    env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
     env.api.startBurn();
     assert.strictEqual(env.api.getWatch(), null,
       'startBurn must drop the old watch before awaiting, so an in-flight poll ' +

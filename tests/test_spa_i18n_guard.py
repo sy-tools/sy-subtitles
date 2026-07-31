@@ -66,7 +66,7 @@ ALLOWLIST = {
     # translatePage() calls updateBurnButton(), which re-composes it in the
     # current language — pinned by tests/test_spa_cache.js
     # ("re-composes the render button's tooltip on a language toggle").
-    "btn.title = mismatch ? burnWrongLangText() : '';",
+    "btn.title = (!reopen && mismatch) ? burnWrongLangText() : '';",
 }
 
 
