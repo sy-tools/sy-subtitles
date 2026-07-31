@@ -1134,6 +1134,10 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 .export-item__meta { font-size: var(--text-xs); color: var(--fg4); }
 .export-item__meta[hidden] { display: none; }
 .export-item-group .burn-panel__link { display: block; font-size: var(--text-xs); }
+/* Same trap as .burn-track: the display above outranks [hidden], so the link to
+   a run the item no longer stands behind survived every attempt to take it
+   down. Scoped to the group, matching the rule it has to outrank. */
+.export-item-group .burn-panel__link[hidden] { display: none; }
 /* The link must move as one piece: a row one word too tight would otherwise
    wrap its text mid-phrase instead of keeping the whole link together. */
 .burn-panel__link { color: var(--link); white-space: nowrap; }
@@ -1146,6 +1150,10 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
    flattened three short certainties and one twenty-minute stretch into the same
    pixel scale; this form says "three quick things, then one patient one". */
 .burn-track { display: flex; gap: 2px; height: 8px; }
+/* display:flex above beats the UA's [hidden]{display:none}: without this the
+   driver hid the track of a render it had disowned, faithfully and invisibly,
+   and the finished bar stayed on screen under an offer to build. */
+.burn-track[hidden] { display: none; }
 .burn-seg {
   position: relative;
   flex: 0 1 auto;          /* grow comes from the weights, inline, per segment */

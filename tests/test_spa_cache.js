@@ -3715,15 +3715,40 @@ describe('burn video wiring', () => {
       'route() must NOT clear the persisted burn state');
   });
 
-  it('keeps every flex surface hidden while [hidden] (display:flex would defeat it)', () => {
-    // Each of these sets its own display; an author display always beats the UA
-    // [hidden]{display:none}, so every one of them needs its own rule. The menu
-    // ships hidden, so without its rule the whole surface renders on first load.
-    for (const sel of ['.export-menu', '.export-item-group', '.export-item__meta',
-                       '.btn']) {
-      assert.match(css, new RegExp('\\' + sel + '\\[hidden\\]\\s*\\{[^}]*display:\\s*none'),
-        sel + '[hidden] must set display:none, or a hidden ' + sel + ' still renders');
+  it('keeps every surface the driver hides actually hidden', () => {
+    // An author `display` always beats the UA's [hidden]{display:none}, so any
+    // element the driver hides by setting .hidden needs its own rule — and this
+    // shipped broken twice for want of one. #burn-track (display:flex) and the
+    // run link (display:block) had none, so three rounds of "hide the disowned
+    // render" set .hidden faithfully and changed nothing on screen, while
+    // .export-item__meta — which DOES have a rule — vanished as intended. Every
+    // harness test passed throughout: stub elements model the property, and the
+    // property was never the problem.
+    //
+    // The list is derived from the markup rather than hand-kept, so an element
+    // that starts wearing a class with a display cannot slip through the way
+    // these two did.
+    const HIDDEN_BY_DRIVER = ['export-menu', 'export-video', 'burn-track',
+                              'burn-run-link', 'burn-error'];
+    // Classes carrying a display other than none, from anywhere in the sheet.
+    const displayed = new Set();
+    for (const m of css.matchAll(/\.([a-z0-9_-]+)(?:[^{};]*)\{([^}]*)\}/gi)) {
+      if (/display:\s*(?!none)[a-z-]+/.test(m[2])) displayed.add(m[1]);
     }
+    for (const id of HIDDEN_BY_DRIVER) {
+      const tag = html.match(new RegExp('<[a-z]+[^>]*id="' + id + '"[^>]*>', 'i'));
+      assert.ok(tag, '#' + id + ' is not in the markup');
+      const cls = (tag[0].match(/class="([^"]*)"/) || [, ''])[1].split(/\s+/).filter(Boolean);
+      for (const c of cls) {
+        if (!displayed.has(c)) continue;
+        assert.match(css, new RegExp('\\.' + c + '(?:[^{};]*)\\[hidden\\]\\s*\\{[^}]*display:\\s*none'),
+          '#' + id + ' is hidden by the driver and wears .' + c + ', which sets a ' +
+          'display — .' + c + '[hidden] must set display:none or hiding it does nothing');
+      }
+    }
+    // .btn is hidden the same way outside this menu (the old download button).
+    assert.match(css, /\.btn\[hidden\]\s*\{[^}]*display:\s*none/,
+      '.btn[hidden] must set display:none — .btn is display:inline-flex');
   });
 
   it('documents the video item in the styleguide, rendered by the real CSS', () => {

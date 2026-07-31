@@ -75,11 +75,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     script = ""
 
+    def end_headers(self):
+        # NOTHING here may be cached. index.html carried no-store from the
+        # start; css/ and js/ did not, so Chrome held on to them and edits to a
+        # stylesheet simply never reached the page — three rounds of a CSS fix
+        # were "verified" against a browser still running the previous sheet.
+        # A development stand's whole job is to show the working tree.
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
     def do_GET(self):  # noqa: N802 - BaseHTTPRequestHandler's spelling
         path = self.path.split("?", 1)[0].split("#", 1)[0]
         if path in ("/", "/index.html"):
             self._send_injected_index()
             return
+        # SimpleHTTPRequestHandler answers 304 straight from If-Modified-Since,
+        # which would hand the browser its cached copy back despite the header
+        # above. Drop the condition so every request is answered in full.
+        if "If-Modified-Since" in self.headers:
+            del self.headers["If-Modified-Since"]
         super().do_GET()
 
     def _send_injected_index(self):
@@ -88,9 +102,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        # The injected copy must never be cached: a stale one would silently
-        # send a later session to the deployed Worker, which rejects localhost.
-        self.send_header("Cache-Control", "no-store")
+        # Cache-Control: no-store comes from end_headers(), which puts it on
+        # every response — a stale index would silently send a later session to
+        # the deployed Worker, which rejects localhost.
         self.end_headers()
         self.wfile.write(body)
 
