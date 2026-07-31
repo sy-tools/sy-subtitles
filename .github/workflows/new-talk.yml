@@ -138,7 +138,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install -r requirements.txt yt-dlp
+          pip install -r requirements.txt 'yt-dlp[default,curl-cffi]'
 
       - name: Process new talks
         run: |
@@ -310,7 +310,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           pip install -r requirements.txt
-          pip install faster-whisper>=1.2.1 yt-dlp
+          pip install faster-whisper>=1.2.1 'yt-dlp[default,curl-cffi]'
 
       - name: Cache Whisper model
         uses: actions/cache@v6

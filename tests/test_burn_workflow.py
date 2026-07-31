@@ -3,11 +3,25 @@
 import os
 import re
 import subprocess
+from pathlib import Path
 
 import pytest
 import yaml
 
 WORKFLOW = ".github/workflows/burn-subtitles.yml"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _commands(run):
+    """A run: block with its comment lines removed.
+
+    These guards assert what the step EXECUTES. A comment that merely mentions
+    a command must neither satisfy one nor trip another — the original
+    test_installs_yt_dlp said as much, and then this file's own explanatory
+    comment broke it.
+    """
+    return "\n".join(ln for ln in run.splitlines() if not ln.lstrip().startswith("#"))
+
 
 # The progress model in the SPA maps these strings to progress stages.
 CONTRACT_STEPS = [
@@ -94,9 +108,16 @@ class TestSteps:
     def test_installs_ffmpeg(self):
         assert any("install -y ffmpeg" in run for run in _runs())
 
-    def test_installs_yt_dlp(self):
-        # An actual install command, not a passing mention in a comment.
-        assert "pip install yt-dlp" in _step("Install dependencies")["run"]
+    def test_installs_yt_dlp_from_requirements(self):
+        """yt-dlp comes from requirements.txt, which pins the impersonation extra.
+
+        A bare `pip install yt-dlp` alongside it would resolve the same package
+        WITHOUT the extra and silently drop curl_cffi, which is the one thing
+        newer Vimeo videos need (see test_yt_dlp_can_impersonate_a_browser).
+        """
+        run = _step("Install dependencies")["run"]
+        assert "pip install -r requirements.txt" in _commands(run)
+        assert "pip install yt-dlp" not in _commands(run)
 
     def test_does_not_apt_install_a_font(self):
         # Roboto is vendored under assets/fonts/ and handed to libass via fontsdir.
@@ -346,3 +367,37 @@ class TestPinnedActions:
             "actions/upload-artifact@v7",
         ):
             assert action in raw, action
+
+
+class TestVimeoImpersonation:
+    """Newer Vimeo videos block yt-dlp on its TLS fingerprint.
+
+    Measured 2026-07-31 on two real talks: the 2014-era video (id 104915825)
+    downloads with a plain yt-dlp, while the 2025-era one (id 1065815961)
+    answers 401 — and a real browser plays the very same URL and hash, which is
+    what rules out a stale hash or a privacy setting. yt-dlp names the cause
+    itself: "This request has been blocked due to its TLS fingerprint. Install
+    a required impersonation dependency."
+
+    That dependency is the `curl-cffi` extra, and it has to be on the
+    requirement, not merely installed alongside: `pip install yt-dlp` resolves
+    the already-satisfied bare package and installs no extra.
+    """
+
+    def test_requirements_pin_the_impersonation_extra(self):
+        text = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
+        line = next(ln for ln in text.splitlines() if ln.startswith("yt-dlp"))
+        assert "curl-cffi" in line, "yt-dlp must carry the curl-cffi extra or newer Vimeo videos 401: " + line
+
+    def test_every_workflow_installing_yt_dlp_gets_the_extra(self):
+        """A second install site without the extra would undo the first."""
+        offenders = []
+        for path in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")):
+            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if line.lstrip().startswith("#"):
+                    continue  # prose about the install is not an install
+                if "pip install" not in line or "yt-dlp" not in line:
+                    continue
+                if "curl-cffi" not in line:
+                    offenders.append(f"{path.name}:{n}: {line.strip()}")
+        assert not offenders, "install yt-dlp with its extra:\n" + "\n".join(offenders)

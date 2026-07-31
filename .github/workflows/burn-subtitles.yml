@@ -57,8 +57,10 @@ jobs:
           set -euo pipefail
           python -m pip install --upgrade pip
           # Pillow (font metrics for the gradient band) comes from requirements.
+          # yt-dlp comes from requirements.txt, which carries the curl-cffi
+          # extra. A bare `pip install yt-dlp` here would find the requirement
+          # already satisfied and install the extra for nobody.
           pip install -r requirements.txt
-          pip install yt-dlp
           # No font package: Roboto is vendored in assets/fonts/ and reaches
           # libass through fontsdir.
           sudo apt-get update && sudo apt-get install -y ffmpeg
