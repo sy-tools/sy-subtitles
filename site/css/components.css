@@ -1060,18 +1060,61 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
    until the run exists, and an auto margin on a hidden element pushes nothing. */
 .burn-panel__title { font-family: var(--f-sans); font-size: var(--text-sm); color: var(--fg2); font-weight: 600; margin-right: auto; }
 .burn-panel__link { font-size: var(--text-xs); color: var(--link); }
-.burn-bar { height: 6px; background: var(--bg4); border-radius: var(--radius-pill); overflow: hidden; }
-.burn-bar__fill {
-  height: 100%;
-  width: 0;
-  background: var(--sync-progress);
-  border-radius: var(--radius-pill);
-  transition: width 0.4s ease;
+/* The track is four phase segments with visible seams, widths proportional to
+   phase weight (JS sets flex-grow from the weight table). One uniform bar
+   flattened three short certainties and one twenty-minute stretch into the same
+   pixel scale; this form says "three quick things, then one patient one". */
+.burn-track { display: flex; gap: 2px; height: 8px; }
+.burn-seg {
+  position: relative;
+  flex: 0 1 auto;          /* grow comes from the weights, inline, per segment */
+  min-width: 10px;         /* the 5% phase still has to be seen */
+  background: var(--bg4);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
+/* Only the outer ends are fully round: the inner seams stay square so the four
+   phases read as one track rather than four pills. */
+.burn-seg:first-child { border-top-left-radius: var(--radius-pill); border-bottom-left-radius: var(--radius-pill); }
+.burn-seg:last-child { border-top-right-radius: var(--radius-pill); border-bottom-right-radius: var(--radius-pill); }
+/* .6s glide, so a 5s poll reads as one continuous act instead of a jump. */
+.burn-seg__fill { height: 100%; width: 0; background: var(--sync-progress); transition: width 0.6s ease; }
+/* A running phase that has earned no fraction yet still has to look alive. */
+.burn-seg--active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--sync-progress);
+  animation: burn-seg-breathe 1.6s ease-in-out infinite alternate;
+}
+@keyframes burn-seg-breathe { from { opacity: 0.16; } to { opacity: 0.45; } }
+.burn-panel--done .burn-seg__fill { background: var(--accent-green); }
+/* The failed mark is on the segment BODY, not its fill: a run that died in its
+   first gate has a zero-width fill, and red that only lived there would show
+   nothing at all. */
+.burn-seg--failed { background: var(--danger-bg); box-shadow: inset 0 0 0 1px var(--accent-red); }
+.burn-seg--failed .burn-seg__fill { background: var(--accent-red); }
+/* Expired: the artifact is gone, so the whole track goes quiet rather than
+   sitting there looking like a finished render. */
+.burn-panel--expired .burn-seg__fill { background: var(--border3); transition: none; }
 /* The panel is a column flexbox, so a child button would stretch edge to edge —
    pin the download to its natural width. */
 .burn-panel > .btn { align-self: flex-start; }
 .burn-panel__status { margin: 0; font-size: var(--text-xs); color: var(--fg4); }
-.burn-panel__eta { color: var(--fg5); font-style: italic; }
+/* Dot separators live between ADJACENT NON-EMPTY spans, so an absent elapsed or
+   ETA leaves no leading or doubled dot. */
+.burn-panel__status > span:not(:empty) ~ span:not(:empty)::before {
+  content: '\00B7';
+  margin: 0 var(--space-2);
+  color: var(--fg6);
+}
+/* The faintest AA-passing ink, and NOT italic: the italic apologised for a
+   guess, and the remaining time is now extrapolated from a measured rate. */
+.burn-panel__eta { color: var(--fg5); }
 .burn-panel__error { margin: 0; font-size: var(--text-xs); color: var(--danger-fg); }
-@media (prefers-reduced-motion: reduce) { .burn-bar__fill { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .burn-seg__fill { transition: none; }
+  /* The feedback that the run is alive falls back to the elapsed counter — a
+     text update, which needs no motion. */
+  .burn-seg--active::after { animation: none; opacity: 0.35; }
+}

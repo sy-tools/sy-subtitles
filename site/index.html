@@ -398,11 +398,23 @@
       <a id="burn-run-link" class="burn-panel__link" href="#" target="_blank" rel="noopener" hidden data-i18n="burn.view_run">View run</a>
       <button class="btn btn--ghost btn--sm" onclick="SPA.cancelBurnWatch()" data-i18n="burn.hide">Hide</button>
     </div>
-    <!-- A render takes ~25 min, so the bar and both message lines have to reach
-         a screen reader: a progressbar with a real value, a polite status and an
-         assertive error. renderBurnProgress() keeps aria-valuenow in sync. -->
-    <div id="burn-bar" class="burn-bar" role="progressbar" aria-labelledby="burn-panel-title" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="burn-bar-fill" class="burn-bar__fill"></div></div>
-    <p class="burn-panel__status" aria-live="polite"><span id="burn-step"></span> <span id="burn-eta" class="burn-panel__eta"></span></p>
+    <!-- Four phase segments with visible seams, built by ensureBurnTrack() from
+         the real step weights so the drawn widths cannot drift from the
+         workflow. It stays ONE control for assistive tech: the track is the
+         progressbar and carries the value; the segments are aria-hidden.
+         A render takes ~25 min, so the status has to be announced too — but only
+         #burn-step is live: the elapsed counter ticks every 5s, and inside the
+         live region that would be ~300 announcements of a number. -->
+    <div id="burn-track" class="burn-track" role="progressbar"
+         aria-labelledby="burn-panel-title" aria-valuemin="0" aria-valuemax="100"
+         aria-valuenow="0"></div>
+    <!-- No whitespace between the spans: the dot separators are CSS ::before on
+         adjacent non-empty spans, and a stray text node doubles the gap. -->
+    <p class="burn-panel__status">
+      <span id="burn-step" aria-live="polite"></span
+      ><span id="burn-elapsed"></span
+      ><span id="burn-eta" class="burn-panel__eta"></span>
+    </p>
     <button id="btn-burn-download" class="btn btn--primary" hidden onclick="SPA.downloadBurned()" data-i18n="btn.burn_download">Download MP4</button>
     <p id="burn-error" class="burn-panel__error" role="alert" hidden></p>
   </div>
@@ -969,9 +981,19 @@ var I18N = {
     'btn.burn_video': '\u0417\u0456\u0431\u0440\u0430\u0442\u0438 \u0432\u0456\u0434\u0435\u043E',
     'btn.burn_download': '\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 MP4',
     'burn.title': '\u0417\u0431\u0438\u0440\u0430\u0454\u043C\u043E \u0432\u0456\u0434\u0435\u043E \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043C\u0438',
+    'burn.title_done': '\u0412\u0456\u0434\u0435\u043E \u0433\u043E\u0442\u043E\u0432\u0435',
+    'burn.title_failed': '\u0417\u0431\u0438\u0440\u0430\u043D\u043D\u044F \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F',
     'burn.view_run': '\u0414\u0438\u0432\u0438\u0442\u0438\u0441\u044C \u0437\u0430\u043F\u0443\u0441\u043A',
     'burn.hide': '\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438',
-    'burn.estimate': '\u043F\u0440\u0438\u0431\u043B\u0438\u0437\u043D\u043E {min} \u0445\u0432 \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C',
+    // The four phases the track draws, in workflow order.
+    'burn.step.prepare': '\u041F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430',
+    'burn.step.fetch': '\u041E\u0442\u0440\u0438\u043C\u0443\u0454\u043C\u043E \u0432\u0456\u0434\u0435\u043E',
+    'burn.step.render': '\u0412\u0448\u0438\u0432\u0430\u0454\u043C\u043E \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0438',
+    'burn.step.upload': '\u0412\u0438\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0454\u043C\u043E \u0444\u0430\u0439\u043B',
+    'burn.step_of': '\u041A\u0440\u043E\u043A {n} \u0437 {total} \u2014 {step}',
+    'burn.elapsed': '\u043C\u0438\u043D\u0443\u043B\u043E {min} \u0445\u0432',
+    'burn.estimate_soft': '\u0449\u0435 \u0431\u043B\u0438\u0437\u044C\u043A\u043E {min} \u0445\u0432',
+    'burn.done_in': '\u0433\u043E\u0442\u043E\u0432\u043E \u0437\u0430 {min} \u0445\u0432',
     'burn.queued': '\u0417\u0430\u043F\u0443\u0441\u043A\u0430\u0454\u043C\u043E\u2026',
     'burn.failed_step': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430 \u043A\u0440\u043E\u0446\u0456 \u00AB{step}\u00BB',
     'burn.failed': '\u0417\u0431\u0438\u0440\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u0435\u043E \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F',
@@ -1152,9 +1174,19 @@ var I18N = {
     'btn.burn_video': 'Render video',
     'btn.burn_download': 'Download MP4',
     'burn.title': 'Rendering video with subtitles',
+    'burn.title_done': 'The video is ready',
+    'burn.title_failed': 'The render failed',
     'burn.view_run': 'View run',
     'burn.hide': 'Hide',
-    'burn.estimate': 'about {min} min left',
+    // The four phases the track draws, in workflow order.
+    'burn.step.prepare': 'Preparing',
+    'burn.step.fetch': 'Fetching the video',
+    'burn.step.render': 'Burning in the subtitles',
+    'burn.step.upload': 'Uploading the result',
+    'burn.step_of': 'Step {n} of {total} — {step}',
+    'burn.elapsed': '{min} min elapsed',
+    'burn.estimate_soft': 'about {min} min to go',
+    'burn.done_in': 'done in {min} min',
     'burn.queued': 'Starting…',
     'burn.failed_step': 'Failed at step "{step}"',
     'burn.failed': 'The render failed',
@@ -3844,14 +3876,18 @@ function setBurnRunLink(url) {
   link.hidden = !ok;
 }
 
-function showBurnPanel(label, fraction) {
+// Opens the panel in its starting state. Takes no label: the status line is
+// derived from the progress payload now, and the discovery window paints the
+// burn.queued line on its own.
+function showBurnPanel() {
   var panel = document.getElementById('burn-panel');
   if (panel) panel.hidden = false;
   var err = document.getElementById('burn-error');
   if (err) { err.textContent = ''; err.hidden = true; }
   var dl = document.getElementById('btn-burn-download');
   if (dl) dl.hidden = true;
-  renderBurnProgress({ fraction: fraction || 0, label: label || '' });
+  renderBurnProgress({ fraction: 0, label: '', done: false, failed: false,
+                       failedStep: '', startedMs: null });
 }
 
 function showBurnError(msg) {
@@ -3861,8 +3897,76 @@ function showBurnError(msg) {
   if (panel) panel.hidden = false;
   var err = document.getElementById('burn-error');
   if (err) { err.textContent = msg; err.hidden = false; }
-  var eta = document.getElementById('burn-eta');
-  if (eta) eta.textContent = '';
+  // The panel has stopped being a progress report, so its status line goes: a
+  // frozen phase and a frozen clock next to an error read as "still working".
+  clearBurnStatusLine();
+  // Errors raised before any job step ran — dispatch, permissions,
+  // run-not-found — never reach renderBurnProgress, so the title would keep
+  // promising a render in flight. A failure AFTER a successful render (the
+  // download, an expired artifact) must keep its finished title, though: the
+  // render really did succeed, and the error line says what went wrong since.
+  if (panel && !/burn-panel--(done|expired)/.test(panel.className)) {
+    renderBurnTitle({ done: false, failed: true });
+  }
+}
+
+// The panel's terminal tint: 'done', 'expired' or nothing. Single writer, so
+// two states can never stack up and a new render cannot inherit the old one's
+// green.
+function setBurnPanelState(state) {
+  var panel = document.getElementById('burn-panel');
+  if (!panel) return;
+  panel.className = 'burn-panel' + (state ? ' burn-panel--' + state : '');
+}
+
+// Phase, elapsed and remaining all come off together: any one of them left
+// behind alone would be a claim the panel can no longer stand behind.
+function clearBurnStatusLine() {
+  var ids = ['burn-step', 'burn-elapsed', 'burn-eta'];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el) el.textContent = '';
+  }
+}
+
+// The 7-day retention has taken the artifact: nothing here can be downloaded
+// any more. Mute the track, hide the button that could only fail and drop every
+// time claim — the error line says the rest.
+function showBurnExpired() {
+  setBurnPanelState('expired');
+  var dl = document.getElementById('btn-burn-download');
+  if (dl) dl.hidden = true;
+  clearBurnStatusLine();
+}
+
+// One segment per phase, flex-grow straight from the weight table, so the drawn
+// widths cannot drift from the workflow. Built once and then only updated: a
+// rebuild would restart the CSS width transition and make the fill jump.
+var burnTrack = null;   // {track: element, parts: [{seg, fill}]} once built
+
+function ensureBurnTrack() {
+  var track = document.getElementById('burn-track');
+  if (!track) return null;
+  var phases = burnPhases();
+  if (burnTrack && burnTrack.track === track && burnTrack.parts.length === phases.length) {
+    return track;
+  }
+  track.innerHTML = '';
+  var parts = [];
+  for (var i = 0; i < phases.length; i++) {
+    var seg = document.createElement('div');
+    seg.className = 'burn-seg';
+    // One control, not four: the value is published on the track itself.
+    seg.setAttribute('aria-hidden', 'true');
+    seg.style.flexGrow = String(phases[i].weight * 100);
+    var fill = document.createElement('div');
+    fill.className = 'burn-seg__fill';
+    seg.appendChild(fill);
+    track.appendChild(seg);
+    parts.push({ seg: seg, fill: fill });
+  }
+  burnTrack = { track: track, parts: parts };
+  return track;
 }
 
 // Minutes left in the render, or null when there is nothing honest to say.
@@ -3876,28 +3980,99 @@ function burnEtaMinutes(p) {
   return seconds === null ? null : Math.max(1, Math.round(seconds / 60));
 }
 
+// Whole minutes since our first step started, FLOORED so the counter can never
+// overstate, and null below one minute: "1 min elapsed" after ten seconds is a
+// small lie, and the phase name carries the first minute on its own.
+function burnElapsedMinutes(p) {
+  if (!p.startedMs) return null;
+  var minutes = Math.floor(Math.max(0, Date.now() - p.startedMs) / 60000);
+  return minutes >= 1 ? minutes : null;
+}
+
+// "Step 3 of 4 - Burning in the subtitles": the phase, never the raw English
+// step name the Actions API reports.
+function burnStepText(p) {
+  // A terminal state says it in the title; an empty line under it is honest.
+  if (p.done || p.failed) return '';
+  var number = burnPhaseNumber(p);
+  var key = burnPhaseKey(p.label);
+  // computeProgress() returns an empty label for the whole run-discovery window
+  // (up to 60s), and the trailing 'Post ...' steps are not ours to name. Keep
+  // saying burn.queued rather than leaving the user at a blank panel.
+  if (!number || !key) return t('burn.queued');
+  return t('burn.step_of')
+    .replace('{n}', number)
+    .replace('{total}', burnPhases().length)
+    .replace('{step}', t('burn.step.' + key));
+}
+
 function renderBurnProgress(p) {
-  var pct = Math.round(p.fraction * 100);
-  var fill = document.getElementById('burn-bar-fill');
-  if (fill) fill.style.width = pct + '%';
-  // The bar is a progressbar for assistive tech, so the value has to be
-  // published as a number too — a CSS width says nothing to a screen reader.
-  var bar = document.getElementById('burn-bar');
-  if (bar) bar.setAttribute('aria-valuenow', pct);
+  var pct = p.done ? 100 : Math.round((Number(p.fraction) || 0) * 100);
+  var track = ensureBurnTrack();
+  if (track) {
+    var segs = burnSegments(p);
+    // The discovery window: the run was dispatched but no step of ours is named
+    // yet, and that lasts up to a minute. Breathe the phase that is about to
+    // run rather than showing an inert track. Presentation only — the model
+    // stays literal about what the API has actually confirmed.
+    if (!p.done && !p.failed && !segs.some(function(s) { return s.state !== 'idle'; })) {
+      segs[0] = Object.assign({}, segs[0], { state: 'active' });
+    }
+    for (var i = 0; i < segs.length; i++) {
+      var part = burnTrack.parts[i];
+      part.seg.className = 'burn-seg burn-seg--' + segs[i].state;
+      part.fill.style.width = Math.round(segs[i].fill * 100) + '%';
+    }
+    // A CSS width says nothing to a screen reader, so the progressbar publishes
+    // its value as a number too.
+    track.setAttribute('aria-valuenow', pct);
+  }
+  setBurnPanelState(p.done ? 'done' : '');
+  renderBurnTitle(p);
+  renderBurnStatus(p);
+}
+
+function renderBurnTitle(p) {
+  var el = document.getElementById('burn-panel-title');
+  if (!el) return;
+  var key = p.done ? 'burn.title_done' : (p.failed ? 'burn.title_failed' : 'burn.title');
+  // translatePage() repaints every [data-i18n] element, so the key has to move
+  // with the text — otherwise a language toggle reverts a finished run's title
+  // to burn.title, the still-rendering one.
+  el.setAttribute('data-i18n', key);
+  el.textContent = t(key);
+}
+
+function renderBurnStatus(p) {
   var step = document.getElementById('burn-step');
-  // computeProgress() returns an empty label while the run is still being
-  // discovered (up to 60s). Blanking the status there would leave the user
-  // staring at an empty panel at 0%, so keep saying "Starting…" — but never
-  // over a terminal state, where an empty line is the honest one.
-  if (step) step.textContent = p.label || ((p.done || p.failed) ? '' : t('burn.queued'));
+  if (step) {
+    var text = burnStepText(p);
+    // Written only when it actually changes: this span is the panel's live
+    // region, and re-writing identical text makes a screen reader say it again.
+    if (step.textContent !== text) step.textContent = text;
+  }
+  var minutes = burnElapsedMinutes(p);
+  var elapsed = document.getElementById('burn-elapsed');
+  // The elapsed line is the alive-signal while a single gate runs for minutes
+  // with nothing else moving — but on a terminal state the title and the
+  // burn.done_in line say it better.
+  if (elapsed) {
+    elapsed.textContent = (minutes === null || p.done || p.failed)
+      ? '' : t('burn.elapsed').replace('{min}', minutes);
+  }
   var eta = document.getElementById('burn-eta');
   if (!eta) return;
-  // Terminal state wins over the projection: a run cancelled mid-render still
-  // carries a render rate, and "about 9 min left" next to a failure is a lie.
-  var minutes = (p.failed || p.done) ? null : burnEtaMinutes(p);
-  eta.textContent = minutes === null
+  if (p.done) {
+    eta.textContent = minutes === null
+      ? '' : t('burn.done_in').replace('{min}', minutes);
+    return;
+  }
+  // Terminal failure wins over the projection: a run cancelled mid-render still
+  // carries a render rate, and "about 9 min to go" next to a failure is a lie.
+  var left = p.failed ? null : burnEtaMinutes(p);
+  eta.textContent = left === null
     ? ''
-    : t('burn.estimate').replace('{min}', minutes);
+    : t('burn.estimate_soft').replace('{min}', left);
 }
 
 function startBurn() {
@@ -3914,7 +4089,7 @@ function startBurn() {
   // continuation give up instead of re-arming a second poll loop.
   burnWatch = null;
   setBurnFollowing(true);
-  showBurnPanel(t('burn.queued'), 0);
+  showBurnPanel();
   setBurnRunLink('');
   return burnGeometry().then(function(geometry) {
     var ratios = measureBurnRatios(geometry);
@@ -3978,7 +4153,7 @@ function pollBurn() {
         : t('burn.failed'));
       return;
     }
-    if (p.done) { onBurnFinished(); return; }
+    if (p.done) { onBurnFinished(p); return; }
     burnTimer = setTimeout(pollBurn, BURN_POLL_MS);
   }).catch(function(err) {
     if (watch !== burnWatch || !burnFollowing) return;
@@ -3986,10 +4161,14 @@ function pollBurn() {
   });
 }
 
-function onBurnFinished() {
+// `p` is the terminal progress payload, when there is one. Only startedMs is
+// read from it: the "done in N min" line must come from the API's start instant,
+// not from a guess made here.
+function onBurnFinished(p) {
   stopBurnTimer();
   setBurnFollowing(false);   // the run is terminal — rendering again is allowed
-  renderBurnProgress({ fraction: 1, label: '', done: true });
+  renderBurnProgress({ fraction: 1, label: '', done: true, failed: false,
+                       failedStep: '', startedMs: (p && p.startedMs) || null });
   // Success must never sit under a leftover error line.
   var err = document.getElementById('burn-error');
   if (err) { err.textContent = ''; err.hidden = true; }
@@ -4035,7 +4214,7 @@ function resumeBurnWatch(talkId, videoSlug) {
   // The recorded run may still be in flight — follow it, and keep the button
   // disabled until this poll reaches a terminal state.
   setBurnFollowing(true);
-  showBurnPanel(t('burn.queued'), 0);
+  showBurnPanel();
   setBurnRunLink(saved.runUrl);
   pollBurn();
 }
@@ -4068,7 +4247,7 @@ function downloadBurned() {
     var art = arts[0];
     if (!art) throw new Error(t('burn.no_artifact'));
     // Artifacts vanish after the 7-day retention — name that, don't show a 404.
-    if (art.expired) throw new Error(t('burn.expired'));
+    if (art.expired) { showBurnExpired(); throw new Error(t('burn.expired')); }
     return fetch(API + '/actions/artifacts/' + art.id + '/zip', {
       headers: { Authorization: 'Bearer ' + token }
     });

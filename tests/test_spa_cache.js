@@ -3436,77 +3436,160 @@ describe('burn video wiring', () => {
       'the button belongs in the preview .header-actions cluster');
   });
 
-  it('labels the render estimate as an estimate in both languages', () => {
-    assert.ok(html.includes('burn.estimate'),
-      'the progress panel must carry an i18n key marking the ETA as approximate');
+  it('words the remaining time softly and drops the superseded keys', () => {
+    // The ETA is extrapolated from a rate ffmpeg's own progress file measured,
+    // so it no longer needs the italic apology — but it is still an
+    // extrapolation, hence «ще близько».
+    assert.ok(html.includes('burn.estimate_soft'),
+      'the panel must carry the soft-worded remaining-time key');
+    assert.ok(!/burn\.estimate'/.test(html),
+      'burn.estimate is superseded by burn.estimate_soft — it must be gone');
+    assert.ok(!html.includes('burn.overrun'),
+      'burn.overrun existed for the 97% interpolation cap, which no longer exists');
   });
 
-  it('defines every burn i18n key in BOTH language tables', () => {
+  it('defines every burn i18n key exactly once in BOTH language tables', () => {
     // t() falls back to English, so a key missing from uk would silently ship
     // English text into a Ukrainian UI. Check each table separately.
-    //
-    // Both call sites count. The panel labels never reach t() in the source —
-    // they are painted from data-i18n attributes by applyI18N — so harvesting
-    // only t('…') left the five most visible strings unchecked.
-    const KEY = '(?:burn\\.[a-z_]+|btn\\.burn[a-z_]*)';
+    const KEY = '(?:burn\\.[a-z_.]+|btn\\.burn[a-z_]*)';
     const i18n = html.match(/var I18N\s*=\s*\{([\s\S]*?)\n\};/);
     assert.ok(i18n, 'I18N table not found');
     const uk = i18n[1].slice(i18n[1].indexOf('uk:'), i18n[1].indexOf('\n  en:'));
     const en = i18n[1].slice(i18n[1].indexOf('\n  en:'));
-    const keys = new Set([
-      ...[...html.matchAll(new RegExp("t\\('" + KEY + "'\\)", 'g'))]
-        .map((m) => m[0].slice(3, -2)),
-      ...[...html.matchAll(new RegExp('data-i18n="' + KEY + '"', 'g'))]
-        .map((m) => m[0].slice(11, -1))
+    // Harvest from the CODE with the tables cut out, so the tables cannot
+    // vouch for themselves. Three call shapes count: t('…'), the data-i18n
+    // attributes applyI18N paints, and bare key literals — the title key is
+    // picked by a conditional and never appears inside a t(...) call.
+    const at = html.indexOf(i18n[0]);
+    const code = html.slice(0, at) + html.slice(at + i18n[0].length);
+    const found = new Set([
+      ...[...code.matchAll(new RegExp("'(" + KEY + ")'", 'g'))].map((m) => m[1]),
+      ...[...code.matchAll(new RegExp('data-i18n="(' + KEY + ')"', 'g'))].map((m) => m[1])
     ]);
-    // Guard the harvest itself: a regex that silently matches nothing would
+    // 'burn.step.' is a computed prefix: the phase key is appended at runtime.
+    // The four keys it can build come from the phase model itself, so a renamed
+    // phase fails here instead of silently printing a raw key.
+    const PREFIX = 'burn.step.';
+    const keys = [...found].filter((k) => k !== PREFIX)
+      .concat(require('../site/js/burn_video').burnPhases().map((p) => PREFIX + p.key));
+    // Guard the harvest itself: a regex that silently matched nothing would
     // make every assertion below vacuous.
-    for (const attrKey of ['btn.burn_video', 'btn.burn_download', 'burn.title',
-                           'burn.view_run', 'burn.hide']) {
-      assert.ok(keys.has(attrKey), 'data-i18n key not harvested: ' + attrKey);
+    for (const wanted of ['btn.burn_video', 'btn.burn_download', 'burn.title',
+                          'burn.view_run', 'burn.hide', 'burn.queued',
+                          'burn.title_done', 'burn.title_failed', 'burn.step_of',
+                          'burn.elapsed', 'burn.estimate_soft', 'burn.done_in',
+                          'burn.step.render']) {
+      assert.ok(keys.includes(wanted), 'i18n key not harvested: ' + wanted);
     }
-    assert.ok(keys.has('burn.queued'), "t() key not harvested: burn.queued");
-    assert.ok(keys.size >= 15, 'expected the full burn key set, got ' + keys.size);
-    for (const key of keys) {
-      assert.ok(uk.includes("'" + key + "'"), 'uk table is missing ' + key);
-      assert.ok(en.includes("'" + key + "'"), 'en table is missing ' + key);
+    // A shape, not a magic count: each key the code uses is defined EXACTLY
+    // once per table (a duplicate literal silently wins), and neither table
+    // carries a burn key the code never uses — that is how a superseded key
+    // like burn.estimate would otherwise survive its own removal.
+    for (const [name, table] of [['uk', uk], ['en', en]]) {
+      const defined = new Map();
+      for (const d of table.matchAll(new RegExp("'(" + KEY + ")':", 'g'))) {
+        defined.set(d[1], (defined.get(d[1]) || 0) + 1);
+      }
+      for (const key of keys) {
+        assert.strictEqual(defined.get(key), 1,
+          name + ' table must define ' + key + ' exactly once, got ' + defined.get(key));
+      }
+      assert.deepStrictEqual([...defined.keys()].filter((k) => !keys.includes(k)), [],
+        name + ' table defines burn keys the code never uses');
     }
   });
 
-  it('gives the progress bar and the two message lines a11y semantics', () => {
-    // A ~25-minute operation whose only feedback is a bar and an error line is
+  it('gives the track a progressbar role and keeps the ticker out of the live region', () => {
+    // A ~25-minute operation whose only feedback is a track and an error line is
     // unusable without a progressbar role and live regions.
     const panel = html.slice(html.indexOf('<div id="burn-panel"'),
                              html.indexOf('<!-- === REVIEW VIEW === -->'));
     assert.ok(panel, 'burn panel markup not found');
-    const bar = panel.match(/<div[^>]*class="burn-bar"[^>]*>/);
-    assert.ok(bar, '.burn-bar element not found');
-    assert.ok(bar[0].includes('role="progressbar"'),
-      'the bar must expose role="progressbar"');
+    const track = panel.match(/<div[^>]*id="burn-track"[^>]*>/);
+    assert.ok(track, '#burn-track element not found');
+    assert.ok(track[0].includes('role="progressbar"'),
+      'the track must expose role="progressbar" — one control, not four segments');
     for (const attr of ['aria-valuemin="0"', 'aria-valuemax="100"', 'aria-valuenow=']) {
-      assert.ok(bar[0].includes(attr), 'the bar must carry ' + attr);
+      assert.ok(track[0].includes(attr), 'the track must carry ' + attr);
     }
+    const step = panel.match(/<span[^>]*id="burn-step"[^>]*>/);
+    assert.ok(step && step[0].includes('aria-live="polite"'),
+      'the phase line must be the polite live region');
+    // The elapsed counter ticks on every 5s poll for ~25 minutes: inside a live
+    // region that is ~300 announcements of a number nobody asked to hear.
     const status = panel.match(/<p[^>]*class="burn-panel__status"[^>]*>/);
-    assert.ok(status && status[0].includes('aria-live="polite"'),
-      'the status line must be a polite live region');
+    assert.ok(status && !status[0].includes('aria-live'),
+      'aria-live belongs on #burn-step alone, not on the whole status line');
+    for (const id of ['burn-elapsed', 'burn-eta']) {
+      const span = panel.match(new RegExp('<span[^>]*id="' + id + '"[^>]*>'));
+      assert.ok(span, '#' + id + ' not found');
+      assert.ok(!span[0].includes('aria-live'),
+        '#' + id + ' must sit outside the live region');
+    }
     const err = panel.match(/<p[^>]*id="burn-error"[^>]*>/);
     assert.ok(err && (err[0].includes('role="alert"') ||
                       err[0].includes('aria-live="assertive"')),
       'the error line must be an assertive live region');
   });
 
+  it('draws the track as seamed segments over the single bar', () => {
+    assert.match(css, /\.burn-track\s*\{[^}]*display:\s*flex/,
+      '.burn-track must lay the phase segments out in a row');
+    assert.match(css, /\.burn-seg\s*\{[^}]*background:\s*var\(--bg4\)/,
+      'an unfilled segment must sit on the idle surface token');
+    assert.ok(!css.includes('.burn-bar'),
+      'the single-bar rules are superseded by the segmented track');
+  });
+
+  it('marks a failed phase without depending on its fill width', () => {
+    // .burn-seg__fill starts at width:0, so a run that died in its first gate
+    // would show nothing at all if red lived only on the fill.
+    const seg = css.match(/\.burn-seg--failed\s*\{([^}]*)\}/);
+    assert.ok(seg, '.burn-seg--failed must style the segment body itself');
+    assert.match(seg[1], /var\(--(danger-bg|accent-red)\)/,
+      'the failed segment body needs a visible treatment of its own');
+  });
+
+  it('drops the italic apology from the remaining-time line', () => {
+    const eta = css.match(/\.burn-panel__eta\s*\{([^}]*)\}/);
+    assert.ok(eta, '.burn-panel__eta rule not found');
+    assert.ok(!/italic/.test(eta[1]),
+      'the italic apologised for a guess; the ETA is now a measured extrapolation');
+  });
+
+  it('holds the segment animation still under prefers-reduced-motion', () => {
+    assert.match(css, /prefers-reduced-motion[\s\S]{0,300}\.burn-seg--active::after\s*\{[^}]*animation:\s*none/,
+      'the breathing segment must stop for readers who asked for less motion');
+  });
+
   it('mirrors the a11y semantics into the styleguide entry', () => {
     // The catalog is the contract: an example without the roles teaches the
     // wrong markup to the next component author.
-    const sg = styleguide.slice(styleguide.indexOf('<h2>Burn panel</h2>'));
+    const at = styleguide.indexOf('<h2>Burn track</h2>');
+    assert.ok(at > -1, 'the styleguide must carry a Burn track section');
+    const sg = styleguide.slice(at);
     assert.ok(sg.includes('role="progressbar"'),
-      'the styleguide bar must show role="progressbar"');
+      'the styleguide track must show role="progressbar"');
     assert.ok(sg.includes('aria-valuenow='),
-      'the styleguide bar must show aria-valuenow');
+      'the styleguide track must show aria-valuenow');
     assert.ok(sg.includes('aria-live="polite"'),
       'the styleguide status line must show the polite live region');
     assert.ok(sg.includes('role="alert"') || sg.includes('aria-live="assertive"'),
       'the styleguide error line must show the assertive live region');
+  });
+
+  it('builds the styleguide tracks from the real weight table', () => {
+    const at = styleguide.indexOf('<h2>Burn track</h2>');
+    assert.ok(at > -1, 'the styleguide must carry a Burn track section');
+    const sg = styleguide.slice(at);
+    assert.ok(styleguide.includes('<script src="js/burn_video.js"></script>'),
+      'the catalog must include the real phase model, not hand-drawn widths');
+    assert.match(sg, /burnSegments\(|burnPhases\(/,
+      'the example tracks must be generated from the phase model');
+    for (const state of ['early', 'mid-render', 'done', 'failed', 'expired']) {
+      assert.ok(sg.includes(state),
+        'the catalog must show the ' + state + ' state');
+    }
   });
 
   it('stops the burn poll when the router leaves the preview', () => {
@@ -3537,8 +3620,8 @@ describe('burn video wiring', () => {
   it('documents the panel in the styleguide, rendered by the real CSS', () => {
     assert.match(styleguide, /class="burn-panel[ "]/,
       'a new component must ship a live styleguide example');
-    assert.ok(styleguide.includes('burn-bar__fill'),
-      'the styleguide example must show the progress bar itself');
+    assert.ok(styleguide.includes('burn-seg__fill'),
+      'the styleguide example must show the filled segments themselves');
   });
 
   it('exposes the three entry points the markup calls on SPA', () => {
@@ -3564,28 +3647,53 @@ describe('burn video driver behaviour', () => {
   const html = fs.readFileSync('site/index.html', 'utf8');
 
   function makeEl(id) {
-    return {
-      id: id, hidden: false, disabled: false, textContent: '', href: '',
-      style: {}, attrs: {},
+    const el = {
+      id: id, hidden: false, disabled: false, href: '', className: '',
+      style: {}, attrs: {}, children: [], writes: 0,
       setAttribute: function (k, v) { this.attrs[k] = String(v); },
       getAttribute: function (k) { return k in this.attrs ? this.attrs[k] : null; },
+      appendChild: function (c) { this.children.push(c); return c; },
       click: function () {}
     };
+    // textContent counts its writes: #burn-step is the panel's live region, so
+    // "written only when the text actually changes" is a behaviour, not a
+    // detail — a re-write makes a screen reader announce it again.
+    let text = '';
+    Object.defineProperty(el, 'textContent', {
+      get: function () { return text; },
+      set: function (v) { text = String(v); el.writes++; },
+      enumerable: true, configurable: true
+    });
+    // The driver clears the track before (re)building its segments.
+    Object.defineProperty(el, 'innerHTML', {
+      get: function () { return ''; },
+      set: function () { el.children.length = 0; },
+      enumerable: true, configurable: true
+    });
+    return el;
   }
 
   // Mirrors the shipped markup, including which nodes start [hidden].
-  const EL_IDS = ['burn-panel', 'burn-error', 'btn-burn-download', 'burn-bar',
-                  'burn-bar-fill', 'burn-step', 'burn-eta', 'burn-run-link',
-                  'btn-burn-video'];
+  const EL_IDS = ['burn-panel', 'burn-panel-title', 'burn-error',
+                  'btn-burn-download', 'burn-track', 'burn-step', 'burn-elapsed',
+                  'burn-eta', 'burn-run-link', 'btn-burn-video'];
   const HIDDEN_IDS = ['burn-panel', 'burn-error', 'btn-burn-download', 'burn-run-link'];
 
   const NO_PROGRESS = { fraction: 0, label: '', done: false, failed: false,
-                        failedStep: '', renderFraction: null, renderStartedMs: null };
+                        failedStep: '', renderFraction: null, renderStartedMs: null,
+                        startedMs: null };
+  const MIN_MS = 60000;
+
+  // The phase model is pure and tested directly in tests/test_burn_video.js, so
+  // the driver gets the REAL functions: a stub would let the panel draw four
+  // equal segments and still pass.
+  const PHASE_MODEL = require('../site/js/burn_video');
 
   function makeHarness(over) {
     const els = {};
     EL_IDS.forEach(function (id) { els[id] = makeEl(id); });
     HIDDEN_IDS.forEach(function (id) { els[id].hidden = true; });
+    els['burn-panel'].className = 'burn-panel';   // as the markup ships it
     const store = {};
     const env = {
       els: els,
@@ -3620,6 +3728,10 @@ describe('burn video driver behaviour', () => {
       getRunJobs: function () { return Promise.resolve([{}]); },
       computeProgress: function () { return Object.assign({}, NO_PROGRESS); },
       renderEtaSeconds: function () { return 600; },
+      burnPhases: PHASE_MODEL.burnPhases,
+      burnPhaseKey: PHASE_MODEL.burnPhaseKey,
+      burnPhaseNumber: PHASE_MODEL.burnPhaseNumber,
+      burnSegments: PHASE_MODEL.burnSegments,
       burnStateKey: function (a, b) { return 'burn:' + a + ':' + b; },
       listRunArtifacts: function () { return Promise.resolve([]); },
       ghWriteUser: function () { return true; },
@@ -3639,6 +3751,7 @@ describe('burn video driver behaviour', () => {
       'previewState', 't', 'API', 'BURN_WORKFLOW', 'getAuthToken', 'dispatchWorkflow',
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
+      'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
       'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
       'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned'];
@@ -3758,8 +3871,228 @@ describe('burn video driver behaviour', () => {
     const env = makeHarness();
     env.api.renderBurnProgress({ fraction: 0.42, label: 'Render 20%',
                                  done: false, failed: false });
-    assert.strictEqual(env.els['burn-bar'].getAttribute('aria-valuenow'), '42',
+    assert.strictEqual(env.els['burn-track'].getAttribute('aria-valuenow'), '42',
       'the progressbar must report its value, not only its pixel width');
+  });
+
+  // ---- the seamed four-phase track ----
+
+  function segs(env) { return env.els['burn-track'].children; }
+  function classes(env) { return segs(env).map(function (s) { return s.className; }); }
+  function widths(env) {
+    return segs(env).map(function (s) { return s.children[0].style.width; });
+  }
+
+  it('builds one segment per phase, sized by the real weights', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
+    assert.strictEqual(segs(env).length, 4, 'four phases, four segments');
+    assert.deepStrictEqual(segs(env).map(function (s) { return s.style.flexGrow; }),
+      ['5', '15', '70', '10'],
+      'flex-grow must come from the weight table — equal quarters would lie');
+    assert.ok(segs(env).every(function (s) { return s.getAttribute('aria-hidden') === 'true'; }),
+      'the segments are decoration: the value lives on the track (one control)');
+  });
+
+  it('reuses the segments on the next poll instead of rebuilding them', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
+    const first = segs(env)[0];
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS, { fraction: 0.5 }));
+    assert.strictEqual(segs(env).length, 4, 'a rebuild would duplicate the segments');
+    assert.strictEqual(segs(env)[0], first,
+      'rebuilding restarts the CSS width transition, so the fill would jump');
+  });
+
+  it('fills a phase only with its own credited weight', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.05 + 0.15 + 0.05 + 0.065, label: 'Render 20%' }));
+    assert.deepStrictEqual(widths(env), ['100%', '100%', '16%', '0%']);
+    assert.match(classes(env)[2], /burn-seg--active/,
+      'the phase whose step is running is the active one');
+  });
+
+  it('breathes the first segment while the run is still being discovered', () => {
+    // Dispatched, run not found yet: no fraction, no named step, and up to 60s
+    // of it. The panel must not look inert — the phase about to run breathes.
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
+    assert.match(classes(env)[0], /burn-seg--active/);
+    assert.strictEqual(env.els['burn-step'].textContent, 'T:burn.queued');
+  });
+
+  it('breathes nothing on a terminal state', () => {
+    for (const terminal of [{ failed: true }, { done: true, fraction: 1 }]) {
+      const env = makeHarness();
+      env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS, terminal));
+      assert.ok(classes(env).every(function (c) { return !/burn-seg--active/.test(c); }),
+        'a finished or failed run is not still working on something');
+    }
+  });
+
+  it('names the phase, never the English workflow step', () => {
+    const env = makeHarness({
+      t: function (k) { return k === 'burn.step_of' ? '{n} of {total} — {step}' : k; }
+    });
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.3, label: 'Render 20%' }));
+    assert.strictEqual(env.els['burn-step'].textContent, '3 of 4 — burn.step.render',
+      'a Ukrainian interface must not show the raw Actions step name');
+  });
+
+  it('leaves the elapsed line empty below one full minute', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.05, label: 'Download video', startedMs: Date.now() - 59000 }));
+    assert.strictEqual(env.els['burn-elapsed'].textContent, '',
+      '"1 min elapsed" after 59 seconds is a small lie');
+  });
+
+  it('floors the elapsed minutes so the counter can never overstate', () => {
+    const env = makeHarness({
+      t: function (k) { return k === 'burn.elapsed' ? '{min}m' : k; }
+    });
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.05, label: 'Download video',
+        startedMs: Date.now() - (7 * MIN_MS + 59000) }));
+    assert.strictEqual(env.els['burn-elapsed'].textContent, '7m');
+  });
+
+  it('writes the live status line only when it changes', () => {
+    const env = makeHarness();
+    const p = Object.assign({}, NO_PROGRESS, { fraction: 0.3, label: 'Render 20%' });
+    env.api.renderBurnProgress(p);
+    const before = env.els['burn-step'].writes;
+    env.api.renderBurnProgress(Object.assign({}, p, { fraction: 0.365 }));
+    assert.strictEqual(env.els['burn-step'].writes, before,
+      'a re-write of identical text makes a screen reader announce it again');
+  });
+
+  it('moves the title i18n key with the title text', () => {
+    // translatePage() repaints every [data-i18n] element on a language toggle,
+    // so a stale key reverts a finished run's title to "Rendering…".
+    const env = makeHarness();
+    env.api.renderBurnProgress({ fraction: 1, label: '', done: true });
+    assert.strictEqual(env.els['burn-panel-title'].textContent, 'T:burn.title_done');
+    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
+      'burn.title_done');
+    env.api.renderBurnProgress({ fraction: 0.3, label: 'Render 40%', done: false,
+                                 failed: true, failedStep: 'Render 40%' });
+    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
+      'burn.title_failed');
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.1, label: 'Download video' }));
+    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'), 'burn.title');
+  });
+
+  it('names the failure in the title when no job step ever ran', () => {
+    // A dispatch/permission/run-not-found error never reaches
+    // renderBurnProgress, so the title would keep promising a render in flight.
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
+    env.api.showBurnError('boom');
+    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
+      'burn.title_failed');
+  });
+
+  it('clears the stale progress line when it reports an error', () => {
+    // The panel stops being a progress report the moment it becomes an error
+    // report: «Запускаємо…» under "the render failed" invites the belief that
+    // something is still being followed.
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
+      { fraction: 0.3, label: 'Render 20%', startedMs: Date.now() - 8 * MIN_MS }));
+    assert.notStrictEqual(env.els['burn-step'].textContent, '', 'precondition');
+    env.api.showBurnError('boom');
+    assert.strictEqual(env.els['burn-step'].textContent, '');
+    assert.strictEqual(env.els['burn-elapsed'].textContent, '');
+    assert.strictEqual(env.els['burn-eta'].textContent, '');
+  });
+
+  it('keeps the finished title when only the download failed', () => {
+    const env = makeHarness();
+    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS });
+    env.api.showBurnError('no mp4 inside the archive');
+    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
+      'burn.title_done',
+      'the render did succeed — it was the download that failed');
+  });
+
+  it('greens the whole track on a finished run and says how long it took', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
+                                 startedMs: Date.now() - 21 * MIN_MS });
+    assert.strictEqual(env.els['burn-panel'].className, 'burn-panel burn-panel--done');
+    assert.deepStrictEqual(widths(env), ['100%', '100%', '100%', '100%']);
+    assert.ok(classes(env).every(function (c) { return /burn-seg--done/.test(c); }));
+    assert.strictEqual(env.els['burn-track'].getAttribute('aria-valuenow'), '100');
+    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in');
+  });
+
+  it('carries the run start into the finished panel', async () => {
+    // «готово за 21 хв» has to come from the API's own start instant — the
+    // finished payload the driver synthesises must not lose it.
+    const start = Date.now() - 21 * MIN_MS;
+    const env = makeHarness({
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          { fraction: 1, done: true, startedMs: start });
+      },
+      t: function (k) { return k === 'burn.done_in' ? '{min} min' : k; }
+    });
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.els['burn-eta'].textContent, '21 min',
+      'onBurnFinished must be told when the run started rather than guess');
+  });
+
+  it('drops the finished tint when the next render starts', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress({ fraction: 1, label: '', done: true });
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
+    assert.strictEqual(env.els['burn-panel'].className, 'burn-panel',
+      'a fresh run must not inherit the previous run\'s green');
+  });
+
+  it('marks only the phase that failed', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress({ fraction: 0.3, label: 'Render 40%', done: false,
+                                 failed: true, failedStep: 'Render 40%' });
+    const c = classes(env);
+    assert.match(c[2], /burn-seg--failed/);
+    assert.ok(!/burn-seg--failed/.test(c[0] + c[1] + c[3]));
+  });
+
+  it('marks no phase when the failure has no named step', () => {
+    // We do not know where it died, so we do not claim a place.
+    const env = makeHarness();
+    env.api.renderBurnProgress({ fraction: 0, label: '', done: false,
+                                 failed: true, failedStep: '' });
+    assert.ok(classes(env).every(function (c) { return !/burn-seg--failed/.test(c); }));
+  });
+
+  it('mutes the track and drops the times when the artifact has expired', async () => {
+    const env = makeHarness({
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9, expired: true }]); }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
+                                 startedMs: Date.now() - 21 * MIN_MS });
+    await env.api.downloadBurned();
+    assert.match(env.els['burn-panel'].className, /burn-panel--expired/,
+      'nothing here can be downloaded any more — the track must stop looking ready');
+    assert.strictEqual(env.els['btn-burn-download'].hidden, true,
+      'a download button that can only fail is worse than none');
+    assert.strictEqual(env.els['burn-eta'].textContent, '',
+      'no time claims survive an expired artifact');
+    assert.strictEqual(env.els['burn-error'].textContent, 'T:burn.expired');
+    assert.strictEqual(env.els['burn-panel-title'].getAttribute('data-i18n'),
+      'burn.title_done',
+      'the render did not fail — its file expired, which the error line says');
   });
 
   // The remaining time is now extrapolated from the rate the render is actually
