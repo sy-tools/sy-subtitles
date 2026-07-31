@@ -3579,8 +3579,8 @@ describe('burn video driver behaviour', () => {
                   'btn-burn-video'];
   const HIDDEN_IDS = ['burn-panel', 'burn-error', 'btn-burn-download', 'burn-run-link'];
 
-  const NO_PROGRESS = { fraction: 0, label: '', estimated: false, done: false,
-                        failed: false, failedStep: '' };
+  const NO_PROGRESS = { fraction: 0, label: '', done: false, failed: false,
+                        failedStep: '', renderFraction: null, renderStartedMs: null };
 
   function makeHarness(over) {
     const els = {};
@@ -3749,17 +3749,46 @@ describe('burn video driver behaviour', () => {
 
   it('does not print "Starting…" over a finished run', () => {
     const env = makeHarness();
-    env.api.renderBurnProgress({ fraction: 1, label: '', estimated: false, done: true });
+    env.api.renderBurnProgress({ fraction: 1, label: '', done: true });
     assert.strictEqual(env.els['burn-step'].textContent, '',
       'a terminal state must not fall back to the queued label');
   });
 
   it('publishes progress to assistive tech via aria-valuenow', () => {
     const env = makeHarness();
-    env.api.renderBurnProgress({ fraction: 0.42, label: 'Burn subtitles',
-                                 estimated: false, done: false, failed: false });
+    env.api.renderBurnProgress({ fraction: 0.42, label: 'Render 20%',
+                                 done: false, failed: false });
     assert.strictEqual(env.els['burn-bar'].getAttribute('aria-valuenow'), '42',
       'the progressbar must report its value, not only its pixel width');
+  });
+
+  // The remaining time is now extrapolated from the rate the render is actually
+  // going at, so it exists only once the encode has produced a measurable one.
+  const rendering = (over) => Object.assign({
+    fraction: 0.4, label: 'Render 20%', done: false, failed: false,
+    renderFraction: 0.25, renderStartedMs: Date.now() - 600000
+  }, over || {});
+
+  it('says nothing about remaining time before the render has a measured rate', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS, { fraction: 0.2 }));
+    assert.strictEqual(env.els['burn-eta'].textContent, '',
+      'with no render rate yet there is no honest number to show');
+  });
+
+  it('shows a remaining-time line once the render rate is measurable', () => {
+    const env = makeHarness({ renderEtaSeconds: function () { return 1800; } });
+    env.api.renderBurnProgress(rendering());
+    assert.notStrictEqual(env.els['burn-eta'].textContent, '');
+  });
+
+  it('never shows a remaining time next to a failure or a finished run', () => {
+    for (const terminal of [{ failed: true }, { done: true }]) {
+      const env = makeHarness({ renderEtaSeconds: function () { return 1800; } });
+      env.api.renderBurnProgress(rendering(terminal));
+      assert.strictEqual(env.els['burn-eta'].textContent, '',
+        'a remaining time next to ' + JSON.stringify(terminal) + ' is a lie');
+    }
   });
 
   it('treats a cancelled save dialog as a no-op, not a failure', async () => {

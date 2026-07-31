@@ -131,7 +131,13 @@ jobs:
           test -s /tmp/burn/source.mp4 \
             || { echo "::error::downloaded file is empty"; exit 1; }
 
-      - name: Burn subtitles
+      # The render is one detached ffmpeg run, followed by ten cheap steps that
+      # each block until it passes a threshold. Rationale: a step *completing*
+      # is the only live, CORS-clean progress channel a browser has into a
+      # running job (the log blob 404s mid-run, annotations appear only at
+      # finalisation), and the SPA already polls the job's step list. See the
+      # module docstring in tools/render_gate.py.
+      - name: Start render
         env:
           TALK_ID: ${{ inputs.talk_id }}
           VIDEO_SLUG: ${{ inputs.video_slug }}
@@ -141,17 +147,156 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/burn/out
-          # Two "[burn] ffmpeg ..." lines are expected: a one-frame font
-          # pre-flight, then the real encode. A font libass cannot resolve
-          # fails this step — no exit code is masked anywhere.
-          python -m tools.burn_subtitles \
-            --srt "talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
-            --video /tmp/burn/source.mp4 \
-            --output "/tmp/burn/out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4" \
-            --font-ratio "$FONT_RATIO" \
-            --padtop-ratio "$PADTOP_RATIO" \
-            --padbot-ratio "$PADBOT_RATIO" \
-            --ass-out /tmp/burn/subs.ass
+          # The gates turn out_time_us into a percentage, which needs the source
+          # duration. A non-numeric probe result fails the gates loudly rather
+          # than degrading into "release everything".
+          ffprobe -v error -show_entries format=duration -of csv=p=0 \
+            /tmp/burn/source.mp4 > /tmp/burn/duration_s.txt
+          test -s /tmp/burn/duration_s.txt \
+            || { echo "::error::could not probe the source duration"; exit 1; }
+          # Detached with stdio on files, so this step's shell can exit while the
+          # encode keeps running across the gate steps below. nohup is what keeps
+          # it alive; no `disown` is needed, and none is used — it would have to
+          # be guarded by an exit-code mask, which this workflow forbids.
+          #
+          # SECURITY: the body is SINGLE-quoted, so the outer shell splices
+          # nothing into it. TALK_ID and VIDEO_SLUG arrive through `env:` above
+          # and are expanded by the inner shell as ordinary variables, which is
+          # what makes a crafted talk_id inert here.
+          #
+          # No `set -e` inside: the wrapper must ALWAYS reach `echo $?`, so the
+          # gates get an unambiguous "the render is over" signal instead of
+          # depending on pid liveness.
+          #
+          # Two "[burn] ffmpeg ..." lines are expected in the log: a one-frame
+          # font pre-flight, then the real encode. A font libass cannot resolve
+          # exits non-zero and fails the first gate.
+          #
+          # SC2016 ("expressions don't expand in single quotes") is the whole
+          # point here — the inner shell expands them, this one must not.
+          # shellcheck disable=SC2016
+          nohup bash -c '
+            python -m tools.burn_subtitles \
+              --srt "talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
+              --video /tmp/burn/source.mp4 \
+              --output "/tmp/burn/out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4" \
+              --font-ratio "$FONT_RATIO" \
+              --padtop-ratio "$PADTOP_RATIO" \
+              --padbot-ratio "$PADBOT_RATIO" \
+              --ass-out /tmp/burn/subs.ass \
+              --progress-file /tmp/burn/progress.txt
+            echo $? > /tmp/burn/exit_code
+          ' > /tmp/burn/render.log 2>&1 < /dev/null &
+          # Return only once ffmpeg has written its first sample, so the first
+          # gate never polls a progress file that does not exist yet.
+          python -m tools.render_gate --percent 0 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      # Nine gates, written out literally. A loop or a matrix cannot produce
+      # nine *named* steps, and the names are the entire mechanism: the SPA
+      # credits each completed name a fixed slice of the bar.
+      - name: Render 10%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 10 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 20%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 20 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 30%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 30 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 40%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 40 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 50%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 50 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 60%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 60 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 70%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 70 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 80%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 80 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 90%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 90 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Finish render
+        env:
+          TALK_ID: ${{ inputs.talk_id }}
+          VIDEO_SLUG: ${{ inputs.video_slug }}
+        run: |
+          set -euo pipefail
+          # --await-exit ignores progress=end and adopts the process's own exit
+          # code: ffmpeg writes that marker before +faststart has finished
+          # rewriting the moov atom, so "encoder done" is not "file written".
+          python -m tools.render_gate --await-exit \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+          # The detached render logged to a file, so surface it in the job log.
+          cat /tmp/burn/render.log
+          test -s "/tmp/burn/out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4" \
+            || { echo "::error::the render produced no output file"; exit 1; }
 
       - name: Upload result
         uses: actions/upload-artifact@v7

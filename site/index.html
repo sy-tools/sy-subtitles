@@ -3809,12 +3809,6 @@ function burnGeometry() {
     });
 }
 
-// Total spoken length, used only to estimate the render step (see burn_video.js).
-function burnDurationMs() {
-  var cues = (previewState && previewState.subtitles) || [];
-  return cues.length ? cues[cues.length - 1].endMs : 0;
-}
-
 function saveBurnState(watch) {
   if (!watch) return;
   // Best-effort: a full/blocked storage must not abort a running render — the
@@ -3857,7 +3851,7 @@ function showBurnPanel(label, fraction) {
   if (err) { err.textContent = ''; err.hidden = true; }
   var dl = document.getElementById('btn-burn-download');
   if (dl) dl.hidden = true;
-  renderBurnProgress({ fraction: fraction || 0, label: label || '', estimated: false });
+  renderBurnProgress({ fraction: fraction || 0, label: label || '' });
 }
 
 function showBurnError(msg) {
@@ -3871,8 +3865,15 @@ function showBurnError(msg) {
   if (eta) eta.textContent = '';
 }
 
-function burnEtaMinutes(fraction) {
-  return Math.max(1, Math.round(renderEtaSeconds(burnDurationMs()) * (1 - fraction) / 60));
+// Minutes left in the render, or null when there is nothing honest to say.
+// The rate is measured from the render's own gate steps: renderFraction of the
+// encode took (now - renderStartedMs). Before the first gate completes there is
+// no rate at all — say nothing rather than invent one.
+function burnEtaMinutes(p) {
+  if (!p.renderStartedMs) return null;
+  var elapsed = Math.max(0, (Date.now() - p.renderStartedMs) / 1000);
+  var seconds = renderEtaSeconds(p.renderFraction, elapsed);
+  return seconds === null ? null : Math.max(1, Math.round(seconds / 60));
 }
 
 function renderBurnProgress(p) {
@@ -3891,12 +3892,12 @@ function renderBurnProgress(p) {
   if (step) step.textContent = p.label || ((p.done || p.failed) ? '' : t('burn.queued'));
   var eta = document.getElementById('burn-eta');
   if (!eta) return;
-  // Terminal state wins over the estimate: a run cancelled mid-render comes
-  // back failed AND estimated, and "about 9 min left" next to a failure is a
-  // lie. Labelled as approximate otherwise — ffmpeg reports no true percentage.
-  eta.textContent = (p.estimated && !p.failed && !p.done)
-    ? t('burn.estimate').replace('{min}', burnEtaMinutes(p.fraction))
-    : '';
+  // Terminal state wins over the projection: a run cancelled mid-render still
+  // carries a render rate, and "about 9 min left" next to a failure is a lie.
+  var minutes = (p.failed || p.done) ? null : burnEtaMinutes(p);
+  eta.textContent = minutes === null
+    ? ''
+    : t('burn.estimate').replace('{min}', minutes);
 }
 
 function startBurn() {
@@ -3965,11 +3966,11 @@ function pollBurn() {
     // Abandon if the panel moved on: another video (watch swapped) or the user
     // hid this one (no longer following). Either way, do not re-arm the loop.
     if (watch !== burnWatch || !burnFollowing) return;
-    var p = computeProgress(job, Date.now(), burnDurationMs());
+    var p = computeProgress(job, Date.now());
     renderBurnProgress(p);
     // Failure first: a job that died in "Set up job" (before any named step)
-    // comes back failed with an empty failedStep, and can also carry
-    // estimated:true when cancelled mid-render.
+    // comes back failed with an empty failedStep, and a run cancelled
+    // mid-render still carries a render rate that must not be shown.
     if (p.failed) {
       clearBurnState(watch.talkId, watch.videoSlug);
       showBurnError(p.failedStep
@@ -3988,7 +3989,7 @@ function pollBurn() {
 function onBurnFinished() {
   stopBurnTimer();
   setBurnFollowing(false);   // the run is terminal — rendering again is allowed
-  renderBurnProgress({ fraction: 1, label: '', estimated: false, done: true });
+  renderBurnProgress({ fraction: 1, label: '', done: true });
   // Success must never sit under a leftover error line.
   var err = document.getElementById('burn-error');
   if (err) { err.textContent = ''; err.hidden = true; }

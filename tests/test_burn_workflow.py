@@ -1,6 +1,7 @@
 """Guards on burn-subtitles.yml — the SPA depends on its run-name and step names."""
 
 import os
+import re
 import subprocess
 
 import pytest
@@ -13,7 +14,17 @@ CONTRACT_STEPS = [
     "Install dependencies",
     "Validate inputs",
     "Download video",
-    "Burn subtitles",
+    "Start render",
+    "Render 10%",
+    "Render 20%",
+    "Render 30%",
+    "Render 40%",
+    "Render 50%",
+    "Render 60%",
+    "Render 70%",
+    "Render 80%",
+    "Render 90%",
+    "Finish render",
     "Upload result",
 ]
 
@@ -165,13 +176,99 @@ class TestDownload:
 
 class TestBurn:
     def test_passes_the_browser_measured_ratios(self):
-        run = _step("Burn subtitles")["run"]
+        run = _step("Start render")["run"]
         assert "tools.burn_subtitles" in run
         for flag in ("--font-ratio", "--padtop-ratio", "--padbot-ratio"):
             assert flag in run, flag
 
     def test_burns_the_validated_ukrainian_srt(self):
-        assert "final/uk.srt" in _step("Burn subtitles")["run"]
+        assert "final/uk.srt" in _step("Start render")["run"]
+
+    def test_the_render_writes_a_progress_file_for_the_gates(self):
+        # Without this the gate steps have nothing to poll and every one of them
+        # would stall out — the whole progress mechanism hangs off this flag.
+        assert "--progress-file" in _step("Start render")["run"]
+
+    def test_probes_the_source_duration_before_launching(self):
+        # out_time_us only becomes a percentage against a known duration.
+        run = _step("Start render")["run"]
+        assert "ffprobe" in run
+        assert "format=duration" in run
+
+    def test_the_launcher_always_records_an_exit_code(self):
+        # The gates' unambiguous "the render is over" signal. If the wrapper
+        # could skip it (a `set -e` inside, say), a failed render would leave
+        # every remaining gate waiting for a stall timeout instead of failing.
+        run = _step("Start render")["run"]
+        assert "> /tmp/burn/exit_code" in run
+
+    def test_every_gate_polls_the_same_four_files(self):
+        for name in [f"Render {p}%" for p in range(10, 100, 10)] + ["Finish render"]:
+            run = _step(name)["run"]
+            assert "tools.render_gate" in run, name
+            for flag in ("--progress-file", "--duration-file", "--exit-file", "--log-file"):
+                assert flag in run, f"{name} {flag}"
+
+    def test_the_gates_ask_for_ascending_thresholds(self):
+        percents = []
+        for name in [f"Render {p}%" for p in range(10, 100, 10)]:
+            run = _step(name)["run"]
+            percents.append(int(re.search(r"--percent (\d+)", run).group(1)))
+        assert percents == sorted(percents) == list(range(10, 100, 10))
+
+    def test_the_gate_threshold_matches_its_step_name(self):
+        # A gate named 90% that waits for 20% would light the SPA's bar up in
+        # the wrong order — and nothing else in the system would notice.
+        for percent in range(10, 100, 10):
+            run = _step(f"Render {percent}%")["run"]
+            assert f"--percent {percent} " in run + " ", percent
+
+    def test_the_final_step_waits_for_the_process_not_the_encoder(self):
+        # progress=end arrives before +faststart has rewritten the moov atom.
+        assert "--await-exit" in _step("Finish render")["run"]
+
+    def test_the_final_step_surfaces_the_detached_log(self):
+        # The render's output went to a file, so nothing reaches the job log
+        # unless this step prints it.
+        assert "cat /tmp/burn/render.log" in _step("Finish render")["run"]
+
+
+class TestRenderLauncherInjection:
+    """The detached body is single-quoted; the shell must splice nothing into it."""
+
+    def _launcher(self, run, root):
+        start = run.index("nohup bash -c")
+        marker = "< /dev/null &"
+        end = run.index(marker) + len(marker)
+        return run[start:end].replace("/tmp/burn", root)
+
+    @pytest.mark.integration
+    def test_a_crafted_talk_id_cannot_execute_a_command(self, tmp_path):
+        root = tmp_path / "burn"
+        (root / "out").mkdir(parents=True)
+        pwned = tmp_path / "pwned"
+        # A stub `python` keeps the check about quoting, not about ffmpeg, and
+        # its exit code proves the wrapper records one.
+        bindir = tmp_path / "bin"
+        bindir.mkdir()
+        stub = bindir / "python"
+        stub.write_text("#!/bin/sh\nexit 7\n", encoding="utf-8")
+        stub.chmod(0o755)
+
+        script = "set -euo pipefail\n" + self._launcher(_step("Start render")["run"], str(root)) + "\nwait\n"
+        env = dict(
+            os.environ,
+            PATH=f"{bindir}{os.pathsep}{os.environ['PATH']}",
+            TALK_ID=f'x"; touch {pwned}; #',
+            VIDEO_SLUG=f"v'; touch {pwned}; #",
+            FONT_RATIO="0.0711",
+            PADTOP_RATIO="0.0741",
+            PADBOT_RATIO="0.0333",
+        )
+        done = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True)
+        assert done.returncode == 0, done.stderr
+        assert not pwned.exists(), "a crafted talk_id executed a command inside the detached body"
+        assert (root / "exit_code").read_text().strip() == "7"
 
 
 class TestArtifact:

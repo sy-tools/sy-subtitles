@@ -184,7 +184,7 @@ describe('measureBurnRatios', () => {
 
 const {
   BURN_STEP_WEIGHTS,
-  RENDER_SPEED,
+  BURN_RENDER_BLOCK,
   computeProgress,
   renderEtaSeconds,
 } = require('../site/js/burn_video');
@@ -201,99 +201,132 @@ function job(steps, status, conclusion) {
 }
 const T0 = 1700000000000;
 const HOUR_MS = 3600 * 1000;
+const done = (name) => ({ name, status: 'completed', conclusion: 'success' });
 
 describe('BURN_STEP_WEIGHTS', () => {
-  it('sums to exactly 1', () => {
-    const total = BURN_STEP_WEIGHTS.reduce((a, s) => a + s.weight, 0);
-    assert.ok(Math.abs(total - 1) < 1e-9);
+  it('the step weights sum to exactly one', () => {
+    const sum = BURN_STEP_WEIGHTS.reduce((a, s) => a + s.weight, 0);
+    assert.ok(Math.abs(sum - 1) < 1e-9, `weights sum to ${sum}`);
   });
 
   it('names match the workflow step names', () => {
+    // tests/test_burn_workflow_steps.py guards this against the YAML itself;
+    // spelled out here too so a rename shows up in the SPA suite as well.
     assert.deepStrictEqual(BURN_STEP_WEIGHTS.map((s) => s.name), [
-      'Install dependencies', 'Download video', 'Burn subtitles', 'Upload result',
+      'Install dependencies', 'Download video', 'Start render',
+      'Render 10%', 'Render 20%', 'Render 30%', 'Render 40%', 'Render 50%',
+      'Render 60%', 'Render 70%', 'Render 80%', 'Render 90%',
+      'Finish render', 'Upload result',
     ]);
   });
 });
 
-describe('RENDER_SPEED', () => {
-  it('is calibrated to 2.5x realtime', () => {
-    // Pin the literal: renderEtaSeconds's own test recomputes its expectation
-    // from RENDER_SPEED, which pins nothing about the constant's value itself.
-    assert.strictEqual(RENDER_SPEED, 2.5);
+describe('BURN_RENDER_BLOCK', () => {
+  it('agrees with the weight table it summarises', () => {
+    // Exported so Task 15 can draw the render segment without re-deriving its
+    // bounds — and re-derived here so the two can never disagree.
+    const names = BURN_STEP_WEIGHTS.map((s) => s.name);
+    const first = names.indexOf(BURN_RENDER_BLOCK.firstStep);
+    const last = names.indexOf(BURN_RENDER_BLOCK.lastStep);
+    assert.ok(first > -1 && last > first, 'the block must name real steps in order');
+    const sum = (from, to) => BURN_STEP_WEIGHTS.slice(from, to)
+      .reduce((a, s) => a + s.weight, 0);
+    assert.ok(Math.abs(sum(first, last + 1) - BURN_RENDER_BLOCK.weight) < 1e-9);
+    assert.ok(Math.abs(sum(0, first) - BURN_RENDER_BLOCK.offset) < 1e-9);
+  });
+
+  it('reserves the same 0.70 of the bar the render always had', () => {
+    assert.ok(Math.abs(BURN_RENDER_BLOCK.weight - 0.70) < 1e-9);
   });
 });
 
 describe('renderEtaSeconds', () => {
-  it('scales the talk duration by the render speed', () => {
-    assert.strictEqual(renderEtaSeconds(HOUR_MS), 3600 / RENDER_SPEED);
+  it('extrapolates from the measured rate', () => {
+    // A quarter of the render block took 10 minutes -> 30 minutes remain.
+    assert.ok(Math.abs(renderEtaSeconds(0.25, 600) - 1800) < 1e-6);
   });
 
-  it('never returns zero for a missing duration', () => {
-    assert.ok(renderEtaSeconds(0) > 0);
-    assert.ok(renderEtaSeconds(undefined) > 0);
+  it('has nothing to say before the first gate', () => {
+    assert.equal(renderEtaSeconds(0, 600), null);
+    assert.equal(renderEtaSeconds(null, 600), null);
+  });
+
+  it('has nothing to say once the block is complete', () => {
+    // f >= 1 would extrapolate zero or negative time remaining.
+    assert.equal(renderEtaSeconds(1, 600), null);
+    assert.equal(renderEtaSeconds(1.5, 600), null);
   });
 });
 
 describe('computeProgress', () => {
   it('is zero before anything starts', () => {
-    const p = computeProgress(job([]), T0, HOUR_MS);
+    const p = computeProgress(job([]), T0);
     assert.strictEqual(p.fraction, 0);
     assert.strictEqual(p.done, false);
   });
 
   it('credits completed steps by their weight', () => {
     const p = computeProgress(job([
-      { name: 'Install dependencies', status: 'completed', conclusion: 'success' },
-      { name: 'Download video', status: 'completed', conclusion: 'success' },
-    ]), T0, HOUR_MS);
+      done('Install dependencies'), done('Download video'),
+    ]), T0);
     assert.ok(Math.abs(p.fraction - 0.20) < 1e-9);
   });
 
-  it('interpolates inside the render step and marks it an estimate', () => {
-    const halfEta = (renderEtaSeconds(HOUR_MS) / 2) * 1000;
-    const p = computeProgress(job([
-      { name: 'Install dependencies', status: 'completed', conclusion: 'success' },
-      { name: 'Download video', status: 'completed', conclusion: 'success' },
-      { name: 'Burn subtitles', status: 'in_progress',
-        started_at: new Date(T0).toISOString() },
-    ]), T0 + halfEta, HOUR_MS);
-    // 0.20 credited + about half of the 0.70 render weight.
-    assert.ok(p.fraction > 0.5 && p.fraction < 0.6, 'got ' + p.fraction);
-    assert.strictEqual(p.estimated, true);
-    assert.strictEqual(p.label, 'Burn subtitles');
+  it('a completed gate credits its own weight and nothing else', () => {
+    const j = {steps: [
+      {name: 'Install dependencies', status: 'completed'},
+      {name: 'Download video', status: 'completed'},
+      {name: 'Start render', status: 'completed'},
+      {name: 'Render 10%', status: 'completed'},
+      {name: 'Render 20%', status: 'in_progress'}
+    ]};
+    const p = computeProgress(j, 0);
+    assert.ok(Math.abs(p.fraction - (0.05 + 0.15 + 0.05 + 0.065)) < 1e-9);
+    assert.equal(p.estimated, undefined);   // the fraction is a fact now
   });
 
-  it('never reaches 1 while the render step is still running', () => {
-    const p = computeProgress(job([
-      { name: 'Burn subtitles', status: 'in_progress',
-        started_at: new Date(T0).toISOString() },
-    ]), T0 + 10 * HOUR_MS, HOUR_MS);
-    assert.ok(p.fraction < 1, 'an overrunning render must not report 100%');
-    assert.strictEqual(p.done, false);
+  it('the render share is the position inside the render block', () => {
+    // Start render + one gate done = 0.05 + 0.065 of the block's 0.70
+    const j = {steps: [
+      {name: 'Install dependencies', status: 'completed'},
+      {name: 'Download video', status: 'completed'},
+      {name: 'Start render', status: 'completed', started_at: '2026-07-31T10:00:00Z'},
+      {name: 'Render 10%', status: 'completed'},
+      {name: 'Render 20%', status: 'in_progress'}
+    ]};
+    const p = computeProgress(j, Date.parse('2026-07-31T10:10:00Z'));
+    assert.ok(Math.abs(p.renderFraction - (0.05 + 0.065) / 0.70) < 1e-9);
+    assert.equal(p.renderStartedMs, Date.parse('2026-07-31T10:00:00Z'));
   });
 
-  it('holds short of 100% until the job itself reports success', () => {
-    // All four named steps report completed while job.status is still
+  it('has no render share before the render block begins', () => {
+    const p = computeProgress(job([done('Install dependencies')]), T0);
+    assert.strictEqual(p.renderFraction, null);
+    assert.strictEqual(p.renderStartedMs, null);
+  });
+
+  it('reports the gate it is waiting on as the label', () => {
+    const p = computeProgress(job([
+      done('Install dependencies'), done('Download video'), done('Start render'),
+      { name: 'Render 10%', status: 'in_progress' },
+    ]), T0);
+    assert.strictEqual(p.label, 'Render 10%');
+  });
+
+  it('credits every step but still takes done only from the job', () => {
+    // Every named step reports completed while job.status is still
     // in_progress — hit on every real run, because actions/cache and
     // actions/setup-python each append a "Post ..." step that runs AFTER
-    // "Upload result" but BEFORE the job flips to completed. RENDER_CAP is
-    // the only thing standing between this state and a false 100% bar.
-    //
-    // The raw weight sum (0.05+0.15+0.70+0.10) floating-point-adds to
-    // 0.9999999999999999, not exactly 1 — so a loose `fraction < 1` check
-    // would NOT catch RENDER_CAP creeping up to 1.0 or the outer Math.min
-    // being dropped entirely: Math.min(0.9999999999999999, 1.0) is still
-    // < 1. Pin the literal cap value so the assertion actually depends on it.
-    const done = (name) => ({ name, status: 'completed', conclusion: 'success' });
-    const p = computeProgress(job(BURN_STEP_WEIGHTS.map((s) => done(s.name))), T0, HOUR_MS);
+    // "Upload result" but BEFORE the job flips to completed. The bar may sit
+    // at 100% there (it is true: the steps ARE done), but `done` — which is
+    // what reveals the download button — must come from the job alone.
+    const p = computeProgress(job(BURN_STEP_WEIGHTS.map((s) => done(s.name))), T0);
     assert.strictEqual(p.done, false);
-    assert.ok(Math.abs(p.fraction - 0.97) < 1e-9, 'got ' + p.fraction);   // approved RENDER_CAP
+    assert.ok(Math.abs(p.fraction - 1) < 1e-9, 'got ' + p.fraction);
   });
 
   it('reports done only when the job succeeded', () => {
-    const p = computeProgress(job([
-      { name: 'Upload result', status: 'completed', conclusion: 'success' },
-    ], 'completed'), T0, HOUR_MS);
+    const p = computeProgress(job([done('Upload result')], 'completed'), T0);
     assert.strictEqual(p.done, true);
     assert.strictEqual(p.fraction, 1);
   });
@@ -301,33 +334,41 @@ describe('computeProgress', () => {
   it('surfaces which step failed', () => {
     const p = computeProgress(job([
       { name: 'Download video', status: 'completed', conclusion: 'failure' },
-    ], 'completed'), T0, HOUR_MS);
+    ], 'completed'), T0);
     assert.strictEqual(p.failed, true);
     assert.strictEqual(p.failedStep, 'Download video');
     assert.strictEqual(p.done, false);
   });
 
+  it('surfaces a failed gate by its own name', () => {
+    // A stalled or crashed render fails whichever gate was waiting — that name
+    // is the most specific thing the user can be told about where it died.
+    const p = computeProgress(job([
+      done('Install dependencies'), done('Download video'), done('Start render'),
+      { name: 'Render 40%', status: 'completed', conclusion: 'failure' },
+    ], 'completed'), T0);
+    assert.strictEqual(p.failedStep, 'Render 40%');
+  });
+
   it('tolerates a null job while the run is still being created', () => {
-    const p = computeProgress(null, T0, HOUR_MS);
+    const p = computeProgress(null, T0);
     assert.strictEqual(p.fraction, 0);
     assert.strictEqual(p.failed, false);
   });
 
   it('ignores unknown step names instead of throwing', () => {
-    const p = computeProgress(job([
-      { name: 'Set up job', status: 'completed', conclusion: 'success' },
-    ]), T0, HOUR_MS);
+    const p = computeProgress(job([done('Set up job')]), T0);
     assert.strictEqual(p.fraction, 0);
   });
 
   it('does not report done when the job failed outside a named step', () => {
-    const p = computeProgress(job([], 'completed', 'failure'), T0, HOUR_MS);
+    const p = computeProgress(job([], 'completed', 'failure'), T0);
     assert.strictEqual(p.done, false);
     assert.strictEqual(p.failed, true);
   });
 
   it('does not report done when the job was cancelled outside a named step', () => {
-    const p = computeProgress(job([], 'completed', 'cancelled'), T0, HOUR_MS);
+    const p = computeProgress(job([], 'completed', 'cancelled'), T0);
     assert.strictEqual(p.done, false);
     assert.strictEqual(p.failed, true);
   });

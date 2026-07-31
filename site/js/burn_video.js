@@ -99,32 +99,68 @@ function measureBurnRatios(geometry) {
 }
 
 // Weights per workflow step. Names must match burn-subtitles.yml exactly —
-// tests/test_burn_workflow.py guards the workflow side.
+// tests/test_burn_workflow_steps.py pins the two files against each other.
+//
+// The nine "Render NN%" entries and "Finish render" are not work in their own
+// right: each is a step that blocks until the detached ffmpeg encode passes
+// that percentage (tools/render_gate.py). A step COMPLETING is the only live,
+// CORS-clean signal a browser has into a running job, and it is one the SPA
+// already polls — so the render percentage below is ffmpeg's own, not a guess.
+//
+// Written out literally on purpose: a generated `Render NN%` loop would be
+// clever and would hide a typo'd name behind matching-but-wrong output.
 var BURN_STEP_WEIGHTS = [
   { name: 'Install dependencies', weight: 0.05 },
   { name: 'Download video', weight: 0.15 },
-  { name: 'Burn subtitles', weight: 0.70 },
+  { name: 'Start render', weight: 0.05 },
+  { name: 'Render 10%', weight: 0.065 },
+  { name: 'Render 20%', weight: 0.065 },
+  { name: 'Render 30%', weight: 0.065 },
+  { name: 'Render 40%', weight: 0.065 },
+  { name: 'Render 50%', weight: 0.065 },
+  { name: 'Render 60%', weight: 0.065 },
+  { name: 'Render 70%', weight: 0.065 },
+  { name: 'Render 80%', weight: 0.065 },
+  { name: 'Render 90%', weight: 0.065 },
+  { name: 'Finish render', weight: 0.065 },
   { name: 'Upload result', weight: 0.10 }
 ];
 
-var RENDER_STEP_NAME = 'Burn subtitles';
+// The contiguous run of steps that IS the encode: 'Start render' through
+// 'Finish render', carrying 0.70 of the bar after 0.20 of setup. Exported so a
+// caller drawing a segmented track does not re-derive these bounds from the
+// table and drift out of step with it.
+var BURN_RENDER_BLOCK = {
+  firstStep: 'Start render',
+  lastStep: 'Finish render',
+  weight: 0.70,
+  offset: 0.20
+};
 
-// Rendering runs at roughly this multiple of realtime on a 2-core runner
-// (veryfast x264, ~24 min for an hour-long talk). Calibrate from real runs.
-var RENDER_SPEED = 2.5;
+function burnStepIndex(name) {
+  for (var i = 0; i < BURN_STEP_WEIGHTS.length; i++) {
+    if (BURN_STEP_WEIGHTS[i].name === name) return i;
+  }
+  return -1;
+}
 
-// Never claim the interpolated render step is finished — only the API can say so.
-var RENDER_CAP = 0.97;
-
-function renderEtaSeconds(durationMs) {
-  var ms = (typeof durationMs === 'number' && durationMs > 0) ? durationMs : 30 * 60 * 1000;
-  return (ms / 1000) / RENDER_SPEED;
+// Seconds left in the render, extrapolated from the rate actually observed:
+// `renderFraction` of the block took `elapsedSeconds`, so the rest takes
+// proportionally longer. This is a MEASURED rate, which is why no calibrated
+// "render speed" constant is needed any more — a slow runner or a 4K source
+// simply shows up as a slower measured rate.
+//
+// null when there is nothing honest to say: before the first gate completes
+// there is no rate, and at or past 1 there is no remainder.
+function renderEtaSeconds(renderFraction, elapsedSeconds) {
+  var f = Number(renderFraction);
+  if (!f || !isFinite(f) || f >= 1) return null;
+  return elapsedSeconds * (1 - f) / f;
 }
 
 // Turns a GitHub job object into a fraction/label/terminal-state summary.
-// Pure: no DOM, no network. ffmpeg has no channel into the Actions API, so
-// progress inside the render step is interpolated from elapsed time and
-// flagged `estimated: true` — never overstate certainty in a progress bar.
+// Pure: no DOM, no network. The fraction is a fact, not an estimate: every
+// weight below is credited only when its step actually completed.
 //
 // Steps are looked up BY NAME from BURN_STEP_WEIGHTS and every other step is
 // ignored. This is deliberate: actions/cache and actions/setup-python each
@@ -132,16 +168,26 @@ function renderEtaSeconds(durationMs) {
 // "last step in the list means finished" heuristic would never report done.
 // Terminal state comes only from job.status/job.conclusion, never from step
 // position.
-function computeProgress(job, nowMs, durationMs) {
-  var result = { fraction: 0, label: '', estimated: false, done: false,
-                 failed: false, failedStep: '' };
+function computeProgress(job, nowMs) {
+  var result = { fraction: 0, label: '', done: false, failed: false,
+                 failedStep: '', renderFraction: null, renderStartedMs: null };
   var steps = (job && job.steps) || [];
   var byName = {};
   for (var i = 0; i < steps.length; i++) {
     if (steps[i] && steps[i].name) byName[steps[i].name] = steps[i];
   }
 
+  var firstRender = burnStepIndex(BURN_RENDER_BLOCK.firstStep);
+  var lastRender = burnStepIndex(BURN_RENDER_BLOCK.lastStep);
+  var startStep = byName[BURN_RENDER_BLOCK.firstStep];
+  if (startStep) {
+    // Date.parse('') is NaN, which || turns into null — an unstarted step
+    // must not read as "started at the epoch".
+    result.renderStartedMs = Date.parse(startStep.started_at || '') || null;
+  }
+
   var fraction = 0;
+  var renderCredited = 0;
   for (var w = 0; w < BURN_STEP_WEIGHTS.length; w++) {
     var spec = BURN_STEP_WEIGHTS[w];
     var step = byName[spec.name];
@@ -149,25 +195,17 @@ function computeProgress(job, nowMs, durationMs) {
     if (step.conclusion === 'failure' || step.conclusion === 'cancelled') {
       result.failed = true;
       result.failedStep = spec.name;
-      result.fraction = fraction;
       result.label = spec.name;
-      return result;
+      break;
     }
     if (step.status === 'completed') {
       fraction += spec.weight;
+      if (w >= firstRender && w <= lastRender) renderCredited += spec.weight;
       result.label = spec.name;
       continue;
     }
     if (step.status === 'in_progress') {
       result.label = spec.name;
-      if (spec.name === RENDER_STEP_NAME) {
-        // No true percentage exists here — interpolate and say so.
-        var started = Date.parse(step.started_at || '') || nowMs;
-        var elapsed = Math.max(0, (nowMs - started) / 1000);
-        var share = Math.min(RENDER_CAP, elapsed / renderEtaSeconds(durationMs));
-        fraction += spec.weight * share;
-        result.estimated = true;
-      }
       break;
     }
     // Any other status (e.g. 'queued') falls through here: it credits no
@@ -177,14 +215,24 @@ function computeProgress(job, nowMs, durationMs) {
     // Do not "fix" this into a break.
   }
 
+  // null until the encode has actually begun: an ETA computed from a block
+  // that has not started would divide by nothing.
+  if (result.renderStartedMs !== null || renderCredited > 0) {
+    result.renderFraction = renderCredited / BURN_RENDER_BLOCK.weight;
+  }
+
   if (job && job.status === 'completed') {
     // status: 'completed' alone is not success — GitHub sets it the same way
     // on a job that failed, was cancelled, or died in "Set up job" before any
     // named step ran. Only conclusion: 'success' means the artifact exists.
-    if (job.conclusion === 'success') {
+    //
+    // A named step that already reported failure outranks a job-level success:
+    // the two can disagree (a continue-on-error step, or a payload read
+    // mid-transition), and reporting done there would reveal a download button
+    // for an artifact that was never produced.
+    if (job.conclusion === 'success' && !result.failed) {
       result.done = true;
       result.fraction = 1;
-      result.estimated = false;
       return result;
     }
     if (!result.failed) {
@@ -193,7 +241,10 @@ function computeProgress(job, nowMs, durationMs) {
       result.failed = true;
     }
   }
-  result.fraction = Math.min(fraction, RENDER_CAP);
+  // Clamped only against floating-point drift in the weight sum; the bar may
+  // legitimately sit at 100% while the job runs its trailing "Post ..." steps.
+  // `done` is what gates the download, and it comes from the job alone.
+  result.fraction = Math.min(fraction, 1);
   return result;
 }
 
@@ -212,7 +263,7 @@ if (typeof module !== 'undefined' && module.exports) {
     displayedVideoHeight: displayedVideoHeight,
     measureBurnRatios: measureBurnRatios,
     BURN_STEP_WEIGHTS: BURN_STEP_WEIGHTS,
-    RENDER_SPEED: RENDER_SPEED,
+    BURN_RENDER_BLOCK: BURN_RENDER_BLOCK,
     renderEtaSeconds: renderEtaSeconds,
     computeProgress: computeProgress,
   };
