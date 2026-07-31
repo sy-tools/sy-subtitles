@@ -3436,6 +3436,17 @@ describe('burn video wiring', () => {
       'the button belongs in the preview .header-actions cluster');
   });
 
+  it('does not claim the save-picker path streams to disk', () => {
+    // Both save paths assemble the whole file in memory; only the destination
+    // differs. The old wording blamed the browser for the one thing neither
+    // path does, exactly where a user is being told why the tab is straining.
+    const en = html.slice(html.indexOf("\n  en:"));
+    const line = en.match(/'burn\.memory_fallback':\s*'([^']*)'/);
+    assert.ok(line, 'burn.memory_fallback must exist');
+    assert.ok(!/stream/i.test(line[1]),
+      'the showSaveFilePicker path buffers in memory too — saying otherwise is false');
+  });
+
   it('warns through the house dialog, never native confirm()', () => {
     // SPA.confirm exists precisely so the app's voice and language carry
     // through; a native confirm() would be an untranslated browser chrome box.
@@ -3743,6 +3754,7 @@ describe('burn video driver behaviour', () => {
   // the driver gets the REAL functions: a stub would let the panel draw four
   // equal segments and still pass.
   const PHASE_MODEL = require('../site/js/burn_video');
+  const ZIP_READER = require('../site/js/burn_artifact');
 
   function makeHarness(over) {
     const els = {};
@@ -3805,7 +3817,18 @@ describe('burn video driver behaviour', () => {
       listRunArtifacts: function () { return Promise.resolve([]); },
       ghWriteUser: function () { return true; },
       showToast: function (m) { env.toasts.push(m); },
-      fetch: function () { return Promise.reject(new Error('no network in tests')); },
+      // The ZIP reader is pure and tested directly in tests/test_burn_artifact.js,
+      // so the driver gets the REAL functions over the REAL fixture: a stub could
+      // not tell a view apart from a copy, which is the whole point below.
+      findEocd: ZIP_READER.findEocd,
+      readCentralDirectory: ZIP_READER.readCentralDirectory,
+      pickMp4Entry: ZIP_READER.pickMp4Entry,
+      localDataOffset: ZIP_READER.localDataOffset,
+      fetches: 0,
+      fetch: function () {
+        env.fetches++;
+        return Promise.reject(new Error('no network in tests'));
+      },
       // Fake timers: the poll loop must never keep the test process alive, and
       // the count of armed timers is exactly what the leak tests assert on.
       setTimeout: function (fn) { env.timers.push(fn); return env.timers.length; },
@@ -3822,10 +3845,11 @@ describe('burn video driver behaviour', () => {
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
-      'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout'];
+      'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout',
+      'findEocd', 'readCentralDirectory', 'pickMp4Entry', 'localDataOffset'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
       'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned',
-      'retranslateBurnPanel', 'updateBurnButton'];
+      'retranslateBurnPanel', 'updateBurnButton', 'extractBurnedMp4'];
     const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
       ', getWatch: function () { return burnWatch; } };';
     env.api = new Function(names.join(','), html.slice(start, end) + tail)
@@ -4432,6 +4456,77 @@ describe('burn video driver behaviour', () => {
       assert.strictEqual(env.els['burn-eta'].textContent, '',
         'a remaining time next to ' + JSON.stringify(terminal) + ' is a lie');
     }
+  });
+
+  // ---- the download must not buffer a feature-length video three times ----
+  //
+  // resp.arrayBuffer() reads the whole ZIP, the entry slice copied it again and
+  // the Blob wrapped a third. This corpus has 60-120-minute talks, so the peak
+  // was 2-6 GB and the tab died with an untranslated allocation error.
+
+  it('hands a STORED entry to the Blob as a view, never as another full copy', async () => {
+    // STORED is always our case (upload-artifact runs at compression-level: 0),
+    // so this is the copy that actually costs gigabytes.
+    const env = makeHarness();
+    const bytes = new Uint8Array(fs.readFileSync('tests/fixtures/streaming_artifact.zip'));
+    const file = await env.api.extractBurnedMp4(bytes);
+    assert.strictEqual(file.bytes.byteLength, 140, 'precondition: the mp4 was found');
+    assert.strictEqual(file.bytes.buffer, bytes.buffer,
+      'a stored entry must be a view onto the ZIP, not a second allocation');
+  });
+
+  it('still decompresses a deflated entry rather than aliasing raw bytes', async () => {
+    // A view over deflate-compressed bytes would hand the user a corrupt mp4,
+    // so the two branches must stay distinguishable.
+    const zlib = require('node:zlib');
+    const payload = Buffer.from('what a deflated entry decompresses to');
+    const deflated = zlib.deflateRawSync(payload);
+    const bytes = new Uint8Array(4 + deflated.length);
+    bytes.set(deflated, 4);
+    const env = makeHarness({
+      findEocd: function () { return 0; },
+      readCentralDirectory: function () {
+        return [{ name: 'x.mp4', method: 8, compressedSize: deflated.length,
+                  uncompressedSize: payload.length, localHeaderOffset: 0 }];
+      },
+      localDataOffset: function () { return 4; }
+    });
+    const file = await env.api.extractBurnedMp4(bytes);
+    assert.strictEqual(Buffer.from(file.bytes).toString(), payload.toString());
+    assert.notStrictEqual(file.bytes.buffer, bytes.buffer,
+      'a deflated entry must be decoded into its own buffer');
+  });
+
+  it('refuses an artifact too large to hold in memory instead of killing the tab', async () => {
+    const env = makeHarness({
+      listRunArtifacts: function () {
+        return Promise.resolve([{ id: 9, size_in_bytes: 2469606195 }]);
+      },
+      t: function (k) { return k === 'burn.too_large' ? 'too big: {size} GB' : 'T:' + k; }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-error'].textContent, 'too big: 2.3 GB',
+      'say the size honestly rather than attempting an allocation that will fail');
+    assert.strictEqual(env.fetches, 0,
+      'the point is to not start a download that cannot finish');
+  });
+
+  it('downloads an artifact that comfortably fits', async () => {
+    // The guard must not become a ceiling on ordinary renders: the verified
+    // real run produced 29 MB.
+    const env = makeHarness({
+      listRunArtifacts: function () {
+        return Promise.resolve([{ id: 9, size_in_bytes: 28978456 }]);
+      }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.fetches, 1, 'a normal-sized artifact must still be fetched');
   });
 
   it('treats a cancelled save dialog as a no-op, not a failure', async () => {
