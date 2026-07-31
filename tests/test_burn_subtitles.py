@@ -491,6 +491,19 @@ class TestBuildFfmpegCommand:
         assert cmd[cmd.index("-i") + 1] == "in.mp4"
         assert cmd[-1] == "out.mp4"
 
+    def test_build_ffmpeg_command_omits_progress_by_default(self):
+        cmd = burn_subtitles.build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts")
+        assert "-progress" not in cmd
+
+    def test_build_ffmpeg_command_writes_progress_to_the_given_file(self):
+        cmd = burn_subtitles.build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts", progress_file="/tmp/p.txt")
+        assert cmd[cmd.index("-progress") + 1] == "/tmp/p.txt"
+        # -nostats keeps the periodic status line out of the log; the progress file
+        # is the machine-readable channel and the log stays readable.
+        assert "-nostats" in cmd
+        # The flags must precede the output path, or ffmpeg treats them as output options.
+        assert cmd.index("-progress") < cmd.index("out.mp4")
+
 
 class TestProbeDimensions:
     def test_reads_the_first_video_stream(self, monkeypatch):
@@ -620,6 +633,11 @@ class TestFontProbeCommand:
 
     def test_uses_the_same_ass_filter_and_fontsdir(self):
         assert "ass=probe.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
+
+    def test_font_probe_command_never_carries_progress(self):
+        """The pre-flight is a one-frame probe; progress from it would be noise."""
+        cmd = burn_subtitles.build_font_probe_command("probe.ass", "/fonts")
+        assert "-progress" not in cmd
 
 
 class TestProbeTextFor:

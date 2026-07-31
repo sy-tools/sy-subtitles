@@ -316,12 +316,22 @@ def build_ass_document(
     return "\n".join(lines) + "\n"
 
 
-def build_ffmpeg_command(video, ass_path, output, fonts_dir):
-    """ffmpeg argv. Audio is copied, never re-encoded."""
-    return [
-        "ffmpeg",
-        "-nostdin",
-        "-y",
+def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None):
+    """ffmpeg argv. Audio is copied, never re-encoded.
+
+    `progress_file` turns on ffmpeg's own machine-readable `-progress` channel.
+    The workflow points it at a file the render-gate steps poll, which is how the
+    SPA learns the true encode percentage — see tools/render_gate.py for why that
+    detour exists. `-nostats` rides along so the periodic human status line stops
+    flooding the job log now that the same numbers go to the file.
+    """
+    cmd = ["ffmpeg", "-nostdin", "-y"]
+    if progress_file:
+        # -progress and -nostats are global options, so they belong with the
+        # other globals and, crucially, ahead of the output path: after it
+        # ffmpeg would parse them as options of a second output file.
+        cmd += ["-progress", progress_file, "-nostats"]
+    cmd += [
         "-i",
         video,
         "-vf",
@@ -340,6 +350,7 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir):
         "+faststart",
         output,
     ]
+    return cmd
 
 
 # libass logs the face it settled on as "fontselect: (<request>) -> <path>, <index>,
@@ -552,6 +563,10 @@ def main(argv=None):
     parser.add_argument("--font-name", default=DEFAULT_FONT_NAME)
     parser.add_argument("--gradient-steps", type=int, default=DEFAULT_GRADIENT_STEPS)
     parser.add_argument("--ass-out", help="keep the generated .ass for inspection")
+    parser.add_argument(
+        "--progress-file",
+        help="write ffmpeg's machine-readable -progress stream here (polled by tools.render_gate)",
+    )
     args = parser.parse_args(argv)
 
     width, height = probe_dimensions(args.video)
@@ -582,7 +597,7 @@ def main(argv=None):
     # one cue to be discovered twenty minutes later.
     verify_font_selection(args.font_name, fonts_dir, args.font_file, probe_text_for(cues))
 
-    cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir)
+    cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir, args.progress_file)
     print("[burn] " + " ".join(cmd))
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
