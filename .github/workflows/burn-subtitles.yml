@@ -129,7 +129,19 @@ jobs:
           yt-dlp --referer "https://www.amruta.org/" \
             --merge-output-format mp4 \
             -o /tmp/burn/source.mp4 "$VIDEO_URL" \
-            || { echo "::error::video download failed (Vimeo often answers 401)"; exit 1; }
+            || {
+              # Measured 2026-07-31 across two talks and two networks: some
+              # newer Vimeo uploads answer 401 from GitHub's Azure IPs while
+              # the SAME url+hash downloads fine from a home connection, with
+              # identical yt-dlp and impersonation. Older uploads work from
+              # both. So a 401 here is usually Vimeo refusing a data-centre IP,
+              # not a bad ref — say that, or the next person re-derives it.
+              echo "::error::video download failed with 401. The url and hash are"
+              echo "::error::probably fine: Vimeo blocks some newer videos from"
+              echo "::error::data-centre IPs like GitHub's runners. Rendering this"
+              echo "::error::talk needs a machine on a normal connection."
+              exit 1
+            }
           test -s /tmp/burn/source.mp4 \
             || { echo "::error::downloaded file is empty"; exit 1; }
 
