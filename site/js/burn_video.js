@@ -6,6 +6,20 @@
 
 var BURN_WORKFLOW = 'burn-subtitles.yml';
 
+// The branch whose burn-subtitles.yml actually runs. Production always wants
+// the default branch, but a workflow change cannot be exercised from the UI
+// until it is ON that branch — so a run dispatched while testing would execute
+// the OLD file and silently prove nothing. `window.__SY_BURN_REF` lets a local
+// stand point at the branch under test; the same runtime-hook pattern as
+// __SY_GH_EXCHANGE_URL, and it never ships (nothing sets it in the page).
+var BURN_DEFAULT_REF = 'main';
+
+function burnRef(win) {
+  var w = win || (typeof window !== 'undefined' ? window : null);
+  var ref = w && w.__SY_BURN_REF;
+  return (typeof ref === 'string' && ref) ? ref : BURN_DEFAULT_REF;
+}
+
 // The three ratios the workflow requires. Sizing travels as fractions of the
 // displayed video height, never pixels: fullscreen derives its font size from
 // viewport width, so pixels would make the output depend on the monitor.
@@ -251,6 +265,16 @@ function burnPhases() {
 // Which phase a workflow step belongs to, or null for steps that are not ours
 // ('Set up job', the trailing 'Post ...' steps). null is what stops the panel
 // from claiming a phase is running when nothing of ours is.
+// The runner brackets every job with its own steps: 'Set up job' first, and a
+// 'Post <action>' for each action that registered cleanup, AFTER our last step.
+// They are never evidence that the workflow is not ours.
+function isRunnerStep(stepName) {
+  return stepName === 'Set up job'
+    || stepName === 'Complete job'
+    || /^Post /.test(stepName)
+    || /^Run actions\//.test(stepName);
+}
+
 function burnPhaseKey(stepName) {
   if (!stepName) return null;
   var phases = burnPhases();
@@ -339,7 +363,7 @@ function renderEtaSeconds(renderFraction, elapsedSeconds) {
 function computeProgress(job, nowMs) {
   var result = { fraction: 0, label: '', done: false, failed: false,
                  failedStep: '', renderFraction: null, renderStartedMs: null,
-                 startedMs: null };
+                 startedMs: null, unknownStep: '' };
   var steps = (job && job.steps) || [];
   var byName = {};
   for (var i = 0; i < steps.length; i++) {
@@ -396,6 +420,30 @@ function computeProgress(job, nowMs) {
     // Do not "fix" this into a break.
   }
 
+  // A step of OURS that is running names the phase. When none is, the loop
+  // above has left `label` on the last COMPLETED step — which reads as "that
+  // phase is running" and is a lie for as long as the unknown step takes. It
+  // happens whenever the dispatched workflow is not the one this table
+  // describes (a placeholder on the default branch, a rename, a version skew
+  // between the SPA and the workflow file). Report the step we do not know
+  // instead of borrowing a name we do: the credited fraction stays honest
+  // either way, and silence beats a confident wrong phase.
+  if (!result.failed) {
+    var named = byName[result.label];
+    if (!named || named.status !== 'in_progress') {
+      var running = null;
+      for (var r = 0; r < steps.length; r++) {
+        if (steps[r] && steps[r].status === 'in_progress') { running = steps[r]; break; }
+      }
+      // 'Set up job' and the trailing 'Post ...' steps belong to the runner and
+      // bracket every job — they are not evidence of an unrecognised workflow.
+      if (running && !isRunnerStep(running.name) && !burnPhaseKey(running.name)) {
+        result.label = '';
+        result.unknownStep = running.name;
+      }
+    }
+  }
+
   // The weighted loop above cannot see a weightless step, so a run rejected in
   // 'Validate inputs' would arrive as "failed, we cannot say where". It maps to
   // a phase (BURN_STEP_PHASE_ALIASES), so name it — and still credit it nothing.
@@ -446,6 +494,8 @@ function computeProgress(job, nowMs) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     BURN_WORKFLOW: BURN_WORKFLOW,
+    BURN_DEFAULT_REF: BURN_DEFAULT_REF,
+    burnRef: burnRef,
     BURN_RATIO_KEYS: BURN_RATIO_KEYS,
     makeRequestId: makeRequestId,
     buildBurnInputs: buildBurnInputs,

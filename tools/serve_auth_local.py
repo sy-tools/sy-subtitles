@@ -31,7 +31,7 @@ SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site"
 DEFAULT_EXCHANGE_URL = "http://localhost:8787/exchange"
 
 
-def injection(exchange_url, client_id):
+def injection(exchange_url, client_id, burn_ref=""):
     """The <script> that overrides the shipped auth constants.
 
     Only the exchange URL is required: the client id in index.html is public
@@ -41,6 +41,8 @@ def injection(exchange_url, client_id):
     lines = [f"window.__SY_GH_EXCHANGE_URL={_js_string(exchange_url)};"]
     if client_id:
         lines.append(f"window.__SY_GH_CLIENT_ID={_js_string(client_id)};")
+    if burn_ref:
+        lines.append(f"window.__SY_BURN_REF={_js_string(burn_ref)};")
     return "<script>" + "".join(lines) + "</script>"
 
 
@@ -106,14 +108,23 @@ def main(argv=None):
         default="",
         help="override the App client id (defaults to the one in index.html)",
     )
+    parser.add_argument(
+        "--burn-ref",
+        default="",
+        help="branch whose burn-subtitles.yml the render should run "
+        "(defaults to the shipped 'main'); set this to exercise a workflow "
+        "change before it is on the default branch",
+    )
     args = parser.parse_args(argv)
 
-    Handler.script = injection(args.exchange_url, args.client_id)
+    Handler.script = injection(args.exchange_url, args.client_id, args.burn_ref)
     handler = functools.partial(Handler, directory=SITE_DIR)
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("127.0.0.1", args.port), handler) as httpd:
         print(f"SPA        http://localhost:{args.port}/?repo=sy-tools/sy-subtitles")
         print(f"exchange   {args.exchange_url}")
+        if args.burn_ref:
+            print(f"burn ref   {args.burn_ref}")
         print("Ctrl-C to stop.")
         with contextlib.suppress(KeyboardInterrupt):
             httpd.serve_forever()

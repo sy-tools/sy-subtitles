@@ -3813,7 +3813,10 @@ describe('burn video driver behaviour', () => {
       API: 'https://api.example/repos/o/r',
       BURN_WORKFLOW: 'burn-subtitles.yml',
       getAuthToken: function () { return 'tok'; },
-      dispatchWorkflow: function () { env.dispatched++; return Promise.resolve(); },
+      dispatchWorkflow: function (api, tok, wf, ref) {
+        env.dispatched++; env.dispatchedRef = ref; return Promise.resolve();
+      },
+      burnRef: PHASE_MODEL.burnRef,
       measureBurnRatios: function () { return {}; },
       makeRequestId: function () { return 'rid'; },
       buildBurnInputs: function () { return {}; },
@@ -3854,7 +3857,7 @@ describe('burn video driver behaviour', () => {
     assert.ok(start > -1 && end > start, 'burn driver block not found in index.html');
     const names = ['document', 'window', 'localStorage', 'getComputedStyle',
       'previewState', 't', 'pluralFor', 'SPA', 'API', 'BURN_WORKFLOW', 'getAuthToken',
-      'dispatchWorkflow',
+      'dispatchWorkflow', 'burnRef',
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
@@ -3905,6 +3908,21 @@ describe('burn video driver behaviour', () => {
     return { previewState: Object.assign({ talkId: 't', videoSlug: 'v', player: null,
                                            subtitles: [], srtLang: 'uk', edits: {} }, over) };
   }
+
+  it('dispatches against the default branch, and against an override when set', async () => {
+    // The ref decides WHICH burn-subtitles.yml runs. Getting it from a hook is
+    // the only way to exercise a workflow change from the UI before it is on
+    // the default branch — a dispatch to 'main' would run the old file and
+    // prove nothing. Production must still be untouched, hence both halves.
+    const env = makeHarness();
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedRef, 'main', 'production dispatches main');
+
+    const env2 = makeHarness();
+    env2.window.__SY_BURN_REF = 'worktree-burn-subtitles';
+    await env2.api.startBurn('t', 'v');
+    assert.strictEqual(env2.dispatchedRef, 'worktree-burn-subtitles');
+  });
 
   it('dispatches nothing while a language other than Ukrainian is previewed', async () => {
     const env = makeHarness(previewing({ srtLang: 'en' }));

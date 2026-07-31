@@ -79,6 +79,27 @@ describe('burnStateKey', () => {
   });
 });
 
+describe('burnRef', () => {
+  const { burnRef, BURN_DEFAULT_REF } = require('../site/js/burn_video');
+
+  it('dispatches against the default branch in production', () => {
+    assert.strictEqual(BURN_DEFAULT_REF, 'main');
+    assert.strictEqual(burnRef({}), 'main');
+    assert.strictEqual(burnRef(null), 'main');
+  });
+
+  it('honours a local override so a branch workflow can be exercised', () => {
+    // Without this, a workflow change cannot be tested from the UI at all:
+    // the dispatch would run the default branch's OLD file and prove nothing.
+    assert.strictEqual(burnRef({ __SY_BURN_REF: 'my-branch' }), 'my-branch');
+  });
+
+  it('ignores a blank or non-string override rather than dispatching nowhere', () => {
+    assert.strictEqual(burnRef({ __SY_BURN_REF: '' }), 'main');
+    assert.strictEqual(burnRef({ __SY_BURN_REF: 7 }), 'main');
+  });
+});
+
 describe('BURN_WORKFLOW', () => {
   it('points at the workflow file', () => {
     assert.strictEqual(BURN_WORKFLOW, 'burn-subtitles.yml');
@@ -454,6 +475,40 @@ describe('computeProgress', () => {
     const p = computeProgress(job([], 'completed', 'failure'), T0);
     assert.strictEqual(p.done, false);
     assert.strictEqual(p.failed, true);
+  });
+
+  // Regression: a real run against a workflow whose steps we do not know
+  // (the placeholder that lived on main, or any future drift) left the panel
+  // confidently naming the LAST COMPLETED step for the whole render. The
+  // fraction was right; the phase was a lie. Saying nothing beats saying the
+  // wrong thing, so an unrecognised running step must clear the label and
+  // announce itself.
+  it('does not name a phase while a step we do not know is running', () => {
+    const p = computeProgress(job([
+      done('Install dependencies'), done('Download video'),
+      { name: 'Burn subtitles', status: 'in_progress' },
+    ]), T0);
+    assert.strictEqual(p.label, '', 'must not carry the last completed step forward');
+    assert.strictEqual(p.unknownStep, 'Burn subtitles');
+    assert.ok(Math.abs(p.fraction - 0.20) < 1e-9, 'credited weight is still honest');
+  });
+
+  it('reports no unknown step on a healthy run', () => {
+    const p = computeProgress(job([
+      done('Install dependencies'),
+      { name: 'Download video', status: 'in_progress' },
+    ]), T0);
+    assert.strictEqual(p.label, 'Download video');
+    assert.strictEqual(p.unknownStep, '');
+  });
+
+  it('ignores the runner steps that bracket every job', () => {
+    // 'Set up job' and the trailing 'Post ...' steps are the runner's, not
+    // ours — they must never be reported as an unrecognised workflow.
+    const p = computeProgress(job([
+      { name: 'Set up job', status: 'in_progress' },
+    ]), T0);
+    assert.strictEqual(p.unknownStep, '');
   });
 
   it('does not report done when the job was cancelled outside a named step', () => {

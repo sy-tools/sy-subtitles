@@ -1001,6 +1001,7 @@ var I18N = {
     'burn.no_artifact': '\u0417\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437\u0430\u043B\u0438\u0448\u0438\u0432 \u0444\u0430\u0439\u043B\u0443',
     'burn.download_failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u0430\u0439\u043B (HTTP {status})',
     'burn.range_ignored': '\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0432 \u0437\u0430\u043F\u0438\u0442\u0430\u043D\u0438\u0439 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D \u0431\u0430\u0439\u0442\u0456\u0432 \u2014 \u043F\u043E\u0442\u043E\u043A\u043E\u0432\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u043D\u0435\u043C\u043E\u0436\u043B\u0438\u0432\u0435',
+    'burn.unknown_step': '\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 \u043A\u0440\u043E\u043A \u00AB{step}\u00BB \u2014 \u0437\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437 \u0446\u0456\u0454\u0457 \u0432\u0435\u0440\u0441\u0456\u0457',
     'burn.no_mp4': '\u0423 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E\u043C\u0443 \u0430\u0440\u0445\u0456\u0432\u0456 \u043D\u0435\u043C\u0430\u0454 MP4',
     'burn.no_actions_permission': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0437\u0432\u043E\u043B\u0443 Actions \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0456\u0442\u044C Actions: Read and write',
     'burn.expired': '\u0422\u0435\u0440\u043C\u0456\u043D \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442\u0443 \u0441\u043F\u043B\u0438\u0432 (7 \u0434\u043D\u0456\u0432) \u2014 \u0437\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0456\u0434\u0435\u043E \u0437\u0430\u043D\u043E\u0432\u043E',
@@ -1199,6 +1200,7 @@ var I18N = {
     'burn.no_artifact': 'The run produced no artifact',
     'burn.download_failed': 'Artifact download failed (HTTP {status})',
     'burn.range_ignored': 'The server did not send the requested byte range — the video could not be streamed',
+    'burn.unknown_step': 'Unknown step "{step}" \u2014 this run is not from this version',
     'burn.no_mp4': 'No mp4 inside the downloaded archive',
     'burn.no_actions_permission': 'The GitHub App lacks the Actions permission — enable Actions: Read and write',
     'burn.expired': 'The artifact expired (7 days) — render again',
@@ -4091,6 +4093,10 @@ function burnElapsedMinutes(p) {
 function burnStepText(p) {
   // A terminal state says it in the title; an empty line under it is honest.
   if (p.done || p.failed) return '';
+  // A step is running that this build does not know: the dispatched workflow is
+  // not the one BURN_STEP_WEIGHTS describes. Say so — borrowing the last phase
+  // we DID recognise would name the wrong one for as long as that step runs.
+  if (p.unknownStep) return t('burn.unknown_step').replace('{step}', p.unknownStep);
   var number = burnPhaseNumber(p);
   var key = burnPhaseKey(p.label);
   // computeProgress() returns an empty label for the whole run-discovery window
@@ -4246,7 +4252,7 @@ function dispatchBurn(talkId, videoSlug) {
     var ratios = measureBurnRatios(geometry);
     var requestId = makeRequestId(Date.now());
     var inputs = buildBurnInputs(talkId, videoSlug, ratios, requestId);
-    return dispatchWorkflow(API, getAuthToken(), BURN_WORKFLOW, 'main', inputs)
+    return dispatchWorkflow(API, getAuthToken(), BURN_WORKFLOW, burnRef(window), inputs)
       .then(function() {
         burnWatch = { requestId: requestId, runId: 0, runUrl: '', startedAt: Date.now(),
                       talkId: talkId, videoSlug: videoSlug };
