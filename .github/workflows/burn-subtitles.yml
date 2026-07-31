@@ -168,9 +168,11 @@ jobs:
           # gates get an unambiguous "the render is over" signal instead of
           # depending on pid liveness.
           #
-          # Two "[burn] ffmpeg ..." lines are expected in the log: a one-frame
-          # font pre-flight, then the real encode. A font libass cannot resolve
-          # exits non-zero and fails the first gate.
+          # Exactly ONE "[burn] ffmpeg ..." line appears in the log: the real
+          # encode. The one-frame font pre-flight that runs before it is
+          # captured, not echoed — on failure it raises with libass's own
+          # stderr attached, so its argv is not what you would need to read.
+          # A font libass cannot resolve exits non-zero and fails the first gate.
           #
           # SC2016 ("expressions don't expand in single quotes") is the whole
           # point here — the inner shell expands them, this one must not.
@@ -383,6 +385,8 @@ jobs:
           # --await-exit ignores progress=end and adopts the process's own exit
           # code: ffmpeg writes that marker before +faststart has finished
           # rewriting the moov atom, so "encoder done" is not "file written".
+          # That rewrite emits no progress at all, so this wait is also exempt
+          # from the gates' stall window; timeout-minutes bounds it instead.
           python -m tools.render_gate --await-exit \
             --progress-file /tmp/burn/progress.txt \
             --duration-file /tmp/burn/duration_s.txt \

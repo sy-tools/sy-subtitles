@@ -30,7 +30,8 @@ from dataclasses import dataclass
 DEFAULT_POLL_SECONDS = 5.0
 
 # ffmpeg emits a progress block roughly every half second; ten minutes without
-# out_time advancing means the encode is wedged, not merely slow.
+# out_time advancing means the encode is wedged, not merely slow. Applies to the
+# threshold gates only — see wait_for on why --await-exit is exempt.
 DEFAULT_STALL_SECONDS = 600.0
 
 # Exit codes. A failed render propagates ffmpeg's own code instead, so these two
@@ -128,7 +129,9 @@ def wait_for(
 
     `threshold` is a fraction in [0, 1]; ``None`` means "ignore the percentage
     and wait for the process to exit" — what the final step does, because
-    ``progress=end`` arrives before the muxer has finished.
+    ``progress=end`` arrives before the muxer has finished. That mode is also
+    exempt from `stall_seconds`: the phase it covers emits no progress at all,
+    so a progress-driven stall detector there measures nothing.
 
     `read_progress` returns the progress file's current text (empty string if it
     does not exist yet — the launcher and the first gate legitimately race).
@@ -168,7 +171,15 @@ def wait_for(
             # never observed. Release it rather than hang.
             return GateOutcome("reached", exit_code=exit_code, fraction=fraction)
 
-        if now() - last_advance > stall_seconds:
+        # The stall window is progress-driven, so it only means anything while
+        # something is expected to write progress. In --await-exit mode nothing
+        # is: ffmpeg emits progress=end BEFORE `-movflags +faststart` starts
+        # rewriting the moov atom, and that rewrite — whose duration scales with
+        # output size — is silent by construction. Policing it there would fail a
+        # job whose render succeeded. The terminating condition of that wait is
+        # the exit-code file, and the job's own timeout-minutes is the right
+        # outer bound for a phase that is legitimately quiet.
+        if threshold is not None and now() - last_advance > stall_seconds:
             return GateOutcome("stalled", fraction=fraction)
 
         sleep(poll_seconds)
@@ -225,7 +236,10 @@ def main(argv=None):
     parser.add_argument(
         "--await-exit",
         action="store_true",
-        help="ignore the percentage and block until the render exits, adopting its exit code",
+        help=(
+            "ignore the percentage and block until the render exits, adopting its exit code; "
+            "exempt from --stall-seconds, which measures a channel this phase does not use"
+        ),
     )
     parser.add_argument("--poll-seconds", type=float, default=DEFAULT_POLL_SECONDS)
     parser.add_argument("--stall-seconds", type=float, default=DEFAULT_STALL_SECONDS)

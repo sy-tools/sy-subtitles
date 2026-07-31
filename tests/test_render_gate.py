@@ -149,6 +149,43 @@ class TestWaitFor:
         assert out.status == "failed"
         assert out.exit_code == 137
 
+    def test_await_mode_outlasts_a_silence_that_would_stall_a_gate(self):
+        """The +faststart rewrite emits no progress AT ALL, by construction.
+
+        ffmpeg writes progress=end before the muxer starts moving the moov
+        atom, and that rewrite scales with output size. Policing the
+        progress-driven stall window across it fails a job whose render
+        succeeded, so --await-exit must not consult it: its terminating
+        condition is the exit code, and the job's timeout-minutes is the
+        correct outer bound for a phase that is legitimately silent.
+        """
+        codes = iter([None] * 40 + [0])
+        out = self._wait(
+            None,
+            lambda: "out_time_us=9000000\nprogress=end\n",
+            lambda: next(codes),
+            now=_fake_clock(step=60.0),
+            stall_seconds=300.0,
+        )
+        assert out.status == "reached"
+        assert out.exit_code == 0
+
+    def test_a_threshold_gate_still_stalls_on_the_same_silence(self):
+        """The exemption is for --await-exit only — a wedged encode must still fail.
+
+        Same reader, same clock, same window as the test above; only the
+        threshold differs. Exempting every wait would be a gate that never
+        gives up.
+        """
+        out = self._wait(
+            0.99,
+            lambda: "out_time_us=9000000\nprogress=continue\n",
+            lambda: None,
+            now=_fake_clock(step=60.0),
+            stall_seconds=300.0,
+        )
+        assert out.status == "stalled"
+
 
 class TestCli:
     def _files(self, tmp_path, progress="", duration="10.0", exit_code=None, log=""):
@@ -214,6 +251,23 @@ class TestCli:
         argv = self._files(tmp_path, progress="out_time_us=1000000\nprogress=continue\n")
         code = render_gate.main(argv + ["--percent", "90", "--stall-seconds", "0", "--poll-seconds", "0"])
         assert code != 0
+
+    def test_await_exit_waits_out_a_silent_faststart_rewrite(self, tmp_path, monkeypatch):
+        # End to end through the CLI: the progress file already says
+        # progress=end and never changes again, and --stall-seconds 0 would trip
+        # on the first comparison if --await-exit still policed that window.
+        argv = self._files(tmp_path, progress="out_time_us=10000000\nprogress=end\n")
+        polls = {"n": 0}
+
+        def sleep(_seconds):
+            polls["n"] += 1
+            if polls["n"] == 3:
+                (tmp_path / "exit_code").write_text("0", encoding="utf-8")
+
+        monkeypatch.setattr(render_gate.time, "sleep", sleep)
+        code = render_gate.main(argv + ["--await-exit", "--stall-seconds", "0", "--poll-seconds", "0"])
+        assert code == 0
+        assert polls["n"] >= 3, "it must actually have waited, not returned on the first poll"
 
     def test_an_absent_progress_file_is_not_an_error_yet(self, tmp_path, monkeypatch):
         # The launcher and the first gate race: ffmpeg may not have created the

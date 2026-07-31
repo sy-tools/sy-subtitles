@@ -219,6 +219,20 @@ class TestBurn:
         # would stall out — the whole progress mechanism hangs off this flag.
         assert "--progress-file" in _step("Start render")["run"]
 
+    def test_the_comment_counts_the_burn_log_lines_correctly(self):
+        """The comment tells whoever is debugging a font failure what to look for.
+
+        It used to promise two "[burn] ffmpeg ..." lines — a pre-flight and the
+        encode — but the pre-flight runs under capture_output and echoes
+        nothing, so only one is ever written. Pinning both halves keeps a reader
+        from hunting for a line that does not exist.
+        """
+        with open("tools/burn_subtitles.py", encoding="utf-8") as f:
+            source = f.read()
+        assert source.count('print("[burn] ') == 1, "only the encode may echo its command"
+        comment = _step("Start render")["run"]
+        assert 'Exactly ONE "[burn] ffmpeg ..." line' in comment
+
     def test_probes_the_source_duration_before_launching(self):
         # out_time_us only becomes a percentage against a known duration.
         run = _step("Start render")["run"]
