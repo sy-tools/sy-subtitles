@@ -34,6 +34,8 @@
 <script src="js/marker_sync.js"></script>
 <script src="js/sync_status_view.js"></script>
 <script src="js/my_work.js"></script>
+<script src="js/burn_video.js"></script>
+<script src="js/burn_artifact.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -366,6 +368,7 @@
       <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-gh-hide data-i18n="btn.copy_all">Copy all</button>
       <button id="btn-preview-issue" class="btn btn--issue" data-gh-hide onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
       <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
+      <button id="btn-burn-video" class="btn" data-gh-only onclick="SPA.startBurn()" data-i18n="btn.burn_video">Render video</button>
       <button id="btn-clear-all" class="btn btn--danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
     </div>
   </div>
@@ -385,6 +388,20 @@
       <ul class="marker-list" id="marker-list"></ul>
       <ul class="edit-list" id="edit-list" style="display:none"></ul>
     </details>
+  </div>
+  <!-- Burned-in subtitle render. Hidden until a run is dispatched (or resumed
+       from a previous visit); the run link stays hidden until the run exists,
+       because workflow_dispatch returns no id to link to. -->
+  <div id="burn-panel" class="burn-panel" hidden>
+    <div class="burn-panel__head">
+      <span class="burn-panel__title" data-i18n="burn.title">Rendering video with subtitles</span>
+      <a id="burn-run-link" class="burn-panel__link" href="#" target="_blank" rel="noopener" hidden data-i18n="burn.view_run">View run</a>
+      <button class="btn btn--ghost btn--sm" onclick="SPA.cancelBurnWatch()" data-i18n="burn.hide">Hide</button>
+    </div>
+    <div class="burn-bar"><div id="burn-bar-fill" class="burn-bar__fill"></div></div>
+    <p class="burn-panel__status"><span id="burn-step"></span> <span id="burn-eta" class="burn-panel__eta"></span></p>
+    <button id="btn-burn-download" class="btn btn--primary" hidden onclick="SPA.downloadBurned()" data-i18n="btn.burn_download">Download MP4</button>
+    <p id="burn-error" class="burn-panel__error" hidden></p>
   </div>
 </div>
 
@@ -945,7 +962,23 @@ var I18N = {
     'auth.no_write': '\u0412\u0445\u0456\u0434 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E, \u0430\u043B\u0435 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043B\u0438\u0448\u0435 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443',
     'auth.write_granted': '\u0414\u043E\u0441\u0442\u0443\u043F \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0430\u0434\u0430\u043D\u043E \u2014 \u0432\u0441\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E',
     'auth.readonly_title': '(\u0431\u0435\u0437 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441)',
-    'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
+    'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443',
+    'btn.burn_video': '\u0417\u0456\u0431\u0440\u0430\u0442\u0438 \u0432\u0456\u0434\u0435\u043E',
+    'btn.burn_download': '\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 MP4',
+    'burn.title': '\u0417\u0431\u0438\u0440\u0430\u0454\u043C\u043E \u0432\u0456\u0434\u0435\u043E \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043C\u0438',
+    'burn.view_run': '\u0414\u0438\u0432\u0438\u0442\u0438\u0441\u044C \u0437\u0430\u043F\u0443\u0441\u043A',
+    'burn.hide': '\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438',
+    'burn.estimate': '\u043F\u0440\u0438\u0431\u043B\u0438\u0437\u043D\u043E {min} \u0445\u0432 \u043B\u0438\u0448\u0438\u043B\u043E\u0441\u044C',
+    'burn.queued': '\u0417\u0430\u043F\u0443\u0441\u043A\u0430\u0454\u043C\u043E\u2026',
+    'burn.failed_step': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430 \u043A\u0440\u043E\u0446\u0456 \u00AB{step}\u00BB',
+    'burn.failed': '\u0417\u0431\u0438\u0440\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u0435\u043E \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F',
+    'burn.run_not_found': '\u0417\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437',
+    'burn.no_artifact': '\u0417\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437\u0430\u043B\u0438\u0448\u0438\u0432 \u0444\u0430\u0439\u043B\u0443',
+    'burn.download_failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u0430\u0439\u043B (HTTP {status})',
+    'burn.no_mp4': '\u0423 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E\u043C\u0443 \u0430\u0440\u0445\u0456\u0432\u0456 \u043D\u0435\u043C\u0430\u0454 MP4',
+    'burn.no_actions_permission': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0437\u0432\u043E\u043B\u0443 Actions \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0456\u0442\u044C Actions: Read and write',
+    'burn.expired': '\u0422\u0435\u0440\u043C\u0456\u043D \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442\u0443 \u0441\u043F\u043B\u0438\u0432 (7 \u0434\u043D\u0456\u0432) \u2014 \u0437\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0456\u0434\u0435\u043E \u0437\u0430\u043D\u043E\u0432\u043E',
+    'burn.memory_fallback': '\u0411\u0440\u0430\u0443\u0437\u0435\u0440 \u043D\u0435 \u0432\u043C\u0456\u0454 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438 \u043F\u043E\u0442\u043E\u043A\u043E\u043C \u2014 \u0444\u0430\u0439\u043B \u0437\u0431\u0435\u0440\u0435\u0442\u044C\u0441\u044F \u0432 \u043F\u0430\u043C\u02BC\u044F\u0442\u0456'
   },
   en: {
     'gate.title': 'Enter the password to continue',
@@ -1112,7 +1145,23 @@ var I18N = {
     'auth.no_write': 'Signed in, but without write access — read-only features available',
     'auth.write_granted': 'Write access granted — all features enabled',
     'auth.readonly_title': '(no write access)',
-    'title.lang': 'Interface language'
+    'title.lang': 'Interface language',
+    'btn.burn_video': 'Render video',
+    'btn.burn_download': 'Download MP4',
+    'burn.title': 'Rendering video with subtitles',
+    'burn.view_run': 'View run',
+    'burn.hide': 'Hide',
+    'burn.estimate': 'about {min} min left',
+    'burn.queued': 'Starting…',
+    'burn.failed_step': 'Failed at step "{step}"',
+    'burn.failed': 'The render failed',
+    'burn.run_not_found': 'The run was not found — try again',
+    'burn.no_artifact': 'The run produced no artifact',
+    'burn.download_failed': 'Artifact download failed (HTTP {status})',
+    'burn.no_mp4': 'No mp4 inside the downloaded archive',
+    'burn.no_actions_permission': 'The GitHub App lacks the Actions permission — enable Actions: Read and write',
+    'burn.expired': 'The artifact expired (7 days) — render again',
+    'burn.memory_fallback': 'This browser cannot stream to disk — the file is assembled in memory'
   }
 };
 
@@ -2990,6 +3039,9 @@ function showPreview(talkId, videoSlug) {
   renderMarkers();
   renderEditList();
   updateClearBtn();
+  // A burn dispatched here (or on another device/tab) keeps running in Actions
+  // — pick the recorded run back up so leaving the page doesn't lose it.
+  resumeBurnWatch(talkId, videoSlug);
 
   // The view is active and its DOM is rendered — install the resize handles now
   // rather than waiting for the 400ms timer, which can lose the race against a
@@ -3694,6 +3746,311 @@ SPA.openPreviewEditor = function() {
     window.open(url);
   }
 };
+
+// ============================================================
+// Burned-in subtitle render (preview → Actions → mp4)
+//
+// Vimeo streams the talk cross-origin: the browser may PLAY it but can never
+// read its bytes, so the re-encode has to happen in Actions. This block is DOM
+// glue only — every decision (ratios, run matching, progress, ZIP parsing)
+// lives in js/burn_video.js and js/burn_artifact.js, which the Node suite
+// tests directly.
+// ============================================================
+var BURN_POLL_MS = 5000;
+var BURN_RUN_WAIT_MS = 60000;
+// Actions artifacts are deleted after the 7-day retention, so a recorded run
+// older than that can no longer produce a download — drop it on resume.
+var BURN_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+var burnWatch = null;   // {requestId, runId, runUrl, startedAt, talkId, videoSlug}
+var burnTimer = null;
+
+// meta.yaml carries no video dimensions, and the iframe is cross-origin — but
+// the Vimeo player API reports the intrinsic size over postMessage, and only
+// the aspect ratio is needed here. The workflow re-probes the real pixels with
+// ffprobe, so this affects the ratio only.
+function burnGeometry() {
+  var player = previewState && previewState.player;
+  var scale = parseFloat(getComputedStyle(document.documentElement)
+    .getPropertyValue('--preview-subs-scale')) || 1;
+  var base = {
+    viewportWidth: window.screen.width,
+    viewportHeight: window.screen.height,
+    subsScale: scale
+  };
+  if (!player) {
+    // 16:9 is the only sane default; a wrong aspect changes the ratio, not the
+    // correctness of the render.
+    return Promise.resolve(Object.assign(base, { videoWidth: 16, videoHeight: 9 }));
+  }
+  return Promise.all([player.getVideoWidth(), player.getVideoHeight()])
+    .then(function(wh) {
+      return Object.assign(base, { videoWidth: wh[0], videoHeight: wh[1] });
+    })
+    .catch(function() {
+      return Object.assign(base, { videoWidth: 16, videoHeight: 9 });
+    });
+}
+
+// Total spoken length, used only to estimate the render step (see burn_video.js).
+function burnDurationMs() {
+  var cues = (previewState && previewState.subtitles) || [];
+  return cues.length ? cues[cues.length - 1].endMs : 0;
+}
+
+function saveBurnState(watch) {
+  if (!watch) return;
+  // Best-effort: a full/blocked storage must not abort a running render — the
+  // watch keeps working in memory, it just won't survive a reload.
+  try {
+    localStorage.setItem(burnStateKey(watch.talkId, watch.videoSlug), JSON.stringify(watch));
+  } catch (e) {}
+}
+
+function clearBurnState(talkId, videoSlug) {
+  try { localStorage.removeItem(burnStateKey(talkId, videoSlug)); } catch (e) {}
+}
+
+function stopBurnTimer() {
+  if (burnTimer) { clearTimeout(burnTimer); burnTimer = null; }
+}
+
+// Only ever link to an https run URL from the API — never let an unexpected
+// value become a javascript:/data: href.
+function setBurnRunLink(url) {
+  var link = document.getElementById('burn-run-link');
+  if (!link) return;
+  var ok = /^https:\/\//.test(url || '');
+  link.href = ok ? url : '#';
+  link.hidden = !ok;
+}
+
+function showBurnPanel(label, fraction) {
+  var panel = document.getElementById('burn-panel');
+  if (panel) panel.hidden = false;
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = ''; err.hidden = true; }
+  var dl = document.getElementById('btn-burn-download');
+  if (dl) dl.hidden = true;
+  renderBurnProgress({ fraction: fraction || 0, label: label || '', estimated: false });
+}
+
+function showBurnError(msg) {
+  stopBurnTimer();
+  var panel = document.getElementById('burn-panel');
+  if (panel) panel.hidden = false;
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = msg; err.hidden = false; }
+  var eta = document.getElementById('burn-eta');
+  if (eta) eta.textContent = '';
+}
+
+function burnEtaMinutes(fraction) {
+  return Math.max(1, Math.round(renderEtaSeconds(burnDurationMs()) * (1 - fraction) / 60));
+}
+
+function renderBurnProgress(p) {
+  var fill = document.getElementById('burn-bar-fill');
+  if (fill) fill.style.width = Math.round(p.fraction * 100) + '%';
+  var step = document.getElementById('burn-step');
+  if (step) step.textContent = p.label || '';
+  var eta = document.getElementById('burn-eta');
+  if (!eta) return;
+  // Terminal state wins over the estimate: a run cancelled mid-render comes
+  // back failed AND estimated, and "about 9 min left" next to a failure is a
+  // lie. Labelled as approximate otherwise — ffmpeg reports no true percentage.
+  eta.textContent = (p.estimated && !p.failed && !p.done)
+    ? t('burn.estimate').replace('{min}', burnEtaMinutes(p.fraction))
+    : '';
+}
+
+function startBurn() {
+  var talkId = previewState && previewState.talkId;
+  var videoSlug = previewState && previewState.videoSlug;
+  if (!talkId || !videoSlug) return Promise.resolve();
+  stopBurnTimer();
+  showBurnPanel(t('burn.queued'), 0);
+  setBurnRunLink('');
+  return burnGeometry().then(function(geometry) {
+    var ratios = measureBurnRatios(geometry);
+    var requestId = makeRequestId(Date.now());
+    var inputs = buildBurnInputs(talkId, videoSlug, ratios, requestId);
+    return dispatchWorkflow(API, getAuthToken(), BURN_WORKFLOW, 'main', inputs)
+      .then(function() {
+        burnWatch = { requestId: requestId, runId: 0, runUrl: '', startedAt: Date.now(),
+                      talkId: talkId, videoSlug: videoSlug };
+        saveBurnState(burnWatch);
+        pollBurn();
+      });
+  }).catch(function(err) {
+    // A 403 here means the token predates the App's Actions grant — say that
+    // plainly instead of echoing an opaque API message.
+    showBurnError(err && err.status === 403
+      ? t('burn.no_actions_permission')
+      : (err && err.message) || String(err));
+  });
+}
+
+function pollBurn() {
+  if (!burnWatch) return;
+  var watch = burnWatch;   // pin it: navigating away swaps burnWatch mid-flight
+  var token = getAuthToken();
+  var findRun = watch.runId
+    ? Promise.resolve(watch.runId)
+    : listWorkflowRuns(API, token, BURN_WORKFLOW).then(function(runs) {
+        var run = matchRun(runs, watch.requestId);
+        if (run) {
+          watch.runId = run.id;
+          watch.runUrl = run.html_url || '';
+          saveBurnState(watch);
+          // Only touch the panel if it still belongs to this watch.
+          if (watch === burnWatch) setBurnRunLink(watch.runUrl);
+          return run.id;
+        }
+        // Dispatch to run creation is not instant — keep waiting, but not forever.
+        if (Date.now() - watch.startedAt > BURN_RUN_WAIT_MS) {
+          throw new Error(t('burn.run_not_found'));
+        }
+        return 0;
+      });
+
+  findRun.then(function(runId) {
+    if (!runId) return null;
+    return getRunJobs(API, token, runId).then(function(jobs) { return jobs[0]; });
+  }).then(function(job) {
+    if (watch !== burnWatch) return;   // the user moved to another video
+    var p = computeProgress(job, Date.now(), burnDurationMs());
+    renderBurnProgress(p);
+    // Failure first: a job that died in "Set up job" (before any named step)
+    // comes back failed with an empty failedStep, and can also carry
+    // estimated:true when cancelled mid-render.
+    if (p.failed) {
+      clearBurnState(watch.talkId, watch.videoSlug);
+      showBurnError(p.failedStep
+        ? t('burn.failed_step').replace('{step}', p.failedStep)
+        : t('burn.failed'));
+      return;
+    }
+    if (p.done) { onBurnFinished(); return; }
+    burnTimer = setTimeout(pollBurn, BURN_POLL_MS);
+  }).catch(function(err) {
+    if (watch !== burnWatch) return;
+    showBurnError((err && err.message) || String(err));
+  });
+}
+
+function onBurnFinished() {
+  stopBurnTimer();
+  renderBurnProgress({ fraction: 1, label: '', estimated: false, done: true });
+  // Success must never sit under a leftover error line.
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = ''; err.hidden = true; }
+  var btn = document.getElementById('btn-burn-download');
+  if (btn) btn.hidden = false;
+}
+
+function cancelBurnWatch() {
+  // "Hide" stops the polling and closes the panel, but keeps the recorded run:
+  // reopening the preview resumes it, so a render is never lost by tidying up.
+  stopBurnTimer();
+  var panel = document.getElementById('burn-panel');
+  if (panel) panel.hidden = true;
+}
+
+// Called on every preview entry. Drops the previous video's watch and picks up
+// this video's, if a render is still recorded and still downloadable.
+function resumeBurnWatch(talkId, videoSlug) {
+  stopBurnTimer();
+  burnWatch = null;
+  var panel = document.getElementById('burn-panel');
+  if (panel) panel.hidden = true;
+  var raw = null;
+  try { raw = localStorage.getItem(burnStateKey(talkId, videoSlug)); } catch (e) {}
+  if (!raw) return;
+  var saved = null;
+  try { saved = JSON.parse(raw); } catch (e) {}
+  if (!saved || !saved.requestId) return;
+  if (Date.now() - (saved.startedAt || 0) > BURN_STATE_TTL_MS) {
+    clearBurnState(talkId, videoSlug);
+    return;
+  }
+  // Following a run and fetching its artifact both need the API — a read-only
+  // or signed-out session can do neither.
+  if (!ghWriteUser() || !getAuthToken()) return;
+  burnWatch = saved;
+  showBurnPanel(t('burn.queued'), 0);
+  setBurnRunLink(saved.runUrl);
+  pollBurn();
+}
+
+// The ZIP reader throws SYNCHRONOUSLY on a ZIP64 archive (js/burn_artifact.js
+// refuses to misread the sentinels) and DecompressionStream can throw where it
+// is unsupported. Wrapping the whole body keeps those on the promise chain, so
+// downloadBurned()'s .catch() reports them instead of letting them escape.
+function extractBurnedMp4(bytes) {
+  try {
+    // upload-artifact writes a streaming ZIP, so local headers may say zero —
+    // the central directory is the only trustworthy source of sizes.
+    var entry = pickMp4Entry(readCentralDirectory(bytes, findEocd(bytes)));
+    if (!entry) throw new Error(t('burn.no_mp4'));
+    var at = localDataOffset(bytes, entry.localHeaderOffset);
+    var data = bytes.slice(at, at + entry.compressedSize);
+    if (entry.method === 0) return Promise.resolve({ bytes: data, name: entry.name });
+    return new Response(new Blob([data]).stream()
+        .pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()
+      .then(function(b) { return { bytes: new Uint8Array(b), name: entry.name }; });
+  } catch (err) {
+    return Promise.reject(err);
+  }
+}
+
+function downloadBurned() {
+  if (!burnWatch || !burnWatch.runId) return Promise.resolve();
+  var token = getAuthToken();
+  return listRunArtifacts(API, token, burnWatch.runId).then(function(arts) {
+    var art = arts[0];
+    if (!art) throw new Error(t('burn.no_artifact'));
+    // Artifacts vanish after the 7-day retention — name that, don't show a 404.
+    if (art.expired) throw new Error(t('burn.expired'));
+    return fetch(API + '/actions/artifacts/' + art.id + '/zip', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+  }).then(function(resp) {
+    if (!resp.ok) throw new Error(t('burn.download_failed').replace('{status}', resp.status));
+    return resp.arrayBuffer();
+  }).then(function(buf) {
+    return extractBurnedMp4(new Uint8Array(buf));
+  }).then(function(file) {
+    return saveMp4(file.bytes, file.name);
+  }).catch(function(err) {
+    showBurnError((err && err.message) || String(err));
+  });
+}
+
+function saveMp4(bytes, name) {
+  var blob = new Blob([bytes], { type: 'video/mp4' });
+  if (window.showSaveFilePicker) {
+    return window.showSaveFilePicker({
+      suggestedName: name,
+      types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }]
+    }).then(function(handle) {
+      return handle.createWritable().then(function(w) {
+        return w.write(blob).then(function() { return w.close(); });
+      });
+    });
+  }
+  // Safari/Firefox: no streaming save, so the file is assembled in memory.
+  showToast(t('burn.memory_fallback'));
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
+  return Promise.resolve();
+}
+
+SPA.startBurn = startBurn;
+SPA.cancelBurnWatch = cancelBurnWatch;
+SPA.downloadBurned = downloadBurned;
 
 document.addEventListener('keydown', function(e) {
   if (!document.getElementById('view-preview').classList.contains('active')) return;

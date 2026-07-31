@@ -167,6 +167,31 @@ The edit + marker chips both use it; glyphs come from <code>syncCloudSvg()</code
 catalog can't drift from the app.</p>
 <div class="sg-row" id="sync-clouds" style="gap:var(--space-6)"></div>
 
+<h2>Burn panel</h2>
+<p style="color:var(--fg4)">Progress for a burned-in subtitle render. The bar reuses
+<code>--sync-progress</code>, the same in-progress tone as the sync cloud; the italic note
+marks the remaining time as an <em>estimate</em>, because ffmpeg reports no true percentage
+through the Actions API. The error line uses <code>--danger-fg</code> and replaces the ETA,
+never sits beside it.</p>
+<div class="burn-panel sg-card">
+  <div class="burn-panel__head">
+    <span class="burn-panel__title">Rendering video with subtitles</span>
+    <a class="burn-panel__link" href="#">View run</a>
+    <button class="btn btn--ghost btn--sm">Hide</button>
+  </div>
+  <div class="burn-bar"><div class="burn-bar__fill" style="width:62%"></div></div>
+  <p class="burn-panel__status">Burn subtitles <span class="burn-panel__eta">about 9 min left</span></p>
+</div>
+<div class="burn-panel sg-card">
+  <div class="burn-panel__head">
+    <span class="burn-panel__title">Rendering video with subtitles</span>
+    <button class="btn btn--ghost btn--sm">Hide</button>
+  </div>
+  <div class="burn-bar"><div class="burn-bar__fill" style="width:30%"></div></div>
+  <p class="burn-panel__status">Download video</p>
+  <p class="burn-panel__error">Failed at step &quot;Burn subtitles&quot;</p>
+</div>
+
 <script src="js/sync_status_view.js"></script>
 <script>
   (function () {

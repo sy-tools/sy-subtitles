@@ -91,6 +91,7 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 .btn:active { opacity: 0.7; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
 .btn:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.btn[hidden] { display: none; }
 
 .btn--primary { background: var(--primary-bg); border-color: var(--primary-border); color: var(--primary-fg); }
 .btn--issue   { background: var(--issue-bg);   border-color: var(--issue-border);   color: var(--issue-fg); }
@@ -1030,3 +1031,47 @@ body.gh-write::after {
 body.gh-write .gh-avatar-wrap #gh-avatar {
   box-shadow: 0 0 0 2px var(--bg), 0 0 10px 2px var(--aura);
 }
+
+/* Burned-in video render panel. Progress reuses --sync-progress, the same
+   in-progress tone the cloud-sync chip uses; no new palette token. */
+.burn-panel {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  /* Same 960px centred column as .player-container / .preview-list, so the
+     panel lines up with the rest of the preview instead of going full-bleed.
+     width:100% is load-bearing: #view-preview is a COLUMN flexbox, where the
+     auto side margins suppress the default stretch and would otherwise
+     shrink-wrap the panel to its text. */
+  width: 100%;
+  max-width: 960px;
+  margin: var(--space-3) auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* An author `display` always beats the UA's [hidden]{display:none}, so the
+   flex/inline-flex rules above and on .btn need their own hidden rule — without
+   it a `hidden` panel or download button would still render. */
+.burn-panel[hidden] { display: none; }
+.burn-panel__head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+/* The title (not the link) carries the auto margin: the run link is hidden
+   until the run exists, and an auto margin on a hidden element pushes nothing. */
+.burn-panel__title { font-family: var(--f-sans); font-size: var(--text-sm); color: var(--fg2); font-weight: 600; margin-right: auto; }
+.burn-panel__link { font-size: var(--text-xs); color: var(--link); }
+.burn-bar { height: 6px; background: var(--bg4); border-radius: var(--radius-pill); overflow: hidden; }
+.burn-bar__fill {
+  height: 100%;
+  width: 0;
+  background: var(--sync-progress);
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+/* The panel is a column flexbox, so a child button would stretch edge to edge —
+   pin the download to its natural width. */
+.burn-panel > .btn { align-self: flex-start; }
+.burn-panel__status { margin: 0; font-size: var(--text-xs); color: var(--fg4); }
+.burn-panel__eta { color: var(--fg5); font-style: italic; }
+.burn-panel__error { margin: 0; font-size: var(--text-xs); color: var(--danger-fg); }
+@media (prefers-reduced-motion: reduce) { .burn-bar__fill { transition: none; } }

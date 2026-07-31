@@ -3394,3 +3394,89 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
     assert.deepStrictEqual(offenders, [], 'Hardcoded Cyrillic JS literals (use t()): ' + offenders.join(' | '));
   });
 });
+
+// ============================================================
+// Burned-in subtitle render: button, panel, download wiring
+// ============================================================
+describe('burn video wiring', () => {
+  const fs = require('fs');
+  const html = fs.readFileSync('site/index.html', 'utf8');
+  const sw = fs.readFileSync('site/sw.js', 'utf8');
+  const css = fs.readFileSync('site/css/components.css', 'utf8');
+  const styleguide = fs.readFileSync('site/styleguide.html', 'utf8');
+
+  // Two modules, not one: the run driver and the artifact ZIP reader.
+  const BURN_MODULES = ['js/burn_video.js', 'js/burn_artifact.js'];
+
+  it('loads both burn modules as plain script tags', () => {
+    for (const mod of BURN_MODULES) {
+      assert.ok(html.includes('<script src="' + mod + '"></script>'),
+        'index.html must load ' + mod + ' — single source, no inline copy');
+    }
+  });
+
+  it('precaches both burn modules', () => {
+    for (const mod of BURN_MODULES) {
+      assert.ok(sw.includes("'" + mod + "'"),
+        'a new site/js module must be added to the SW SHELL_ASSETS list: ' + mod);
+    }
+  });
+
+  it('shows the burn button only to signed-in users with write access', () => {
+    const button = html.match(/<button[^>]*id="btn-burn-video"[^>]*>/);
+    assert.ok(button, 'the burn button must exist');
+    assert.ok(button[0].includes('data-gh-only'),
+      'burn must be gated by data-gh-only: read-only sessions cannot dispatch');
+  });
+
+  it('places the button in the preview header actions', () => {
+    const header = html.slice(html.indexOf('preview-header'),
+                              html.indexOf('player-container'));
+    assert.ok(header.includes('btn-burn-video'),
+      'the button belongs in the preview .header-actions cluster');
+  });
+
+  it('labels the render estimate as an estimate in both languages', () => {
+    assert.ok(html.includes('burn.estimate'),
+      'the progress panel must carry an i18n key marking the ETA as approximate');
+  });
+
+  it('defines every burn i18n key in BOTH language tables', () => {
+    // t() falls back to English, so a key missing from uk would silently ship
+    // English text into a Ukrainian UI. Check each table separately.
+    const i18n = html.match(/var I18N\s*=\s*\{([\s\S]*?)\n\};/);
+    assert.ok(i18n, 'I18N table not found');
+    const uk = i18n[1].slice(i18n[1].indexOf('uk:'), i18n[1].indexOf('\n  en:'));
+    const en = i18n[1].slice(i18n[1].indexOf('\n  en:'));
+    const keys = [...html.matchAll(/t\('((?:btn\.burn|burn)\.[a-z_]+)'\)/g)]
+      .map((m) => m[1]);
+    assert.ok(keys.length > 0, 'expected t() calls for burn keys');
+    for (const key of new Set(keys)) {
+      assert.ok(uk.includes("'" + key + "'"), 'uk table is missing ' + key);
+      assert.ok(en.includes("'" + key + "'"), 'en table is missing ' + key);
+    }
+  });
+
+  it('keeps the panel hidden while [hidden] (display:flex would defeat it)', () => {
+    // .burn-panel sets display:flex; an author display always beats the UA
+    // [hidden]{display:none}, so the attribute needs its own rule.
+    assert.match(css, /\.burn-panel\[hidden\]\s*\{[^}]*display:\s*none/,
+      '.burn-panel[hidden] must set display:none, else hidden panels render');
+    assert.match(css, /\.btn\[hidden\]\s*\{[^}]*display:\s*none/,
+      '.btn[hidden] must set display:none — .btn is display:inline-flex');
+  });
+
+  it('documents the panel in the styleguide, rendered by the real CSS', () => {
+    assert.match(styleguide, /class="burn-panel[ "]/,
+      'a new component must ship a live styleguide example');
+    assert.ok(styleguide.includes('burn-bar__fill'),
+      'the styleguide example must show the progress bar itself');
+  });
+
+  it('exposes the three entry points the markup calls on SPA', () => {
+    for (const fn of ['startBurn', 'cancelBurnWatch', 'downloadBurned']) {
+      assert.ok(new RegExp('SPA\\.' + fn + '\\s*=').test(html),
+        'SPA.' + fn + ' must exist — the panel markup calls it inline');
+    }
+  });
+});

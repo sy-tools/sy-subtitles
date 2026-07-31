@@ -50,7 +50,9 @@ var SHELL_ASSETS = [
   'js/edit_sync.js',
   'js/marker_sync.js',
   'js/sync_status_view.js',
-  'js/my_work.js'
+  'js/my_work.js',
+  'js/burn_video.js',
+  'js/burn_artifact.js'
 ];
 
 // Cross-origin libs the shell needs to boot (js-yaml parses every meta.yaml).
