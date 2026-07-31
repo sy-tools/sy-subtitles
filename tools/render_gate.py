@@ -25,8 +25,8 @@ import sys
 import time
 from dataclasses import dataclass
 
-# Polled often enough that a gate is not the bottleneck, rarely enough that ten
-# gates cost no meaningful runner CPU.
+# Polled often enough that a gate is not the bottleneck, rarely enough that
+# twenty gates cost no meaningful runner CPU.
 DEFAULT_POLL_SECONDS = 5.0
 
 # ffmpeg emits a progress block roughly every half second; ten minutes without
