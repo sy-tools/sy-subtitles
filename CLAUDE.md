@@ -190,7 +190,8 @@ python -m tools.build_map assemble       --talk-dir PATH --video-slug SLUG [--la
 # absolutely from the module, so the CLI works from any directory.
 python -m tools.burn_subtitles --srt PATH --video PATH --output PATH \
   --font-ratio 0.0711 --padtop-ratio 0.0741 --padbot-ratio 0.0333 \
-  [--font-file PATH] [--font-name Roboto] [--gradient-steps 64] [--ass-out PATH]
+  [--font-file PATH] [--font-name Roboto] [--gradient-steps 64] [--ass-out PATH] \
+  [--progress-file PATH]   # ffmpeg -progress sink; burn-subtitles.yml's gates poll it
 
 # Validate SRT subtitles (timing source: --whisper-json OR --en-srt, en-srt preferred)
 python -m tools.validate_subtitles --srt PATH --transcript PATH \
@@ -261,6 +262,10 @@ python -m tools.whisper_run --video PATH --output PATH [--model MODEL] [--langua
 # Internal / pipeline-support CLIs (run by workflows, rarely by hand):
 #   tools.builder_data            — query EN SRT blocks + whisper word timestamps for the builder agent
 #   tools.fake_llm                — fake LLM responder for dry-run pipeline (replays snapshots)
+#   tools.render_gate             — blocks until the detached burn encode passes a
+#                                   percentage; each burn-subtitles.yml gate step is one
+#                                   call, and a step COMPLETING is the only live progress
+#                                   channel the SPA has into a running job
 #   tools.verify_snapshot         — verify a dry-run result against a recorded snapshot
 #   tools.workflow_validation_cli — guard step validating talk-id / video-slug / video-ref inputs
 ```

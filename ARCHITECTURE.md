@@ -56,6 +56,9 @@ sy-subtitles/
 │           └── final/
 │               ├── uk.srt          # Final Ukrainian subtitles
 │               └── report.txt      # Validation report
+├── assets/                         # Vendored binary assets
+│   └── fonts/                      # Roboto TTF + license — libass reads it via fontsdir,
+│                                   #   so a burned line breaks exactly where the SPA's does
 ├── glossary/                       # Translation knowledge base
 │   ├── terms_lookup.yaml           # 374 EN→UK terms
 │   ├── terms_context.yaml          # Disambiguation context
@@ -64,6 +67,8 @@ sy-subtitles/
 ├── tools/                          # Python tooling (see tools/ for full listing)
 │   ├── download.py                 # Fetch from amruta.org (local only)
 │   ├── whisper_run.py              # Whisper speech detection wrapper
+│   ├── burn_subtitles.py           # SRT → ASS → ffmpeg+libass burned-in video
+│   ├── render_gate.py              # Blocks a burn gate step until the encode passes N%
 │   ├── build_map.py / build_srt.py # Subtitle builder (prepare → LLM → assemble)
 │   ├── builder_data.py             # Whisper / EN-SRT timing query interface
 │   ├── validate_subtitles.py       # SRT validation (text, CPS, overlaps, gaps)
@@ -166,6 +171,19 @@ subtitle look, and uploads the MP4 as a 7-day artifact. Sizing arrives as
 ratios measured in the browser (see `tools/burn_subtitles.py`). `run-name`
 carries the caller's `request_id` — `workflow_dispatch` returns no run id, so
 that is how the SPA finds its own run.
+
+The job runs ffmpeg **once**, detached, writing an `-progress` file, and then
+declares twenty cheap named steps (`Render 5%` … `Render 95%`, `Finish render`)
+that each block in `tools/render_gate.py` until the encode passes that
+threshold. That shape exists because a *step completing* is the only live,
+CORS-clean progress channel a browser has into a running job — the log blob
+404s mid-run and annotations appear only at finalisation — and the SPA already
+polls the job's step list. So the bar is made of facts: each completed step
+name credits a fixed slice of it (`BURN_STEP_WEIGHTS` in
+`site/js/burn_video.js`, pinned against these step names by
+`tests/test_burn_workflow_steps.py`). The grid is 5% because the corpus's
+longest talk encodes in about 50 minutes, where 10% gates would leave the bar
+motionless for over five minutes at a time.
 
 ## Subtitle Builder (V2)
 
