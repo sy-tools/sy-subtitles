@@ -130,6 +130,43 @@ class TestSyncSrtToTranscript:
         )
         assert "error" in result
 
+    def test_block_split_without_text_change_is_not_an_insertion(self, talk):
+        """Re-blocking is not editing: the same words in more blocks.
+
+        The optimizer's merge guard leaves sentences that used to share one
+        subtitle in separate blocks, so a rebuilt SRT legitimately has more
+        blocks with byte-identical text. The transcript has nothing to learn
+        from that and must be left alone — not rejected as an insertion.
+        """
+        new_srt = """1
+00:00:01,000 --> 00:00:05,000
+Перше речення першого абзацу.
+
+2
+00:00:05,100 --> 00:00:07,000
+Друге речення
+
+3
+00:00:07,100 --> 00:00:10,000
+першого абзацу.
+
+4
+00:00:12,000 --> 00:00:18,000
+Єдине речення другого абзацу.
+"""
+        (talk / "Video" / "final" / "uk.srt").write_text(new_srt, encoding="utf-8")
+        before = (talk / "transcript_uk.txt").read_text(encoding="utf-8")
+
+        result = sync_srt_to_transcript(
+            old_srt=str(talk / "uk_old.srt"),
+            new_srt=str(talk / "Video" / "final" / "uk.srt"),
+            transcript=str(talk / "transcript_uk.txt"),
+        )
+
+        assert "error" not in result, result.get("error")
+        assert result["changed"] == 0
+        assert (talk / "transcript_uk.txt").read_text(encoding="utf-8") == before
+
     def test_deleted_placeholder_block_skipped_silently(self, tmp_path):
         """Deleting a block whose text is NOT in the transcript (e.g. a placeholder
         like '[Промова англійською]') should succeed without touching the transcript."""
