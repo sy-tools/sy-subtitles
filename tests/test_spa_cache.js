@@ -3436,6 +3436,26 @@ describe('burn video wiring', () => {
       'the button belongs in the preview .header-actions cluster');
   });
 
+  it('warns through the house dialog, never native confirm()', () => {
+    // SPA.confirm exists precisely so the app's voice and language carry
+    // through; a native confirm() would be an untranslated browser chrome box.
+    const driver = html.slice(html.indexOf('var BURN_POLL_MS'),
+                              html.indexOf('SPA.startBurn = startBurn;'));
+    assert.ok(driver.includes('SPA.confirm('),
+      'the pending-edits warning must use the house dialog');
+    assert.ok(!/(^|[^.\w])confirm\s*\(/.test(driver.replace(/SPA\.confirm\s*\(/g, '')),
+      'no bare confirm() may survive in the burn driver');
+  });
+
+  it('refreshes the render button when the subtitle language changes', () => {
+    // The refusal is keyed on previewState.srtLang, which switchSubLang mutates
+    // — without this the button would stay disabled after switching back to UK.
+    const fn = html.slice(html.indexOf('SPA.switchSubLang = function'),
+                          html.indexOf('function ensureManifest'));
+    assert.ok(fn.includes('updateBurnButton()'),
+      'a language switch must re-evaluate whether a render is possible');
+  });
+
   it('words the remaining time softly and drops the superseded keys', () => {
     // The ETA is extrapolated from a rate ffmpeg's own progress file measured,
     // so it no longer needs the italic apology — but it is still an
@@ -3735,6 +3755,12 @@ describe('burn video driver behaviour', () => {
       timers: [],
       dispatched: 0,
       toasts: [],
+      // Every SPA.confirm() the driver opens, and the answer it gets back.
+      // Recorded rather than auto-approved: the declined case has to be able to
+      // assert that NOTHING was dispatched, which a stub that always says yes
+      // could never show.
+      confirms: [],
+      confirmAnswer: true,
       document: {
         getElementById: function (id) { return els[id] || null; },
         documentElement: {},
@@ -3749,8 +3775,16 @@ describe('burn video driver behaviour', () => {
       getComputedStyle: function () {
         return { getPropertyValue: function () { return '1'; } };
       },
-      previewState: { talkId: 't', videoSlug: 'v', player: null, subtitles: [] },
+      previewState: { talkId: 't', videoSlug: 'v', player: null, subtitles: [],
+                      srtLang: 'uk', edits: {} },
       t: function (k) { return 'T:' + k; },
+      pluralFor: function (n, key) { return key; },
+      SPA: {
+        confirm: function (opts) {
+          env.confirms.push(opts);
+          return Promise.resolve(env.confirmAnswer);
+        }
+      },
       API: 'https://api.example/repos/o/r',
       BURN_WORKFLOW: 'burn-subtitles.yml',
       getAuthToken: function () { return 'tok'; },
@@ -3783,14 +3817,15 @@ describe('burn video driver behaviour', () => {
     const end = html.indexOf('SPA.startBurn = startBurn;');
     assert.ok(start > -1 && end > start, 'burn driver block not found in index.html');
     const names = ['document', 'window', 'localStorage', 'getComputedStyle',
-      'previewState', 't', 'API', 'BURN_WORKFLOW', 'getAuthToken', 'dispatchWorkflow',
+      'previewState', 't', 'pluralFor', 'SPA', 'API', 'BURN_WORKFLOW', 'getAuthToken',
+      'dispatchWorkflow',
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
       'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
       'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned',
-      'retranslateBurnPanel'];
+      'retranslateBurnPanel', 'updateBurnButton'];
     const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
       ', getWatch: function () { return burnWatch; } };';
     env.api = new Function(names.join(','), html.slice(start, end) + tail)
@@ -3819,6 +3854,105 @@ describe('burn video driver behaviour', () => {
     await settle();
     assert.strictEqual(env.dispatched, 1,
       'a second click must not dispatch a second workflow run');
+  });
+
+  // ---- the render must not quietly disagree with the preview ----
+  //
+  // The panel promises a video "matching what the fullscreen preview shows",
+  // and two things could silently make that false: the workflow always burns
+  // final/uk.srt (it has no language input), and it checks out `main`, so
+  // edits still sitting in the browser cannot appear. Both are minutes-long
+  // waits that end in the wrong file, so both are refused up front.
+
+  function previewing(over) {
+    return { previewState: Object.assign({ talkId: 't', videoSlug: 'v', player: null,
+                                           subtitles: [], srtLang: 'uk', edits: {} }, over) };
+  }
+
+  it('dispatches nothing while a language other than Ukrainian is previewed', async () => {
+    const env = makeHarness(previewing({ srtLang: 'en' }));
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.dispatched, 0,
+      'the workflow burns final/uk.srt and takes no language input — previewing ' +
+      'English and pressing Render must not produce a Ukrainian video');
+    assert.strictEqual(env.api.getWatch(), null,
+      'nothing may be recorded for a run that was never started');
+  });
+
+  it('says why the render is unavailable rather than leaving a dead button', () => {
+    const env = makeHarness(Object.assign(previewing({ srtLang: 'en' }), {
+      t: function (k) { return k === 'burn.wrong_lang' ? 'UK only, not {lang}' : k; }
+    }));
+    env.api.updateBurnButton();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, true);
+    assert.strictEqual(env.els['btn-burn-video'].title, 'UK only, not EN',
+      'a disabled control with no explanation is indistinguishable from a bug');
+  });
+
+  it('takes the explanation back off once Ukrainian is previewed again', () => {
+    const env = makeHarness(previewing({ srtLang: 'en' }));
+    env.api.updateBurnButton();
+    env.previewState.srtLang = 'uk';
+    env.api.updateBurnButton();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+    assert.strictEqual(env.els['btn-burn-video'].title, '',
+      'a stale reason on a working button is worse than none');
+  });
+
+  it('asks before rendering without the pending edits, naming their count', async () => {
+    const env = makeHarness(Object.assign(previewing({ edits: { uk: { 3: 'a', 7: 'b' } } }), {
+      t: function (k) { return k === 'burn.pending_title' ? '{n} {word} pending' : k; }
+    }));
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.confirms.length, 1,
+      'the house dialog must carry the warning — never native confirm()');
+    assert.strictEqual(env.confirms[0].title, '2 edits pending');
+    assert.strictEqual(env.dispatched, 1, 'an affirmative answer still renders');
+  });
+
+  it('dispatches nothing when the pending-edits warning is declined', async () => {
+    const env = makeHarness(Object.assign(previewing({ edits: { uk: { 3: 'a' } } }),
+      { confirmAnswer: false }));
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.confirms.length, 1, 'precondition: it was asked');
+    assert.strictEqual(env.dispatched, 0, 'declining must not start a run anyway');
+    assert.strictEqual(env.api.getWatch(), null);
+    assert.strictEqual(env.els['burn-panel'].hidden, true,
+      'no progress panel for a render that never started');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
+      'declining must leave the button usable — the user may edit and retry');
+  });
+
+  it('does not ask when nothing is pending', async () => {
+    const env = makeHarness();
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.confirms.length, 0, 'a dialog with nothing to warn about is noise');
+    assert.strictEqual(env.dispatched, 1);
+  });
+
+  it('opens one dialog, not two, when the button is clicked twice', async () => {
+    // burnFollowing cannot cover this window: nothing is being followed while
+    // the dialog is open, so a second click would open a second dialog and,
+    // once both are answered, dispatch twice.
+    const env = makeHarness(previewing({ edits: { uk: { 3: 'a' } } }));
+    env.api.startBurn();
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.confirms.length, 1);
+    assert.strictEqual(env.dispatched, 1);
+  });
+
+  it('counts only the edits in the language the run will burn', async () => {
+    // English edits are not what the Ukrainian render would omit.
+    const env = makeHarness(previewing({ edits: { en: { 1: 'a', 2: 'b' } } }));
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.confirms.length, 0);
+    assert.strictEqual(env.dispatched, 1);
   });
 
   it('disables the render button while the run is followed', async () => {
