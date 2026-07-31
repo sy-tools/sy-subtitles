@@ -4,7 +4,7 @@
   SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja-1st-Talk-after-Puja/final/uk.srt
   Transcript: talks/2000-07-23_Guru-Puja-Shraddha/transcript_uk.txt
   EN SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja-1st-Talk-after-Puja/source/en.srt
-  SRT blocks: 171
+  SRT blocks: 170
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,36 +22,36 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 171
+  Total blocks: 170
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 171
-  CPS: avg=109.6, median=42.5, max=4785.7
-  CPS > target: 160 (93.6%)
-  CPS > hard max: 155 (90.6%)
-  CPL: avg=51.4, max=84
+  Total blocks: 170
+  CPS: avg=99.6, median=42.5, max=4785.7
+  CPS > target: 159 (93.5%)
+  CPS > hard max: 154 (90.6%)
+  CPL: avg=51.3, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
-  Duration < min: 8
+  Duration < min: 7
   Duration > max: 2
   Overlaps: 0
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #24: CPS=4785.7 (67ch/0.0s) "то ви повинні робити все це лише для того, щоб пізнати самог..."
+    #23: CPS=4785.7 (67ch/0.0s) "то ви повинні робити все це лише для того, щоб пізнати самог..."
     #4: CPS=1857.1 (39ch/0.0s) "Насправді все це вже є – абсолютно все."
-    #9: CPS=1500.0 (21ch/0.0s) "Кожен має Дух у собі."
-    #6: CPS=1054.8 (77ch/0.1s) "(легкий сміх, коли собака виходить на сцену) Якраз вчасно! (..."
-    #7: CPS=861.1 (31ch/0.0s) "Усе це міститься всередині вас."
-    #3: CPS=735.8 (39ch/0.1s) "– він відкриває їх для вашого пізнання."
+    #8: CPS=1500.0 (21ch/0.0s) "Кожен має Дух у собі."
     #5: CPS=714.3 (50ch/0.1s) "Усе знання, вся духовність, вся радість – все там."
-    #8: CPS=518.8 (83ch/0.2s) "Єдине, що робить Ґуру, – це допомагає вам усвідомити свої зн..."
-    #35: CPS=70.0 (84ch/1.2s) "Через це потурання его ви просто починаєте дрейфувати в океа..."
-    #54: CPS=70.0 (84ch/1.2s) "бо в разі мирської необізнаності ви дійсно відчуваєте наслід..."
+    #3: CPS=600.0 (39ch/0.1s) "– він відкриває їх для вашого пізнання."
+    #7: CPS=518.8 (83ch/0.2s) "Єдине, що робить Ґуру, – це допомагає вам усвідомити свої зн..."
+    #6: CPS=238.1 (45ch/0.2s) "Якраз вчасно! Усе це міститься всередині вас."
+    #34: CPS=70.0 (84ch/1.2s) "Через це потурання его ви просто починаєте дрейфувати в океа..."
+    #53: CPS=70.0 (84ch/1.2s) "бо в разі мирської необізнаності ви дійсно відчуваєте наслід..."
+    #26: CPS=69.2 (83ch/1.2s) "Вони живуть у повній необізнаності щодо самих себе і день у ..."
 
 ============================================================
   SUMMARY
@@ -63,11 +63,11 @@
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
 
-  Avg CPS: 109.6 (target ≤15.0)
-  CPS > 15.0: 160 blocks
-  CPS > 20.0: 155 blocks
+  Avg CPS: 99.6 (target ≤15.0)
+  CPS > 15.0: 159 blocks
+  CPS > 20.0: 154 blocks
   CPL > 84: 0 blocks
-  Duration < 1200ms: 8 blocks
+  Duration < 1200ms: 7 blocks
   Duration > 21000ms: 2 blocks
   Gaps < 80ms: 0 blocks
 

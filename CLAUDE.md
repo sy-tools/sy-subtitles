@@ -255,6 +255,8 @@ python -m tools.whisper_run --video PATH --output PATH [--model MODEL] [--langua
 #   tools.fake_llm                — fake LLM responder for dry-run pipeline (replays snapshots)
 #   tools.verify_snapshot         — verify a dry-run result against a recorded snapshot
 #   tools.workflow_validation_cli — guard step validating talk-id / video-slug / video-ref inputs
+#   tools.retime_snapshot         — carry a dry-run snapshot's timings onto a new block cut
+#                                   (run after changing text_segmentation or subtitle_omit; see TESTING.md)
 ```
 
 ## Glossary
@@ -264,6 +266,12 @@ Sahaja Yoga term dictionaries live in `glossary/`:
 - `terms_context.yaml` – disambiguation context for terms with variants
 - `chakra_map.yaml` – chakra/deity/channel mapping
 - `chakra_system.yaml` – full subtle system reference
+- `subtitle_omit.yaml` – editorial remarks ("(сміх)") that stay in the
+  transcript but never reach the screen. Talk-specific one-offs go in that
+  talk's `meta.yaml` under `subtitle_omit:`. Applied in `load_transcript`, so
+  the builder and `check_text_preservation` see the same text by construction.
+  **Changing either list changes the block cut — re-time the dry-run snapshots
+  (`tools.retime_snapshot`) and rebuild affected talks.**
 
 See `glossary/CLAUDE.md` for translator agent instructions (transliteration, capitalization rules).
 
