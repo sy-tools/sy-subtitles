@@ -288,14 +288,38 @@ def test_merge_sparse_blocks_merges_when_speech_is_continuous():
     config = OptimizeConfig()
     blocks = [
         {"idx": 1, "start_ms": 0, "end_ms": 3000, "text": "Сьогодні ми тут."},
-        {"idx": 2, "start_ms": 3100, "end_ms": 12000, "text": "Ґуру."},
+        {"idx": 2, "start_ms": 3100, "end_ms": 5700, "text": "Ґуру."},
     ]
-    words = [(0, 3000), (3100, 3600)]
+    # Words fill both blocks end to end — no silence anywhere to merge over.
+    words = [(0, 3000), (3100, 5700)]
 
     result, merged = merge_sparse_blocks(blocks, config, word_intervals=words)
 
     assert merged == 1
     assert len(result) == 1
+
+
+def test_merge_sparse_blocks_does_not_absorb_a_block_that_covers_silence():
+    """A block already sitting over a pause must not grow by absorbing a
+    neighbour — the merged subtitle would span the whole silence.
+
+    Real case: "Усе знання, вся духовність, вся радість – все там." (speech
+    ends at 431.2s) merged with "Якраз вчасно!" (speech 431.3–433.7s, then
+    9.7s of laughter) into one 23.8s subtitle.
+    """
+    config = OptimizeConfig()
+    blocks = [
+        {"idx": 1, "start_ms": 419560, "end_ms": 431240, "text": "Усе знання, вся радість – все там."},
+        {"idx": 2, "start_ms": 431320, "end_ms": 443370, "text": "Якраз вчасно!"},
+    ]
+    # Speech is continuous across the boundary, but block 2 runs 9.7s past its
+    # last word.
+    words = [(419560, 431240), (431320, 433700)]
+
+    result, merged = merge_sparse_blocks(blocks, config, word_intervals=words)
+
+    assert merged == 0
+    assert len(result) == 2
 
 
 def test_merge_short_blocks_does_not_bridge_a_speech_pause():

@@ -872,7 +872,7 @@ jobs:
           WHISPER="talks/${TALK_ID}/${VIDEO_SLUG}/source/whisper.json"
           WHISPER_FLAG=""
           if [ -f "${WHISPER}" ]; then
-            WHISPER_FLAG="--whisper-json ${WHISPER}"
+            WHISPER_FLAG="--json ${WHISPER}"
           else
             echo "::warning::${WHISPER} missing — optimizer runs without speech timings"
           fi

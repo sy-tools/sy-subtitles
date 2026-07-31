@@ -595,6 +595,40 @@ def _speech_gap_ms(block_a, block_b, word_intervals):
     return max(srt_gap, min(starts) - max(ends))
 
 
+def _longest_silence_ms(start_ms, end_ms, word_intervals):
+    """Longest stretch of [start_ms, end_ms] with no whisper word under it.
+
+    Counts the lead-in before the first word and the tail after the last one,
+    not just the gaps between words: a block whose text is spoken in the first
+    two seconds and then sits through nine seconds of laughter is covering
+    silence just as much as one straddling a mid-sentence pause.
+
+    Returns 0 when there is nothing to measure against.
+    """
+    if not word_intervals:
+        return 0
+    inside = sorted((max(start_ms, s), min(end_ms, e)) for s, e in word_intervals if s < end_ms and e > start_ms)
+    if not inside:
+        return 0
+
+    longest = inside[0][0] - start_ms
+    for (_, prev_end), (next_start, _) in zip(inside, inside[1:], strict=False):
+        longest = max(longest, next_start - prev_end)
+    return max(longest, end_ms - inside[-1][1])
+
+
+def _merge_silence_ms(block_a, block_b, word_intervals):
+    """Longest silence the merged block would put on screen.
+
+    This is what merge eligibility is judged on: both the pause between the
+    two blocks' speech and any silence already sitting inside either of them.
+    """
+    return max(
+        _speech_gap_ms(block_a, block_b, word_intervals),
+        _longest_silence_ms(block_a["start_ms"], block_b["end_ms"], word_intervals),
+    )
+
+
 def merge_sparse_blocks(blocks, config, word_intervals=None):
     """Merge ultra-sparse blocks (CPS < threshold AND chars < 20) with neighbors.
 
@@ -631,7 +665,7 @@ def merge_sparse_blocks(blocks, config, word_intervals=None):
             if is_sparse and i + 1 < len(blocks):
                 # Try merge forward (only if gap is small)
                 next_b = blocks[i + 1]
-                gap = _speech_gap_ms(b, next_b, word_intervals)
+                gap = _merge_silence_ms(b, next_b, word_intervals)
                 next_chars = len(next_b["text"].replace("\n", ""))
                 combined_chars = b_chars + next_chars + 1
                 if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP:
@@ -651,7 +685,7 @@ def merge_sparse_blocks(blocks, config, word_intervals=None):
             if is_sparse and new_blocks:
                 # Try merge backward (only if gap is small)
                 prev_b = new_blocks[-1]
-                gap = _speech_gap_ms(prev_b, b, word_intervals)
+                gap = _merge_silence_ms(prev_b, b, word_intervals)
                 prev_chars = len(prev_b["text"].replace("\n", ""))
                 combined_chars = prev_chars + b_chars + 1
                 if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP:
@@ -716,7 +750,7 @@ def merge_short_blocks(blocks, config, word_intervals=None):
                 # Merge eligibility is judged on the SILENCE between the two
                 # blocks' words; the combined duration still uses the real
                 # timecode gap.
-                gap = _speech_gap_ms(b, next_b, word_intervals)
+                gap = _merge_silence_ms(b, next_b, word_intervals)
                 b_dur = b["end_ms"] - b["start_ms"]
                 next_dur = next_b["end_ms"] - next_b["start_ms"]
                 combined_dur = b_dur + next_dur + srt_gap
@@ -1287,7 +1321,7 @@ def optimize(srt_path, json_path, output_path, report_path=None, config=None, uk
 # ---------------------------------------------------------------------------
 
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(description="Optimize SRT subtitles")
     parser.add_argument("--srt", default=None, help="Input SRT file")
     parser.add_argument("--uk-json", default=None, help="Input uk_whisper.json (alternative to --srt)")
@@ -1302,6 +1336,11 @@ def main():
     parser.add_argument("--fps", type=int, default=24)
     parser.add_argument("--skip-duration-split", action="store_true", help="Skip Phase 1b (duration splits)")
     parser.add_argument("--skip-cps-split", action="store_true", help="Skip Phase 4 (CPS splits)")
+    return parser
+
+
+def main():
+    parser = build_parser()
     args = parser.parse_args()
 
     if not args.srt and not args.uk_json:
