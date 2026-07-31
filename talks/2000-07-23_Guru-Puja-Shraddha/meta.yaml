@@ -3,6 +3,10 @@ date: '2000-07-23'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/2000/07/23/guru-puja-2000/
 language: en
+# The video shows the dog and the laughter — the remarks add nothing on screen.
+subtitle_omit:
+- (легкий сміх, коли собака виходить на сцену)
+- (ще більше сміху)
 videos:
 - slug: Guru-Puja
   title: Guru Puja

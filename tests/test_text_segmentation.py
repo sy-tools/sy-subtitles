@@ -5,9 +5,11 @@ import pytest
 from tools.text_segmentation import (
     MAX_CPL,
     build_blocks_from_paragraphs,
+    global_omit_phrases,
     load_transcript,
     split_sentences,
     split_text_to_lines,
+    strip_omitted_phrases,
 )
 
 
@@ -111,6 +113,55 @@ def test_split_sentences_multiple_punct() -> None:
 def test_split_sentences_cyrillic_uppercase() -> None:
     sents = split_sentences("Перше речення. Друге речення. Третє.")
     assert len(sents) == 3
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Він спитав: «Хто ти?» Якщо всі релігії однакові, чому вони сваряться?",
+        "Він спитав: «Хто ти?» Якщо всі релігії однакові, чому вони сваряться?".replace("»", '"'),
+        "Вони сказали: «Ти летиш до Америки!» Я відповіла спокійно.",
+        "Вона мовила: «Мені це не подобається.» Це поширено на Заході.",
+        "Він спитав: “Хто ти?” Якщо всі релігії однакові, чому вони сваряться?",
+        "Він спитав: ‘Хто ти?’ Якщо всі релігії однакові, чому вони сваряться?",
+        "Це сталося давно (у Лондоні.) Тоді ніхто нічого не знав.",
+        "[Він сказав це двічі.] Тоді ніхто нічого не знав.",
+    ],
+)
+def test_split_sentences_terminal_followed_by_closing_quote(text: str) -> None:
+    """A sentence can end with .!? *inside* a closing quote/bracket — «…?»,
+    "…!", '….', (….), […] — and the next sentence still starts a new block.
+
+    Regression: `?»` left the two sentences glued into one over-long subtitle
+    block (2000-07-23 Guru Puja, and 1441 blocks corpus-wide)."""
+    assert len(split_sentences(text)) == 2
+
+
+def test_split_sentences_nested_closing_quotes() -> None:
+    """Nested quotes stack closers: «…“…?”» — still one boundary."""
+    text = "Вона спитала: «Чому він казав “Хто ти?”» Ніхто не відповів."
+    assert len(split_sentences(text)) == 2
+
+
+def test_split_sentences_closing_quote_mid_sentence_not_split() -> None:
+    """A closing quote NOT preceded by .!? is not a sentence boundary."""
+    text = "Слово «Ґуру» означає гуру принцип, і це дуже важливо."
+    assert split_sentences(text) == [text]
+
+
+def test_split_sentences_abbreviation_guard_still_holds() -> None:
+    """Widening the boundary must not reopen the abbreviation false positives."""
+    assert len(split_sentences("Dr. Smith came. He left.")) == 2
+
+
+def test_split_text_to_lines_breaks_after_closing_quote() -> None:
+    """`_split_once` ranks a sentence end highest — a word ending in `?»` is a
+    sentence end too, so an over-long line breaks there, not mid-clause."""
+    text = "Він спитав: «Хто ти?» Якщо всі релігії говорять про одне, чому вони сваряться постійно?"
+    assert len(text) > MAX_CPL
+    lines = split_text_to_lines(text)
+    # Without the fix the comma (priority 2) wins over the unrecognised `?»`.
+    assert lines[0].endswith("?»"), lines
 
 
 # build_blocks_from_paragraphs — edge cases -----------------------------------
@@ -264,3 +315,121 @@ def test_load_transcript_strips_multilingual_stage_direction_patterns(tmp_path: 
     )
     paras = load_transcript(str(f))
     assert paras == ["First Bhajan was sung."]
+
+
+# Declared omitted phrases -----------------------------------------------------
+#
+# Some parentheticals are editorial remarks about what the video already shows
+# ("(сміх)", "(Оплески)"). They belong in the transcript but not on screen.
+# Only phrases DECLARED in glossary/subtitle_omit.yaml (corpus-wide) or in the
+# talk's meta.yaml `subtitle_omit:` (one-offs) are stripped — never all brackets.
+
+
+def test_strip_omitted_phrases_removes_declared_phrase() -> None:
+    text = "Усе знання, вся радість – все там. (сміх) Усе це всередині вас."
+    assert strip_omitted_phrases(text, ["(сміх)"]) == ("Усе знання, вся радість – все там. Усе це всередині вас.")
+
+
+def test_strip_omitted_phrases_is_case_insensitive() -> None:
+    """`(сміх)` in the spec also covers `(Сміх)` — 48 vs 22 occurrences corpus-wide."""
+    assert strip_omitted_phrases("Так було. (Сміх) Далі.", ["(сміх)"]) == "Так було. Далі."
+
+
+def test_strip_omitted_phrases_leaves_undeclared_brackets() -> None:
+    """Undeclared parentheses are content — country names, translator notes."""
+    for text in [
+        "Кабелла Лігуре (Італія) — це місце.",
+        "Він сказав щось (нерозбірливо) і пішов.",
+        "Шрі Матаджі [в Лондоні] сказала це.",
+    ]:
+        assert strip_omitted_phrases(text, ["(сміх)", "(Оплески)"]) == text
+
+
+def test_strip_omitted_phrases_absorbs_the_remarks_own_trailing_period() -> None:
+    """`… вчасно! (ще більше сміху). Усе це …` — the period belongs to the
+    remark, so removing the remark must not leave `!.` or a stray `.`."""
+    text = "Якраз вчасно! (ще більше сміху). Усе це міститься всередині вас."
+    assert strip_omitted_phrases(text, ["(ще більше сміху)"]) == ("Якраз вчасно! Усе це міститься всередині вас.")
+
+
+def test_strip_omitted_phrases_keeps_the_speakers_own_period() -> None:
+    """Mirror case: here the period ends the SPEAKER's sentence and must stay."""
+    text = "Він сказав це (сміх). Потім пішов."
+    assert strip_omitted_phrases(text, ["(сміх)"]) == "Він сказав це. Потім пішов."
+
+
+def test_strip_omitted_phrases_at_paragraph_edges() -> None:
+    assert strip_omitted_phrases("(сміх) Далі текст.", ["(сміх)"]) == "Далі текст."
+    assert strip_omitted_phrases("Текст далі. (сміх)", ["(сміх)"]) == "Текст далі."
+
+
+def test_strip_omitted_phrases_untouched_text_is_returned_verbatim() -> None:
+    """Normalisation runs only when something was actually removed — a
+    transcript with no declared phrase must pass through byte-identical."""
+    text = "Речення  з  подвійними пробілами та пробілом перед крапкою ."
+    assert strip_omitted_phrases(text, ["(сміх)"]) == text
+
+
+def test_load_transcript_strips_talk_level_omit_phrases(tmp_path: Path) -> None:
+    """One-off remarks declared in the talk's own meta.yaml."""
+    (tmp_path / "meta.yaml").write_text(
+        "title: Guru Puja\ndate: '2000-07-23'\nlanguage: en\n"
+        "subtitle_omit:\n"
+        "  - '(легкий сміх, коли собака виходить на сцену)'\n"
+        "  - '(ще більше сміху)'\n",
+        encoding="utf-8",
+    )
+    f = tmp_path / "transcript_uk.txt"
+    f.write_text(
+        "Мова промови: англійська\n\n"
+        "Усе там. (легкий сміх, коли собака виходить на сцену) Якраз вчасно! "
+        "(ще більше сміху). Усе це всередині вас.\n",
+        encoding="utf-8",
+    )
+    assert load_transcript(str(f)) == ["Усе там. Якраз вчасно! Усе це всередині вас."]
+
+
+def test_load_transcript_drops_paragraph_emptied_by_omission(tmp_path: Path) -> None:
+    (tmp_path / "meta.yaml").write_text(
+        "title: T\ndate: '2000-01-01'\nlanguage: en\nsubtitle_omit:\n  - '(Оплески)'\n",
+        encoding="utf-8",
+    )
+    f = tmp_path / "transcript_uk.txt"
+    f.write_text("Мова: англійська\n\nПерший абзац.\n\n(Оплески)\n\nТретій абзац.\n", encoding="utf-8")
+    assert load_transcript(str(f)) == ["Перший абзац.", "Третій абзац."]
+
+
+def test_load_transcript_omit_phrases_override_wins(tmp_path: Path) -> None:
+    """Explicit `omit_phrases=` bypasses spec discovery (used by tests/tools)."""
+    f = tmp_path / "transcript_uk.txt"
+    f.write_text("Мова: англійська\n\nТекст (щось) далі.\n", encoding="utf-8")
+    assert load_transcript(str(f), omit_phrases=["(щось)"]) == ["Текст далі."]
+    assert load_transcript(str(f), omit_phrases=[]) == ["Текст (щось) далі."]
+
+
+def test_load_transcript_without_meta_yaml_uses_global_spec_only(tmp_path: Path) -> None:
+    f = tmp_path / "transcript_uk.txt"
+    f.write_text("Мова: англійська\n\nТекст (сміх) далі.\n", encoding="utf-8")
+    expected = "Текст далі." if "(сміх)" in global_omit_phrases() else "Текст (сміх) далі."
+    assert load_transcript(str(f)) == [expected]
+
+
+def test_global_omit_spec_entries_are_bracketed() -> None:
+    """Every declared phrase must carry its own brackets — the spec matches
+    whole bracketed remarks, not bare words that could appear in speech."""
+    phrases = global_omit_phrases()
+    assert phrases, "glossary/subtitle_omit.yaml declares no phrases"
+    for p in phrases:
+        assert (p.startswith("(") and p.endswith(")")) or (p.startswith("[") and p.endswith("]")), p
+
+
+def test_build_blocks_never_ship_declared_omit_phrases(tmp_path: Path) -> None:
+    """End-to-end: a declared remark reaches neither a block nor the SRT."""
+    (tmp_path / "meta.yaml").write_text(
+        "title: T\ndate: '2000-01-01'\nlanguage: en\nsubtitle_omit:\n  - '(ще більше сміху)'\n",
+        encoding="utf-8",
+    )
+    f = tmp_path / "transcript_uk.txt"
+    f.write_text("Мова: англійська\n\nЯкраз вчасно! (ще більше сміху). Усе це.\n", encoding="utf-8")
+    blocks = build_blocks_from_paragraphs(load_transcript(str(f)))
+    assert [b["text"] for b in blocks] == ["Якраз вчасно!", "Усе це."]

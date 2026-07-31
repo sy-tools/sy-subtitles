@@ -115,7 +115,31 @@ and makes no outbound calls.
 responses in `tests/fixtures/pipeline_snapshots/`, then `tools.verify_snapshot`
 checks the output (text preservation, block-count tolerance, CPS, validation).
 
-> ⚠️ **Known gap:** the generator `tools/bootstrap_snapshot.py` was removed in
-> `c72e1b53` ("drop uk.map … legacy cleanup"). Until it is restored and
-> modernised, the checked-in snapshot fixtures cannot be regenerated —
-> `python -m tools.bootstrap_snapshot --all` no longer exists.
+### Re-timing after a segmentation change
+
+`work/timecodes.txt` is the builder agent's answer for **one specific cut** of
+the transcript into blocks. Change how that cut is made — a new sentence
+boundary in `tools/text_segmentation.py`, a newly declared remark in
+`glossary/subtitle_omit.yaml` — and the ids stop lining up: `build_map
+assemble` drops every block without a timecode and the replay fails text
+preservation. Carry the recorded timings over to the new cut:
+
+```bash
+python -m tools.retime_snapshot \
+  --snapshot tests/fixtures/pipeline_snapshots/TALK/VIDEO \
+  --whisper  talks/TALK/VIDEO/source/whisper.json
+```
+
+Unchanged blocks keep their recorded span; a block that became several splits
+its span at the widest **real whisper pauses** inside it (never at a character
+ratio — a span with no usable pause is split evenly and reported as a
+`WARNING`); a block whose text is no longer shipped is dropped. `--check`
+reports the drift and exits non-zero without writing.
+
+After re-timing, refresh `expected/final_uk.srt` and `manifest.baseline` by
+replaying the matrix — they are reference artefacts, not inputs.
+
+> ⚠️ **Known gap:** the *original* generator `tools/bootstrap_snapshot.py` was
+> removed in `c72e1b53` ("drop uk.map … legacy cleanup"). `retime_snapshot`
+> covers segmentation changes; creating a snapshot for a **new** talk from
+> scratch still has no tool.

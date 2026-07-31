@@ -800,3 +800,40 @@ def test_block_count_fewer_uk_is_ok(tmp_path):
     uk_blocks = [_block(i, 1000 * i, 1000 * i + 500) for i in range(1, 6)]  # 5 UK vs 20 EN
     report = []
     assert check_block_count_vs_en_srt(uk_blocks, str(en_path), report) is True
+
+
+def test_text_preservation_ignores_declared_omit_phrases(tmp_path):
+    """Declared editorial remarks ("(сміх)") live in the transcript but never
+    on screen. `check_text_preservation` reads the transcript through
+    `load_transcript`, so it applies the same spec the builder did — the SRT
+    that legitimately omits them still round-trips cleanly.
+    """
+    srt_file = tmp_path / "uk.srt"
+    transcript_file = tmp_path / "transcript_uk.txt"
+
+    (tmp_path / "meta.yaml").write_text(
+        "title: T\ndate: '2000-07-23'\nlanguage: en\n"
+        "subtitle_omit:\n  - '(легкий сміх, коли собака виходить на сцену)'\n",
+        encoding="utf-8",
+    )
+    _write_srt(
+        srt_file,
+        [
+            (1, "00:00:01,000", "00:00:03,000", "Усе знання, вся радість – все там."),
+            (2, "00:00:03,500", "00:00:06,000", "Якраз вчасно!"),
+            (3, "00:00:06,500", "00:00:09,000", "Усе це міститься всередині вас."),
+        ],
+    )
+    _write_transcript(
+        transcript_file,
+        "Мова промови: англійська\n\n"
+        "Усе знання, вся радість – все там. "
+        "(легкий сміх, коли собака виходить на сцену) Якраз вчасно! (сміх). "
+        "Усе це міститься всередині вас.\n",
+    )
+
+    from tools.srt_utils import parse_srt
+
+    blocks = parse_srt(str(srt_file))
+    report = []
+    assert check_text_preservation(blocks, str(transcript_file), report) is True, "\n".join(report)
