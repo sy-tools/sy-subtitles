@@ -155,3 +155,21 @@ def test_ytdlp_steps_decode_video_ref_to_player_url() -> None:
         assert decodes, f"{name}: no video_ref decode found"
         for call in decodes:
             assert "--player" in call, f"{name}: yt-dlp needs the embed form: decode {call}"
+
+
+def test_review_issue_is_only_touched_on_main() -> None:
+    """The review tracking issue is main-scoped shared state: creating it —
+    or resetting an approved one back to review:pending — announces that new
+    subtitles are on main and ready to review.
+
+    A run dispatched from a feature branch commits its artifacts to that
+    branch (see bot-pr.sh), so nothing reached main and the issue must be
+    left alone. Regression guard for the 2026-07-31 branch-dispatch fallout.
+    """
+    wf = yaml.safe_load((WORKFLOWS / "subtitle-pipeline.yml").read_text(encoding="utf-8"))
+    steps = wf["jobs"]["commit"]["steps"]
+    issue_steps = [s for s in steps if "review tracking issue" in (s.get("name") or "").lower()]
+    assert issue_steps, "review tracking issue step not found"
+    for step in issue_steps:
+        cond = str(step.get("if", ""))
+        assert "github.ref_name == 'main'" in cond, f"review-issue step must be gated on main, got if: {cond!r}"

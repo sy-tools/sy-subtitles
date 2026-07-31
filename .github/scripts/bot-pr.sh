@@ -7,6 +7,9 @@
 # Example:
 #   .github/scripts/bot-pr.sh bot/whisper "Add Whisper data" talks/*/*/source/whisper.json
 #
+# The PR targets the ref the run was dispatched from (GITHUB_REF_NAME),
+# falling back to main. Override with BOT_PR_BASE.
+#
 # Requirements:
 #   - GH_TOKEN must be set (for gh CLI)
 #   - Must be run from repo root with git configured
@@ -45,6 +48,17 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
+# Target the ref this run was dispatched from, NOT always main. The bot branch
+# is cut from the current checkout, so basing the PR on main would merge that
+# whole checkout into main — a workflow dispatched from a feature branch would
+# ship every unreviewed commit on it as a side effect of asking for artifacts.
+# `pull_request` runs report a synthetic `123/merge` ref that cannot be a base.
+BASE="${BOT_PR_BASE:-${GITHUB_REF_NAME:-main}}"
+case "$BASE" in
+  */merge|*/head|"") BASE="main" ;;
+esac
+echo "PR base: $BASE"
+
 # Create branch with timestamp to avoid collisions
 BRANCH="${BRANCH_PREFIX}/$(date +%Y%m%d-%H%M%S)-${RANDOM}"
 
@@ -57,7 +71,7 @@ git push -u origin "$BRANCH"
 PR_URL=$(gh pr create \
   --title "$COMMIT_MSG" \
   --body "Automated PR by GitHub Actions." \
-  --base main \
+  --base "$BASE" \
   --head "$BRANCH")
 
 echo "Created PR: $PR_URL"

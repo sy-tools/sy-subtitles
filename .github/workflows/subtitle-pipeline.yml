@@ -1169,7 +1169,10 @@ jobs:
         # Only when subtitles were actually built and committed this run —
         # resetting the issue to review:pending after a failed build would
         # wipe the real review status without shipping anything to review.
-        if: success() && needs.build-timecodes.result == 'success'
+        # And only on main: a run dispatched from a feature branch commits to
+        # that branch (bot-pr.sh), so nothing is on main to announce, and
+        # resetting an approved issue would wipe a real review status.
+        if: success() && needs.build-timecodes.result == 'success' && github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
