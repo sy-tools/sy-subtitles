@@ -170,6 +170,11 @@ function computeProgress(job, nowMs, durationMs) {
       }
       break;
     }
+    // Any other status (e.g. 'queued') falls through here: it credits no
+    // weight and does not break the loop. That's deliberate, not a gap —
+    // GitHub always runs steps in declared order, so a later-named step is
+    // never in_progress/completed while an earlier one is still queued.
+    // Do not "fix" this into a break.
   }
 
   if (job && job.status === 'completed') {

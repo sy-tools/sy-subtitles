@@ -260,6 +260,7 @@ describe('computeProgress', () => {
     // 0.20 credited + about half of the 0.70 render weight.
     assert.ok(p.fraction > 0.5 && p.fraction < 0.6, 'got ' + p.fraction);
     assert.strictEqual(p.estimated, true);
+    assert.strictEqual(p.label, 'Burn subtitles');
   });
 
   it('never reaches 1 while the render step is still running', () => {
@@ -269,6 +270,24 @@ describe('computeProgress', () => {
     ]), T0 + 10 * HOUR_MS, HOUR_MS);
     assert.ok(p.fraction < 1, 'an overrunning render must not report 100%');
     assert.strictEqual(p.done, false);
+  });
+
+  it('holds short of 100% until the job itself reports success', () => {
+    // All four named steps report completed while job.status is still
+    // in_progress — hit on every real run, because actions/cache and
+    // actions/setup-python each append a "Post ..." step that runs AFTER
+    // "Upload result" but BEFORE the job flips to completed. RENDER_CAP is
+    // the only thing standing between this state and a false 100% bar.
+    //
+    // The raw weight sum (0.05+0.15+0.70+0.10) floating-point-adds to
+    // 0.9999999999999999, not exactly 1 — so a loose `fraction < 1` check
+    // would NOT catch RENDER_CAP creeping up to 1.0 or the outer Math.min
+    // being dropped entirely: Math.min(0.9999999999999999, 1.0) is still
+    // < 1. Pin the literal cap value so the assertion actually depends on it.
+    const done = (name) => ({ name, status: 'completed', conclusion: 'success' });
+    const p = computeProgress(job(BURN_STEP_WEIGHTS.map((s) => done(s.name))), T0, HOUR_MS);
+    assert.strictEqual(p.done, false);
+    assert.ok(Math.abs(p.fraction - 0.97) < 1e-9, 'got ' + p.fraction);   // approved RENDER_CAP
   });
 
   it('reports done only when the job succeeded', () => {
