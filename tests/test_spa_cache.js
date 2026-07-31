@@ -3444,17 +3444,85 @@ describe('burn video wiring', () => {
   it('defines every burn i18n key in BOTH language tables', () => {
     // t() falls back to English, so a key missing from uk would silently ship
     // English text into a Ukrainian UI. Check each table separately.
+    //
+    // Both call sites count. The panel labels never reach t() in the source —
+    // they are painted from data-i18n attributes by applyI18N — so harvesting
+    // only t('…') left the five most visible strings unchecked.
+    const KEY = '(?:burn\\.[a-z_]+|btn\\.burn[a-z_]*)';
     const i18n = html.match(/var I18N\s*=\s*\{([\s\S]*?)\n\};/);
     assert.ok(i18n, 'I18N table not found');
     const uk = i18n[1].slice(i18n[1].indexOf('uk:'), i18n[1].indexOf('\n  en:'));
     const en = i18n[1].slice(i18n[1].indexOf('\n  en:'));
-    const keys = [...html.matchAll(/t\('((?:btn\.burn|burn)\.[a-z_]+)'\)/g)]
-      .map((m) => m[1]);
-    assert.ok(keys.length > 0, 'expected t() calls for burn keys');
-    for (const key of new Set(keys)) {
+    const keys = new Set([
+      ...[...html.matchAll(new RegExp("t\\('" + KEY + "'\\)", 'g'))]
+        .map((m) => m[0].slice(3, -2)),
+      ...[...html.matchAll(new RegExp('data-i18n="' + KEY + '"', 'g'))]
+        .map((m) => m[0].slice(11, -1))
+    ]);
+    // Guard the harvest itself: a regex that silently matches nothing would
+    // make every assertion below vacuous.
+    for (const attrKey of ['btn.burn_video', 'btn.burn_download', 'burn.title',
+                           'burn.view_run', 'burn.hide']) {
+      assert.ok(keys.has(attrKey), 'data-i18n key not harvested: ' + attrKey);
+    }
+    assert.ok(keys.has('burn.queued'), "t() key not harvested: burn.queued");
+    assert.ok(keys.size >= 15, 'expected the full burn key set, got ' + keys.size);
+    for (const key of keys) {
       assert.ok(uk.includes("'" + key + "'"), 'uk table is missing ' + key);
       assert.ok(en.includes("'" + key + "'"), 'en table is missing ' + key);
     }
+  });
+
+  it('gives the progress bar and the two message lines a11y semantics', () => {
+    // A ~25-minute operation whose only feedback is a bar and an error line is
+    // unusable without a progressbar role and live regions.
+    const panel = html.slice(html.indexOf('<div id="burn-panel"'),
+                             html.indexOf('<!-- === REVIEW VIEW === -->'));
+    assert.ok(panel, 'burn panel markup not found');
+    const bar = panel.match(/<div[^>]*class="burn-bar"[^>]*>/);
+    assert.ok(bar, '.burn-bar element not found');
+    assert.ok(bar[0].includes('role="progressbar"'),
+      'the bar must expose role="progressbar"');
+    for (const attr of ['aria-valuemin="0"', 'aria-valuemax="100"', 'aria-valuenow=']) {
+      assert.ok(bar[0].includes(attr), 'the bar must carry ' + attr);
+    }
+    const status = panel.match(/<p[^>]*class="burn-panel__status"[^>]*>/);
+    assert.ok(status && status[0].includes('aria-live="polite"'),
+      'the status line must be a polite live region');
+    const err = panel.match(/<p[^>]*id="burn-error"[^>]*>/);
+    assert.ok(err && (err[0].includes('role="alert"') ||
+                      err[0].includes('aria-live="assertive"')),
+      'the error line must be an assertive live region');
+  });
+
+  it('mirrors the a11y semantics into the styleguide entry', () => {
+    // The catalog is the contract: an example without the roles teaches the
+    // wrong markup to the next component author.
+    const sg = styleguide.slice(styleguide.indexOf('<h2>Burn panel</h2>'));
+    assert.ok(sg.includes('role="progressbar"'),
+      'the styleguide bar must show role="progressbar"');
+    assert.ok(sg.includes('aria-valuenow='),
+      'the styleguide bar must show aria-valuenow');
+    assert.ok(sg.includes('aria-live="polite"'),
+      'the styleguide status line must show the polite live region');
+    assert.ok(sg.includes('role="alert"') || sg.includes('aria-live="assertive"'),
+      'the styleguide error line must show the assertive live region');
+  });
+
+  it('stops the burn poll when the router leaves the preview', () => {
+    // Routing to the index left the 5s loop running for up to ~30 min, writing
+    // into hidden DOM. The recorded run must survive so resumeBurnWatch() can
+    // pick it back up on return.
+    const idx = html.indexOf('function route()');
+    assert.ok(idx > -1, 'route() not found');
+    const after = html.indexOf('\nfunction ', idx + 1);
+    const chunk = html.slice(idx, after > -1 ? after : idx + 4000);
+    assert.ok(chunk.includes('stopBurnTimer()'),
+      'route() must stop the burn poll when the view changes');
+    assert.ok(!/burnWatch\s*=\s*null/.test(chunk),
+      'route() must NOT drop burnWatch — resumeBurnWatch needs the recorded run');
+    assert.ok(!chunk.includes('clearBurnState'),
+      'route() must NOT clear the persisted burn state');
   });
 
   it('keeps the panel hidden while [hidden] (display:flex would defeat it)', () => {
@@ -3478,5 +3546,238 @@ describe('burn video wiring', () => {
       assert.ok(new RegExp('SPA\\.' + fn + '\\s*=').test(html),
         'SPA.' + fn + ' must exist — the panel markup calls it inline');
     }
+  });
+});
+
+// ============================================================
+// Burn driver behaviour — the REAL functions from index.html
+//
+// The driver is inline glue (single source, no js/ mirror), so — like
+// esc()/safeHref() in test_spa_xss.js — the block is extracted from
+// index.html and evaluated against stubbed collaborators. That exercises the
+// shipped code instead of a replica, which matters here: every defect this
+// suite guards (double dispatch, leaked poll loops, a blank status line, a
+// cancelled save reported as failure) is invisible to a string grep.
+// ============================================================
+describe('burn video driver behaviour', () => {
+  const fs = require('fs');
+  const html = fs.readFileSync('site/index.html', 'utf8');
+
+  function makeEl(id) {
+    return {
+      id: id, hidden: false, disabled: false, textContent: '', href: '',
+      style: {}, attrs: {},
+      setAttribute: function (k, v) { this.attrs[k] = String(v); },
+      getAttribute: function (k) { return k in this.attrs ? this.attrs[k] : null; },
+      click: function () {}
+    };
+  }
+
+  // Mirrors the shipped markup, including which nodes start [hidden].
+  const EL_IDS = ['burn-panel', 'burn-error', 'btn-burn-download', 'burn-bar',
+                  'burn-bar-fill', 'burn-step', 'burn-eta', 'burn-run-link',
+                  'btn-burn-video'];
+  const HIDDEN_IDS = ['burn-panel', 'burn-error', 'btn-burn-download', 'burn-run-link'];
+
+  const NO_PROGRESS = { fraction: 0, label: '', estimated: false, done: false,
+                        failed: false, failedStep: '' };
+
+  function makeHarness(over) {
+    const els = {};
+    EL_IDS.forEach(function (id) { els[id] = makeEl(id); });
+    HIDDEN_IDS.forEach(function (id) { els[id].hidden = true; });
+    const store = {};
+    const env = {
+      els: els,
+      timers: [],
+      dispatched: 0,
+      toasts: [],
+      document: {
+        getElementById: function (id) { return els[id] || null; },
+        documentElement: {},
+        createElement: function () { return makeEl('a'); }
+      },
+      window: { screen: { width: 1280, height: 720 } },
+      localStorage: {
+        getItem: function (k) { return k in store ? store[k] : null; },
+        setItem: function (k, v) { store[k] = String(v); },
+        removeItem: function (k) { delete store[k]; }
+      },
+      getComputedStyle: function () {
+        return { getPropertyValue: function () { return '1'; } };
+      },
+      previewState: { talkId: 't', videoSlug: 'v', player: null, subtitles: [] },
+      t: function (k) { return 'T:' + k; },
+      API: 'https://api.example/repos/o/r',
+      BURN_WORKFLOW: 'burn-subtitles.yml',
+      getAuthToken: function () { return 'tok'; },
+      dispatchWorkflow: function () { env.dispatched++; return Promise.resolve(); },
+      measureBurnRatios: function () { return {}; },
+      makeRequestId: function () { return 'rid'; },
+      buildBurnInputs: function () { return {}; },
+      listWorkflowRuns: function () { return Promise.resolve([]); },
+      matchRun: function () { return null; },
+      getRunJobs: function () { return Promise.resolve([{}]); },
+      computeProgress: function () { return Object.assign({}, NO_PROGRESS); },
+      renderEtaSeconds: function () { return 600; },
+      burnStateKey: function (a, b) { return 'burn:' + a + ':' + b; },
+      listRunArtifacts: function () { return Promise.resolve([]); },
+      ghWriteUser: function () { return true; },
+      showToast: function (m) { env.toasts.push(m); },
+      fetch: function () { return Promise.reject(new Error('no network in tests')); },
+      // Fake timers: the poll loop must never keep the test process alive, and
+      // the count of armed timers is exactly what the leak tests assert on.
+      setTimeout: function (fn) { env.timers.push(fn); return env.timers.length; },
+      clearTimeout: function (h) { if (h) env.timers[h - 1] = null; }
+    };
+    Object.assign(env, over || {});
+
+    const start = html.indexOf('var BURN_POLL_MS');
+    const end = html.indexOf('SPA.startBurn = startBurn;');
+    assert.ok(start > -1 && end > start, 'burn driver block not found in index.html');
+    const names = ['document', 'window', 'localStorage', 'getComputedStyle',
+      'previewState', 't', 'API', 'BURN_WORKFLOW', 'getAuthToken', 'dispatchWorkflow',
+      'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
+      'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
+      'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout'];
+    const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
+      'showBurnError', 'cancelBurnWatch', 'resumeBurnWatch', 'saveMp4', 'downloadBurned'];
+    const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
+      ', getWatch: function () { return burnWatch; } };';
+    env.api = new Function(names.join(','), html.slice(start, end) + tail)
+      .apply(null, names.map(function (n) { return env[n]; }));
+    return env;
+  }
+
+  // Drain the microtask queue (the driver chains several .then()s per step).
+  function settle() {
+    return new Promise(function (r) { global.setTimeout(r, 0); });
+  }
+
+  function armedTimers(env) {
+    return env.timers.filter(Boolean).length;
+  }
+
+  function savedWatch(runId) {
+    return JSON.stringify({ requestId: 'old', runId: runId, runUrl: '',
+                            startedAt: Date.now(), talkId: 't', videoSlug: 'v' });
+  }
+
+  it('dispatches only one run while a render is already being followed', async () => {
+    const env = makeHarness();
+    env.api.startBurn();
+    env.api.startBurn();   // impatient second click
+    await settle();
+    assert.strictEqual(env.dispatched, 1,
+      'a second click must not dispatch a second workflow run');
+  });
+
+  it('disables the render button while the run is followed', async () => {
+    const env = makeHarness();
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, true,
+      'the button must be disabled while a run is being followed');
+  });
+
+  it('re-enables the button when the run finishes, fails or is hidden', async () => {
+    for (const finish of ['onBurnFinished', 'showBurnError', 'cancelBurnWatch']) {
+      const env = makeHarness();
+      env.api.startBurn();
+      await settle();
+      assert.strictEqual(env.els['btn-burn-video'].disabled, true,
+        'precondition: the button is disabled while the run is followed');
+      env.api[finish]('boom');
+      assert.strictEqual(env.els['btn-burn-video'].disabled, false,
+        finish + '() must re-enable the render button');
+    }
+  });
+
+  it('keeps the button disabled for a run resumed on page load', async () => {
+    const env = makeHarness();
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, true,
+      'a resumed in-flight run must keep the button disabled');
+  });
+
+  it('enables the button when there is nothing to resume', async () => {
+    const env = makeHarness();
+    env.els['btn-burn-video'].disabled = true;   // left over from another video
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
+      'no recorded run means the button must be usable');
+  });
+
+  it('drops the previous watch before dispatching a new one', async () => {
+    const env = makeHarness();
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    assert.ok(env.api.getWatch(), 'precondition: a watch is being followed');
+    env.api.cancelBurnWatch();   // Hide keeps the recorded run
+    env.api.startBurn();
+    assert.strictEqual(env.api.getWatch(), null,
+      'startBurn must drop the old watch before awaiting, so an in-flight poll ' +
+      'continuation fails its watch === burnWatch check instead of re-arming');
+  });
+
+  it('does not re-arm the poll timer from a continuation that lands after Hide', async () => {
+    let resolveJobs;
+    const env = makeHarness({
+      getRunJobs: function () { return new Promise(function (r) { resolveJobs = r; }); }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.cancelBurnWatch();
+    resolveJobs([{}]);
+    await settle();
+    assert.strictEqual(armedTimers(env), 0,
+      'a poll continuation resolving after Hide must not restart the loop');
+  });
+
+  it('shows the queued label instead of a blank status during run discovery', () => {
+    const env = makeHarness();
+    // computeProgress(null) legitimately returns label:'' — the panel must not
+    // go blank at 0% for the whole discovery window.
+    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
+    assert.strictEqual(env.els['burn-step'].textContent, 'T:burn.queued');
+  });
+
+  it('does not print "Starting…" over a finished run', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress({ fraction: 1, label: '', estimated: false, done: true });
+    assert.strictEqual(env.els['burn-step'].textContent, '',
+      'a terminal state must not fall back to the queued label');
+  });
+
+  it('publishes progress to assistive tech via aria-valuenow', () => {
+    const env = makeHarness();
+    env.api.renderBurnProgress({ fraction: 0.42, label: 'Burn subtitles',
+                                 estimated: false, done: false, failed: false });
+    assert.strictEqual(env.els['burn-bar'].getAttribute('aria-valuenow'), '42',
+      'the progressbar must report its value, not only its pixel width');
+  });
+
+  it('treats a cancelled save dialog as a no-op, not a failure', async () => {
+    const env = makeHarness();
+    const abort = new Error('The user aborted a request.');
+    abort.name = 'AbortError';
+    env.window.showSaveFilePicker = function () { return Promise.reject(abort); };
+    await env.api.saveMp4(new Uint8Array([1, 2, 3]), 'x.mp4');
+    assert.strictEqual(env.els['burn-error'].hidden, true);
+    assert.strictEqual(env.els['burn-error'].textContent, '');
+  });
+
+  it('still surfaces a real save failure', async () => {
+    const env = makeHarness();
+    env.window.showSaveFilePicker = function () {
+      return Promise.reject(new Error('disk full'));
+    };
+    await assert.rejects(function () { return env.api.saveMp4(new Uint8Array([1]), 'x.mp4'); },
+      /disk full/, 'only AbortError may be swallowed');
   });
 });

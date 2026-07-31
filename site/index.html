@@ -394,14 +394,17 @@
        because workflow_dispatch returns no id to link to. -->
   <div id="burn-panel" class="burn-panel" hidden>
     <div class="burn-panel__head">
-      <span class="burn-panel__title" data-i18n="burn.title">Rendering video with subtitles</span>
+      <span id="burn-panel-title" class="burn-panel__title" data-i18n="burn.title">Rendering video with subtitles</span>
       <a id="burn-run-link" class="burn-panel__link" href="#" target="_blank" rel="noopener" hidden data-i18n="burn.view_run">View run</a>
       <button class="btn btn--ghost btn--sm" onclick="SPA.cancelBurnWatch()" data-i18n="burn.hide">Hide</button>
     </div>
-    <div class="burn-bar"><div id="burn-bar-fill" class="burn-bar__fill"></div></div>
-    <p class="burn-panel__status"><span id="burn-step"></span> <span id="burn-eta" class="burn-panel__eta"></span></p>
+    <!-- A render takes ~25 min, so the bar and both message lines have to reach
+         a screen reader: a progressbar with a real value, a polite status and an
+         assertive error. renderBurnProgress() keeps aria-valuenow in sync. -->
+    <div id="burn-bar" class="burn-bar" role="progressbar" aria-labelledby="burn-panel-title" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="burn-bar-fill" class="burn-bar__fill"></div></div>
+    <p class="burn-panel__status" aria-live="polite"><span id="burn-step"></span> <span id="burn-eta" class="burn-panel__eta"></span></p>
     <button id="btn-burn-download" class="btn btn--primary" hidden onclick="SPA.downloadBurned()" data-i18n="btn.burn_download">Download MP4</button>
-    <p id="burn-error" class="burn-panel__error" hidden></p>
+    <p id="burn-error" class="burn-panel__error" role="alert" hidden></p>
   </div>
 </div>
 
@@ -2141,6 +2144,16 @@ function route() {
   // pauses the player. No-op when not on a preview (guards on talkId).
   flushPreviewPos();
 
+  // Stop the burn poll on every navigation, including the gated redirect below:
+  // off the preview the panel is not on screen, so the 5s loop would keep
+  // hitting the API for up to ~30 min and write into hidden DOM. burnWatch and
+  // its persisted state are deliberately kept — entering a preview calls
+  // resumeBurnWatch(), which picks the recorded run straight back up.
+  // setBurnFollowing(false) as well, so an already-issued poll request that
+  // resolves after this point gives up instead of re-arming the loop.
+  stopBurnTimer();
+  setBurnFollowing(false);
+
   // Soft passphrase gate: a gated route reached while locked (e.g. a pasted
   // deep link) redirects to the index and prompts there; only a correct
   // passphrase proceeds to the original target.
@@ -3763,6 +3776,11 @@ var BURN_RUN_WAIT_MS = 60000;
 var BURN_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 var burnWatch = null;   // {requestId, runId, runUrl, startedAt, talkId, videoSlug}
 var burnTimer = null;
+// True exactly while a non-terminal run is being followed. Single source of
+// truth for "no second render may start": it drives the button's disabled
+// state AND stops a poll continuation that lands after the panel was hidden
+// from re-arming the 5s loop behind the user's back.
+var burnFollowing = false;
 
 // meta.yaml carries no video dimensions, and the iframe is cross-origin — but
 // the Vimeo player API reports the intrinsic size over postMessage, and only
@@ -3814,6 +3832,14 @@ function stopBurnTimer() {
   if (burnTimer) { clearTimeout(burnTimer); burnTimer = null; }
 }
 
+// Follow state and the button's disabled state are the same fact — keep them
+// written in one place so they can never disagree.
+function setBurnFollowing(on) {
+  burnFollowing = !!on;
+  var btn = document.getElementById('btn-burn-video');
+  if (btn) btn.disabled = burnFollowing;
+}
+
 // Only ever link to an https run URL from the API — never let an unexpected
 // value become a javascript:/data: href.
 function setBurnRunLink(url) {
@@ -3836,6 +3862,7 @@ function showBurnPanel(label, fraction) {
 
 function showBurnError(msg) {
   stopBurnTimer();
+  setBurnFollowing(false);
   var panel = document.getElementById('burn-panel');
   if (panel) panel.hidden = false;
   var err = document.getElementById('burn-error');
@@ -3849,10 +3876,19 @@ function burnEtaMinutes(fraction) {
 }
 
 function renderBurnProgress(p) {
+  var pct = Math.round(p.fraction * 100);
   var fill = document.getElementById('burn-bar-fill');
-  if (fill) fill.style.width = Math.round(p.fraction * 100) + '%';
+  if (fill) fill.style.width = pct + '%';
+  // The bar is a progressbar for assistive tech, so the value has to be
+  // published as a number too — a CSS width says nothing to a screen reader.
+  var bar = document.getElementById('burn-bar');
+  if (bar) bar.setAttribute('aria-valuenow', pct);
   var step = document.getElementById('burn-step');
-  if (step) step.textContent = p.label || '';
+  // computeProgress() returns an empty label while the run is still being
+  // discovered (up to 60s). Blanking the status there would leave the user
+  // staring at an empty panel at 0%, so keep saying "Starting…" — but never
+  // over a terminal state, where an empty line is the honest one.
+  if (step) step.textContent = p.label || ((p.done || p.failed) ? '' : t('burn.queued'));
   var eta = document.getElementById('burn-eta');
   if (!eta) return;
   // Terminal state wins over the estimate: a run cancelled mid-render comes
@@ -3867,7 +3903,16 @@ function startBurn() {
   var talkId = previewState && previewState.talkId;
   var videoSlug = previewState && previewState.videoSlug;
   if (!talkId || !videoSlug) return Promise.resolve();
+  // One render at a time. Without this an impatient second click dispatches a
+  // second run and orphans the first one — it keeps burning Actions minutes
+  // with no UI and no way back to it.
+  if (burnFollowing) return Promise.resolve();
   stopBurnTimer();
+  // Drop the old watch BEFORE the first await: an already-scheduled pollBurn
+  // continuation still holds it, and `watch !== burnWatch` is what makes that
+  // continuation give up instead of re-arming a second poll loop.
+  burnWatch = null;
+  setBurnFollowing(true);
   showBurnPanel(t('burn.queued'), 0);
   setBurnRunLink('');
   return burnGeometry().then(function(geometry) {
@@ -3917,7 +3962,9 @@ function pollBurn() {
     if (!runId) return null;
     return getRunJobs(API, token, runId).then(function(jobs) { return jobs[0]; });
   }).then(function(job) {
-    if (watch !== burnWatch) return;   // the user moved to another video
+    // Abandon if the panel moved on: another video (watch swapped) or the user
+    // hid this one (no longer following). Either way, do not re-arm the loop.
+    if (watch !== burnWatch || !burnFollowing) return;
     var p = computeProgress(job, Date.now(), burnDurationMs());
     renderBurnProgress(p);
     // Failure first: a job that died in "Set up job" (before any named step)
@@ -3933,13 +3980,14 @@ function pollBurn() {
     if (p.done) { onBurnFinished(); return; }
     burnTimer = setTimeout(pollBurn, BURN_POLL_MS);
   }).catch(function(err) {
-    if (watch !== burnWatch) return;
+    if (watch !== burnWatch || !burnFollowing) return;
     showBurnError((err && err.message) || String(err));
   });
 }
 
 function onBurnFinished() {
   stopBurnTimer();
+  setBurnFollowing(false);   // the run is terminal — rendering again is allowed
   renderBurnProgress({ fraction: 1, label: '', estimated: false, done: true });
   // Success must never sit under a leftover error line.
   var err = document.getElementById('burn-error');
@@ -3952,6 +4000,9 @@ function cancelBurnWatch() {
   // "Hide" stops the polling and closes the panel, but keeps the recorded run:
   // reopening the preview resumes it, so a render is never lost by tidying up.
   stopBurnTimer();
+  // Nothing is being followed any more, so the button must work again —
+  // otherwise hiding the panel would lock rendering out with no way back.
+  setBurnFollowing(false);
   var panel = document.getElementById('burn-panel');
   if (panel) panel.hidden = true;
 }
@@ -3960,6 +4011,9 @@ function cancelBurnWatch() {
 // this video's, if a render is still recorded and still downloadable.
 function resumeBurnWatch(talkId, videoSlug) {
   stopBurnTimer();
+  // Every early return below means "nothing is being followed here", so reset
+  // first and only re-arm once a run is actually picked back up.
+  setBurnFollowing(false);
   burnWatch = null;
   var panel = document.getElementById('burn-panel');
   if (panel) panel.hidden = true;
@@ -3977,6 +4031,9 @@ function resumeBurnWatch(talkId, videoSlug) {
   // or signed-out session can do neither.
   if (!ghWriteUser() || !getAuthToken()) return;
   burnWatch = saved;
+  // The recorded run may still be in flight — follow it, and keep the button
+  // disabled until this poll reaches a terminal state.
+  setBurnFollowing(true);
   showBurnPanel(t('burn.queued'), 0);
   setBurnRunLink(saved.runUrl);
   pollBurn();
@@ -4036,6 +4093,13 @@ function saveMp4(bytes, name) {
       return handle.createWritable().then(function(w) {
         return w.write(blob).then(function() { return w.close(); });
       });
+    }).catch(function(err) {
+      // Escape/Cancel in the save dialog rejects with AbortError. A deliberate
+      // cancel is not a failure: swallow it so the panel stays in its finished
+      // state and the user can click Download again. Everything else still
+      // propagates to downloadBurned()'s .catch().
+      if (err && err.name === 'AbortError') return;
+      throw err;
     });
   }
   // Safari/Firefox: no streaming save, so the file is assembled in memory.

@@ -173,23 +173,27 @@ catalog can't drift from the app.</p>
 marks the remaining time as an <em>estimate</em>, because ffmpeg reports no true percentage
 through the Actions API. The error line uses <code>--danger-fg</code> and replaces the ETA,
 never sits beside it.</p>
+<p style="color:var(--fg4)">A render runs for ~25 minutes, so the component is announced as
+well as drawn: the bar is a <code>role="progressbar"</code> whose <code>aria-valuenow</code>
+is kept in sync with its width, the status line is a polite live region, and the error line
+is <code>role="alert"</code>. Copy those attributes with the markup.</p>
 <div class="burn-panel sg-card">
   <div class="burn-panel__head">
-    <span class="burn-panel__title">Rendering video with subtitles</span>
+    <span id="sg-burn-title-1" class="burn-panel__title">Rendering video with subtitles</span>
     <a class="burn-panel__link" href="#">View run</a>
     <button class="btn btn--ghost btn--sm">Hide</button>
   </div>
-  <div class="burn-bar"><div class="burn-bar__fill" style="width:62%"></div></div>
-  <p class="burn-panel__status">Burn subtitles <span class="burn-panel__eta">about 9 min left</span></p>
+  <div class="burn-bar" role="progressbar" aria-labelledby="sg-burn-title-1" aria-valuemin="0" aria-valuemax="100" aria-valuenow="62"><div class="burn-bar__fill" style="width:62%"></div></div>
+  <p class="burn-panel__status" aria-live="polite">Burn subtitles <span class="burn-panel__eta">about 9 min left</span></p>
 </div>
 <div class="burn-panel sg-card">
   <div class="burn-panel__head">
-    <span class="burn-panel__title">Rendering video with subtitles</span>
+    <span id="sg-burn-title-2" class="burn-panel__title">Rendering video with subtitles</span>
     <button class="btn btn--ghost btn--sm">Hide</button>
   </div>
-  <div class="burn-bar"><div class="burn-bar__fill" style="width:30%"></div></div>
-  <p class="burn-panel__status">Download video</p>
-  <p class="burn-panel__error">Failed at step &quot;Burn subtitles&quot;</p>
+  <div class="burn-bar" role="progressbar" aria-labelledby="sg-burn-title-2" aria-valuemin="0" aria-valuemax="100" aria-valuenow="30"><div class="burn-bar__fill" style="width:30%"></div></div>
+  <p class="burn-panel__status" aria-live="polite">Download video</p>
+  <p class="burn-panel__error" role="alert">Failed at step &quot;Burn subtitles&quot;</p>
 </div>
 
 <script src="js/sync_status_view.js"></script>
