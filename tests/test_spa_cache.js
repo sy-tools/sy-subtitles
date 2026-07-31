@@ -4609,22 +4609,37 @@ describe('burn video driver behaviour', () => {
              dataAt: lfh.length, payload: payload };
   }
 
-  // Two chunks, so the pump has to handle more than one.
-  function makeBody(bytes, withPipeTo) {
+  // Two chunks, so the pump has to handle more than one. `onCancel` fires when
+  // the caller cancels a body it decided not to read: the fake enqueues
+  // everything up front, so without this hook "the transfer was stopped" is
+  // indistinguishable from "the response was simply dropped".
+  function makeBody(bytes, withPipeTo, onCancel) {
     const half = Math.ceil(bytes.length / 2);
     const chunks = [bytes.slice(0, half), bytes.slice(half)];
     if (withPipeTo) {
-      return new ReadableStream({
+      const stream = new ReadableStream({
         start: function (c) { chunks.forEach(function (x) { c.enqueue(x); }); c.close(); }
       });
+      // A stream closed inside start() never reaches the underlying source's
+      // cancel hook, so record the caller's cancel() call itself — asking is
+      // what is under test.
+      const cancel = stream.cancel.bind(stream);
+      stream.cancel = function (reason) {
+        if (onCancel) onCancel();
+        return cancel(reason);
+      };
+      return stream;
     }
     let i = 0;
-    return { getReader: function () {
-      return { read: function () {
-        return Promise.resolve(i < chunks.length
-          ? { done: false, value: chunks[i++] } : { done: true });
-      } };
-    } };
+    return {
+      getReader: function () {
+        return { read: function () {
+          return Promise.resolve(i < chunks.length
+            ? { done: false, value: chunks[i++] } : { done: true });
+        } };
+      },
+      cancel: function () { if (onCancel) onCancel(); return Promise.resolve(); }
+    };
   }
 
   // Serves byte ranges out of `zip` the way the real host does — measured
@@ -4634,11 +4649,12 @@ describe('burn video driver behaviour', () => {
   //   * a start past EOF is 416, and only there is Content-Range exposed;
   //   * on a 206, Content-Range is NOT among the exposed headers, so a browser
   //     cannot read it — hence null here, and the driver must not need it.
-  // It also records every range asked for and the bytes handed back, which is
-  // what "does not buffer the whole artifact" actually means.
+  // It also records every range asked for, the bytes handed back — which is
+  // what "does not buffer the whole artifact" actually means — and how many
+  // bodies the driver cancelled instead of leaving them to transfer.
   function rangeServer(zip, over) {
     const opt = Object.assign({ pipeTo: true, ignoreRange: false }, over || {});
-    const server = { ranges: [], served: 0 };
+    const server = { ranges: [], served: 0, cancels: 0 };
     server.fetch = function (url, init) {
       const range = (init && init.headers && init.headers.Range) || '';
       server.ranges.push(range);
@@ -4669,7 +4685,7 @@ describe('burn video driver behaviour', () => {
           return Promise.resolve(slice.buffer.slice(
             slice.byteOffset, slice.byteOffset + slice.byteLength));
         },
-        body: makeBody(slice, opt.pipeTo)
+        body: makeBody(slice, opt.pipeTo, function () { server.cancels++; })
       });
     };
     return server;
@@ -4856,6 +4872,62 @@ describe('burn video driver behaviour', () => {
     await env.api.downloadBurned();
     assert.deepStrictEqual(env.sink.saved(), payload,
       'the fallback must still produce the mp4, not the archive around it');
+    assert.ok(env.server.cancels >= 1,
+      'the whole-artifact body the window reader discards must be cancelled');
+  });
+
+  it('cancels the body and names the ignored range when the data comes back 200', async () => {
+    // The tail proved this host honours Range, so a 200 on the DATA range is
+    // the whole archive arriving where the video was expected. Throwing with
+    // the body still open leaves a full-artifact transfer running, and
+    // "(HTTP 200)" tells the user nothing about what went wrong.
+    const zip = skewedZip(Buffer.alloc(20000, 6), 0);
+    const windows = rangeServer(zip.bytes);
+    const whole = rangeServer(zip.bytes, { ignoreRange: true });
+    let n = 0;
+    const env = savingHarness(zip.bytes, {
+      fetch: function (url, init) {
+        n += 1;   // 1 tail, 2 local header, 3 the video data itself
+        return (n === 3 ? whole : windows).fetch(url, init);
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(whole.cancels, 1,
+      'the whole-artifact body must be cancelled, not left transferring');
+    assert.strictEqual(env.els['burn-error'].textContent, 'T:burn.range_ignored',
+      'the error must describe the ignored range, not report "(HTTP 200)"');
+    assert.strictEqual(env.sink.chunks.length, 0,
+      'nothing may reach the file when the response is not the slice');
+  });
+
+  it('reports an abort raised once the bytes are already flowing', async () => {
+    // Cancelling the SAVE DIALOG is a no-op; an abort during the transfer is a
+    // half-written file. A catch spanning the whole chain would swallow it and
+    // report the truncated download as finished.
+    const abort = new Error('The user aborted a request.');
+    abort.name = 'AbortError';
+    const zip = skewedZip(Buffer.alloc(20000, 4), 0);
+    const windows = rangeServer(zip.bytes);
+    let n = 0;
+    const env = savingHarness(zip.bytes, {
+      fetch: function (url, init) {
+        n += 1;
+        if (n !== 3) return windows.fetch(url, init);
+        return Promise.resolve({
+          ok: true, status: 206,
+          headers: { get: function () { return null; } },
+          // Some bytes land, then the transfer aborts.
+          body: new ReadableStream({
+            start: function (c) { c.enqueue(new Uint8Array(64)); c.error(abort); }
+          })
+        });
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-error'].textContent, abort.message,
+      'an abort mid-transfer leaves a truncated file — it is a failure');
   });
 
   it('never streams a deflated entry raw — it decompresses it instead', async () => {

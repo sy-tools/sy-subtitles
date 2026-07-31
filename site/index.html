@@ -1000,6 +1000,7 @@ var I18N = {
     'burn.run_not_found': '\u0417\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437',
     'burn.no_artifact': '\u0417\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437\u0430\u043B\u0438\u0448\u0438\u0432 \u0444\u0430\u0439\u043B\u0443',
     'burn.download_failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u0430\u0439\u043B (HTTP {status})',
+    'burn.range_ignored': '\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0432 \u0437\u0430\u043F\u0438\u0442\u0430\u043D\u0438\u0439 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D \u0431\u0430\u0439\u0442\u0456\u0432 \u2014 \u043F\u043E\u0442\u043E\u043A\u043E\u0432\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u043D\u0435\u043C\u043E\u0436\u043B\u0438\u0432\u0435',
     'burn.no_mp4': '\u0423 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E\u043C\u0443 \u0430\u0440\u0445\u0456\u0432\u0456 \u043D\u0435\u043C\u0430\u0454 MP4',
     'burn.no_actions_permission': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0437\u0432\u043E\u043B\u0443 Actions \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0456\u0442\u044C Actions: Read and write',
     'burn.expired': '\u0422\u0435\u0440\u043C\u0456\u043D \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442\u0443 \u0441\u043F\u043B\u0438\u0432 (7 \u0434\u043D\u0456\u0432) \u2014 \u0437\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0456\u0434\u0435\u043E \u0437\u0430\u043D\u043E\u0432\u043E',
@@ -1197,6 +1198,7 @@ var I18N = {
     'burn.run_not_found': 'The run was not found — try again',
     'burn.no_artifact': 'The run produced no artifact',
     'burn.download_failed': 'Artifact download failed (HTTP {status})',
+    'burn.range_ignored': 'The server did not send the requested byte range — the video could not be streamed',
     'burn.no_mp4': 'No mp4 inside the downloaded archive',
     'burn.no_actions_permission': 'The GitHub App lacks the Actions permission — enable Actions: Read and write',
     'burn.expired': 'The artifact expired (7 days) — render again',
@@ -4533,23 +4535,30 @@ function streamBurnedMp4(url, token, file) {
   return window.showSaveFilePicker({
     suggestedName: file.name,
     types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }]
+  }).catch(function(err) {
+    // As in saveMp4: cancelling the DIALOG is a deliberate no-op. Only this
+    // call is wrapped — an AbortError raised once the transfer is under way
+    // means a half-written file, and swallowing that would report a truncated
+    // video as a finished download.
+    if (err && err.name === 'AbortError') return null;
+    throw err;
   }).then(function(handle) {
+    if (!handle) return;
     return burnRangeFetch(url, token,
         'bytes=' + file.start + '-' + (file.start + file.size - 1))
       .then(function(resp) {
         // The tail already proved this server honours Range; a 200 here would
         // be the whole ZIP, and writing it would leave a broken mp4 on disk.
         if (resp.status !== 206 || !resp.body) {
-          throw new Error(t('burn.download_failed').replace('{status}', resp.status));
+          // Don't leave a whole-artifact transfer running for a body nobody
+          // will read.
+          if (resp.body && resp.body.cancel) resp.body.cancel();
+          throw new Error(t('burn.range_ignored'));
         }
         return handle.createWritable().then(function(w) {
           return pumpToWritable(resp.body, w);
         });
       });
-  }).catch(function(err) {
-    // As in saveMp4: a deliberate cancel is not a failure.
-    if (err && err.name === 'AbortError') return;
-    throw err;
   });
 }
 
