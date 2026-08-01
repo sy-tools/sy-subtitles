@@ -30,17 +30,32 @@
   //
   //   writeUser     the session can dispatch a workflow run at all
   //   langMismatch  the preview shows subtitles the render would not burn
+  //   downloading   the finished video is transferring to disk right now
   //   following     a run is in flight and being polled
   //   done          the followed run finished successfully
   //   stale         the subtitles changed since that run was dispatched
   //   expired       the run's artifact is past the 7-day retention
   //
-  // Order matters: a run in flight outranks everything, and both `stale` and
-  // `expired` demote a finished run back to an offer to build — a download
-  // that would hand over the wrong file, or no file, is worse than no offer.
+  // Order matters: a transfer in progress outranks a run in flight (they cannot
+  // both be true, and the transfer is the one the user just started), and both
+  // `stale` and `expired` demote a finished run back to an offer to build — a
+  // download that would hand over the wrong file, or no file, is worse than no
+  // offer.
+  //
+  // `writeUser` is checked FIRST, ahead of even a transfer in flight, and that
+  // is deliberate. A review raised the opposite: a session whose write access
+  // lapses mid-transfer loses its readout. True, but the whole control goes with
+  // it — the group is gated on the same condition in the page — so returning
+  // 'downloading' would describe a row nobody can see, and the transfer still
+  // announces itself when it lands. One rule for "this session cannot use the
+  // API" beats a face that contradicts its own container.
   function videoItemState(o) {
     o = o || {};
     if (!o.writeUser) return { state: 'hidden', disabled: true, reasonKey: '' };
+    // Written through the save dialog's own file handle, a burned video lands in
+    // no downloads list and behind no shelf. This face is the only sign a few
+    // hundred megabytes are moving.
+    if (o.downloading) return { state: 'downloading', disabled: true, reasonKey: '' };
     if (o.following) return { state: 'working', disabled: true, reasonKey: '' };
     // The file already exists; which subtitles happen to be on screen cannot
     // unmake it, so the language guard does not reach the download.
@@ -52,6 +67,21 @@
       disabled: !!o.langMismatch,
       reasonKey: o.langMismatch ? 'burn.wrong_lang' : ''
     };
+  }
+
+  // How much of the transfer has landed, 0..1, or null when the response
+  // carried no length. An invented bar is worse than no bar: the reviewer would
+  // read a made-up position as a real one.
+  function downloadFraction(loaded, total) {
+    var size = Number(total);
+    if (!size || !isFinite(size) || size <= 0) return null;
+    return Math.min(1, Math.max(0, Number(loaded) / size));
+  }
+
+  // Whole megabytes — the unit these numbers live in (a burned talk runs 100 MB
+  // to 2 GB). Rounded, because a tenth of a megabyte is noise at this scale.
+  function megabytes(bytes) {
+    return Math.round(Number(bytes || 0) / (1024 * 1024));
   }
 
   // The published subtitles for a video — the same file the render reads, so
@@ -69,6 +99,8 @@
   var api = {
     exportIconSvg: exportIconSvg,
     videoItemState: videoItemState,
+    downloadFraction: downloadFraction,
+    megabytes: megabytes,
     exportSrtPath: exportSrtPath,
     exportSrtName: exportSrtName
   };

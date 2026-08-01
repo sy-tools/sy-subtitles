@@ -293,6 +293,10 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
      44px metrics inside a 320px menu. */
   .header-actions > button,
   .header-actions > .export-pop > .btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+  /* The text buttons share the wrapped row evenly, as they did before the export
+     menu existed. The icon toggle is left out on purpose: it carries no label,
+     so growing it would stretch a glyph across a third of the row. */
+  .header-actions > button { flex: 1 1 auto; }
   /* Preview header collapses to a single-column stack on narrow screens:
      title, then the centered mode toggle, then the action row. */
   .header.preview-header { display: flex; flex-direction: column; align-items: stretch; }
@@ -811,14 +815,17 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   );
   height: auto;
   line-height: 1.25;
-  /* Re-assert the fullscreen side inset. `:373` (`#view-preview.fs-mode
-     #subtitle-overlay`) gives fullscreen a 10% side inset, but
-     `#view-preview[data-subs-tuned="1"] #subtitle-overlay` (`:668`, written for
-     the embedded resized block) has equal specificity, sits later, and its
+  /* Re-assert the fullscreen side inset. `#view-preview.fs-mode
+     #subtitle-overlay` gives fullscreen a 10% side inset, but
+     `#view-preview[data-subs-tuned="1"] #subtitle-overlay` (written for the
+     embedded resized block) has equal specificity, sits later, and its
      `padding: 16px 24px` shorthand wins once the user has dragged the subtitle
      handle. This rule is more specific than both, so re-asserting the inset here
-     restores it. Keep in sync with the 10% at `:373` and with SIDE_INSET_RATIO in
-     tools/burn_subtitles.py. */
+     restores it. Keep the 10% in sync with the fs-mode rule above and with
+     SIDE_INSET_RATIO in tools/burn_subtitles.py.
+
+     Selectors, not line numbers: the numbers this comment used to carry had
+     already drifted by nine lines. */
   padding-left: 10%;
   padding-right: 10%;
 }
@@ -1183,6 +1190,13 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 }
 @keyframes burn-seg-breathe { from { opacity: 0.16; } to { opacity: 0.45; } }
 .export-item-group--done .burn-seg__fill { background: var(--accent-green); }
+/* While the finished video transfers to disk the same track shows the transfer
+   instead, as one span. It must NOT be green: the group still carries --done
+   from the render that produced the file, and green is the colour of "already
+   there" — creeping across while a few hundred megabytes are still moving, it
+   says the opposite of the label above it. Same specificity as the rule above,
+   so this must stay below it. */
+.export-item-group--transfer .burn-seg__fill { background: var(--sync-progress); }
 /* The failed mark is on the segment BODY, not its fill: a run that died in its
    first gate has a zero-width fill, and red that only lived there would show
    nothing at all. */

@@ -71,6 +71,56 @@ describe('export menu — the video item state', () => {
   });
 });
 
+describe('export menu — the video item while the file is transferring', () => {
+  // A burned video is a few hundred MB, and it is written through the save
+  // dialog's own file handle: no entry in the browser's downloads list, no
+  // shelf, no progress of its own. Without a face of its own here, a reviewer
+  // clicks Download and the menu says nothing for minutes.
+  const base = { writeUser: true, done: true };
+
+  it('reports the transfer instead of offering the download again', () => {
+    const s = M.videoItemState(Object.assign({}, base, { downloading: true }));
+    assert.strictEqual(s.state, 'downloading');
+    assert.strictEqual(s.disabled, true, 'a second click must not start a second transfer');
+  });
+
+  it('outranks a render in flight — the two cannot both be true', () => {
+    const s = M.videoItemState({ writeUser: true, downloading: true, following: true });
+    assert.strictEqual(s.state, 'downloading');
+  });
+
+  it('still hides from a session that cannot render at all', () => {
+    const s = M.videoItemState({ writeUser: false, downloading: true });
+    assert.strictEqual(s.state, 'hidden');
+  });
+});
+
+describe('export menu — transfer arithmetic', () => {
+  it('is the fraction of the file that has landed', () => {
+    assert.strictEqual(M.downloadFraction(0, 200), 0);
+    assert.strictEqual(M.downloadFraction(50, 200), 0.25);
+    assert.strictEqual(M.downloadFraction(200, 200), 1);
+  });
+
+  it('never exceeds one, however many bytes arrive', () => {
+    // Content-Length can disagree with the body; a bar past 100% reads as a bug.
+    assert.strictEqual(M.downloadFraction(300, 200), 1);
+  });
+
+  it('has no fraction to report without a length', () => {
+    // Some responses carry no length, and an invented bar is worse than none.
+    assert.strictEqual(M.downloadFraction(50, 0), null);
+    assert.strictEqual(M.downloadFraction(50, null), null);
+    assert.strictEqual(M.downloadFraction(50, undefined), null);
+  });
+
+  it('reads sizes in whole megabytes, the unit the numbers live in', () => {
+    assert.strictEqual(M.megabytes(0), 0);
+    assert.strictEqual(M.megabytes(1024 * 1024), 1);
+    assert.strictEqual(M.megabytes(280.6 * 1024 * 1024), 281);
+  });
+});
+
 describe('export menu — the subtitle file', () => {
   it('names the file after the talk, the video and the language', () => {
     assert.strictEqual(M.exportSrtName('1975-03-29_Public-Program', 'Dadar-Mumbai', 'uk'),

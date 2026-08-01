@@ -3751,6 +3751,49 @@ describe('burn video wiring', () => {
       '.btn[hidden] must set display:none — .btn is display:inline-flex');
   });
 
+  it('keeps the header buttons filling the wrapped mobile row', () => {
+    // The mobile touch-target rule had to be rescoped with `>` so it stopped
+    // stretching the export MENU's rows to the header's 44px metrics inside a
+    // 320px popover. Rescoping it dropped `flex: 1 1 auto`, which every header
+    // button had relied on since long before this feature: below 768px the row
+    // wraps, and without it the buttons size to their own text and the row goes
+    // ragged. The new icon toggle is deliberately NOT in this rule — it is
+    // content-sized on purpose.
+    // Anchored on the brace, so the combined touch-target selector above (which
+    // legitimately carries no flex) cannot answer for this one.
+    const rule = css.match(/\.header-actions > button\s*\{([^}]*)\}/);
+    assert.ok(rule, 'no rule grows the header buttons on a wrapped row');
+    assert.match(rule[1], /flex:\s*1\s+1\s+auto/,
+      'header buttons must still grow to fill the wrapped row');
+  });
+
+  it('lets the transfer tint win over the finished render\'s green', () => {
+    // Same specificity, so only source order decides. Written the other way
+    // round the transfer bar would be green — the colour of "already done" —
+    // while a few hundred megabytes were still moving.
+    const done = css.indexOf('.export-item-group--done .burn-seg__fill');
+    const transfer = css.indexOf('.export-item-group--transfer .burn-seg__fill');
+    assert.ok(transfer > -1, 'the transfer tint must exist');
+    assert.ok(transfer > done,
+      'the transfer rule must come after the done rule, or it never applies');
+  });
+
+  it('documents the disabled row, which is its own visual state', () => {
+    // `.export-item:disabled` is deliberately NOT the faded treatment a dead
+    // .btn earns — the row is a status line as often as a control. Three of the
+    // five faces are disabled, so an undocumented one is the rule most likely
+    // to be "cleaned up" by someone reading only the button styles.
+    assert.match(styleguide, /class="export-item"[^>]*\sdisabled/,
+      'the catalog must render a disabled row, not only enabled ones');
+  });
+
+  it('documents the transfer state in the styleguide too', () => {
+    // The catalog is the contract: a state that only exists mid-download is the
+    // easiest one to never look at again.
+    assert.ok(styleguide.includes('export-item-group--transfer'),
+      'the transfer state must have a live example, like every other state');
+  });
+
   it('documents the video item in the styleguide, rendered by the real CSS', () => {
     assert.match(styleguide, /class="export-item-group[ "]/,
       'a new component must ship a live styleguide example');
@@ -4020,6 +4063,8 @@ describe('burn video driver behaviour', () => {
       burnPhaseNumber: PHASE_MODEL.burnPhaseNumber,
       burnSegments: PHASE_MODEL.burnSegments,
       videoItemState: MENU_MODEL.videoItemState,
+      downloadFraction: MENU_MODEL.downloadFraction,
+      megabytes: MENU_MODEL.megabytes,
       exportIconSvg: MENU_MODEL.exportIconSvg,
       exportSrtPath: MENU_MODEL.exportSrtPath,
       exportSrtName: MENU_MODEL.exportSrtName,
@@ -4055,7 +4100,8 @@ describe('burn video driver behaviour', () => {
       'measureBurnRatios', 'makeRequestId', 'buildBurnInputs', 'listWorkflowRuns',
       'matchRun', 'getRunJobs', 'computeProgress', 'renderEtaSeconds', 'burnStateKey',
       'burnPhases', 'burnPhaseKey', 'burnPhaseNumber', 'burnSegments',
-      'videoItemState', 'exportIconSvg', 'exportSrtPath', 'exportSrtName',
+      'videoItemState', 'downloadFraction', 'megabytes',
+      'exportIconSvg', 'exportSrtPath', 'exportSrtName',
       'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout',
       'findEocd', 'readCentralDirectory', 'pickMp4Entry', 'localDataOffset'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
@@ -5492,6 +5538,328 @@ describe('burn video driver behaviour', () => {
     env.picked = picked;
     return env;
   }
+
+  // ---- the transfer itself has to be visible ----
+  //
+  // The render's own progress is well covered above. This is the phase AFTER
+  // it: a few hundred megabytes moving from the artifact to disk, written
+  // through the save dialog's file handle — no downloads entry, no shelf, no
+  // progress of its own. The reviewer's words: "не зрозуміло що йде
+  // завантаження, коли і чи воно завершилось".
+  function watchWrites(env) {
+    const seen = [];
+    const write = env.sink.stream.write;
+    env.sink.stream.write = function (c) {
+      seen.push({
+        label: env.els['burn-item-label'].textContent,
+        disabled: env.els['btn-burn-video'].disabled,
+        value: env.els['burn-track'].attrs['aria-valuenow'],
+        meta: env.els['burn-step'].textContent,
+        cls: env.els['export-video'].className
+      });
+      return write.call(env.sink.stream, c);
+    };
+    return seen;
+  }
+
+  // The face the item wears once the transfer ends is whatever the RUN says, so
+  // these use a finished run whose signature still matches the screen — without
+  // both, the item is demoted to "create" and the test proves nothing about the
+  // transfer handing the item back.
+  const FINISHED = { computeProgress: function () {
+    return Object.assign({}, NO_PROGRESS, { done: true, fraction: 1 }); } };
+
+  function downloadableHarness(zip, over) {
+    const env = savingHarness(zip, Object.assign({}, FINISHED, over || {}));
+    env.localStorage.setItem('burn:t:v', JSON.stringify({
+      requestId: 'old', runId: 7, runUrl: '', startedAt: Date.now(),
+      talkId: 't', videoSlug: 'v', editsSig: ''   // '' = no edits, and comparable
+    }));
+    env.api.resumeBurnWatch('t', 'v');
+    return env;
+  }
+
+  it('reports the transfer while it runs, and stops when it ends', async () => {
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = downloadableHarness(zip.bytes);
+    await settle();
+    const seen = watchWrites(env);
+
+    await env.api.downloadBurned();
+
+    assert.ok(seen.length, 'the transfer must have written something to watch');
+    assert.strictEqual(seen[0].label, 'T:export.video_downloading',
+      'the item is the readout: it must say the file is coming down');
+    assert.strictEqual(seen[0].disabled, true,
+      'a second click must not start a second transfer');
+    assert.ok(seen[0].meta, 'the byte counter is the only sign of movement');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'and it must hand the item back afterwards, not hold it forever');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+  });
+
+  it('does not start a second poll loop when the menu is reopened mid-request', async () => {
+    // openExportMenu() re-arms the follow and calls pollBurn(). A close+reopen
+    // inside one network round-trip left the first chain's continuation to find
+    // `watch === burnWatch` and burnFollowing true again — so it carried on and
+    // armed its own timer, while burnTimer only ever remembers the last id. The
+    // escaped loop then polls the GitHub API for as long as the video stays
+    // open, at double the rate, invisibly.
+    // EVERY chain's resolver is kept: holding only the last one would leave the
+    // first chain pending forever and the test would pass without proving a thing.
+    const waiting = [];
+    const env = makeHarness({
+      listWorkflowRuns: function () {
+        return new Promise(function (resolve) { waiting.push(resolve); });
+      }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(0));   // no runId: must look it up
+    env.api.resumeBurnWatch('t', 'v');
+    env.api.openExportMenu();                              // chain 1 starts, in flight
+    env.api.closeExportMenu();
+    env.api.openExportMenu();                              // chain 2
+    assert.strictEqual(waiting.length, 1,
+      'the reopen must reuse the request already out, not send a second one');
+    waiting.forEach(function (resolve) {
+      resolve([{ id: 7, html_url: 'https://x/run/7', display_title: 'x · old' }]);
+    });
+    await settle();
+
+    const armed = env.timers.filter(Boolean).length;
+    assert.strictEqual(armed, 1,
+      'exactly one poll loop may be armed: got ' + armed);
+  });
+
+  // ---- the pending-edits dialog, left open across a navigation ----
+  //
+  // burnConfirming is set before the dialog is awaited, and the dialog is a
+  // floating overlay the router does not tear down. So it can be answered on a
+  // page it no longer belongs to — and until it is answered, it is a global
+  // "one render at a time" lock.
+  function orphanedDialog() {
+    let answer;
+    let opened = 0;
+    const env = makeHarness({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                      edits: { uk: { 3: 'edited' } } },
+      SPA: { confirm: function () {
+        opened++;
+        // Never resolves on its own: an unanswered dialog is the whole point.
+        return new Promise(function (resolve) { answer = resolve; });
+      } }
+    });
+    env.api.startBurn();                     // opens the dialog, locks the control
+    return { env: env, answer: function (ok) { return answer(ok); },
+             opened: function () { return opened; } };
+  }
+
+  it('does not render the talk the dialog was opened on after leaving it', async () => {
+    const { env, answer } = orphanedDialog();
+    // The reviewer navigates away, then finds the stale dialog and confirms.
+    env.previewState.videoSlug = 'v2';
+    env.api.resumeBurnWatch('t', 'v2');
+    answer(true);
+    await settle();
+    assert.strictEqual(env.dispatched, 0,
+      'confirming a dialog from a video no longer on screen must not dispatch');
+  });
+
+  it('does not let an unanswered dialog lock every other render', async () => {
+    const { env, opened } = orphanedDialog();
+    env.previewState.videoSlug = 'v2';
+    env.api.resumeBurnWatch('t', 'v2');
+    // Deliberately not awaited: v2 has pending edits too, so it opens a dialog
+    // of its own, and that one does not resolve either. Reaching it is the fact
+    // under test — a refused render never asks.
+    env.api.startBurn();
+    await settle();
+    assert.strictEqual(opened(), 2,
+      'a dialog stranded on another video must not disable rendering everywhere');
+  });
+
+  // ---- a transfer belongs to ONE video, and to nothing else ----
+  //
+  // Two independent reviews landed on the same defect: burnDownload was a bare
+  // global, and resumeBurnWatch() — which runs on every preview entry — reset
+  // the watch, the result, the tint, the link and the error line, but not this.
+  // So a transfer started on one video painted its face onto the next one, and
+  // `downloading` outranks every other face in videoItemState: a video that had
+  // never been rendered showed a disabled "Downloading, please wait" for as long
+  // as the other video's bytes kept moving.
+  function pendingTransfer(over) {
+    // No size on the artifact, so the buffered path takes it: one fetch, which
+    // never resolves — a real multi-minute transfer, held still.
+    const env = makeHarness(Object.assign({
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
+      fetch: function () { return new Promise(function () {}); }
+    }, over || {}));
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    return env;
+  }
+
+  it('does not carry a transfer onto a video that never started one', async () => {
+    const env = pendingTransfer();
+    await settle();
+    env.api.downloadBurned();          // deliberately not awaited: still running
+    await settle();
+    assert.strictEqual(env.els['burn-item-label'].textContent,
+      'T:export.video_downloading', 'the transfer must be showing on its own video');
+
+    // Navigate to another video of the same talk, exactly as showPreview does.
+    env.previewState.videoSlug = 'v2';
+    env.api.resumeBurnWatch('t', 'v2');
+
+    assert.notStrictEqual(env.els['burn-item-label'].textContent,
+      'T:export.video_downloading',
+      'v2 never started a transfer — it must not wear one');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
+      'and it must not be disabled by another video\'s transfer');
+  });
+
+  it('shows the transfer again on returning to the video it belongs to', async () => {
+    // The other half of the same fact: the bytes really are still moving, so
+    // coming back must show that, not a bare offer to build.
+    const env = pendingTransfer();
+    await settle();
+    env.api.downloadBurned();
+    await settle();
+    env.previewState.videoSlug = 'v2';
+    env.api.resumeBurnWatch('t', 'v2');
+    env.previewState.videoSlug = 'v';
+    env.api.resumeBurnWatch('t', 'v');
+    assert.strictEqual(env.els['burn-item-label'].textContent,
+      'T:export.video_downloading');
+  });
+
+  it('does not paint the transfer green, which would read as finished', async () => {
+    // The group still carries --done from the render that produced the file, and
+    // that rule greens the fill. A green bar creeping across while bytes are
+    // still moving says the opposite of the label above it.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = downloadableHarness(zip.bytes);
+    await settle();
+    const seen = watchWrites(env);
+
+    await env.api.downloadBurned();
+
+    assert.match(seen[0].cls, /export-item-group--transfer/,
+      'the transfer needs its own tint over the finished render\'s green');
+    assert.ok(!/export-item-group--transfer/.test(env.els['export-video'].className),
+      'and it must come off, or the finished bar stays blue for good');
+    assert.match(env.els['export-video'].className, /export-item-group--done/,
+      'the render is still finished — that tint is not the transfer\'s to drop');
+  });
+
+  it('shows no bar at all when there is no length to count against', async () => {
+    // The buffered path (no save dialog, or an artifact of unknown size) reads
+    // the whole archive with arrayBuffer() and reports nothing on the way. An
+    // empty bar sitting at zero for ten minutes reads as broken; the label
+    // saying the transfer is running is the honest half.
+    const env = makeHarness({
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
+      fetch: function () {
+        assert.strictEqual(env.els['burn-item-label'].textContent,
+          'T:export.video_downloading', 'the label must still report it');
+        assert.strictEqual(env.els['burn-track'].hidden, true,
+          'a bar with no position to show must not be shown');
+        return Promise.reject(new Error('stop here'));
+      }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    await env.api.downloadBurned();
+  });
+
+  it('announces the save on the buffered path too', async () => {
+    // The streaming path says so; a browser without a save dialog reached the
+    // same end in silence, which is the same complaint in a different browser.
+    const env = makeHarness();
+    let closed = false;
+    env.window.showSaveFilePicker = function () {
+      return Promise.resolve({ createWritable: function () {
+        return Promise.resolve({
+          write: function () { return Promise.resolve(); },
+          close: function () { closed = true; return Promise.resolve(); }
+        });
+      } });
+    };
+    await env.api.saveMp4(new Uint8Array([1, 2, 3]), 'x.mp4');
+    assert.ok(closed, 'the file must actually be written');
+    assert.ok(env.toasts.some(function (m) { return m.indexOf('T:burn.saved') === 0; }),
+      'got ' + JSON.stringify(env.toasts));
+  });
+
+  it('gives the render its own bar back after a transfer fails part-way', async () => {
+    // The transfer rebuilds #burn-track as ONE span. Nothing repainted the four
+    // phase segments afterwards, so a transfer that died at 40% left a 40% bar
+    // under a finished render — reading as a render that stalled.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = downloadableHarness(zip.bytes);
+    await settle();
+    let wrote = 0;
+    env.sink.stream.write = function () {
+      return ++wrote > 1 ? Promise.reject(new Error('disk full')) : Promise.resolve();
+    };
+
+    await env.api.downloadBurned();
+
+    assert.ok(env.els['burn-error'].textContent, 'the failure must be reported');
+    assert.strictEqual(env.els['burn-track'].children.length, 4,
+      'the four phase segments must be back: got '
+        + env.els['burn-track'].children.length);
+    assert.strictEqual(env.els['burn-track'].getAttribute('aria-valuenow'), '100',
+      'and they must show the render, which did finish');
+  });
+
+  it('counts the bytes onto the bar as they land', async () => {
+    const zip = skewedZip(Buffer.alloc(60000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    const seen = watchWrites(env);
+
+    await env.api.downloadBurned();
+
+    const values = seen.map(function (s) { return Number(s.value); });
+    assert.ok(values.length > 1, 'need more than one chunk to see movement');
+    assert.ok(values[values.length - 1] > values[0],
+      'the bar must advance with the transfer: ' + JSON.stringify(values));
+    for (const v of values) {
+      assert.ok(v >= 0 && v <= 100, 'a bar past its ends reads as a bug: ' + v);
+    }
+  });
+
+  it('hands the item back when the save dialog is dismissed', async () => {
+    // Nothing transfers, so nothing may be left claiming it does.
+    const abort = new Error('user cancelled');
+    abort.name = 'AbortError';
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = downloadableHarness(zip.bytes, {
+      window: {
+        screen: { width: 1280, height: 720 },
+        showSaveFilePicker: function () { return Promise.reject(abort); }
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+  });
+
+  it('hands the item back when the transfer fails', async () => {
+    // A stuck "downloading, please wait" over a dead transfer is the worst of
+    // both: no file, and no way to ask for one again.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    // The write itself fails — a revoked handle, a full disk.
+    env.sink.stream.write = function () { return Promise.reject(new Error('disk full')); };
+    await env.api.downloadBurned();
+    assert.ok(env.els['burn-error'].textContent, 'the failure must be reported');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
+      'the item must be pressable again');
+  });
 
   it('says the video was saved, since nothing else will', async () => {
     // The streaming path writes through the save dialog's own file handle, so

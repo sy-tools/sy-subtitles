@@ -252,12 +252,14 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
       return sum;
     }
     var STATES = [
-      { name: 'early', tint: '', label: 'Building the video with subtitles, please wait',
+      { name: 'early', tint: '', disabled: true,
+        label: 'Building the video with subtitles, please wait',
         p: { fraction: fractionThrough('Install dependencies'),
              label: 'Download video' },
         status: ['Step 2 of 4 — Fetching the video', '1 min elapsed', ''], link: true },
       // Four gates are through; the fifth is the one being waited on.
-      { name: 'mid-render', tint: '', label: 'Building the video with subtitles, please wait',
+      { name: 'mid-render', tint: '', disabled: true,
+        label: 'Building the video with subtitles, please wait',
         p: { fraction: fractionThrough('Render 40%'), label: 'Render 50%' },
         status: ['Step 3 of 4 — Burning in the subtitles', '12 min elapsed',
                  'about 9 min to go'], link: true },
@@ -272,12 +274,36 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
              failed: true, failedStep: 'Render 10%' },
         status: ['', '', ''], link: true,
         error: 'Failed at step "Burning in the subtitles"' },
+      // The phase AFTER the render: the finished video moving to disk. Written
+      // through the save dialog's own file handle, so the browser reports it
+      // nowhere — this readout is the only sign it is happening. One span, not
+      // four phases, and deliberately NOT green: the group still carries --done
+      // from the render, and green would read as "already there".
+      { name: 'transferring', tint: 'export-item-group--done export-item-group--transfer',
+        disabled: true, label: 'Downloading the video, please wait',
+        transfer: 0.43, status: ['120 MB of 281 MB', '', ''], link: true },
+      // Offered, but refused: the preview shows subtitles the render would not
+      // burn. The reason lives on the control's own title, as in the app.
+      { name: 'wrong language', tint: '', disabled: true,
+        label: 'Create the video with subtitles',
+        title: 'The render burns the Ukrainian subtitles, and EN is on screen',
+        p: { fraction: 0, label: '' }, status: ['', '', ''] },
       { name: 'expired', tint: 'export-item-group--expired',
         label: 'Create the video with subtitles',
         p: { fraction: 1, done: true }, status: ['', '', ''],
         error: 'The artifact expired (7 days) — render again' }
     ];
     function trackHtml(state, id) {
+      // A transfer is one span across the whole track, exactly as the driver
+      // builds it — the four phase weights describe the render, not this.
+      if (state.transfer != null) {
+        var width = Math.round(state.transfer * 100);
+        return '<div class="burn-track" role="progressbar" aria-labelledby="' + id
+          + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + width + '">'
+          + '<div class="burn-seg" aria-hidden="true" style="flex-grow:100">'
+          + '<div class="burn-seg__fill" style="width:' + width + '%"></div>'
+          + '</div></div>';
+      }
       var segs = burnSegments(state.p).map(function (s) {
         // --empty exactly as the driver sets it: only a running phase with no
         // credited fill carries the breathing overlay.
@@ -295,8 +321,13 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
     // Mirrors the shipped markup, whitespace included: no text nodes between
     // the meta spans, or the dot separators double up.
     function videoItemHtml(s, id) {
+      // `disabled` is part of the face, not decoration: the working, transferring
+      // and wrong-language rows are all disabled, and .export-item:disabled is a
+      // deliberately different treatment from a dead .btn.
       return '<div class="export-item-group ' + s.tint + '">'
-        + '<button class="export-item"><span id="' + id
+        + '<button class="export-item"' + (s.disabled ? ' disabled' : '')
+        + (s.title ? ' title="' + s.title + '"' : '')
+        + '><span id="' + id
         + '" class="export-item__label">' + s.label + '</span></button>'
         + trackHtml(s, id)
         + '<p class="export-item__meta">'
