@@ -149,8 +149,9 @@ Toggle it live on this page:</p>
 <p style="color:var(--fg4)">The mine filter lists talks in two groups — assigned to me, then a
 <code>.talk-sep</code> separator before "work I started" (my PRs/issues, not assigned) — in both
 modes. <code>.work-badge</code> links appear in expert mode only, right-aligned in the actions row;
-tone tracks the item state: draft (dashed) / open / merged for PRs, open / closed for issues.
-Closed-unmerged PRs are excluded as noise.</p>
+tone tracks the item state on GitHub's own reading — grey draft (dashed) = not up yet,
+green open = live, plum merged = landed, red closed = ended without landing. PRs are
+draft / open / merged, issues open / closed; closed-unmerged PRs are excluded as noise.</p>
 <div class="talk-sep">Work I started</div>
 <div class="talk-item sg-card">
   <div class="talk-date">1979-09-27 <span class="review-badge in-review">in review</span></div>
@@ -385,7 +386,7 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
   }
   function renderSwatches() {
     swatches('sw-neutral', ['--bg','--bg2','--bg3','--bg4','--bg5','--fg','--fg2','--fg3','--fg4','--fg5','--fg6','--border','--border2','--border3']);
-    swatches('sw-accent', ['--link','--accent-green','--accent-orange','--accent-red','--sync-progress','--stat-active-bg','--mark-bg','--aura','--aura-core']);
+    swatches('sw-accent', ['--link','--accent-green','--accent-orange','--accent-red','--accent-purple','--sync-progress','--stat-active-bg','--mark-bg','--aura','--aura-core']);
     swatches('sw-semantic', ['--primary-bg','--primary-border','--primary-fg','--issue-bg','--issue-border','--issue-fg','--danger-bg','--danger-border','--danger-fg','--cell-hover','--cell-edit-bg','--cell-edited-bg']);
   }
   renderSwatches();
