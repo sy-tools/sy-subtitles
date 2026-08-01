@@ -6,12 +6,18 @@ reads as — so a card advertised finished work as still in flight (reported
 on PR #912, which showed green in the "my work" list days after it landed).
 
 The badge palette mirrors GitHub's own state semantics, which is what a
-reviewer already reads these colours as:
+reviewer already reads these colours as — four MEANINGS, shared by PRs and
+issues alike:
 
-    draft   grey   — not yet up for review
-    open    green  — live, awaiting action
-    merged  plum   — landed
-    closed  red    — ended without landing
+    draft    grey   — not up yet
+    open     green  — live, awaiting action
+    merged   plum   — a PR landed
+    closed   plum   — an issue got done (GitHub's "completed")
+    dropped  red    — an issue ended as "not planned"
+
+merged and closed intentionally share plum: a landed PR and a completed
+issue mean the same thing to whoever scans the list, and the "PR " prefix
+already tells the two kinds apart.
 
 Structural guard: components.css must map each state to that token. The
 computed values themselves (both themes) are covered by
@@ -27,8 +33,10 @@ EXPECTED = {
     "draft": "--fg5",
     "open": "--accent-green",
     "merged": "--accent-purple",
-    "closed": "--accent-red",
+    "closed": "--accent-purple",
+    "dropped": "--accent-red",
 }
+MEANINGS = {"--fg5", "--accent-green", "--accent-purple", "--accent-red"}
 
 
 def _badge_colour(state: str) -> str | None:
@@ -44,8 +52,9 @@ def test_each_state_uses_its_own_semantic_colour() -> None:
     assert actual == EXPECTED, f"badge colours drifted from the state semantics: {actual}"
 
 
-def test_no_two_states_share_a_colour() -> None:
-    # The whole point is telling states apart at a glance; two states on one
-    # token makes the badge decorative.
-    used = [_badge_colour(state) for state in EXPECTED]
-    assert len(set(used)) == len(used), f"states share a colour: {used}"
+def test_the_palette_spans_all_four_meanings() -> None:
+    # The whole point is telling states apart at a glance. Collapsing the
+    # palette (as orange-for-both-draft-and-open did) makes the badge
+    # decorative; every meaning must still be reachable.
+    used = {_badge_colour(state) for state in EXPECTED}
+    assert used == MEANINGS, f"badge palette no longer spans the four meanings: {sorted(used)}"

@@ -34,8 +34,14 @@ function classifyWorkRow(row) {
     if (row.pull_request.merged_at) state = 'merged';
     else if (row.state !== 'open') return null;
     else state = row.draft ? 'draft' : 'open';
+  } else if (row.state === 'open') {
+    state = 'open';
   } else {
-    state = row.state === 'open' ? 'open' : 'closed';
+    // GitHub's two closure reasons mean opposite things: "completed" is work
+    // that landed (reads like a merged PR), "not planned" is work that was
+    // dropped — the issue-side twin of a closed-unmerged PR. A null reason
+    // is a pre-state_reason closure, which was always a plain "done".
+    state = row.state_reason === 'not_planned' ? 'dropped' : 'closed';
   }
   return { talkId: talkId, kind: isPr ? 'pr' : 'issue', state: state,
     number: row.number, url: row.html_url };

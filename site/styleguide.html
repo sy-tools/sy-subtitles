@@ -150,8 +150,9 @@ Toggle it live on this page:</p>
 <code>.talk-sep</code> separator before "work I started" (my PRs/issues, not assigned) — in both
 modes. <code>.work-badge</code> links appear in expert mode only, right-aligned in the actions row;
 tone tracks the item state on GitHub's own reading — grey draft (dashed) = not up yet,
-green open = live, plum merged = landed, red closed = ended without landing. PRs are
-draft / open / merged, issues open / closed; closed-unmerged PRs are excluded as noise.</p>
+green open = live, plum = landed (a merged PR or a completed issue), red dropped = an
+issue closed as "not planned". PRs are draft / open / merged, issues open / closed /
+dropped; closed-unmerged PRs are excluded as noise.</p>
 <div class="talk-sep">Work I started</div>
 <div class="talk-item sg-card">
   <div class="talk-date">1979-09-27 <span class="review-badge in-review">in review</span></div>
@@ -163,6 +164,7 @@ draft / open / merged, issues open / closed; closed-unmerged PRs are excluded as
       <a class="work-badge work-badge--open" href="#">PR #101</a>
       <a class="work-badge work-badge--merged" href="#">PR #90</a>
       <a class="work-badge work-badge--closed" href="#">#55</a>
+      <a class="work-badge work-badge--dropped" href="#">#41</a>
     </span>
   </div>
 </div>

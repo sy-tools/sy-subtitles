@@ -189,6 +189,9 @@ function listIssuesByCreator(api, token, creator, fetchImpl) {
   function mapRow(r) {
     return { number: r.number, title: r.title, state: r.state, html_url: r.html_url,
       draft: !!r.draft,
+      // Closure reason: 'completed' | 'not_planned' | 'reopened' | null.
+      // classifyWorkRow needs it to tell a done issue from a dropped one.
+      state_reason: r.state_reason || null,
       pull_request: r.pull_request ? { merged_at: r.pull_request.merged_at || null } : null };
   }
   function fetchPage(page, acc) {
