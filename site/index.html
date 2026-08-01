@@ -5074,6 +5074,12 @@ function streamBurnedMp4(url, token, file) {
 // refuses. It holds the whole video in memory, so past a point the allocation
 // simply fails and the tab dies with an untranslated error the user cannot act
 // on: say the size and point at the run instead.
+//
+// The body is read chunk by chunk ONLY so the byte counter can move: this is
+// the whole transfer UI a Firefox reviewer gets. GitHub's artifact host can
+// crawl for minutes, and a silent arrayBuffer() gulp over that left the item
+// saying "downloading, please wait" with no sign of life — reported as broken
+// while the transfer was in fact running.
 function downloadBurnedBuffered(url, token, art) {
   if (art.size_in_bytes > BURN_MAX_DOWNLOAD_BYTES) {
     throw new Error(t('burn.too_large')
@@ -5082,9 +5088,30 @@ function downloadBurnedBuffered(url, token, art) {
   return fetch(url, { headers: { Authorization: 'Bearer ' + token } })
     .then(function(resp) {
       if (!resp.ok) throw new Error(t('burn.download_failed').replace('{status}', resp.status));
-      return resp.arrayBuffer();
-    }).then(function(buf) {
-      return extractBurnedMp4(new Uint8Array(buf));
+      if (!resp.body || !resp.body.getReader) return resp.arrayBuffer().then(function(buf) {
+        return new Uint8Array(buf);
+      });
+      // The ZIP is stored (compression-level 0), so the body length matches
+      // the API's size_in_bytes; Content-Length corroborates where exposed.
+      var total = Number(resp.headers && resp.headers.get
+        && resp.headers.get('Content-Length')) || art.size_in_bytes || 0;
+      var reader = resp.body.getReader();
+      var chunks = [], loaded = 0;
+      return (function step() {
+        return reader.read().then(function(r) {
+          if (r.done) {
+            var out = new Uint8Array(loaded), off = 0;
+            for (var i = 0; i < chunks.length; i++) { out.set(chunks[i], off); off += chunks[i].length; }
+            return out;
+          }
+          chunks.push(r.value);
+          loaded += (r.value && r.value.length) || 0;
+          advanceBurnDownload(loaded, total);
+          return step();
+        });
+      })();
+    }).then(function(bytes) {
+      return extractBurnedMp4(bytes);
     }).then(function(file) {
       return saveMp4(file.bytes, file.name);
     });

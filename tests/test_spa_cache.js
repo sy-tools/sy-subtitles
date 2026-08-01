@@ -5736,6 +5736,118 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['btn-burn-video'].disabled, false);
   });
 
+  it('the buffered fallback reports the same byte counter as the streaming path', async () => {
+    // Firefox has no save-file dialog, so the whole artifact buffers through
+    // memory — and for the minutes a slow artifact host takes, the item was the
+    // only possible sign of life and it never moved. The reviewer's words:
+    // «змінюється напис на завантажується але самого завантаження не
+    // відбувається» — the transfer WAS running, silently.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const half = Math.floor(zip.bytes.length / 2);
+    const seen = [];
+    let sent = 0;
+    const env = makeHarness(Object.assign({}, FINISHED, {
+      window: { screen: { width: 1280, height: 720 } },   // no showSaveFilePicker
+      listRunArtifacts: function () {
+        return Promise.resolve([{ id: 9, size_in_bytes: zip.bytes.length }]);
+      },
+      fetch: function () {
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: function (h) {
+            return /^content-length$/i.test(h) ? String(zip.bytes.length) : null; } },
+          // The old code path swallowed the body whole; keeping arrayBuffer()
+          // here means that path still SUCCEEDS — this test must fail on the
+          // missing counter, not on a broken fixture.
+          arrayBuffer: function () {
+            return Promise.resolve(zip.bytes.buffer.slice(
+              zip.bytes.byteOffset, zip.bytes.byteOffset + zip.bytes.byteLength));
+          },
+          body: { getReader: function () { return { read: function () {
+            if (sent === 0) {
+              sent = 1;
+              return Promise.resolve({
+                value: new Uint8Array(zip.bytes.subarray(0, half)), done: false });
+            }
+            if (sent === 1) {
+              sent = 2;
+              // Between the chunks: chunk 1 must already be on the counter.
+              seen.push({
+                meta: env.els['burn-step'].textContent,
+                value: env.els['burn-track'].attrs['aria-valuenow']
+              });
+              return Promise.resolve({
+                value: new Uint8Array(zip.bytes.subarray(half)), done: false });
+            }
+            return Promise.resolve({ done: true });
+          } }; } }
+        });
+      }
+    }));
+    env.localStorage.setItem('burn:t:v', JSON.stringify({
+      requestId: 'old', runId: 7, runUrl: '', startedAt: Date.now(),
+      talkId: 't', videoSlug: 'v', editsSig: '' }));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-error'].textContent || '', '',
+      'the transfer must not fail');
+    assert.ok(seen.length,
+      'the body must be read chunk by chunk — a silent arrayBuffer() gulp shows nothing');
+    assert.strictEqual(seen[0].meta, 'T:burn.downloaded',
+      'the byte counter is the only sign of movement Firefox gets');
+    assert.ok(Number(seen[0].value) >= 40 && Number(seen[0].value) <= 60,
+      'and it must stand at the first chunk, got: ' + seen[0].value);
+    assert.ok(env.created.length,
+      'the finished file still lands through the anchor download');
+  });
+
+  it('keeps a real percentage when the host hides Content-Length', async () => {
+    // Content-Range/Content-Length exposure over CORS is the host's choice, not
+    // ours. The artifact ZIP is stored uncompressed, so the API's own
+    // size_in_bytes is the same number — the counter must fall back to it
+    // rather than degrade to a percentless crawl.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const half = Math.floor(zip.bytes.length / 2);
+    const seen = [];
+    let sent = 0;
+    const env = makeHarness(Object.assign({}, FINISHED, {
+      window: { screen: { width: 1280, height: 720 } },
+      listRunArtifacts: function () {
+        return Promise.resolve([{ id: 9, size_in_bytes: zip.bytes.length }]);
+      },
+      fetch: function () {
+        return Promise.resolve({
+          ok: true, status: 200,
+          headers: { get: function () { return null; } },
+          body: { getReader: function () { return { read: function () {
+            if (sent === 0) {
+              sent = 1;
+              return Promise.resolve({
+                value: new Uint8Array(zip.bytes.subarray(0, half)), done: false });
+            }
+            if (sent === 1) {
+              sent = 2;
+              seen.push({ value: env.els['burn-track'].attrs['aria-valuenow'] });
+              return Promise.resolve({
+                value: new Uint8Array(zip.bytes.subarray(half)), done: false });
+            }
+            return Promise.resolve({ done: true });
+          } }; } }
+        });
+      }
+    }));
+    env.localStorage.setItem('burn:t:v', JSON.stringify({
+      requestId: 'old', runId: 7, runUrl: '', startedAt: Date.now(),
+      talkId: 't', videoSlug: 'v', editsSig: '' }));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    await env.api.downloadBurned();
+    assert.ok(seen.length, 'the second chunk must have been asked for');
+    assert.ok(Number(seen[0].value) >= 40 && Number(seen[0].value) <= 60,
+      'size_in_bytes must carry the percentage, got: ' + seen[0].value);
+  });
+
   it('does not start a second poll loop when the menu is reopened mid-request', async () => {
     // openExportMenu() re-arms the follow and calls pollBurn(). A close+reopen
     // inside one network round-trip left the first chain's continuation to find
