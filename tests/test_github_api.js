@@ -2,10 +2,14 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { authHeaders, exchangeCode, getViewer } = require('../site/js/github_api');
 
+// Statuses the Fetch spec forbids a body on; Response throws otherwise.
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+
 function fetchDouble(status, payload, capture) {
   return async (url, init) => {
     if (capture) { capture.url = url; capture.init = init || {}; }
-    return new Response(JSON.stringify(payload), {
+    const body = NULL_BODY_STATUSES.has(status) ? null : JSON.stringify(payload);
+    return new Response(body, {
       status,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -582,5 +586,74 @@ describe('listIssuesByCreator', () => {
     assert.strictEqual(rows.length, 101);
     assert.strictEqual(seen.length, 2);
     assert.match(seen[0], /creator=a%20b/); // creator is URI-encoded
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Actions API (burned-in subtitle render): dispatch the workflow, find the
+// run, follow its jobs, and locate the artifact.
+// ---------------------------------------------------------------------------
+const {
+  dispatchWorkflow,
+  listWorkflowRuns,
+  getRunJobs,
+  listRunArtifacts,
+} = require('../site/js/github_api');
+
+// Reuses the module-level API constant declared above (same origin shape;
+// the tests below only assert on URL suffixes, not the repo it points at).
+
+describe('dispatchWorkflow', () => {
+  it('POSTs ref and inputs to the workflow dispatch endpoint', async () => {
+    const capture = {};
+    await dispatchWorkflow(API, 'gho_x', 'burn-subtitles.yml', 'main',
+      { talk_id: 't' }, fetchDouble(204, {}, capture));
+    assert.strictEqual(capture.url,
+      API + '/actions/workflows/burn-subtitles.yml/dispatches');
+    assert.strictEqual(capture.init.method, 'POST');
+    assert.deepStrictEqual(JSON.parse(capture.init.body),
+      { ref: 'main', inputs: { talk_id: 't' } });
+  });
+
+  it('rejects with the status so the UI can explain a 403', async () => {
+    await assert.rejects(
+      dispatchWorkflow(API, 'gho_x', 'w.yml', 'main', {},
+        fetchDouble(403, { message: 'Resource not accessible by integration' })),
+      (e) => e.status === 403);
+  });
+});
+
+describe('listWorkflowRuns', () => {
+  it('returns the runs array for the workflow', async () => {
+    const capture = {};
+    const runs = await listWorkflowRuns(API, 'gho_x', 'burn-subtitles.yml',
+      fetchDouble(200, { workflow_runs: [{ id: 7 }] }, capture));
+    assert.deepStrictEqual(runs, [{ id: 7 }]);
+    assert.match(capture.url, /\/actions\/workflows\/burn-subtitles\.yml\/runs/);
+  });
+
+  it('returns [] when the payload has no runs key', async () => {
+    assert.deepStrictEqual(
+      await listWorkflowRuns(API, 'gho_x', 'w.yml', fetchDouble(200, {})), []);
+  });
+});
+
+describe('getRunJobs', () => {
+  it('returns the jobs array for a run', async () => {
+    const capture = {};
+    const jobs = await getRunJobs(API, 'gho_x', 42,
+      fetchDouble(200, { jobs: [{ name: 'burn' }] }, capture));
+    assert.deepStrictEqual(jobs, [{ name: 'burn' }]);
+    assert.strictEqual(capture.url, API + '/actions/runs/42/jobs');
+  });
+});
+
+describe('listRunArtifacts', () => {
+  it('returns the artifacts array for a run', async () => {
+    const capture = {};
+    const arts = await listRunArtifacts(API, 'gho_x', 42,
+      fetchDouble(200, { artifacts: [{ id: 9, expired: false }] }, capture));
+    assert.deepStrictEqual(arts, [{ id: 9, expired: false }]);
+    assert.strictEqual(capture.url, API + '/actions/runs/42/artifacts');
   });
 });

@@ -380,6 +380,36 @@ function submitFilesPr(api, token, opts, fetchImpl) {
     });
 }
 
+// --- Actions ---------------------------------------------------------------
+// Used by the burned-in subtitle render: dispatch the workflow, find the run,
+// follow its steps, and locate the artifact. Requires the App's `actions`
+// permission — a 403 here usually means the token predates that grant.
+
+function dispatchWorkflow(api, token, workflowFile, ref, inputs, fetchImpl) {
+  return ghJson(
+    api + '/actions/workflows/' + encodeURIComponent(workflowFile) + '/dispatches',
+    token, { method: 'POST', body: { ref: ref, inputs: inputs } }, fetchImpl
+  ).then(function () { /* 204 No Content */ });
+}
+
+function listWorkflowRuns(api, token, workflowFile, fetchImpl) {
+  return ghJson(
+    api + '/actions/workflows/' + encodeURIComponent(workflowFile)
+      + '/runs?event=workflow_dispatch&per_page=20',
+    token, null, fetchImpl
+  ).then(function (r) { return (r && r.workflow_runs) || []; });
+}
+
+function getRunJobs(api, token, runId, fetchImpl) {
+  return ghJson(api + '/actions/runs/' + runId + '/jobs', token, null, fetchImpl)
+    .then(function (r) { return (r && r.jobs) || []; });
+}
+
+function listRunArtifacts(api, token, runId, fetchImpl) {
+  return ghJson(api + '/actions/runs/' + runId + '/artifacts', token, null, fetchImpl)
+    .then(function (r) { return (r && r.artifacts) || []; });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     authHeaders: authHeaders,
@@ -412,5 +442,9 @@ if (typeof module !== 'undefined' && module.exports) {
     closePull: closePull,
     deleteRef: deleteRef,
     submitFilesPr: submitFilesPr,
+    dispatchWorkflow: dispatchWorkflow,
+    listWorkflowRuns: listWorkflowRuns,
+    getRunJobs: getRunJobs,
+    listRunArtifacts: listRunArtifacts,
   };
 }
