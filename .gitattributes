@@ -1,0 +1,10 @@
+# Line endings are normalized to LF in the repository, whatever the editing
+# platform. Windows editors and amruta's downloaded .srt files both introduce
+# CRLF; without this they land in commits and show as whole-file diffs.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending-normalized.
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.ttf binary

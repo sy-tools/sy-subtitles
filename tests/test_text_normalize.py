@@ -5,12 +5,19 @@ literal NBSP in source (tests/test_text_hygiene.py), and a literal here would
 be silently repaired by the very tool under test.
 """
 
+import subprocess
+import sys
+
 from hypothesis import given
 from hypothesis import strategies as st
 
 from tools.text_normalize import (
     ODD_SPACES,
     ZERO_WIDTH,
+    check_text,
+    fix_text,
+    is_scanned_path,
+    is_uk_content_path,
     normalize_uk_typography,
     sanitize_edited_text,
     sanitize_field_text,
@@ -198,3 +205,96 @@ class TestTypographyInvariants:
     def test_line_count_is_preserved(self, text):
         """Typography runs over whole files; it must never add or remove lines."""
         assert normalize_uk_typography(text).count("\n") == text.count("\n")
+
+
+class TestPathClassification:
+    def test_uk_content_paths(self):
+        assert is_uk_content_path("talks/2000-07-23_Guru-Puja/transcript_uk.txt")
+        assert is_uk_content_path("talks/2000-07-23_Guru-Puja/Talk/final/uk.srt")
+        assert is_uk_content_path("talks/1992-07-19_Guru-Puja/Talk/work/uk_corrected.srt")
+        assert is_uk_content_path("talks/1992-07-19_Guru-Puja/Talk/final/Talk_uk.srt")
+
+    def test_non_uk_paths(self):
+        assert not is_uk_content_path("talks/2000-07-23_Guru-Puja/transcript_en.txt")
+        assert not is_uk_content_path("talks/2000-07-23_Guru-Puja/Talk/source/en.srt")
+        assert not is_uk_content_path("talks/2000-07-23_Guru-Puja/meta.yaml")
+        assert not is_uk_content_path("tools/text_normalize.py")
+
+    def test_fixtures_are_not_scanned(self):
+        """Fixtures hold deliberately dirty input; scanning them is nonsense."""
+        assert not is_scanned_path("tests/fixtures/amruta_parsed.json")
+        assert not is_scanned_path("tests/fixtures/pipeline_snapshots/x/work/uk_blocks.json")
+
+    def test_ordinary_source_is_scanned(self):
+        assert is_scanned_path("tools/text_normalize.py")
+        assert is_scanned_path("talks/2000-07-23_Guru-Puja/transcript_uk.txt")
+
+
+class TestCheckAndFix:
+    def test_check_reports_nbsp(self):
+        issues = check_text("a\u00a0b", uk=False)
+        assert len(issues) == 1
+        assert "U+00A0" in issues[0]
+
+    def test_check_reports_crlf(self):
+        assert any("CRLF" in i for i in check_text("a\r\nb", uk=False))
+
+    def test_check_reports_uk_typography_only_when_uk(self):
+        assert check_text("м'ясо", uk=False) == []
+        assert check_text("м'ясо", uk=True) != []
+
+    def test_check_passes_on_clean_text(self):
+        assert check_text("Привіт – світ", uk=True) == []
+
+    def test_fix_leaves_english_quotes_alone(self):
+        text = 'He said "hello" — loudly.\n'
+        assert fix_text(text, uk=False) == text
+
+    def test_fix_repairs_a_uk_file(self):
+        assert fix_text("м'ясо — смачне\n", uk=True) == "м’ясо – смачне\n"
+
+    def test_fix_is_idempotent_on_a_uk_file(self):
+        once = fix_text("м'ясо — смачне\n", uk=True)
+        assert fix_text(once, uk=True) == once
+
+
+class TestCheckFixAgreement:
+    """check_text and fix_text must agree, or the corpus can never go green."""
+
+    @given(_HYGIENE_TEXT, st.booleans())
+    def test_clean_iff_unchanged(self, text, uk):
+        assert (check_text(text, uk=uk) == []) == (fix_text(text, uk=uk) == text)
+
+
+class TestCli:
+    def test_check_exits_1_and_names_the_file(self, tmp_path):
+        target = tmp_path / "transcript_uk.txt"
+        target.write_text("м'ясо тут\n", encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--check", str(target)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1
+        assert "transcript_uk.txt" in result.stdout
+
+    def test_fix_rewrites_the_file_and_exits_0(self, tmp_path):
+        target = tmp_path / "transcript_uk.txt"
+        target.write_text("м'ясо тут\n", encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--fix", str(target)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+        assert target.read_text(encoding="utf-8") == "м’ясо тут\n"
+
+    def test_check_passes_on_clean_file(self, tmp_path):
+        target = tmp_path / "transcript_uk.txt"
+        target.write_text("Привіт – світ\n", encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--check", str(target)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
