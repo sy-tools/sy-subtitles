@@ -1056,7 +1056,7 @@ describe('engine: rebuilt file hygiene', () => {
   }
 
   it('strips invisible characters from rebuilt files before putFile', async () => {
-    const dirty = '1\n00:00:01,000 --> 00:00:02,000\nПривіт світ​\n\n';
+    const dirty = '1\n00:00:01,000 --> 00:00:02,000\nПривіт\u00a0світ\u200b\n\n';
     const h = capturePuts({
       buildFiles: () => [{ path: SRT_PATH, content: dirty }],
       sanitize: sanitizeInvisible,
@@ -1065,8 +1065,8 @@ describe('engine: rebuilt file hygiene', () => {
 
     const srt = h.seen.filter((o) => o.path === SRT_PATH);
     assert.strictEqual(srt.length, 1, 'the rebuilt SRT was not pushed');
-    assert.ok(!srt[0].content.includes(' '), 'NBSP reached putFile');
-    assert.ok(!srt[0].content.includes('​'), 'ZWSP reached putFile');
+    assert.ok(!srt[0].content.includes('\u00a0'), 'NBSP reached putFile');
+    assert.ok(!srt[0].content.includes('\u200b'), 'ZWSP reached putFile');
     assert.ok(srt[0].content.includes('Привіт світ'), 'NBSP was deleted instead of folded to a space');
     assert.ok(
       srt[0].content.includes('00:00:01,000 --> 00:00:02,000'),
