@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-31T08:08:59.574888+00:00",
+  "updated_at": "2026-08-01T12:21:55.651847+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -555,10 +555,10 @@
       "updated_at": "2026-07-12T20:22:41Z"
     },
     "2000-07-23_Guru-Puja-Shraddha": {
-      "status": "pending",
+      "status": "in-progress",
       "reviewer": "IrynaFilSY",
       "issue_number": 895,
-      "updated_at": "2026-07-31T08:08:47Z"
+      "updated_at": "2026-08-01T12:21:34Z"
     }
   }
 }
