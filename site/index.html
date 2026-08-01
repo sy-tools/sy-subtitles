@@ -23,6 +23,7 @@
 <script src="js/manifest_fetch.js"></script>
 <script src="js/offline_fallback.js"></script>
 <script src="js/talk_slug.js"></script>
+<script src="js/text_sanitize.js"></script>
 <script src="js/vimeo_codec.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
@@ -3673,7 +3674,11 @@ SPA.onEditInput = function(idx, el) {
   if (!previewState.edits[lang]) previewState.edits[lang] = {};
   var blocks = previewState.subtitles || [];
   var orig = blocks[idx] ? blocks[idx].text : '';
-  var text = el.innerText;
+  // contenteditable injects &nbsp; on its own and paste brings in line breaks;
+  // the store must hold clean bytes because edit_sync commits it verbatim.
+  // Sanitizing on READ rather than rewriting the node avoids caret-position
+  // bugs -- the next render comes from the store anyway.
+  var text = sanitizeEditedText(el.innerText, lang);
   if (text === orig) {
     delete previewState.edits[lang][idx];
     el.classList.remove('edited-dirty');
@@ -5811,7 +5816,10 @@ function renderReviewSrt(grid) {
 }
 
 function onReviewEdit(idx, el) {
-  var text = el.innerText.trim();
+  // The review grid's right column is always the Ukrainian text. Sanitizing on
+  // READ keeps the store clean without disturbing the caret; sanitizeEditedText
+  // already trims, so the explicit .trim() is gone.
+  var text = sanitizeEditedText(el.innerText, 'uk');
   var orig = reviewState.rightParas[idx] || '';
   var cell = el.closest('.cell.uk');
   if (text === orig) { delete reviewState.edits[idx]; if (cell) cell.classList.remove('edited'); }

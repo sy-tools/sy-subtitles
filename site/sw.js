@@ -40,6 +40,7 @@ var SHELL_ASSETS = [
   'js/manifest_fetch.js',
   'js/offline_fallback.js',
   'js/talk_slug.js',
+  'js/text_sanitize.js',
   'js/vimeo_codec.js',
   'js/add_talk_data.js',
   'js/shell_version.js',
