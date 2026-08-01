@@ -173,3 +173,31 @@ def test_review_issue_is_only_touched_on_main() -> None:
     for step in issue_steps:
         cond = str(step.get("if", ""))
         assert "github.ref_name == 'main'" in cond, f"review-issue step must be gated on main, got if: {cond!r}"
+
+
+def test_review_issue_reset_keeps_a_claimed_review_claimed() -> None:
+    """A rebuild invalidates an approval, but never a claim.
+
+    The reset dropped `review:in-progress` unconditionally while leaving the
+    assignee in place, so a talk rebuilt after someone claimed it went back to
+    `review:pending` — and the SPA, which reads the label via
+    review-status.json, advertised it as needing a reviewer while that
+    reviewer was still on it. Observed on issue #895: assigned 2026-07-27,
+    reset by the 2026-07-30 rebuild.
+
+    An assigned issue must therefore land on `review:in-progress`; only an
+    unassigned one resets to `review:pending`.
+    """
+    wf = yaml.safe_load((WORKFLOWS / "subtitle-pipeline.yml").read_text(encoding="utf-8"))
+    step = next(s for s in wf["jobs"]["commit"]["steps"] if "review tracking issue" in (s.get("name") or "").lower())
+    run = step["run"]
+    # The reset branch only — everything between the existing-issue test and
+    # the `else` that creates a fresh issue (which is pending by definition).
+    start = run.find('if [ -n "$EXISTING" ]')
+    assert start != -1, "existing-issue branch not found"
+    reset = run[start : run.find("\n          else", start)]
+    assert "--json assignees" in reset, "reset must read the issue's assignees before picking a label"
+    assert '--add-label "review:pending' not in reset.replace("'", '"'), (
+        "reset must not unconditionally re-apply review:pending — an assigned issue stays in-progress"
+    )
+    assert "review:in-progress" in reset, "reset must be able to land on review:in-progress"

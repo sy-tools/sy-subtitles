@@ -1197,9 +1197,21 @@ jobs:
           SPA_BASE="https://${OWNER_LC}.github.io/${REPO#*/}"
           EXISTING=$(gh issue list --search "Review: $TALK_ID in:title" --json number --jq '.[0].number')
           if [ -n "$EXISTING" ]; then
-            echo "Review issue #$EXISTING already exists — resetting to pending"
+            # A rebuild invalidates an approval, but never a claim: an
+            # assigned issue stays review:in-progress. Resetting it to
+            # review:pending left the assignee in place while the SPA
+            # advertised the talk as needing a reviewer (issue #895).
+            CLAIMED=$(gh issue view "$EXISTING" --json assignees --jq '.assignees | length')
+            if [ "$CLAIMED" -gt 0 ]; then
+              NEXT_LABEL="review:in-progress"
+              DROP_LABELS="review:approved,review:pending"
+            else
+              NEXT_LABEL="review:pending"
+              DROP_LABELS="review:approved,review:in-progress"
+            fi
+            echo "Review issue #$EXISTING already exists — resetting to $NEXT_LABEL"
             gh issue reopen "$EXISTING"
-            gh issue edit "$EXISTING" --remove-label "review:approved,review:in-progress" --add-label "review:pending,talk-review"
+            gh issue edit "$EXISTING" --remove-label "$DROP_LABELS" --add-label "$NEXT_LABEL,talk-review"
           else
             META_TITLE=$(python3 -c "import yaml; print(yaml.safe_load(open('talks/$TALK_ID/meta.yaml'))['title'])" 2>/dev/null || echo "$TALK_ID")
             gh issue create \
