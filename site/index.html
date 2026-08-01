@@ -3943,14 +3943,24 @@ function burnLangMismatch() {
 // status means the branch is behind the screen, and rendering would quietly
 // produce the wrong video after a long wait.
 //
-//   no engine for this talk -> 'main', the published subtitles
-//   engine, status 'synced' -> its branch, the edited subtitles
-//   engine, anything else   -> null: refuse, and say why
+//   no engine for this talk           -> 'main', the published subtitles
+//   engine, status 'synced' / 'ready' -> its branch, the edited subtitles
+//                                        ('ready' = synced + undrafted PR)
+//   engine, no local edits pending    -> 'main': the screen IS the published
+//                                        subtitles, whatever the sync says
+//   engine, unsynced local edits      -> null: refuse, and say why
+//
+// The no-edits arm is load-bearing: a signed-in reviewer ALWAYS has an engine
+// with a branch (the name is deterministic, minted before any edit or network
+// call), and an engine that finds no state file on attach stays at its
+// construction-time 'idle' forever. Without this arm the export control died
+// on every clean account, waiting for edits that do not exist.
 function burnSourceRef() {
   var sync = (editSync && editSync.talkId === (previewState && previewState.talkId))
     ? editSync.getInfo() : null;
   if (!sync || !sync.branch) return burnRef(window);
-  return sync.status === 'synced' ? sync.branch : null;
+  if (sync.status === 'synced' || sync.status === 'ready') return sync.branch;
+  return burnPendingEdits() ? null : burnRef(window);
 }
 
 function burnPendingEdits() {

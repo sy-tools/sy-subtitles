@@ -4507,6 +4507,8 @@ describe('burn video driver behaviour', () => {
   it('refuses while the cloud is not green, rather than rendering stale text', async () => {
     for (const status of ['pending', 'syncing', 'error']) {
       const env = makeHarness({
+        previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                        edits: { uk: { 3: 'edited' } } },
         editSync: { talkId: 't', getInfo: function () {
           return { status: status, branch: 'sync/me/t--v-uk' }; } },
       });
@@ -4520,6 +4522,8 @@ describe('burn video driver behaviour', () => {
 
   it('says why the control is disabled while syncing', () => {
     const env = makeHarness({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                      edits: { uk: { 3: 'edited' } } },
       editSync: { talkId: 't', getInfo: function () {
         return { status: 'pending', branch: 'b' }; } },
     });
@@ -4527,6 +4531,56 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['btn-export'].disabled, true);
     assert.strictEqual(env.els['btn-export'].title, 'T:burn.wait_for_sync',
       'a dead control with no reason is indistinguishable from a bug');
+  });
+
+  // A signed-in reviewer ALWAYS has an engine with a branch: the branch name is
+  // deterministic and exists as a string before any edit or any network call.
+  // When they never edited anything, attach() finds no state file on GitHub and
+  // leaves the status at its construction-time 'idle' — forever. Gating the
+  // export on 'synced' alone therefore killed the control for every clean
+  // account with "waiting for your edits to sync" over edits that do not exist.
+  it('offers the export to a signed-in reviewer who has no edits at all', async () => {
+    const env = makeHarness({
+      editSync: { talkId: 't', getInfo: function () {
+        return { status: 'idle', branch: 'sync/me/t--v-uk' }; } },
+    });
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['btn-export'].disabled, false,
+      'no edits pending means nothing to wait for');
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'main',
+      'the screen shows the published subtitles, so main IS the screen');
+  });
+
+  it('keeps the export alive when a sync status is not green but nothing is edited', async () => {
+    // A full revert mid-teardown ('syncing'), or a background sync error, with
+    // zero local edits: the screen shows the published subtitles, so a render
+    // from main matches it exactly — the sync machinery is irrelevant to it.
+    for (const status of ['pending', 'syncing', 'error']) {
+      const env = makeHarness({
+        editSync: { talkId: 't', getInfo: function () {
+          return { status: status, branch: 'sync/me/t--v-uk' }; } },
+      });
+      await env.api.startBurn('t', 'v');
+      assert.strictEqual(env.dispatchedInputs.source_ref, 'main',
+        status + ' with no edits must render the published subtitles');
+    }
+  });
+
+  it('renders from the branch after the PR was finalized', async () => {
+    // 'ready' is 'synced' plus an undrafted PR: pushFiles() committed the
+    // edited srt before either status could be set, so the branch still holds
+    // exactly what the preview shows.
+    const env = makeHarness({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                      edits: { uk: { 3: 'edited' } } },
+      editSync: { talkId: 't', getInfo: function () {
+        return { status: 'ready', branch: 'sync/me/t--v-uk' }; } },
+    });
+    await env.api.startBurn('t', 'v');
+    assert.strictEqual(env.confirms.length, 0,
+      'the branch carries the edits — warning about missing them would lie');
+    assert.strictEqual(env.dispatchedInputs.source_ref, 'sync/me/t--v-uk');
   });
 
   it('closes the menu when the ref goes behind the screen', () => {
@@ -4544,6 +4598,7 @@ describe('burn video driver behaviour', () => {
     });
     env.api.openExportMenu();
     assert.strictEqual(env.els['export-menu'].hidden, false, 'precondition: open');
+    env.previewState.edits = { uk: { 3: 'edited' } };   // the fresh edit itself
     info = { status: 'syncing', branch: 'b' };
     env.api.updateExportUi();
     assert.strictEqual(env.els['export-menu'].hidden, true,
@@ -6380,7 +6435,10 @@ describe('burn video driver behaviour', () => {
     let status = 'pending';
     const engine = { talkId: 't', getInfo: function () {
       return { status: status, branch: 'sync/me/t--v-uk' }; } };
-    const env = makeHarness({ editSync: engine });
+    const env = makeHarness({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                      edits: { uk: { 3: 'edited' } } },
+      editSync: engine });
     const sync = makeSyncWiring(env);
     env.api.updateExportUi();
     assert.strictEqual(env.els['btn-export'].disabled, true,
@@ -6401,7 +6459,10 @@ describe('burn video driver behaviour', () => {
     let status = 'synced';
     const engine = { talkId: 't', getInfo: function () {
       return { status: status, branch: 'sync/me/t--v-uk' }; } };
-    const env = makeHarness({ editSync: engine });
+    const env = makeHarness({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                      edits: { uk: { 3: 'edited' } } },
+      editSync: engine });
     const sync = makeSyncWiring(env);
     env.api.openExportMenu();
     assert.strictEqual(env.els['export-menu'].hidden, false, 'precondition: open');
@@ -6419,7 +6480,10 @@ describe('burn video driver behaviour', () => {
     // back through the same funnel.
     const engine = { talkId: 't', getInfo: function () {
       return { status: 'pending', branch: 'sync/me/t--v-uk' }; } };
-    const env = makeHarness({ editSync: engine });
+    const env = makeHarness({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk',
+                      edits: { uk: { 3: 'edited' } } },
+      editSync: engine });
     const sync = makeSyncWiring(env);
     env.api.updateExportUi();
     assert.strictEqual(env.els['btn-export'].disabled, true,
