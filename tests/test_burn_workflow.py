@@ -453,7 +453,7 @@ class TestPinnedActions:
         raw = _raw()
         for action in (
             "actions/checkout@v7",
-            "actions/setup-python@v6",
+            "actions/setup-python@v7",
             "actions/cache@v6",
             "actions/upload-artifact@v7",
         ):
