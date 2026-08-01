@@ -68,3 +68,63 @@ def sanitize_file_text(text: str) -> str:
         bom, text = "\ufeff", text[1:]
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     return bom + sanitize_invisible(text)
+
+
+# --- Ukrainian typography (glossary/CLAUDE.md) --------------------------------
+
+_APOSTROPHE_RE = re.compile("['‘ʼ]")
+_DASH_RE = re.compile("[—‒−―]")
+# Horizontal whitespace only, so running this over a whole file cannot join
+# lines. Restricted to a word character on the left: unrestricted stripping
+# would glue the ellipsis onto a preceding dash.
+_ELLIPSIS_SPACE_RE = re.compile(r"(?<=\w)[ \t]+\.\.\.")
+
+# A straight quote following one of these opens; anything else closes. Includes
+# the opening guillemet itself so that consecutive quotes nest rather than
+# alternate.
+_QUOTE_OPENS_AFTER = set(" \t\n\r([{«–")
+
+
+def _resolve_straight_quotes(text: str) -> str:
+    """Turn U+0022 into an opening or closing guillemet from its left neighbour.
+
+    Counting cannot work here: quote state does not carry across subtitle
+    blocks, so a counter is wrong whenever a quotation spans a block boundary.
+    The neighbour rule is stateless and therefore block-independent. It reads
+    the ALREADY-CONVERTED previous character, which is what makes two straight
+    quotes in a row nest instead of alternating.
+    """
+    out: list[str] = []
+    for ch in text:
+        if ch == '"':
+            prev = out[-1] if out else ""
+            out.append("«" if prev == "" or prev in _QUOTE_OPENS_AFTER else "»")
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+def normalize_uk_typography(text: str) -> str:
+    """Apply the Ukrainian orthography rules from glossary/CLAUDE.md.
+
+    UKRAINIAN TEXT ONLY. English prose legitimately uses `"` and an em dash,
+    and YAML/JSON use `"` as syntax; applying this to them corrupts them.
+    """
+    text = text.replace("“", "«").replace("„", "«").replace("”", "»")
+    text = _resolve_straight_quotes(text)
+    text = _APOSTROPHE_RE.sub("’", text)
+    text = _DASH_RE.sub("–", text)
+    text = text.replace("…", "...")
+    return _ELLIPSIS_SPACE_RE.sub("...", text)
+
+
+def sanitize_edited_text(text: str, lang: str) -> str:
+    """Normalize one edited field value. The entry point the SPA mirrors.
+
+    Invisible-character cleanup runs for every language; typography runs for
+    Ukrainian only.
+    """
+    text = sanitize_field_text(text)
+    if lang == "uk":
+        text = normalize_uk_typography(text)
+    return text
