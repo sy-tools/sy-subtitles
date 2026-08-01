@@ -3546,6 +3546,56 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// --- Edit-field input guards -------------------------------------------------
+//
+// Both editing surfaces are contenteditable: `.edited` in the preview edit list
+// and `.cell-text` in the review grid. A line break in either is damage -- a
+// subtitle block is single-line by project rule and a transcript paragraph is
+// one line -- and rich paste carries NBSP and smart quotes from its source.
+//
+// Delegated at the document, capture phase, because the review grid builds
+// `.cell-text` in two places (renderReviewParas and renderReviewSrt) and
+// SyncPlayer's own Enter guard only runs while the video panel is open, leaving
+// the break unblocked with the panel closed.
+
+// Language of the surface the event landed on; the review grid's editable
+// column is always Ukrainian.
+function editFieldLang(el) {
+  if (el.matches('.cell-text')) return 'uk';
+  return (typeof previewState !== 'undefined' && previewState && previewState.srtLang) || 'uk';
+}
+
+function isEditField(el) {
+  return !!(el && el.matches && (el.matches('.cell-text') || el.matches('.edited')));
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+  // The preview cell keeps its own handler (it also resumes the player); this
+  // one exists for the review grid, where nothing unconditional blocked Enter.
+  if (!e.target || !e.target.matches || !e.target.matches('.cell-text')) return;
+  e.preventDefault();
+  e.target.blur();
+}, true);
+
+document.addEventListener('paste', function(e) {
+  if (!isEditField(e.target) || !e.clipboardData) return;
+  e.preventDefault();
+  var plain = e.clipboardData.getData('text/plain');
+  document.execCommand('insertText', false, sanitizeEditedText(plain, editFieldLang(e.target)));
+}, true);
+
+// The store is sanitized on read, so the field can briefly show what was typed
+// -- straight quotes, an em dash -- while the store already holds the corrected
+// form. Reconcile the visible text once focus leaves, where moving the caret
+// costs nothing. focusout (not blur) because it bubbles to the document.
+document.addEventListener('focusout', function(e) {
+  var el = e.target;
+  if (!isEditField(el)) return;
+  var clean = sanitizeEditedText(el.innerText, editFieldLang(el));
+  if (el.innerText !== clean) el.textContent = clean;
+});
+
 function renderMarkers() {
   var list = document.getElementById('marker-list');
   var count = document.getElementById('marker-count');
@@ -3620,11 +3670,13 @@ function renderEditList() {
     if (langEdits[idx] !== block.text) edited.classList.add('edited-dirty');
     edited.addEventListener('input', function() { SPA.onEditInput(idx, edited); });
     edited.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        edited.blur();
-        SPA.resumePlayer();
-      }
+      // Enter always commits, Shift or not: a subtitle block is single-line by
+      // project rule, so a break here is damage, never intent. Shift+Enter used
+      // to fall through and insert one.
+      if (e.key !== 'Enter' || e.isComposing || e.keyCode === 229) return;
+      e.preventDefault();
+      edited.blur();
+      SPA.resumePlayer();
     });
     var del = document.createElement('span');
     del.className = 'del';
