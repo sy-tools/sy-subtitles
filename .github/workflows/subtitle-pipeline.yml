@@ -865,9 +865,21 @@ jobs:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
           VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
         run: |
+          # Word timings let the merge phases tell "timecodes touch" apart from
+          # "speech is continuous" — without them a block inherited from a
+          # padded EN SRT gets merged with its neighbour across a pause. The
+          # whisper job is conditional, so pass the file only when it exists.
+          WHISPER="talks/${TALK_ID}/${VIDEO_SLUG}/source/whisper.json"
+          WHISPER_FLAG=""
+          if [ -f "${WHISPER}" ]; then
+            WHISPER_FLAG="--json ${WHISPER}"
+          else
+            echo "::warning::${WHISPER} missing — optimizer runs without speech timings"
+          fi
           python -m tools.optimize_srt \
             --srt "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \
             --output "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \
+            ${WHISPER_FLAG} \
             --skip-duration-split \
             --skip-cps-split
 
@@ -1169,7 +1181,10 @@ jobs:
         # Only when subtitles were actually built and committed this run —
         # resetting the issue to review:pending after a failed build would
         # wipe the real review status without shipping anything to review.
-        if: success() && needs.build-timecodes.result == 'success'
+        # And only on main: a run dispatched from a feature branch commits to
+        # that branch (bot-pr.sh), so nothing is on main to announce, and
+        # resetting an approved issue would wipe a real review status.
+        if: success() && needs.build-timecodes.result == 'success' && github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}

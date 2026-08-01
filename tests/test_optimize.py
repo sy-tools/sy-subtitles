@@ -13,6 +13,7 @@ from tools.optimize_srt import (
     find_block_split_point,
     main,
     merge_short_blocks,
+    merge_sparse_blocks,
     optimize,
     split_blocks_by_duration,
     split_blocks_by_size,
@@ -244,6 +245,139 @@ def test_optimize_idempotent_with_small_max_duration(tmp_path):
     key = [(b["start_ms"], b["end_ms"], b["text"]) for b in parse_srt(out1)]
     key2 = [(b["start_ms"], b["end_ms"], b["text"]) for b in parse_srt(out2)]
     assert key == key2
+
+
+# --- trim_blocks_to_speech (silence guard) ---
+
+
+def _whisper_words(*spans):
+    """Build a minimal whisper payload from (start_s, end_s, word) triples."""
+    return [
+        {
+            "start": spans[0][0],
+            "end": spans[-1][1],
+            "words": [{"start": s, "end": e, "word": w} for s, e, w in spans],
+        }
+    ]
+
+
+def test_merge_sparse_blocks_does_not_bridge_a_speech_pause():
+    """Touching timecodes are not proof of touching speech.
+
+    A block inherited from a padded EN SRT ends long after its last word, so
+    the SRT-level gap to the next block reads as ~0 while the speaker was
+    actually silent for seconds. Merging there puts one subtitle over the
+    pause (2000-07-23 Guru Puja, "Що робить Ґуру? Все, що у вас є…", 26s).
+    """
+    config = OptimizeConfig()
+    blocks = [
+        {"idx": 1, "start_ms": 0, "end_ms": 12000, "text": "Сьогодні ми тут."},
+        {"idx": 2, "start_ms": 12100, "end_ms": 22000, "text": "Що робить Ґуру?"},
+    ]
+    # Speech stops at 3.0s and resumes at 12.1s — a 9.1s pause.
+    words = [(0, 3000), (12100, 14000)]
+
+    result, merged = merge_sparse_blocks(blocks, config, word_intervals=words)
+
+    assert merged == 0
+    assert len(result) == 2
+
+
+def test_merge_sparse_blocks_merges_when_speech_is_continuous():
+    """The pause guard must not block ordinary merges of adjacent speech."""
+    config = OptimizeConfig()
+    blocks = [
+        {"idx": 1, "start_ms": 0, "end_ms": 3000, "text": "Сьогодні ми тут."},
+        {"idx": 2, "start_ms": 3100, "end_ms": 5700, "text": "Ґуру."},
+    ]
+    # Words fill both blocks end to end — no silence anywhere to merge over.
+    words = [(0, 3000), (3100, 5700)]
+
+    result, merged = merge_sparse_blocks(blocks, config, word_intervals=words)
+
+    assert merged == 1
+    assert len(result) == 1
+
+
+def test_merge_sparse_blocks_does_not_absorb_a_block_that_covers_silence():
+    """A block already sitting over a pause must not grow by absorbing a
+    neighbour — the merged subtitle would span the whole silence.
+
+    Real case: "Усе знання, вся духовність, вся радість – все там." (speech
+    ends at 431.2s) merged with "Якраз вчасно!" (speech 431.3–433.7s, then
+    9.7s of laughter) into one 23.8s subtitle.
+    """
+    config = OptimizeConfig()
+    blocks = [
+        {"idx": 1, "start_ms": 419560, "end_ms": 431240, "text": "Усе знання, вся радість – все там."},
+        {"idx": 2, "start_ms": 431320, "end_ms": 443370, "text": "Якраз вчасно!"},
+    ]
+    # Speech is continuous across the boundary, but block 2 runs 9.7s past its
+    # last word.
+    words = [(419560, 431240), (431320, 433700)]
+
+    result, merged = merge_sparse_blocks(blocks, config, word_intervals=words)
+
+    assert merged == 0
+    assert len(result) == 2
+
+
+def test_merge_short_blocks_does_not_bridge_a_speech_pause():
+    config = OptimizeConfig(min_duration_ms=1200)
+    blocks = [
+        {"idx": 1, "start_ms": 0, "end_ms": 12000, "text": "Привіт."},
+        {"idx": 2, "start_ms": 12100, "end_ms": 12900, "text": "Ґуру."},
+    ]
+    words = [(0, 3000), (12100, 12900)]
+
+    result, merged = merge_short_blocks(blocks, config, word_intervals=words)
+
+    assert merged == 0
+    assert len(result) == 2
+
+
+def test_optimize_does_not_merge_across_a_speech_pause(tmp_path):
+    """Two blocks separated by real silence must stay separate.
+
+    Sparse-block merging used to bridge them whenever their SRT timecodes
+    happened to touch — producing one subtitle covering a multi-second pause
+    (2000-07-23 Guru Puja: "Що робить Ґуру? Все, що у вас є…", 26s on screen).
+    """
+    config = OptimizeConfig()
+    src = tmp_path / "in.srt"
+    src.write_text(
+        "1\n00:00:00,000 --> 00:00:12,000\nСьогодні ми тут, щоб пізнати Принцип Ґуру.\n\n"
+        "2\n00:00:12,100 --> 00:00:22,000\nЩо робить Ґуру?\n\n",
+        encoding="utf-8",
+    )
+    whisper = tmp_path / "whisper.json"
+    whisper.write_text(
+        json.dumps(
+            {
+                "segments": [
+                    {
+                        "start": 0.0,
+                        "end": 3.0,
+                        "words": [{"start": 0.0, "end": 3.0, "word": "Today"}],
+                    },
+                    {
+                        "start": 12.1,
+                        "end": 14.0,
+                        "words": [{"start": 12.1, "end": 14.0, "word": "What"}],
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "out.srt"
+
+    optimize(srt_path=str(src), json_path=str(whisper), output_path=str(out), config=config)
+
+    blocks = parse_srt(out)
+    assert len(blocks) == 2, f"blocks were merged across a pause: {blocks}"
+    # Not merging is the whole fix — the timings themselves stay untouched.
+    assert [(b["start_ms"], b["end_ms"]) for b in blocks] == [(0, 12000), (12100, 22000)]
 
 
 def test_optimize_without_whisper_json(sample_srt_path, tmp_srt):
