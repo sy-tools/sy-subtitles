@@ -5731,8 +5731,45 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(seen[0].disabled, true,
       'a second click must not start a second transfer');
     assert.ok(seen[0].meta, 'the byte counter is the only sign of movement');
+    // Not straight back to "Download the video with subtitles": that reads as
+    // if nothing happened. The landed file gets said out loud.
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_downloaded',
+      'the item must say the file has landed');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, true,
+      'a statement, not a button — reopening the menu re-arms the download');
+  });
+
+  it('re-arms the download when the menu is closed and reopened', async () => {
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = downloadableHarness(zip.bytes);
+    await settle();
+    env.api.openExportMenu();   // a download always starts from the open menu
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_downloaded',
+      'precondition: the item says the file has landed');
+    env.api.closeExportMenu();
+    env.api.openExportMenu();
     assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'and it must hand the item back afterwards, not hold it forever');
+      'a fresh look at the menu offers the download again');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+  });
+
+  it('does not claim a download the save dialog cancelled', async () => {
+    // Escape in the picker resolves the flow without a file. "The video has
+    // been downloaded" over a cancel would be a lie the reviewer acts on.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const abort = new Error('cancelled');
+    abort.name = 'AbortError';
+    const env = downloadableHarness(zip.bytes, {
+      window: {
+        screen: { width: 1280, height: 720 },
+        showSaveFilePicker: function () { return Promise.reject(abort); }
+      }
+    });
+    await settle();
+    await env.api.downloadBurned();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
+      'no file landed, so the item still offers the download');
     assert.strictEqual(env.els['btn-burn-video'].disabled, false);
   });
 

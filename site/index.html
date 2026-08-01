@@ -1002,6 +1002,7 @@ var I18N = {
     'export.video_working': '\u0421\u0442\u0432\u043e\u0440\u044e\u0454\u0442\u044c\u0441\u044f \u0432\u0456\u0434\u0435\u043e \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043c\u0438, \u0437\u0430\u0447\u0435\u043a\u0430\u0439\u0442\u0435',
     'export.video_download': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438 \u0432\u0456\u0434\u0435\u043e \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043c\u0438',
     'export.video_downloading': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0443\u0454\u0442\u044c\u0441\u044f \u0432\u0456\u0434\u0435\u043e, \u0437\u0430\u0447\u0435\u043a\u0430\u0439\u0442\u0435',
+    'export.video_downloaded': '\u0412\u0456\u0434\u0435\u043e \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043c\u0438 \u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043e',
     'burn.downloaded': '{done} \u041c\u0411 \u0437 {total} \u041c\u0411',
     'export.srt_failed': '\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0438 (HTTP {status})',
     'burn.saved': '\u0412\u0456\u0434\u0435\u043e \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043d\u043e: {name}',
@@ -1206,6 +1207,7 @@ var I18N = {
     'export.video_working': 'Building the video with subtitles, please wait',
     'export.video_download': 'Download the video with subtitles',
     'export.video_downloading': 'Downloading the video, please wait',
+    'export.video_downloaded': 'The video with subtitles has been downloaded',
     'burn.downloaded': '{done} MB of {total} MB',
     'export.srt_failed': 'Subtitle download failed (HTTP {status})',
     'burn.saved': 'Video saved: {name}',
@@ -3919,6 +3921,27 @@ function burnDownloadIsHere() {
     && burnDownload.videoSlug === (previewState && previewState.videoSlug);
 }
 
+// The transfer that LANDED, {talkId, videoSlug} — set only where a file
+// verifiably reached disk, cleared when the menu closes. While set, the item
+// says "the video has been downloaded" instead of offering the download again
+// as if nothing happened; closing and reopening the menu re-arms the offer.
+var burnDownloaded = null;
+
+function burnDownloadedIsHere() {
+  return !!burnDownloaded
+    && burnDownloaded.talkId === (previewState && previewState.talkId)
+    && burnDownloaded.videoSlug === (previewState && previewState.videoSlug);
+}
+
+// Called beside each success toast — those are exactly the "file landed"
+// points. The scope comes from the transfer slot, not from previewState: the
+// transfer may outlive the preview it started on, and the claim belongs to
+// ITS video, not to whichever one is on screen when the bytes finish.
+function markBurnDownloaded() {
+  if (!burnDownload) return;
+  burnDownloaded = { talkId: burnDownload.talkId, videoSlug: burnDownload.videoSlug };
+}
+
 // The workflow reads talks/{id}/{slug}/final/uk.srt and declares no language
 // input, so this is the one language a render can be about.
 var BURN_LANG = 'uk';
@@ -4028,11 +4051,13 @@ function renderVideoItem() {
     following: burnFollowing || burnConfirming,
     done: !!(burnLastProgress && burnLastProgress.done),
     stale: burnStale(),
-    expired: /export-item-group--expired/.test(group.className)
+    expired: /export-item-group--expired/.test(group.className),
+    justDownloaded: burnDownloadedIsHere()
   });
   var key = s.state === 'working' ? 'export.video_working'
     : (s.state === 'downloading' ? 'export.video_downloading'
-    : (s.state === 'download' ? 'export.video_download' : 'export.video_make'));
+    : (s.state === 'downloaded' ? 'export.video_downloaded'
+    : (s.state === 'download' ? 'export.video_download' : 'export.video_make')));
   // The key travels with the text so translatePage() repaints the right label.
   label.setAttribute('data-i18n', key);
   label.textContent = t(key);
@@ -4694,6 +4719,9 @@ function closeExportMenu() {
   menu.hidden = true;
   var btn = document.getElementById('btn-export');
   if (btn) btn.setAttribute('aria-expanded', 'false');
+  // Closing the menu retires the "video has been downloaded" claim: the next
+  // open offers the download again.
+  burnDownloaded = null;
   stopBurnTimer();
   setBurnFollowing(false);
   updateExportUi();
@@ -5064,6 +5092,7 @@ function streamBurnedMp4(url, token, file) {
           // (The subtitle file goes through an anchor and DOES appear there,
           // so without this the two downloads behaved differently for no
           // reason the user could see.)
+          markBurnDownloaded();
           showToast(t('burn.saved').replace('{name}', file.name));
         });
       });
@@ -5180,6 +5209,7 @@ function saveMp4(bytes, name) {
       }).then(function() {
         // Same silence as the streaming path: written through the dialog's own
         // handle, this lands in no downloads list and behind no shelf.
+        markBurnDownloaded();
         showToast(t('burn.saved').replace('{name}', name));
       });
     }).catch(function(err) {
@@ -5195,6 +5225,7 @@ function saveMp4(bytes, name) {
   // without asking — and, unlike the streaming path, it was assembled in
   // memory first. The toast says both, because the memory is why a long talk
   // can fail here and not in a browser that has a picker.
+  markBurnDownloaded();
   showToast(t('burn.memory_fallback'));
   saveBlob(blob, name);
   return Promise.resolve();

@@ -28,13 +28,14 @@
 
   // Which face the video item wears, and whether it can be pressed.
   //
-  //   writeUser     the session can dispatch a workflow run at all
-  //   langMismatch  the preview shows subtitles the render would not burn
-  //   downloading   the finished video is transferring to disk right now
-  //   following     a run is in flight and being polled
-  //   done          the followed run finished successfully
-  //   stale         the subtitles changed since that run was dispatched
-  //   expired       the run's artifact is past the 7-day retention
+  //   writeUser      the session can dispatch a workflow run at all
+  //   langMismatch   the preview shows subtitles the render would not burn
+  //   downloading    the finished video is transferring to disk right now
+  //   following      a run is in flight and being polled
+  //   done           the followed run finished successfully
+  //   stale          the subtitles changed since that run was dispatched
+  //   expired        the run's artifact is past the 7-day retention
+  //   justDownloaded the file landed and the menu has not been closed since
   //
   // Order matters: a transfer in progress outranks a run in flight (they cannot
   // both be true, and the transfer is the one the user just started), and both
@@ -60,6 +61,10 @@
     // The file already exists; which subtitles happen to be on screen cannot
     // unmake it, so the language guard does not reach the download.
     if (o.done && !o.stale && !o.expired) {
+      // Right after the transfer lands the item is a statement, not a button:
+      // flipping straight back to "Download..." reads as if nothing happened.
+      // Closing the menu retires the claim; reopening offers the download again.
+      if (o.justDownloaded) return { state: 'downloaded', disabled: true, reasonKey: '' };
       return { state: 'download', disabled: false, reasonKey: '' };
     }
     return {
