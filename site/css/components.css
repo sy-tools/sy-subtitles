@@ -91,6 +91,7 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 .btn:active { opacity: 0.7; }
 .btn:disabled, .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
 .btn:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.btn[hidden] { display: none; }
 
 .btn--primary { background: var(--primary-bg); border-color: var(--primary-border); color: var(--primary-fg); }
 .btn--issue   { background: var(--issue-bg);   border-color: var(--issue-border);   color: var(--issue-fg); }
@@ -287,7 +288,22 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
   .header { padding: 10px 12px; }
   .header h1 { font-size: 16px; flex: 1 1 100%; }
   .header-actions { flex-wrap: wrap; gap: 6px; width: 100%; }
-  .header-actions button { min-height: 44px; padding: 8px 12px; flex: 1 1 auto; font-size: 13px; }
+  /* Scoped to the row itself: the export menu hangs inside .header-actions, and
+     a descendant selector would stretch its menu rows to the header row's
+     44px metrics inside a 320px menu. */
+  .header-actions > button,
+  .header-actions > .video-picker > button,
+  .header-actions > .export-pop > .btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
+  /* The text buttons share the wrapped row evenly, as they did before the export
+     menu existed. The icon toggle is left out on purpose: it carries no label,
+     so growing it would stretch a glyph across a third of the row. */
+  .header-actions > button { flex: 1 1 auto; }
+  /* The menu hangs LEFTWARD from its anchor (right: 0). When the row wraps, a
+     wrapped flex item lands at the START of its new row — and a 320px surface
+     anchored to a 44px icon at x≈12 opens at x=−264, off the left edge, where
+     absolute-position overflow cannot be scrolled to. Pinning the anchor to its
+     row's right edge keeps the menu on screen wherever the wrap puts it. */
+  .header-actions > .export-pop { margin-left: auto; }
   /* Preview header collapses to a single-column stack on narrow screens:
      title, then the centered mode toggle, then the action row. */
   .header.preview-header { display: flex; flex-direction: column; align-items: stretch; }
@@ -806,6 +822,19 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   );
   height: auto;
   line-height: 1.25;
+  /* Re-assert the fullscreen side inset. `#view-preview.fs-mode
+     #subtitle-overlay` gives fullscreen a 10% side inset, but
+     `#view-preview[data-subs-tuned="1"] #subtitle-overlay` (written for the
+     embedded resized block) has equal specificity, sits later, and its
+     `padding: 16px 24px` shorthand wins once the user has dragged the subtitle
+     handle. This rule is more specific than both, so re-asserting the inset here
+     restores it. Keep the 10% in sync with the fs-mode rule above and with
+     SIDE_INSET_RATIO in tools/burn_subtitles.py.
+
+     Selectors, not line numbers: the numbers this comment used to carry had
+     already drifted by nine lines. */
+  padding-left: 10%;
+  padding-right: 10%;
 }
 
 /* Focus ring — warm */
@@ -1019,4 +1048,195 @@ body.gh-write::after {
 }
 body.gh-write .gh-avatar-wrap #gh-avatar {
   box-shadow: 0 0 0 2px var(--bg), 0 0 10px 2px var(--aura);
+}
+
+/* Export menu — everything a reviewer takes away from a video, behind one icon
+   button in the preview header: the subtitle file, and the video with those
+   subtitles burned in. The video item is not a row beside a progress panel, it
+   IS the progress readout, so the render's track and times live inside it.
+   Progress reuses --sync-progress, the same in-progress tone as the cloud-sync
+   chip; no new palette token.
+
+   The menu opens directly beneath the button and floats over the page. Its
+   predecessor sat a full screen below that button — pressing Render moved
+   nothing the eye could see, and every open/close reflowed the whole preview. */
+.export-pop { position: relative; display: inline-flex; }
+.export-menu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-dropdown);
+  /* Wide enough for the four-phase track to keep its proportions — at 320 the
+     5% phase still draws ~15px, clear of its 10px floor, and the 70% render
+     phase visibly dominates — narrow enough to stay a menu; never wider than
+     the viewport it hangs in. */
+  width: 320px;
+  max-width: calc(100vw - var(--space-6));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--bg2);
+  /* --shadow-md, not --shadow-lg: the large shadow is scaled for modals, and a
+     320px card wearing it read as torn off the page. On the walnut dark theme
+     either shadow all but disappears, so the edge falls to the border — the
+     one-step-up --border2, because the resting --border is invisible against
+     the dark page behind the menu. */
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  /* The preview header centres its middle column; the menu is a reading
+     surface and sets its own alignment. */
+  text-align: left;
+}
+/* An author `display` always beats the UA's [hidden]{display:none}, so every
+   flex rule in this block needs its own hidden rule — without it a closed menu
+   would still render. */
+.export-menu[hidden] { display: none; }
+/* The caret that ties the surface back to the button it came out of: a rotated
+   square, so the menu's own border continues around its two exposed sides. */
+.export-menu::before {
+  content: '';
+  position: absolute;
+  top: -5px;
+  right: var(--space-5);
+  width: 9px;
+  height: 9px;
+  background: var(--bg2);
+  border-left: 1px solid var(--border2);
+  border-top: 1px solid var(--border2);
+  transform: rotate(45deg);
+}
+/* A menu row — deliberately NOT a .btn: these are lines in a list, and the
+   button system's centred, bordered chrome fights that reading. */
+.export-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--f-sans);
+  font-size: var(--text-sm);
+  line-height: 1.35;
+  text-align: left;
+  color: var(--fg2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.export-item:hover:not(:disabled) { background: var(--bg3); }
+/* A disabled row still reads — it is a status line as often as a control (the
+   render's "please wait" face is disabled by design), so it must not fade to
+   the near-invisible treatment a dead button would earn. */
+.export-item:disabled { color: var(--fg4); cursor: default; }
+.export-item__label { flex: 1; }
+/* The video row plus everything the render has to say about itself. */
+.export-item-group { display: flex; flex-direction: column; }
+.export-item-group[hidden] { display: none; }
+/* Track, times, link and error all align to the row's text, not to the menu's
+   padding box — they are that row's continuation, not new items. */
+.export-item-group .burn-track,
+.export-item__meta,
+.export-item-group .burn-panel__link,
+.export-item-group .burn-panel__error {
+  margin: var(--space-1) var(--space-3) 0;
+}
+/* Thinner than the standalone track: inside a menu row it is a ribbon under a
+   line of text, not a panel's centrepiece. */
+.export-item-group .burn-track { height: 5px; }
+.export-item__meta { font-size: var(--text-xs); color: var(--fg4); }
+.export-item__meta[hidden] { display: none; }
+.export-item-group .burn-panel__link { display: block; font-size: var(--text-xs); }
+/* Same trap as .burn-track: the display above outranks [hidden], so the link to
+   a run the item no longer stands behind survived every attempt to take it
+   down. Scoped to the group, matching the rule it has to outrank. */
+.export-item-group .burn-panel__link[hidden] { display: none; }
+/* The link must move as one piece: a row one word too tight would otherwise
+   wrap its text mid-phrase instead of keeping the whole link together. */
+.burn-panel__link { color: var(--link); white-space: nowrap; }
+/* Icon-only control: a square target for a glyph that says it all. The
+   accessible name lives on the button (aria-label), so nothing is lost. */
+.btn--icon { padding: var(--space-2); }
+.btn--icon svg { display: block; }
+/* The track is four phase segments with visible seams, widths proportional to
+   phase weight (JS sets flex-grow from the weight table). One uniform bar
+   flattened three short certainties and one twenty-minute stretch into the same
+   pixel scale; this form says "three quick things, then one patient one". */
+.burn-track { display: flex; gap: 2px; height: 8px; }
+/* display:flex above beats the UA's [hidden]{display:none}: without this the
+   driver hid the track of a render it had disowned, faithfully and invisibly,
+   and the finished bar stayed on screen under an offer to build. */
+.burn-track[hidden] { display: none; }
+.burn-seg {
+  position: relative;
+  flex: 0 1 auto;          /* grow comes from the weights, inline, per segment */
+  min-width: 10px;         /* the 5% phase still has to be seen */
+  background: var(--bg4);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+/* Only the outer ends are fully round: the inner seams stay square so the four
+   phases read as one track rather than four pills. */
+.burn-seg:first-child { border-top-left-radius: var(--radius-pill); border-bottom-left-radius: var(--radius-pill); }
+.burn-seg:last-child { border-top-right-radius: var(--radius-pill); border-bottom-right-radius: var(--radius-pill); }
+/* .6s glide, so a 5s poll reads as one continuous act instead of a jump. */
+.burn-seg__fill { height: 100%; width: 0; background: var(--sync-progress); transition: width 0.6s ease; }
+/* A running phase that has earned NOTHING yet still has to look alive, and there
+   the tint's extent is the phase's own extent — it claims nothing more than "we
+   are somewhere inside this phase". The moment a phase has credited fill the
+   overlay comes off: two shades of the same hue read as a buffered progress bar,
+   and on the 70%-wide render segment a measured 44% looked ~78% done. From then
+   on the fill is the whole truth and the elapsed counter is the alive-signal. */
+.burn-seg--active.burn-seg--empty::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--sync-progress);
+  animation: burn-seg-breathe 1.6s ease-in-out infinite alternate;
+}
+@keyframes burn-seg-breathe { from { opacity: 0.16; } to { opacity: 0.45; } }
+.export-item-group--done .burn-seg__fill { background: var(--accent-green); }
+/* While the finished video transfers to disk the same track shows the transfer
+   instead, as one span. It must NOT be green: the group still carries --done
+   from the render that produced the file, and green is the colour of "already
+   there" — creeping across while a few hundred megabytes are still moving, it
+   says the opposite of the label above it. Same specificity as the rule above,
+   so this must stay below it. */
+.export-item-group--transfer .burn-seg__fill { background: var(--sync-progress); }
+/* The failed mark is on the segment BODY, not its fill: a run that died in its
+   first gate has a zero-width fill, and red that only lived there would show
+   nothing at all. */
+.burn-seg--failed { background: var(--danger-bg); box-shadow: inset 0 0 0 1px var(--accent-red); }
+.burn-seg--failed .burn-seg__fill { background: var(--accent-red); }
+/* Expired: the artifact is gone, so the whole track goes quiet rather than
+   sitting there looking like a finished render. */
+.export-item-group--expired .burn-seg__fill { background: var(--border3); transition: none; }
+/* Dot separators live between ADJACENT NON-EMPTY spans, so an absent elapsed or
+   ETA leaves no leading or doubled dot. */
+.export-item__meta > span:not(:empty) ~ span:not(:empty)::before {
+  content: '\00B7';
+  margin: 0 var(--space-2);
+  color: var(--fg6);
+}
+/* In a 320px menu the one-line status — phase · elapsed · remaining — is
+   ~380px of Ukrainian and wrapped with a one-word orphan. Stack it on purpose
+   instead: the phase takes its own line, the two times share the next. Only
+   the dot between the times survives; a dot ahead of the first time span
+   would start the second line. The re-adding rule outranks the removal by
+   its extra :nth-child, and the dot's margin and colour still come from the
+   base rule above — content is the only property in dispute. */
+.export-item__meta > span:first-child:not(:empty) { display: block; margin-bottom: var(--space-1); }
+.export-item__meta > span:not(:empty) ~ span:not(:empty)::before { content: none; }
+.export-item__meta > span:nth-child(2):not(:empty) ~ span:not(:empty)::before { content: '\00B7'; }
+/* The faintest AA-passing ink, and NOT italic: the italic apologised for a
+   guess, and the remaining time is now extrapolated from a measured rate. */
+.burn-panel__eta { color: var(--fg5); }
+.burn-panel__error { font-size: var(--text-xs); color: var(--danger-fg); }
+@media (prefers-reduced-motion: reduce) {
+  .burn-seg__fill { transition: none; }
+  /* The feedback that the run is alive falls back to the elapsed counter — a
+     text update, which needs no motion. The tint stays: on an empty segment it
+     still says which phase is running. */
+  .burn-seg--active.burn-seg--empty::after { animation: none; opacity: 0.35; }
 }

@@ -34,6 +34,9 @@
 <script src="js/marker_sync.js"></script>
 <script src="js/sync_status_view.js"></script>
 <script src="js/my_work.js"></script>
+<script src="js/burn_video.js"></script>
+<script src="js/burn_artifact.js"></script>
+<script src="js/export_menu.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
@@ -366,6 +369,53 @@
       <button id="btn-copy-all" class="btn" onclick="SPA.copyMarkers()" data-gh-hide data-i18n="btn.copy_all">Copy all</button>
       <button id="btn-preview-issue" class="btn btn--issue" data-gh-hide onclick="SPA.createPreviewIssue()" data-i18n="btn.create_issue">Create issue</button>
       <button id="btn-preview-editor" class="btn btn--primary" style="display:none" onclick="SPA.openPreviewEditor()" data-i18n="btn.open_editor">Open in GitHub Editor</button>
+      <!-- Everything a reviewer takes away from this video: the subtitle file,
+           and the video with those subtitles burned into it. One control,
+           because it is one errand. Both read the SAME ref — main, or the
+           autosync branch once it is green — so the whole menu is disabled
+           while edits are still syncing: until then that ref is behind the
+           screen and either download would hand over the wrong text.
+           The menu floats over the page from the button; nothing reflows. -->
+      <span class="export-pop">
+        <button id="btn-export" class="btn btn--icon" onclick="SPA.toggleExportMenu()"
+                aria-haspopup="true" aria-expanded="false" aria-controls="export-menu"
+                data-i18n-title="export.title" data-i18n-aria-label="export.title"></button>
+        <div id="export-menu" class="export-menu" hidden>
+          <button class="export-item" onclick="SPA.downloadSrt()">
+            <span class="export-item__label" data-i18n="export.srt">Subtitle file (.srt)</span>
+          </button>
+          <!-- The video item is not a button beside a progress panel: it IS the
+               progress readout, wearing one of the faces videoItemState() picks.
+               Only a signed-in reviewer can dispatch a run, so the whole item —
+               not just a disabled button — belongs to that session alone. -->
+          <div id="export-video" class="export-item-group" data-gh-only>
+            <button id="btn-burn-video" class="export-item" onclick="SPA.videoItemAction()">
+              <span id="burn-item-label" class="export-item__label"></span>
+            </button>
+            <!-- Four phase segments with visible seams, built by ensureBurnTrack()
+                 from the real step weights so the drawn widths cannot drift from
+                 the workflow. It stays ONE control for assistive tech: the track is
+                 the progressbar and carries the value; the segments are aria-hidden.
+                 A render takes ~25 min, so the status has to be announced too — but
+                 only #burn-step is live: the elapsed counter ticks every 5s, and
+                 inside the live region that would be ~300 announcements of a number. -->
+            <div id="burn-track" class="burn-track" role="progressbar"
+                 aria-labelledby="burn-item-label" aria-valuemin="0" aria-valuemax="100"
+                 aria-valuenow="0" hidden></div>
+            <!-- No whitespace between the spans: the dot separators are CSS ::before
+                 on adjacent non-empty spans, and a stray text node doubles the gap. -->
+            <p class="export-item__meta">
+              <span id="burn-step" aria-live="polite"></span
+              ><span id="burn-elapsed"></span
+              ><span id="burn-eta" class="burn-panel__eta"></span>
+            </p>
+            <!-- Hidden until the run exists: workflow_dispatch returns no id to
+                 link to, so there is nothing to point at for the first ~60s. -->
+            <a id="burn-run-link" class="burn-panel__link" href="#" target="_blank" rel="noopener" hidden data-i18n="burn.view_run">View run</a>
+            <p id="burn-error" class="burn-panel__error" role="alert" hidden></p>
+          </div>
+        </div>
+      </span>
       <button id="btn-clear-all" class="btn btn--danger" style="display:none" onclick="SPA.clearAll()" data-i18n="btn.clear_all">Clear all</button>
     </div>
   </div>
@@ -945,7 +995,44 @@ var I18N = {
     'auth.no_write': '\u0412\u0445\u0456\u0434 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E, \u0430\u043B\u0435 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043B\u0438\u0448\u0435 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443',
     'auth.write_granted': '\u0414\u043E\u0441\u0442\u0443\u043F \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0430\u0434\u0430\u043D\u043E \u2014 \u0432\u0441\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E',
     'auth.readonly_title': '(\u0431\u0435\u0437 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441)',
-    'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443'
+    'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443',
+    'export.title': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438',
+    'export.srt': '\u0424\u0430\u0439\u043b \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432 (.srt)',
+    'export.video_make': '\u0421\u0442\u0432\u043e\u0440\u0438\u0442\u0438 \u0432\u0456\u0434\u0435\u043e \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043c\u0438',
+    'export.video_working': '\u0421\u0442\u0432\u043e\u0440\u044e\u0454\u0442\u044c\u0441\u044f \u0432\u0456\u0434\u0435\u043e \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043c\u0438, \u0437\u0430\u0447\u0435\u043a\u0430\u0439\u0442\u0435',
+    'export.video_download': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438 \u0432\u0456\u0434\u0435\u043e \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043c\u0438',
+    'export.video_downloading': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0443\u0454\u0442\u044c\u0441\u044f \u0432\u0456\u0434\u0435\u043e, \u0437\u0430\u0447\u0435\u043a\u0430\u0439\u0442\u0435',
+    'burn.downloaded': '{done} \u041c\u0411 \u0437 {total} \u041c\u0411',
+    'export.srt_failed': '\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0438 (HTTP {status})',
+    'burn.saved': '\u0412\u0456\u0434\u0435\u043e \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043d\u043e: {name}',
+    'burn.view_run': '\u0414\u0438\u0432\u0438\u0442\u0438\u0441\u044C \u0437\u0430\u043F\u0443\u0441\u043A',
+    // The four phases the track draws, in workflow order.
+    'burn.step.prepare': '\u041F\u0456\u0434\u0433\u043E\u0442\u043E\u0432\u043A\u0430',
+    'burn.step.fetch': '\u041E\u0442\u0440\u0438\u043C\u0443\u0454\u043C\u043E \u0432\u0456\u0434\u0435\u043E',
+    'burn.step.render': '\u0412\u0448\u0438\u0432\u0430\u0454\u043C\u043E \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0438',
+    'burn.step.upload': '\u0412\u0438\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0454\u043C\u043E \u0444\u0430\u0439\u043B',
+    'burn.step_of': '\u041A\u0440\u043E\u043A {n} \u0437 {total} \u2014 {step}',
+    'burn.elapsed': '\u043C\u0438\u043D\u0443\u043B\u043E {min} \u0445\u0432',
+    'burn.estimate_soft': '\u0449\u0435 \u0431\u043B\u0438\u0437\u044C\u043A\u043E {min} \u0445\u0432',
+    'burn.done_in': '\u0433\u043E\u0442\u043E\u0432\u043E \u0437\u0430 {min} \u0445\u0432',
+    'burn.queued': '\u0417\u0430\u043F\u0443\u0441\u043A\u0430\u0454\u043C\u043E\u2026',
+    'burn.failed_step': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430 \u043A\u0440\u043E\u0446\u0456 \u00AB{step}\u00BB',
+    'burn.failed': '\u0417\u0431\u0438\u0440\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u0435\u043E \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F',
+    'burn.run_not_found': '\u0417\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437',
+    'burn.no_artifact': '\u0417\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437\u0430\u043B\u0438\u0448\u0438\u0432 \u0444\u0430\u0439\u043B\u0443',
+    'burn.download_failed': '\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u0430\u0439\u043B (HTTP {status})',
+    'burn.range_ignored': '\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0432 \u0437\u0430\u043F\u0438\u0442\u0430\u043D\u0438\u0439 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D \u0431\u0430\u0439\u0442\u0456\u0432 \u2014 \u043F\u043E\u0442\u043E\u043A\u043E\u0432\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u043D\u0435\u043C\u043E\u0436\u043B\u0438\u0432\u0435',
+    'burn.unknown_step': '\u041D\u0435\u0432\u0456\u0434\u043E\u043C\u0438\u0439 \u043A\u0440\u043E\u043A \u00AB{step}\u00BB \u2014 \u0437\u0430\u043F\u0443\u0441\u043A \u043D\u0435 \u0437 \u0446\u0456\u0454\u0457 \u0432\u0435\u0440\u0441\u0456\u0457',
+    'burn.no_mp4': '\u0423 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E\u043C\u0443 \u0430\u0440\u0445\u0456\u0432\u0456 \u043D\u0435\u043C\u0430\u0454 MP4',
+    'burn.no_actions_permission': 'GitHub App \u043D\u0435 \u043C\u0430\u0454 \u0434\u043E\u0437\u0432\u043E\u043B\u0443 Actions \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0456\u0442\u044C Actions: Read and write',
+    'burn.expired': '\u0422\u0435\u0440\u043C\u0456\u043D \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442\u0443 \u0441\u043F\u043B\u0438\u0432 (7 \u0434\u043D\u0456\u0432) \u2014 \u0437\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0456\u0434\u0435\u043E \u0437\u0430\u043D\u043E\u0432\u043E',
+    'burn.one_at_a_time': '\u0417\u0430\u0447\u0435\u043a\u0430\u0439\u0442\u0435 \u2014 \u0456\u043d\u0448\u0435 \u0432\u0456\u0434\u0435\u043e \u0449\u0435 \u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0443\u0454\u0442\u044c\u0441\u044f',
+    'burn.memory_fallback': '\u0426\u0435\u0439 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043D\u0435 \u043C\u0430\u0454 \u0434\u0456\u0430\u043B\u043E\u0433\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u2014 \u0443\u0441\u0435 \u0432\u0456\u0434\u0435\u043E \u0442\u0440\u0438\u043C\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u043F\u0430\u043C\u02BC\u044F\u0442\u0456, \u0430 \u043F\u043E\u0442\u0456\u043C \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u0442\u044C\u0441\u044F \u0432 \u0442\u0435\u043A\u0443 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u044C',
+    'burn.too_large': '\u0412\u0456\u0434\u0435\u043E \u0432\u0430\u0436\u0438\u0442\u044C {size} \u0413\u0411 \u2014 \u0437\u0430\u0431\u0430\u0433\u0430\u0442\u043E, \u0449\u043E\u0431 \u0446\u0435\u0439 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u0443\u0442\u0440\u0438\u043C\u0430\u0432 \u0439\u043E\u0433\u043E \u0432 \u043F\u0430\u043C\u02BC\u044F\u0442\u0456. \u0412\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 \u0437\u0430\u043F\u0443\u0441\u043A \u0456 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0442\u0435 \u0430\u0440\u0442\u0435\u0444\u0430\u043A\u0442 \u0456\u0437 GitHub.',
+    'burn.wrong_lang': '\u0423 \u0432\u0456\u0434\u0435\u043E \u0437\u0430\u0432\u0436\u0434\u0438 \u0432\u0448\u0438\u0432\u0430\u044E\u0442\u044C\u0441\u044F \u0443\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0456 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0438 \u2014 {lang} \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443.',
+    'burn.wait_for_sync': '\u0427\u0435\u043A\u0430\u0454\u043C\u043E, \u043F\u043E\u043A\u0438 \u0432\u0430\u0448\u0456 \u043F\u0440\u0430\u0432\u043A\u0438 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u044E\u0442\u044C\u0441\u044F',
+    'burn.pending_title': '{n} {word} \u0449\u0435 \u043D\u0435 \u0432 main. \u0412\u0441\u0435 \u043E\u0434\u043D\u043E \u0437\u0456\u0431\u0440\u0430\u0442\u0438 \u0432\u0456\u0434\u0435\u043E?',
+    'burn.pending_body': '\u0412\u0456\u0434\u0435\u043E \u0437\u0431\u0438\u0440\u0430\u0454\u0442\u044C\u0441\u044F \u0456\u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432 \u0443 \u0433\u0456\u043B\u0446\u0456 <strong>main</strong>. \u041F\u0440\u0430\u0432\u043A\u0438, \u0449\u043E \u0449\u0435 \u0447\u0435\u043A\u0430\u044E\u0442\u044C \u0443 \u043F\u0443\u043B-\u0440\u0435\u043A\u0432\u0435\u0441\u0442\u0456, \u0443 \u0432\u0456\u0434\u0435\u043E \u043D\u0435 \u043F\u043E\u0442\u0440\u0430\u043F\u043B\u044F\u0442\u044C.'
   },
   en: {
     'gate.title': 'Enter the password to continue',
@@ -1112,7 +1199,44 @@ var I18N = {
     'auth.no_write': 'Signed in, but without write access — read-only features available',
     'auth.write_granted': 'Write access granted — all features enabled',
     'auth.readonly_title': '(no write access)',
-    'title.lang': 'Interface language'
+    'title.lang': 'Interface language',
+    'export.title': 'Download',
+    'export.srt': 'Subtitle file (.srt)',
+    'export.video_make': 'Create the video with subtitles',
+    'export.video_working': 'Building the video with subtitles, please wait',
+    'export.video_download': 'Download the video with subtitles',
+    'export.video_downloading': 'Downloading the video, please wait',
+    'burn.downloaded': '{done} MB of {total} MB',
+    'export.srt_failed': 'Subtitle download failed (HTTP {status})',
+    'burn.saved': 'Video saved: {name}',
+    'burn.view_run': 'View run',
+    // The four phases the track draws, in workflow order.
+    'burn.step.prepare': 'Preparing',
+    'burn.step.fetch': 'Fetching the video',
+    'burn.step.render': 'Burning in the subtitles',
+    'burn.step.upload': 'Uploading the result',
+    'burn.step_of': 'Step {n} of {total} — {step}',
+    'burn.elapsed': '{min} min elapsed',
+    'burn.estimate_soft': 'about {min} min to go',
+    'burn.done_in': 'done in {min} min',
+    'burn.queued': 'Starting…',
+    'burn.failed_step': 'Failed at step "{step}"',
+    'burn.failed': 'The render failed',
+    'burn.run_not_found': 'The run was not found — try again',
+    'burn.no_artifact': 'The run produced no artifact',
+    'burn.download_failed': 'Artifact download failed (HTTP {status})',
+    'burn.range_ignored': 'The server did not send the requested byte range — the video could not be streamed',
+    'burn.unknown_step': 'Unknown step "{step}" \u2014 this run is not from this version',
+    'burn.no_mp4': 'No mp4 inside the downloaded archive',
+    'burn.no_actions_permission': 'The GitHub App lacks the Actions permission — enable Actions: Read and write',
+    'burn.expired': 'The artifact expired (7 days) — render again',
+    'burn.one_at_a_time': 'Please wait — another video is still downloading',
+    'burn.memory_fallback': 'This browser has no save dialog — the whole video is held in memory, then saved to your Downloads folder',
+    'burn.too_large': 'The video is {size} GB — more than this browser can hold in memory. Open the run and download the artifact from GitHub.',
+    'burn.wrong_lang': 'The render always burns in the Ukrainian subtitles — {lang} is preview-only.',
+    'burn.wait_for_sync': 'Waiting for your edits to finish syncing',
+    'burn.pending_title': '{n} {word} not yet on main. Render the video anyway?',
+    'burn.pending_body': 'The video is built from the subtitles on <strong>main</strong>. Edits still waiting in a pull request will not appear in it.'
   }
 };
 
@@ -1179,6 +1303,12 @@ function translatePage() {
   });
   // Update html lang attribute
   document.documentElement.lang = currentLang;
+  // The burn panel's status line is composed at render time ("done in 21 min"),
+  // so no data-i18n attribute above can reach it — it has to be drawn again.
+  retranslateBurnPanel();
+  // Same reason for the render button's tooltip: it names the previewed
+  // subtitle language, so it is composed text, not a fixed key.
+  updateExportUi();
 }
 
 var SyncPlayer = (function() {
@@ -2077,6 +2207,9 @@ SPA.switchSubLang = function(lang) {
       renderEditList();
       updateClearBtn();
     }
+    // A render is only possible for the language the workflow burns, so the
+    // button's availability changes with the language shown.
+    updateExportUi();
   });
 };
 
@@ -2091,6 +2224,16 @@ function route() {
   // Persist the preview playback position before any navigation tears down or
   // pauses the player. No-op when not on a preview (guards on talkId).
   flushPreviewPos();
+
+  // Stop the burn poll on every navigation, including the gated redirect below:
+  // off the preview the panel is not on screen, so the 5s loop would keep
+  // hitting the API for up to ~30 min and write into hidden DOM. burnWatch and
+  // its persisted state are deliberately kept — entering a preview calls
+  // resumeBurnWatch(), which picks the recorded run straight back up.
+  // setBurnFollowing(false) as well, so an already-issued poll request that
+  // resolves after this point gives up instead of re-arming the loop.
+  stopBurnTimer();
+  setBurnFollowing(false);
 
   // Soft passphrase gate: a gated route reached while locked (e.g. a pasted
   // deep link) redirects to the index and prompts there; only a correct
@@ -2990,6 +3133,9 @@ function showPreview(talkId, videoSlug) {
   renderMarkers();
   renderEditList();
   updateClearBtn();
+  // A burn dispatched here (or on another device/tab) keeps running in Actions
+  // — pick the recorded run back up so leaving the page doesn't lose it.
+  resumeBurnWatch(talkId, videoSlug);
 
   // The view is active and its DOM is rendered — install the resize handles now
   // rather than waiting for the 400ms timer, which can lose the race against a
@@ -3553,6 +3699,12 @@ SPA.deleteEdit = function(idx) {
 };
 
 function updateClearBtn() {
+  // Every path that changes previewState.edits ends here (add, typing, undo,
+  // clear-all, remote merge) — and those edits are burnEditsSignature()'s
+  // input, so the export item is repainted here too: a finished render must
+  // stop being offered the moment the subtitles stop matching it. Marker-only
+  // changes take the call as well; it is idempotent and cheap.
+  updateExportUi();
   var btn = document.getElementById('btn-clear-all');
   if (!btn) return;
   var n = 0;
@@ -3694,6 +3846,1341 @@ SPA.openPreviewEditor = function() {
     window.open(url);
   }
 };
+
+// ============================================================
+// Burned-in subtitle render (preview → Actions → mp4)
+//
+// Vimeo streams the talk cross-origin: the browser may PLAY it but can never
+// read its bytes, so the re-encode has to happen in Actions. This block is DOM
+// glue only — every decision (ratios, run matching, progress, ZIP parsing)
+// lives in js/burn_video.js and js/burn_artifact.js, which the Node suite
+// tests directly.
+// ============================================================
+var BURN_POLL_MS = 5000;
+var BURN_RUN_WAIT_MS = 60000;
+// Actions artifacts are deleted after the 7-day retention, so a recorded run
+// older than that can no longer produce a download — drop it on resume.
+var BURN_STATE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+// A browser without showSaveFilePicker reads the artifact into memory whole;
+// past roughly a gigabyte that allocation fails (or the tab is killed) with
+// nothing legible to show. The streaming path holds none of it, so this limit
+// belongs to the buffered path alone.
+var BURN_GB = 1024 * 1024 * 1024;
+var BURN_MAX_DOWNLOAD_BYTES = BURN_GB;
+// The tail window that carries the EOCD and the central directory. Measured:
+// a one-entry, comment-less artifact needs 170 bytes of directory, so 4 KB is
+// generous — and BURN_TAIL_RETRY_BYTES covers the shapes it cannot, once.
+var BURN_TAIL_BYTES = 4096;
+var BURN_TAIL_RETRY_BYTES = 262144;
+// Enough of a local file header for its 30 fixed bytes plus any name and extra
+// field a real artifact carries; nothing reads past them.
+var BURN_LFH_BYTES = 1024;
+var burnWatch = null;   // {requestId, runId, runUrl, startedAt, talkId, videoSlug}
+var burnTimer = null;
+// True exactly while a non-terminal run is being followed. Single source of
+// truth for "no second render may start": it drives the button's disabled
+// state AND stops a poll continuation that lands after the panel was hidden
+// from re-arming the 5s loop behind the user's back.
+var burnFollowing = false;
+// True exactly while the pending-edits dialog is open. burnFollowing cannot
+// cover that window — nothing is being followed yet — so without this a second
+// click opens a second dialog and, once both are answered, dispatches twice.
+var burnConfirming = false;
+// The watch a poll request is currently out for, from the moment it is sent
+// until its continuation settles. burnFollowing cannot cover this: closing and
+// reopening the menu inside one network round-trip restores it, so the first
+// chain's continuation found both `watch === burnWatch` and burnFollowing true
+// again, carried on, and armed a timer of its own — while burnTimer only ever
+// remembers the last id, so the escaped loop polled the API for as long as the
+// video stayed open.
+//
+// It holds the WATCH, not a bare boolean: a plain flag would also refuse the
+// first poll of a video the reviewer navigated to while the old video's request
+// was still out, and then nothing would poll at all.
+var burnPollingFor = null;
+// {talkId, videoSlug, loaded, total} exactly while a finished video is being
+// written to disk, null otherwise. That write goes through the save dialog's own
+// file handle, so the browser files it under nothing at all: no downloads entry,
+// no shelf, no progress. Without this the menu is silent for the several minutes
+// a few hundred megabytes take, and there is no way to tell a running transfer
+// from a finished one or from a click that did nothing.
+//
+// It carries the video it belongs to because it OUTLIVES the preview it started
+// on: nothing aborts a transfer on navigation, and `downloading` outranks every
+// other face. Unscoped, a video that had never been rendered wore a disabled
+// "Downloading, please wait" for as long as another video's bytes kept moving.
+var burnDownload = null;
+
+// Is the running transfer the one the reviewer is looking at? Anything else
+// belongs to a video they have navigated away from, and must not show here.
+function burnDownloadIsHere() {
+  return !!burnDownload
+    && burnDownload.talkId === (previewState && previewState.talkId)
+    && burnDownload.videoSlug === (previewState && previewState.videoSlug);
+}
+
+// The workflow reads talks/{id}/{slug}/final/uk.srt and declares no language
+// input, so this is the one language a render can be about.
+var BURN_LANG = 'uk';
+
+// The previewed subtitles are not the ones a run would burn. Previewing en.srt
+// and pressing Render would return Ukrainian subtitles after a wait of minutes.
+function burnLangMismatch() {
+  var lang = previewState && previewState.srtLang;
+  return !!(lang && lang !== BURN_LANG);
+}
+
+// Blocks the reviewer has edited in this browser but not yet landed on main.
+// The dispatch targets ref 'main', so these are exactly the words the rendered
+// video will NOT show.
+// Which ref carries the subtitles the user is looking at, and whether it is
+// safe to render yet.
+//
+// The SPA commits the EDITED talks/<talk>/<slug>/final/<lang>.srt to its
+// autosync branch inside pushFiles(), which completes BEFORE the status becomes
+// 'synced'. So a green cloud is a promise that the branch already holds those
+// edits — rendering from it gives exactly what the preview shows. Any other
+// status means the branch is behind the screen, and rendering would quietly
+// produce the wrong video after a long wait.
+//
+//   no engine for this talk           -> 'main', the published subtitles
+//   engine, status 'synced' / 'ready' -> its branch, the edited subtitles
+//                                        ('ready' = synced + undrafted PR)
+//   engine, no local edits pending    -> 'main': the screen IS the published
+//                                        subtitles, whatever the sync says
+//   engine, unsynced local edits      -> null: refuse, and say why
+//
+// The no-edits arm is load-bearing: a signed-in reviewer ALWAYS has an engine
+// with a branch (the name is deterministic, minted before any edit or network
+// call), and an engine that finds no state file on attach stays at its
+// construction-time 'idle' forever. Without this arm the export control died
+// on every clean account, waiting for edits that do not exist.
+function burnSourceRef() {
+  var sync = (editSync && editSync.talkId === (previewState && previewState.talkId))
+    ? editSync.getInfo() : null;
+  if (!sync || !sync.branch) return burnRef(window);
+  if (sync.status === 'synced' || sync.status === 'ready') return sync.branch;
+  return burnPendingEdits() ? null : burnRef(window);
+}
+
+function burnPendingEdits() {
+  var edits = previewState && previewState.edits && previewState.edits[BURN_LANG];
+  return edits ? Object.keys(edits).length : 0;
+}
+
+// A fingerprint of the subtitles a render would burn, recorded with the run and
+// compared against the current one. It is what makes a finished video go stale:
+// once the reviewer edits (or un-edits) a block, that file no longer matches the
+// screen, and the menu must stop offering it as this video's subtitled copy.
+function burnEditsSignature() {
+  var edits = (previewState && previewState.edits && previewState.edits[BURN_LANG]) || {};
+  var keys = Object.keys(edits).sort();
+  var parts = [];
+  for (var i = 0; i < keys.length; i++) parts.push(keys[i] + '=' + edits[keys[i]]);
+  return parts.join('\n');
+}
+
+function burnStale() {
+  if (!burnWatch) return false;
+  // A run recorded before signatures existed carries none, so there is nothing
+  // to compare against: we cannot know which subtitles that video was built
+  // from. Offering it as "the video with subtitles" would claim a match we
+  // cannot prove — and since an unsigned watch can never BECOME stale, the
+  // claim would be permanent and leave no way to build again. The run is kept
+  // either way; only the promise about it is withheld.
+  if (burnWatch.editsSig === undefined) return true;
+  return burnWatch.editsSig !== burnEditsSignature();
+}
+
+// Everything that decides what the export control offers is read here, in one
+// place, so no two of them can disagree on screen. A control disabled for a
+// reason always carries that reason as its title: a dead control with no
+// explanation is indistinguishable from a bug.
+function updateExportUi() {
+  var btn = document.getElementById('btn-export');
+  if (btn) {
+    // The glyph is written once — it is a constant, and rewriting it on every
+    // poll would churn the DOM 300 times over a render.
+    if (!btn.firstChild) btn.innerHTML = exportIconSvg();
+    // BOTH downloads read the ref burnSourceRef() picks. While that ref is
+    // behind the screen there is nothing here worth handing over, so the whole
+    // control goes quiet rather than serving stale text under a fresh preview.
+    var unsettled = burnSourceRef() === null;
+    btn.disabled = unsettled;
+    btn.title = unsettled ? t('burn.wait_for_sync') : t('export.title');
+    if (unsettled) closeExportMenu();
+  }
+  renderVideoItem();
+}
+
+// The video item's face: label, enabled-ness, and which of its progress parts
+// are on screen. videoItemState() decides; this only draws.
+function renderVideoItem() {
+  var group = document.getElementById('export-video');
+  var item = document.getElementById('btn-burn-video');
+  var label = document.getElementById('burn-item-label');
+  if (!group || !item || !label) return;
+  var terminal = burnLastProgress && (burnLastProgress.done || burnLastProgress.failed);
+  var s = videoItemState({
+    writeUser: ghWriteUser(),
+    langMismatch: burnLangMismatch(),
+    downloading: burnDownloadIsHere(),
+    following: burnFollowing || burnConfirming,
+    done: !!(burnLastProgress && burnLastProgress.done),
+    stale: burnStale(),
+    expired: /export-item-group--expired/.test(group.className)
+  });
+  var key = s.state === 'working' ? 'export.video_working'
+    : (s.state === 'downloading' ? 'export.video_downloading'
+    : (s.state === 'download' ? 'export.video_download' : 'export.video_make'));
+  // The key travels with the text so translatePage() repaints the right label.
+  label.setAttribute('data-i18n', key);
+  label.textContent = t(key);
+  item.disabled = s.disabled;
+  item.title = s.reasonKey === 'burn.wrong_lang' ? burnWrongLangText() : '';
+  // A transfer owns the readout while it runs: its own bar and byte counter,
+  // over the render's finished ones. Painted from here, not from the download
+  // code, so every repaint agrees about what the item is showing. The tint is
+  // set from here for the same reason, and unconditionally — a class only ever
+  // added on the way in would survive the way out.
+  setTransferTint(s.state === 'downloading');
+  if (s.state === 'downloading') {
+    renderDownloadProgress();
+    return;
+  }
+  // A render the item has DISOWNED: it succeeded, but the item is no longer
+  // standing behind it — the subtitles moved on, or it cannot be matched to
+  // them at all — and there is no error explaining the offer either. Its whole
+  // readout has to go with it. Left up, a full green track, "done in N min"
+  // and a link to the run sat directly under "Create the video with subtitles",
+  // saying the opposite of the label above them.
+  //
+  // A FAILED run is not disowned: there the readout is why the offer is there,
+  // so the error line and the run link stay.
+  var err = document.getElementById('burn-error');
+  var explained = !!(err && !err.hidden && err.textContent);
+  // An item offering to build, with nothing to explain the offer, stands behind
+  // no render at all — so nothing of one may show beneath it. Without this the
+  // previous render's track and run link sat directly under "Create the video
+  // with subtitles", saying the opposite of the label above them. There is no
+  // exception for a run mid-flight: if the label says "create", the readout
+  // under it belongs to something the item is not talking about.
+  var disowned = s.state === 'start' && !explained;
+  // The progress parts belong to a run: an item merely offering to start one
+  // shows a bare label, with no empty track and no stale times under it.
+  var showProgress = !disowned && (s.state !== 'start' || !!burnLastProgress);
+  var track = document.getElementById('burn-track');
+  if (track) track.hidden = !showProgress;
+  // `terminal` is read for the meta line alone — a finished run keeps its
+  // "done in N min", a start-state item has nothing to say.
+  var meta = group.querySelector('.export-item__meta');
+  if (meta) meta.hidden = disowned || (!showProgress && !terminal);
+  // The link's visibility is DERIVED, never merely switched off: onBurnFinished
+  // drops the follow flag before writing the result, so for one paint the item
+  // wears a start face — and a link only ever hidden here would stay hidden,
+  // because nothing paints it back. setBurnRunLink() owns the href; whether
+  // there is a run to point at is read from it.
+  var link = document.getElementById('burn-run-link');
+  if (link) {
+    // From the watch, not from the element: an <a> with href="#" reports the
+    // whole page URL back through .href, which on the deployed https:// origin
+    // would pass a protocol test that means nothing.
+    var haveRun = !!(burnWatch && /^https:\/\//.test(burnWatch.runUrl || ''));
+    // A failure keeps its link even with no progress drawn: it is the only way
+    // to see what the gate actually said.
+    link.hidden = !(haveRun && !disowned && (showProgress || explained));
+  }
+  // The green belonged to that same disowned video. Left on, it tints a track
+  // that is about to be hidden and comes back the moment anything reveals it.
+  if (disowned && /export-item-group--done/.test(group.className)) {
+    setVideoItemTint('');
+  }
+  // Coming back OUT of a transfer, the track is still the transfer's single
+  // span, frozen wherever the bytes stopped. Nothing else repaints it until the
+  // menu is reopened, so a transfer that died at 40% left a 40% bar under a
+  // render that had finished, reading as a render that stalled.
+  //
+  // Last, and only when there is a render to show: an expired artifact and a
+  // disowned run have both just had their readout deliberately taken down, and
+  // renderBurnProgress() would paint it straight back — green tint included.
+  if (burnTrack && burnTrack.mode === 'download' && !disowned
+      && !/export-item-group--expired/.test(group.className)) {
+    if (burnLastProgress) renderBurnProgress(burnLastProgress);
+    else ensureBurnTrack();
+  }
+}
+
+function burnWrongLangText() {
+  var lang = String((previewState && previewState.srtLang) || '').toUpperCase();
+  return t('burn.wrong_lang').replace('{lang}', lang);
+}
+
+// meta.yaml carries no video dimensions, and the iframe is cross-origin — but
+// the Vimeo player API reports the intrinsic size over postMessage, and only
+// the aspect ratio is needed here. The workflow re-probes the real pixels with
+// ffprobe, so this affects the ratio only.
+function burnGeometry() {
+  var player = previewState && previewState.player;
+  var scale = parseFloat(getComputedStyle(document.documentElement)
+    .getPropertyValue('--preview-subs-scale')) || 1;
+  var base = {
+    viewportWidth: window.screen.width,
+    viewportHeight: window.screen.height,
+    subsScale: scale
+  };
+  if (!player) {
+    // 16:9 is the only sane default; a wrong aspect changes the ratio, not the
+    // correctness of the render.
+    return Promise.resolve(Object.assign(base, { videoWidth: 16, videoHeight: 9 }));
+  }
+  return Promise.all([player.getVideoWidth(), player.getVideoHeight()])
+    .then(function(wh) {
+      return Object.assign(base, { videoWidth: wh[0], videoHeight: wh[1] });
+    })
+    .catch(function() {
+      return Object.assign(base, { videoWidth: 16, videoHeight: 9 });
+    });
+}
+
+function saveBurnState(watch) {
+  if (!watch) return;
+  // Best-effort: a full/blocked storage must not abort a running render — the
+  // watch keeps working in memory, it just won't survive a reload.
+  try {
+    localStorage.setItem(burnStateKey(watch.talkId, watch.videoSlug), JSON.stringify(watch));
+  } catch (e) {}
+}
+
+function clearBurnState(talkId, videoSlug) {
+  try { localStorage.removeItem(burnStateKey(talkId, videoSlug)); } catch (e) {}
+}
+
+function stopBurnTimer() {
+  if (burnTimer) { clearTimeout(burnTimer); burnTimer = null; }
+}
+
+function setBurnFollowing(on) {
+  burnFollowing = !!on;
+  updateExportUi();
+}
+
+// Only ever link to an https run URL from the API — never let an unexpected
+// value become a javascript:/data: href.
+function setBurnRunLink(url) {
+  var link = document.getElementById('burn-run-link');
+  if (!link) return;
+  var ok = /^https:\/\//.test(url || '');
+  link.href = ok ? url : '#';
+  link.hidden = !ok;
+}
+
+// Puts the video item back into its starting state for a run that is about to
+// begin. Takes no label: the status line is derived from the progress payload
+// now, and the discovery window paints the burn.queued line on its own.
+function resetVideoItem() {
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = ''; err.hidden = true; }
+  renderBurnProgress({ fraction: 0, label: '', done: false, failed: false,
+                       failedStep: '', startedMs: null });
+}
+
+function showBurnError(msg) {
+  stopBurnTimer();
+  setBurnFollowing(false);
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = msg; err.hidden = false; }
+  // Over a terminal item nothing comes off: a failure AFTER a successful render
+  // (the download, an expired artifact) keeps the duration it earned — the
+  // render really did succeed, and the error line says what went wrong since.
+  // Anywhere else the item has stopped being a progress report, so the status
+  // line goes: a frozen phase and a frozen clock beside an error read as
+  // "still working".
+  //
+  // Errors raised before any job step ran — dispatch, permissions,
+  // run-not-found — never reach renderBurnProgress, which is why the item has
+  // to be corrected here at all.
+  var group = document.getElementById('export-video');
+  if (!group || !/export-item-group--(done|expired)/.test(group.className)) {
+    clearBurnStatusLine();
+    burnLastProgress = null;   // a failure is not a result to offer back
+    updateExportUi();
+  }
+}
+
+// The video item's terminal tint: 'done', 'expired' or nothing. Single writer,
+// so two states can never stack up and a new render cannot inherit the old
+// one's green.
+function setVideoItemTint(state) {
+  var group = document.getElementById('export-video');
+  if (!group) return;
+  group.className = 'export-item-group' + (state ? ' export-item-group--' + state : '');
+}
+
+// The transfer's tint sits ALONGSIDE the render's, not instead of it: the run
+// really did finish, and setVideoItemTint() replaces the whole class list, so
+// this one is added and removed on its own.
+function setTransferTint(on) {
+  var group = document.getElementById('export-video');
+  if (!group) return;
+  var base = group.className.replace(/\s*export-item-group--transfer/g, '');
+  group.className = on ? base + ' export-item-group--transfer' : base;
+}
+
+// Phase, elapsed and remaining all come off together: any one of them left
+// behind alone would be a claim the panel can no longer stand behind.
+function clearBurnStatusLine() {
+  var ids = ['burn-step', 'burn-elapsed', 'burn-eta'];
+  for (var i = 0; i < ids.length; i++) {
+    var el = document.getElementById(ids[i]);
+    if (el) el.textContent = '';
+  }
+}
+
+// The 7-day retention has taken the artifact: nothing here can be downloaded
+// any more. Mute the track, take the item off its download face and drop every
+// time claim — the error line says the rest.
+function showBurnExpired() {
+  setVideoItemTint('expired');
+  updateExportUi();
+  clearBurnStatusLine();
+}
+
+// One segment per phase, flex-grow straight from the weight table, so the drawn
+// widths cannot drift from the workflow. Built once and then only updated: a
+// rebuild would restart the CSS width transition and make the fill jump.
+var burnTrack = null;   // {track: element, parts: [{seg, fill}]} once built
+
+// The payload the item was last drawn from. The status line is composed text
+// (burn.done_in with a minute count substituted in), which no data-i18n
+// attribute can repaint — so a UI-language switch has to draw the item again.
+var burnLastProgress = null;
+
+// Called by translatePage() on a UI-language switch.
+function retranslateBurnPanel() {
+  var group = document.getElementById('export-video');
+  // A closed menu is repainted too — it is one cheap write, not a poll, and it
+  // closes the window where closing the menu then switching language would
+  // leave stale text waiting to be revealed. Never drawn at all is the only
+  // nothing-to-do case.
+  if (!group || !burnLastProgress) return;
+  // The expired state is deliberately frozen: its track is muted, its times are
+  // gone and its download is off. A repaint would put all three back.
+  if (/export-item-group--expired/.test(group.className)) return;
+  var err = document.getElementById('burn-error');
+  // An error report must not become a progress report again: redrawing a
+  // non-terminal payload would resurrect the phase line showBurnError took down.
+  // A finished payload is safe — its status line is the duration fact alone,
+  // which is exactly what should follow the language.
+  if (err && !err.hidden && !burnLastProgress.done) return;
+  renderBurnProgress(burnLastProgress);
+}
+
+// The same track element serves two different bars: the render's four weighted
+// phase segments, and the file transfer's single span. `mode` is what keeps a
+// cached set of parts from being reused for the other one.
+function ensureTrackParts(weights, mode) {
+  var track = document.getElementById('burn-track');
+  if (!track) return null;
+  if (burnTrack && burnTrack.track === track && burnTrack.mode === mode
+      && burnTrack.parts.length === weights.length) {
+    return track;
+  }
+  track.innerHTML = '';
+  var parts = [];
+  for (var i = 0; i < weights.length; i++) {
+    var seg = document.createElement('div');
+    seg.className = 'burn-seg';
+    // One control, not four: the value is published on the track itself.
+    seg.setAttribute('aria-hidden', 'true');
+    seg.style.flexGrow = String(weights[i] * 100);
+    var fill = document.createElement('div');
+    fill.className = 'burn-seg__fill';
+    seg.appendChild(fill);
+    track.appendChild(seg);
+    parts.push({ seg: seg, fill: fill });
+  }
+  burnTrack = { track: track, parts: parts, mode: mode };
+  return track;
+}
+
+function ensureBurnTrack() {
+  return ensureTrackParts(burnPhases().map(function(p) { return p.weight; }), 'phases');
+}
+
+// The transfer's readout: one span filling as bytes land, and the counter under
+// it. Nothing else in the browser reports this — the file is written through the
+// save dialog's handle.
+//
+// A response without a length gets an empty bar and no counter rather than an
+// invented position: the reviewer would read a made-up bar as a real one. The
+// label above it still says the transfer is running, which is the fact.
+function renderDownloadProgress() {
+  var d = burnDownload || { loaded: 0, total: 0 };
+  var fraction = downloadFraction(d.loaded, d.total);
+  var track = ensureTrackParts([1], 'download');
+  if (track) {
+    // No length, no bar. An empty track sitting at zero for the ten minutes the
+    // buffered path takes reads as broken, and a bar that cannot move is not a
+    // smaller version of a bar that can.
+    track.hidden = fraction === null;
+    track.setAttribute('aria-valuenow', String(Math.round((fraction || 0) * 100)));
+    burnTrack.parts[0].fill.style.width = ((fraction || 0) * 100) + '%';
+  }
+  var meta = document.getElementById('export-video').querySelector('.export-item__meta');
+  if (meta) meta.hidden = false;
+  var step = document.getElementById('burn-step');
+  if (step) {
+    step.textContent = fraction === null ? ''
+      : t('burn.downloaded').replace('{done}', megabytes(d.loaded))
+                            .replace('{total}', megabytes(d.total));
+  }
+  // The render's own numbers are not about this phase.
+  var elapsed = document.getElementById('burn-elapsed');
+  if (elapsed) elapsed.textContent = '';
+  var eta = document.getElementById('burn-eta');
+  if (eta) eta.textContent = '';
+}
+
+// Enter, advance, and leave the transfer state. Every exit runs through here —
+// a success, a dismissed dialog, a dead handle — because a readout left saying
+// "downloading, please wait" over a transfer that stopped is the one outcome
+// with no way back: the item stays disabled and the file never arrives.
+function setBurnDownload(progress) {
+  burnDownload = progress;
+  updateExportUi();
+}
+
+// Byte counts arrive per chunk — ~64 KB at a time, so several thousand times
+// for a real video. The state is always current, but the repaint only happens
+// when the whole percent changes: the bar cannot show more than that anyway.
+function advanceBurnDownload(loaded, total) {
+  if (!burnDownload) return;
+  // Compare like with like: the old loaded against the OLD total. Reading the
+  // new total on both sides meant the step from "no length yet" to a known one
+  // floored to 0 either way, so the bar and the counter stayed away until a
+  // whole percent had landed — 20 MB into a 2 GB file.
+  var before = downloadFraction(burnDownload.loaded, burnDownload.total);
+  var after = downloadFraction(loaded, total);
+  burnDownload = { talkId: burnDownload.talkId, videoSlug: burnDownload.videoSlug,
+                   loaded: loaded, total: total };
+  if ((before === null) !== (after === null)
+      || Math.floor((after || 0) * 100) !== Math.floor((before || 0) * 100)) {
+    updateExportUi();
+  }
+}
+
+// Minutes left in the render, or null when there is nothing honest to say.
+// The rate is measured from the render's own gate steps: renderFraction of the
+// encode took (now - renderStartedMs). Before the first gate completes there is
+// no rate at all — say nothing rather than invent one.
+function burnEtaMinutes(p) {
+  if (!p.renderStartedMs) return null;
+  var elapsed = Math.max(0, (Date.now() - p.renderStartedMs) / 1000);
+  var seconds = renderEtaSeconds(p.renderFraction, elapsed);
+  return seconds === null ? null : Math.max(1, Math.round(seconds / 60));
+}
+
+// Whole minutes since our first step started, FLOORED so the counter can never
+// overstate, and null below one minute: "1 min elapsed" after ten seconds is a
+// small lie, and the phase name carries the first minute on its own.
+// Whole minutes since the job started, floored — empty below one, because
+// "1 min elapsed" after ten seconds is a small lie and the phase name already
+// carries the first minute.
+//
+// A FINISHED run is measured to when it finished, never to now: Date.now()
+// keeps ticking after the run ends, so "done in N min" would grow for as long
+// as the tab stays open (a one-minute run read as 17).
+function burnElapsedMinutes(p) {
+  if (!p.startedMs) return null;
+  var until = (p.done || p.failed) ? (p.finishedMs || p.startedMs) : Date.now();
+  var minutes = Math.floor(Math.max(0, until - p.startedMs) / 60000);
+  return minutes >= 1 ? minutes : null;
+}
+
+// "Step 3 of 4 - Burning in the subtitles": the phase, never the raw English
+// step name the Actions API reports.
+function burnStepText(p) {
+  // A terminal state says it in the title; an empty line under it is honest.
+  if (p.done || p.failed) return '';
+  // A step is running that this build does not know: the dispatched workflow is
+  // not the one BURN_STEP_WEIGHTS describes. Say so — borrowing the last phase
+  // we DID recognise would name the wrong one for as long as that step runs.
+  if (p.unknownStep) return t('burn.unknown_step').replace('{step}', p.unknownStep);
+  var number = burnPhaseNumber(p);
+  var key = burnPhaseKey(p.label);
+  // computeProgress() returns an empty label for the whole run-discovery window
+  // (up to 60s), and the trailing 'Post ...' steps are not ours to name. Keep
+  // saying burn.queued rather than leaving the user at a blank panel.
+  if (!number || !key) return t('burn.queued');
+  return t('burn.step_of')
+    .replace('{n}', number)
+    .replace('{total}', burnPhases().length)
+    .replace('{step}', t('burn.step.' + key));
+}
+
+function renderBurnProgress(p) {
+  var pct = p.done ? 100 : Math.round((Number(p.fraction) || 0) * 100);
+  var track = ensureBurnTrack();
+  if (track) {
+    // Every state — including the discovery window's breathing first phase —
+    // comes from burnSegments(). The driver only sets classes and geometry.
+    var segs = burnSegments(p);
+    for (var i = 0; i < segs.length; i++) {
+      var part = burnTrack.parts[i];
+      // 'empty' is the one case the breathing overlay is for: a phase that IS
+      // running and has earned nothing to show. Once it has credited fill, the
+      // fill is the whole truth — a tint over the rest of a 70%-wide segment
+      // reads as a second, paler shade of progress (a measured 44% looked ~78%
+      // done), and the alive-signal is the elapsed counter and the fill itself.
+      var empty = segs[i].fill === 0 ? ' burn-seg--empty' : '';
+      part.seg.className = 'burn-seg burn-seg--' + segs[i].state + empty;
+      part.fill.style.width = Math.round(segs[i].fill * 100) + '%';
+    }
+    // A CSS width says nothing to a screen reader, so the progressbar publishes
+    // its value as a number too.
+    track.setAttribute('aria-valuenow', pct);
+  }
+  setVideoItemTint(p.done ? 'done' : '');
+  renderBurnStatus(p);
+  // Remembered for retranslateBurnPanel(): the status line is composed text, so
+  // a UI-language switch can only be honoured by drawing it again. Set BEFORE
+  // the item is drawn — renderVideoItem() reads it to tell a finished run from
+  // one that has not started.
+  burnLastProgress = p;
+  updateExportUi();
+}
+
+// Where a run died, said in the language and the vocabulary of the panel: the
+// PHASE, not the workflow's own "Render 40%". A step we cannot map to a phase
+// gets the generic sentence rather than a name we have no translation for — the
+// View-run link carries the gate-level detail for anyone who wants it.
+function burnFailureMessage(p) {
+  var key = burnPhaseKey(p && p.failedStep);
+  return key
+    ? t('burn.failed_step').replace('{step}', t('burn.step.' + key))
+    : t('burn.failed');
+}
+
+function renderBurnStatus(p) {
+  var step = document.getElementById('burn-step');
+  if (step) {
+    var text = burnStepText(p);
+    // Written only when it actually changes: this span is the panel's live
+    // region, and re-writing identical text makes a screen reader say it again.
+    if (step.textContent !== text) step.textContent = text;
+  }
+  var minutes = burnElapsedMinutes(p);
+  var elapsed = document.getElementById('burn-elapsed');
+  // The elapsed line is the alive-signal while a single gate runs for minutes
+  // with nothing else moving — but on a terminal state the title and the
+  // burn.done_in line say it better.
+  if (elapsed) {
+    elapsed.textContent = (minutes === null || p.done || p.failed)
+      ? '' : t('burn.elapsed').replace('{min}', minutes);
+  }
+  var eta = document.getElementById('burn-eta');
+  if (!eta) return;
+  if (p.done) {
+    eta.textContent = minutes === null
+      ? '' : t('burn.done_in').replace('{min}', minutes);
+    return;
+  }
+  // Terminal failure wins over the projection: a run cancelled mid-render still
+  // carries a render rate, and "about 9 min to go" next to a failure is a lie.
+  var left = p.failed ? null : burnEtaMinutes(p);
+  eta.textContent = left === null
+    ? ''
+    : t('burn.estimate_soft').replace('{min}', left);
+}
+
+// The render is a wait of many minutes that ends in a file. Two things could
+// silently make that file disagree with the preview it promises to match — the
+// subtitle language, and edits that have not reached main — so both are settled
+// BEFORE anything is dispatched rather than discovered afterwards.
+function startBurn() {
+  var talkId = previewState && previewState.talkId;
+  var videoSlug = previewState && previewState.videoSlug;
+  if (!talkId || !videoSlug) return Promise.resolve();
+  // One render at a time. Without this an impatient second click dispatches a
+  // second run and orphans the first one — it keeps burning Actions minutes
+  // with no UI and no way back to it.
+  if (burnFollowing || burnConfirming) return Promise.resolve();
+  // The edited subtitles are not on any branch yet — rendering now would burn
+  // the published text under a preview showing something else.
+  if (burnSourceRef() === null) {
+    updateExportUi();
+    showToast(t('burn.wait_for_sync'));
+    return Promise.resolve();
+  }
+  // The workflow burns final/uk.srt and has no language input, so a render
+  // started over an English preview would come back Ukrainian. Refuse, and say
+  // so — the item carries the same sentence as its title.
+  if (burnLangMismatch()) {
+    updateExportUi();
+    showToast(burnWrongLangText());
+    return Promise.resolve();
+  }
+  // Only warn when the render genuinely will not carry the edits: rendering
+  // from a synced branch includes them, so the old "your edits will be missing"
+  // dialog would be a lie there.
+  var pending = (burnSourceRef() === burnRef(window)) ? burnPendingEdits() : 0;
+  if (!pending) return dispatchBurn(talkId, videoSlug);
+  // The dispatch targets ref 'main' (see below), so pending edits are precisely
+  // what the video will not show. Say it before the wait, not after it.
+  // Dispatching against the draft PR's branch instead would include them; that
+  // is the better answer and a separate change.
+  burnConfirming = true;
+  updateExportUi();
+  return SPA.confirm({
+    title: t('burn.pending_title').replace('{n}', pending)
+      .replace('{word}', pluralFor(pending, 'edits')),
+    body: t('burn.pending_body'),
+    confirmLabel: t('export.video_make'),
+    cancelLabel: t('modal.cancel')
+  }).then(function(ok) {
+    burnConfirming = false;
+    updateExportUi();
+    if (!ok) return;
+    // The dialog is a floating overlay the router does not tear down, so it can
+    // be answered on a page it no longer belongs to. This closure still holds
+    // the video it was opened for: dispatching it now would start a render for
+    // one video and paint its progress onto another.
+    if (talkId !== (previewState && previewState.talkId)
+        || videoSlug !== (previewState && previewState.videoSlug)) return;
+    return dispatchBurn(talkId, videoSlug);
+  }, function(err) {
+    burnConfirming = false;
+    updateExportUi();
+    throw err;
+  });
+}
+
+// The human titles that name the run in the Actions list. A talk missing from
+// the manifest yields empty strings, and the workflow falls back to
+// talk_id/video_slug — a nameless run is better than a blocked render.
+function burnRunTitles(talkId, videoSlug) {
+  var talk = manifest
+    ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
+  var video = talk
+    ? (talk.videos || []).find(function(v) { return v.slug === videoSlug; }) : null;
+  return { talkTitle: (talk && talk.title) || '',
+           videoTitle: (video && video.title) || '' };
+}
+
+function dispatchBurn(talkId, videoSlug) {
+  stopBurnTimer();
+  // Drop the old watch BEFORE the first await: an already-scheduled pollBurn
+  // continuation still holds it, and `watch !== burnWatch` is what makes that
+  // continuation give up instead of re-arming a second poll loop.
+  burnWatch = null;
+  setBurnFollowing(true);
+  // A fresh render replaces whatever the item was showing, tint included.
+  setVideoItemTint('');
+  resetVideoItem();
+  setBurnRunLink('');
+  return burnGeometry().then(function(geometry) {
+    var ratios = measureBurnRatios(geometry);
+    var requestId = makeRequestId(Date.now());
+    var titles = burnRunTitles(talkId, videoSlug);
+    var inputs = buildBurnInputs(talkId, videoSlug, ratios, requestId, {
+      sourceRef: burnSourceRef(),
+      talkTitle: titles.talkTitle,
+      videoTitle: titles.videoTitle,
+    });
+    // TWO refs, deliberately: the workflow file and tools/ come from the ref
+    // this SPA was built against, the subtitles from `source_ref` above. An
+    // edit-sync branch is cut from main ONCE and never fast-forwarded, so
+    // dispatching against it would run whatever renderer main happened to have
+    // on the day the reviewer first edited.
+    return dispatchWorkflow(API, getAuthToken(), BURN_WORKFLOW, burnRef(window), inputs)
+      .then(function() {
+        // editsSig freezes what this run was asked to burn: the moment the
+        // reviewer edits (or un-edits) a block afterwards, the video it produces
+        // stops matching the screen and the item stops offering it.
+        burnWatch = { requestId: requestId, runId: 0, runUrl: '', startedAt: Date.now(),
+                      talkId: talkId, videoSlug: videoSlug,
+                      editsSig: burnEditsSignature() };
+        saveBurnState(burnWatch);
+        pollBurn();
+      });
+  }).catch(function(err) {
+    // A 403 here means the token predates the App's Actions grant — say that
+    // plainly instead of echoing an opaque API message.
+    showBurnError(err && err.status === 403
+      ? t('burn.no_actions_permission')
+      : (err && err.message) || String(err));
+  });
+}
+
+function pollBurn() {
+  if (!burnWatch) return;
+  if (burnPollingFor === burnWatch) return;   // one loop per watch, however many callers
+  var watch = burnWatch;   // pin it: navigating away swaps burnWatch mid-flight
+  burnPollingFor = watch;
+  var token = getAuthToken();
+  var findRun = watch.runId
+    ? Promise.resolve(watch.runId)
+    : listWorkflowRuns(API, token, BURN_WORKFLOW).then(function(runs) {
+        var run = matchRun(runs, watch.requestId);
+        if (run) {
+          watch.runId = run.id;
+          watch.runUrl = run.html_url || '';
+          saveBurnState(watch);
+          // Only touch the panel if it still belongs to this watch.
+          if (watch === burnWatch) setBurnRunLink(watch.runUrl);
+          return run.id;
+        }
+        // Dispatch to run creation is not instant — keep waiting, but not forever.
+        if (Date.now() - watch.startedAt > BURN_RUN_WAIT_MS) {
+          throw new Error(t('burn.run_not_found'));
+        }
+        return 0;
+      });
+
+  findRun.then(function(runId) {
+    if (!runId) return null;
+    return getRunJobs(API, token, runId).then(function(jobs) { return jobs[0]; });
+  }).then(function(job) {
+    if (burnPollingFor === watch) burnPollingFor = null;
+    // Abandon if the panel moved on: another video (watch swapped) or the user
+    // hid this one (no longer following). Either way, do not re-arm the loop.
+    if (watch !== burnWatch || !burnFollowing) return;
+    var p = computeProgress(job, Date.now());
+    renderBurnProgress(p);
+    // Failure first: a job that died in "Set up job" (before any named step)
+    // comes back failed with an empty failedStep, and a run cancelled
+    // mid-render still carries a render rate that must not be shown.
+    if (p.failed) {
+      clearBurnState(watch.talkId, watch.videoSlug);
+      showBurnError(burnFailureMessage(p));
+      return;
+    }
+    if (p.done) { onBurnFinished(p); return; }
+    burnTimer = setTimeout(pollBurn, BURN_POLL_MS);
+  }).catch(function(err) {
+    if (burnPollingFor === watch) burnPollingFor = null;
+    if (watch !== burnWatch || !burnFollowing) return;
+    showBurnError((err && err.message) || String(err));
+  });
+}
+
+// `p` is the terminal progress payload, when there is one. Only startedMs is
+// read from it: the "done in N min" line must come from the API's start instant,
+// not from a guess made here.
+function onBurnFinished(p) {
+  stopBurnTimer();
+  setBurnFollowing(false);   // the run is terminal — rendering again is allowed
+  // Both instants have to survive: the duration is finishedMs - startedMs, and
+  // dropping either one turns "done in 21 min" into silence or into a number
+  // that grows with the wall clock.
+  renderBurnProgress({ fraction: 1, label: '', done: true, failed: false,
+                       failedStep: '', unknownStep: '',
+                       startedMs: (p && p.startedMs) || null,
+                       finishedMs: (p && p.finishedMs) || null });
+  // Success must never sit under a leftover error line.
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = ''; err.hidden = true; }
+}
+
+// The menu is a menu: closing it stops the polling but keeps the recorded run,
+// so reopening picks the render back up and nothing is lost by tidying up.
+function closeExportMenu() {
+  var menu = document.getElementById('export-menu');
+  if (!menu || menu.hidden) return;
+  // Closed FIRST, before anything that can call back in here. updateExportUi()
+  // closes the menu whenever the ref goes behind the screen, and
+  // setBurnFollowing() calls updateExportUi() — so with this line last the two
+  // recursed until the stack ran out, on every poll tick during a sync.
+  menu.hidden = true;
+  var btn = document.getElementById('btn-export');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  stopBurnTimer();
+  setBurnFollowing(false);
+  updateExportUi();
+}
+
+// Opens the menu and picks the followed run back up, unless it already reached
+// a terminal state — that item is a result, not a progress report.
+function openExportMenu() {
+  var menu = document.getElementById('export-menu');
+  if (!menu) return;
+  menu.hidden = false;
+  var btn = document.getElementById('btn-export');
+  if (btn) btn.setAttribute('aria-expanded', 'true');
+  var group = document.getElementById('export-video');
+  var err = document.getElementById('burn-error');
+  var reported = !!(err && !err.hidden && err.textContent);
+  // The expired state is deliberately frozen, and renderBurnProgress() ends in
+  // setVideoItemTint(), which REPLACES the class list — replaying the finished
+  // payload here stamped --done over --expired, and the item went back to
+  // offering a download whose artifact is gone. Guarded in two other repaint
+  // paths already; this was the third.
+  var frozen = group && /export-item-group--expired/.test(group.className);
+  if (burnLastProgress && !frozen) renderBurnProgress(burnLastProgress);
+  // A failure is terminal too. showBurnError() nulls burnLastProgress, so the
+  // payload cannot say so — the error still on screen is what says it. Without
+  // this, every reopen re-armed the poll for a run that had already died and
+  // wore "Building, please wait" for one API round-trip.
+  var terminal = reported || frozen
+    || (burnLastProgress && (burnLastProgress.done || burnLastProgress.failed));
+  if (burnWatch && !terminal) { setBurnFollowing(true); pollBurn(); }
+  updateExportUi();
+}
+
+function toggleExportMenu() {
+  var menu = document.getElementById('export-menu');
+  if (!menu) return;
+  if (menu.hidden) openExportMenu(); else closeExportMenu();
+}
+
+// The menu carries no dismiss control of its own: leaving it IS closing it.
+// A click anywhere outside the ANCHOR closes it — the anchor, not the menu,
+// because the download button sits inside it and is the toggle, and because a
+// menu item must not dismiss the surface it is on before it has acted.
+function onBurnDocumentClick(e) {
+  var menu = document.getElementById('export-menu');
+  if (!menu || menu.hidden) return;
+  var target = e && e.target;
+  if (target && target.closest && target.closest('.export-pop')) return;
+  closeExportMenu();
+}
+
+// A surface floating over the page is expected to close on Escape too — the
+// keyboard's version of clicking away from it. The run goes on either way, and
+// the button is the way back to it.
+function onBurnKeydown(e) {
+  if (e.key !== 'Escape') return;
+  var menu = document.getElementById('export-menu');
+  // An already-closed menu must not swallow the key: it is shared with the
+  // CSS-only fullscreen exit below.
+  if (!menu || menu.hidden) return;
+  // In fs-mode the header — and with it this menu — is display:none. There
+  // Escape belongs to leaving fullscreen, not to closing an invisible menu.
+  var view = document.getElementById('view-preview');
+  if (view && /(^|\s)fs-mode(\s|$)/.test(view.className || '')) return;
+  closeExportMenu();
+}
+
+// The video item does two different things depending on the face it is
+// wearing, and the face is decided in one place — so the click asks the same
+// question the label answered rather than guessing again.
+function videoItemAction() {
+  var group = document.getElementById('export-video');
+  var s = videoItemState({
+    writeUser: ghWriteUser(),
+    langMismatch: burnLangMismatch(),
+    following: burnFollowing || burnConfirming,
+    done: !!(burnLastProgress && burnLastProgress.done),
+    stale: burnStale(),
+    expired: !!(group && /export-item-group--expired/.test(group.className))
+  });
+  if (s.state === 'download') return downloadBurned();
+  if (s.state === 'start') return startBurn();
+  return Promise.resolve();
+}
+
+// The published subtitle file, from the SAME ref the render reads — so the two
+// downloads can never disagree about what "the subtitles" are. The language is
+// the one on screen: this file is what the reviewer is looking at, unlike the
+// video, which the workflow only ever burns in Ukrainian.
+function downloadSrt() {
+  var talkId = previewState && previewState.talkId;
+  var videoSlug = previewState && previewState.videoSlug;
+  var lang = (previewState && previewState.srtLang) || BURN_LANG;
+  var ref = burnSourceRef();
+  if (!talkId || !videoSlug || ref === null) return Promise.resolve();
+  var url = 'https://raw.githubusercontent.com/' + REPO + '/' + ref + '/'
+    + exportSrtPath(talkId, videoSlug, lang);
+  return fetch(url).then(function(resp) {
+    if (!resp.ok) {
+      throw new Error(t('export.srt_failed').replace('{status}', resp.status));
+    }
+    return resp.blob();
+  }).then(function(blob) {
+    saveBlob(blob, exportSrtName(talkId, videoSlug, lang));
+  }).catch(function(err) {
+    showToast((err && err.message) || String(err));
+  });
+}
+
+// One anchor-click download, shared by the subtitle file and the buffered
+// video path. The object URL is revoked late: revoking it synchronously can
+// cancel the download the click just started.
+function saveBlob(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  a.click();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
+}
+
+// Called on every preview entry. Drops the previous video's watch and picks up
+// this video's, if a render is still recorded and still downloadable.
+function resumeBurnWatch(talkId, videoSlug) {
+  stopBurnTimer();
+  // Every early return below means "nothing is being followed here", so reset
+  // first and only re-arm once a run is actually picked back up. The state —
+  // the previous video's run, result, run link and error line included — is
+  // cleared BEFORE setBurnFollowing() repaints: painting first left video A's
+  // "Download" face (and its error) on a video B that never rendered, because
+  // the early returns repaint nothing after the clear.
+  burnWatch = null;
+  burnLastProgress = null;
+  // "One render at a time" is scoped to a preview. An unanswered pending-edits
+  // dialog, stranded by a navigation, would otherwise refuse every render on
+  // every video until someone found and dismissed it.
+  burnConfirming = false;
+  setVideoItemTint('');
+  setBurnRunLink('');
+  var err = document.getElementById('burn-error');
+  if (err) { err.textContent = ''; err.hidden = true; }
+  closeExportMenu();
+  setBurnFollowing(false);
+  var raw = null;
+  try { raw = localStorage.getItem(burnStateKey(talkId, videoSlug)); } catch (e) {}
+  if (!raw) return;
+  var saved = null;
+  try { saved = JSON.parse(raw); } catch (e) {}
+  if (!saved || !saved.requestId) return;
+  if (Date.now() - (saved.startedAt || 0) > BURN_STATE_TTL_MS) {
+    clearBurnState(talkId, videoSlug);
+    return;
+  }
+  // Following a run and fetching its artifact both need the API — a read-only
+  // or signed-out session can do neither.
+  if (!ghWriteUser() || !getAuthToken()) return;
+  burnWatch = saved;
+  // The recorded run may still be in flight — follow it, and keep the item
+  // showing progress until this poll reaches a terminal state. The menu stays
+  // closed: a resumed render is not a reason to open a menu over the preview.
+  setBurnFollowing(true);
+  resetVideoItem();
+  setBurnRunLink(saved.runUrl);
+  pollBurn();
+}
+
+// The ZIP reader throws SYNCHRONOUSLY on a ZIP64 archive (js/burn_artifact.js
+// refuses to misread the sentinels) and DecompressionStream can throw where it
+// is unsupported. Wrapping the whole body keeps those on the promise chain, so
+// downloadBurned()'s .catch() reports them instead of letting them escape.
+function extractBurnedMp4(bytes) {
+  try {
+    // upload-artifact writes a streaming ZIP, so local headers may say zero —
+    // the central directory is the only trustworthy source of sizes.
+    var entry = pickMp4Entry(readCentralDirectory(bytes, findEocd(bytes)));
+    if (!entry) throw new Error(t('burn.no_mp4'));
+    var at = localDataOffset(bytes, entry.localHeaderOffset);
+    // STORED is always our case (upload-artifact runs at compression-level: 0)
+    // and it is the case where the payload is gigabytes, so take a VIEW rather
+    // than a copy: Blob reads a view's bytes exactly, and one full-size
+    // allocation of a feature-length MP4 disappears for free.
+    if (entry.method === 0) {
+      return Promise.resolve({ bytes: bytes.subarray(at, at + entry.compressedSize),
+                               name: entry.name });
+    }
+    // A deflated entry must NOT be viewed: those bytes are compressed, and
+    // handing them on unchanged would be a silently corrupt file.
+    var data = bytes.slice(at, at + entry.compressedSize);
+    return new Response(new Blob([data]).stream()
+        .pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()
+      .then(function(b) { return { bytes: new Uint8Array(b), name: entry.name }; });
+  } catch (err) {
+    return Promise.reject(err);
+  }
+}
+
+// ---- streaming: the video goes from the network into the file, unbuffered ----
+//
+// A Range header survives the API's 302 to the pre-signed blob (measured
+// against a real artifact), so the browser can read the ZIP in pieces through
+// the same URL — it never sees the blob URL, which CORS would not let it read
+// anyway. Three small requests locate the mp4: a tail window carrying the
+// central directory, the entry's own local header, then the data range, which
+// is piped straight into the file handle. Nothing larger than the tail window
+// is ever held, so the video's size stops mattering.
+function burnRangeFetch(url, token, range) {
+  return fetch(url, { headers: { Authorization: 'Bearer ' + token, Range: range } });
+}
+
+// "bytes 1000-1999/28978456" -> {start, end, total}. A 416 answers with the
+// unsatisfied form "bytes */28978456", which carries no window but does say
+// how long the file is — the one thing that response is useful for.
+function parseContentRange(value) {
+  var m = /bytes\s+(?:(\d+)-(\d+)|\*)\/(\d+)/.exec(String(value || ''));
+  if (!m) return null;
+  return { start: m[1] === undefined ? null : Number(m[1]),
+           end: m[2] === undefined ? null : Number(m[2]),
+           total: Number(m[3]) };
+}
+
+// One window of the artifact, `start` to `end` inclusive and both absolute —
+// or null when the server ignored the Range header and answered 200 with the
+// WHOLE file, which written as if it were the slice would produce garbage.
+//
+// The range is always explicit. Measured against the real artifact: the blob
+// host the API redirects to ignores a suffix range (bytes=-N) and sends
+// everything, and an open-ended bytes=N- would be unbounded whenever the size
+// the API reported is short of the truth.
+function fetchZipWindow(url, token, start, end) {
+  return burnRangeFetch(url, token, 'bytes=' + start + '-' + end).then(function(resp) {
+    if (resp.status === 416) {
+      // The artifact is shorter than the API said. Measured with an Origin
+      // set, the blob host sends a DIFFERENT Access-Control-Expose-Headers per
+      // status: Content-Range is on the 416 list and absent from the 206 one —
+      // so only here can the browser read the real length and ask again.
+      var over = parseContentRange(resp.headers && resp.headers.get('Content-Range'));
+      var past = new Error('burn: requested range is past the end of the artifact');
+      past.artifactTotal = over && over.total;
+      throw past;
+    }
+    if (!resp.ok) throw new Error(t('burn.download_failed').replace('{status}', resp.status));
+    if (resp.status !== 206) {
+      // Don't leave a whole-artifact download running for a body we discard.
+      if (resp.body && resp.body.cancel) resp.body.cancel();
+      return null;
+    }
+    // Content-Range is not a CORS-safelisted response header and the blob host
+    // does not expose it on a 206, so the window sits where we asked for it —
+    // the header only corroborates that, where it can be read at all.
+    var cr = parseContentRange(resp.headers && resp.headers.get('Content-Range'));
+    // These windows are kilobytes; the prohibition on arrayBuffer() is about
+    // the data range below, which is the one that would be gigabytes.
+    return resp.arrayBuffer().then(function(buf) {
+      return { bytes: new Uint8Array(buf),
+               base: (cr && cr.start !== null) ? cr.start : start };
+    });
+  });
+}
+
+// Locates the mp4's data range, or returns null when this artifact cannot be
+// streamed and the buffered path should take it. `total` is the artifact's
+// length as the API reported it.
+function locateBurnedMp4(url, token, total, tailBytes) {
+  var from = Math.max(0, total - tailBytes);
+  return fetchZipWindow(url, token, from, total - 1).then(function(win) {
+    if (!win) return null;
+    var entries = null;
+    try {
+      var at = findEocd(win.bytes);
+      if (at >= 0) entries = readCentralDirectory(win.bytes, at, win.base);
+    } catch (err) {
+      // A window that stops short of the directory is a "fetch more" problem;
+      // a ZIP64 refusal is not, and must not be retried into silence.
+      if (!err || !err.needsLargerWindow) throw err;
+    }
+    if (!entries || !entries.length) {
+      // A ZIP comment, more entries than one, or a reported size that is not
+      // quite the archive's: one larger window covers all of those. Past that,
+      // hand the archive to the buffered path rather than guess at its shape.
+      if (tailBytes < BURN_TAIL_RETRY_BYTES) {
+        return locateBurnedMp4(url, token, total, BURN_TAIL_RETRY_BYTES);
+      }
+      return null;
+    }
+    var entry = pickMp4Entry(entries);
+    // The directory parsed cleanly and holds no mp4 — downloading the whole
+    // archive would only reach the same answer more slowly.
+    if (!entry) throw new Error(t('burn.no_mp4'));
+    // A deflated entry must never be streamed: piping those bytes to disk
+    // writes a file that looks fine until it is played. upload-artifact runs
+    // at compression-level: 0, so this does not arise — and if it ever did,
+    // the buffered path below decompresses it properly.
+    if (entry.method !== 0) return null;
+    return fetchZipWindow(url, token, entry.localHeaderOffset,
+        Math.min(entry.localHeaderOffset + BURN_LFH_BYTES - 1, total - 1))
+      .then(function(hdr) {
+        if (!hdr) return null;
+        // From the entry's OWN local header: its name and extra lengths can
+        // differ from the central directory's copy, and a data range computed
+        // from the wrong one is silently misaligned.
+        return { name: entry.name, size: entry.compressedSize,
+                 start: localDataOffset(hdr.bytes, entry.localHeaderOffset, hdr.base) };
+      });
+  }, function(err) {
+    // Exactly one correction: ask again from the length the server itself
+    // reported. A second 416 against that length would mean something we
+    // cannot reason about, so the buffered path takes it.
+    if (err && err.artifactTotal && err.artifactTotal !== total) {
+      return locateBurnedMp4(url, token, err.artifactTotal, tailBytes);
+    }
+    if (err && err.artifactTotal !== undefined) return null;
+    throw err;
+  });
+}
+
+// `onProgress(bytesSoFar)` is optional. When it is given the reader loop is used
+// even where pipeTo exists: pipeTo hands the whole body over and reports
+// nothing, and a silent transfer is exactly what this argument is here to fix.
+// The loop awaits each write, so backpressure survives.
+function pumpToWritable(body, writable, onProgress) {
+  // pipeTo closes the stream itself; the reader loop has to.
+  if (body.pipeTo && !onProgress) return body.pipeTo(writable);
+  var reader = body.getReader();
+  var loaded = 0;
+  return (function step() {
+    return reader.read().then(function(r) {
+      if (r.done) return writable.close();
+      loaded += (r.value && r.value.length) || 0;
+      if (onProgress) onProgress(loaded);
+      return writable.write(r.value).then(step);
+    });
+  })();
+}
+
+function streamBurnedMp4(url, token, file) {
+  // The picker opens before the video is asked for, so a cancel costs nothing
+  // and the bytes have somewhere to go the moment they arrive.
+  return window.showSaveFilePicker({
+    suggestedName: file.name,
+    types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }]
+  }).catch(function(err) {
+    // As in saveMp4: cancelling the DIALOG is a deliberate no-op. Only this
+    // call is wrapped — an AbortError raised once the transfer is under way
+    // means a half-written file, and swallowing that would report a truncated
+    // video as a finished download.
+    if (err && err.name === 'AbortError') return null;
+    throw err;
+  }).then(function(handle) {
+    if (!handle) return;
+    return burnRangeFetch(url, token,
+        'bytes=' + file.start + '-' + (file.start + file.size - 1))
+      .then(function(resp) {
+        // The tail already proved this server honours Range; a 200 here would
+        // be the whole ZIP, and writing it would leave a broken mp4 on disk.
+        if (resp.status !== 206 || !resp.body) {
+          // Don't leave a whole-artifact transfer running for a body nobody
+          // will read.
+          if (resp.body && resp.body.cancel) resp.body.cancel();
+          throw new Error(t('burn.range_ignored'));
+        }
+        return handle.createWritable().then(function(w) {
+          return pumpToWritable(resp.body, w, function(loaded) {
+            advanceBurnDownload(loaded, file.size);
+          });
+        }).then(function() {
+          // Written through the dialog's own file handle, this lands in no
+          // downloads list, behind no shelf, with no progress of its own — a
+          // few hundred MB arrive in silence while the menu says nothing more.
+          // (The subtitle file goes through an anchor and DOES appear there,
+          // so without this the two downloads behaved differently for no
+          // reason the user could see.)
+          showToast(t('burn.saved').replace('{name}', file.name));
+        });
+      });
+  });
+}
+
+// The path for browsers without a save dialog, and for the archives streaming
+// refuses. It holds the whole video in memory, so past a point the allocation
+// simply fails and the tab dies with an untranslated error the user cannot act
+// on: say the size and point at the run instead.
+function downloadBurnedBuffered(url, token, art) {
+  if (art.size_in_bytes > BURN_MAX_DOWNLOAD_BYTES) {
+    throw new Error(t('burn.too_large')
+      .replace('{size}', (art.size_in_bytes / BURN_GB).toFixed(1)));
+  }
+  return fetch(url, { headers: { Authorization: 'Bearer ' + token } })
+    .then(function(resp) {
+      if (!resp.ok) throw new Error(t('burn.download_failed').replace('{status}', resp.status));
+      return resp.arrayBuffer();
+    }).then(function(buf) {
+      return extractBurnedMp4(new Uint8Array(buf));
+    }).then(function(file) {
+      return saveMp4(file.bytes, file.name);
+    });
+}
+
+function downloadBurned() {
+  if (!burnWatch || !burnWatch.runId) return Promise.resolve();
+  // One transfer at a time. burnDownload is a single slot: a second one rebrands
+  // the first one's chunks, makes the counter flicker between two totals, and
+  // whichever finishes first clears the readout of the one still going. A
+  // transfer deliberately outlives its preview, so "another video's" is a real
+  // case, not a double-click.
+  if (burnDownload) { showToast(t('burn.one_at_a_time')); return Promise.resolve(); }
+  var token = getAuthToken();
+  // Where this transfer's messages may be written. It outlives the preview it
+  // started on, and showBurnError() stops the poll timer and drops the follow
+  // flag — so reporting a departed transfer's failure would kill the CURRENT
+  // video's live render readout and leave a foreign error under it.
+  var here = { talkId: burnWatch.talkId, videoSlug: burnWatch.videoSlug };
+  function stillHere() {
+    return here.talkId === (previewState && previewState.talkId)
+      && here.videoSlug === (previewState && previewState.videoSlug);
+  }
+  // From the click, not from the first byte: locating the mp4 inside the
+  // artifact is itself three requests, and a control that looks idle after a
+  // click reads as a control that did nothing.
+  setBurnDownload({ talkId: here.talkId, videoSlug: here.videoSlug,
+                    loaded: 0, total: 0 });
+  return listRunArtifacts(API, token, burnWatch.runId).then(function(arts) {
+    var art = arts[0];
+    if (!art) throw new Error(t('burn.no_artifact'));
+    // Artifacts vanish after the 7-day retention — name that, don't show a 404.
+    if (art.expired) {
+      if (stillHere()) showBurnExpired();
+      throw new Error(t('burn.expired'));
+    }
+    var url = API + '/actions/artifacts/' + art.id + '/zip';
+    // Streaming needs a save dialog to write into and a length to count the
+    // tail back from; without either, the buffered path is the only one.
+    if (!window.showSaveFilePicker || !art.size_in_bytes) {
+      return downloadBurnedBuffered(url, token, art);
+    }
+    return locateBurnedMp4(url, token, art.size_in_bytes, BURN_TAIL_BYTES).then(function(file) {
+      if (!file) return downloadBurnedBuffered(url, token, art);
+      return streamBurnedMp4(url, token, file);
+    });
+  }).catch(function(err) {
+    if (stillHere()) showBurnError((err && err.message) || String(err));
+  }).then(function() {
+    // One exit for every outcome. showBurnError() above swallows the rejection,
+    // so this runs after a failure too — and an item still saying "downloading,
+    // please wait" over a dead transfer can never be pressed again.
+    setBurnDownload(null);
+  });
+}
+
+function saveMp4(bytes, name) {
+  var blob = new Blob([bytes], { type: 'video/mp4' });
+  if (window.showSaveFilePicker) {
+    return window.showSaveFilePicker({
+      suggestedName: name,
+      types: [{ description: 'MP4 video', accept: { 'video/mp4': ['.mp4'] } }]
+    }).then(function(handle) {
+      return handle.createWritable().then(function(w) {
+        return w.write(blob).then(function() { return w.close(); });
+      }).then(function() {
+        // Same silence as the streaming path: written through the dialog's own
+        // handle, this lands in no downloads list and behind no shelf.
+        showToast(t('burn.saved').replace('{name}', name));
+      });
+    }).catch(function(err) {
+      // Escape/Cancel in the save dialog rejects with AbortError. A deliberate
+      // cancel is not a failure: swallow it so the panel stays in its finished
+      // state and the user can click Download again. Everything else still
+      // propagates to downloadBurned()'s .catch().
+      if (err && err.name === 'AbortError') return;
+      throw err;
+    });
+  }
+  // Safari/Firefox: no save dialog, so the file lands in the Downloads folder
+  // without asking — and, unlike the streaming path, it was assembled in
+  // memory first. The toast says both, because the memory is why a long talk
+  // can fail here and not in a browser that has a picker.
+  showToast(t('burn.memory_fallback'));
+  saveBlob(blob, name);
+  return Promise.resolve();
+}
+
+SPA.toggleExportMenu = toggleExportMenu;
+SPA.downloadSrt = downloadSrt;
+SPA.videoItemAction = videoItemAction;
+document.addEventListener('keydown', onBurnKeydown);
+// Bubble phase, so the download button's own onclick has already run: by the
+// time this sees the click the toggle has settled the menu's state, and the
+// anchor test then finds nothing to do instead of undoing it.
+document.addEventListener('click', onBurnDocumentClick);
 
 document.addEventListener('keydown', function(e) {
   if (!document.getElementById('view-preview').classList.contains('active')) return;
@@ -4708,6 +6195,13 @@ function renderSyncStatus(status, info) {
   // The edit chip is suppressed while preview marker mode is active (the marker
   // chip takes over) and whenever there is no engine attached.
   paintSyncChip('sync', (!editSync || previewMarkerModeActive()) ? 'idle' : status);
+  // The export control reads the same engine (burnSourceRef), and every status
+  // transition, engine attach and teardown funnels through this paint — so the
+  // export writer runs here too. Without it the download button, disabled with
+  // "wait for the sync" while edits were pushing, stayed dead after the cloud
+  // turned green. (Safe to call from here: updateExportUi() never paints the
+  // chip back, so there is no cycle.)
+  updateExportUi();
 }
 
 // The chip is the whole signed-in lifecycle: its dropdown carries the PR
@@ -5127,6 +6621,13 @@ function updateAuthUI() {
   // Edit auto-sync lives only in a signed-in session on a talk view.
   ensureEditSync();
   ensureMarkerSync();
+  // ghWriteUser() gates the whole export video item (videoItemState), and this
+  // function is the one funnel every auth transition takes — sign-in, sign-out,
+  // write granted or lost. ensureEditSync() repaints the control only on the
+  // branches that touch the engine (its view-not-ready branch paints nothing),
+  // so the transition is honoured here explicitly, AFTER the engine was
+  // re-keyed so burnSourceRef() reads the new one.
+  updateExportUi();
   // Index cards/chips render auth-dependent bits ("take for review", the
   // 'mine' chip, own-talk highlight) — refresh them on login/logout.
   if (manifest && document.getElementById('index-content')) {

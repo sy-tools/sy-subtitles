@@ -3,6 +3,7 @@ import pytest
 from tools.vimeo_codec import encode_video_ref
 from tools.workflow_validation import (
     InvalidWorkflowInput,
+    validate_git_ref,
     validate_talk_id,
     validate_video_ref,
     validate_video_slug,
@@ -148,6 +149,66 @@ def test_video_ref_rejects_decoded_injection() -> None:
     malicious = encode_video_ref("https://vimeo.com/123;curl evil")
     with pytest.raises(InvalidWorkflowInput):
         validate_video_ref(malicious)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "main",
+        "worktree-burn-subtitles",
+        # The shape edit-sync actually produces, which is the whole reason this
+        # validator exists: the SPA renders the reviewer's branch, not main.
+        "sync/SlavaSubotskiy/1982-08-01_Adi-Shakti-puja--Mantras-uk",
+        "refs/heads/main",
+        "v1.2.3",
+        "_scratch",
+    ],
+)
+def test_git_ref_accepts_valid(value: str) -> None:
+    assert validate_git_ref(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "-rf",  # option-like: would be read as a flag by whatever consumes it
+        "--upload-pack=evil",
+        "..",
+        "a..b",  # git's own reserved sequence
+        "main;curl evil",
+        "main$(curl evil)",
+        "main with spaces",
+        "main\nsecond-line",
+        "main/",
+        "a//b",
+        "back\\slash",
+        "head@{1}",
+        "tilde~1",
+        "caret^",
+        "colon:name",
+        "quest?ion",
+        "star*",
+        "brack[et",
+        "x" * 256,
+    ],
+)
+def test_git_ref_rejects_the_rest(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_git_ref(value)
+
+
+def test_cli_accepts_valid_source_ref() -> None:
+    from tools.workflow_validation_cli import main
+
+    main(["--source-ref", "sync/SlavaSubotskiy/1982-08-01_x-uk"])  # must not raise / exit
+
+
+def test_cli_rejects_bad_source_ref() -> None:
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit):
+        main(["--source-ref", "main;curl evil"])
 
 
 def test_cli_accepts_valid_video_ref() -> None:

@@ -56,6 +56,9 @@ sy-subtitles/
 │           └── final/
 │               ├── uk.srt          # Final Ukrainian subtitles
 │               └── report.txt      # Validation report
+├── assets/                         # Vendored binary assets
+│   └── fonts/                      # Roboto TTF + license — libass reads it via fontsdir,
+│                                   #   so a burned line breaks exactly where the SPA's does
 ├── glossary/                       # Translation knowledge base
 │   ├── terms_lookup.yaml           # 374 EN→UK terms
 │   ├── terms_context.yaml          # Disambiguation context
@@ -64,6 +67,8 @@ sy-subtitles/
 ├── tools/                          # Python tooling (see tools/ for full listing)
 │   ├── download.py                 # Fetch from amruta.org (local only)
 │   ├── whisper_run.py              # Whisper speech detection wrapper
+│   ├── burn_subtitles.py           # SRT → ASS → ffmpeg+libass burned-in video
+│   ├── render_gate.py              # Blocks a burn gate step until the encode passes N%
 │   ├── build_map.py / build_srt.py # Subtitle builder (prepare → LLM → assemble)
 │   ├── builder_data.py             # Whisper / EN-SRT timing query interface
 │   ├── validate_subtitles.py       # SRT validation (text, CPS, overlaps, gaps)
@@ -108,7 +113,8 @@ sy-subtitles/
     ├── glossary-release.yml        # Glossary releases
     ├── golden-talks.yml            # Full-corpus golden tests (manual)
     ├── new-talk.yml                # PR-triggered setup for new talks
-    └── pipeline-matrix-dryrun.yml  # Matrix dry-run validation
+    ├── pipeline-matrix-dryrun.yml  # Matrix dry-run validation
+    └── burn-subtitles.yml          # Render uk.srt into the video (SPA-dispatched)
 ```
 
 ## Workflows
@@ -157,6 +163,35 @@ Triggered when a PR adds a new talk directory; bootstraps metadata.
 ### pipeline-matrix-dryrun.yml
 Replays the subtitle pipeline using `tools.fake_llm` snapshots — exercises
 the build/sync stack without burning Claude calls.
+
+### burn-subtitles.yml
+`workflow_dispatch` from the preview SPA: downloads the video, burns
+`final/uk.srt` into the picture with ffmpeg+libass reproducing the fullscreen
+subtitle look, and uploads the MP4 as a 7-day artifact. Sizing arrives as
+ratios measured in the browser (see `tools/burn_subtitles.py`). `run-name` is
+the talk's human title, so a run is found by eye in the Actions list; the
+caller's `request_id` rides along at the end because `workflow_dispatch`
+returns no run id, and that is how the SPA finds its own run.
+
+**Two refs, on purpose.** The workflow file and `tools/` come from the ref the
+dispatch names — always the deployed SPA's own version. The subtitles come from
+the `source_ref` input, checked out separately into `content/`, because a
+reviewer's edit-sync branch is cut from `main` once and never fast-forwarded:
+dispatching against it would run whatever renderer `main` happened to carry on
+the day they first edited.
+
+The job runs ffmpeg **once**, detached, writing an `-progress` file, and then
+declares twenty cheap named steps (`Render 5%` … `Render 95%`, `Finish render`)
+that each block in `tools/render_gate.py` until the encode passes that
+threshold. That shape exists because a *step completing* is the only live,
+CORS-clean progress channel a browser has into a running job — the log blob
+404s mid-run and annotations appear only at finalisation — and the SPA already
+polls the job's step list. So the bar is made of facts: each completed step
+name credits a fixed slice of it (`BURN_STEP_WEIGHTS` in
+`site/js/burn_video.js`, pinned against these step names by
+`tests/test_burn_workflow_steps.py`). The grid is 5% because the corpus's
+longest talk encodes in about 50 minutes, where 10% gates would leave the bar
+motionless for over five minutes at a time.
 
 ## Subtitle Builder (V2)
 

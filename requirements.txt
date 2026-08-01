@@ -2,4 +2,8 @@ pyyaml>=6.0.3
 requests>=2.34.2
 beautifulsoup4>=4.15.0
 python-dotenv>=1.2.2
-yt-dlp>=2026.7.4
+# The curl-cffi extra is not optional: without it yt-dlp is blocked on its TLS
+# fingerprint and newer Vimeo videos answer 401, while a browser plays the very
+# same URL. See tests/test_burn_workflow.py::TestVimeoImpersonation.
+yt-dlp[default,curl-cffi]>=2026.7.4
+Pillow>=12.2.0
