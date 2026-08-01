@@ -6200,6 +6200,8 @@ function ensureEditSync() {
     },
     isOffline: isOfflineError,
     buildFiles: buildSyncFiles,
+    // Invisible characters only -- these are whole rebuilt files.
+    sanitize: sanitizeInvisible,
     onStatus: onSyncStatus,
     onRemoteApplied: onSyncRemoteApplied,
   });
