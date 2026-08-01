@@ -1,5 +1,4 @@
-role: secondary
-mode: secondary-resync
-primary_slug: Guru-Puja
-built_at: '2026-07-31T08:08:26Z'
-run_id: 30614575300
+role: primary
+mode: en-srt
+built_at: '2026-08-01T11:38:49Z'
+run_id: manual
