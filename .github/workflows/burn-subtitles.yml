@@ -95,9 +95,13 @@ jobs:
           # extra. A bare `pip install yt-dlp` here would find the requirement
           # already satisfied and install the extra for nobody.
           pip install -r requirements.txt
-          # No font package: Roboto is vendored in assets/fonts/ and reaches
-          # libass through fontsdir.
-          sudo apt-get update && sudo apt-get install -y ffmpeg
+          # Roboto stays vendored in assets/fonts/ and reaches libass through
+          # fontsdir; the pre-flight probe proves it stayed the PRIMARY face.
+          # Noto is a GLYPH fallback only: twelve videos carry Sanskrit mantras
+          # in Devanagari, which Roboto does not cover — without a fallback
+          # libass has nothing to draw them with and the probe rightly refuses
+          # to put tofu boxes in a final video.
+          sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core
 
       - name: Validate inputs
         env:
@@ -112,6 +116,25 @@ jobs:
             --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG"
           test -f "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
             || { echo "::error::no final/uk.srt for $TALK_ID/$VIDEO_SLUG"; exit 1; }
+          # The video_ref, checked HERE for two reasons. Presence: a talk whose
+          # video has none used to sail through validation and die at Download
+          # video, after the whole install. Shape: the ref comes from meta.yaml
+          # on a caller-chosen branch, and decode_video_ref appends its payload
+          # to vimeo.com/ without any shape check — a multiline payload would
+          # defeat the line-based ::add-mask:: in the download step and hand
+          # its tail to the runner as workflow commands. validate_video_ref
+          # re-checks the DECODED url against the strict pattern.
+          VIDEO_REF=$(python3 -c "
+          import os, yaml
+          with open('content/talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
+              meta = yaml.safe_load(f)
+          for v in meta.get('videos', []):
+              if v.get('slug') == os.environ['VIDEO_SLUG']:
+                  print(v.get('video_ref', '')); break
+          ")
+          test -n "$VIDEO_REF" \
+            || { echo "::error::no video_ref for $VIDEO_SLUG — this video cannot be rendered"; exit 1; }
+          python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
           # The ratios are measured in the browser. Reject nonsense here, with a
           # legible message, rather than deep inside ffmpeg. The font_ratio
           # bounds mirror the clamp in tools/burn_subtitles.py.
@@ -151,6 +174,12 @@ jobs:
                   print(v.get('video_ref', '')); break
           ")
           test -n "$VIDEO_REF" || { echo "::error::no video_ref for $VIDEO_SLUG"; exit 1; }
+          # Validated AGAIN at the point of use, not only in Validate inputs:
+          # this is where the decoded value flows into ::add-mask:: and a log
+          # echo, so the guarantee must hold here even if the steps above are
+          # ever reordered. validate_video_ref rejects any ref whose decoded
+          # url does not match the strict single-line vimeo.com shape.
+          python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
           # Decode the obfuscated video_ref at the last moment and mask the
           # plaintext URL from the logs. --player emits the player.vimeo.com
           # form: Vimeo answers 401 on the internal API yt-dlp uses for the

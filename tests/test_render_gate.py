@@ -140,9 +140,33 @@ class TestWaitFor:
         # rewrites the moov atom afterwards), so "Finish render" must adopt the
         # process's real exit code, not the encoder's last progress line.
         codes = iter([None, None, 0])
-        out = self._wait(None, lambda: "out_time_us=9000000\nprogress=end\n", lambda: next(codes))
+        out = self._wait(None, lambda: "out_time_us=9900000\nprogress=end\n", lambda: next(codes))
         assert out.status == "reached"
         assert out.exit_code == 0
+
+    def test_await_mode_rejects_a_clean_exit_that_encoded_only_part(self):
+        # ffmpeg can hit a damaged packet partway, stop, and still exit 0. Every
+        # gate then released on the recorded progress and the job went green
+        # with a 20-minute file for a 149-minute talk. The final gate holds both
+        # operands — the source duration and the last out_time — so it is the
+        # one place the truncation is checkable.
+        out = self._wait(None, lambda: "out_time_us=1200000\nprogress=end\n", lambda: 0)
+        assert out.status == "truncated"
+        assert out.fraction == pytest.approx(0.12)
+
+    def test_await_mode_tolerates_the_last_fraction_of_a_second(self):
+        # Container durations are approximate; the stream legitimately runs a
+        # touch short of the declared length.
+        out = self._wait(None, lambda: "out_time_us=9900000\nprogress=end\n", lambda: 0)
+        assert out.status == "reached"
+
+    def test_await_mode_rejects_a_clean_exit_with_no_progress_at_all(self):
+        # Exit 0 with an empty progress file: nothing proves any frame was
+        # encoded. The threshold gates would normally have caught this, but the
+        # final gate must not vouch for what it cannot see.
+        out = self._wait(None, lambda: "", lambda: 0)
+        assert out.status == "truncated"
+        assert out.fraction is None
 
     def test_await_mode_propagates_a_failure(self):
         out = self._wait(None, lambda: "", lambda: 137)
@@ -162,7 +186,7 @@ class TestWaitFor:
         codes = iter([None] * 40 + [0])
         out = self._wait(
             None,
-            lambda: "out_time_us=9000000\nprogress=end\n",
+            lambda: "out_time_us=9900000\nprogress=end\n",
             lambda: next(codes),
             now=_fake_clock(step=60.0),
             stall_seconds=300.0,
@@ -245,6 +269,28 @@ class TestCli:
         with pytest.raises(SystemExit) as excinfo:
             render_gate.main(argv + ["--percent", "10"])
         assert excinfo.value.code != 0
+
+    def test_a_truncated_render_fails_the_final_gate(self, tmp_path, monkeypatch, capsys):
+        progress = tmp_path / "p.txt"
+        progress.write_text("out_time_us=1200000\nprogress=end\n", encoding="utf-8")
+        duration = tmp_path / "d.txt"
+        duration.write_text("10.0", encoding="utf-8")
+        exit_file = tmp_path / "e.txt"
+        exit_file.write_text("0", encoding="utf-8")
+        code = render_gate.main(
+            [
+                "--progress-file",
+                str(progress),
+                "--duration-file",
+                str(duration),
+                "--exit-file",
+                str(exit_file),
+                "--await-exit",
+            ]
+        )
+        assert code == render_gate.EXIT_TRUNCATED
+        out = capsys.readouterr().out
+        assert "::error::" in out and "12%" in out
 
     def test_a_stall_exits_non_zero(self, tmp_path, monkeypatch):
         monkeypatch.setattr(render_gate.time, "sleep", lambda s: None)

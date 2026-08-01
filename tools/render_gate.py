@@ -38,6 +38,13 @@ DEFAULT_STALL_SECONDS = 600.0
 # are the only ones this module invents.
 EXIT_SETUP_ERROR = 1
 EXIT_STALLED = 3
+EXIT_TRUNCATED = 4
+
+# The least of the source a clean exit may leave encoded. Container durations
+# are approximate — a stream legitimately runs a fraction of a second short of
+# the declared length — but 2% of a 149-minute talk is three minutes, which is
+# not rounding, it is a truncated video handed over as a finished one.
+COMPLETE_FRACTION_FLOOR = 0.98
 
 # How much of the detached render's log to echo when a gate fails.
 LOG_TAIL_CHARS = 4000
@@ -167,6 +174,15 @@ def wait_for(
                 return GateOutcome("reached", fraction=fraction)
 
         if exit_code is not None:
+            # The final gate is the one place truncation is checkable: ffmpeg
+            # can hit a damaged packet partway, stop, and still exit 0 — and
+            # every threshold gate would then release on the progress already
+            # recorded, sending a 20-minute file for a 149-minute talk out as a
+            # green job. Both operands are here: the declared duration and the
+            # last out_time. No progress at all is the same verdict — a gate
+            # must not vouch for what it cannot see.
+            if threshold is None and (fraction is None or fraction < COMPLETE_FRACTION_FLOOR):
+                return GateOutcome("truncated", exit_code=exit_code, fraction=fraction)
             # Zero: the render is over and this gate's threshold was simply
             # never observed. Release it rather than hang.
             return GateOutcome("reached", exit_code=exit_code, fraction=fraction)
@@ -264,6 +280,10 @@ def main(argv=None):
     if outcome.status == "failed":
         print(f"::error::the render exited with code {outcome.exit_code}")
         code = outcome.exit_code or EXIT_SETUP_ERROR
+    elif outcome.status == "truncated":
+        encoded = "no progress at all" if outcome.fraction is None else f"only {outcome.fraction:.0%} of the source"
+        print(f"::error::the render exited cleanly having encoded {encoded} — the video is truncated")
+        code = EXIT_TRUNCATED
     else:
         print(f"::error::no encode progress for {args.stall_seconds:.0f}s; giving up")
         code = EXIT_STALLED

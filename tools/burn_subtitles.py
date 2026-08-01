@@ -18,6 +18,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -82,6 +83,13 @@ def escape_ass_text(text):
     # The literal below is U+00A0. _WS_RUN would fold it too, so this replace
     # is redundant today and spelled out on purpose: if anyone ever narrows the
     # regex to [ \t]+, NBSP handling must not disappear silently with it.
+    if "\\" in text:
+        # ASS has no escape for a backslash. Passed through, a typed \N is a
+        # hard line break the wrapper never counted — the band is sized for one
+        # line while two are drawn. And escaping the braces around it makes it
+        # worse: `a\{b}` becomes `a\\{b\}`, where libass reads \\ as a literal
+        # backslash and {b\} as an override block that swallows the text.
+        raise ValueError(f"subtitle text contains a backslash: {text!r}")
     flat = text.replace(" ", " ")
     flat = _WS_RUN.sub(" ", flat).strip()
     return flat.replace("{", r"\{").replace("}", r"\}")
@@ -357,6 +365,10 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None)
 # <face>". ffmpeg prefixes the line with "[Parsed_ass_0 @ 0x...]".
 _FONTSELECT_RESULT = re.compile(r"fontselect:\s*\([^)]*\)\s*->\s*(?P<result>.+)")
 
+# ass_font.c logs this before re-running selection for a single missing glyph.
+# Every resolution line after it names a fallback face, not the primary.
+_GLYPH_FALLBACK_MARKER = "not found, selecting one more font"
+
 # Supplementary to the positive check below, not a substitute for it: these are
 # the three trouble messages libass 0.17.5 emits (ass_fontselect.c). The first
 # two are also caught by the face comparison; the third is not, because the
@@ -419,7 +431,24 @@ def font_selection_error(stderr, font_name, font_file=None, require_evidence=Tru
     happens to carry no fontselect line — a quieter build, a truncated capture —
     must not condemn a finished render. Proof is demanded where it is free.
     """
-    faces = [m.group("result").split(",")[-1].strip() for m in _FONTSELECT_RESULT.finditer(stderr)]
+    # Sequential, because ORDER is what tells a substitution from a fallback.
+    # libass selects the primary face first; only when a glyph is missing from
+    # it does it log "Glyph 0x… not found, selecting one more font" and then a
+    # second resolution line for the fallback face. Twelve of the corpus's
+    # videos carry Devanagari mantras that Roboto does not cover: their
+    # fallback resolutions are legitimate — the layout metrics all come from
+    # the primary — and condemning them made those talks unrenderable. A wrong
+    # face BEFORE any fallback marker is still the substitution this function
+    # exists to catch.
+    faces = []
+    fallback_engaged = False
+    for line in stderr.splitlines():
+        if _GLYPH_FALLBACK_MARKER in line:
+            fallback_engaged = True
+            continue
+        m = _FONTSELECT_RESULT.search(line)
+        if m and not fallback_engaged:
+            faces.append(m.group("result").split(",")[-1].strip())
     trouble = [phrase for phrase in _FONTSELECT_TROUBLE if phrase in stderr]
     if trouble:
         used = ", ".join(sorted(set(faces))) or "an unknown face"
@@ -574,6 +603,16 @@ def main(argv=None):
     # The measurer takes CSS pixels, not the ASS FontSize — see css_font_px.
     measure = text_measurer(args.font_file, css_font_px(args.font_ratio, height))
     cues = parse_srt(args.srt)
+    # Refused here, before anything runs, so the message can name the cue — the
+    # ValueError escape_ass_text would raise later names only the text, and the
+    # reviewer is left grepping four hundred cues for it.
+    for cue in cues:
+        if "\\" in cue.get("text", ""):
+            raise SystemExit(
+                f"cue {cue.get('idx', '?')} contains a backslash: {cue['text']!r}\n"
+                "ASS reads \\N as a line break the layout never counted; "
+                "fix the subtitle text."
+            )
     doc = build_ass_document(
         cues,
         width,
@@ -605,6 +644,12 @@ def main(argv=None):
     # Second net, now that the probe covers the content too: this catches only
     # what a single frame of the real document could still differ on.
     # Silence is tolerated here — see font_selection_error.
+    # ffmpeg can truncate on a damaged source and still exit 0. Its captured
+    # stderr is the only evidence; dropped here, a green job with a short file
+    # explains itself to nobody. Tail-bounded so a chatty encode cannot flood
+    # the render log.
+    if proc.stderr:
+        sys.stderr.write("[burn] ffmpeg stderr (tail):\n" + proc.stderr[-4000:] + "\n")
     error = font_selection_error(proc.stderr, args.font_name, font_file=args.font_file, require_evidence=False)
     if error:
         # Never leave a wrongly wrapped file behind: it looks like a finished burn.

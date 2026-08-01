@@ -3699,6 +3699,30 @@ describe('burn video wiring', () => {
       'a hand-computed gate weight restates the table this section derives from');
   });
 
+  it('actually registers the menu dismissal handlers on the document', () => {
+    // The dismissal handlers are exhaustively unit-tested — by calling them.
+    // The registrations live OUTSIDE the extracted driver block, so a mutation
+    // pass deleted both addEventListener lines and 1137 tests stayed green
+    // while Escape and click-away were dead in the real app. The exact
+    // "unit-tested but never called" failure mode this branch already shipped.
+    assert.ok(html.includes("document.addEventListener('keydown', onBurnKeydown)"),
+      'Escape-close is tested but not wired');
+    assert.ok(html.includes("document.addEventListener('click', onBurnDocumentClick)"),
+      'click-outside-close is tested but not wired');
+  });
+
+  it('actually calls resumeBurnWatch when a preview is shown', () => {
+    // Same class: every reset/resume test invokes resumeBurnWatch itself. The
+    // ONLY production call site is showPreview — deleting that one line kept
+    // the suite green while resume-on-entry, the per-video reset and the
+    // transfer scoping all died as the user experiences them.
+    const idx = html.indexOf('function showPreview(');
+    assert.ok(idx > -1, 'showPreview not found');
+    const chunk = html.slice(idx, html.indexOf('\nfunction ', idx + 1));
+    assert.match(chunk, /resumeBurnWatch\(talkId,\s*videoSlug\)/,
+      'showPreview must hand the burn state its talk and video');
+  });
+
   it('stops the burn poll when the router leaves the preview', () => {
     // Routing to the index left the 5s loop running for up to ~30 min, writing
     // into hidden DOM. The recorded run must survive so resumeBurnWatch() can
@@ -3765,6 +3789,31 @@ describe('burn video wiring', () => {
     assert.ok(rule, 'no rule grows the header buttons on a wrapped row');
     assert.match(rule[1], /flex:\s*1\s+1\s+auto/,
       'header buttons must still grow to fill the wrapped row');
+  });
+
+  it('keeps the menu anchor at the right edge when the mobile row wraps', () => {
+    // The menu hangs leftward from its anchor (right: 0). On a narrow screen the
+    // header row wraps, and a wrapped flex item lands at the START of its new
+    // row — a 320px surface anchored to a 44px icon at x≈12 opens at x=−264,
+    // and absolute-position overflow to the left is not scrollable: the menu is
+    // simply gone. Measured at a 320px viewport with the two grown text buttons
+    // filling row one. margin-left:auto pins the icon to its row's right edge
+    // whether it wraps or not, so the right-anchored menu always fits.
+    const media = css.slice(css.indexOf('@media (max-width: 768px)'));
+    assert.match(media, /\.header-actions > \.export-pop\s*\{[^}]*margin-left:\s*auto/,
+      'the export anchor must hug the right edge of a wrapped mobile row');
+  });
+
+  it('keeps the video-picker button a 44px touch target on mobile', () => {
+    // The old descendant rule (.header-actions button) covered #btn-sync-player
+    // through its .video-picker wrapper. The `>` rescoping kept the direct
+    // children and the export-pop, and silently dropped this third nesting —
+    // measured 34px beside 44px siblings on the review view's most-used control.
+    const media = css.slice(css.indexOf('@media (max-width: 768px)'));
+    const rule = media.match(/\.header-actions > [^{]*\{[^}]*min-height:\s*44px[^}]*\}/);
+    assert.ok(rule, 'no mobile touch-target rule found');
+    assert.match(rule[0], /\.header-actions > \.video-picker > button/,
+      'the video-picker button must keep the 44px touch metrics');
   });
 
   it('lets the transfer tint win over the finished render\'s green', () => {
@@ -3921,7 +3970,8 @@ describe('burn video driver behaviour', () => {
       getAttribute: function (k) { return k in this.attrs ? this.attrs[k] : null; },
       appendChild: function (c) { this.children.push(c); return c; },
       querySelector: function (sel) { return this.byCss[sel] || null; },
-      click: function () {}
+      clicks: 0,
+      click: function () { this.clicks++; }
     };
     // textContent counts its writes: #burn-step is the item's live region, so
     // "written only when the text actually changes" is a behaviour, not a
@@ -4108,7 +4158,8 @@ describe('burn video driver behaviour', () => {
       'showBurnError', 'resumeBurnWatch', 'saveMp4', 'downloadBurned', 'downloadSrt',
       'openExportMenu', 'closeExportMenu', 'toggleExportMenu', 'videoItemAction',
       'retranslateBurnPanel', 'updateExportUi', 'extractBurnedMp4',
-      'burnElapsedMinutes', 'onBurnKeydown', 'onBurnDocumentClick'];
+      'burnElapsedMinutes', 'onBurnKeydown', 'onBurnDocumentClick',
+      'advanceBurnDownload'];
     const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
       ', getWatch: function () { return burnWatch; } };';
     env.api = new Function(names.join(','), html.slice(start, end) + tail)
@@ -4541,6 +4592,8 @@ describe('burn video driver behaviour', () => {
         'the path is the published subtitle file, not an SPA-side reconstruction');
       assert.strictEqual(anchor.download, MENU_MODEL.exportSrtName('t', 'v', 'uk'),
         'a reviewer downloads several of these into one folder — name them so');
+      assert.strictEqual(anchor.clicks, 1,
+        'an anchor built and named but never clicked downloads nothing');
     }
   });
 
@@ -5346,6 +5399,36 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.fetches, 1, 'a normal-sized artifact must still be fetched');
   });
 
+  it('actually saves the file on the no-picker fallback path', async () => {
+    // Safari/Firefox have no save dialog: saveMp4 falls back to an anchor
+    // click. That line was deletable with the suite green — the branch would
+    // toast "saved" and write nothing. The toast is asserted elsewhere; this
+    // pins the click that IS the save.
+    const env = makeHarness();
+    env.window.showSaveFilePicker = undefined;
+    await env.api.saveMp4(new Uint8Array([1, 2, 3]), 'x.mp4');
+    const anchor = env.created[env.created.length - 1];
+    assert.strictEqual(anchor.download, 'x.mp4');
+    assert.strictEqual(anchor.clicks, 1,
+      'without the click the browser saves nothing');
+  });
+
+  it('drops a recorded run past the 7-day TTL instead of following it', async () => {
+    // The artifact is gone after 7 days, so a watch older than that has nothing
+    // to offer. This branch had no coverage: deleting it kept the suite green
+    // while every preview entry silently re-followed week-dead runs.
+    const env = makeHarness();
+    env.localStorage.setItem('burn:t:v', JSON.stringify({
+      requestId: 'old', runId: 7, runUrl: '', talkId: 't', videoSlug: 'v',
+      startedAt: Date.now() - 8 * 24 * 60 * 60 * 1000, editsSig: ''
+    }));
+    env.api.resumeBurnWatch('t', 'v');
+    assert.strictEqual(env.api.getWatch(), null,
+      'a week-old run must not be picked back up');
+    assert.strictEqual(env.localStorage.getItem('burn:t:v'), null,
+      'and its record must be dropped, not re-read on every entry');
+  });
+
   it('treats a cancelled save dialog as a no-op, not a failure', async () => {
     const env = makeHarness();
     const abort = new Error('The user aborted a request.');
@@ -5630,6 +5713,112 @@ describe('burn video driver behaviour', () => {
       'exactly one poll loop may be armed: got ' + armed);
   });
 
+  // ---- a transfer that outlives its preview must not paint on the next one ----
+  //
+  // The STATE was scoped; its failure paths were not. showBurnError() stops the
+  // poll timer, drops burnFollowing and writes the message into whatever item is
+  // on screen — so a download dying on video A killed video B's live render
+  // readout and left a foreign error under it.
+  it('does not report a departed transfer\'s failure on the video now shown', async () => {
+    let fail;
+    const env = makeHarness({
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
+      fetch: function () { return new Promise(function (_, reject) { fail = reject; }); }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.downloadBurned();                       // A's transfer, still running
+    await settle();
+
+    // Move to a video with a render in flight, and follow it.
+    env.previewState.videoSlug = 'v2';
+    env.localStorage.setItem('burn:t:v2', savedWatch(8));
+    env.api.resumeBurnWatch('t', 'v2');
+    env.api.openExportMenu();
+    await settle();
+    const followedBefore = env.timers.filter(Boolean).length;
+
+    fail(new Error('network died'));                // A's transfer dies
+    await settle();
+
+    assert.strictEqual(env.els['burn-error'].textContent, '',
+      'the other video\'s download error must not be written here');
+    assert.strictEqual(env.timers.filter(Boolean).length, followedBefore,
+      'and it must not stop the render this video is following');
+  });
+
+  it('does not start a second transfer while one is still running', async () => {
+    // One slot, one writer. A second transfer rebranded the first one's chunks,
+    // made the counter flicker between two totals, and whichever finished first
+    // cleared the readout of the one still going.
+    // Counted here: the harness's own env.fetches is not incremented by an
+    // overridden fetch, so asserting on it would pass without proving anything.
+    let started = 0;
+    const env = makeHarness({
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
+      fetch: function () { started++; return new Promise(function () {}); }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.downloadBurned();
+    await settle();
+    assert.strictEqual(started, 1, 'setup: the first transfer must be running');
+
+    env.previewState.videoSlug = 'v2';
+    env.localStorage.setItem('burn:t:v2', savedWatch(8));
+    env.api.resumeBurnWatch('t', 'v2');
+    env.api.downloadBurned();
+    await settle();
+
+    assert.strictEqual(started, 1,
+      'a second transfer must not be started over the first');
+  });
+
+  it('keeps an expired artifact expired when the menu is reopened', async () => {
+    // renderBurnProgress ends in setVideoItemTint(), which REPLACES the class
+    // list — so replaying the finished payload on reopen stamped --done over
+    // --expired, and the item went back to offering a download that is gone.
+    const env = makeHarness({
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9, expired: true }]); }
+    });
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
+                                 startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
+    await env.api.downloadBurned();
+    assert.match(env.els['export-video'].className, /--expired/, 'setup: must be expired');
+
+    env.api.closeExportMenu();
+    env.api.openExportMenu();
+
+    assert.match(env.els['export-video'].className, /--expired/,
+      'reopening must not resurrect a download whose artifact is gone');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'and the item must keep offering a rebuild, not a dead download');
+  });
+
+  it('does not re-follow a run that already failed', async () => {
+    // showBurnError nulls burnLastProgress, so `terminal` could not see the
+    // failure and every reopen re-armed the poll — one wasted API call, and a
+    // disabled "Building, please wait" face over a run that died.
+    const env = makeHarness();
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    env.api.showBurnError('Failed at step "Burning in the subtitles"');
+    env.api.closeExportMenu();
+    const before = env.fetches;
+
+    env.api.openExportMenu();
+
+    assert.strictEqual(env.timers.filter(Boolean).length, 0,
+      'a failed run must not be polled again');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'and the item must not claim to be building');
+    assert.strictEqual(env.fetches, before);
+  });
+
   // ---- the pending-edits dialog, left open across a navigation ----
   //
   // burnConfirming is set before the dialog is awaited, and the dialog is a
@@ -5811,6 +6000,28 @@ describe('burn video driver behaviour', () => {
         + env.els['burn-track'].children.length);
     assert.strictEqual(env.els['burn-track'].getAttribute('aria-valuenow'), '100',
       'and they must show the render, which did finish');
+  });
+
+  it('shows the bar the moment the length becomes known, not a percent later', async () => {
+    // The percent gate compared the OLD loaded against the NEW total, so
+    // 0-of-unknown and 0-of-known both floored to 0 and nothing repainted: the
+    // bar and the "0 MB of N MB" counter stayed away until a whole percent had
+    // landed — 20 MB into a 2 GB file. Driven directly, because the streaming
+    // harness's chunks are file halves: at 50% a chunk even the broken gate
+    // repainted, so an end-to-end run here proves nothing.
+    const env = pendingTransfer();
+    await settle();
+    env.api.downloadBurned();                 // slot is {loaded: 0, total: 0}
+    await settle();
+    assert.strictEqual(env.els['burn-step'].textContent, '',
+      'setup: no counter while the length is unknown');
+
+    env.api.advanceBurnDownload(100, 1000000);   // 0.01% — under any percent
+
+    assert.strictEqual(env.els['burn-step'].textContent, 'T:burn.downloaded',
+      'the first chunk carries the length — the counter must appear on it');
+    assert.strictEqual(env.els['burn-track'].hidden, false,
+      'and the bar with it');
   });
 
   it('counts the bytes onto the bar as they land', async () => {

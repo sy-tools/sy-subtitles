@@ -71,6 +71,15 @@ class TestEscapeAssText:
     def test_collapses_runs_of_whitespace(self):
         assert escape_ass_text("one   two") == "one two"
 
+    def test_a_backslash_is_refused_not_passed_through(self):
+        # ASS has no escape for a backslash: passed through, libass reads a
+        # typed \N as a hard line break the wrapper never counted, so the band
+        # is sized for one line while two are drawn. Escaping the brace after
+        # it (a\{b}) makes it worse — \\ then reads as a literal backslash and
+        # {b\} as an override block that swallows the text. Refuse loudly.
+        with pytest.raises(ValueError, match="backslash"):
+            escape_ass_text(r"a \N b")
+
 
 class TestSizingConstants:
     """Pin the literals themselves.
@@ -539,6 +548,19 @@ LIBASS_MISSING_GLYPH_STDERR = (
 )
 
 
+# A glyph-level fallback: the primary family resolved to OUR font, then libass
+# asked for one more font because a single character (0x926 is द) has no glyph
+# in it. Twelve of the corpus's videos carry Sanskrit mantras in Devanagari,
+# which Roboto does not cover — treating this sequence as a substitution made
+# every one of them permanently unrenderable.
+LIBASS_GLYPH_FALLBACK_STDERR = (
+    LIBASS_SUCCESS_STDERR
+    + "[Parsed_ass_0 @ 0x7f8e1c] Glyph 0x926 not found, selecting one more font for (Roboto, 400, 0)\n"
+    + "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (Roboto, 400, 0) -> "
+    "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf, 0, Noto Sans Devanagari\n"
+)
+
+
 class TestFontSelectionError:
     """The only net under a silent font substitution.
 
@@ -579,6 +601,31 @@ class TestFontSelectionError:
     def test_silence_is_not_success(self):
         # No fontselect lines at all = no proof. Refuse rather than assume.
         assert font_selection_error("", "Roboto")
+
+    def test_a_glyph_fallback_for_a_character_our_font_lacks_is_not_substitution(self):
+        # The primary selection IS our font; the extra face exists only because
+        # one mantra character has no glyph in Roboto. The layout metrics all
+        # come from the primary, so nothing re-wraps — refusing here vetoed a
+        # two-hour render over a two-cue mantra.
+        assert font_selection_error(LIBASS_GLYPH_FALLBACK_STDERR, "Roboto") is None
+
+    def test_a_fallback_face_without_a_primary_selection_is_still_no_proof(self):
+        # Only the fallback resolution, no primary: the one face named arrived
+        # through the glyph path, so the font the LAYOUT used is still unproven.
+        lines = LIBASS_GLYPH_FALLBACK_STDERR.splitlines()
+        stderr = "\n".join(lines[1:]) + "\n"
+        assert font_selection_error(stderr, "Roboto")
+
+    def test_a_substituted_primary_is_fatal_even_with_a_glyph_fallback_after_it(self):
+        # The tolerance is for the glyph path only — a wrong PRIMARY face still
+        # moves every line break, fallback or no fallback.
+        stderr = LIBASS_FALLBACK_STDERR + LIBASS_GLYPH_FALLBACK_STDERR.split("\n", 1)[1]
+        assert font_selection_error(stderr, "Roboto")
+
+    def test_a_missing_glyph_stays_fatal_alongside_the_fallback_tolerance(self):
+        # "failed to find any fallback" means tofu on screen: the runner has no
+        # face at all for the character. The tolerance above must not eat it.
+        assert font_selection_error(LIBASS_MISSING_GLYPH_STDERR, "Roboto")
 
     def test_silence_can_be_tolerated_where_evidence_is_optional(self):
         # The encode runs at ffmpeg's default log level, which may withhold the
@@ -866,6 +913,23 @@ class TestMain:
         # ffmpeg's default log level may withhold the resolution line; the probe
         # already proved the font, so silence here must not fail the run.
         _, _, _ = self._invoke(tmp_path, monkeypatch, stderr="frame= 1 fps=0.0\n")
+
+    def test_a_backslash_in_a_cue_is_refused_before_anything_runs(self, tmp_path, monkeypatch):
+        # A typed \N reaches libass as a hard line break the wrapper never
+        # counted — text spills above the band. The message must name the cue,
+        # or the reviewer is left grepping four hundred of them.
+        run, state = self._harness(tmp_path, monkeypatch, cue_text=r"Перше \N речення.")
+        with pytest.raises(SystemExit, match=r"(?s)backslash.*1|1.*backslash"):
+            run()
+        assert state["commands"] == []  # refused before the probe, not after it
+
+    def test_a_clean_encode_still_surfaces_ffmpegs_complaints(self, tmp_path, monkeypatch, capsys):
+        # ffmpeg can truncate on a damaged source and still exit 0. Its stderr
+        # was captured and thrown away on success, so a green job with a short
+        # file left no evidence anywhere of why.
+        warning = "[mov,mp4 @ 0x1] Packet corrupt (stream = 0, dts = 8): Truncating packet"
+        self._invoke(tmp_path, monkeypatch, stderr=LIBASS_SUCCESS_STDERR + warning + "\n")
+        assert warning in capsys.readouterr().err
 
 
 class TestTextMeasurer:

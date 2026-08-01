@@ -183,10 +183,37 @@ class TestSteps:
         assert "pip install -r requirements.txt" in _commands(run)
         assert "pip install yt-dlp" not in _commands(run)
 
-    def test_does_not_apt_install_a_font(self):
-        # Roboto is vendored under assets/fonts/ and handed to libass via fontsdir.
-        joined = "\n".join(_runs())
-        assert "fonts-" not in joined
+    def test_installs_only_the_devanagari_fallback_font(self):
+        # Roboto is vendored under assets/fonts/ and handed to libass via
+        # fontsdir; it must stay the PRIMARY face, and the probe proves it did.
+        # Noto is here for the twelve videos whose subtitles carry Sanskrit
+        # mantras in Devanagari — glyphs Roboto does not have. Without a
+        # fallback libass logs "failed to find any fallback" and the probe
+        # rightly refuses to put tofu boxes in a final video.
+        joined = "\n".join(_commands(run) for run in _runs())
+        assert "fonts-noto-core" in joined
+        stripped = joined.replace("fonts-noto-core", "")
+        assert "fonts-" not in stripped, "no OTHER font package may be installed"
+
+    def test_validates_the_video_ref_before_the_run_invests_in_it(self):
+        # Two reasons, one step. A talk whose video has no video_ref used to
+        # burn through the whole install before dying at Download video; and an
+        # unvalidated ref decodes to vimeo.com/<arbitrary text> — multiline,
+        # which defeats the line-based ::add-mask:: and hands the tail to the
+        # runner as workflow commands. validate_video_ref re-checks the decoded
+        # URL against the strict shape.
+        validate = _commands(_step("Validate inputs")["run"])
+        assert "video_ref" in validate, "Validate inputs must extract the video_ref"
+        assert "--video-ref" in validate, "and reject a malformed one before any work"
+
+    def test_the_download_validates_the_ref_before_decoding_it(self):
+        # The hard guarantee lives where the value flows into add-mask/echo:
+        # decode nothing that validation has not passed.
+        download = _commands(_step("Download video")["run"])
+        assert "--video-ref" in download
+        assert download.index("--video-ref") < download.index("vimeo_codec decode"), (
+            "the guard must run before the decode, or the mask sees the payload first"
+        )
 
     def test_every_run_block_is_strict(self):
         for run in _runs():

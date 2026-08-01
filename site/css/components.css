@@ -292,11 +292,18 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
      a descendant selector would stretch its menu rows to the header row's
      44px metrics inside a 320px menu. */
   .header-actions > button,
+  .header-actions > .video-picker > button,
   .header-actions > .export-pop > .btn { min-height: 44px; padding: 8px 12px; font-size: 13px; }
   /* The text buttons share the wrapped row evenly, as they did before the export
      menu existed. The icon toggle is left out on purpose: it carries no label,
      so growing it would stretch a glyph across a third of the row. */
   .header-actions > button { flex: 1 1 auto; }
+  /* The menu hangs LEFTWARD from its anchor (right: 0). When the row wraps, a
+     wrapped flex item lands at the START of its new row — and a 320px surface
+     anchored to a 44px icon at x≈12 opens at x=−264, off the left edge, where
+     absolute-position overflow cannot be scrolled to. Pinning the anchor to its
+     row's right edge keeps the menu on screen wherever the wrap puts it. */
+  .header-actions > .export-pop { margin-left: auto; }
   /* Preview header collapses to a single-column stack on narrow screens:
      title, then the centered mode toggle, then the action row. */
   .header.preview-header { display: flex; flex-direction: column; align-items: stretch; }

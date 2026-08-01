@@ -98,10 +98,6 @@ function readCentralDirectory(bytes, eocdOffset, baseOffset) {
     windowIndex(bytes, baseOffset, absolute,
                 46 + nameLen + extraLen + commentLen, label + ' name');
     var nameBytes = bytes.slice(at + 46, at + 46 + nameLen);
-    var name = '';
-    for (var c = 0; c < nameBytes.length; c++) {
-      name += String.fromCharCode(nameBytes[c]);
-    }
     entries.push({
       // Artifact filenames are our own construction (burned__{talk_id}__
       // {video_slug}, ASCII only), so a UTF-8 decode of the raw name bytes
