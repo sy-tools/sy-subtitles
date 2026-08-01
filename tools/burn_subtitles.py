@@ -180,10 +180,14 @@ def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
             "YCbCr Matrix: None",
             "",
             "[V4+ Styles]",
-            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
-            "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
-            "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
-            "Alignment, MarginL, MarginR, MarginV, Encoding",
+            # One ASS header line, split only for line length — parenthesized so
+            # the concatenation is visibly deliberate, not a missing comma.
+            (
+                "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+                "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+                "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+                "Alignment, MarginL, MarginR, MarginV, Encoding"
+            ),
             # OutlineColour alpha 1A ~ the CSS 0 0 2px rgba(0,0,0,.9) halo.
             # BackColour (alpha 26 ~ the 0 2px 8px rgba(0,0,0,.85) drop shadow)
             # is the shadow's colour. It draws nothing while the Shadow field

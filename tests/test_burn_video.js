@@ -169,9 +169,6 @@ describe('BURN_WORKFLOW', () => {
 const {
   FONT_RATIO_MAX,
   FONT_RATIO_MIN,
-  FS_FONT_MAX_PX,
-  FS_PADBOT_PX,
-  FS_PADTOP_PX,
   displayedVideoHeight,
   fullscreenFontPx,
   measureBurnRatios,
@@ -318,7 +315,6 @@ function job(steps, status, conclusion) {
   };
 }
 const T0 = 1700000000000;
-const HOUR_MS = 3600 * 1000;
 const done = (name) => ({ name, status: 'completed', conclusion: 'success' });
 
 describe('BURN_STEP_WEIGHTS', () => {
