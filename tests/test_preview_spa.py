@@ -4223,7 +4223,7 @@ class TestBookmarkletExtraction:
                 '<div class="entry-content">'
                 "<p>This is the first paragraph that the source HTML\n"
                 "hard-wrapped across several\nlines for readability.</p>"
-                "<p>Second paragraph with a non-breaking space sitting inside it.</p>"
+                "<p>Second paragraph with a non-breaking\u00a0space sitting inside it.</p>"
                 "</div>"
             )
             data = self._run_bookmarklet(pg)
@@ -4235,7 +4235,7 @@ class TestBookmarkletExtraction:
             "across several lines for readability.\n"
             "Second paragraph with a non-breaking space sitting inside it."
         ), repr(data["tx"])
-        assert " " not in data["tx"]
+        assert "\u00a0" not in data["tx"]
         # Exactly two lines — one per <p>, no mid-paragraph breaks.
         assert len(data["tx"].split("\n")) == 2, data["tx"]
 

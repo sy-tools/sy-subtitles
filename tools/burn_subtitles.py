@@ -90,7 +90,7 @@ def escape_ass_text(text):
         # worse: `a\{b}` becomes `a\\{b\}`, where libass reads \\ as a literal
         # backslash and {b\} as an override block that swallows the text.
         raise ValueError(f"subtitle text contains a backslash: {text!r}")
-    flat = text.replace(" ", " ")
+    flat = text.replace("\u00a0", " ")
     flat = _WS_RUN.sub(" ", flat).strip()
     return flat.replace("{", r"\{").replace("}", r"\}")
 
