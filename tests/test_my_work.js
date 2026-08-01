@@ -35,8 +35,18 @@ describe('classifyWorkRow', () => {
     assert.deepStrictEqual(classifyWorkRow({ ...base, state: 'open' }),
       { talkId: TALK, kind: 'issue', state: 'open', number: 7, url: 'https://x/7' });
   });
-  it('classifies a closed issue', () => {
+  it('classifies a closed issue as done', () => {
+    // GitHub's default closure reason is "completed" — the work landed, and
+    // the badge must read like a merged PR, not like an abandoned item.
     assert.strictEqual(classifyWorkRow({ ...base, state: 'closed' }).state, 'closed');
+    assert.strictEqual(
+      classifyWorkRow({ ...base, state: 'closed', state_reason: 'completed' }).state, 'closed');
+  });
+  it('classifies an issue closed as not-planned as dropped', () => {
+    // "Not planned" is the one issue ending that did NOT produce work; it is
+    // the issue-side twin of a closed-unmerged PR and must not read as done.
+    assert.strictEqual(
+      classifyWorkRow({ ...base, state: 'closed', state_reason: 'not_planned' }).state, 'dropped');
   });
   it('classifies an open PR (pull_request key, no merged_at)', () => {
     const r = classifyWorkRow({ ...base, state: 'open', pull_request: { merged_at: null } });

@@ -1029,10 +1029,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
    pushed to the right edge of the .talk-actions row */
 .work-badges { margin-left: auto; display: inline-flex; gap: 6px; }
 .talk-actions a.work-badge { border-radius: var(--radius-pill); font-family: var(--f-mono); }
-.talk-actions a.work-badge--open { color: var(--accent-orange); }
-.talk-actions a.work-badge--draft { color: var(--accent-orange); border-style: dashed; }
-.talk-actions a.work-badge--merged { color: var(--accent-green); }
-.talk-actions a.work-badge--closed { color: var(--fg5); }
+/* Colour carries the state, on GitHub's own reading — a merged PR in green
+   read as still-open work (PR #912). Grey = not up yet, green = live,
+   plum = landed (a merged PR or a completed issue — same meaning to whoever
+   scans the list), red = ended without landing. */
+.talk-actions a.work-badge--draft { color: var(--fg5); border-style: dashed; }
+.talk-actions a.work-badge--open { color: var(--accent-green); }
+.talk-actions a.work-badge--merged { color: var(--accent-purple); }
+.talk-actions a.work-badge--closed { color: var(--accent-purple); }
+.talk-actions a.work-badge--dropped { color: var(--accent-red); }
 
 /* Signed-in "enlightenment" marks (body.gh-write, toggled by updateAuthUI):
    a dawn thread across the top of the viewport + a warm aura on the avatar.
