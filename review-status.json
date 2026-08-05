@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-01T13:02:48.348101+00:00",
+  "updated_at": "2026-08-05T11:13:01.879315+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -559,6 +559,12 @@
       "reviewer": "IrynaFilSY",
       "issue_number": 895,
       "updated_at": "2026-08-01T13:02:46Z"
+    },
+    "1993-05-18_Shri-Fatima-Puja-Women-are-responsible-for-the-society": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 932,
+      "updated_at": "2026-08-05T11:12:44Z"
     }
   }
 }
