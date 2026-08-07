@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-05T11:13:01.879315+00:00",
+  "updated_at": "2026-08-07T21:15:20.296618+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -565,6 +565,12 @@
       "reviewer": null,
       "issue_number": 932,
       "updated_at": "2026-08-05T11:12:44Z"
+    },
+    "1989-07-23_Guru-Puja-Creativity": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 938,
+      "updated_at": "2026-08-07T21:15:10Z"
     }
   }
 }
