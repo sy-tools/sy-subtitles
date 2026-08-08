@@ -3290,11 +3290,6 @@ function showPreview(talkId, videoSlug) {
       }
       player.ready().then(function() {
         console.log('[SPA] Vimeo player ready');
-        // Duration feeds the end-freeze threshold; fetched once per player.
-        // sameVideo re-entries keep previewState, so the value survives them.
-        player.getDuration().then(function(d) {
-          if (stillOnSameVideo() && previewState._rafToken === rafToken) previewState._duration = d;
-        }).catch(function() {});
         // Resume where the user left off on this video. Only fresh entries reach
         // here (sameVideo re-entry keeps the live player + position); trivial
         // near-start positions are skipped by shouldResumePreviewPos.
@@ -3305,6 +3300,17 @@ function showPreview(talkId, videoSlug) {
           });
         }
         requestAnimationFrame(overlayLoop);
+        // Duration feeds the end-freeze threshold; fetched once per player
+        // (sameVideo re-entries keep previewState, so the value survives).
+        // Best-effort and strictly AFTER the loop starts: a player without
+        // getDuration must degrade to no freeze, never to a dead overlay.
+        try {
+          player.getDuration().then(function(d) {
+            if (stillOnSameVideo() && previewState._rafToken === rafToken) previewState._duration = d;
+          }).catch(function() {});
+        } catch (e) {
+          console.warn('[SPA] end-freeze getDuration unavailable:', e);
+        }
       }).catch(function(err) {
         console.warn('[SPA] Vimeo player error:', err);
       });
