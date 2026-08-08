@@ -3,32 +3,32 @@
   "cases": [
     {
       "fn": "sanitize_invisible",
-      "input": "a\u00a0b",
+      "input": "a b",
       "expected": "a b"
     },
     {
       "fn": "sanitize_invisible",
-      "input": "a\u202fb",
+      "input": "a b",
       "expected": "a b"
     },
     {
       "fn": "sanitize_invisible",
-      "input": "a\u3000b",
+      "input": "a　b",
       "expected": "a b"
     },
     {
       "fn": "sanitize_invisible",
-      "input": "a\u200bb",
+      "input": "a​b",
       "expected": "ab"
     },
     {
       "fn": "sanitize_invisible",
-      "input": "a\u00adb",
+      "input": "a­b",
       "expected": "ab"
     },
     {
       "fn": "sanitize_invisible",
-      "input": "a\ufeffb",
+      "input": "a﻿b",
       "expected": "ab"
     },
     {
@@ -53,12 +53,12 @@
     },
     {
       "fn": "sanitize_field_text",
-      "input": "a\u2028b",
+      "input": "a b",
       "expected": "a b"
     },
     {
       "fn": "sanitize_field_text",
-      "input": "a\u2029b",
+      "input": "a b",
       "expected": "a b"
     },
     {
@@ -73,7 +73,7 @@
     },
     {
       "fn": "sanitize_field_text",
-      "input": "a \u00a0 b",
+      "input": "a   b",
       "expected": "a b"
     },
     {
@@ -205,7 +205,7 @@
     {
       "fn": "sanitize_edited_text",
       "lang": "uk",
-      "input": "м'ясо\u00a0смачне",
+      "input": "м'ясо смачне",
       "expected": "м’ясо смачне"
     },
     {
@@ -217,7 +217,7 @@
     {
       "fn": "sanitize_edited_text",
       "lang": "en",
-      "input": "say \"hi\"\u00a0now",
+      "input": "say \"hi\" now",
       "expected": "say \"hi\" now"
     },
     {
@@ -231,6 +231,47 @@
       "lang": "en",
       "input": "a\nb",
       "expected": "a b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "Тамаса - це те саме",
+      "expected": "Тамаса – це те саме"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "- як індійці, іноді -\n- це...",
+      "expected": "– як індійці, іноді –\n– це..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "будь-хто де-факто",
+      "expected": "будь-хто де-факто"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "мінус -5 градусів",
+      "expected": "мінус -5 градусів"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a\n- b",
+      "expected": "a\n– b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a\r- b",
+      "expected": "a\r- b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "—\"Слово\"",
+      "expected": "–«Слово»"
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "input": "слово - слово",
+      "lang": "uk",
+      "expected": "слово – слово"
     }
   ]
 }

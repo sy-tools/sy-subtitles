@@ -1,4 +1,4 @@
-// Canonical text hygiene rules — JS source of truth, twin of tools/text_normalize.py.
+// Canonical text hygiene rules — JS twin of tools/text_normalize.py.
 //
 // Two independent concerns live here and are deliberately NOT merged:
 //
@@ -50,6 +50,13 @@ function sanitizeFieldText(text) {
 
 var APOSTROPHE_RE = /['‘ʼ]/g;
 var DASH_RE = /[—‒−―]/g;
+// A hyphen standing in for a dash: both sides open (space/tab or a line
+// boundary). One-sided hyphens stay — `будь-хто` is a word, `-5` a number.
+// The left boundary is captured and re-emitted rather than matched in a
+// lookbehind, which older Safari lacks. \n sits in the classes instead of
+// using the m flag: JS multiline anchors also match at \r, U+2028 and
+// U+2029, where Python's (?m) does not, and the twins must agree.
+var HYPHEN_DASH_RE = /(^|[ \t\n])-(?=[ \t\n]|$)/g;
 // Horizontal whitespace only, so running this over whole files cannot join
 // lines. Restricted to a word character on the left: unrestricted stripping
 // would glue the ellipsis onto a preceding dash. The word character is captured
@@ -88,10 +95,15 @@ function normalizeUkTypography(text) {
     .replace(/“/g, '«')
     .replace(/„/g, '«')
     .replace(/”/g, '»');
+  // Dashes before quotes: QUOTE_OPENS_AFTER knows only the canonical en dash,
+  // so a quote sitting right after an unconverted em dash would resolve as
+  // closing. Same order as tools/text_normalize.py.
+  out = out
+    .replace(DASH_RE, '–')
+    .replace(HYPHEN_DASH_RE, '$1–');
   out = resolveStraightQuotes(out);
   return out
     .replace(APOSTROPHE_RE, '’')
-    .replace(DASH_RE, '–')
     .replace(/…/g, '...')
     .replace(ELLIPSIS_SPACE_RE, '$1...');
 }
