@@ -11,9 +11,13 @@ repos:
       # Same check as tests/test_text_hygiene.py, run before the commit rather
       # than after the push. tests/fixtures holds captured dirty input by
       # design and is excluded there too.
+      # `language: python` (not `system`): pre-commit provides the
+      # interpreter, so commits from a GUI or a shell without `python` on
+      # PATH (stock macOS/Debian ship only `python3`) still run the hook.
+      # The tool is stdlib-only, so the isolated env needs no dependencies.
       - id: text-hygiene
         name: text hygiene (invisible chars, line endings, UK typography)
         entry: python -m tools.text_normalize --check
-        language: system
+        language: python
         types: [text]
         exclude: ^tests/fixtures/
