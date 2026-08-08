@@ -157,18 +157,6 @@ def mock_player_js():
     return Path(__file__).parent.joinpath("fixtures", "mock_vimeo_player.js").read_text()
 
 
-@pytest.fixture(scope="module")
-def browser():
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        b = p.chromium.launch()
-        yield b
-        b.close()
-
-
 @pytest.fixture
 def page(server, mock_player_js, browser):
     ctx = browser.new_context()

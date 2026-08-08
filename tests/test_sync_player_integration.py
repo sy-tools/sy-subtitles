@@ -30,7 +30,6 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
     SAMPLE_SRT,
     SAMPLE_UK,
     SPA_URL,
-    browser,
     goto_spa,
     server,
     spa_path,
