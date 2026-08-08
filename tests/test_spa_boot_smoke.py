@@ -68,32 +68,25 @@ def smoke_server():
 
 
 @pytest.fixture
-def smoke_page():
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context()
-        pg = ctx.new_page()
-        # Deterministic + offline: empty repo tree, no real network reached.
-        pg.route(
-            "**/api.github.com/**",
-            lambda r: r.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"ETag": '"smoke"'},
-                body=json.dumps({"sha": "smoke", "tree": [], "truncated": False}),
-            ),
-        )
-        pg.route(
-            "**/raw.githubusercontent.com/**",
-            lambda r: r.fulfill(status=404, body="not found"),
-        )
-        yield pg
-        ctx.close()
-        browser.close()
+def smoke_page(browser):
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    # Deterministic + offline: empty repo tree, no real network reached.
+    pg.route(
+        "**/api.github.com/**",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            headers={"ETag": '"smoke"'},
+            body=json.dumps({"sha": "smoke", "tree": [], "truncated": False}),
+        ),
+    )
+    pg.route(
+        "**/raw.githubusercontent.com/**",
+        lambda r: r.fulfill(status=404, body="not found"),
+    )
+    yield pg
+    ctx.close()
 
 
 # A truly unstyled <body> computes to a transparent background; the themed app

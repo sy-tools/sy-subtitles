@@ -119,36 +119,29 @@ def served_site():
 
 
 @pytest.fixture
-def booted_page(served_site):
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context()
-        pg = ctx.new_page()
-        # Deterministic + offline: empty repo tree, no real network reached.
-        pg.route(
-            "**/api.github.com/**",
-            lambda r: r.fulfill(
-                status=200,
-                content_type="application/json",
-                headers={"ETag": '"hidden"'},
-                body=json.dumps({"sha": "hidden", "tree": [], "truncated": False}),
-            ),
-        )
-        pg.route(
-            "**/raw.githubusercontent.com/**",
-            lambda r: r.fulfill(status=404, body="not found"),
-        )
-        pg.goto(f"{served_site}/index.html")
-        # The app has to have booted and applied its stylesheet, or every element
-        # would measure as "correctly hidden" for the wrong reason.
-        pg.wait_for_function("document.title.includes('Index')", timeout=10000)
-        yield pg
-        ctx.close()
-        browser.close()
+def booted_page(served_site, browser):
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    # Deterministic + offline: empty repo tree, no real network reached.
+    pg.route(
+        "**/api.github.com/**",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            headers={"ETag": '"hidden"'},
+            body=json.dumps({"sha": "hidden", "tree": [], "truncated": False}),
+        ),
+    )
+    pg.route(
+        "**/raw.githubusercontent.com/**",
+        lambda r: r.fulfill(status=404, body="not found"),
+    )
+    pg.goto(f"{served_site}/index.html")
+    # The app has to have booted and applied its stylesheet, or every element
+    # would measure as "correctly hidden" for the wrong reason.
+    pg.wait_for_function("document.title.includes('Index')", timeout=10000)
+    yield pg
+    ctx.close()
 
 
 def test_disowned_render_readout_leaves_the_screen(booted_page):

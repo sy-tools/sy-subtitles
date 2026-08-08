@@ -433,7 +433,9 @@ class TestBuildAssDocument:
         layers = [ln.split(",")[0] for ln in _doc().splitlines() if ln.startswith("Dialogue:")]
         assert layers == (["Dialogue: 0"] * DEFAULT_GRADIENT_STEPS + ["Dialogue: 1"]) * 2
 
-    def test_band_and_text_share_exact_timings(self):
+    def test_band_and_text_share_exact_timings_when_cues_touch(self):
+        # CUES are back-to-back, so bridging has nothing to add: the band
+        # still starts and ends exactly with its text.
         band_times = None
         checked = 0
         for line in _doc().splitlines():
@@ -474,6 +476,70 @@ class TestBuildAssDocument:
     def test_header_precedes_events(self):
         doc = _doc()
         assert doc.index("[Events]") < doc.index("Dialogue:")
+
+
+def _event_times(doc):
+    """(layer, start, end) per Dialogue line, in document order."""
+    times = []
+    for line in doc.splitlines():
+        if line.startswith("Dialogue:"):
+            layer, start, end = line.split(",")[0:3]
+            times.append((layer, start, end))
+    return times
+
+
+class TestBandBridgesGaps:
+    """The band must hold through the gap between cues, as the SPA does.
+
+    The web overlay pins its height when a cue ends, so the gradient stays up
+    through the deliberate 80ms gaps instead of flashing off and on. The ASS
+    counterpart: a cue's band runs until the next visible cue starts; only the
+    text keeps the cue's exact timings.
+    """
+
+    GAPPED = [
+        {"idx": 1, "start_ms": 0, "end_ms": 2000, "text": "Перше речення."},
+        {"idx": 2, "start_ms": 2080, "end_ms": 4000, "text": "Друге речення."},
+    ]
+
+    def test_band_extends_to_next_cue_start(self):
+        events = _event_times(_doc(self.GAPPED))
+        first_bands = [e for e in events if e[0] == "Dialogue: 0"][:DEFAULT_GRADIENT_STEPS]
+        assert all(e[1] == "0:00:00.00" and e[2] == "0:00:02.08" for e in first_bands)
+
+    def test_text_keeps_the_cue_timings(self):
+        events = _event_times(_doc(self.GAPPED))
+        texts = [e for e in events if e[0] == "Dialogue: 1"]
+        assert texts[0] == ("Dialogue: 1", "0:00:00.00", "0:00:02.00")
+        assert texts[1] == ("Dialogue: 1", "0:00:02.08", "0:00:04.00")
+
+    def test_last_cue_band_ends_with_its_text(self):
+        events = _event_times(_doc(self.GAPPED))
+        last_bands = [e for e in events if e[0] == "Dialogue: 0"][DEFAULT_GRADIENT_STEPS:]
+        assert all(e[2] == "0:00:04.00" for e in last_bands)
+
+    def test_blank_cue_is_not_a_bridge_anchor(self):
+        # A blank cue draws nothing, so bridging to its start would end the
+        # band on an invisible event and reintroduce the flash.
+        cues = [
+            {"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "Перше."},
+            {"idx": 2, "start_ms": 1500, "end_ms": 1600, "text": "   "},
+            {"idx": 3, "start_ms": 3000, "end_ms": 4000, "text": "Третє."},
+        ]
+        events = _event_times(_doc(cues))
+        first_bands = [e for e in events if e[0] == "Dialogue: 0"][:DEFAULT_GRADIENT_STEPS]
+        assert all(e[2] == "0:00:03.00" for e in first_bands)
+
+    def test_overlapping_cues_never_shrink_the_band(self):
+        # Pathological SRT where the next cue starts before this one ends:
+        # the band must still cover its own text.
+        cues = [
+            {"idx": 1, "start_ms": 0, "end_ms": 2000, "text": "Перше."},
+            {"idx": 2, "start_ms": 1000, "end_ms": 3000, "text": "Друге."},
+        ]
+        events = _event_times(_doc(cues))
+        first_bands = [e for e in events if e[0] == "Dialogue: 0"][:DEFAULT_GRADIENT_STEPS]
+        assert all(e[2] == "0:00:02.00" for e in first_bands)
 
     def test_ends_with_a_newline(self):
         assert _doc().endswith("\n")

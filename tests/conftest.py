@@ -56,3 +56,22 @@ def tmp_srt(tmp_path):
 @pytest.fixture
 def tmp_json(tmp_path):
     return tmp_path / "output.json"
+
+
+@pytest.fixture(scope="session")
+def browser():
+    """One chromium per xdist worker for the whole run.
+
+    Session scope keeps the browser (and its driver process) alive across
+    every e2e module a worker picks up; per-test isolation comes from the
+    browser *contexts* the tests create, never from the browser itself.
+    See test_e2e_browser_fixture_guard.py.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        pytest.skip("playwright not installed")
+    with sync_playwright() as p:
+        b = p.chromium.launch()
+        yield b
+        b.close()
