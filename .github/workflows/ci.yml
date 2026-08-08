@@ -75,6 +75,10 @@ jobs:
 
   test-e2e:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -82,18 +86,10 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - name: Resolve installed Playwright version
-        id: playwright-version
-        run: echo "version=$(python -c 'import playwright; print(playwright.__version__)')" >> "$GITHUB_OUTPUT"
-        # Keyed by the installed package version: the requirements pin is a
-        # floor (>=), so hashing requirements-dev.txt would go stale silently.
-      - name: Cache Playwright browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
       - run: playwright install chromium --with-deps
-      - run: pytest tests/ -n auto -m e2e --tb=short
+        # strategy.job-total keeps --num-shards in lockstep with the matrix,
+        # so growing/shrinking the shard list cannot silently drop tests.
+      - run: pytest tests/ -n auto -m e2e --tb=short --shard-id=${{ matrix.shard }} --num-shards=${{ strategy.job-total }}
 
   test-js:
     runs-on: ubuntu-latest
