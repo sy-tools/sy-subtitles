@@ -127,18 +127,6 @@ def server():
     httpd.shutdown()
 
 
-@pytest.fixture(scope="module")
-def browser():
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        b = p.chromium.launch()
-        yield b
-        b.close()
-
-
 def _record(calls):
     def handler_for(status, payload):
         def handle(route):

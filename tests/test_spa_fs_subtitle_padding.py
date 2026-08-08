@@ -69,35 +69,28 @@ def served_site():
 
 
 @pytest.fixture
-def page(served_site):
+def page(served_site, browser):
     """A Playwright page loaded on the served SPA, with GitHub API calls
     stubbed locally (same routes as tests/test_spa_theme_tokens.py) so the
     test stays hermetic and isn't exposed to real network calls or GitHub
-    rate limiting. Skips cleanly when Playwright isn't installed; always
-    closes the browser, even on assertion failure.
+    rate limiting. Always closes its context, even on assertion failure.
     """
+    ctx = browser.new_context(viewport={"width": 1280, "height": 800})
     try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        try:
-            pg = browser.new_page(viewport={"width": 1280, "height": 800})
-            pg.route(
-                "**/api.github.com/**",
-                lambda r: r.fulfill(
-                    status=200,
-                    content_type="application/json",
-                    body=json.dumps({"sha": "x", "tree": [], "truncated": False}),
-                ),
-            )
-            pg.route("**/raw.githubusercontent.com/**", lambda r: r.fulfill(status=404, body=""))
-            pg.goto(served_site)
-            yield pg
-        finally:
-            browser.close()
+        pg = ctx.new_page()
+        pg.route(
+            "**/api.github.com/**",
+            lambda r: r.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"sha": "x", "tree": [], "truncated": False}),
+            ),
+        )
+        pg.route("**/raw.githubusercontent.com/**", lambda r: r.fulfill(status=404, body=""))
+        pg.goto(served_site)
+        yield pg
+    finally:
+        ctx.close()
 
 
 def _measure(page, fs_mode, tuned=True):

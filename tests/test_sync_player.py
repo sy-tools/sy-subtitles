@@ -13,7 +13,6 @@ import pytest
 
 from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
     SPA_URL,
-    browser,
     goto_spa,
     mock_player_js,
     page,

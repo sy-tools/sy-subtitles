@@ -157,18 +157,6 @@ def mock_player_js():
     return Path(__file__).parent.joinpath("fixtures", "mock_vimeo_player.js").read_text()
 
 
-@pytest.fixture(scope="module")
-def browser():
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        b = p.chromium.launch()
-        yield b
-        b.close()
-
-
 @pytest.fixture
 def page(server, mock_player_js, browser):
     ctx = browser.new_context()
@@ -4666,6 +4654,61 @@ class TestUkrainianPlurals:
         # make sure we don't print "Скасувати всі 1 редагування?" again.
         assert "всі 1" not in message
         assert "всі" not in message
+
+
+class TestEndFreeze:
+    """Fullscreen end-freeze: the player pauses just before the video ends so
+    the Vimeo 'more from this user' end screen never fires (js/end_freeze.js).
+    The mock player reports a 3600s duration; 3599.8 is inside the 0.3s
+    epsilon window before the end."""
+
+    END_SEC = 3599.8
+
+    def _goto_preview(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.wait_for_timeout(1000)
+
+    def _enter_fs(self, page):
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.wait_for_timeout(100)
+
+    def test_freezes_on_last_frame_in_fullscreen(self, server, page):
+        self._goto_preview(server, page)
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
+
+    def test_no_freeze_outside_fullscreen(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+
+    def test_frozen_latch_lets_viewer_play_the_tail(self, server, page):
+        self._goto_preview(server, page)
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
+        # A viewer who presses play at the freeze point must be able to watch
+        # the tail — the frozen latch must not re-pause.
+        page.evaluate("window._vimeoPlayer.play()")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+
+    def test_freeze_clears_saved_resume_position(self, server, page):
+        self._goto_preview(server, page)
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
+        page.wait_for_timeout(300)
+        pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
+        assert pos in (None, "0"), f"freeze must not persist the end position, got {pos}"
 
 
 class TestClearAllCount:

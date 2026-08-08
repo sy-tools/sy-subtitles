@@ -115,41 +115,33 @@ def _read_tokens(page, names):
     )
 
 
-def test_palette_is_consistent_across_all_six_theme_states(served_site):
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-
+def test_palette_is_consistent_across_all_six_theme_states(served_site, browser):
     failures = []
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        for scheme in ("light", "dark"):
-            for dtheme in (None, "light", "dark"):
-                ctx = browser.new_context(color_scheme=scheme)
-                pg = ctx.new_page()
-                pg.route(
-                    "**/api.github.com/**",
-                    lambda r: r.fulfill(
-                        status=200,
-                        content_type="application/json",
-                        body=json.dumps({"sha": "x", "tree": [], "truncated": False}),
-                    ),
-                )
-                pg.route("**/raw.githubusercontent.com/**", lambda r: r.fulfill(status=404, body=""))
-                pg.goto(served_site)
-                if dtheme:
-                    pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", dtheme)
-                else:
-                    pg.evaluate("() => document.documentElement.removeAttribute('data-theme')")
-                got = _read_tokens(pg, NAMES)
-                is_dark = dtheme == "dark" or (dtheme is None and scheme == "dark")
-                want = DARK if is_dark else LIGHT
-                state = f"OS={scheme}/data-theme={dtheme or 'auto'} (effective={'dark' if is_dark else 'light'})"
-                for n in NAMES:
-                    if got[n] != want[n]:
-                        failures.append(f"{state} {n}: got {got[n]!r}, want {want[n]!r}")
-                ctx.close()
-        browser.close()
+    for scheme in ("light", "dark"):
+        for dtheme in (None, "light", "dark"):
+            ctx = browser.new_context(color_scheme=scheme)
+            pg = ctx.new_page()
+            pg.route(
+                "**/api.github.com/**",
+                lambda r: r.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps({"sha": "x", "tree": [], "truncated": False}),
+                ),
+            )
+            pg.route("**/raw.githubusercontent.com/**", lambda r: r.fulfill(status=404, body=""))
+            pg.goto(served_site)
+            if dtheme:
+                pg.evaluate("(t) => document.documentElement.setAttribute('data-theme', t)", dtheme)
+            else:
+                pg.evaluate("() => document.documentElement.removeAttribute('data-theme')")
+            got = _read_tokens(pg, NAMES)
+            is_dark = dtheme == "dark" or (dtheme is None and scheme == "dark")
+            want = DARK if is_dark else LIGHT
+            state = f"OS={scheme}/data-theme={dtheme or 'auto'} (effective={'dark' if is_dark else 'light'})"
+            for n in NAMES:
+                if got[n] != want[n]:
+                    failures.append(f"{state} {n}: got {got[n]!r}, want {want[n]!r}")
+            ctx.close()
 
     assert not failures, "palette drift / cross-theme leak:\n  " + "\n  ".join(failures)

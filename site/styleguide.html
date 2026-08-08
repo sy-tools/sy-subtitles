@@ -285,6 +285,13 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
       { name: 'transferring', tint: 'export-item-group--done export-item-group--transfer',
         disabled: true, label: 'Downloading the video, please wait',
         transfer: 0.43, status: ['120 MB of 281 MB', '', ''], link: true },
+      // The file has just landed. A statement, not a button: flipping straight
+      // back to "Download..." read as if nothing happened. The group keeps the
+      // render's --done green; closing and reopening the menu re-arms the offer.
+      { name: 'downloaded', tint: 'export-item-group--done', disabled: true,
+        label: 'The video with subtitles has been downloaded',
+        p: { fraction: 1, done: true },
+        status: ['', '', 'done in 21 min'], link: true },
       // Offered, but refused: the preview shows subtitles the render would not
       // burn. The reason lives on the control's own title, as in the app.
       { name: 'wrong language', tint: '', disabled: true,

@@ -95,6 +95,40 @@ describe('export menu — the video item while the file is transferring', () => 
   });
 });
 
+describe('export menu — the video item after the file has landed', () => {
+  // A completed transfer flips the item straight back to "Download the video
+  // with subtitles" — which reads as if nothing happened. The item keeps a
+  // "downloaded" face until the menu is closed; reopening offers the download
+  // again.
+  const base = { writeUser: true, done: true, justDownloaded: true };
+
+  it('says the video has been downloaded, and is not a button', () => {
+    const s = M.videoItemState(base);
+    assert.strictEqual(s.state, 'downloaded');
+    assert.strictEqual(s.disabled, true,
+      'the label is a statement, not an action — reopening re-arms the download');
+  });
+
+  it('withdraws the claim once the subtitles have moved on', () => {
+    // An edit makes the downloaded file no longer the text on screen: the item
+    // goes back to offering a build, exactly as the plain download face does.
+    const s = M.videoItemState(Object.assign({}, base, { stale: true }));
+    assert.strictEqual(s.state, 'start');
+  });
+
+  it('yields to a transfer in flight', () => {
+    // One slot: a new transfer for another video can be running while this
+    // item's file already landed. The moving bytes outrank the finished claim.
+    const s = M.videoItemState(Object.assign({}, base, { downloading: true }));
+    assert.strictEqual(s.state, 'downloading');
+  });
+
+  it('still hides from a session that cannot render at all', () => {
+    const s = M.videoItemState(Object.assign({}, base, { writeUser: false }));
+    assert.strictEqual(s.state, 'hidden');
+  });
+});
+
 describe('export menu — transfer arithmetic', () => {
   it('is the fraction of the file that has landed', () => {
     assert.strictEqual(M.downloadFraction(0, 200), 0);
