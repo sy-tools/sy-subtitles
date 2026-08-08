@@ -24,6 +24,7 @@
 <script src="js/offline_fallback.js"></script>
 <script src="js/talk_slug.js"></script>
 <script src="js/vimeo_codec.js"></script>
+<script src="js/end_freeze.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/talk_actions.js"></script>
@@ -3259,7 +3260,30 @@ function showPreview(talkId, videoSlug) {
           pollInFlight = true;
           player.getCurrentTime().then(function(sec) {
             pollInFlight = false;
-            if (stillOnSameVideo() && previewState._rafToken === rafToken) renderOverlayAt(sec);
+            if (stillOnSameVideo() && previewState._rafToken === rafToken) {
+              renderOverlayAt(sec);
+              // Fullscreen end-freeze: pause on the last frame before 'ended'
+              // can fire, so the Vimeo end screen never appears (js/end_freeze.js).
+              var freezeAct = endFreezeAction({
+                fsMode: !!(viewEl && viewEl.classList.contains('fs-mode')),
+                sec: sec,
+                duration: previewState._duration,
+                frozen: !!previewState._frozen,
+              });
+              if (freezeAct === 'freeze') {
+                previewState._frozen = true;
+                // Mirror the 'ended' handler: the freeze is our end-of-video,
+                // so the next visit must start fresh, not resume at the end.
+                if (_previewPosTimer) { clearTimeout(_previewPosTimer); _previewPosTimer = null; }
+                previewState._ended = true;
+                savePreviewPos(previewState.talkId, previewState.videoSlug, localStorage, 0);
+                player.pause().catch(function(e) {
+                  console.warn('[SPA] end-freeze pause failed:', e);
+                });
+              } else if (freezeAct === 'unfreeze') {
+                previewState._frozen = false;
+              }
+            }
           }).catch(function() { pollInFlight = false; });
         }
         requestAnimationFrame(overlayLoop);
@@ -3276,6 +3300,17 @@ function showPreview(talkId, videoSlug) {
           });
         }
         requestAnimationFrame(overlayLoop);
+        // Duration feeds the end-freeze threshold; fetched once per player
+        // (sameVideo re-entries keep previewState, so the value survives).
+        // Best-effort and strictly AFTER the loop starts: a player without
+        // getDuration must degrade to no freeze, never to a dead overlay.
+        try {
+          player.getDuration().then(function(d) {
+            if (stillOnSameVideo() && previewState._rafToken === rafToken) previewState._duration = d;
+          }).catch(function() {});
+        } catch (e) {
+          console.warn('[SPA] end-freeze getDuration unavailable:', e);
+        }
       }).catch(function(err) {
         console.warn('[SPA] Vimeo player error:', err);
       });
