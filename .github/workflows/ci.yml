@@ -86,7 +86,9 @@ jobs:
           python-version: '3.12'
           cache: 'pip'
       - run: pip install -r requirements.txt -r requirements-dev.txt
-      - run: playwright install chromium --with-deps
+        # Headless runs use the chromium headless shell, so skip the full
+        # chromium download (--only-shell roughly halves the payload).
+      - run: playwright install chromium --only-shell --with-deps
         # strategy.job-total keeps --num-shards in lockstep with the matrix,
         # so growing/shrinking the shard list cannot silently drop tests.
       - run: pytest tests/ -n auto -m e2e --tb=short --shard-id=${{ matrix.shard }} --num-shards=${{ strategy.job-total }}
