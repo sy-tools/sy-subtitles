@@ -83,7 +83,7 @@ class TestSanitizeFileText:
 # generator spends its budget on the interesting cases rather than on random
 # astral-plane codepoints.
 _HYGIENE_ALPHABET = st.sampled_from(
-    list("abcя .,!?\"'«»–—…\n\r\t")
+    list("abcя .,!?\"'«»-–—…\n\r\t")
     + list("\u00a0\u202f\u2002\u2003\u2007\u2009\u3000")
     + list("\u200b\u200c\u200d\u00ad\ufeff\u2028\u2029")
 )
@@ -134,6 +134,25 @@ class TestUkTypography:
     def test_other_dash_variants_become_en_dash(self):
         for ch in "‒−―":
             assert normalize_uk_typography(f"a {ch} b") == "a – b", f"U+{ord(ch):04X}"
+
+    def test_spaced_hyphen_becomes_en_dash(self):
+        """A hyphen standing in for a dash — the corpus had 68 of these."""
+        assert normalize_uk_typography("Тамаса - це те саме") == "Тамаса – це те саме"
+
+    def test_line_start_and_line_end_hyphens_become_en_dash(self):
+        assert normalize_uk_typography("- як індійці, іноді -\n- це...") == ("– як індійці, іноді –\n– це...")
+
+    def test_hyphen_inside_a_word_is_kept(self):
+        assert normalize_uk_typography("будь-хто де-факто") == "будь-хто де-факто"
+
+    def test_hyphen_before_a_digit_is_kept(self):
+        """A negative number is not a dash."""
+        assert normalize_uk_typography("мінус -5 градусів") == "мінус -5 градусів"
+
+    def test_quote_right_after_an_em_dash_opens(self):
+        """Dashes must normalize before quote resolution: an unconverted em
+        dash is not in the opens-after set and would flip the quote."""
+        assert normalize_uk_typography('—"Слово"') == "–«Слово»"
 
     def test_ellipsis_character_becomes_three_dots(self):
         assert normalize_uk_typography("та…") == "та..."
@@ -229,6 +248,16 @@ class TestPathClassification:
         assert is_scanned_path("tools/text_normalize.py")
         assert is_scanned_path("talks/2000-07-23_Guru-Puja/transcript_uk.txt")
 
+    def test_absolute_path_still_respects_the_fixture_exemption(self, tmp_path, monkeypatch):
+        """`--fix $(pwd)/tests/fixtures/x` must not rewrite a fixture."""
+        from tools.text_normalize import _iter_paths
+
+        monkeypatch.chdir(tmp_path)
+        fixture = tmp_path / "tests" / "fixtures" / "dirty.json"
+        fixture.parent.mkdir(parents=True)
+        fixture.write_text("a\u00a0b", encoding="utf-8")
+        assert _iter_paths([str(fixture)]) == []
+
 
 class TestCheckAndFix:
     def test_check_reports_nbsp(self):
@@ -245,6 +274,13 @@ class TestCheckAndFix:
 
     def test_check_passes_on_clean_text(self):
         assert check_text("Привіт – світ", uk=True) == []
+
+    def test_check_reports_hyphen_standing_in_for_a_dash(self):
+        issues = check_text("слово - слово\n", uk=True)
+        assert any("hyphen" in i for i in issues)
+
+    def test_check_ignores_hyphen_in_non_uk_text(self):
+        assert check_text("word - word\n", uk=False) == []
 
     def test_fix_leaves_english_quotes_alone(self):
         text = 'He said "hello" — loudly.\n'
@@ -298,3 +334,29 @@ class TestCli:
             text=True,
         )
         assert result.returncode == 0
+
+    def test_check_flags_a_non_utf8_text_file(self, tmp_path):
+        """A mis-encoded file must fail the guard, not slip through silently."""
+        target = tmp_path / "transcript_uk.txt"
+        target.write_bytes("Привіт світ\n".encode("cp1251"))
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--check", str(target)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1
+        assert "not valid UTF-8" in result.stdout
+
+    def test_fix_leaves_a_non_utf8_file_alone_and_warns(self, tmp_path):
+        """The fixer cannot guess the encoding; it must warn, not corrupt."""
+        target = tmp_path / "transcript_uk.txt"
+        raw = "Привіт світ\n".encode("cp1251")
+        target.write_bytes(raw)
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--fix", str(target)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0
+        assert target.read_bytes() == raw
+        assert "not valid UTF-8" in result.stderr

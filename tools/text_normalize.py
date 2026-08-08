@@ -78,6 +78,9 @@ def sanitize_file_text(text: str) -> str:
 
 _APOSTROPHE_RE = re.compile("['‘ʼ]")
 _DASH_RE = re.compile("[—‒−―]")
+# A hyphen standing in for a dash: both sides open (space/tab or a line
+# boundary). One-sided hyphens stay — `будь-хто` is a word, `-5` a number.
+_HYPHEN_DASH_RE = re.compile(r"(?m)(?:(?<=[ \t])|^)-(?=[ \t]|$)")
 # Horizontal whitespace only, so running this over a whole file cannot join
 # lines. Restricted to a word character on the left: unrestricted stripping
 # would glue the ellipsis onto a preceding dash.
@@ -115,9 +118,13 @@ def normalize_uk_typography(text: str) -> str:
     and YAML/JSON use `"` as syntax; applying this to them corrupts them.
     """
     text = text.replace("“", "«").replace("„", "«").replace("”", "»")
+    # Dashes before quotes: _QUOTE_OPENS_AFTER knows only the canonical en
+    # dash, so a quote sitting right after an unconverted em dash would
+    # resolve as closing.
+    text = _DASH_RE.sub("–", text)
+    text = _HYPHEN_DASH_RE.sub("–", text)
     text = _resolve_straight_quotes(text)
     text = _APOSTROPHE_RE.sub("’", text)
-    text = _DASH_RE.sub("–", text)
     text = text.replace("…", "...")
     return _ELLIPSIS_SPACE_RE.sub("...", text)
 
@@ -208,6 +215,10 @@ def check_text(text: str, *, uk: bool) -> list[str]:
             for ch, label in _UK_BANNED:
                 if ch in text:
                     issues.append(f"U+{ord(ch):04X} {label} (use the glossary form)")
+            # Not a banned CHARACTER — a hyphen is legitimate inside words and
+            # numbers — so it gets its own positional check.
+            if _HYPHEN_DASH_RE.search(cleaned):
+                issues.append("hyphen standing in for a dash (use – U+2013)")
             if _ELLIPSIS_SPACE_RE.search(cleaned):
                 issues.append("space before an ellipsis")
     return issues
@@ -216,26 +227,43 @@ def check_text(text: str, *, uk: bool) -> list[str]:
 # --- CLI -----------------------------------------------------------------------
 
 
+def _relativize(path: str) -> str:
+    """Repo-relative form of ``path`` when it lies under the CWD, else as-is.
+
+    Classification is prefix-based, so an absolute path to a fixture would
+    silently dodge the exemption without this.
+    """
+    try:
+        return Path(path).resolve().relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return path
+
+
 def _iter_paths(paths: list[str]) -> list[str]:
     """Expand the given paths, or every git-tracked file when none are given."""
     if paths:
-        return [p for p in paths if is_scanned_path(p)]
+        return [p for p in paths if is_scanned_path(_relativize(p))]
     tracked = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout.splitlines()
     return [p for p in tracked if p and is_scanned_path(p)]
 
 
-def _read_text(path: str) -> str | None:
-    """Return the file's UTF-8 text, or None when it is binary or unreadable."""
+def _read_text(path: str) -> tuple[str | None, str | None]:
+    """Return ``(text, problem)`` for the file.
+
+    ``(text, None)`` — decoded UTF-8 text. ``(None, None)`` — binary or
+    unreadable, not this tool's business. ``(None, message)`` — a text file
+    that is not valid UTF-8: the guard must flag it, not skip it silently.
+    """
     try:
         raw = Path(path).read_bytes()
     except OSError:
-        return None
+        return None, None
     if b"\x00" in raw[:8000]:
-        return None
+        return None, None
     try:
-        return raw.decode("utf-8")
+        return raw.decode("utf-8"), None
     except UnicodeDecodeError:
-        return None
+        return None, "not valid UTF-8"
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -248,7 +276,15 @@ def main(argv: list[str] | None = None) -> None:
 
     offenders = 0
     for path in _iter_paths(args.paths):
-        text = _read_text(path)
+        text, problem = _read_text(path)
+        if problem:
+            if args.check:
+                offenders += 1
+                print(f"{path}: {problem}")
+            else:
+                # The fixer cannot guess the encoding; warn instead of corrupt.
+                print(f"cannot fix {path}: {problem}", file=sys.stderr)
+            continue
         if text is None:
             continue
         uk = is_uk_content_path(path)
