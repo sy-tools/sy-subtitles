@@ -1026,3 +1026,62 @@ describe('engine: target-scoped coexistence', () => {
     assert.strictEqual(storage.getItem(syncBaseKey(TALK)), null);
   });
 });
+
+// --- File-content hygiene ------------------------------------------------------
+//
+// Collaborators still hold edits containing NBSP in localStorage from before the
+// input fields were fixed; this is the last gate before the bytes reach GitHub.
+// Invisible characters ONLY -- `content` is a whole rebuilt file, so the
+// field-level rule would collapse its newlines and destroy the SRT.
+const { sanitizeInvisible } = require('../site/js/text_sanitize');
+
+describe('engine: rebuilt file hygiene', () => {
+  const SRT_PATH = 'talks/' + TALK + '/video1/final/uk.srt';
+
+  // gh.putFile is resolved on the stub at call time, so wrapping it after
+  // construction captures exactly what the engine sends.
+  function capturePuts(engineOver) {
+    const h = makeEngine(undefined, undefined, engineOver);
+    const seen = [];
+    const origPut = h.gh.putFile;
+    h.gh.putFile = async (api, token, opts) => { seen.push(opts); return origPut(api, token, opts); };
+    return Object.assign({ seen }, h);
+  }
+
+  async function pushOnce(h) {
+    localEdit(h.storage, 1, 'а');
+    h.engine.notifyEdit();
+    h.timers.fire(15000);
+    await settle();
+  }
+
+  it('strips invisible characters from rebuilt files before putFile', async () => {
+    const dirty = '1\n00:00:01,000 --> 00:00:02,000\nПривіт\u00a0світ\u200b\n\n';
+    const h = capturePuts({
+      buildFiles: () => [{ path: SRT_PATH, content: dirty }],
+      sanitize: sanitizeInvisible,
+    });
+    await pushOnce(h);
+
+    const srt = h.seen.filter((o) => o.path === SRT_PATH);
+    assert.strictEqual(srt.length, 1, 'the rebuilt SRT was not pushed');
+    assert.ok(!srt[0].content.includes('\u00a0'), 'NBSP reached putFile');
+    assert.ok(!srt[0].content.includes('\u200b'), 'ZWSP reached putFile');
+    assert.ok(srt[0].content.includes('Привіт світ'), 'NBSP was deleted instead of folded to a space');
+    assert.ok(
+      srt[0].content.includes('00:00:01,000 --> 00:00:02,000'),
+      'SRT line structure was destroyed -- the field-level rule was applied by mistake',
+    );
+  });
+
+  it('passes content through unchanged when no sanitizer is wired', async () => {
+    // edit_sync.js must stay loadable in a context that never pulls the twin in.
+    const content = '1\n00:00:01,000 --> 00:00:02,000\nplain\n\n';
+    const h = capturePuts({ buildFiles: () => [{ path: SRT_PATH, content: content }] });
+    await pushOnce(h);
+
+    const srt = h.seen.filter((o) => o.path === SRT_PATH);
+    assert.strictEqual(srt.length, 1);
+    assert.strictEqual(srt[0].content, content);
+  });
+});

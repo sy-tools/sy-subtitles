@@ -1,0 +1,277 @@
+{
+  "_comment": "Shared golden fixture for the text hygiene rules. Consumed by BOTH tests/test_text_normalize_parity.py (tools/text_normalize.py) and tests/test_text_sanitize.js (site/js/text_sanitize.js) so the Python and JS implementations cannot diverge silently. `fn` selects the function under test. Invisible characters are written as \\u escapes -- a literal here would be unreadable and would trip the repository's own hygiene guard.",
+  "cases": [
+    {
+      "fn": "sanitize_invisible",
+      "input": "a b",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "a b",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "a　b",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "a​b",
+      "expected": "ab"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "a­b",
+      "expected": "ab"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "a﻿b",
+      "expected": "ab"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "a\n\nb  c\td",
+      "expected": "a\n\nb  c\td"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "Сьогодні ми тут",
+      "expected": "Сьогодні ми тут"
+    },
+    {
+      "fn": "sanitize_field_text",
+      "input": "a\nb",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_field_text",
+      "input": "a\r\nb",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_field_text",
+      "input": "a b",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_field_text",
+      "input": "a b",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_field_text",
+      "input": "a\tb",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_field_text",
+      "input": "  a   b  ",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_field_text",
+      "input": "a   b",
+      "expected": "a b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "м'ясо",
+      "expected": "м’ясо"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "м‘ясо",
+      "expected": "м’ясо"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "мʼясо",
+      "expected": "м’ясо"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "слово — слово",
+      "expected": "слово – слово"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a ‒ b",
+      "expected": "a – b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a − b",
+      "expected": "a – b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a ― b",
+      "expected": "a – b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "та…",
+      "expected": "та..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "слово ...",
+      "expected": "слово..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "слово …",
+      "expected": "слово..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "– ...",
+      "expected": "– ..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "“Привіт”",
+      "expected": "«Привіт»"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "„Привіт”",
+      "expected": "«Привіт»"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "Він сказав: \"Привіт\"",
+      "expected": "Він сказав: «Привіт»"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "\"Привіт\", — сказав він",
+      "expected": "«Привіт», – сказав він"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "\"Він сказав: \"Привіт\"\"",
+      "expected": "«Він сказав: «Привіт»»"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "\"\"Привіт",
+      "expected": "««Привіт"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "Як це Мати сказала, що ми їдемо завтра?\"",
+      "expected": "Як це Мати сказала, що ми їдемо завтра?»"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "00:00:01,000 --> 00:00:02,000",
+      "expected": "00:00:01,000 --> 00:00:02,000"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "слово\n...",
+      "expected": "слово\n..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a ...",
+      "expected": "a..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "1 ...",
+      "expected": "1..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": ") ...",
+      "expected": ") ..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "Ґуру ...",
+      "expected": "Ґуру..."
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "lang": "uk",
+      "input": "м'ясо смачне",
+      "expected": "м’ясо смачне"
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "lang": "uk",
+      "input": "м'ясо смачне",
+      "expected": "м’ясо смачне"
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "lang": "en",
+      "input": "say \"hi\" now",
+      "expected": "say \"hi\" now"
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "lang": "en",
+      "input": "say \"hi\" now",
+      "expected": "say \"hi\" now"
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "lang": "uk",
+      "input": "a\nb",
+      "expected": "a b"
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "lang": "en",
+      "input": "a\nb",
+      "expected": "a b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "Тамаса - це те саме",
+      "expected": "Тамаса – це те саме"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "- як індійці, іноді -\n- це...",
+      "expected": "– як індійці, іноді –\n– це..."
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "будь-хто де-факто",
+      "expected": "будь-хто де-факто"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "мінус -5 градусів",
+      "expected": "мінус -5 градусів"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a\n- b",
+      "expected": "a\n– b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "a\r- b",
+      "expected": "a\r- b"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "—\"Слово\"",
+      "expected": "–«Слово»"
+    },
+    {
+      "fn": "sanitize_edited_text",
+      "input": "слово - слово",
+      "lang": "uk",
+      "expected": "слово – слово"
+    }
+  ]
+}

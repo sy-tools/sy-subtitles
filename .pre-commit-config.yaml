@@ -5,3 +5,15 @@ repos:
       - id: ruff
         args: [--fix]
       - id: ruff-format
+
+  - repo: local
+    hooks:
+      # Same check as tests/test_text_hygiene.py, run before the commit rather
+      # than after the push. tests/fixtures holds captured dirty input by
+      # design and is excluded there too.
+      - id: text-hygiene
+        name: text hygiene (invisible chars, line endings, UK typography)
+        entry: python -m tools.text_normalize --check
+        language: system
+        types: [text]
+        exclude: ^tests/fixtures/
