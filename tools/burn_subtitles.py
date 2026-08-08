@@ -246,9 +246,9 @@ def band_event(start_ms, end_ms, width, band_top, band_height, steps=DEFAULT_GRA
     separate \\pos-ed events drew the full-width gradient correctly. Each strip
     therefore draws from its own origin and carries its absolute frame Y in \\pos.
 
-    All strips share the cue's exact timings, which reproduces the CSS behaviour
-    of the band being visible only while a subtitle is on screen. The caller
-    joins them into the document with the rest of the events.
+    All strips share the given timings. The caller decides the span: the text's
+    own cue timings, or a longer window that bridges the gap to the next cue —
+    see build_ass_document.
     """
     if steps < 1:
         raise ValueError(f"steps must be >= 1, got {steps}")
@@ -301,7 +301,10 @@ def build_ass_document(
     """Assemble the full ASS document for a cue list.
 
     Each cue contributes its band — one Layer-0 event per gradient strip — and
-    then a single Layer-1 text event, all sharing the cue's timings. Cues whose
+    then a single Layer-1 text event. The text keeps the cue's exact timings;
+    the band runs on until the next visible cue starts, holding the gradient
+    through the deliberate 80ms gaps the way the SPA overlay pins its height —
+    the band flashing off and on between cues reads as flicker. Cues whose
     text is blank are skipped entirely: a band with nothing on it would flash a
     dark strip across an otherwise clean frame.
     """
@@ -311,19 +314,23 @@ def build_ass_document(
     padtop_px = round(padtop_ratio * height)
     wrap_width = width - 2 * margin_h
 
+    # Escape first: wrapping then measures the escaped form, so the one
+    # backslash each escaped brace adds is counted although libass will not
+    # draw it. Braces are vanishingly rare here, and the 2% wrap safety
+    # margin absorbs it; measuring the raw text would instead let a line
+    # grow past the margin.
+    visible = [(cue, text) for cue in cues if (text := escape_ass_text(cue["text"]))]
+
     lines = [build_ass_header(width, height, font_size, font_name, margin_h, margin_v)]
-    for cue in cues:
-        # Escape first: wrapping then measures the escaped form, so the one
-        # backslash each escaped brace adds is counted although libass will not
-        # draw it. Braces are vanishingly rare here, and the 2% wrap safety
-        # margin absorbs it; measuring the raw text would instead let a line
-        # grow past the margin.
-        text = escape_ass_text(cue["text"])
-        if not text:
-            continue
+    for i, (cue, text) in enumerate(visible):
         wrapped = wrap_text(text, measure, wrap_width)
         band_top, band_height = band_geometry(height, font_size, len(wrapped), margin_v, padtop_px)
-        lines.extend(band_event(cue["start_ms"], cue["end_ms"], width, band_top, band_height, steps))
+        # max(): a pathological overlapping SRT must not end the band before
+        # its own text. The last band ends with its text — nothing to hold for.
+        band_end = cue["end_ms"]
+        if i + 1 < len(visible):
+            band_end = max(band_end, visible[i + 1][0]["start_ms"])
+        lines.extend(band_event(cue["start_ms"], band_end, width, band_top, band_height, steps))
         lines.append(dialogue_event(cue["start_ms"], cue["end_ms"], wrapped, font_size))
     return "\n".join(lines) + "\n"
 
