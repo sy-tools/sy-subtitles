@@ -8,3 +8,8 @@
 *.jpg binary
 *.mp4 binary
 *.ttf binary
+
+# Fixtures are captured raw input (amruta page dumps, pipeline snapshots) and
+# may deliberately carry CRLF or other oddities; never renormalize them. The
+# hygiene scanner (tools/text_normalize.py) exempts them for the same reason.
+tests/fixtures/** -text
