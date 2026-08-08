@@ -19,38 +19,37 @@ from pathlib import Path
 
 import pytest
 
-from tools.text_normalize import check_text, is_scanned_path, is_uk_content_path
+from tools.text_normalize import _read_text, check_text, is_scanned_path, is_uk_content_path
 
 _ROOT = Path(__file__).resolve().parent.parent
 
 
-def _tracked_text_files() -> list[str]:
-    out = subprocess.run(["git", "ls-files"], cwd=_ROOT, capture_output=True, text=True, check=True).stdout.splitlines()
+def _tracked_text_files(root: Path = _ROOT) -> list[str]:
+    out = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True, check=True).stdout.splitlines()
     return [p for p in out if p and is_scanned_path(p)]
 
 
-def _read(path: str) -> str | None:
-    """Return the file's UTF-8 text, or None when it is binary or unreadable."""
-    try:
-        raw = (_ROOT / path).read_bytes()
-    except OSError:
-        return None
-    if b"\x00" in raw[:8000]:
-        return None
-    try:
-        return raw.decode("utf-8")
-    except UnicodeDecodeError:
-        return None
+def _scan(root: Path) -> list[str]:
+    """Every hygiene offence in the tree, `path: issue` per line.
 
-
-def test_no_hygiene_violations_in_tracked_files():
+    Shares tools.text_normalize._read_text with the CLI so a mis-encoded file
+    is an offence in both places, not a silent skip in one of them.
+    """
     offenders = []
-    for path in _tracked_text_files():
-        text = _read(path)
+    for path in _tracked_text_files(root):
+        text, problem = _read_text(str(root / path))
+        if problem:
+            offenders.append(f"{path}: {problem}")
+            continue
         if text is None:
             continue
         for issue in check_text(text, uk=is_uk_content_path(path)):
             offenders.append(f"{path}: {issue}")
+    return offenders
+
+
+def test_no_hygiene_violations_in_tracked_files():
+    offenders = _scan(_ROOT)
     assert not offenders, (
         "text hygiene violations found -- run `python -m tools.text_normalize --fix`:\n"
         + "\n".join(offenders[:40])
@@ -64,7 +63,17 @@ def test_the_guard_actually_detects_dirt():
     assert check_text("a\u200bb", uk=False), "ZWSP not detected"
     assert check_text("a\r\nb", uk=False), "CRLF not detected"
     assert check_text("м'ясо", uk=True), "UK typography drift not detected"
+    assert check_text("слово - слово", uk=True), "hyphen-as-dash not detected"
     assert not check_text("м’ясо", uk=True), "clean UK text falsely flagged"
+
+
+def test_the_guard_flags_a_non_utf8_tracked_file(tmp_path):
+    """A mis-encoded text file must be an offence, not a silent skip."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    bad = tmp_path / "transcript_uk.txt"
+    bad.write_bytes("Привіт світ\n".encode("cp1251"))
+    subprocess.run(["git", "-C", str(tmp_path), "add", "transcript_uk.txt"], check=True)
+    assert _scan(tmp_path) == ["transcript_uk.txt: not valid UTF-8"]
 
 
 def test_the_guard_scans_a_meaningful_number_of_files():
