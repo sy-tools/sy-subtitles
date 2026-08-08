@@ -1085,3 +1085,25 @@ describe('engine: rebuilt file hygiene', () => {
     assert.strictEqual(srt[0].content, content);
   });
 });
+
+
+// --- index.html wiring -----------------------------------------------------
+//
+// The engine-side hygiene tests above inject `sanitize` themselves, so the
+// one line in index.html that actually wires sanitizeInvisible into
+// ensureEditSync could be deleted with every test green. Pin the wiring the
+// way test_spa_cache.js pins the stylesheet links: by reading the source.
+describe('index.html wiring', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const html = fs.readFileSync(path.join(__dirname, '..', 'site', 'index.html'), 'utf8');
+
+  it('passes sanitizeInvisible into the sync engine', () => {
+    assert.match(html, /sanitize:\s*sanitizeInvisible/);
+  });
+
+  it('loads text_sanitize.js before the inline app code that calls it', () => {
+    const tag = html.indexOf('src="js/text_sanitize.js"');
+    assert.notStrictEqual(tag, -1, 'text_sanitize.js script tag missing');
+  });
+});

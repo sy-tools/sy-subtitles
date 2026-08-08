@@ -3595,10 +3595,20 @@ document.addEventListener('keydown', function(e) {
 // SyncPlayer's own Enter guard only runs while the video panel is open, leaving
 // the break unblocked with the panel closed.
 
-// Language of the surface the event landed on; the review grid's editable
-// column is always Ukrainian.
+// The review grid's editable column follows the user's column choice
+// (?right=<lang>, the header dropdown, or the first available final SRT
+// language) -- it is NOT always Ukrainian. Hardcoding 'uk' here would force
+// Ukrainian typography onto English or Hindi text and edit_sync would commit
+// the corruption upstream.
+function reviewRightLang() {
+  if (typeof reviewState === 'undefined' || !reviewState) return 'uk';
+  var lang = reviewState.mode === 'srt' ? reviewState.srtRightLang : reviewState.rightLang;
+  return lang || 'uk';
+}
+
+// Language of the surface the event landed on.
 function editFieldLang(el) {
-  if (el.matches('.cell-text')) return 'uk';
+  if (el.matches('.cell-text')) return reviewRightLang();
   return (typeof previewState !== 'undefined' && previewState && previewState.srtLang) || 'uk';
 }
 
@@ -3617,15 +3627,30 @@ document.addEventListener('keydown', function(e) {
 
 document.addEventListener('paste', function(e) {
   if (!isEditField(e.target) || !e.clipboardData) return;
+  // Invisible cleanup and flattened breaks ONLY: a pasted fragment has no
+  // caret context, so the field-level trim would eat an intended leading
+  // space and quote resolution would open a quote that must close. The
+  // store-level sanitize on the input event this insert fires finishes the
+  // job. Sanitize BEFORE preventDefault: if anything here throws (e.g. the
+  // sanitizer failed to load), the native paste proceeds instead of the
+  // event being swallowed with nothing inserted.
+  var clean;
+  try {
+    clean = sanitizePastedText(e.clipboardData.getData('text/plain'));
+  } catch (err) {
+    return;
+  }
   e.preventDefault();
-  var plain = e.clipboardData.getData('text/plain');
-  document.execCommand('insertText', false, sanitizeEditedText(plain, editFieldLang(e.target)));
+  document.execCommand('insertText', false, clean);
 }, true);
 
 // The store is sanitized on read, so the field can briefly show what was typed
 // -- straight quotes, an em dash -- while the store already holds the corrected
 // form. Reconcile the visible text once focus leaves, where moving the caret
 // costs nothing. focusout (not blur) because it bubbles to the document.
+// Known tradeoff: a programmatic textContent write resets the browser's undo
+// stack for the field. Accepted -- every alternative (re-render from the
+// store) resets it too, and the store itself is always correct.
 document.addEventListener('focusout', function(e) {
   var el = e.target;
   if (!isEditField(el)) return;
@@ -5934,10 +5959,11 @@ function renderReviewSrt(grid) {
 }
 
 function onReviewEdit(idx, el) {
-  // The review grid's right column is always the Ukrainian text. Sanitizing on
-  // READ keeps the store clean without disturbing the caret; sanitizeEditedText
-  // already trims, so the explicit .trim() is gone.
-  var text = sanitizeEditedText(el.innerText, 'uk');
+  // Sanitizing on READ keeps the store clean without disturbing the caret;
+  // sanitizeEditedText already trims, so the explicit .trim() is gone. The
+  // language follows the column (see reviewRightLang) -- typography must not
+  // touch an English or Hindi right column.
+  var text = sanitizeEditedText(el.innerText, reviewRightLang());
   var orig = reviewState.rightParas[idx] || '';
   var cell = el.closest('.cell.uk');
   if (text === orig) { delete reviewState.edits[idx]; if (cell) cell.classList.remove('edited'); }
