@@ -15,6 +15,7 @@ from tools.text_normalize import (
     sanitize_edited_text,
     sanitize_field_text,
     sanitize_invisible,
+    sanitize_pasted_text,
 )
 
 _FIXTURE = os.path.join(os.path.dirname(__file__), "fixtures", "text_hygiene_cases.json")
@@ -27,6 +28,7 @@ _FNS = {
     "sanitize_field_text": lambda c: sanitize_field_text(c["input"]),
     "normalize_uk_typography": lambda c: normalize_uk_typography(c["input"]),
     "sanitize_edited_text": lambda c: sanitize_edited_text(c["input"], c["lang"]),
+    "sanitize_pasted_text": lambda c: sanitize_pasted_text(c["input"]),
 }
 
 
@@ -35,6 +37,14 @@ def test_fixture_case(case):
     fn = _FNS.get(case["fn"])
     assert fn is not None, f"unknown fixture fn: {case['fn']}"
     assert fn(case) == case["expected"]
+
+
+@pytest.mark.parametrize("case", _CASES, ids=[f"fp-{c['fn']}-{i}" for i, c in enumerate(_CASES)])
+def test_every_fixture_output_is_a_fixed_point(case):
+    """Idempotency across BOTH twins: the SPA sanitizes on input and again on
+    focusout, so a non-fixed-point output would churn text on every blur."""
+    fn = _FNS[case["fn"]]
+    assert fn({**case, "input": case["expected"]}) == case["expected"]
 
 
 def test_every_function_is_exercised():

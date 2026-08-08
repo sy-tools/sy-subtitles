@@ -272,6 +272,46 @@
       "input": "слово - слово",
       "lang": "uk",
       "expected": "слово – слово"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "(\"так\")",
+      "expected": "(«так»)"
+    },
+    {
+      "fn": "normalize_uk_typography",
+      "input": "слово»\n\"Другий блок",
+      "expected": "слово»\n«Другий блок"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "श्‍री",
+      "expected": "श्‍री"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "сло‍во",
+      "expected": "слово"
+    },
+    {
+      "fn": "sanitize_invisible",
+      "input": "a‌‍b",
+      "expected": "ab"
+    },
+    {
+      "fn": "sanitize_pasted_text",
+      "input": " і далі ",
+      "expected": " і далі "
+    },
+    {
+      "fn": "sanitize_pasted_text",
+      "input": "\"х\" —\nтак",
+      "expected": "\"х\" — так"
+    },
+    {
+      "fn": "sanitize_pasted_text",
+      "input": "a  b\tc",
+      "expected": "a  b c"
     }
   ]
 }

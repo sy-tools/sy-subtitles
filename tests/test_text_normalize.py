@@ -5,8 +5,10 @@ literal NBSP in source (tests/test_text_hygiene.py), and a literal here would
 be silently repaired by the very tool under test.
 """
 
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 from hypothesis import given
 from hypothesis import strategies as st
@@ -14,6 +16,7 @@ from hypothesis import strategies as st
 from tools.text_normalize import (
     ODD_SPACES,
     ZERO_WIDTH,
+    ZW_JOINERS,
     check_text,
     fix_text,
     is_scanned_path,
@@ -23,6 +26,7 @@ from tools.text_normalize import (
     sanitize_field_text,
     sanitize_file_text,
     sanitize_invisible,
+    sanitize_pasted_text,
 )
 
 
@@ -37,6 +41,22 @@ class TestSanitizeInvisible:
     def test_zero_width_characters_are_deleted(self):
         for ch in "\u200b\u200c\u200d\u00ad\ufeff":
             assert sanitize_invisible(f"a{ch}b") == "ab", f"U+{ord(ch):04X} not deleted"
+
+    def test_joiners_between_devanagari_are_kept(self):
+        """ZWJ/ZWNJ are orthographic in Devanagari (conjunct control) -- the
+        repo carries Hindi content, and deleting them changes rendered glyphs."""
+        shri = "\u0936\u094d\u200d\u0930\u0940"
+        assert sanitize_invisible(shri) == shri
+        knj = "\u0915\u200c\u0937"
+        assert sanitize_invisible(knj) == knj
+
+    def test_joiner_with_one_devanagari_neighbour_is_kept(self):
+        assert sanitize_invisible("\u0915\u200d b") == "\u0915\u200d b"
+        assert sanitize_invisible("a\u200d\u0915") == "a\u200d\u0915"
+
+    def test_joiners_outside_devanagari_are_deleted(self):
+        assert sanitize_invisible("a\u200cb") == "ab"
+        assert sanitize_invisible("сло\u200dво") == "слово"
 
     def test_newlines_and_runs_are_preserved(self):
         """The file-safe variant must not touch line structure."""
@@ -83,7 +103,11 @@ class TestSanitizeFileText:
 # generator spends its budget on the interesting cases rather than on random
 # astral-plane codepoints.
 _HYGIENE_ALPHABET = st.sampled_from(
-    list("abcя .,!?\"'«»-–—…\n\r\t")
+    # Every character class the rules rewrite must appear here, or the
+    # check/fix agreement property silently stops guarding it.
+    list("abcя0 .,!?\"'«»-–—…([\n\r\t")
+    + list("‘ʼ“”„‒−―")
+    + list("\u0915")  # Devanagari, for the conditional ZWJ/ZWNJ rule
     + list("\u00a0\u202f\u2002\u2003\u2007\u2009\u3000")
     + list("\u200b\u200c\u200d\u00ad\ufeff\u2028\u2029")
 )
@@ -108,9 +132,12 @@ class TestInvariants:
 
     @given(_HYGIENE_TEXT)
     def test_sanitize_invisible_only_touches_listed_characters(self, text):
-        """Any character outside the two tables must survive untouched."""
-        kept = [c for c in text if c not in ODD_SPACES and c not in ZERO_WIDTH]
-        assert [c for c in sanitize_invisible(text) if c != " "] == [c for c in kept if c != " "]
+        """Any character outside the tables must survive untouched. ZWJ/ZWNJ
+        are conditional (kept next to Devanagari), so they are excluded from
+        the exact comparison and pinned by their own tests instead."""
+        kept = [c for c in text if c not in ODD_SPACES and c not in ZERO_WIDTH and c not in ZW_JOINERS]
+        got = [c for c in sanitize_invisible(text) if c != " " and c not in ZW_JOINERS]
+        assert got == [c for c in kept if c != " "]
 
     @given(_HYGIENE_TEXT)
     def test_field_text_output_is_single_line(self, text):
@@ -203,6 +230,31 @@ class TestSanitizeEditedText:
         assert sanitize_edited_text("a\nb", "en") == "a b"
 
 
+class TestSanitizePastedText:
+    """The paste-time variant: invisible cleanup + flattened breaks ONLY.
+
+    No trim, no space-run collapse, no typography: a pasted FRAGMENT has no
+    caret context (a leading space may be intended; a leading straight quote
+    may need to close, not open). The store-level sanitize on the following
+    input event and the focusout reconciliation finish the job.
+    """
+
+    def test_invisible_characters_are_cleaned(self):
+        assert sanitize_pasted_text("a\u00a0b\u200bc") == "a bc"
+
+    def test_line_breaks_flatten_to_a_single_space(self):
+        assert sanitize_pasted_text("a\r\nb\n\nc") == "a b c"
+
+    def test_leading_and_trailing_spaces_survive(self):
+        assert sanitize_pasted_text(" і далі ") == " і далі "
+
+    def test_no_typography_is_applied(self):
+        assert sanitize_pasted_text('"х" — так') == '"х" — так'
+
+    def test_space_runs_survive(self):
+        assert sanitize_pasted_text("a  b") == "a  b"
+
+
 class TestTypographyInvariants:
     @given(_HYGIENE_TEXT)
     def test_normalize_uk_typography_is_idempotent(self, text):
@@ -293,6 +345,17 @@ class TestCheckAndFix:
         once = fix_text("м'ясо — смачне\n", uk=True)
         assert fix_text(once, uk=True) == once
 
+    def test_check_ignores_joiners_inside_devanagari(self):
+        assert check_text("\u0936\u094d\u200d\u0930\u0940\n", uk=False) == []
+
+    def test_check_reports_joiners_outside_devanagari(self):
+        assert any("U+200D" in i for i in check_text("сло\u200dво\n", uk=False))
+
+    def test_fix_opens_a_quote_after_a_leading_bom(self):
+        """The BOM must not act as the quote's left neighbour: the whole-file
+        path strips it before typography and re-attaches it after."""
+        assert fix_text('\ufeff"Привіт", – сказав\n', uk=True) == "\ufeff«Привіт», – сказав\n"
+
 
 class TestCheckFixAgreement:
     """check_text and fix_text must agree, or the corpus can never go green."""
@@ -334,6 +397,50 @@ class TestCli:
             text=True,
         )
         assert result.returncode == 0
+
+    def test_check_flags_a_utf16_text_file(self, tmp_path):
+        """UTF-16 is the most common Windows mis-encoding; the NUL sniff must
+        not silently classify it as binary."""
+        target = tmp_path / "transcript_uk.txt"
+        target.write_bytes("Привіт світ\n".encode("utf-16"))
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--check", str(target)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1
+        assert "UTF-16" in result.stdout
+
+    def test_failing_check_prints_the_fix_remedy(self, tmp_path):
+        target = tmp_path / "transcript_uk.txt"
+        target.write_text("м'ясо тут\n", encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--check", str(target)],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1
+        assert "--fix" in result.stdout
+
+    def test_fix_over_a_relative_list_spares_fixtures(self, tmp_path):
+        """pre-commit passes explicit relative paths; the fixture exemption
+        must hold for them exactly as for a whole-tree run."""
+        (tmp_path / "tests" / "fixtures").mkdir(parents=True)
+        dirty = tmp_path / "transcript_uk.txt"
+        dirty.write_text("м'ясо\n", encoding="utf-8")
+        fixture = tmp_path / "tests" / "fixtures" / "dirty.txt"
+        fixture_bytes = "сирий\u00a0вхід\n".encode("utf-8")
+        fixture.write_bytes(fixture_bytes)
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.text_normalize", "--fix", "transcript_uk.txt", "tests/fixtures/dirty.txt"],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+            env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parent.parent)},
+        )
+        assert result.returncode == 0
+        assert dirty.read_text(encoding="utf-8") == "м’ясо\n"
+        assert fixture.read_bytes() == fixture_bytes
 
     def test_check_flags_a_non_utf8_text_file(self, tmp_path):
         """A mis-encoded file must fail the guard, not slip through silently."""

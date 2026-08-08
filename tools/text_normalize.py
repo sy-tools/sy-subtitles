@@ -29,10 +29,17 @@ ODD_SPACES = "\u00a0\u202f\u2002\u2003\u2007\u2009\u3000"
 
 # Characters that carry no width. Deleted outright. U+FEFF is included; a
 # LEADING byte-order mark is restored separately by sanitize_file_text.
-ZERO_WIDTH = "\u200b\u200c\u200d\u00ad\ufeff"
+ZERO_WIDTH = "\u200b\u00ad\ufeff"
+
+# ZWNJ/ZWJ are deleted only OUTSIDE Devanagari: between Devanagari characters
+# they are orthographic (conjunct control -- e.g. the eyelash ra in Shri), and
+# the repo carries Hindi transcripts and subtitles. Kept when EITHER neighbour
+# is in U+0900-U+097F.
+ZW_JOINERS = "\u200c\u200d"
 
 _ODD_SPACE_RE = re.compile(f"[{ODD_SPACES}]")
 _ZERO_WIDTH_RE = re.compile(f"[{ZERO_WIDTH}]")
+_ZW_JOINER_RE = re.compile(f"(?<![\u0900-\u097f])[{ZW_JOINERS}](?![\u0900-\u097f])")
 # Tabs are folded together with line breaks: a field value is a single line.
 _FIELD_BREAK_RE = re.compile("[\t\n\r\u2028\u2029]+")
 _SPACE_RUN_RE = re.compile(" {2,}")
@@ -45,6 +52,7 @@ def sanitize_invisible(text: str) -> str:
     this is the only variant safe to apply to whole file contents.
     """
     text = _ODD_SPACE_RE.sub(" ", text)
+    text = _ZW_JOINER_RE.sub("", text)
     return _ZERO_WIDTH_RE.sub("", text)
 
 
@@ -59,6 +67,18 @@ def sanitize_field_text(text: str) -> str:
     text = sanitize_invisible(text)
     text = _FIELD_BREAK_RE.sub(" ", text)
     return _SPACE_RUN_RE.sub(" ", text).strip()
+
+
+def sanitize_pasted_text(text: str) -> str:
+    """Normalize a pasted FRAGMENT: invisible cleanup + flattened breaks only.
+
+    No trim, no space-run collapse, no typography: a fragment has no caret
+    context -- a leading space may be intended, and a leading straight quote
+    may need to close rather than open. The store-level sanitize on the next
+    input event and the focusout reconciliation finish the job.
+    """
+    text = sanitize_invisible(text)
+    return _FIELD_BREAK_RE.sub(" ", text)
 
 
 def sanitize_file_text(text: str) -> str:
@@ -167,11 +187,24 @@ def is_scanned_path(path: str) -> bool:
 # --- Whole-file check / fix ----------------------------------------------------
 
 
+def _normalize_uk_file(text: str) -> str:
+    """Whole-file typography: the leading BOM must not act as a character.
+
+    Without stripping it first, a straight quote right after the BOM would see
+    U+FEFF as its left neighbour and resolve as CLOSING. Used by both fix_text
+    and the check_text gate so the two stay in agreement by construction.
+    """
+    bom = ""
+    if text.startswith("\ufeff"):
+        bom, text = "\ufeff", text[1:]
+    return bom + normalize_uk_typography(text)
+
+
 def fix_text(text: str, *, uk: bool) -> str:
     """Return ``text`` with every hygiene rule that applies to it enforced."""
     text = sanitize_file_text(text)
     if uk:
-        text = normalize_uk_typography(text)
+        text = _normalize_uk_file(text)
     return text
 
 
@@ -209,9 +242,13 @@ def check_text(text: str, *, uk: bool) -> list[str]:
             issues.append(f"U+{ord(ch):04X} non-plain space")
         elif ch in ZERO_WIDTH:
             issues.append(f"U+{ord(ch):04X} zero-width character")
+    # ZWNJ/ZWJ are contextual: an offence only where the fixer would delete
+    # them (outside Devanagari), or check and fix would disagree.
+    for ch in sorted(set(_ZW_JOINER_RE.findall(body))):
+        issues.append(f"U+{ord(ch):04X} zero-width joiner outside Devanagari")
     if uk:
         cleaned = sanitize_file_text(text)
-        if normalize_uk_typography(cleaned) != cleaned:
+        if _normalize_uk_file(cleaned) != cleaned:
             for ch, label in _UK_BANNED:
                 if ch in text:
                     issues.append(f"U+{ord(ch):04X} {label} (use the glossary form)")
@@ -258,6 +295,11 @@ def _read_text(path: str) -> tuple[str | None, str | None]:
         raw = Path(path).read_bytes()
     except OSError:
         return None, None
+    # Sniff UTF-16 BOMs BEFORE the NUL check: UTF-16 text is full of NUL bytes
+    # and would otherwise be classified as binary and silently skipped --
+    # and UTF-16 is the most common Windows mis-encoding of a transcript.
+    if raw[:2] in (b"\xff\xfe", b"\xfe\xff"):
+        return None, "UTF-16 encoding (expected UTF-8)"
     if b"\x00" in raw[:8000]:
         return None, None
     try:
@@ -306,6 +348,7 @@ def main(argv: list[str] | None = None) -> None:
     verb = "violating" if args.check else "fixed"
     print(f"{offenders} file(s) {verb}")
     if args.check and offenders:
+        print("run `python -m tools.text_normalize --fix` to repair")
         sys.exit(1)
 
 

@@ -23,7 +23,23 @@
 // literal NBSP in source, and a literal here would be unreadable anyway.
 
 var ODD_SPACES = '\u00a0\u202f\u2002\u2003\u2007\u2009\u3000';
-var ZERO_WIDTH = '\u200b\u200c\u200d\u00ad\ufeff';
+var ZERO_WIDTH = '\u200b\u00ad\ufeff';
+// ZWNJ/ZWJ are deleted only OUTSIDE Devanagari: between Devanagari characters
+// they are orthographic (conjunct control), and the repo carries Hindi
+// content. Kept when EITHER neighbour is in U+0900-U+097F. Implemented as a
+// replace callback reading neighbours from the ORIGINAL string at the match
+// offset -- older Safari lacks lookbehind, and this mirrors Python's
+// lookarounds, which also evaluate against the original string.
+var ZW_JOINER_RE = /[\u200c\u200d]/g;
+var DEVANAGARI_RE = /[\u0900-\u097f]/;
+
+function stripZwJoiners(text) {
+  return text.replace(ZW_JOINER_RE, function (m, offset, s) {
+    var prev = offset > 0 ? s.charAt(offset - 1) : '';
+    var next = s.charAt(offset + 1);
+    return DEVANAGARI_RE.test(prev) || DEVANAGARI_RE.test(next) ? m : '';
+  });
+}
 
 var ODD_SPACE_RE = new RegExp('[' + ODD_SPACES + ']', 'g');
 var ZERO_WIDTH_RE = new RegExp('[' + ZERO_WIDTH + ']', 'g');
@@ -34,9 +50,9 @@ var SPACE_RUN_RE = / {2,}/g;
 // Character-level only: newlines, tabs and whitespace runs survive, so this is
 // the variant that may be applied to whole file contents.
 function sanitizeInvisible(text) {
-  return String(text == null ? '' : text)
-    .replace(ODD_SPACE_RE, ' ')
-    .replace(ZERO_WIDTH_RE, '');
+  return stripZwJoiners(
+    String(text == null ? '' : text).replace(ODD_SPACE_RE, ' ')
+  ).replace(ZERO_WIDTH_RE, '');
 }
 
 // A single-line field value: subtitles are single-line by project rule and
@@ -46,6 +62,15 @@ function sanitizeFieldText(text) {
     .replace(FIELD_BREAK_RE, ' ')
     .replace(SPACE_RUN_RE, ' ')
     .trim();
+}
+
+// A pasted FRAGMENT: invisible cleanup + flattened breaks ONLY. No trim, no
+// space-run collapse, no typography -- a fragment has no caret context (a
+// leading space may be intended; a leading straight quote may need to close,
+// not open). The store-level sanitize on the following input event and the
+// focusout reconciliation finish the job.
+function sanitizePastedText(text) {
+  return sanitizeInvisible(text).replace(FIELD_BREAK_RE, ' ');
 }
 
 var APOSTROPHE_RE = /['‘ʼ]/g;
@@ -119,6 +144,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     sanitizeInvisible: sanitizeInvisible,
     sanitizeFieldText: sanitizeFieldText,
+    sanitizePastedText: sanitizePastedText,
     normalizeUkTypography: normalizeUkTypography,
     sanitizeEditedText: sanitizeEditedText,
   };

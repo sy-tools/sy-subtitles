@@ -76,6 +76,16 @@ def test_the_guard_flags_a_non_utf8_tracked_file(tmp_path):
     assert _scan(tmp_path) == ["transcript_uk.txt: not valid UTF-8"]
 
 
+def test_the_guard_flags_a_utf16_tracked_file(tmp_path):
+    """The NUL sniff must not classify UTF-16 text as binary and skip it."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    bad = tmp_path / "transcript_uk.txt"
+    bad.write_bytes("Привіт світ\n".encode("utf-16"))
+    subprocess.run(["git", "-C", str(tmp_path), "add", "transcript_uk.txt"], check=True)
+    offenders = _scan(tmp_path)
+    assert len(offenders) == 1 and "UTF-16" in offenders[0]
+
+
 def test_the_guard_scans_a_meaningful_number_of_files():
     """Guards against a path-classification bug silently emptying the scan."""
     assert len(_tracked_text_files()) > 500

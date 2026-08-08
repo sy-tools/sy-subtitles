@@ -17,6 +17,7 @@ const FNS = {
   sanitize_field_text: (c) => mod.sanitizeFieldText(c.input),
   normalize_uk_typography: (c) => mod.normalizeUkTypography(c.input),
   sanitize_edited_text: (c) => mod.sanitizeEditedText(c.input, c.lang),
+  sanitize_pasted_text: (c) => mod.sanitizePastedText(c.input),
 };
 
 for (const c of fixture.cases) {
@@ -24,6 +25,14 @@ for (const c of fixture.cases) {
     const fn = FNS[c.fn];
     assert.ok(fn, `unknown fixture fn: ${c.fn}`);
     assert.strictEqual(fn(c), c.expected);
+  });
+}
+
+// Idempotency across BOTH twins: the SPA sanitizes on input and again on
+// focusout, so a non-fixed-point output would churn text on every blur.
+for (const c of fixture.cases) {
+  test(`fixed point: ${c.fn}(${JSON.stringify(c.expected)})`, () => {
+    assert.strictEqual(FNS[c.fn]({ ...c, input: c.expected }), c.expected);
   });
 }
 
