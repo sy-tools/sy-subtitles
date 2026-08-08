@@ -154,18 +154,6 @@ def server():
     httpd.shutdown()
 
 
-@pytest.fixture(scope="module")
-def browser():
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        b = p.chromium.launch()
-        yield b
-        b.close()
-
-
 # --- doc / body helpers ----------------------------------------------------
 
 

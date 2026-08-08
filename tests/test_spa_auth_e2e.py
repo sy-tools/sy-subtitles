@@ -115,19 +115,12 @@ def _route_github(pg, auth_server):
 
 
 @pytest.fixture
-def auth_page(auth_server):
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context()
-        pg = ctx.new_page()
-        _route_github(pg, auth_server)
-        yield pg
-        ctx.close()
-        browser.close()
+def auth_page(auth_server, browser):
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    _route_github(pg, auth_server)
+    yield pg
+    ctx.close()
 
 
 def test_callback_exchanges_code_and_signs_in(auth_server, auth_page):
@@ -181,24 +174,17 @@ def test_invalid_state_does_not_sign_in(auth_server, auth_page):
     assert "code=" not in page.url
 
 
-def test_signed_out_default_shows_login_button(plain_server):
+def test_signed_out_default_shows_login_button(plain_server, browser):
     """The shipped config carries the real GitHub App client id + worker URL,
     so a signed-out visitor sees the login button (and no avatar) by default."""
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context()
-        pg = ctx.new_page()
-        _route_github(pg, plain_server)
-        pg.goto(f"{plain_server}/index.html")
-        pg.wait_for_function("document.title.includes('Index')", timeout=10000)
-        assert pg.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") != "none"
-        assert pg.evaluate("getComputedStyle(document.getElementById('gh-avatar')).display") == "none"
-        ctx.close()
-        browser.close()
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    _route_github(pg, plain_server)
+    pg.goto(f"{plain_server}/index.html")
+    pg.wait_for_function("document.title.includes('Index')", timeout=10000)
+    assert pg.evaluate("getComputedStyle(document.getElementById('gh-login-btn')).display") != "none"
+    assert pg.evaluate("getComputedStyle(document.getElementById('gh-avatar')).display") == "none"
+    ctx.close()
 
 
 @pytest.fixture
@@ -212,69 +198,55 @@ def hooks_only_server():
     httpd.shutdown()
 
 
-def test_callback_restores_app_params_saved_before_login(hooks_only_server):
+def test_callback_restores_app_params_saved_before_login(hooks_only_server, browser):
     """GitHub App redirect_uri is the bare app URL (exact-match rule), so
     ?repo= must round-trip via sessionStorage — else the off-Pages app cannot
     even boot on the callback (deriveRepo throws -> blank page)."""
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context()
-        pg = ctx.new_page()
-        _route_github(pg, hooks_only_server)
-        pg.add_init_script(
-            "sessionStorage.setItem('sy_gh_state', 'st1');"
-            "sessionStorage.setItem('sy_gh_return', '?repo=sy-tools%2Fsy-subtitles');"
-        )
-        # The callback arrives WITHOUT ?repo — exactly as GitHub sends it.
-        pg.goto(f"{hooks_only_server}/index.html?code=c1&state=st1")
-        pg.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
-        assert pg.evaluate("localStorage.getItem('sy_gh_token')") == "gho_e2e"
-        assert "repo=" in pg.url and "code=" not in pg.url
-        ctx.close()
-        browser.close()
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    _route_github(pg, hooks_only_server)
+    pg.add_init_script(
+        "sessionStorage.setItem('sy_gh_state', 'st1');"
+        "sessionStorage.setItem('sy_gh_return', '?repo=sy-tools%2Fsy-subtitles');"
+    )
+    # The callback arrives WITHOUT ?repo — exactly as GitHub sends it.
+    pg.goto(f"{hooks_only_server}/index.html?code=c1&state=st1")
+    pg.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
+    assert pg.evaluate("localStorage.getItem('sy_gh_token')") == "gho_e2e"
+    assert "repo=" in pg.url and "code=" not in pg.url
+    ctx.close()
 
 
-def test_login_roundtrip_returns_to_the_page_the_user_left(hooks_only_server):
+def test_login_roundtrip_returns_to_the_page_the_user_left(hooks_only_server, browser):
     """Full circle: clicking login on a preview page must land back ON that
     preview page. redirect_uri is the bare app URL (exact-match rule), so BOTH
     the query (?repo=) and the hash route (#/preview/...) round-trip via
     sessionStorage; losing the hash strands the user on the index after login."""
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
     from urllib.parse import parse_qs, urlparse
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context()
-        pg = ctx.new_page()
-        _route_github(pg, hooks_only_server)
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    _route_github(pg, hooks_only_server)
 
-        # GitHub authorize bounces straight back to redirect_uri with a code —
-        # the shape of a real approval, so the SPA's stash/restore pair runs
-        # exactly as in production.
-        def authorize(route):
-            q = parse_qs(urlparse(route.request.url).query)
-            target = q["redirect_uri"][0] + "?code=c1&state=" + q["state"][0]
-            route.fulfill(status=302, headers={"Location": target})
+    # GitHub authorize bounces straight back to redirect_uri with a code —
+    # the shape of a real approval, so the SPA's stash/restore pair runs
+    # exactly as in production.
+    def authorize(route):
+        q = parse_qs(urlparse(route.request.url).query)
+        target = q["redirect_uri"][0] + "?code=c1&state=" + q["state"][0]
+        route.fulfill(status=302, headers={"Location": target})
 
-        pg.route("https://github.com/login/oauth/authorize*", authorize)
+    pg.route("https://github.com/login/oauth/authorize*", authorize)
 
-        route_hash = "#/preview/1979-09-27_Talk/Video-HD"
-        pg.goto(f"{hooks_only_server}/index.html?repo=sy-tools%2Fsy-subtitles{route_hash}")
-        pg.wait_for_selector("#gh-login-btn", state="visible", timeout=10000)
-        pg.click("#gh-login-btn")
-        pg.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
-        assert pg.evaluate("localStorage.getItem('sy_gh_token')") == "gho_e2e"
-        assert "repo=" in pg.url and "code=" not in pg.url
-        assert pg.url.endswith(route_hash), f"login must return to the page the user left, got {pg.url}"
-        ctx.close()
-        browser.close()
+    route_hash = "#/preview/1979-09-27_Talk/Video-HD"
+    pg.goto(f"{hooks_only_server}/index.html?repo=sy-tools%2Fsy-subtitles{route_hash}")
+    pg.wait_for_selector("#gh-login-btn", state="visible", timeout=10000)
+    pg.click("#gh-login-btn")
+    pg.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
+    assert pg.evaluate("localStorage.getItem('sy_gh_token')") == "gho_e2e"
+    assert "repo=" in pg.url and "code=" not in pg.url
+    assert pg.url.endswith(route_hash), f"login must return to the page the user left, got {pg.url}"
+    ctx.close()
 
 
 def test_foreign_state_url_does_not_consume_the_return_stash(auth_server, auth_page):
@@ -436,21 +408,15 @@ def test_signed_in_write_gets_enlightenment_marks(auth_server, auth_page):
     assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).boxShadow") != "none"
 
 
-def test_signed_out_has_no_enlightenment_marks(plain_server):
-    try:
-        from playwright.sync_api import sync_playwright
-    except ImportError:
-        pytest.skip("playwright not installed")
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        ctx = browser.new_context()
-        pg = ctx.new_page()
-        _route_github(pg, plain_server)
-        pg.goto(f"{plain_server}/index.html")
-        pg.wait_for_function("document.title.includes('Index')", timeout=10000)
-        assert not pg.evaluate("document.body.classList.contains('gh-write')")
-        assert pg.evaluate("getComputedStyle(document.body, '::after').content") == "none"
-        ctx.close()
+def test_signed_out_has_no_enlightenment_marks(plain_server, browser):
+    ctx = browser.new_context()
+    pg = ctx.new_page()
+    _route_github(pg, plain_server)
+    pg.goto(f"{plain_server}/index.html")
+    pg.wait_for_function("document.title.includes('Index')", timeout=10000)
+    assert not pg.evaluate("document.body.classList.contains('gh-write')")
+    assert pg.evaluate("getComputedStyle(document.body, '::after').content") == "none"
+    ctx.close()
 
 
 def test_readonly_session_has_no_enlightenment_marks(auth_server, auth_page):

@@ -15,7 +15,6 @@ from __future__ import annotations
 import pytest
 
 from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
-    browser,
     mock_player_js,
     page,
     server,
