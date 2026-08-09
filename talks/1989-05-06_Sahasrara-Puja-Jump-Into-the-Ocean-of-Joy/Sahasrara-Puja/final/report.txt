@@ -3,10 +3,20 @@
 ============================================================
   SRT: talks/1989-05-06_Sahasrara-Puja-Jump-Into-the-Ocean-of-Joy/Sahasrara-Puja/final/uk.srt
   Transcript: talks/1989-05-06_Sahasrara-Puja-Jump-Into-the-Ocean-of-Joy/transcript_uk.txt
-  SRT blocks: 357
-  (text preservation check skipped — offset video)
-  (time range check skipped — offset video)
-  (CPS hard fail skipped — builder mode)
+  Whisper: talks/1989-05-06_Sahasrara-Puja-Jump-Into-the-Ocean-of-Joy/Sahasrara-Puja/source/whisper.json
+  SRT blocks: 383
+  Whisper segments: 1107
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 19446
+  SRT chars: 19446
+  Exact normalized match: OK
+  Transcript words: 3152
+  SRT words: 3152
+  Word-level match: OK
 
 ============================================================
   CHECK 2: Timing overlaps
@@ -14,23 +24,26 @@
   Overlapping blocks: 0
 
 ============================================================
-  CHECK 3: Time range — SKIPPED (explicitly skipped)
+  CHECK 3: Time range (vs whisper)
 ============================================================
+  whisper range: 00:07:37,290 — 04:59:08,530
+  SRT range:       00:07:37,290 — 00:43:12,690
+  Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 357
+  Total blocks: 383
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 357
-  CPS: avg=10.3, median=10.3, max=15.1
-  CPS > target: 36 (10.1%)
+  Total blocks: 383
+  CPS: avg=10.3, median=10.2, max=15.0
+  CPS > target: 0 (0.0%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=53.5, max=84
+  CPL: avg=49.8, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -40,16 +53,16 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #215: CPS=15.1 (39ch/2.6s) "тому у нас були проблеми та інші речі»."
-    #268: CPS=15.1 (37ch/2.5s) "Ось питання, яке слід поставити собі."
-    #169: CPS=15.0 (50ch/3.3s) "але вдають, що люблять, бо в когось більше грошей."
-    #41: CPS=15.0 (28ch/1.9s) "Раніше цього ніколи не було."
-    #216: CPS=15.0 (28ch/1.9s) "Він сказав: «Ні, ні, ні, ні!"
-    #247: CPS=15.0 (34ch/2.3s) "Усі ці художники багато страждали."
-    #67: CPS=15.0 (37ch/2.5s) "яких наші чакри відкриваються більше,"
-    #322: CPS=15.0 (37ch/2.5s) "Тому ти хочеш подарувати Мені квітку,"
-    #344: CPS=15.0 (40ch/2.7s) "Ви сумніваєтеся лише тоді, коли думаєте."
-    #339: CPS=15.0 (43ch/2.9s) "а потім Він відмовляється, Він сказав: «Ні,"
+    #40: CPS=15.0 (39ch/2.6s) "Через напругу, [про яку] вони говорять."
+    #130: CPS=15.0 (18ch/1.2s) "Я тебе ненавиджу!»"
+    #300: CPS=15.0 (79ch/5.3s) "З любові до людини ви повинні, якщо це можливо, сказати їй: ..."
+    #186: CPS=15.0 (76ch/5.1s) "Якщо любов вбита, то радість втрачена, ви не можете мати рад..."
+    #342: CPS=15.0 (70ch/4.7s) "наприклад, ти хочеш подарувати Мені квіти, бо знаєш, що Я лю..."
+    #367: CPS=15.0 (67ch/4.5s) "Отже, коли ви досягаєте цієї межі, можна сказати, що ви пере..."
+    #162: CPS=15.0 (61ch/4.1s) "Сказати, що «мені це не подобається» і «мені це подобається»..."
+    #195: CPS=15.0 (58ch/3.9s) "Якщо ви прив’язані до однієї частини або до однієї квітки,"
+    #325: CPS=15.0 (58ch/3.9s) "нам доводиться просити деяких людей залишити Сахаджа Йоґу."
+    #128: CPS=15.0 (52ch/3.5s) "– навіть дитина може повторювати: «Я тебе ненавиджу!"
 
 ============================================================
   SUMMARY
@@ -60,11 +73,10 @@
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
-  [PASS] Duration ≥ 1200ms
-  [PASS] Duration ≤ 21000ms
+  [PASS] CPS ≤ 20.0
 
   Avg CPS: 10.3 (target ≤15.0)
-  CPS > 15.0: 36 blocks
+  CPS > 15.0: 0 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
