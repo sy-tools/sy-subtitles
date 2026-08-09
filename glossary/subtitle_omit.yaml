@@ -1,0 +1,23 @@
+# Editorial remarks that belong in the transcript but never on screen.
+#
+# These parentheticals describe what the video already shows — the audience
+# laughing, applauding — so repeating them as a subtitle adds nothing and
+# steals screen time. They stay in transcript_uk.txt (the reading artefact)
+# and are stripped by `load_transcript`, which every subtitle-facing tool
+# goes through: build_map (blocks), validate_subtitles (text preservation),
+# align_uk, sync_transcript_to_srt.
+#
+# ONLY phrases listed here are stripped — never all parentheses. `(Італія)`,
+# `(нерозбірливо)`, `(гінді)` and translator clarifications are content.
+#
+# Matching is exact and case-insensitive: "(сміх)" also covers "(Сміх)".
+# Brackets are part of the phrase, so "[…]" remarks work the same way.
+# Talk-specific one-offs go in that talk's meta.yaml under `subtitle_omit:`.
+
+omit_exact:
+  - "(сміх)"
+  - "(сміється)"
+  - "(сміючись)"
+  - "(Мати сміється)"
+  - "(Шрі Матаджі сміється)"
+  - "(Оплески)"

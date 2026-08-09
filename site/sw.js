@@ -1,7 +1,7 @@
 // Service Worker for SPA caching
 // Browser detects changes by comparing sw.js byte-for-byte.
 // CACHE_VERSION: bump when cache format changes or to force purge.
-var CACHE_VERSION = 13;
+var CACHE_VERSION = 17;
 var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 
 // Routing predicates (isImmutable / isApiOrRaw / isNavigation / pickStrategy) are
@@ -40,7 +40,9 @@ var SHELL_ASSETS = [
   'js/manifest_fetch.js',
   'js/offline_fallback.js',
   'js/talk_slug.js',
+  'js/text_sanitize.js',
   'js/vimeo_codec.js',
+  'js/end_freeze.js',
   'js/add_talk_data.js',
   'js/shell_version.js',
   'js/talk_actions.js',
@@ -49,7 +51,11 @@ var SHELL_ASSETS = [
   'js/github_api.js',
   'js/edit_sync.js',
   'js/marker_sync.js',
-  'js/sync_status_view.js'
+  'js/sync_status_view.js',
+  'js/my_work.js',
+  'js/burn_video.js',
+  'js/burn_artifact.js',
+  'js/export_menu.js'
 ];
 
 // Cross-origin libs the shell needs to boot (js-yaml parses every meta.yaml).

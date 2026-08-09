@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-07-18T14:39:58.234439+00:00",
+  "updated_at": "2026-08-07T21:15:20.296618+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -243,10 +243,10 @@
       "updated_at": "2026-06-14T05:23:21Z"
     },
     "1980-07-27_Guru-Puja-The-Statutes-of-the-Lord": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
       "issue_number": 256,
-      "updated_at": "2026-07-14T22:28:23Z"
+      "updated_at": "2026-07-26T14:07:04Z"
     },
     "1982-07-04_Guru-Puja-Establishing-the-Guru-Principle-and-Havan-After-Puja": {
       "status": "pending",
@@ -553,6 +553,24 @@
       "reviewer": "SlavaSubotskiy",
       "issue_number": 726,
       "updated_at": "2026-07-12T20:22:41Z"
+    },
+    "2000-07-23_Guru-Puja-Shraddha": {
+      "status": "approved",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 895,
+      "updated_at": "2026-08-01T13:02:46Z"
+    },
+    "1993-05-18_Shri-Fatima-Puja-Women-are-responsible-for-the-society": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 932,
+      "updated_at": "2026-08-05T11:12:44Z"
+    },
+    "1989-07-23_Guru-Puja-Creativity": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 938,
+      "updated_at": "2026-08-07T21:15:10Z"
     }
   }
 }

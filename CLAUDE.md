@@ -18,8 +18,8 @@ Source language: English. Target language: Ukrainian.
 1. Download talk: `python -m tools.download --url "https://www.amruta.org/..."`
 2. Push source files (`meta.yaml`, `transcript_en.txt`, `en.srt`)
 3. Trigger pipeline: `gh workflow run subtitle-pipeline.yml -f talk_id={date}_{slug}`
-   Optional inputs: `model=claude-opus-4-8|claude-fable-5|claude-sonnet-5`
-   (default `claude-opus-4-8`), `build_model=...` (build-step-only override,
+   Optional inputs: `model=claude-opus-5|claude-opus-4-8|claude-fable-5|claude-sonnet-5`
+   (default `claude-opus-5`), `build_model=...` (build-step-only override,
    default `same-as-model`), `oauth_token=default|EXTRA` (Claude account:
    value `X` → secret `CLAUDE_CODE_OAUTH_TOKEN_X`; missing/empty named secret
    FAILS the run — no silent fallback to the default account),
@@ -184,6 +184,15 @@ python -m tools.build_map prepare        --talk-dir PATH --video-slug SLUG [--la
 python -m tools.build_map prepare-timing --talk-dir PATH --video-slug SLUG [--timing-source whisper|en-srt]
 python -m tools.build_map assemble       --talk-dir PATH --video-slug SLUG [--lang uk]
 
+# Burn subtitles into a video (SRT -> ASS -> ffmpeg+libass). Sizing comes from
+# ratios measured by the SPA against the displayed video, not pixels.
+# --font-file defaults to the vendored assets/fonts/Roboto-Regular.ttf, resolved
+# absolutely from the module, so the CLI works from any directory.
+python -m tools.burn_subtitles --srt PATH --video PATH --output PATH \
+  --font-ratio 0.0711 --padtop-ratio 0.0741 --padbot-ratio 0.0333 \
+  [--font-file PATH] [--font-name Roboto] [--gradient-steps 64] [--ass-out PATH] \
+  [--progress-file PATH]   # ffmpeg -progress sink; burn-subtitles.yml's gates poll it
+
 # Validate SRT subtitles (timing source: --whisper-json OR --en-srt, en-srt preferred)
 python -m tools.validate_subtitles --srt PATH --transcript PATH \
   [--whisper-json PATH | --en-srt PATH] --report PATH \
@@ -253,8 +262,14 @@ python -m tools.whisper_run --video PATH --output PATH [--model MODEL] [--langua
 # Internal / pipeline-support CLIs (run by workflows, rarely by hand):
 #   tools.builder_data            — query EN SRT blocks + whisper word timestamps for the builder agent
 #   tools.fake_llm                — fake LLM responder for dry-run pipeline (replays snapshots)
+#   tools.render_gate             — blocks until the detached burn encode passes a
+#                                   percentage; each burn-subtitles.yml gate step is one
+#                                   call, and a step COMPLETING is the only live progress
+#                                   channel the SPA has into a running job
 #   tools.verify_snapshot         — verify a dry-run result against a recorded snapshot
 #   tools.workflow_validation_cli — guard step validating talk-id / video-slug / video-ref inputs
+#   tools.retime_snapshot         — carry a dry-run snapshot's timings onto a new block cut
+#                                   (run after changing text_segmentation or subtitle_omit; see TESTING.md)
 ```
 
 ## Glossary
@@ -264,6 +279,12 @@ Sahaja Yoga term dictionaries live in `glossary/`:
 - `terms_context.yaml` – disambiguation context for terms with variants
 - `chakra_map.yaml` – chakra/deity/channel mapping
 - `chakra_system.yaml` – full subtle system reference
+- `subtitle_omit.yaml` – editorial remarks ("(сміх)") that stay in the
+  transcript but never reach the screen. Talk-specific one-offs go in that
+  talk's `meta.yaml` under `subtitle_omit:`. Applied in `load_transcript`, so
+  the builder and `check_text_preservation` see the same text by construction.
+  **Changing either list changes the block cut — re-time the dry-run snapshots
+  (`tools.retime_snapshot`) and rebuild affected talks.**
 
 See `glossary/CLAUDE.md` for translator agent instructions (transliteration, capitalization rules).
 

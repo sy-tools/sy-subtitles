@@ -2,10 +2,14 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { authHeaders, exchangeCode, getViewer } = require('../site/js/github_api');
 
+// Statuses the Fetch spec forbids a body on; Response throws otherwise.
+const NULL_BODY_STATUSES = new Set([204, 205, 304]);
+
 function fetchDouble(status, payload, capture) {
   return async (url, init) => {
     if (capture) { capture.url = url; capture.init = init || {}; }
-    return new Response(JSON.stringify(payload), {
+    const body = NULL_BODY_STATUSES.has(status) ? null : JSON.stringify(payload);
+    return new Response(body, {
       status,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -539,5 +543,124 @@ describe('getRepoPermissions', () => {
       getRepoPermissions('https://api.github.com/repos/o/r', 'gho_x',
         fetchDouble(403, { message: 'API rate limit exceeded' })),
       (e) => e.status === 403 && /rate limit/.test(e.message));
+  });
+});
+
+const { listIssuesByCreator } = require('../site/js/github_api');
+
+describe('listIssuesByCreator', () => {
+  const API = 'https://api.github.com/repos/o/r';
+  function pagedFetch(pages, seen) {
+    return async (url) => {
+      seen.push(url);
+      const page = Number(new URL(url).searchParams.get('page'));
+      return new Response(JSON.stringify(pages[page - 1] || []), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    };
+  }
+  it('GETs /issues?creator&state=all and maps rows (pull_request + draft + state_reason kept)', async () => {
+    const seen = [];
+    const rows = await listIssuesByCreator(API, 't', 'tester', pagedFetch([[
+      { number: 1, title: 'Review: x', state: 'open', html_url: 'u1', node_id: 'n1' },
+      { number: 2, title: 'Edit sync: x (tester)', state: 'closed', html_url: 'u2',
+        pull_request: { merged_at: '2026-07-01T00:00:00Z', url: 'p2' } },
+      { number: 3, title: 'Edit sync: y (tester)', state: 'open', html_url: 'u3', draft: true,
+        pull_request: { merged_at: null, url: 'p3' } },
+      // state_reason separates an issue that got done from one that was
+      // dropped — classifyWorkRow colours the badge by it.
+      { number: 4, title: 'Markers: z / v', state: 'closed', html_url: 'u4',
+        state_reason: 'not_planned' },
+    ]], seen));
+    assert.strictEqual(seen.length, 1);
+    assert.match(seen[0], /\/issues\?creator=tester&state=all&per_page=100&page=1$/);
+    assert.deepStrictEqual(rows, [
+      { number: 1, title: 'Review: x', state: 'open', html_url: 'u1', draft: false,
+        state_reason: null, pull_request: null },
+      { number: 2, title: 'Edit sync: x (tester)', state: 'closed', html_url: 'u2', draft: false,
+        state_reason: null, pull_request: { merged_at: '2026-07-01T00:00:00Z' } },
+      { number: 3, title: 'Edit sync: y (tester)', state: 'open', html_url: 'u3', draft: true,
+        state_reason: null, pull_request: { merged_at: null } },
+      { number: 4, title: 'Markers: z / v', state: 'closed', html_url: 'u4', draft: false,
+        state_reason: 'not_planned', pull_request: null },
+    ]);
+  });
+  it('pages until a short page', async () => {
+    const full = Array.from({ length: 100 }, (_, i) => (
+      { number: i, title: 't', state: 'open', html_url: 'u' }));
+    const seen = [];
+    const rows = await listIssuesByCreator(API, 'a b', 'a b', pagedFetch([full, [full[0]]], seen));
+    assert.strictEqual(rows.length, 101);
+    assert.strictEqual(seen.length, 2);
+    assert.match(seen[0], /creator=a%20b/); // creator is URI-encoded
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Actions API (burned-in subtitle render): dispatch the workflow, find the
+// run, follow its jobs, and locate the artifact.
+// ---------------------------------------------------------------------------
+const {
+  dispatchWorkflow,
+  listWorkflowRuns,
+  getRunJobs,
+  listRunArtifacts,
+} = require('../site/js/github_api');
+
+// Reuses the module-level API constant declared above (same origin shape;
+// the tests below only assert on URL suffixes, not the repo it points at).
+
+describe('dispatchWorkflow', () => {
+  it('POSTs ref and inputs to the workflow dispatch endpoint', async () => {
+    const capture = {};
+    await dispatchWorkflow(API, 'gho_x', 'burn-subtitles.yml', 'main',
+      { talk_id: 't' }, fetchDouble(204, {}, capture));
+    assert.strictEqual(capture.url,
+      API + '/actions/workflows/burn-subtitles.yml/dispatches');
+    assert.strictEqual(capture.init.method, 'POST');
+    assert.deepStrictEqual(JSON.parse(capture.init.body),
+      { ref: 'main', inputs: { talk_id: 't' } });
+  });
+
+  it('rejects with the status so the UI can explain a 403', async () => {
+    await assert.rejects(
+      dispatchWorkflow(API, 'gho_x', 'w.yml', 'main', {},
+        fetchDouble(403, { message: 'Resource not accessible by integration' })),
+      (e) => e.status === 403);
+  });
+});
+
+describe('listWorkflowRuns', () => {
+  it('returns the runs array for the workflow', async () => {
+    const capture = {};
+    const runs = await listWorkflowRuns(API, 'gho_x', 'burn-subtitles.yml',
+      fetchDouble(200, { workflow_runs: [{ id: 7 }] }, capture));
+    assert.deepStrictEqual(runs, [{ id: 7 }]);
+    assert.match(capture.url, /\/actions\/workflows\/burn-subtitles\.yml\/runs/);
+  });
+
+  it('returns [] when the payload has no runs key', async () => {
+    assert.deepStrictEqual(
+      await listWorkflowRuns(API, 'gho_x', 'w.yml', fetchDouble(200, {})), []);
+  });
+});
+
+describe('getRunJobs', () => {
+  it('returns the jobs array for a run', async () => {
+    const capture = {};
+    const jobs = await getRunJobs(API, 'gho_x', 42,
+      fetchDouble(200, { jobs: [{ name: 'burn' }] }, capture));
+    assert.deepStrictEqual(jobs, [{ name: 'burn' }]);
+    assert.strictEqual(capture.url, API + '/actions/runs/42/jobs');
+  });
+});
+
+describe('listRunArtifacts', () => {
+  it('returns the artifacts array for a run', async () => {
+    const capture = {};
+    const arts = await listRunArtifacts(API, 'gho_x', 42,
+      fetchDouble(200, { artifacts: [{ id: 9, expired: false }] }, capture));
+    assert.deepStrictEqual(arts, [{ id: 9, expired: false }]);
+    assert.strictEqual(capture.url, API + '/actions/runs/42/artifacts');
   });
 });

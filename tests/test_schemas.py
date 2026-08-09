@@ -132,6 +132,20 @@ def test_meta_good(tmp_path: Path) -> None:
     validate_meta_yaml(_w(tmp_path, "meta.yaml", GOOD_META))
 
 
+def test_meta_subtitle_omit_accepts_list_of_phrases(tmp_path: Path) -> None:
+    ok = dict(GOOD_META, subtitle_omit=["(легкий сміх, коли собака виходить на сцену)"])
+    validate_meta_yaml(_w(tmp_path, "meta.yaml", ok))
+
+
+@pytest.mark.parametrize("bad_value", ["(сміх)", {"a": 1}, ["(сміх)", ""], ["(сміх)", 7]])
+def test_meta_subtitle_omit_rejects_malformed_spec(tmp_path: Path, bad_value) -> None:
+    """A typo'd `subtitle_omit:` must fail loudly — silently ignoring it would
+    ship the very remarks it was written to strip."""
+    bad = dict(GOOD_META, subtitle_omit=bad_value)
+    with pytest.raises(SchemaError, match="subtitle_omit"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
+
+
 def test_meta_bad_date(tmp_path: Path) -> None:
     bad = dict(GOOD_META, date="1988/05/08")
     with pytest.raises(SchemaError, match="YYYY-MM-DD"):

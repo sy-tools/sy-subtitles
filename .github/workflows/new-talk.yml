@@ -131,14 +131,14 @@ jobs:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install -r requirements.txt yt-dlp
+          pip install -r requirements.txt 'yt-dlp[default,curl-cffi]'
 
       - name: Process new talks
         run: |
@@ -295,7 +295,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -310,7 +310,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
           pip install -r requirements.txt
-          pip install faster-whisper>=1.2.1 yt-dlp
+          pip install faster-whisper>=1.2.1 'yt-dlp[default,curl-cffi]'
 
       - name: Cache Whisper model
         uses: actions/cache@v6
@@ -328,8 +328,10 @@ jobs:
       - name: Download video
         run: |
           # Decode the obfuscated video_ref at the last moment and mask the
-          # plaintext URL from the logs.
-          VIMEO_URL=$(python3 -m tools.vimeo_codec decode "$VIDEO_REF")
+          # plaintext URL from the logs. --player emits the player.vimeo.com
+          # form: Vimeo answers 401 on the internal API yt-dlp uses for the
+          # canonical vimeo.com/<id>/<hash> links.
+          VIMEO_URL=$(python3 -m tools.vimeo_codec decode --player "$VIDEO_REF")
           echo "::add-mask::$VIMEO_URL"
           mkdir -p /tmp/whisper_work
           yt-dlp --referer "https://www.amruta.org/" -o "/tmp/whisper_work/video.mp4" "$VIMEO_URL"

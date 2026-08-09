@@ -314,6 +314,13 @@ function createSyncEngine(opts) {
   // provides it); their commits make the draft PR diff human-readable.
   var buildFiles = opts.buildFiles || function () { return []; };
 
+  // Last gate before rebuilt file bytes reach GitHub. Collaborators still hold
+  // edits containing NBSP in localStorage from before the input fields were
+  // fixed, so this is not redundant with the SPA's edit handlers. The typeof
+  // guard keeps this module loadable where the twin is not present.
+  var sanitize = opts.sanitize
+    || (typeof sanitizeInvisible === 'function' ? sanitizeInvisible : null);
+
   var clientId = opts.clientId || (function () {
     var c = storage.getItem('sy_sync_client');
     if (!c) { c = Math.random().toString(36).slice(2, 8); storage.setItem('sy_sync_client', c); }
@@ -528,7 +535,11 @@ function createSyncEngine(opts) {
     // sha (409/422) is refreshed once and retried.
     function pushFiles() {
       if (disposed) return Promise.resolve();
-      var files = buildFiles() || [];
+      // Invisible characters ONLY: `content` is a whole rebuilt file, and the
+      // field-level rule would collapse its newlines and destroy the SRT.
+      var files = (buildFiles() || []).map(function (f) {
+        return sanitize ? { path: f.path, content: sanitize(f.content) } : f;
+      });
       var chain = Promise.resolve();
       files.forEach(function (file) {
         chain = chain.then(function () {

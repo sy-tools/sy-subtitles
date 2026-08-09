@@ -177,6 +177,34 @@ function listIssuesByLabel(api, token, label, fetchImpl) {
   return fetchPage(1, []);
 }
 
+// GET /issues?creator=<login>&state=all — the Issues LIST API returns both
+// issues and PRs (PR rows carry a pull_request key, merged_at when merged).
+// One paged query serves the "my work" mine-filter in both normal and expert
+// mode; open/closed filtering happens client-side. Same pagination contract
+// as listIssuesByLabel (short page stops, MAX_PAGES runaway backstop).
+function listIssuesByCreator(api, token, creator, fetchImpl) {
+  var PER_PAGE = 100, MAX_PAGES = 20;
+  var base = api + '/issues?creator=' + encodeURIComponent(creator)
+    + '&state=all&per_page=' + PER_PAGE;
+  function mapRow(r) {
+    return { number: r.number, title: r.title, state: r.state, html_url: r.html_url,
+      draft: !!r.draft,
+      // Closure reason: 'completed' | 'not_planned' | 'reopened' | null.
+      // classifyWorkRow needs it to tell a done issue from a dropped one.
+      state_reason: r.state_reason || null,
+      pull_request: r.pull_request ? { merged_at: r.pull_request.merged_at || null } : null };
+  }
+  function fetchPage(page, acc) {
+    return ghJson(base + '&page=' + page, token, null, fetchImpl).then(function (list) {
+      var rows = list || [];
+      acc = acc.concat(rows.map(mapRow));
+      if (rows.length === PER_PAGE && page < MAX_PAGES) return fetchPage(page + 1, acc);
+      return acc;
+    });
+  }
+  return fetchPage(1, []);
+}
+
 // POST /labels — idempotent; a 422 "already exists" is success.
 function ensureLabel(api, token, name, fetchImpl) {
   return ghJson(api + '/labels', token, { method: 'POST', body: { name: name } }, fetchImpl)
@@ -355,6 +383,36 @@ function submitFilesPr(api, token, opts, fetchImpl) {
     });
 }
 
+// --- Actions ---------------------------------------------------------------
+// Used by the burned-in subtitle render: dispatch the workflow, find the run,
+// follow its steps, and locate the artifact. Requires the App's `actions`
+// permission — a 403 here usually means the token predates that grant.
+
+function dispatchWorkflow(api, token, workflowFile, ref, inputs, fetchImpl) {
+  return ghJson(
+    api + '/actions/workflows/' + encodeURIComponent(workflowFile) + '/dispatches',
+    token, { method: 'POST', body: { ref: ref, inputs: inputs } }, fetchImpl
+  ).then(function () { /* 204 No Content */ });
+}
+
+function listWorkflowRuns(api, token, workflowFile, fetchImpl) {
+  return ghJson(
+    api + '/actions/workflows/' + encodeURIComponent(workflowFile)
+      + '/runs?event=workflow_dispatch&per_page=20',
+    token, null, fetchImpl
+  ).then(function (r) { return (r && r.workflow_runs) || []; });
+}
+
+function getRunJobs(api, token, runId, fetchImpl) {
+  return ghJson(api + '/actions/runs/' + runId + '/jobs', token, null, fetchImpl)
+    .then(function (r) { return (r && r.jobs) || []; });
+}
+
+function listRunArtifacts(api, token, runId, fetchImpl) {
+  return ghJson(api + '/actions/runs/' + runId + '/artifacts', token, null, fetchImpl)
+    .then(function (r) { return (r && r.artifacts) || []; });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     authHeaders: authHeaders,
@@ -371,6 +429,7 @@ if (typeof module !== 'undefined' && module.exports) {
     updateIssue: updateIssue,
     setIssueState: setIssueState,
     listIssuesByLabel: listIssuesByLabel,
+    listIssuesByCreator: listIssuesByCreator,
     ensureLabel: ensureLabel,
     addAssignees: addAssignees,
     getBranchHeadSha: getBranchHeadSha,
@@ -386,5 +445,9 @@ if (typeof module !== 'undefined' && module.exports) {
     closePull: closePull,
     deleteRef: deleteRef,
     submitFilesPr: submitFilesPr,
+    dispatchWorkflow: dispatchWorkflow,
+    listWorkflowRuns: listWorkflowRuns,
+    getRunJobs: getRunJobs,
+    listRunArtifacts: listRunArtifacts,
   };
 }

@@ -7,6 +7,7 @@ import argparse
 from tools.workflow_validation import (
     InvalidWorkflowInput,
     die,
+    validate_git_ref,
     validate_talk_id,
     validate_video_ref,
     validate_video_slug,
@@ -18,8 +19,11 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--talk-id")
     parser.add_argument("--video-slug")
     parser.add_argument("--video-ref")
+    parser.add_argument("--source-ref")
     args = parser.parse_args(argv)
     try:
+        if args.source_ref is not None:
+            validate_git_ref(args.source_ref)
         if args.talk_id is not None:
             validate_talk_id(args.talk_id)
         if args.video_slug is not None:

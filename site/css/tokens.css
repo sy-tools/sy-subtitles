@@ -39,7 +39,10 @@
   --accent-green:  #5A7A3A;   /* moss    */
   --accent-orange: #C68A2A;   /* saffron */
   --accent-red:    #B04B2E;   /* clay    */
+  --accent-purple: #6E4B8E;   /* plum — landed/merged, GitHub's own reading */
   --sync-progress: #3F6EA5;   /* slate blue — cloud-sync in-progress tone */
+  --aura:      rgba(232, 194, 116, 0.85);   /* enlightenment glow (signed-in marks) */
+  --aura-core: #FFF3D6;                     /* dawn-thread bright center */
 
   --overlay-bg: rgba(26,22,16,0.78);
 
@@ -116,7 +119,9 @@
     --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
     --link: #E39770;
     --accent-green: #A8C884; --accent-orange: #E3B26A; --accent-red: #E08B6A;
+    --accent-purple: #C6A8E0;   /* airy plum on walnut */
     --sync-progress: #7FA8D4;   /* airy slate blue on walnut */
+    --aura: rgba(227, 178, 106, 0.55); --aura-core: #E3B26A;   /* softer glow on walnut */
     --overlay-bg: rgba(0,0,0,0.80);
     --stat-active-bg: #2B2418;
     --primary-bg: #223020; --primary-border: #6C8448; --primary-fg: #BFD29A;
@@ -136,7 +141,9 @@
   --border: #2B2720; --border2: #3B352C; --border3: #4D463A;
   --link: #E39770;
   --accent-green: #A8C884; --accent-orange: #E3B26A; --accent-red: #E08B6A;
+  --accent-purple: #C6A8E0;   /* airy plum on walnut */
   --sync-progress: #7FA8D4;   /* airy slate blue on walnut */
+  --aura: rgba(227, 178, 106, 0.55); --aura-core: #E3B26A;   /* softer glow on walnut */
   --overlay-bg: rgba(0,0,0,0.80);
   --stat-active-bg: #2B2418;
   --primary-bg: #223020; --primary-border: #6C8448; --primary-fg: #BFD29A;

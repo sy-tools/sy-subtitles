@@ -33,7 +33,7 @@ from bs4 import BeautifulSoup, Tag
 from dotenv import load_dotenv
 
 from tools.talk_slug import slugify
-from tools.vimeo_codec import encode_video_ref
+from tools.vimeo_codec import encode_video_ref, to_player_url
 
 
 def parse_amruta_url(url):
@@ -115,8 +115,9 @@ def normalize_vimeo_url(url):
     """Convert player.vimeo.com embed URL to vimeo.com direct URL.
 
     player.vimeo.com/video/ID?h=HASH&... → vimeo.com/ID/HASH
-    The direct format works reliably with yt-dlp for both subtitles and video download.
-    Non-player URLs are returned unchanged.
+    This is the canonical storage form (what ``video_ref`` encodes). Before
+    handing a link to yt-dlp, convert it back with
+    ``tools.vimeo_codec.to_player_url``. Non-player URLs are returned unchanged.
     """
     m = re.match(r"https?://player\.vimeo\.com/video/(\d+)\?h=([a-f0-9]+)", url)
     if m:
@@ -341,7 +342,7 @@ class AmrutaDownloader:
             "srt",
             "-o",
             os.path.join(output_dir, "%(id)s.%(ext)s"),
-            vimeo_url,
+            to_player_url(vimeo_url),
         ]
         subprocess.run(cmd, check=True)
 
@@ -490,7 +491,7 @@ class AmrutaDownloader:
             "https://www.amruta.org/",
             "-o",
             output_path,
-            vimeo_url,
+            to_player_url(vimeo_url),
         ]
         subprocess.run(cmd, check=True)
         return output_path

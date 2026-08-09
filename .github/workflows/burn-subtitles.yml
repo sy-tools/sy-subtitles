@@ -1,0 +1,488 @@
+name: Burn subtitles
+
+# Named after the talk, so a run is found by eye in the Actions list the way a
+# PR is found by its title. The trailing request_id is machinery, not decoration:
+# workflow_dispatch returns no run id, so the caller (the preview SPA) finds its
+# own run by matching that token in the run name.
+run-name: >-
+  ${{ inputs.run_label || format('{0}/{1}', inputs.talk_id, inputs.video_slug) }}
+  · ${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      talk_id:
+        description: Talk folder name, e.g. 1993-09-19_Ganesha-Puja-Cabella
+        required: true
+      video_slug:
+        description: Video subfolder name
+        required: true
+      font_ratio:
+        description: Subtitle font height as a fraction of frame height
+        required: true
+        default: "0.0711"
+      padtop_ratio:
+        description: Gradient band padding above the text, fraction of frame height
+        required: true
+        default: "0.0741"
+      padbot_ratio:
+        description: Gap below the text, fraction of frame height
+        required: true
+        default: "0.0333"
+      request_id:
+        description: Opaque token so the caller can find this run
+        required: true
+      source_ref:
+        description: >-
+          Branch holding the subtitles to burn. The RENDERER always comes from
+          the ref this workflow was dispatched against; only talks/ is read from
+          here, so a reviewer's edit branch never supplies the code.
+        required: false
+        default: main
+      run_label:
+        description: Human name for this run (talk — video); the run name falls
+          back to talk_id/video_slug without it
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  burn:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      # The renderer: tools/, assets/fonts/, requirements.txt, at the ref this
+      # run was dispatched against. Deliberately unpinned and unnamed.
+      - uses: actions/checkout@v7
+
+      # Reject the content ref before anything fetches it. Stdlib-only, so it
+      # runs before setup-python and before dependencies exist.
+      - env:
+          SOURCE_REF: ${{ inputs.source_ref }}
+        run: |
+          set -euo pipefail
+          python3 -m tools.workflow_validation_cli --source-ref "$SOURCE_REF"
+
+      # The subtitles, from wherever the caller is showing them — usually an
+      # edit-sync branch. Only talks/ is read from this tree: those branches are
+      # cut from main once and never fast-forwarded, so their copy of this
+      # workflow and of tools/ can be months old.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.source_ref }}
+          path: content
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Deliberately unnamed: the SPA progress model keys off the named steps
+      # below, so nothing named may sit between them.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/pip
+          key: pip-burn-${{ hashFiles('requirements.txt') }}
+          restore-keys: pip-burn-
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          # Pillow (font metrics for the gradient band) comes from requirements.
+          # yt-dlp comes from requirements.txt, which carries the curl-cffi
+          # extra. A bare `pip install yt-dlp` here would find the requirement
+          # already satisfied and install the extra for nobody.
+          pip install -r requirements.txt
+          # Roboto stays vendored in assets/fonts/ and reaches libass through
+          # fontsdir; the pre-flight probe proves it stayed the PRIMARY face.
+          # Noto is a GLYPH fallback only: twelve videos carry Sanskrit mantras
+          # in Devanagari, which Roboto does not cover — without a fallback
+          # libass has nothing to draw them with and the probe rightly refuses
+          # to put tofu boxes in a final video.
+          sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core
+
+      - name: Validate inputs
+        env:
+          TALK_ID: ${{ inputs.talk_id }}
+          VIDEO_SLUG: ${{ inputs.video_slug }}
+          FONT_RATIO: ${{ inputs.font_ratio }}
+          PADTOP_RATIO: ${{ inputs.padtop_ratio }}
+          PADBOT_RATIO: ${{ inputs.padbot_ratio }}
+        run: |
+          set -euo pipefail
+          python3 -m tools.workflow_validation_cli \
+            --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG"
+          test -f "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
+            || { echo "::error::no final/uk.srt for $TALK_ID/$VIDEO_SLUG"; exit 1; }
+          # The video_ref, checked HERE for two reasons. Presence: a talk whose
+          # video has none used to sail through validation and die at Download
+          # video, after the whole install. Shape: the ref comes from meta.yaml
+          # on a caller-chosen branch, and decode_video_ref appends its payload
+          # to vimeo.com/ without any shape check — a multiline payload would
+          # defeat the line-based ::add-mask:: in the download step and hand
+          # its tail to the runner as workflow commands. validate_video_ref
+          # re-checks the DECODED url against the strict pattern.
+          VIDEO_REF=$(python3 -c "
+          import os, yaml
+          with open('content/talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
+              meta = yaml.safe_load(f)
+          for v in meta.get('videos', []):
+              if v.get('slug') == os.environ['VIDEO_SLUG']:
+                  print(v.get('video_ref', '')); break
+          ")
+          test -n "$VIDEO_REF" \
+            || { echo "::error::no video_ref for $VIDEO_SLUG — this video cannot be rendered"; exit 1; }
+          python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
+          # The ratios are measured in the browser. Reject nonsense here, with a
+          # legible message, rather than deep inside ffmpeg. The font_ratio
+          # bounds mirror the clamp in tools/burn_subtitles.py.
+          python3 - <<'PY'
+          import os
+          import sys
+
+          BOUNDS = {
+              "FONT_RATIO": (0.02, 0.12),
+              "PADTOP_RATIO": (0.0, 0.5),
+              "PADBOT_RATIO": (0.0, 0.5),
+          }
+          for name, (low, high) in BOUNDS.items():
+              raw = os.environ[name]
+              try:
+                  value = float(raw)
+              except ValueError:
+                  print(f"::error::{name.lower()} is not a number: {raw!r}")
+                  sys.exit(1)
+              if not low <= value <= high:
+                  print(f"::error::{name.lower()}={value} is outside [{low}, {high}]")
+                  sys.exit(1)
+          PY
+
+      - name: Download video
+        env:
+          TALK_ID: ${{ inputs.talk_id }}
+          VIDEO_SLUG: ${{ inputs.video_slug }}
+        run: |
+          set -euo pipefail
+          VIDEO_REF=$(python3 -c "
+          import os, yaml
+          with open('content/talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
+              meta = yaml.safe_load(f)
+          for v in meta.get('videos', []):
+              if v.get('slug') == os.environ['VIDEO_SLUG']:
+                  print(v.get('video_ref', '')); break
+          ")
+          test -n "$VIDEO_REF" || { echo "::error::no video_ref for $VIDEO_SLUG"; exit 1; }
+          # Validated AGAIN at the point of use, not only in Validate inputs:
+          # this is where the decoded value flows into ::add-mask:: and a log
+          # echo, so the guarantee must hold here even if the steps above are
+          # ever reordered. validate_video_ref rejects any ref whose decoded
+          # url does not match the strict single-line vimeo.com shape.
+          python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
+          # Decode the obfuscated video_ref at the last moment and mask the
+          # plaintext URL from the logs. --player emits the player.vimeo.com
+          # form: Vimeo answers 401 on the internal API yt-dlp uses for the
+          # canonical vimeo.com/<id>/<hash> links.
+          VIDEO_URL=$(python3 -m tools.vimeo_codec decode --player "$VIDEO_REF")
+          echo "::add-mask::$VIDEO_URL"
+          mkdir -p /tmp/burn
+          # --merge-output-format pins the container: merging into source.mkv
+          # would exit 0 and leave the check below blaming an absent .mp4.
+          yt-dlp --referer "https://www.amruta.org/" \
+            --merge-output-format mp4 \
+            -o /tmp/burn/source.mp4 "$VIDEO_URL" \
+            || {
+              # Measured 2026-07-31 across two talks and two networks: some
+              # newer Vimeo uploads answer 401 from GitHub's Azure IPs while
+              # the SAME url+hash downloads fine from a home connection, with
+              # identical yt-dlp and impersonation. Older uploads work from
+              # both. So a 401 here is usually Vimeo refusing a data-centre IP,
+              # not a bad ref — say that, or the next person re-derives it.
+              echo "::error::video download failed with 401. The url and hash are"
+              echo "::error::probably fine: Vimeo blocks some newer videos from"
+              echo "::error::data-centre IPs like GitHub's runners. Rendering this"
+              echo "::error::talk needs a machine on a normal connection."
+              exit 1
+            }
+          test -s /tmp/burn/source.mp4 \
+            || { echo "::error::downloaded file is empty"; exit 1; }
+
+      # The render is one detached ffmpeg run, followed by twenty cheap steps
+      # that each block until it passes a threshold. Rationale: a step *completing*
+      # is the only live, CORS-clean progress channel a browser has into a
+      # running job (the log blob 404s mid-run, annotations appear only at
+      # finalisation), and the SPA already polls the job's step list. See the
+      # module docstring in tools/render_gate.py.
+      - name: Start render
+        env:
+          TALK_ID: ${{ inputs.talk_id }}
+          VIDEO_SLUG: ${{ inputs.video_slug }}
+          FONT_RATIO: ${{ inputs.font_ratio }}
+          PADTOP_RATIO: ${{ inputs.padtop_ratio }}
+          PADBOT_RATIO: ${{ inputs.padbot_ratio }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/burn/out
+          # The gates turn out_time_us into a percentage, which needs the source
+          # duration. A non-numeric probe result fails the gates loudly rather
+          # than degrading into "release everything".
+          ffprobe -v error -show_entries format=duration -of csv=p=0 \
+            /tmp/burn/source.mp4 > /tmp/burn/duration_s.txt
+          test -s /tmp/burn/duration_s.txt \
+            || { echo "::error::could not probe the source duration"; exit 1; }
+          # Detached with stdio on files, so this step's shell can exit while the
+          # encode keeps running across the gate steps below. nohup is what keeps
+          # it alive; no `disown` is needed, and none is used — it would have to
+          # be guarded by an exit-code mask, which this workflow forbids.
+          #
+          # SECURITY: the body is SINGLE-quoted, so the outer shell splices
+          # nothing into it. TALK_ID and VIDEO_SLUG arrive through `env:` above
+          # and are expanded by the inner shell as ordinary variables, which is
+          # what makes a crafted talk_id inert here.
+          #
+          # No `set -e` inside: the wrapper must ALWAYS reach `echo $?`, so the
+          # gates get an unambiguous "the render is over" signal instead of
+          # depending on pid liveness.
+          #
+          # Exactly ONE "[burn] ffmpeg ..." line appears in the log: the real
+          # encode. The one-frame font pre-flight that runs before it is
+          # captured, not echoed — on failure it raises with libass's own
+          # stderr attached, so its argv is not what you would need to read.
+          # A font libass cannot resolve exits non-zero and fails the first gate.
+          #
+          # SC2016 ("expressions don't expand in single quotes") is the whole
+          # point here — the inner shell expands them, this one must not.
+          # shellcheck disable=SC2016
+          nohup bash -c '
+            python -m tools.burn_subtitles \
+              --srt "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
+              --video /tmp/burn/source.mp4 \
+              --output "/tmp/burn/out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4" \
+              --font-ratio "$FONT_RATIO" \
+              --padtop-ratio "$PADTOP_RATIO" \
+              --padbot-ratio "$PADBOT_RATIO" \
+              --ass-out /tmp/burn/subs.ass \
+              --progress-file /tmp/burn/progress.txt
+            echo $? > /tmp/burn/exit_code
+          ' > /tmp/burn/render.log 2>&1 < /dev/null &
+          # Return only once ffmpeg has written its first sample, so the first
+          # gate never polls a progress file that does not exist yet.
+          python -m tools.render_gate --percent 0 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      # Nineteen gates, written out literally. A loop or a matrix cannot
+      # produce nineteen *named* steps, and the names are the entire mechanism:
+      # the SPA credits each completed name a fixed slice of the bar.
+      #
+      # 5% apart, not 10%: measured on a real run the corpus's longest talk
+      # (213 min, 640x480) encodes in ~50 min, so ten gates would leave the bar
+      # motionless for ~5.5 min at a time. Nineteen halves that; the extra
+      # runner overhead is about a second per step.
+      - name: Render 5%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 5 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 10%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 10 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 15%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 15 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 20%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 20 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 25%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 25 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 30%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 30 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 35%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 35 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 40%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 40 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 45%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 45 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 50%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 50 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 55%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 55 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 60%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 60 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 65%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 65 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 70%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 70 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 75%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 75 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 80%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 80 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 85%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 85 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 90%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 90 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Render 95%
+        run: |
+          set -euo pipefail
+          python -m tools.render_gate --percent 95 \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+
+      - name: Finish render
+        env:
+          TALK_ID: ${{ inputs.talk_id }}
+          VIDEO_SLUG: ${{ inputs.video_slug }}
+        run: |
+          set -euo pipefail
+          # --await-exit ignores progress=end and adopts the process's own exit
+          # code: ffmpeg writes that marker before +faststart has finished
+          # rewriting the moov atom, so "encoder done" is not "file written".
+          # That rewrite emits no progress at all, so this wait is also exempt
+          # from the gates' stall window; timeout-minutes bounds it instead.
+          python -m tools.render_gate --await-exit \
+            --progress-file /tmp/burn/progress.txt \
+            --duration-file /tmp/burn/duration_s.txt \
+            --exit-file /tmp/burn/exit_code \
+            --log-file /tmp/burn/render.log
+          # The detached render logged to a file, so surface it in the job log.
+          cat /tmp/burn/render.log
+          test -s "/tmp/burn/out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4" \
+            || { echo "::error::the render produced no output file"; exit 1; }
+
+      - name: Upload result
+        uses: actions/upload-artifact@v7
+        with:
+          # '__' delimits: talk ids contain hyphens.
+          name: burned__${{ inputs.talk_id }}__${{ inputs.video_slug }}
+          path: /tmp/burn/out/*.mp4
+          # The MP4 is the deliverable: a glob that matches nothing must fail
+          # the job, not warn and hand the SPA an empty ZIP.
+          if-no-files-found: error
+          retention-days: 7
+          # Uncompressed so the SPA can slice the MP4 straight out of the ZIP.
+          compression-level: 0

@@ -46,15 +46,17 @@ on:
         type: choice
         options:
           - claude-opus-4-8
+          - claude-opus-5
           - claude-fable-5
           - claude-sonnet-5
-        default: claude-opus-4-8
+        default: claude-opus-5
       build_model:
         description: 'Override model for the build step only (timecode alignment); same-as-model follows `model`'
         type: choice
         options:
           - same-as-model
           - claude-opus-4-8
+          - claude-opus-5
           - claude-fable-5
           - claude-sonnet-5
         default: same-as-model
@@ -95,7 +97,7 @@ on:
       model:
         description: 'Claude model for LLM steps (translate, review, build)'
         type: string
-        default: claude-opus-4-8
+        default: claude-opus-5
       build_model:
         description: 'Override model for the build step only; empty or same-as-model follows `model`'
         type: string
@@ -113,11 +115,11 @@ permissions:
 
 env:
   # Push-triggered runs have no inputs context — fall back to the default.
-  MODEL_HEAVY: ${{ inputs.model || 'claude-opus-4-8' }}
+  MODEL_HEAVY: ${{ inputs.model || 'claude-opus-5' }}
   # Build is mechanical timecode alignment — may run on a different model
   # than review (e.g. review=Fable, build=Opus). The 'same-as-model'
   # sentinel (choice inputs can't default to '') follows MODEL_HEAVY.
-  MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-4-8' }}
+  MODEL_BUILD: ${{ (inputs.build_model != 'same-as-model' && inputs.build_model) || inputs.model || 'claude-opus-5' }}
   # Claude account for the LLM steps. Convention: oauth_token=X reads
   # secrets.CLAUDE_CODE_OAUTH_TOKEN_X (option value is the literal
   # uppercase suffix — expressions have no upper()). The default secret is
@@ -310,7 +312,7 @@ jobs:
 
       - name: Translate to Ukrainian
         if: inputs.translate != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@e90deca47693f9457b72f2b53c17d7c445a87342  # v1.0.171
+        uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b  # v1.0.183
         with:
           claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -415,9 +417,13 @@ jobs:
           fi
           python -m tools.fake_llm review --snapshot "${snap%/}" --talk-dir "talks/${TALK_ID}"
 
+      - name: Stamp review sentinel
+        if: inputs.review != false && inputs.dry_run != true
+        run: touch /tmp/review_started
+
       - name: Review translation (2+1)
         if: inputs.review != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@e90deca47693f9457b72f2b53c17d7c445a87342  # v1.0.171
+        uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b  # v1.0.183
         with:
           claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -462,10 +468,29 @@ jobs:
 
             Step 4 – Apply:
             Apply all Critic-approved corrections to talks/${{ matrix.talk_id }}/transcript_uk.txt
-            Save the full review report (with all tables) to talks/${{ matrix.talk_id }}/review_report.md
+            Then, as your FINAL action, save the full review report (with all
+            tables) to talks/${{ matrix.talk_id }}/review_report.md — write it
+            only after every approved correction has been applied, so a fresh
+            report file proves the correction pass completed.
 
             Be thorough but precise. Only change what genuinely needs correction.
             Do not use TodoWrite – this runs in CI, no one sees progress updates.
+
+      # A usage-limit stop (session or weekly) ends the Claude CLI with exit
+      # code 0, so the action step succeeds even when the agent died between
+      # applying corrections and writing the report — the transcript may hold
+      # a PARTIAL correction set while review_report.md stays stale (observed
+      # on run 29572341492). The prompt makes the report write the final
+      # action, so a report newer than the sentinel proves the pass completed.
+      - name: Verify review outputs
+        if: inputs.review != false && inputs.dry_run != true
+        env:
+          TALK_ID: ${{ matrix.talk_id }}
+        run: |
+          if [ ! "talks/${TALK_ID}/review_report.md" -nt /tmp/review_started ]; then
+            echo "::error::review_report.md was not rewritten by the review step — the agent likely hit a usage limit mid-review; transcript may contain a partial correction set"
+            exit 1
+          fi
 
       - name: Record glossary version
         if: "!cancelled()"
@@ -558,7 +583,7 @@ jobs:
             fi
           fi
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
@@ -681,7 +706,7 @@ jobs:
             done
           fi
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
@@ -735,7 +760,7 @@ jobs:
 
       - name: Build timecodes (Claude)
         if: inputs.dry_run != true
-        uses: anthropics/claude-code-action@e90deca47693f9457b72f2b53c17d7c445a87342  # v1.0.171
+        uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b  # v1.0.183
         env:
           CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
         with:
@@ -840,9 +865,21 @@ jobs:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
           VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
         run: |
+          # Word timings let the merge phases tell "timecodes touch" apart from
+          # "speech is continuous" — without them a block inherited from a
+          # padded EN SRT gets merged with its neighbour across a pause. The
+          # whisper job is conditional, so pass the file only when it exists.
+          WHISPER="talks/${TALK_ID}/${VIDEO_SLUG}/source/whisper.json"
+          WHISPER_FLAG=""
+          if [ -f "${WHISPER}" ]; then
+            WHISPER_FLAG="--json ${WHISPER}"
+          else
+            echo "::warning::${WHISPER} missing — optimizer runs without speech timings"
+          fi
           python -m tools.optimize_srt \
             --srt "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \
             --output "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \
+            ${WHISPER_FLAG} \
             --skip-duration-split \
             --skip-cps-split
 
@@ -972,7 +1009,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
@@ -1144,7 +1181,10 @@ jobs:
         # Only when subtitles were actually built and committed this run —
         # resetting the issue to review:pending after a failed build would
         # wipe the real review status without shipping anything to review.
-        if: success() && needs.build-timecodes.result == 'success'
+        # And only on main: a run dispatched from a feature branch commits to
+        # that branch (bot-pr.sh), so nothing is on main to announce, and
+        # resetting an approved issue would wipe a real review status.
+        if: success() && needs.build-timecodes.result == 'success' && github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
@@ -1157,9 +1197,21 @@ jobs:
           SPA_BASE="https://${OWNER_LC}.github.io/${REPO#*/}"
           EXISTING=$(gh issue list --search "Review: $TALK_ID in:title" --json number --jq '.[0].number')
           if [ -n "$EXISTING" ]; then
-            echo "Review issue #$EXISTING already exists — resetting to pending"
+            # A rebuild invalidates an approval, but never a claim: an
+            # assigned issue stays review:in-progress. Resetting it to
+            # review:pending left the assignee in place while the SPA
+            # advertised the talk as needing a reviewer (issue #895).
+            CLAIMED=$(gh issue view "$EXISTING" --json assignees --jq '.assignees | length')
+            if [ "$CLAIMED" -gt 0 ]; then
+              NEXT_LABEL="review:in-progress"
+              DROP_LABELS="review:approved,review:pending"
+            else
+              NEXT_LABEL="review:pending"
+              DROP_LABELS="review:approved,review:in-progress"
+            fi
+            echo "Review issue #$EXISTING already exists — resetting to $NEXT_LABEL"
             gh issue reopen "$EXISTING"
-            gh issue edit "$EXISTING" --remove-label "review:approved,review:in-progress" --add-label "review:pending,talk-review"
+            gh issue edit "$EXISTING" --remove-label "$DROP_LABELS" --add-label "$NEXT_LABEL,talk-review"
           else
             META_TITLE=$(python3 -c "import yaml; print(yaml.safe_load(open('talks/$TALK_ID/meta.yaml'))['title'])" 2>/dev/null || echo "$TALK_ID")
             gh issue create \

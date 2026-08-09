@@ -4,6 +4,7 @@ window.Vimeo = {
   Player: class {
     constructor(element) {
       this._currentTime = 0;
+      this._duration = 3600;
       this._callbacks = {};
       // Replace the iframe with a visible div that honors the real CSS
       // layout around it (width/height inherited via 100% from the mount).
@@ -43,6 +44,7 @@ window.Vimeo = {
       this._callbacks[event].push(callback);
     }
     getCurrentTime() { return Promise.resolve(this._currentTime); }
+    getDuration() { return Promise.resolve(this._duration); }
     _fire(event, data) {
       var cbs = this._callbacks[event] || [];
       for (var i = 0; i < cbs.length; i++) cbs[i](data);

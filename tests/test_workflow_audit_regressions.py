@@ -142,3 +142,62 @@ def test_sync_subtitles_commit_skips_ci_to_avoid_self_trigger() -> None:
     skip_token = re.compile(r"\[(?:skip ci|ci skip|no ci|skip actions|actions skip)\]")
     for line in commit_lines:
         assert skip_token.search(line), f"sync commit message lacks a skip-ci token (self-trigger risk): {line.strip()}"
+
+
+def test_ytdlp_steps_decode_video_ref_to_player_url() -> None:
+    """Vimeo answers 401 on the internal API yt-dlp uses for the canonical
+    `vimeo.com/<id>/<hash>` form (whisper runs 2026-07-27 downloaded nothing).
+    Every workflow that feeds a decoded video_ref to yt-dlp must ask for the
+    `player.vimeo.com` embed form, which still resolves."""
+    for name in ("whisper.yml", "new-talk.yml"):
+        text = (WORKFLOWS / name).read_text(encoding="utf-8")
+        decodes = re.findall(r"python3 -m tools\.vimeo_codec decode ([^\n]*)", text)
+        assert decodes, f"{name}: no video_ref decode found"
+        for call in decodes:
+            assert "--player" in call, f"{name}: yt-dlp needs the embed form: decode {call}"
+
+
+def test_review_issue_is_only_touched_on_main() -> None:
+    """The review tracking issue is main-scoped shared state: creating it —
+    or resetting an approved one back to review:pending — announces that new
+    subtitles are on main and ready to review.
+
+    A run dispatched from a feature branch commits its artifacts to that
+    branch (see bot-pr.sh), so nothing reached main and the issue must be
+    left alone. Regression guard for the 2026-07-31 branch-dispatch fallout.
+    """
+    wf = yaml.safe_load((WORKFLOWS / "subtitle-pipeline.yml").read_text(encoding="utf-8"))
+    steps = wf["jobs"]["commit"]["steps"]
+    issue_steps = [s for s in steps if "review tracking issue" in (s.get("name") or "").lower()]
+    assert issue_steps, "review tracking issue step not found"
+    for step in issue_steps:
+        cond = str(step.get("if", ""))
+        assert "github.ref_name == 'main'" in cond, f"review-issue step must be gated on main, got if: {cond!r}"
+
+
+def test_review_issue_reset_keeps_a_claimed_review_claimed() -> None:
+    """A rebuild invalidates an approval, but never a claim.
+
+    The reset dropped `review:in-progress` unconditionally while leaving the
+    assignee in place, so a talk rebuilt after someone claimed it went back to
+    `review:pending` — and the SPA, which reads the label via
+    review-status.json, advertised it as needing a reviewer while that
+    reviewer was still on it. Observed on issue #895: assigned 2026-07-27,
+    reset by the 2026-07-30 rebuild.
+
+    An assigned issue must therefore land on `review:in-progress`; only an
+    unassigned one resets to `review:pending`.
+    """
+    wf = yaml.safe_load((WORKFLOWS / "subtitle-pipeline.yml").read_text(encoding="utf-8"))
+    step = next(s for s in wf["jobs"]["commit"]["steps"] if "review tracking issue" in (s.get("name") or "").lower())
+    run = step["run"]
+    # The reset branch only — everything between the existing-issue test and
+    # the `else` that creates a fresh issue (which is pending by definition).
+    start = run.find('if [ -n "$EXISTING" ]')
+    assert start != -1, "existing-issue branch not found"
+    reset = run[start : run.find("\n          else", start)]
+    assert "--json assignees" in reset, "reset must read the issue's assignees before picking a label"
+    assert '--add-label "review:pending' not in reset.replace("'", '"'), (
+        "reset must not unconditionally re-apply review:pending — an assigned issue stays in-progress"
+    )
+    assert "review:in-progress" in reset, "reset must be able to land on review:in-progress"

@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1989-07-23_Guru-Puja-Creativity/Guru-Puja-Talk-Creativity/final/uk.srt
+  Transcript: talks/1989-07-23_Guru-Puja-Creativity/transcript_uk.txt
+  EN SRT: talks/1989-07-23_Guru-Puja-Creativity/Guru-Puja-Talk-Creativity/source/en.srt
+  SRT blocks: 226
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 226
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 226
+  CPS: avg=8.0, median=7.3, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=57.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 2
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #213: CPS=15.0 (58ch/3.9s) "Стопи, а після цього нам знадобляться кілька дівчат віком,"
+    #185: CPS=15.0 (34ch/2.3s) "як виявляється, того самого стилю."
+    #29: CPS=15.0 (62ch/4.1s) "чи гарного будинку; якщо вам бракує творчості, вам бракувати..."
+    #140: CPS=15.0 (81ch/5.4s) "переймають неправильні речі, вони насамперед звертають увагу..."
+    #114: CPS=15.0 (57ch/3.8s) "Спочатку ви маєте користуватися ними обома, не розуміючи,"
+    #187: CPS=15.0 (27ch/1.8s) "Отже, ми доходимо висновку,"
+    #194: CPS=14.9 (65ch/4.4s) "ви повинні знати, що жодна кількість Моїх розмов, жодна кіль..."
+    #72: CPS=14.9 (43ch/2.9s) "дітей, на нашу дружину, на наших чоловіків,"
+    #170: CPS=14.4 (42ch/2.9s) "Але любов заради самої любові – це ось що:"
+    #143: CPS=14.4 (74ch/5.2s) "Повна віддача на милість своєму власному Ґуру важлива; тоді ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 8.0 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 2 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

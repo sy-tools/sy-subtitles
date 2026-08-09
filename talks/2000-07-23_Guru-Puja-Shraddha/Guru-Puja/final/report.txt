@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja/final/uk.srt
+  Transcript: talks/2000-07-23_Guru-Puja-Shraddha/transcript_uk.txt
+  EN SRT: talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja/source/en.srt
+  SRT blocks: 503
+  EN SRT blocks: 463
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:00,001 — 00:58:18,436
+  SRT range:       00:06:02,346 — 00:58:20,436
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 503
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 503
+  CPS: avg=9.3, median=8.8, max=15.1
+  CPS > target: 9 (1.8%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #289: CPS=15.1 (48ch/3.2s) "мені це не подобається, мені те не подобається!»"
+    #164: CPS=15.0 (37ch/2.5s) "Я відповіла: «Я ніколи не запізнююся."
+    #283: CPS=15.0 (43ch/2.9s) "«Мені це подобається, мені те подобається»."
+    #275: CPS=15.0 (46ch/3.1s) "Вони ніколи не бачать своїх власних недоліків."
+    #159: CPS=15.0 (49ch/3.3s) "«Але ж, – сказали вони, – Ти ж летиш до Америки!»"
+    #469: CPS=15.0 (76ch/5.1s) "Деякі люди казали Мені: «Матінко, якщо Ти прийдеш, то все бу..."
+    #449: CPS=15.0 (44ch/2.9s) "Ви маєте врятувати людей, які на ній живуть."
+    #257: CPS=15.0 (50ch/3.3s) "завдяки якій знайдете рішення для різних ситуацій."
+    #490: CPS=15.0 (62ch/4.1s) "вам не обов’язково створювати організацію, щоб боротися з ци..."
+    #67: CPS=15.0 (60ch/4.0s) "не досягнувши Самості, або, як Я це називаю, Самореалізації."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 503
+  EN SRT blocks: 463
+  Ratio UK/EN: 1.09 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.3 (target ≤15.0)
+  CPS > 15.0: 9 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

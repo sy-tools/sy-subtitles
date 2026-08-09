@@ -1,0 +1,1159 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "id": 0,
+      "start": 1.94,
+      "end": 8.85,
+      "text": "Yesterday we saw the beautiful drama of Shri Rama.",
+      "words": [
+        {
+          "start": 1.94,
+          "end": 2.96,
+          "word": "Yesterday"
+        },
+        {
+          "start": 2.96,
+          "end": 4.1,
+          "word": "we"
+        },
+        {
+          "start": 5.15,
+          "end": 5.41,
+          "word": "saw"
+        },
+        {
+          "start": 5.41,
+          "end": 5.57,
+          "word": "the"
+        },
+        {
+          "start": 5.57,
+          "end": 6.15,
+          "word": "beautiful"
+        },
+        {
+          "start": 6.15,
+          "end": 6.67,
+          "word": "drama"
+        },
+        {
+          "start": 7.31,
+          "end": 8.25,
+          "word": "of"
+        },
+        {
+          "start": 8.25,
+          "end": 8.53,
+          "word": "Shri"
+        },
+        {
+          "start": 8.53,
+          "end": 8.85,
+          "word": "Rama."
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 10.18,
+      "end": 14.34,
+      "text": "It was done so beautifully that my heart",
+      "words": [
+        {
+          "start": 10.18,
+          "end": 10.38,
+          "word": "It"
+        },
+        {
+          "start": 10.38,
+          "end": 10.58,
+          "word": "was"
+        },
+        {
+          "start": 10.58,
+          "end": 10.78,
+          "word": "done"
+        },
+        {
+          "start": 10.78,
+          "end": 11.16,
+          "word": "so"
+        },
+        {
+          "start": 11.16,
+          "end": 11.66,
+          "word": "beautifully"
+        },
+        {
+          "start": 12.26,
+          "end": 13.56,
+          "word": "that"
+        },
+        {
+          "start": 13.56,
+          "end": 14.06,
+          "word": "my"
+        },
+        {
+          "start": 14.06,
+          "end": 14.34,
+          "word": "heart"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 14.34,
+      "end": 26.47,
+      "text": "was filled with admiration and I couldn't say anything, it's a very good work",
+      "words": [
+        {
+          "start": 14.34,
+          "end": 14.74,
+          "word": "was"
+        },
+        {
+          "start": 14.74,
+          "end": 15.06,
+          "word": "filled"
+        },
+        {
+          "start": 15.93,
+          "end": 17.11,
+          "word": "with"
+        },
+        {
+          "start": 17.11,
+          "end": 17.87,
+          "word": "admiration"
+        },
+        {
+          "start": 18.35,
+          "end": 19.31,
+          "word": "and"
+        },
+        {
+          "start": 19.31,
+          "end": 19.45,
+          "word": "I"
+        },
+        {
+          "start": 19.45,
+          "end": 19.69,
+          "word": "couldn't"
+        },
+        {
+          "start": 19.69,
+          "end": 19.95,
+          "word": "say"
+        },
+        {
+          "start": 19.95,
+          "end": 20.39,
+          "word": "anything,"
+        },
+        {
+          "start": 22.76,
+          "end": 22.98,
+          "word": "it's"
+        },
+        {
+          "start": 22.98,
+          "end": 23.0,
+          "word": "a"
+        },
+        {
+          "start": 23.0,
+          "end": 23.44,
+          "word": "very"
+        },
+        {
+          "start": 23.44,
+          "end": 24.16,
+          "word": "good"
+        },
+        {
+          "start": 25.63,
+          "end": 26.47,
+          "word": "work"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 27.68,
+      "end": 30.28,
+      "text": "And thats what happens to you when",
+      "words": [
+        {
+          "start": 27.68,
+          "end": 28.08,
+          "word": "And"
+        },
+        {
+          "start": 28.08,
+          "end": 28.4,
+          "word": "thats"
+        },
+        {
+          "start": 28.4,
+          "end": 28.62,
+          "word": "what"
+        },
+        {
+          "start": 28.62,
+          "end": 29.06,
+          "word": "happens"
+        },
+        {
+          "start": 29.06,
+          "end": 29.32,
+          "word": "to"
+        },
+        {
+          "start": 29.32,
+          "end": 29.84,
+          "word": "you"
+        },
+        {
+          "start": 29.84,
+          "end": 30.28,
+          "word": "when"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 30.28,
+      "end": 32.74,
+      "text": "You become The Spirit ,You become creative",
+      "words": [
+        {
+          "start": 30.28,
+          "end": 30.44,
+          "word": "You"
+        },
+        {
+          "start": 30.44,
+          "end": 30.78,
+          "word": "become"
+        },
+        {
+          "start": 30.78,
+          "end": 31.08,
+          "word": "The"
+        },
+        {
+          "start": 31.08,
+          "end": 31.46,
+          "word": "Spirit"
+        },
+        {
+          "start": 31.46,
+          "end": 31.9,
+          "word": ",You"
+        },
+        {
+          "start": 31.9,
+          "end": 32.24,
+          "word": "become"
+        },
+        {
+          "start": 32.24,
+          "end": 32.74,
+          "word": "creative"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 32.74,
+      "end": 36.86,
+      "text": "You have to be creators, you create Sahaja Yogis.",
+      "words": [
+        {
+          "start": 32.74,
+          "end": 32.94,
+          "word": "You"
+        },
+        {
+          "start": 32.94,
+          "end": 33.1,
+          "word": "have"
+        },
+        {
+          "start": 33.1,
+          "end": 33.32,
+          "word": "to"
+        },
+        {
+          "start": 33.32,
+          "end": 33.48,
+          "word": "be"
+        },
+        {
+          "start": 33.48,
+          "end": 33.98,
+          "word": "creators,"
+        },
+        {
+          "start": 35.54,
+          "end": 35.68,
+          "word": "you"
+        },
+        {
+          "start": 35.68,
+          "end": 36.0,
+          "word": "create"
+        },
+        {
+          "start": 36.0,
+          "end": 36.46,
+          "word": "Sahaja"
+        },
+        {
+          "start": 36.46,
+          "end": 36.86,
+          "word": "Yogis."
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 37.66,
+      "end": 45.66,
+      "text": "You create all kinds of beautiful things and this was so much done in the name",
+      "words": [
+        {
+          "start": 37.66,
+          "end": 37.76,
+          "word": "You"
+        },
+        {
+          "start": 37.76,
+          "end": 38.04,
+          "word": "create"
+        },
+        {
+          "start": 38.04,
+          "end": 38.32,
+          "word": "all"
+        },
+        {
+          "start": 38.32,
+          "end": 38.6,
+          "word": "kinds"
+        },
+        {
+          "start": 38.6,
+          "end": 38.78,
+          "word": "of"
+        },
+        {
+          "start": 38.78,
+          "end": 39.26,
+          "word": "beautiful"
+        },
+        {
+          "start": 39.26,
+          "end": 39.76,
+          "word": "things"
+        },
+        {
+          "start": 39.76,
+          "end": 40.56,
+          "word": "and"
+        },
+        {
+          "start": 40.56,
+          "end": 40.8,
+          "word": "this"
+        },
+        {
+          "start": 40.8,
+          "end": 41.04,
+          "word": "was"
+        },
+        {
+          "start": 41.04,
+          "end": 41.4,
+          "word": "so"
+        },
+        {
+          "start": 41.4,
+          "end": 42.38,
+          "word": "much"
+        },
+        {
+          "start": 42.38,
+          "end": 44.34,
+          "word": "done"
+        },
+        {
+          "start": 44.34,
+          "end": 44.88,
+          "word": "in"
+        },
+        {
+          "start": 44.88,
+          "end": 45.04,
+          "word": "the"
+        },
+        {
+          "start": 45.04,
+          "end": 45.66,
+          "word": "name"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 45.66,
+      "end": 50.08,
+      "text": "Of self I'm very happy they've made this drama",
+      "words": [
+        {
+          "start": 45.66,
+          "end": 46.08,
+          "word": "Of"
+        },
+        {
+          "start": 46.08,
+          "end": 46.44,
+          "word": "self"
+        },
+        {
+          "start": 47.14,
+          "end": 48.08,
+          "word": "I'm"
+        },
+        {
+          "start": 48.08,
+          "end": 48.38,
+          "word": "very"
+        },
+        {
+          "start": 48.38,
+          "end": 48.76,
+          "word": "happy"
+        },
+        {
+          "start": 48.76,
+          "end": 49.16,
+          "word": "they've"
+        },
+        {
+          "start": 49.16,
+          "end": 49.36,
+          "word": "made"
+        },
+        {
+          "start": 49.36,
+          "end": 49.64,
+          "word": "this"
+        },
+        {
+          "start": 49.64,
+          "end": 50.08,
+          "word": "drama"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 50.61,
+      "end": 53.82,
+      "text": "And i'll organize some somehow that it goes",
+      "words": [
+        {
+          "start": 50.61,
+          "end": 50.98,
+          "word": "And"
+        },
+        {
+          "start": 50.98,
+          "end": 51.42,
+          "word": "i'll"
+        },
+        {
+          "start": 51.42,
+          "end": 51.86,
+          "word": "organize"
+        },
+        {
+          "start": 51.86,
+          "end": 52.38,
+          "word": "some"
+        },
+        {
+          "start": 52.38,
+          "end": 52.9,
+          "word": "somehow"
+        },
+        {
+          "start": 52.9,
+          "end": 53.36,
+          "word": "that"
+        },
+        {
+          "start": 53.36,
+          "end": 53.58,
+          "word": "it"
+        },
+        {
+          "start": 53.58,
+          "end": 53.82,
+          "word": "goes"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 53.82,
+      "end": 55.96,
+      "text": "To India into America as well",
+      "words": [
+        {
+          "start": 53.82,
+          "end": 54.1,
+          "word": "To"
+        },
+        {
+          "start": 54.1,
+          "end": 54.4,
+          "word": "India"
+        },
+        {
+          "start": 54.4,
+          "end": 54.78,
+          "word": "into"
+        },
+        {
+          "start": 54.78,
+          "end": 55.24,
+          "word": "America"
+        },
+        {
+          "start": 55.24,
+          "end": 55.6,
+          "word": "as"
+        },
+        {
+          "start": 55.6,
+          "end": 55.96,
+          "word": "well"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 55.96,
+      "end": 59.76,
+      "text": "It's a Very Well Done So give them a hand",
+      "words": [
+        {
+          "start": 55.96,
+          "end": 56.44,
+          "word": "It's"
+        },
+        {
+          "start": 56.44,
+          "end": 56.56,
+          "word": "a"
+        },
+        {
+          "start": 56.56,
+          "end": 56.72,
+          "word": "Very"
+        },
+        {
+          "start": 56.72,
+          "end": 56.98,
+          "word": "Well"
+        },
+        {
+          "start": 56.98,
+          "end": 57.46,
+          "word": "Done"
+        },
+        {
+          "start": 57.46,
+          "end": 58.14,
+          "word": "So"
+        },
+        {
+          "start": 58.14,
+          "end": 58.5,
+          "word": "give"
+        },
+        {
+          "start": 58.5,
+          "end": 58.78,
+          "word": "them"
+        },
+        {
+          "start": 58.78,
+          "end": 59.22,
+          "word": "a"
+        },
+        {
+          "start": 59.22,
+          "end": 59.76,
+          "word": "hand"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 77.04,
+      "end": 87.66,
+      "text": "Also, I very much admire the work put in by the Italian Sahaja Yogis and others who have",
+      "words": [
+        {
+          "start": 77.04,
+          "end": 77.86,
+          "word": "Also,"
+        },
+        {
+          "start": 78.16,
+          "end": 78.8,
+          "word": "I"
+        },
+        {
+          "start": 78.8,
+          "end": 79.14,
+          "word": "very"
+        },
+        {
+          "start": 79.14,
+          "end": 80.26,
+          "word": "much"
+        },
+        {
+          "start": 80.48,
+          "end": 81.24,
+          "word": "admire"
+        },
+        {
+          "start": 81.24,
+          "end": 81.74,
+          "word": "the"
+        },
+        {
+          "start": 81.74,
+          "end": 81.98,
+          "word": "work"
+        },
+        {
+          "start": 81.98,
+          "end": 82.24,
+          "word": "put"
+        },
+        {
+          "start": 82.24,
+          "end": 82.42,
+          "word": "in"
+        },
+        {
+          "start": 82.42,
+          "end": 83.18,
+          "word": "by"
+        },
+        {
+          "start": 83.18,
+          "end": 83.46,
+          "word": "the"
+        },
+        {
+          "start": 83.46,
+          "end": 83.94,
+          "word": "Italian"
+        },
+        {
+          "start": 83.94,
+          "end": 84.36,
+          "word": "Sahaja"
+        },
+        {
+          "start": 84.36,
+          "end": 84.8,
+          "word": "Yogis"
+        },
+        {
+          "start": 85.0,
+          "end": 86.0,
+          "word": "and"
+        },
+        {
+          "start": 86.0,
+          "end": 86.38,
+          "word": "others"
+        },
+        {
+          "start": 86.38,
+          "end": 87.32,
+          "word": "who"
+        },
+        {
+          "start": 87.32,
+          "end": 87.66,
+          "word": "have"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "start": 87.66,
+      "end": 99.41,
+      "text": "been of help to him –to Mr. Guido-and also two others that they've created such a",
+      "words": [
+        {
+          "start": 87.66,
+          "end": 88.66,
+          "word": "been"
+        },
+        {
+          "start": 88.72,
+          "end": 89.12,
+          "word": "of"
+        },
+        {
+          "start": 89.12,
+          "end": 89.34,
+          "word": "help"
+        },
+        {
+          "start": 89.34,
+          "end": 89.62,
+          "word": "to"
+        },
+        {
+          "start": 89.62,
+          "end": 90.38,
+          "word": "him"
+        },
+        {
+          "start": 92.04,
+          "end": 92.52,
+          "word": "–to"
+        },
+        {
+          "start": 92.52,
+          "end": 92.82,
+          "word": "Mr."
+        },
+        {
+          "start": 92.96,
+          "end": 93.34,
+          "word": "Guido"
+        },
+        {
+          "start": 93.34,
+          "end": 94.36,
+          "word": "-and"
+        },
+        {
+          "start": 94.36,
+          "end": 94.74,
+          "word": "also"
+        },
+        {
+          "start": 94.74,
+          "end": 95.0,
+          "word": "two"
+        },
+        {
+          "start": 95.0,
+          "end": 95.54,
+          "word": "others"
+        },
+        {
+          "start": 95.61,
+          "end": 96.67,
+          "word": "that"
+        },
+        {
+          "start": 96.67,
+          "end": 97.67,
+          "word": "they've"
+        },
+        {
+          "start": 97.67,
+          "end": 98.27,
+          "word": "created"
+        },
+        {
+          "start": 98.27,
+          "end": 98.93,
+          "word": "such"
+        },
+        {
+          "start": 98.93,
+          "end": 99.41,
+          "word": "a"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "start": 99.41,
+      "end": 115.06,
+      "text": "us effect in this big structure that I used to think, how can it be a puja under such",
+      "words": [
+        {
+          "start": 99.41,
+          "end": 99.87,
+          "word": "us"
+        },
+        {
+          "start": 99.87,
+          "end": 100.77,
+          "word": "effect"
+        },
+        {
+          "start": 100.77,
+          "end": 101.55,
+          "word": "in"
+        },
+        {
+          "start": 101.55,
+          "end": 102.71,
+          "word": "this"
+        },
+        {
+          "start": 103.67,
+          "end": 105.29,
+          "word": "big"
+        },
+        {
+          "start": 108.26,
+          "end": 109.66,
+          "word": "structure"
+        },
+        {
+          "start": 109.79,
+          "end": 110.89,
+          "word": "that"
+        },
+        {
+          "start": 110.89,
+          "end": 111.15,
+          "word": "I"
+        },
+        {
+          "start": 111.15,
+          "end": 111.37,
+          "word": "used"
+        },
+        {
+          "start": 111.37,
+          "end": 111.59,
+          "word": "to"
+        },
+        {
+          "start": 111.59,
+          "end": 111.89,
+          "word": "think,"
+        },
+        {
+          "start": 112.03,
+          "end": 112.29,
+          "word": "how"
+        },
+        {
+          "start": 112.29,
+          "end": 112.61,
+          "word": "can"
+        },
+        {
+          "start": 112.61,
+          "end": 112.73,
+          "word": "it"
+        },
+        {
+          "start": 112.73,
+          "end": 113.79,
+          "word": "be"
+        },
+        {
+          "start": 113.92,
+          "end": 114.1,
+          "word": "a"
+        },
+        {
+          "start": 114.1,
+          "end": 114.38,
+          "word": "puja"
+        },
+        {
+          "start": 114.38,
+          "end": 114.78,
+          "word": "under"
+        },
+        {
+          "start": 114.78,
+          "end": 115.06,
+          "word": "such"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 115.06,
+      "end": 115.62,
+      "text": "as structures.",
+      "words": [
+        {
+          "start": 115.06,
+          "end": 115.26,
+          "word": "as"
+        },
+        {
+          "start": 115.26,
+          "end": 115.62,
+          "word": "structures."
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 116.68,
+      "end": 124.4,
+      "text": "But now has become so beautiful and nice – thank the Italians for them!",
+      "words": [
+        {
+          "start": 116.68,
+          "end": 116.96,
+          "word": "But"
+        },
+        {
+          "start": 116.96,
+          "end": 117.56,
+          "word": "now"
+        },
+        {
+          "start": 117.56,
+          "end": 117.56,
+          "word": "has"
+        },
+        {
+          "start": 117.56,
+          "end": 117.96,
+          "word": "become"
+        },
+        {
+          "start": 117.96,
+          "end": 118.3,
+          "word": "so"
+        },
+        {
+          "start": 118.3,
+          "end": 118.96,
+          "word": "beautiful"
+        },
+        {
+          "start": 118.96,
+          "end": 119.94,
+          "word": "and"
+        },
+        {
+          "start": 119.94,
+          "end": 120.5,
+          "word": "nice"
+        },
+        {
+          "start": 120.5,
+          "end": 121.32,
+          "word": "–"
+        },
+        {
+          "start": 121.32,
+          "end": 122.76,
+          "word": "thank"
+        },
+        {
+          "start": 122.76,
+          "end": 123.38,
+          "word": "the"
+        },
+        {
+          "start": 123.38,
+          "end": 123.82,
+          "word": "Italians"
+        },
+        {
+          "start": 123.82,
+          "end": 124.08,
+          "word": "for"
+        },
+        {
+          "start": 124.08,
+          "end": 124.4,
+          "word": "them!"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "start": 125.4,
+      "end": 130.1,
+      "text": "One thing about Italian is they are very large hearted people…",
+      "words": [
+        {
+          "start": 125.4,
+          "end": 125.62,
+          "word": "One"
+        },
+        {
+          "start": 125.62,
+          "end": 125.94,
+          "word": "thing"
+        },
+        {
+          "start": 125.94,
+          "end": 126.36,
+          "word": "about"
+        },
+        {
+          "start": 126.36,
+          "end": 126.86,
+          "word": "Italian"
+        },
+        {
+          "start": 126.86,
+          "end": 127.52,
+          "word": "is"
+        },
+        {
+          "start": 127.52,
+          "end": 127.88,
+          "word": "they"
+        },
+        {
+          "start": 127.88,
+          "end": 127.92,
+          "word": "are"
+        },
+        {
+          "start": 127.92,
+          "end": 128.24,
+          "word": "very"
+        },
+        {
+          "start": 128.24,
+          "end": 128.52,
+          "word": "large"
+        },
+        {
+          "start": 128.52,
+          "end": 129.06,
+          "word": "hearted"
+        },
+        {
+          "start": 129.06,
+          "end": 130.1,
+          "word": "people…"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "start": 130.26,
+      "end": 139.11,
+      "text": "And I wish all of you develop that large heartedness and work out everything to enjoy your large",
+      "words": [
+        {
+          "start": 130.26,
+          "end": 130.44,
+          "word": "And"
+        },
+        {
+          "start": 130.44,
+          "end": 130.62,
+          "word": "I"
+        },
+        {
+          "start": 130.62,
+          "end": 130.92,
+          "word": "wish"
+        },
+        {
+          "start": 130.92,
+          "end": 131.18,
+          "word": "all"
+        },
+        {
+          "start": 131.18,
+          "end": 131.32,
+          "word": "of"
+        },
+        {
+          "start": 131.32,
+          "end": 131.5,
+          "word": "you"
+        },
+        {
+          "start": 131.5,
+          "end": 132.22,
+          "word": "develop"
+        },
+        {
+          "start": 132.22,
+          "end": 132.8,
+          "word": "that"
+        },
+        {
+          "start": 132.8,
+          "end": 133.1,
+          "word": "large"
+        },
+        {
+          "start": 133.1,
+          "end": 134.06,
+          "word": "heartedness"
+        },
+        {
+          "start": 134.06,
+          "end": 134.98,
+          "word": "and"
+        },
+        {
+          "start": 134.98,
+          "end": 135.28,
+          "word": "work"
+        },
+        {
+          "start": 135.28,
+          "end": 135.7,
+          "word": "out"
+        },
+        {
+          "start": 135.7,
+          "end": 136.22,
+          "word": "everything"
+        },
+        {
+          "start": 136.35,
+          "end": 137.47,
+          "word": "to"
+        },
+        {
+          "start": 137.47,
+          "end": 138.19,
+          "word": "enjoy"
+        },
+        {
+          "start": 138.19,
+          "end": 138.75,
+          "word": "your"
+        },
+        {
+          "start": 138.75,
+          "end": 139.11,
+          "word": "large"
+        }
+      ]
+    }
+  ]
+}

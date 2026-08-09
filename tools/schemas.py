@@ -149,6 +149,17 @@ def validate_meta_yaml(path: str) -> dict:
             f"language {language!r} not in allowed set {sorted(ALLOWED_LANGUAGES)}",
         )
 
+    # Talk-level editorial remarks to keep out of the subtitles (see
+    # glossary/subtitle_omit.yaml). Optional, but a malformed spec must fail
+    # loudly — silently ignoring it ships the very remarks it was meant to strip.
+    if "subtitle_omit" in data:
+        omit = data["subtitle_omit"]
+        if not isinstance(omit, list):
+            raise SchemaError("meta.yaml", path, f"subtitle_omit must be a list, got {type(omit).__name__}")
+        for i, phrase in enumerate(omit):
+            if not isinstance(phrase, str) or not phrase.strip():
+                raise SchemaError("meta.yaml", path, f"subtitle_omit[{i}] must be a non-empty string")
+
     # A talk may legitimately have no video — e.g. a letter or other text-only
     # translation. videos may be absent or empty; validate whatever is present.
     videos = data.get("videos", [])
