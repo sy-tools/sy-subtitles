@@ -312,6 +312,48 @@
       "fn": "sanitize_pasted_text",
       "input": "a  b\tc",
       "expected": "a  b c"
+    },
+    {
+      "fn": "sanitize_live_text",
+      "input": "слово \"х",
+      "lang": "uk",
+      "expected": "слово «х"
+    },
+    {
+      "fn": "sanitize_live_text",
+      "input": "будь-",
+      "lang": "uk",
+      "expected": "будь-"
+    },
+    {
+      "fn": "sanitize_live_text",
+      "input": "слово -",
+      "lang": "uk",
+      "expected": "слово -"
+    },
+    {
+      "fn": "sanitize_live_text",
+      "input": "слово - ",
+      "lang": "uk",
+      "expected": "слово – "
+    },
+    {
+      "fn": "sanitize_live_text",
+      "input": "  два  ",
+      "lang": "uk",
+      "expected": "  два  "
+    },
+    {
+      "fn": "sanitize_live_text",
+      "input": "текст —",
+      "lang": "uk",
+      "expected": "текст –"
+    },
+    {
+      "fn": "sanitize_live_text",
+      "input": "say \"hi\" — now",
+      "lang": "en",
+      "expected": "say \"hi\" — now"
     }
   ]
 }

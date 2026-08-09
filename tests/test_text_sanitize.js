@@ -18,6 +18,7 @@ const FNS = {
   normalize_uk_typography: (c) => mod.normalizeUkTypography(c.input),
   sanitize_edited_text: (c) => mod.sanitizeEditedText(c.input, c.lang),
   sanitize_pasted_text: (c) => mod.sanitizePastedText(c.input),
+  sanitize_live_text: (c) => mod.sanitizeLiveText(c.input, c.lang),
 };
 
 for (const c of fixture.cases) {

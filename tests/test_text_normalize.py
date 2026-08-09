@@ -26,6 +26,7 @@ from tools.text_normalize import (
     sanitize_field_text,
     sanitize_file_text,
     sanitize_invisible,
+    sanitize_live_text,
     sanitize_pasted_text,
 )
 
@@ -255,6 +256,48 @@ class TestSanitizePastedText:
         assert sanitize_pasted_text("a  b") == "a  b"
 
 
+class TestSanitizeLiveText:
+    """The typing-time variant: typography only, and only for Ukrainian.
+
+    Whitespace is deliberately untouched. The review grid's cells are not
+    `white-space: pre-wrap`, so folding a just-typed trailing space would make
+    it vanish on screen and the field would look unresponsive. Whitespace stays
+    on the store-read and focusout paths.
+    """
+
+    def test_quote_converts_while_still_unclosed(self):
+        assert sanitize_live_text('слово "х', "uk") == "слово «х"
+
+    def test_em_dash_converts_immediately(self):
+        assert sanitize_live_text("текст —", "uk") == "текст –"
+
+    def test_apostrophe_and_ellipsis_convert(self):
+        assert sanitize_live_text("м'ясо…", "uk") == "м’ясо..."
+
+    def test_word_hyphen_is_never_touched_mid_typing(self):
+        """`будь-` must stay a hyphen: the user has not typed `хто` yet, and
+        the file-level rule's end-of-text boundary is only the caret here."""
+        assert sanitize_live_text("будь-", "uk") == "будь-"
+
+    def test_trailing_hyphen_waits_for_a_real_right_boundary(self):
+        assert sanitize_live_text("слово -", "uk") == "слово -"
+        assert sanitize_live_text("слово - ", "uk") == "слово – "
+
+    def test_hyphen_at_the_start_converts_once_a_space_follows(self):
+        assert sanitize_live_text("- слово", "uk") == "– слово"
+
+    def test_whitespace_is_left_exactly_as_typed(self):
+        assert sanitize_live_text("  два  пробіли  ", "uk") == "  два  пробіли  "
+
+    def test_nbsp_is_not_folded_while_typing(self):
+        """Folding it would collapse the just-typed space in a non-pre-wrap
+        cell; the store sanitize and focusout still fold it."""
+        assert sanitize_live_text("слово\u00a0", "uk") == "слово\u00a0"
+
+    def test_non_ukrainian_is_a_no_op(self):
+        assert sanitize_live_text('say "hi" — now', "en") == 'say "hi" — now'
+
+
 class TestTypographyInvariants:
     @given(_HYGIENE_TEXT)
     def test_normalize_uk_typography_is_idempotent(self, text):
@@ -355,6 +398,23 @@ class TestCheckAndFix:
         """The BOM must not act as the quote's left neighbour: the whole-file
         path strips it before typography and re-attaches it after."""
         assert fix_text('\ufeff"Привіт", – сказав\n', uk=True) == "\ufeff«Привіт», – сказав\n"
+
+
+class TestLiveMatchesStored:
+    """Live normalization must be invisible to the store: whatever the field
+    shows after a keystroke, blurring it must produce the same bytes as if no
+    live pass had run. Otherwise typing and saving would disagree."""
+
+    @given(_HYGIENE_TEXT)
+    def test_live_does_not_change_the_stored_result(self, text):
+        direct = sanitize_edited_text(text, "uk")
+        via_live = sanitize_edited_text(sanitize_live_text(text, "uk"), "uk")
+        assert via_live == direct
+
+    @given(_HYGIENE_TEXT)
+    def test_live_is_idempotent(self, text):
+        once = sanitize_live_text(text, "uk")
+        assert sanitize_live_text(once, "uk") == once
 
 
 class TestCheckFixAgreement:

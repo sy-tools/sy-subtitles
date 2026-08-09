@@ -3625,6 +3625,99 @@ document.addEventListener('keydown', function(e) {
   e.target.blur();
 }, true);
 
+// Typography is applied WHILE TYPING, under the caret: waiting for blur reads
+// as the field ignoring you. Whitespace is deliberately NOT touched here --
+// `.cell-text` is not `white-space: pre-wrap`, so folding the NBSP
+// contenteditable injects for a just-typed trailing space would collapse it on
+// screen and the field would look dead. Space folding, run collapsing and
+// trimming stay on the store-read and focusout paths, which run once the caret
+// is out of play. sanitizeLiveText also holds back the hyphen-as-dash rule
+// until a real space follows, so `будь-` does not become `будь–` before the
+// user gets to type `хто`.
+
+// Plain-text offset of the caret within `el`, or null when it is elsewhere.
+function caretOffsetIn(el) {
+  var sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  var r = sel.getRangeAt(0);
+  if (!el.contains(r.endContainer)) return null;
+  var pre = document.createRange();
+  pre.selectNodeContents(el);
+  pre.setEnd(r.endContainer, r.endOffset);
+  return pre.toString().length;
+}
+
+// (node, offset) for a plain-text offset within `el`.
+function textPositionAt(el, target) {
+  var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+  var node, last = null, seen = 0;
+  while ((node = walker.nextNode())) {
+    var len = node.nodeValue.length;
+    if (seen + len >= target) return { node: node, offset: target - seen };
+    seen += len;
+    last = node;
+  }
+  return last ? { node: last, offset: last.nodeValue.length } : null;
+}
+
+function setCaretOffset(el, offset) {
+  var pos = textPositionAt(el, offset);
+  if (!pos) return;
+  var r = document.createRange();
+  r.setStart(pos.node, pos.offset);
+  r.collapse(true);
+  var sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(r);
+}
+
+function applyLiveTypography(el, lang) {
+  var raw = el.textContent;
+  var clean = sanitizeLiveText(raw, lang);
+  if (clean === raw) return;
+
+  var caret = caretOffsetIn(el);
+  // Replace only what actually differs, so the edit is one small command
+  // instead of a whole-node rewrite.
+  var start = 0;
+  var max = Math.min(raw.length, clean.length);
+  while (start < max && raw.charAt(start) === clean.charAt(start)) start++;
+  var endRaw = raw.length;
+  var endClean = clean.length;
+  while (endRaw > start && endClean > start &&
+         raw.charAt(endRaw - 1) === clean.charAt(endClean - 1)) { endRaw--; endClean--; }
+
+  var replacement = clean.slice(start, endClean);
+  var from = textPositionAt(el, start);
+  var to = textPositionAt(el, endRaw);
+  var applied = false;
+  if (from && to) {
+    var range = document.createRange();
+    range.setStart(from.node, from.offset);
+    range.setEnd(to.node, to.offset);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    // execCommand goes through the browser's own editing pipeline, so the
+    // undo stack survives; a textContent rewrite would flatten it on every
+    // converted character.
+    applied = replacement
+      ? document.execCommand('insertText', false, replacement)
+      : document.execCommand('delete');
+  }
+  if (!applied) el.textContent = clean;
+  // The caret is placed from the transformed head rather than left where the
+  // command dropped it: a rule can shorten text BEFORE the caret (the space
+  // before an ellipsis), which would otherwise pull the caret backwards.
+  if (caret !== null) setCaretOffset(el, sanitizeLiveText(raw.slice(0, caret), lang).length);
+}
+
+document.addEventListener('input', function(e) {
+  // isComposing: never rewrite mid-IME, it cancels the composition.
+  if (!isEditField(e.target) || e.isComposing) return;
+  applyLiveTypography(e.target, editFieldLang(e.target));
+}, true);
+
 document.addEventListener('paste', function(e) {
   if (!isEditField(e.target) || !e.clipboardData) return;
   // Invisible cleanup and flattened breaks ONLY: a pasted fragment has no

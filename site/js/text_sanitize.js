@@ -82,6 +82,10 @@ var DASH_RE = /[—‒−―]/g;
 // using the m flag: JS multiline anchors also match at \r, U+2028 and
 // U+2029, where Python's (?m) does not, and the twins must agree.
 var HYPHEN_DASH_RE = /(^|[ \t\n])-(?=[ \t\n]|$)/g;
+// The typing-time variant demands a REAL right boundary. Mid-typing the end of
+// the text is just where the caret is: with `$` allowed, `будь-` would turn
+// into `будь–` before the user gets to type `хто`.
+var HYPHEN_DASH_LIVE_RE = /(^|[ \t\n])-(?=[ \t\n])/g;
 // Horizontal whitespace only, so running this over whole files cannot join
 // lines. Restricted to a word character on the left: unrestricted stripping
 // would glue the ellipsis onto a preceding dash. The word character is captured
@@ -94,8 +98,15 @@ var HYPHEN_DASH_RE = /(^|[ \t\n])-(?=[ \t\n]|$)/g;
 var ELLIPSIS_SPACE_RE = /([\p{L}\p{N}_])[ \t]+\.\.\./gu;
 
 // A straight quote following one of these opens; anything else closes. The
-// opening guillemet is included so consecutive quotes nest rather than alternate.
-var QUOTE_OPENS_AFTER = ' \t\n\r([{«–';
+// opening guillemet is included so consecutive quotes nest rather than
+// alternate, and every odd space: the typing-time pass leaves whitespace
+// alone, so the character before a just-typed quote is often the NBSP
+// contenteditable injected for the space before it.
+var QUOTE_OPENS_AFTER = ' \t\n\r([{«–' + ODD_SPACES;
+
+// Read the left neighbour THROUGH these: a stray zero-width character (or a
+// leading BOM) must not decide the direction of a quote.
+var QUOTE_TRANSPARENT = ZERO_WIDTH + '\u200c\u200d';
 
 // Counting cannot work here: quote state does not carry across subtitle blocks,
 // so a counter is wrong whenever a quotation spans a block boundary. This reads
@@ -106,7 +117,9 @@ function resolveStraightQuotes(text) {
   for (var i = 0; i < text.length; i++) {
     var ch = text.charAt(i);
     if (ch === '"') {
-      var prev = out.length ? out.charAt(out.length - 1) : '';
+      var j = out.length - 1;
+      while (j >= 0 && QUOTE_TRANSPARENT.indexOf(out.charAt(j)) !== -1) j--;
+      var prev = j >= 0 ? out.charAt(j) : '';
       out += (prev === '' || QUOTE_OPENS_AFTER.indexOf(prev) !== -1) ? '«' : '»';
     } else {
       out += ch;
@@ -115,7 +128,7 @@ function resolveStraightQuotes(text) {
   return out;
 }
 
-function normalizeUkTypography(text) {
+function normalizeUkTypography(text, live) {
   var out = String(text == null ? '' : text)
     .replace(/“/g, '«')
     .replace(/„/g, '«')
@@ -125,12 +138,26 @@ function normalizeUkTypography(text) {
   // closing. Same order as tools/text_normalize.py.
   out = out
     .replace(DASH_RE, '–')
-    .replace(HYPHEN_DASH_RE, '$1–');
+    .replace(live ? HYPHEN_DASH_LIVE_RE : HYPHEN_DASH_RE, '$1–');
   out = resolveStraightQuotes(out);
   return out
     .replace(APOSTROPHE_RE, '’')
     .replace(/…/g, '...')
     .replace(ELLIPSIS_SPACE_RE, '$1...');
+}
+
+// Normalize a field WHILE IT IS BEING TYPED. Typography only, Ukrainian only.
+//
+// Whitespace is deliberately untouched: `.cell-text` is not
+// `white-space: pre-wrap`, so folding a just-typed trailing NBSP into a plain
+// space would collapse it on screen and the field would look unresponsive.
+// Space folding, run collapsing and trimming stay on the store-read and
+// focusout paths, which run when the caret is no longer in play. A property
+// test pins the invariant that makes this safe: running text through here
+// first never changes what sanitizeEditedText ends up storing.
+function sanitizeLiveText(text, lang) {
+  var s = String(text == null ? '' : text);
+  return lang === 'uk' ? normalizeUkTypography(s, true) : s;
 }
 
 // The entry point the SPA edit handlers call. Invisible-character cleanup runs
@@ -145,6 +172,7 @@ if (typeof module !== 'undefined' && module.exports) {
     sanitizeInvisible: sanitizeInvisible,
     sanitizeFieldText: sanitizeFieldText,
     sanitizePastedText: sanitizePastedText,
+    sanitizeLiveText: sanitizeLiveText,
     normalizeUkTypography: normalizeUkTypography,
     sanitizeEditedText: sanitizeEditedText,
   };

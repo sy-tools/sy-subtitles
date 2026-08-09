@@ -5889,6 +5889,25 @@ class TestEditFieldHygiene:
         goto_spa(page, server, hash)
         page.wait_for_selector(".cell.uk .cell-text", timeout=10000)
 
+    def _focus_empty_cell(self, page):
+        """Focus the first editable cell with an empty value and the caret in
+        it. Not Control+A: on macOS that is 'move to line start', so the typed
+        text would be prepended to the existing content instead of replacing it.
+        """
+        page.evaluate(
+            """() => {
+              var el = document.querySelector('.cell.uk .cell-text');
+              el.focus();
+              el.textContent = '';
+              var r = document.createRange();
+              r.selectNodeContents(el);
+              r.collapse(true);
+              var s = window.getSelection();
+              s.removeAllRanges();
+              s.addRange(r);
+            }"""
+        )
+
     def _first_cell_edit(self, page, text):
         page.evaluate(
             """(text) => {
@@ -5916,10 +5935,12 @@ class TestEditFieldHygiene:
         stored = page.evaluate("reviewState.edits[0]")
         assert stored.endswith("«так»"), f"UK typography not applied: {stored!r}"
 
-    def test_paste_stays_verbatim_but_single_line(self, server, page):
-        """Paste must clean invisibles and flatten breaks ONLY: no trim (a
-        leading space may be intended) and no quote resolution (a fragment has
-        no caret context). The store still sanitizes via the input event."""
+    def test_paste_keeps_whitespace_but_gets_field_wide_typography(self, server, page):
+        """The paste handler itself only cleans invisibles and flattens breaks
+        -- no trim, because a leading space may be intended, and no quote
+        resolution, because a fragment has no caret context. Typography then
+        arrives from the live pass on the input event the insert fires, which
+        sees the WHOLE field and therefore resolves quotes correctly."""
         self._goto_review(page, server, self.REVIEW_UK)
         # Paste AFTER existing text: pasting a leading space into an EMPTY
         # contenteditable makes the browser itself render it as &nbsp; (the
@@ -5944,7 +5965,7 @@ class TestEditFieldHygiene:
         )
         page.wait_for_timeout(100)
         cell = page.evaluate("document.querySelector('.cell.uk .cell-text').innerText")
-        assert 'слово "х" і далі' in cell, f"fragment was trimmed or rewritten: {cell!r}"
+        assert "слово «х» і далі" in cell, f"fragment was trimmed or mis-resolved: {cell!r}"
         assert "\n" not in cell and "\u00a0" not in cell, f"breaks/NBSP survived paste: {cell!r}"
         stored = page.evaluate("reviewState.edits[0]")
         assert "«х»" in stored, f"store missed the input-event sanitize: {stored!r}"
@@ -5967,6 +5988,70 @@ class TestEditFieldHygiene:
         page.wait_for_timeout(100)
         cell = page.evaluate("document.querySelector('.cell.uk .cell-text').innerText")
         assert "«х»" in cell, f"focusout did not reconcile the display: {cell!r}"
+
+    def test_quote_converts_while_typing(self, server, page):
+        """The conversion must happen under the caret, not at blur: waiting
+        until focus leaves reads as the field ignoring you."""
+        self._goto_review(page, server, self.REVIEW_UK)
+        self._focus_empty_cell(page)
+        page.keyboard.type('Він сказав "так')
+        page.wait_for_timeout(100)
+        cell = page.evaluate("document.querySelector('.cell.uk .cell-text').textContent")
+        assert cell == "Він сказав «так", f"live typography did not run: {cell!r}"
+        focused = page.evaluate("document.activeElement.classList.contains('cell-text')")
+        assert focused is True, "the field lost focus, so this proved nothing"
+
+    def test_typing_continues_after_a_live_conversion(self, server, page):
+        """If the caret jumped on conversion, the tail would land in the wrong
+        place and the text would come out scrambled."""
+        self._goto_review(page, server, self.REVIEW_UK)
+        self._focus_empty_cell(page)
+        page.keyboard.type('Він сказав "так" — і пішов')
+        page.wait_for_timeout(100)
+        cell = page.evaluate("document.querySelector('.cell.uk .cell-text').textContent")
+        assert cell == "Він сказав «так» – і пішов", f"caret drifted: {cell!r}"
+
+    def test_word_hyphen_survives_typing(self, server, page):
+        """`будь-` must not become an en dash between keystrokes: mid-typing
+        the end of the text is only where the caret happens to be."""
+        self._goto_review(page, server, self.REVIEW_UK)
+        self._focus_empty_cell(page)
+        page.keyboard.type("будь-хто")
+        page.wait_for_timeout(100)
+        cell = page.evaluate("document.querySelector('.cell.uk .cell-text').textContent")
+        assert cell == "будь-хто", f"a word hyphen was eaten mid-typing: {cell!r}"
+
+    def test_quote_after_a_typed_space_opens(self, server, page):
+        """contenteditable turns the typed space into NBSP; the quote rule must
+        read through it or the quote resolves as closing."""
+        self._goto_review(page, server, self.REVIEW_UK)
+        self._focus_empty_cell(page)
+        page.keyboard.type('слово "')
+        page.wait_for_timeout(100)
+        cell = page.evaluate("document.querySelector('.cell.uk .cell-text').textContent")
+        assert cell.endswith("«"), f"quote after a typed space closed instead of opening: {cell!r}"
+
+    def test_english_column_is_not_converted_while_typing(self, server, page):
+        self._goto_review(page, server, self.REVIEW_EN)
+        self._focus_empty_cell(page)
+        page.keyboard.type('He said "yes"')
+        page.wait_for_timeout(100)
+        cell = page.evaluate("document.querySelector('.cell.uk .cell-text').textContent")
+        assert cell == 'He said "yes"', f"English text was converted live: {cell!r}"
+
+    def test_undo_survives_a_live_conversion(self, server, page):
+        """The replacement goes through execCommand precisely so the browser's
+        undo stack stays intact; a textContent rewrite would flatten it."""
+        self._goto_review(page, server, self.REVIEW_UK)
+        self._focus_empty_cell(page)
+        page.keyboard.type('слово "х')
+        page.wait_for_timeout(100)
+        before = page.evaluate("document.querySelector('.cell.uk .cell-text').textContent")
+        assert "«х" in before, before
+        page.evaluate("document.execCommand('undo')")
+        page.wait_for_timeout(100)
+        after = page.evaluate("document.querySelector('.cell.uk .cell-text').textContent")
+        assert after != before, "undo did nothing -- the undo stack was reset by the live rewrite"
 
     def test_preview_shift_enter_also_commits(self, server, page):
         """The old preview handler let Shift+Enter insert a line break into a

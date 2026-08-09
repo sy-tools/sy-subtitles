@@ -15,6 +15,7 @@ from tools.text_normalize import (
     sanitize_edited_text,
     sanitize_field_text,
     sanitize_invisible,
+    sanitize_live_text,
     sanitize_pasted_text,
 )
 
@@ -29,6 +30,7 @@ _FNS = {
     "normalize_uk_typography": lambda c: normalize_uk_typography(c["input"]),
     "sanitize_edited_text": lambda c: sanitize_edited_text(c["input"], c["lang"]),
     "sanitize_pasted_text": lambda c: sanitize_pasted_text(c["input"]),
+    "sanitize_live_text": lambda c: sanitize_live_text(c["input"], c["lang"]),
 }
 
 

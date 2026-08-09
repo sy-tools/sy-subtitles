@@ -101,6 +101,10 @@ _DASH_RE = re.compile("[—‒−―]")
 # A hyphen standing in for a dash: both sides open (space/tab or a line
 # boundary). One-sided hyphens stay — `будь-хто` is a word, `-5` a number.
 _HYPHEN_DASH_RE = re.compile(r"(?m)(?:(?<=[ \t])|^)-(?=[ \t]|$)")
+# The typing-time variant demands a REAL right boundary. Mid-typing, the end of
+# the text is just where the caret is: with `$` allowed, `будь-` would become
+# `будь–` before the user gets to type `хто`.
+_HYPHEN_DASH_LIVE_RE = re.compile(r"(?m)(?:(?<=[ \t])|^)-(?=[ \t])")
 # Horizontal whitespace only, so running this over a whole file cannot join
 # lines. Restricted to a word character on the left: unrestricted stripping
 # would glue the ellipsis onto a preceding dash.
@@ -108,8 +112,14 @@ _ELLIPSIS_SPACE_RE = re.compile(r"(?<=\w)[ \t]+\.\.\.")
 
 # A straight quote following one of these opens; anything else closes. Includes
 # the opening guillemet itself so that consecutive quotes nest rather than
-# alternate.
-_QUOTE_OPENS_AFTER = set(" \t\n\r([{«–")
+# alternate, and every odd space: the typing-time pass leaves whitespace alone,
+# so the character before a just-typed quote is often the NBSP contenteditable
+# injected for the space before it.
+_QUOTE_OPENS_AFTER = set(" \t\n\r([{«–") | set(ODD_SPACES)
+
+# Read the left neighbour THROUGH these: a stray zero-width character (or a
+# leading BOM) must not decide the direction of a quote.
+_QUOTE_TRANSPARENT = set(ZERO_WIDTH) | set(ZW_JOINERS)
 
 
 def _resolve_straight_quotes(text: str) -> str:
@@ -124,29 +134,53 @@ def _resolve_straight_quotes(text: str) -> str:
     out: list[str] = []
     for ch in text:
         if ch == '"':
-            prev = out[-1] if out else ""
+            i = len(out) - 1
+            while i >= 0 and out[i] in _QUOTE_TRANSPARENT:
+                i -= 1
+            prev = out[i] if i >= 0 else ""
             out.append("«" if prev == "" or prev in _QUOTE_OPENS_AFTER else "»")
         else:
             out.append(ch)
     return "".join(out)
 
 
-def normalize_uk_typography(text: str) -> str:
+def normalize_uk_typography(text: str, *, live: bool = False) -> str:
     """Apply the Ukrainian orthography rules from glossary/CLAUDE.md.
 
     UKRAINIAN TEXT ONLY. English prose legitimately uses `"` and an em dash,
     and YAML/JSON use `"` as syntax; applying this to them corrupts them.
+
+    ``live=True`` is the typing-time reading: identical except that a hyphen
+    needs a real whitespace character on its right, not the end of the text --
+    see _HYPHEN_DASH_LIVE_RE.
     """
     text = text.replace("“", "«").replace("„", "«").replace("”", "»")
     # Dashes before quotes: _QUOTE_OPENS_AFTER knows only the canonical en
     # dash, so a quote sitting right after an unconverted em dash would
     # resolve as closing.
     text = _DASH_RE.sub("–", text)
-    text = _HYPHEN_DASH_RE.sub("–", text)
+    text = (_HYPHEN_DASH_LIVE_RE if live else _HYPHEN_DASH_RE).sub("–", text)
     text = _resolve_straight_quotes(text)
     text = _APOSTROPHE_RE.sub("’", text)
     text = text.replace("…", "...")
     return _ELLIPSIS_SPACE_RE.sub("...", text)
+
+
+def sanitize_live_text(text: str, lang: str) -> str:
+    """Normalize a field WHILE IT IS BEING TYPED. Typography only, Ukrainian only.
+
+    Whitespace is deliberately untouched: the review grid's cells are not
+    `white-space: pre-wrap`, so folding a just-typed trailing NBSP into a plain
+    space would collapse it on screen and the field would look unresponsive.
+    Space folding, run collapsing and trimming stay on the store-read and
+    focusout paths, which run when the caret is no longer in play.
+
+    The invariant that makes this safe is pinned by a property test: passing
+    text through here first never changes what sanitize_edited_text stores.
+    """
+    if lang != "uk":
+        return text
+    return normalize_uk_typography(text, live=True)
 
 
 def sanitize_edited_text(text: str, lang: str) -> str:
