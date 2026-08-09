@@ -66,7 +66,7 @@ class TestEscapeAssText:
         assert escape_ass_text("one\ntwo") == "one two"
 
     def test_nbsp_normalized_to_space(self):
-        assert escape_ass_text("one two") == "one two"
+        assert escape_ass_text("one\u00a0two") == "one two"
 
     def test_collapses_runs_of_whitespace(self):
         assert escape_ass_text("one   two") == "one two"

@@ -1,0 +1,15 @@
+# Line endings are normalized to LF in the repository, whatever the editing
+# platform. Windows editors and amruta's downloaded .srt files both introduce
+# CRLF; without this they land in commits and show as whole-file diffs.
+* text=auto eol=lf
+
+# Binary assets must never be line-ending-normalized.
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.ttf binary
+
+# Fixtures are captured raw input (amruta page dumps, pipeline snapshots) and
+# may deliberately carry CRLF or other oddities; never renormalize them. The
+# hygiene scanner (tools/text_normalize.py) exempts them for the same reason.
+tests/fixtures/** -text

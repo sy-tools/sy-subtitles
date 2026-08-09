@@ -171,10 +171,10 @@ def test_literal_newlines_in_paragraph_collapsed():
 def test_nbsp_in_paragraph_collapsed():
     """A non-breaking space (U+00A0) inside paragraph text becomes a normal
     space — it must not survive into the transcript as a non-printing char."""
-    html = "<p>ends up in love. Whichever does not end up in love.</p>"
+    html = "<p>ends up in love.\u00a0Whichever does not end up in love.</p>"
     result = _extract(html)
     assert result == "ends up in love. Whichever does not end up in love."
-    assert " " not in result
+    assert "\u00a0" not in result
 
 
 def test_prose_br_survives_newline_collapse():
