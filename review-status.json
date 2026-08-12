@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-09T21:50:08.073651+00:00",
+  "updated_at": "2026-08-12T07:08:18.357716+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -571,6 +571,12 @@
       "reviewer": null,
       "issue_number": 938,
       "updated_at": "2026-08-07T21:15:10Z"
+    },
+    "2004-07-04_Guru-Puja-Follow-My-Message-of-Love": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 954,
+      "updated_at": "2026-08-12T07:08:06Z"
     }
   }
 }
