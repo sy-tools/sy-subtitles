@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2004-07-04_Guru-Puja-Follow-My-Message-of-Love/Guru-Puja/final/uk.srt
+  Transcript: talks/2004-07-04_Guru-Puja-Follow-My-Message-of-Love/transcript_uk.txt
+  EN SRT: talks/2004-07-04_Guru-Puja-Follow-My-Message-of-Love/Guru-Puja/source/en.srt
+  SRT blocks: 146
+  EN SRT blocks: 261
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:07:51,620 — 00:30:46,540
+  SRT range:       00:07:51,620 — 00:30:48,540
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 146
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 146
+  CPS: avg=6.0, median=5.5, max=13.2
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #31: CPS=13.2 (29ch/2.2s) "Ніхто не може нею поділитися."
+    #96: CPS=12.9 (39ch/3.0s) "Хоча насправді для цього немає причини."
+    #112: CPS=12.5 (36ch/2.9s) "Не потрібно докладати жодних зусиль,"
+    #105: CPS=12.1 (35ch/2.9s) "Якщо ми розчинимося в цьому океані,"
+    #121: CPS=11.5 (81ch/7.1s) "Вони не мали нічого, окрім цієї любові, яку не могли втримат..."
+    #39: CPS=11.0 (54ch/4.9s) "Іноді ви відчуваєте, що втратили її, іноді відчуваєте,"
+    #111: CPS=10.7 (73ch/6.8s) "Ви насолоджуєтеся собою і насолоджуєтеся всіма іншими, тому ..."
+    #104: CPS=10.7 (43ch/4.0s) "Нам потрібно просто зануритися в цей океан."
+    #142: CPS=10.3 (51ch/5.0s) "Я не думаю, що ця тема була занадто тонкою для вас."
+    #101: CPS=10.3 (60ch/5.8s) "У цій великій можливості любові, якою ми є, ми тут для того,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 146
+  EN SRT blocks: 261
+  Ratio UK/EN: 0.56 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 6.0 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
