@@ -15,7 +15,7 @@ from tools.burn_subtitles import (
     FONT_PROBE_MAX_CHARS,
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
-    ROBOTO_WIN_FACTOR,
+    PT_SERIF_WIN_FACTOR,
     SIDE_INSET_RATIO,
     WRAP_SAFETY,
     ass_alpha_byte,
@@ -89,9 +89,9 @@ class TestSizingConstants:
     detect a drifted or typo'd value, so the values are asserted directly.
     """
 
-    def test_win_factor_matches_roboto_win_metrics(self):
+    def test_win_factor_matches_pt_serif_win_metrics(self):
         # FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm.
-        assert pytest.approx((1946 + 512) / 2048, abs=1e-4) == ROBOTO_WIN_FACTOR
+        assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == PT_SERIF_WIN_FACTOR
 
     def test_ratio_clamp_bounds(self):
         assert FONT_RATIO_MIN == 0.02
@@ -101,22 +101,23 @@ class TestSizingConstants:
 class TestFontSizeFor:
     def test_applies_win_metric_factor(self):
         # ASS FontSize is the font's Win cell height, not CSS pixels.
-        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * ROBOTO_WIN_FACTOR)
+        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * PT_SERIF_WIN_FACTOR)
 
     def test_pins_size_for_1080p(self):
-        # 0.0711 * 1080 * 1.2002 = 92.2 -> 92. Independent of the constants,
+        # 0.0711 * 1080 * 1.325 = 101.7 -> 102. Independent of the constants,
         # so a drift in any of them fails here.
-        assert font_size_for(0.0711, 1080) == 92
+        assert font_size_for(0.0711, 1080) == 102
 
     def test_pins_clamped_sizes(self):
-        assert font_size_for(0.001, 1000) == 24  # 0.02 * 1000 * 1.2002
-        assert font_size_for(0.9, 1000) == 144  # 0.12 * 1000 * 1.2002
+        # 0.02 * 1000 * 1.325 = 26.5, which Python rounds to even -> 26.
+        assert font_size_for(0.001, 1000) == 26
+        assert font_size_for(0.9, 1000) == 159  # 0.12 * 1000 * 1.325
 
     def test_clamps_below_minimum(self):
-        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * ROBOTO_WIN_FACTOR)
+        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * PT_SERIF_WIN_FACTOR)
 
     def test_clamps_above_maximum(self):
-        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * ROBOTO_WIN_FACTOR)
+        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * PT_SERIF_WIN_FACTOR)
 
     def test_rejects_non_positive_height(self):
         with pytest.raises(ValueError):
@@ -129,7 +130,7 @@ class TestBuildAssHeader:
             width=1920,
             height=1080,
             font_size=92,
-            font_name="Roboto",
+            font_name="PT Serif",
             margin_h=192,
             margin_v=36,
         )
@@ -158,7 +159,7 @@ class TestBuildAssHeader:
 
     def test_default_style_is_bottom_centered_with_margins(self):
         fields = self._default_style_fields()
-        assert fields[1] == "Roboto"
+        assert fields[1] == "PT Serif"
         assert fields[2] == "92"
         assert fields[18] == "2"  # Alignment 2 = bottom centre
         assert fields[-2] == "36"  # MarginV
@@ -367,9 +368,9 @@ class TestDefaults:
         # Fullscreen's horizontal insets; also the wrap width the SPA showed.
         assert SIDE_INSET_RATIO == 0.10
 
-    def test_font_defaults_point_at_the_vendored_roboto(self):
-        assert DEFAULT_FONT_FILE.endswith(os.path.join("assets", "fonts", "Roboto-Regular.ttf"))
-        assert DEFAULT_FONT_NAME == "Roboto"
+    def test_font_defaults_point_at_the_vendored_pt_serif(self):
+        assert DEFAULT_FONT_FILE.endswith(os.path.join("assets", "fonts", "PT_Serif-Web-Regular.ttf"))
+        assert DEFAULT_FONT_NAME == "PT Serif"
 
     def test_default_font_path_is_absolute(self):
         # `python -m tools.burn_subtitles` runs from wherever the caller stands;
@@ -390,7 +391,7 @@ class TestCssFontPx:
 
     def test_font_size_is_css_px_times_the_win_factor(self):
         for ratio, height in ((0.0711, 1080), (0.05, 480), (0.11, 2160)):
-            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * ROBOTO_WIN_FACTOR)
+            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * PT_SERIF_WIN_FACTOR)
 
     def test_shares_the_clamp_with_font_size_for(self):
         assert css_font_px(0.001, 1000) == pytest.approx(FONT_RATIO_MIN * 1000)
@@ -416,7 +417,7 @@ def _doc(cues=None, width=1920, height=1080):
         padtop_ratio=0.0741,
         padbot_ratio=0.0333,
         measure=fake_measure,
-        font_name="Roboto",
+        font_name="PT Serif",
         steps=DEFAULT_GRADIENT_STEPS,
     )
 
@@ -592,38 +593,45 @@ class TestProbeDimensions:
 
 
 # The libass 0.17.5 message bodies are verbatim, captured locally by rendering
-# this project's own .ass on a machine without Roboto installed; only the line
-# prefix was adapted, because the capture came through mpv ("[sub/ass] ") while
-# production reads ffmpeg's stderr ("[Parsed_ass_0 @ 0x...] "). Both lines are
-# emitted on a fallback: the warning, then a resolution naming the wrong face.
+# this project's own probe .ass through mpv; only the line prefix was adapted,
+# because the capture came through mpv ("[sub/ass] ") while production reads
+# ffmpeg's stderr ("[Parsed_ass_0 @ 0x...] ").
+#
+# The substitution: captured with a fonts dir holding Georgia instead of our
+# face and `--sub-font-provider=none`, which is exactly the shape of the
+# accident this guard exists for — Georgia is what the SPA's own preview falls
+# back to, and burning in it instead of PT Serif would re-wrap silently.
+# Both lines are emitted: the warning, then a resolution naming the wrong face.
 LIBASS_FALLBACK_STDERR = (
     "[Parsed_ass_0 @ 0x7f8e1c] fontselect: Using default font family: "
-    "(Roboto, 400, 0) -> /System/Library/Fonts/Helvetica.ttc, -1, Helvetica\n"
-    "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (Roboto, 400, 0) -> "
-    "/System/Library/Fonts/Helvetica.ttc, -1, Helvetica\n"
+    "(PT Serif, 400, 0) -> Georgia, 0, Georgia\n"
+    "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (PT Serif, 400, 0) -> Georgia, 0, Georgia\n"
 )
 
 # The success case, captured the same way with --sub-fonts-dir=assets/fonts.
-LIBASS_SUCCESS_STDERR = "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (Roboto, 400, 0) -> Roboto-Regular, 0, Roboto-Regular\n"
+LIBASS_SUCCESS_STDERR = (
+    "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (PT Serif, 400, 0) -> PTSerif-Regular, 0, PTSerif-Regular\n"
+)
 
 # Third of libass 0.17.5's trouble messages (ass_fontselect.c): the family
-# resolved, but nothing on the system can draw one character. 0x490 is Ґ.
+# resolved, but nothing loaded can draw one character. Captured against an
+# empty fonts dir, hence glyph 0x0.
 LIBASS_MISSING_GLYPH_STDERR = (
     LIBASS_SUCCESS_STDERR
-    + "[Parsed_ass_0 @ 0x7f8e1c] fontselect: failed to find any fallback with glyph 0x490 for font: (Roboto, 400, 0)\n"
+    + "[Parsed_ass_0 @ 0x7f8e1c] fontselect: failed to find any fallback with glyph 0x0 for font: (PT Serif, 400, 0)\n"
 )
 
 
 # A glyph-level fallback: the primary family resolved to OUR font, then libass
-# asked for one more font because a single character (0x926 is द) has no glyph
+# asked for one more font because a single character (0x950 is ॐ) has no glyph
 # in it. Twelve of the corpus's videos carry Sanskrit mantras in Devanagari,
-# which Roboto does not cover — treating this sequence as a substitution made
+# which PT Serif does not cover — treating this sequence as a substitution made
 # every one of them permanently unrenderable.
 LIBASS_GLYPH_FALLBACK_STDERR = (
     LIBASS_SUCCESS_STDERR
-    + "[Parsed_ass_0 @ 0x7f8e1c] Glyph 0x926 not found, selecting one more font for (Roboto, 400, 0)\n"
-    + "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (Roboto, 400, 0) -> "
-    "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf, 0, Noto Sans Devanagari\n"
+    + "[Parsed_ass_0 @ 0x7f8e1c] Glyph 0x950 not found, selecting one more font for (PT Serif, 400, 0)\n"
+    + "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (PT Serif, 400, 0) -> "
+    "/System/Library/Fonts/Supplemental/ITFDevanagari.ttc, -1, ITFDevanagari-Book\n"
 )
 
 
@@ -636,96 +644,97 @@ class TestFontSelectionError:
     """
 
     def test_default_family_warning_is_fatal(self):
-        assert font_selection_error(LIBASS_FALLBACK_STDERR, "Roboto")
+        assert font_selection_error(LIBASS_FALLBACK_STDERR, "PT Serif")
 
     def test_resolution_to_the_requested_face_passes(self):
-        assert font_selection_error(LIBASS_SUCCESS_STDERR, "Roboto") is None
+        assert font_selection_error(LIBASS_SUCCESS_STDERR, "PT Serif") is None
 
     def test_resolution_to_another_face_is_fatal(self):
         # The warning line alone is not what we key on: a resolution naming a
         # different face must fail even if the wording of the warning changes.
         only_resolution = LIBASS_FALLBACK_STDERR.splitlines()[1]
-        assert font_selection_error(only_resolution, "Roboto")
+        assert font_selection_error(only_resolution, "PT Serif")
 
     def test_the_second_default_font_wording_is_fatal(self):
         # libass 0.17.5 has two of these, checked in ass_fontselect.c:
         # "Using default font family: ..." and "Using default font: ...".
         stderr = (
-            "fontselect: Using default font: (Roboto, 400, 0) -> /System/Library/Fonts/Helvetica.ttc, -1, Helvetica"
+            "fontselect: Using default font: (PT Serif, 400, 0) -> /System/Library/Fonts/Helvetica.ttc, -1, Helvetica"
         )
-        assert font_selection_error(stderr, "Roboto")
+        assert font_selection_error(stderr, "PT Serif")
 
     def test_a_missing_glyph_is_fatal_even_when_the_family_resolved(self):
         # The face is right, so the positive check alone would pass this — but
         # the frame would show tofu where Ґ should be.
         stderr = (
             LIBASS_SUCCESS_STDERR
-            + "fontselect: failed to find any fallback with glyph 0x490 for font: (Roboto, 400, 0)\n"
+            + "fontselect: failed to find any fallback with glyph 0x490 for font: (PT Serif, 400, 0)\n"
         )
-        assert font_selection_error(stderr, "Roboto")
+        assert font_selection_error(stderr, "PT Serif")
 
     def test_silence_is_not_success(self):
         # No fontselect lines at all = no proof. Refuse rather than assume.
-        assert font_selection_error("", "Roboto")
+        assert font_selection_error("", "PT Serif")
 
     def test_a_glyph_fallback_for_a_character_our_font_lacks_is_not_substitution(self):
         # The primary selection IS our font; the extra face exists only because
-        # one mantra character has no glyph in Roboto. The layout metrics all
+        # one mantra character has no glyph in PT Serif. The layout metrics all
         # come from the primary, so nothing re-wraps — refusing here vetoed a
         # two-hour render over a two-cue mantra.
-        assert font_selection_error(LIBASS_GLYPH_FALLBACK_STDERR, "Roboto") is None
+        assert font_selection_error(LIBASS_GLYPH_FALLBACK_STDERR, "PT Serif") is None
 
     def test_a_fallback_face_without_a_primary_selection_is_still_no_proof(self):
         # Only the fallback resolution, no primary: the one face named arrived
         # through the glyph path, so the font the LAYOUT used is still unproven.
         lines = LIBASS_GLYPH_FALLBACK_STDERR.splitlines()
         stderr = "\n".join(lines[1:]) + "\n"
-        assert font_selection_error(stderr, "Roboto")
+        assert font_selection_error(stderr, "PT Serif")
 
     def test_a_substituted_primary_is_fatal_even_with_a_glyph_fallback_after_it(self):
         # The tolerance is for the glyph path only — a wrong PRIMARY face still
         # moves every line break, fallback or no fallback.
         stderr = LIBASS_FALLBACK_STDERR + LIBASS_GLYPH_FALLBACK_STDERR.split("\n", 1)[1]
-        assert font_selection_error(stderr, "Roboto")
+        assert font_selection_error(stderr, "PT Serif")
 
     def test_a_missing_glyph_stays_fatal_alongside_the_fallback_tolerance(self):
         # "failed to find any fallback" means tofu on screen: the runner has no
         # face at all for the character. The tolerance above must not eat it.
-        assert font_selection_error(LIBASS_MISSING_GLYPH_STDERR, "Roboto")
+        assert font_selection_error(LIBASS_MISSING_GLYPH_STDERR, "PT Serif")
 
     def test_silence_can_be_tolerated_where_evidence_is_optional(self):
         # The encode runs at ffmpeg's default log level, which may withhold the
         # resolution line; the pre-flight probe is where proof is demanded.
-        assert font_selection_error("", "Roboto", require_evidence=False) is None
+        assert font_selection_error("", "PT Serif", require_evidence=False) is None
 
     def test_ignores_the_case_and_hyphenation_of_the_face_name(self):
-        assert font_selection_error(LIBASS_SUCCESS_STDERR, "roboto") is None
+        assert font_selection_error(LIBASS_SUCCESS_STDERR, "pt-serif") is None
 
     def test_message_names_the_offending_face(self):
-        assert "Helvetica" in font_selection_error(LIBASS_FALLBACK_STDERR, "Roboto")
+        assert "Georgia" in font_selection_error(LIBASS_FALLBACK_STDERR, "PT Serif")
 
-    def test_a_narrower_relative_of_the_family_is_rejected(self):
-        # The whole point of the guard. "Roboto Condensed" begins with "Roboto"
-        # and is 10-15% narrower, so a prefix match would wave through exactly
-        # the corpus-wide re-wrap this exists to prevent. Same for Roboto Slab.
-        for face in ("Roboto Condensed", "Roboto Slab", "Roboto Mono", "Robotoesque"):
-            stderr = f"fontselect: (Roboto, 400, 0) -> /usr/share/fonts/x.ttf, 0, {face}"
-            assert font_selection_error(stderr, "Roboto"), f"{face} must not pass as Roboto"
+    def test_a_wider_relative_of_the_family_is_rejected(self):
+        # The whole point of the guard. "PT Serif Caption" begins with "PT Serif"
+        # and sets 12.6% wider (it is cut for small sizes), so a prefix match
+        # would wave through exactly the corpus-wide re-wrap this exists to
+        # prevent. Same for the other ParaType siblings.
+        for face in ("PT Serif Caption", "PT Sans", "PT Mono", "PT Serifesque"):
+            stderr = f"fontselect: (PT Serif, 400, 0) -> /usr/share/fonts/x.ttf, 0, {face}"
+            assert font_selection_error(stderr, "PT Serif"), f"{face} must not pass as PT Serif"
 
     def test_accepts_the_face_names_read_from_the_font_file(self):
         # With the TTF in hand the accepted names come from the file itself
         # (family + "family style"), not from a pattern over the requested name.
-        assert font_selection_error(LIBASS_SUCCESS_STDERR, "Roboto", font_file=DEFAULT_FONT_FILE) is None
+        assert font_selection_error(LIBASS_SUCCESS_STDERR, "PT Serif", font_file=DEFAULT_FONT_FILE) is None
 
     def test_rejects_a_relative_of_the_family_against_the_font_file_too(self):
-        stderr = "fontselect: (Roboto, 400, 0) -> /usr/share/fonts/x.ttf, 0, Roboto Condensed"
-        assert font_selection_error(stderr, "Roboto", font_file=DEFAULT_FONT_FILE)
+        stderr = "fontselect: (PT Serif, 400, 0) -> /usr/share/fonts/x.ttf, 0, PT Serif Caption"
+        assert font_selection_error(stderr, "PT Serif", font_file=DEFAULT_FONT_FILE)
 
     def test_rejects_another_weight_of_the_same_family(self):
-        # Roboto Light is narrower than Roboto Regular; the vendored file is
-        # Regular, so anything else is not what Pillow measured with.
-        stderr = "fontselect: (Roboto, 400, 0) -> /usr/share/fonts/x.ttf, 0, Roboto Light"
-        assert font_selection_error(stderr, "Roboto", font_file=DEFAULT_FONT_FILE)
+        # PT Serif Bold sets 8.6% wider than PT Serif Regular; the vendored file
+        # is Regular, so anything else is not what Pillow measured with.
+        stderr = "fontselect: (PT Serif, 400, 0) -> /usr/share/fonts/x.ttf, 0, PT Serif Bold"
+        assert font_selection_error(stderr, "PT Serif", font_file=DEFAULT_FONT_FILE)
 
 
 class TestFontProbeCommand:
@@ -789,28 +798,28 @@ class TestProbeTextFor:
 
 class TestFontProbeDocument:
     def test_names_the_requested_font(self):
-        assert "Style: Default,Roboto," in font_probe_document("Roboto")
+        assert "Style: Default,PT Serif," in font_probe_document("PT Serif")
 
     def test_draws_ukrainian_glyphs_so_a_partial_font_is_caught_too(self):
-        doc = font_probe_document("Roboto")
+        doc = font_probe_document("PT Serif")
         text = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 1,"))
         for ch in FONT_PROBE_FLOOR:
             assert ch in text
 
     def test_draws_the_text_it_is_given(self):
-        doc = font_probe_document("Roboto", "№♪")
+        doc = font_probe_document("PT Serif", "№♪")
         text = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 1,"))
         assert "№" in text and "♪" in text
 
     def test_breaks_long_probe_text_into_lines(self):
         # One 400-character line would run off the probe frame; every glyph must
         # be rasterized, not merely shaped.
-        doc = font_probe_document("Roboto", "я" * 200)
+        doc = font_probe_document("PT Serif", "я" * 200)
         text = next(ln for ln in doc.splitlines() if ln.startswith("Dialogue: 1,"))
         assert "\\N" in text
 
     def test_starts_at_zero_so_the_first_frame_renders_it(self):
-        assert "Dialogue: 1,0:00:00.00," in font_probe_document("Roboto")
+        assert "Dialogue: 1,0:00:00.00," in font_probe_document("PT Serif")
 
 
 class TestMain:
@@ -1028,14 +1037,14 @@ class TestVendoredFont:
         assert TTFont(DEFAULT_FONT_FILE)["name"].getDebugName(1) == DEFAULT_FONT_NAME
 
     def test_font_win_metrics_back_the_size_factor(self):
-        # ROBOTO_WIN_FACTOR is derived from these three numbers; a font swap
+        # PT_SERIF_WIN_FACTOR is derived from these three numbers; a font swap
         # that changed them would silently resize every burned subtitle.
         from fontTools.ttLib import TTFont
 
         font = TTFont(DEFAULT_FONT_FILE)
-        assert font["head"].unitsPerEm == 2048
-        assert font["OS/2"].usWinAscent == 1946
-        assert font["OS/2"].usWinDescent == 512
+        assert font["head"].unitsPerEm == 1000
+        assert font["OS/2"].usWinAscent == 1039
+        assert font["OS/2"].usWinDescent == 286
 
     def test_font_covers_ukrainian(self):
         from fontTools.ttLib import TTFont
@@ -1043,3 +1052,14 @@ class TestVendoredFont:
         cmap = TTFont(DEFAULT_FONT_FILE).getBestCmap()
         for cp in (0x0404, 0x0454, 0x0406, 0x0456, 0x0407, 0x0457, 0x0490, 0x0491, 0x02BC):
             assert cp in cmap, f"missing U+{cp:04X}"
+
+    def test_font_covers_the_typography_the_corpus_is_set_in(self):
+        # The preview's stack is `'Fraunces', Georgia, …` and Fraunces carries
+        # no Cyrillic, so what the screen shows is the fallback. A vendored
+        # face that quietly dropped «», the em dash or the right apostrophe
+        # would repeat that trap where libass has no Georgia to fall back to.
+        from fontTools.ttLib import TTFont
+
+        cmap = TTFont(DEFAULT_FONT_FILE).getBestCmap()
+        for char in "«»—’…":
+            assert ord(char) in cmap, f"missing {char!r}"

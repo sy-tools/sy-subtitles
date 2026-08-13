@@ -184,10 +184,10 @@ class TestSteps:
         assert "pip install yt-dlp" not in _commands(run)
 
     def test_installs_only_the_devanagari_fallback_font(self):
-        # Roboto is vendored under assets/fonts/ and handed to libass via
+        # PT Serif is vendored under assets/fonts/ and handed to libass via
         # fontsdir; it must stay the PRIMARY face, and the probe proves it did.
         # Noto is here for the twelve videos whose subtitles carry Sanskrit
-        # mantras in Devanagari — glyphs Roboto does not have. Without a
+        # mantras in Devanagari — glyphs PT Serif does not have. Without a
         # fallback libass logs "failed to find any fallback" and the probe
         # rightly refuses to put tofu boxes in a final video.
         joined = "\n".join(_commands(run) for run in _runs())

@@ -43,7 +43,7 @@ def test_architecture_lists_both_new_tools():
 
 
 def test_architecture_shows_the_vendored_font_directory():
-    # The whole line-break-fidelity argument rests on the vendored Roboto, so a
+    # The whole line-break-fidelity argument rests on the vendored face, so a
     # repo tree without assets/ hides the thing the burn output depends on.
     tree = _read("ARCHITECTURE.md")
     assert "├── assets/" in tree or "└── assets/" in tree
