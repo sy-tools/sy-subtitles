@@ -65,10 +65,26 @@ def status_from_labels(labels: list[str]) -> str:
     return "pending"
 
 
+def issue_rank(issue: dict) -> tuple[str, int]:
+    """Sort key picking the live issue out of same-talk duplicates.
+
+    Freshest activity wins (`updatedAt` is ISO-8601 Z, so it sorts as text);
+    the higher number breaks a tie. Never rely on the order `gh issue list`
+    returns — it is newest-created first, so a plain last-write-wins loop
+    hands the talk to the *stalest* duplicate.
+    """
+    return (issue.get("updatedAt") or "", issue["number"])
+
+
 def main() -> int:
     talks = load_existing()
     issues = fetch_issues()
 
+    # Group first: a talk can carry more than one `talk-review` issue (the
+    # pipeline creates one; the SPA's "take for review" creates another when its
+    # cached review-status has no issue number yet). One of them must win, and
+    # the choice must not depend on list order.
+    by_talk: dict[str, list[dict]] = {}
     for issue in issues:
         talk_id = talk_id_from_title(issue["title"])
         if not talk_id:
@@ -78,13 +94,25 @@ def main() -> int:
                 file=sys.stderr,
             )
             continue
-        labels = [lbl["name"] for lbl in issue.get("labels", [])]
-        assignees = [a["login"] for a in issue.get("assignees", [])]
+        by_talk.setdefault(talk_id, []).append(issue)
+
+    for talk_id, group in by_talk.items():
+        winner, *duplicates = sorted(group, key=issue_rank, reverse=True)
+        if duplicates:
+            dropped = ", ".join(f"#{i['number']}" for i in duplicates)
+            print(
+                f"warning: talk `{talk_id}` has {len(group)} `{GATE_LABEL}` issues — "
+                f"using #{winner['number']} (latest activity), ignoring {dropped}. "
+                f"Remove the `{GATE_LABEL}` label from the stale ones.",
+                file=sys.stderr,
+            )
+        labels = [lbl["name"] for lbl in winner.get("labels", [])]
+        assignees = [a["login"] for a in winner.get("assignees", [])]
         talks[talk_id] = {
             "status": status_from_labels(labels),
             "reviewer": assignees[0] if assignees else None,
-            "issue_number": issue["number"],
-            "updated_at": issue["updatedAt"],
+            "issue_number": winner["number"],
+            "updated_at": winner["updatedAt"],
         }
 
     output = {
