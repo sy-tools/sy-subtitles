@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-13T05:43:49.780410+00:00",
+  "updated_at": "2026-08-13T08:52:46.322082+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -577,6 +577,12 @@
       "reviewer": "SlavaSubotskiy",
       "issue_number": 957,
       "updated_at": "2026-08-12T21:58:15Z"
+    },
+    "1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours-Only-If-Sahasrara-is-Completely-Open": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 969,
+      "updated_at": "2026-08-13T08:52:35Z"
     }
   }
 }

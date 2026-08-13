@@ -164,7 +164,10 @@ function listIssuesByLabel(api, token, label, fetchImpl) {
   var base = api + '/issues?labels=' + encodeURIComponent(label) + '&state=all&per_page=' + PER_PAGE;
   function mapRow(r) {
     return { number: r.number, title: r.title, state: r.state, node_id: r.node_id,
-      html_url: r.html_url, body: r.body || '' };
+      // Same title can legitimately appear twice (a talk claimed while an older
+      // review issue is still open); updated_at is what breaks that tie —
+      // see pickReviewIssue in js/review_issue.js.
+      html_url: r.html_url, body: r.body || '', updated_at: r.updated_at || '' };
   }
   function fetchPage(page, acc) {
     return ghJson(base + '&page=' + page, token, null, fetchImpl).then(function (list) {

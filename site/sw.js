@@ -46,6 +46,7 @@ var SHELL_ASSETS = [
   'js/add_talk_data.js',
   'js/shell_version.js',
   'js/talk_actions.js',
+  'js/review_issue.js',
   'js/passphrase_gate.js',
   'js/github_auth.js',
   'js/github_api.js',

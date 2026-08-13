@@ -29,6 +29,7 @@
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/talk_actions.js"></script>
+<script src="js/review_issue.js"></script>
 <script src="js/passphrase_gate.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
@@ -6948,6 +6949,12 @@ var WRITE_RECHECK_MS = 30 * 60 * 1000;
 // .github/scripts/sync-review-status.py: "Review: <talk_id>" + talk-review).
 // The workflow then flips labels/review-status.json; the UI updates
 // optimistically so the badge doesn't lag behind the bot commit.
+//
+// Creating a SECOND issue for a talk is never harmless: sync-review-status.py
+// keeps one entry per talk, so the duplicate takes the talk's status over — or
+// loses to the stale one and drops the reviewer (#957 vs #954). The cached
+// review-status is therefore only a fast path; when it carries no issue number
+// we ask GitHub (list API, immediately consistent) before creating anything.
 SPA.takeForReview = function(talkId) {
   var user = ghWriteUser(), token = getAuthToken();
   if (!user || !token) return Promise.resolve();
@@ -6968,23 +6975,26 @@ SPA.takeForReview = function(talkId) {
   // Returns a promise that settles when the claim attempt is over (errors are
   // reported via ghWriteError, not rethrown) — the card's click handler
   // re-enables its button on it, so a failure never leaves a dead button.
-  if (st && st.issue_number) {
-    return addAssignees(API, token, st.issue_number, [user.login])
-      .then(function() { done(st.issue_number); })
-      .catch(ghWriteError);
-  }
-  var talk = manifest ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
-  var gh = 'https://github.com/' + REPO;
-  var body = 'Review of [`' + talkId + '`](' + gh + '/tree/main/talks/' + talkId + ')'
-    + '\n\nTaken via the SY Subtitles SPA'
-    + (talk && talk.title ? ' — ' + talk.title : '') + '.';
-  return createIssue(API, token, {
-    title: 'Review: ' + talkId,
-    body: body,
-    labels: ['talk-review', 'review:in-progress'],
-    assignees: [user.login]
-  }).then(function(res) { done(res.number); })
-    .catch(ghWriteError);
+  var claim = function(issueNumber) {
+    return addAssignees(API, token, issueNumber, [user.login])
+      .then(function() { done(issueNumber); });
+  };
+  if (st && st.issue_number) return claim(st.issue_number).catch(ghWriteError);
+  return listIssuesByLabel(API, token, REVIEW_ISSUE_LABEL).then(function(rows) {
+    var existing = pickReviewIssue(rows, talkId);
+    if (existing) return claim(existing.number);
+    var talk = manifest ? manifest.talks.find(function(t) { return t.id === talkId; }) : null;
+    var gh = 'https://github.com/' + REPO;
+    var body = 'Review of [`' + talkId + '`](' + gh + '/tree/main/talks/' + talkId + ')'
+      + '\n\nTaken via the SY Subtitles SPA'
+      + (talk && talk.title ? ' — ' + talk.title : '') + '.';
+    return createIssue(API, token, {
+      title: reviewIssueTitle(talkId),
+      body: body,
+      labels: [REVIEW_ISSUE_LABEL, 'review:in-progress'],
+      assignees: [user.login]
+    }).then(function(res) { done(res.number); });
+  }).catch(ghWriteError);
 };
 
 SPA.ghLogin = function() {
