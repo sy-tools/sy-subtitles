@@ -95,10 +95,10 @@ jobs:
           # extra. A bare `pip install yt-dlp` here would find the requirement
           # already satisfied and install the extra for nobody.
           pip install -r requirements.txt
-          # Roboto stays vendored in assets/fonts/ and reaches libass through
+          # PT Serif stays vendored in assets/fonts/ and reaches libass through
           # fontsdir; the pre-flight probe proves it stayed the PRIMARY face.
           # Noto is a GLYPH fallback only: twelve videos carry Sanskrit mantras
-          # in Devanagari, which Roboto does not cover — without a fallback
+          # in Devanagari, which PT Serif does not cover — without a fallback
           # libass has nothing to draw them with and the probe rightly refuses
           # to put tofu boxes in a final video.
           sudo apt-get update && sudo apt-get install -y ffmpeg fonts-noto-core
