@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours-Only-If-Sahasrara-is-Completely-Open/Sahasrara-Puja-Talk/final/uk.srt
+  Transcript: talks/1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours-Only-If-Sahasrara-is-Completely-Open/transcript_uk.txt
+  EN SRT: talks/1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours-Only-If-Sahasrara-is-Completely-Open/Sahasrara-Puja-Talk/source/en.srt
+  SRT blocks: 664
+  EN SRT blocks: 859
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:11,000 — 01:01:04,170
+  SRT range:       00:00:11,000 — 01:00:23,940
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 664
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 664
+  CPS: avg=11.2, median=11.2, max=15.0
+  CPS > target: 18 (2.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=56.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #657: CPS=15.0 (55ch/3.7s) "Коли цієї реакції немає, тоді все, ви будете здивовані,"
+    #313: CPS=15.0 (40ch/2.7s) "зробив роботу Сахаджа Йоґи і повернувся."
+    #571: CPS=15.0 (23ch/1.5s) "Що вони в Мене просять?"
+    #630: CPS=15.0 (64ch/4.3s) "Не можна ж, так би мовити, розбивати їм голови заради Сахаср..."
+    #269: CPS=15.0 (67ch/4.5s) "тому що вони живуть зі своїм его, живуть зі своїми обумовлен..."
+    #474: CPS=15.0 (76ch/5.1s) "тому що, Я думаю, вони не могли витримати того, наскільки лю..."
+    #146: CPS=15.0 (47ch/3.1s) "Хтось скаже: «Матінко, я був дуже патріотичним,"
+    #312: CPS=15.0 (47ch/3.1s) "Він поплив на інший острів, куди мав дістатися,"
+    #477: CPS=15.0 (47ch/3.1s) "вони подумали: «Марно працювати для цих людей»."
+    #663: CPS=15.0 (47ch/3.1s) "і насолоджуєтеся благословеннями Божественного."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 664
+  EN SRT blocks: 859
+  Ratio UK/EN: 0.77 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.2 (target ≤15.0)
+  CPS > 15.0: 18 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
