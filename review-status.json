@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-13T08:52:46.322082+00:00",
+  "updated_at": "2026-08-17T21:08:01.696316+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -583,6 +583,12 @@
       "reviewer": null,
       "issue_number": 969,
       "updated_at": "2026-08-13T08:52:35Z"
+    },
+    "1986-09-07_Shri-Ganesha-Puja-Establishing-Shri-Ganesha-Principle": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 979,
+      "updated_at": "2026-08-17T21:07:47Z"
     }
   }
 }
