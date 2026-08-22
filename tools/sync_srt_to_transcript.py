@@ -9,6 +9,12 @@ Supported edits:
     text is removed from the transcript if found, otherwise skipped
     silently (placeholders are often not in the transcript)
 
+Deliberately NOT propagated:
+  - removal of a declared `subtitle_omit` phrase ("(сміх)"). Those
+    remarks belong to the transcript and never to a subtitle, so an
+    edit that only takes one off the screen leaves the transcript
+    untouched — whether it shrank a block or dropped an omit-only one.
+
 Unsupported (returns error):
   - block insertions — there's no signal where to insert text in the
     transcript; needs full pipeline rebuild
@@ -30,6 +36,11 @@ import sys
 
 from .srt_utils import parse_srt, write_srt
 from .sync_common import delete_from_text, find_in_text, find_in_text_lenient
+from .text_segmentation import (
+    global_omit_phrases,
+    strip_omitted_phrases,
+    talk_omit_phrases,
+)
 
 # Thin aliases kept for in-file readability (and to not churn call sites).
 _find_in_transcript = find_in_text
@@ -79,6 +90,11 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
 
     with open(transcript, encoding="utf-8") as f:
         text = f.read()
+
+    # Declared editorial remarks ("(сміх)") live in the transcript and never on
+    # screen, so an SRT edit that only takes one off the screen must not travel
+    # back — it would delete the remark from the one artefact that keeps it.
+    omit_phrases = global_omit_phrases() + talk_omit_phrases(transcript)
 
     old_texts = [b["text"] for b in old_blocks]
     new_texts = [b["text"] for b in new_blocks]
@@ -165,6 +181,18 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
                         )
                     continue
                 new_t = new_slice[match_idx]
+                if omit_phrases and strip_omitted_phrases(old_t, omit_phrases) == new_t != old_t:
+                    # The edit only took a declared remark off the screen. The
+                    # transcript is meant to keep it — walk past and move on.
+                    pos = find_in_text_lenient(text, old_t, cursor)
+                    if pos != -1:
+                        cursor = pos + len(old_t)
+                    print(
+                        f"  Block {src_block['idx']}: «{old_t[:60]}» — omit remark dropped from the "
+                        f"screen only; transcript keeps it",
+                        file=sys.stderr,
+                    )
+                    continue
                 pos = _find_in_transcript(text, old_t, cursor)
                 if pos == -1:
                     return {
@@ -192,6 +220,19 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
             # never the source of that text.
             for k in range(i1, i2):
                 old_t = old_texts[k]
+                if omit_phrases and not strip_omitted_phrases(old_t, omit_phrases):
+                    # The block was nothing but declared remarks. Dropping it
+                    # from the SRT is right; the transcript still keeps them.
+                    pos = find_in_text_lenient(text, old_t, cursor)
+                    if pos != -1:
+                        cursor = pos + len(old_t)
+                    print(
+                        f"  Block {old_blocks[k]['idx']}: «{old_t[:60]}» — omit-only block dropped from "
+                        f"the screen only; transcript keeps it",
+                        file=sys.stderr,
+                    )
+                    skipped += 1
+                    continue
                 op = _delete_from_transcript(text, cursor, old_t)
                 if op["action"] == "skipped":
                     print(
