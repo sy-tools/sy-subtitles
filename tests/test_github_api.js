@@ -252,11 +252,15 @@ describe('issue sync primitives (marker sync)', () => {
   it('listIssuesByLabel GETs labels=&state=all and maps rows', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'GET', match: '/issues?', status: 200,
-      payload: [{ number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B' }] }], calls);
+      payload: [{ number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B',
+        updated_at: '2026-08-12T21:57:55Z' }] }], calls);
     const rows = await listIssuesByLabel(API, 'gho_x', 'markers', f);
     assert.ok(/labels=markers/.test(calls[0].url) && /state=all/.test(calls[0].url), calls[0].url);
+    // updated_at rides along so same-title duplicates can be ranked by activity
+    // (js/review_issue.js pickReviewIssue).
     assert.deepStrictEqual(rows[0],
-      { number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B' });
+      { number: 7, title: 'Markers: t / v', state: 'open', node_id: 'I_7', html_url: 'u7', body: 'B',
+        updated_at: '2026-08-12T21:57:55Z' });
   });
   it('listIssuesByLabel pages through until a short page (I2)', async () => {
     const full = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, title: 'T' + (i + 1),

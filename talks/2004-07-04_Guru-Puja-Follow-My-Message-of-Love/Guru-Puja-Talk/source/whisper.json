@@ -1,0 +1,8920 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "id": 0,
+      "start": 3.41,
+      "end": 11.74,
+      "text": "It is a great pleasure for Me, greatest joy",
+      "words": [
+        {
+          "start": 3.41,
+          "end": 3.95,
+          "word": "It"
+        },
+        {
+          "start": 3.95,
+          "end": 5.13,
+          "word": "is"
+        },
+        {
+          "start": 5.45,
+          "end": 5.89,
+          "word": "a"
+        },
+        {
+          "start": 5.89,
+          "end": 6.17,
+          "word": "great"
+        },
+        {
+          "start": 6.17,
+          "end": 6.73,
+          "word": "pleasure"
+        },
+        {
+          "start": 6.73,
+          "end": 7.17,
+          "word": "for"
+        },
+        {
+          "start": 7.17,
+          "end": 8.05,
+          "word": "Me,"
+        },
+        {
+          "start": 10.68,
+          "end": 11.02,
+          "word": "greatest"
+        },
+        {
+          "start": 11.02,
+          "end": 11.74,
+          "word": "joy"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 12.96,
+      "end": 17.4,
+      "text": "to see so many Sahaja Yogis",
+      "words": [
+        {
+          "start": 12.96,
+          "end": 13.78,
+          "word": "to"
+        },
+        {
+          "start": 13.78,
+          "end": 14.08,
+          "word": "see"
+        },
+        {
+          "start": 14.08,
+          "end": 14.38,
+          "word": "so"
+        },
+        {
+          "start": 14.38,
+          "end": 15.58,
+          "word": "many"
+        },
+        {
+          "start": 15.74,
+          "end": 16.24,
+          "word": "Sahaja"
+        },
+        {
+          "start": 16.24,
+          "end": 17.4,
+          "word": "Yogis"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 19.13,
+      "end": 20.45,
+      "text": "further Guru puja.",
+      "words": [
+        {
+          "start": 19.13,
+          "end": 19.65,
+          "word": "further"
+        },
+        {
+          "start": 19.65,
+          "end": 20.03,
+          "word": "Guru"
+        },
+        {
+          "start": 20.03,
+          "end": 20.45,
+          "word": "puja."
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 23.6,
+      "end": 25.1,
+      "text": "Its very gratifying",
+      "words": [
+        {
+          "start": 23.6,
+          "end": 23.84,
+          "word": "Its"
+        },
+        {
+          "start": 23.84,
+          "end": 24.22,
+          "word": "very"
+        },
+        {
+          "start": 24.22,
+          "end": 25.1,
+          "word": "gratifying"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 26.74,
+      "end": 29.71,
+      "text": "To think that there are",
+      "words": [
+        {
+          "start": 26.74,
+          "end": 27.5,
+          "word": "To"
+        },
+        {
+          "start": 27.5,
+          "end": 27.8,
+          "word": "think"
+        },
+        {
+          "start": 27.8,
+          "end": 28.6,
+          "word": "that"
+        },
+        {
+          "start": 28.69,
+          "end": 29.41,
+          "word": "there"
+        },
+        {
+          "start": 29.41,
+          "end": 29.71,
+          "word": "are"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 29.71,
+      "end": 33.49,
+      "text": "So Many of you",
+      "words": [
+        {
+          "start": 29.71,
+          "end": 30.03,
+          "word": "So"
+        },
+        {
+          "start": 30.03,
+          "end": 30.85,
+          "word": "Many"
+        },
+        {
+          "start": 30.95,
+          "end": 32.29,
+          "word": "of"
+        },
+        {
+          "start": 32.29,
+          "end": 33.49,
+          "word": "you"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 34.35,
+      "end": 38.39,
+      "text": "who all disciples",
+      "words": [
+        {
+          "start": 34.35,
+          "end": 34.85,
+          "word": "who"
+        },
+        {
+          "start": 34.85,
+          "end": 35.99,
+          "word": "all"
+        },
+        {
+          "start": 37.53,
+          "end": 38.39,
+          "word": "disciples"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 47.56,
+      "end": 49.42,
+      "text": "it was never expected",
+      "words": [
+        {
+          "start": 47.56,
+          "end": 48.1,
+          "word": "it"
+        },
+        {
+          "start": 48.1,
+          "end": 48.36,
+          "word": "was"
+        },
+        {
+          "start": 48.36,
+          "end": 48.68,
+          "word": "never"
+        },
+        {
+          "start": 48.68,
+          "end": 49.42,
+          "word": "expected"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 51.11,
+      "end": 59.6,
+      "text": "that I'll have so many people following Me.",
+      "words": [
+        {
+          "start": 51.11,
+          "end": 52.21,
+          "word": "that"
+        },
+        {
+          "start": 52.21,
+          "end": 52.69,
+          "word": "I'll"
+        },
+        {
+          "start": 52.69,
+          "end": 52.95,
+          "word": "have"
+        },
+        {
+          "start": 52.95,
+          "end": 53.27,
+          "word": "so"
+        },
+        {
+          "start": 53.27,
+          "end": 53.89,
+          "word": "many"
+        },
+        {
+          "start": 54.85,
+          "end": 56.69,
+          "word": "people"
+        },
+        {
+          "start": 57.84,
+          "end": 58.98,
+          "word": "following"
+        },
+        {
+          "start": 58.98,
+          "end": 59.6,
+          "word": "Me."
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 65.64,
+      "end": 75.06,
+      "text": "It is being expected",
+      "words": [
+        {
+          "start": 65.64,
+          "end": 65.86,
+          "word": "It"
+        },
+        {
+          "start": 65.86,
+          "end": 66.88,
+          "word": "is"
+        },
+        {
+          "start": 69.79,
+          "end": 70.91,
+          "word": "being"
+        },
+        {
+          "start": 73.98,
+          "end": 75.06,
+          "word": "expected"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 77.86,
+      "end": 88.11,
+      "text": "That you all will follow My message of love",
+      "words": [
+        {
+          "start": 77.86,
+          "end": 78.55,
+          "word": "That"
+        },
+        {
+          "start": 78.55,
+          "end": 78.91,
+          "word": "you"
+        },
+        {
+          "start": 78.91,
+          "end": 79.25,
+          "word": "all"
+        },
+        {
+          "start": 79.25,
+          "end": 80.39,
+          "word": "will"
+        },
+        {
+          "start": 82.47,
+          "end": 83.21,
+          "word": "follow"
+        },
+        {
+          "start": 85.83,
+          "end": 86.59,
+          "word": "My"
+        },
+        {
+          "start": 86.59,
+          "end": 87.31,
+          "word": "message"
+        },
+        {
+          "start": 87.31,
+          "end": 87.79,
+          "word": "of"
+        },
+        {
+          "start": 87.79,
+          "end": 88.11,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 92.4,
+      "end": 98.07,
+      "text": "I do not have to say anything for love.",
+      "words": [
+        {
+          "start": 92.4,
+          "end": 93.16,
+          "word": "I"
+        },
+        {
+          "start": 93.16,
+          "end": 93.44,
+          "word": "do"
+        },
+        {
+          "start": 93.44,
+          "end": 93.66,
+          "word": "not"
+        },
+        {
+          "start": 93.66,
+          "end": 93.88,
+          "word": "have"
+        },
+        {
+          "start": 93.88,
+          "end": 94.1,
+          "word": "to"
+        },
+        {
+          "start": 94.1,
+          "end": 94.34,
+          "word": "say"
+        },
+        {
+          "start": 94.34,
+          "end": 94.86,
+          "word": "anything"
+        },
+        {
+          "start": 96.43,
+          "end": 97.47,
+          "word": "for"
+        },
+        {
+          "start": 97.47,
+          "end": 98.07,
+          "word": "love."
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "start": 101.4,
+      "end": 109.74,
+      "text": "Love is absolute gift,",
+      "words": [
+        {
+          "start": 101.4,
+          "end": 101.8,
+          "word": "Love"
+        },
+        {
+          "start": 101.8,
+          "end": 103.26,
+          "word": "is"
+        },
+        {
+          "start": 105.88,
+          "end": 107.0,
+          "word": "absolute"
+        },
+        {
+          "start": 108.6,
+          "end": 109.74,
+          "word": "gift,"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "start": 114.2,
+      "end": 120.37,
+      "text": "a gift of just feeling others",
+      "words": [
+        {
+          "start": 114.2,
+          "end": 114.54,
+          "word": "a"
+        },
+        {
+          "start": 114.54,
+          "end": 114.84,
+          "word": "gift"
+        },
+        {
+          "start": 116.09,
+          "end": 117.51,
+          "word": "of"
+        },
+        {
+          "start": 118.89,
+          "end": 119.39,
+          "word": "just"
+        },
+        {
+          "start": 119.39,
+          "end": 119.83,
+          "word": "feeling"
+        },
+        {
+          "start": 119.83,
+          "end": 120.37,
+          "word": "others"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 123.47,
+      "end": 129.03,
+      "text": "there's no talking about it",
+      "words": [
+        {
+          "start": 123.47,
+          "end": 124.61,
+          "word": "there's"
+        },
+        {
+          "start": 124.61,
+          "end": 125.55,
+          "word": "no"
+        },
+        {
+          "start": 126.93,
+          "end": 127.73,
+          "word": "talking"
+        },
+        {
+          "start": 127.73,
+          "end": 128.19,
+          "word": "about"
+        },
+        {
+          "start": 128.19,
+          "end": 129.03,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 129.19,
+      "end": 132.24,
+      "text": "discussing about nothing",
+      "words": [
+        {
+          "start": 129.19,
+          "end": 129.95,
+          "word": "discussing"
+        },
+        {
+          "start": 129.95,
+          "end": 130.51,
+          "word": "about"
+        },
+        {
+          "start": 130.8,
+          "end": 132.24,
+          "word": "nothing"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "start": 133.2,
+      "end": 139.75,
+      "text": "Just you feel that love",
+      "words": [
+        {
+          "start": 133.2,
+          "end": 134.66,
+          "word": "Just"
+        },
+        {
+          "start": 135.36,
+          "end": 136.54,
+          "word": "you"
+        },
+        {
+          "start": 136.54,
+          "end": 137.56,
+          "word": "feel"
+        },
+        {
+          "start": 138.33,
+          "end": 139.01,
+          "word": "that"
+        },
+        {
+          "start": 139.01,
+          "end": 139.75,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "start": 144.32,
+      "end": 146.04,
+      "text": "To feel the love",
+      "words": [
+        {
+          "start": 144.32,
+          "end": 144.94,
+          "word": "To"
+        },
+        {
+          "start": 144.94,
+          "end": 145.3,
+          "word": "feel"
+        },
+        {
+          "start": 145.3,
+          "end": 145.58,
+          "word": "the"
+        },
+        {
+          "start": 145.58,
+          "end": 146.04,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "start": 148.99,
+      "end": 151.91,
+      "text": "I would say one has to have a heart,",
+      "words": [
+        {
+          "start": 148.99,
+          "end": 149.65,
+          "word": "I"
+        },
+        {
+          "start": 149.65,
+          "end": 149.93,
+          "word": "would"
+        },
+        {
+          "start": 149.93,
+          "end": 150.27,
+          "word": "say"
+        },
+        {
+          "start": 150.27,
+          "end": 150.53,
+          "word": "one"
+        },
+        {
+          "start": 150.53,
+          "end": 150.83,
+          "word": "has"
+        },
+        {
+          "start": 150.83,
+          "end": 151.11,
+          "word": "to"
+        },
+        {
+          "start": 151.11,
+          "end": 151.43,
+          "word": "have"
+        },
+        {
+          "start": 151.43,
+          "end": 151.61,
+          "word": "a"
+        },
+        {
+          "start": 151.61,
+          "end": 151.91,
+          "word": "heart,"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "start": 153.42,
+      "end": 155.18,
+      "text": "but how can you have the heart?",
+      "words": [
+        {
+          "start": 153.42,
+          "end": 153.64,
+          "word": "but"
+        },
+        {
+          "start": 153.64,
+          "end": 153.94,
+          "word": "how"
+        },
+        {
+          "start": 153.94,
+          "end": 154.16,
+          "word": "can"
+        },
+        {
+          "start": 154.16,
+          "end": 154.34,
+          "word": "you"
+        },
+        {
+          "start": 154.34,
+          "end": 154.6,
+          "word": "have"
+        },
+        {
+          "start": 154.6,
+          "end": 154.82,
+          "word": "the"
+        },
+        {
+          "start": 154.82,
+          "end": 155.18,
+          "word": "heart?"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "start": 157.7,
+      "end": 160.08,
+      "text": "It is not your own doing.",
+      "words": [
+        {
+          "start": 157.7,
+          "end": 157.9,
+          "word": "It"
+        },
+        {
+          "start": 157.9,
+          "end": 158.16,
+          "word": "is"
+        },
+        {
+          "start": 158.16,
+          "end": 158.86,
+          "word": "not"
+        },
+        {
+          "start": 158.86,
+          "end": 159.36,
+          "word": "your"
+        },
+        {
+          "start": 159.36,
+          "end": 159.66,
+          "word": "own"
+        },
+        {
+          "start": 159.66,
+          "end": 160.08,
+          "word": "doing."
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "start": 161.99,
+      "end": 163.25,
+      "text": "it's all there!",
+      "words": [
+        {
+          "start": 161.99,
+          "end": 162.31,
+          "word": "it's"
+        },
+        {
+          "start": 162.31,
+          "end": 162.61,
+          "word": "all"
+        },
+        {
+          "start": 162.61,
+          "end": 163.25,
+          "word": "there!"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "start": 167.62,
+      "end": 168.34,
+      "text": "So",
+      "words": [
+        {
+          "start": 167.62,
+          "end": 168.34,
+          "word": "So"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "start": 170.93,
+      "end": 172.87,
+      "text": "something that already",
+      "words": [
+        {
+          "start": 170.93,
+          "end": 171.65,
+          "word": "something"
+        },
+        {
+          "start": 171.65,
+          "end": 172.01,
+          "word": "that"
+        },
+        {
+          "start": 172.01,
+          "end": 172.87,
+          "word": "already"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "start": 172.87,
+      "end": 174.29,
+      "text": "gifted by you",
+      "words": [
+        {
+          "start": 172.87,
+          "end": 173.67,
+          "word": "gifted"
+        },
+        {
+          "start": 173.67,
+          "end": 174.09,
+          "word": "by"
+        },
+        {
+          "start": 174.09,
+          "end": 174.29,
+          "word": "you"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "start": 174.29,
+      "end": 175.17,
+      "text": "You've got",
+      "words": [
+        {
+          "start": 174.29,
+          "end": 174.93,
+          "word": "You've"
+        },
+        {
+          "start": 174.93,
+          "end": 175.17,
+          "word": "got"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "start": 176.32,
+      "end": 178.26,
+      "text": "That love you feel",
+      "words": [
+        {
+          "start": 176.32,
+          "end": 177.32,
+          "word": "That"
+        },
+        {
+          "start": 177.32,
+          "end": 177.5,
+          "word": "love"
+        },
+        {
+          "start": 177.5,
+          "end": 177.5,
+          "word": "you"
+        },
+        {
+          "start": 177.5,
+          "end": 178.26,
+          "word": "feel"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "start": 182.32,
+      "end": 184.46,
+      "text": "There are so many",
+      "words": [
+        {
+          "start": 182.32,
+          "end": 183.04,
+          "word": "There"
+        },
+        {
+          "start": 183.04,
+          "end": 183.32,
+          "word": "are"
+        },
+        {
+          "start": 183.32,
+          "end": 183.42,
+          "word": "so"
+        },
+        {
+          "start": 183.42,
+          "end": 184.46,
+          "word": "many"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "start": 184.46,
+      "end": 186.04,
+      "text": "joy-giving",
+      "words": [
+        {
+          "start": 184.46,
+          "end": 185.04,
+          "word": "joy"
+        },
+        {
+          "start": 185.04,
+          "end": 186.04,
+          "word": "-giving"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "start": 187.19,
+      "end": 188.79,
+      "text": "peace giving",
+      "words": [
+        {
+          "start": 187.19,
+          "end": 187.67,
+          "word": "peace"
+        },
+        {
+          "start": 187.67,
+          "end": 188.79,
+          "word": "giving"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "start": 189.88,
+      "end": 191.5,
+      "text": "Love has its own",
+      "words": [
+        {
+          "start": 189.88,
+          "end": 190.42,
+          "word": "Love"
+        },
+        {
+          "start": 190.42,
+          "end": 190.78,
+          "word": "has"
+        },
+        {
+          "start": 190.78,
+          "end": 191.06,
+          "word": "its"
+        },
+        {
+          "start": 191.06,
+          "end": 191.5,
+          "word": "own"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "start": 195.27,
+      "end": 195.91,
+      "text": "qualities",
+      "words": [
+        {
+          "start": 195.27,
+          "end": 195.91,
+          "word": "qualities"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "start": 195.91,
+      "end": 204.4,
+      "text": "And one of the qualities is that love understands.",
+      "words": [
+        {
+          "start": 195.91,
+          "end": 197.05,
+          "word": "And"
+        },
+        {
+          "start": 199.06,
+          "end": 199.34,
+          "word": "one"
+        },
+        {
+          "start": 199.34,
+          "end": 199.54,
+          "word": "of"
+        },
+        {
+          "start": 199.54,
+          "end": 199.74,
+          "word": "the"
+        },
+        {
+          "start": 199.74,
+          "end": 200.26,
+          "word": "qualities"
+        },
+        {
+          "start": 200.26,
+          "end": 200.8,
+          "word": "is"
+        },
+        {
+          "start": 200.8,
+          "end": 201.8,
+          "word": "that"
+        },
+        {
+          "start": 203.02,
+          "end": 203.5,
+          "word": "love"
+        },
+        {
+          "start": 203.5,
+          "end": 204.4,
+          "word": "understands."
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "start": 206.66,
+      "end": 209.02,
+      "text": "Its understanding, it's not in words",
+      "words": [
+        {
+          "start": 206.66,
+          "end": 206.94,
+          "word": "Its"
+        },
+        {
+          "start": 206.94,
+          "end": 207.58,
+          "word": "understanding,"
+        },
+        {
+          "start": 207.94,
+          "end": 208.14,
+          "word": "it's"
+        },
+        {
+          "start": 208.14,
+          "end": 208.36,
+          "word": "not"
+        },
+        {
+          "start": 208.36,
+          "end": 208.64,
+          "word": "in"
+        },
+        {
+          "start": 208.64,
+          "end": 209.02,
+          "word": "words"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "start": 209.62,
+      "end": 211.26,
+      "text": "Not thought",
+      "words": [
+        {
+          "start": 209.62,
+          "end": 210.66,
+          "word": "Not"
+        },
+        {
+          "start": 210.66,
+          "end": 211.26,
+          "word": "thought"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "start": 213.08,
+      "end": 215.12,
+      "text": "But understand within",
+      "words": [
+        {
+          "start": 213.08,
+          "end": 213.68,
+          "word": "But"
+        },
+        {
+          "start": 213.68,
+          "end": 214.36,
+          "word": "understand"
+        },
+        {
+          "start": 214.36,
+          "end": 215.12,
+          "word": "within"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "start": 218.48,
+      "end": 221.1,
+      "text": "It can feel with them",
+      "words": [
+        {
+          "start": 218.48,
+          "end": 219.44,
+          "word": "It"
+        },
+        {
+          "start": 219.44,
+          "end": 219.8,
+          "word": "can"
+        },
+        {
+          "start": 219.8,
+          "end": 220.18,
+          "word": "feel"
+        },
+        {
+          "start": 220.18,
+          "end": 220.5,
+          "word": "with"
+        },
+        {
+          "start": 220.5,
+          "end": 221.1,
+          "word": "them"
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "start": 224.98,
+      "end": 226.54,
+      "text": "Which very important",
+      "words": [
+        {
+          "start": 224.98,
+          "end": 225.32,
+          "word": "Which"
+        },
+        {
+          "start": 225.32,
+          "end": 225.76,
+          "word": "very"
+        },
+        {
+          "start": 225.76,
+          "end": 226.54,
+          "word": "important"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "start": 229.74,
+      "end": 232.32,
+      "text": "This most important part",
+      "words": [
+        {
+          "start": 229.74,
+          "end": 230.34,
+          "word": "This"
+        },
+        {
+          "start": 230.34,
+          "end": 230.98,
+          "word": "most"
+        },
+        {
+          "start": 230.98,
+          "end": 231.58,
+          "word": "important"
+        },
+        {
+          "start": 231.58,
+          "end": 232.32,
+          "word": "part"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "start": 234.0,
+      "end": 235.76,
+      "text": "One has to realize",
+      "words": [
+        {
+          "start": 234.0,
+          "end": 234.6,
+          "word": "One"
+        },
+        {
+          "start": 234.6,
+          "end": 234.9,
+          "word": "has"
+        },
+        {
+          "start": 234.9,
+          "end": 235.16,
+          "word": "to"
+        },
+        {
+          "start": 235.16,
+          "end": 235.76,
+          "word": "realize"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "start": 238.2,
+      "end": 239.54,
+      "text": "That love",
+      "words": [
+        {
+          "start": 238.2,
+          "end": 238.92,
+          "word": "That"
+        },
+        {
+          "start": 238.92,
+          "end": 239.54,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "start": 241.18,
+      "end": 243.2,
+      "text": "You only feeling",
+      "words": [
+        {
+          "start": 241.18,
+          "end": 242.06,
+          "word": "You"
+        },
+        {
+          "start": 242.06,
+          "end": 242.5,
+          "word": "only"
+        },
+        {
+          "start": 242.5,
+          "end": 243.2,
+          "word": "feeling"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "start": 243.2,
+      "end": 247.55,
+      "text": "you cannot talk about it,",
+      "words": [
+        {
+          "start": 243.2,
+          "end": 244.34,
+          "word": "you"
+        },
+        {
+          "start": 245.81,
+          "end": 246.15,
+          "word": "cannot"
+        },
+        {
+          "start": 246.15,
+          "end": 246.53,
+          "word": "talk"
+        },
+        {
+          "start": 246.53,
+          "end": 246.97,
+          "word": "about"
+        },
+        {
+          "start": 246.97,
+          "end": 247.55,
+          "word": "it,"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "start": 249.17,
+      "end": 250.75,
+      "text": "You can not show about",
+      "words": [
+        {
+          "start": 249.17,
+          "end": 249.45,
+          "word": "You"
+        },
+        {
+          "start": 249.45,
+          "end": 249.73,
+          "word": "can"
+        },
+        {
+          "start": 249.73,
+          "end": 249.99,
+          "word": "not"
+        },
+        {
+          "start": 249.99,
+          "end": 250.29,
+          "word": "show"
+        },
+        {
+          "start": 250.29,
+          "end": 250.75,
+          "word": "about"
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "start": 252.23,
+      "end": 254.43,
+      "text": "where It is within and",
+      "words": [
+        {
+          "start": 252.23,
+          "end": 252.77,
+          "word": "where"
+        },
+        {
+          "start": 252.77,
+          "end": 253.07,
+          "word": "It"
+        },
+        {
+          "start": 253.07,
+          "end": 253.31,
+          "word": "is"
+        },
+        {
+          "start": 253.31,
+          "end": 253.75,
+          "word": "within"
+        },
+        {
+          "start": 253.75,
+          "end": 254.43,
+          "word": "and"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "start": 254.43,
+      "end": 261.62,
+      "text": "And that's why today",
+      "words": [
+        {
+          "start": 254.43,
+          "end": 255.29,
+          "word": "And"
+        },
+        {
+          "start": 258.88,
+          "end": 260.14,
+          "word": "that's"
+        },
+        {
+          "start": 260.14,
+          "end": 260.42,
+          "word": "why"
+        },
+        {
+          "start": 260.42,
+          "end": 261.62,
+          "word": "today"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "start": 262.0,
+      "end": 269.9,
+      "text": "Is your celebration of the Guru",
+      "words": [
+        {
+          "start": 262.0,
+          "end": 262.54,
+          "word": "Is"
+        },
+        {
+          "start": 262.54,
+          "end": 263.72,
+          "word": "your"
+        },
+        {
+          "start": 267.78,
+          "end": 268.58,
+          "word": "celebration"
+        },
+        {
+          "start": 268.58,
+          "end": 268.94,
+          "word": "of"
+        },
+        {
+          "start": 268.94,
+          "end": 269.4,
+          "word": "the"
+        },
+        {
+          "start": 269.4,
+          "end": 269.9,
+          "word": "Guru"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "start": 273.6,
+      "end": 274.94,
+      "text": "The celebration",
+      "words": [
+        {
+          "start": 273.6,
+          "end": 274.14,
+          "word": "The"
+        },
+        {
+          "start": 274.14,
+          "end": 274.94,
+          "word": "celebration"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "start": 274.94,
+      "end": 275.88,
+      "text": "Where",
+      "words": [
+        {
+          "start": 274.94,
+          "end": 275.88,
+          "word": "Where"
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "start": 280.44,
+      "end": 284.73,
+      "text": "For Your Guru",
+      "words": [
+        {
+          "start": 280.44,
+          "end": 280.98,
+          "word": "For"
+        },
+        {
+          "start": 282.83,
+          "end": 283.67,
+          "word": "Your"
+        },
+        {
+          "start": 283.67,
+          "end": 284.73,
+          "word": "Guru"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "start": 286.56,
+      "end": 287.66,
+      "text": "That feeling",
+      "words": [
+        {
+          "start": 286.56,
+          "end": 287.16,
+          "word": "That"
+        },
+        {
+          "start": 287.16,
+          "end": 287.66,
+          "word": "feeling"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "start": 290.26,
+      "end": 290.8,
+      "text": "Within",
+      "words": [
+        {
+          "start": 290.26,
+          "end": 290.8,
+          "word": "Within"
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "start": 292.65,
+      "end": 297.68,
+      "text": "And only in within you can feel that.",
+      "words": [
+        {
+          "start": 292.65,
+          "end": 293.67,
+          "word": "And"
+        },
+        {
+          "start": 293.67,
+          "end": 294.09,
+          "word": "only"
+        },
+        {
+          "start": 294.09,
+          "end": 294.43,
+          "word": "in"
+        },
+        {
+          "start": 294.43,
+          "end": 294.91,
+          "word": "within"
+        },
+        {
+          "start": 295.58,
+          "end": 296.62,
+          "word": "you"
+        },
+        {
+          "start": 296.62,
+          "end": 296.96,
+          "word": "can"
+        },
+        {
+          "start": 296.96,
+          "end": 297.28,
+          "word": "feel"
+        },
+        {
+          "start": 297.28,
+          "end": 297.68,
+          "word": "that."
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "start": 300.13,
+      "end": 304.81,
+      "text": "So, we have to understand it's not the show",
+      "words": [
+        {
+          "start": 300.13,
+          "end": 300.53,
+          "word": "So,"
+        },
+        {
+          "start": 302.51,
+          "end": 302.65,
+          "word": "we"
+        },
+        {
+          "start": 302.65,
+          "end": 302.89,
+          "word": "have"
+        },
+        {
+          "start": 302.89,
+          "end": 303.11,
+          "word": "to"
+        },
+        {
+          "start": 303.11,
+          "end": 303.63,
+          "word": "understand"
+        },
+        {
+          "start": 303.63,
+          "end": 304.03,
+          "word": "it's"
+        },
+        {
+          "start": 304.03,
+          "end": 304.23,
+          "word": "not"
+        },
+        {
+          "start": 304.23,
+          "end": 304.49,
+          "word": "the"
+        },
+        {
+          "start": 304.49,
+          "end": 304.81,
+          "word": "show"
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "start": 306.54,
+      "end": 310.68,
+      "text": "It is nothing else but just a feeling",
+      "words": [
+        {
+          "start": 306.54,
+          "end": 307.46,
+          "word": "It"
+        },
+        {
+          "start": 307.46,
+          "end": 307.64,
+          "word": "is"
+        },
+        {
+          "start": 307.64,
+          "end": 308.0,
+          "word": "nothing"
+        },
+        {
+          "start": 308.0,
+          "end": 308.68,
+          "word": "else"
+        },
+        {
+          "start": 308.74,
+          "end": 309.68,
+          "word": "but"
+        },
+        {
+          "start": 309.68,
+          "end": 310.12,
+          "word": "just"
+        },
+        {
+          "start": 310.12,
+          "end": 310.36,
+          "word": "a"
+        },
+        {
+          "start": 310.36,
+          "end": 310.68,
+          "word": "feeling"
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "start": 310.68,
+      "end": 311.38,
+      "text": "Within",
+      "words": [
+        {
+          "start": 310.68,
+          "end": 311.38,
+          "word": "Within"
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "start": 312.41,
+      "end": 314.39,
+      "text": "That You know",
+      "words": [
+        {
+          "start": 312.41,
+          "end": 313.39,
+          "word": "That"
+        },
+        {
+          "start": 313.39,
+          "end": 313.67,
+          "word": "You"
+        },
+        {
+          "start": 313.67,
+          "end": 314.39,
+          "word": "know"
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "start": 314.9,
+      "end": 315.9,
+      "text": "That",
+      "words": [
+        {
+          "start": 314.9,
+          "end": 315.9,
+          "word": "That"
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "start": 315.9,
+      "end": 319.05,
+      "text": "Love of The Divine",
+      "words": [
+        {
+          "start": 315.9,
+          "end": 317.04,
+          "word": "Love"
+        },
+        {
+          "start": 317.17,
+          "end": 318.37,
+          "word": "of"
+        },
+        {
+          "start": 318.37,
+          "end": 318.61,
+          "word": "The"
+        },
+        {
+          "start": 318.61,
+          "end": 319.05,
+          "word": "Divine"
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "start": 321.9,
+      "end": 324.66,
+      "text": "This You Can Have because",
+      "words": [
+        {
+          "start": 321.9,
+          "end": 322.82,
+          "word": "This"
+        },
+        {
+          "start": 322.82,
+          "end": 323.0,
+          "word": "You"
+        },
+        {
+          "start": 323.0,
+          "end": 323.32,
+          "word": "Can"
+        },
+        {
+          "start": 323.32,
+          "end": 323.58,
+          "word": "Have"
+        },
+        {
+          "start": 323.58,
+          "end": 324.66,
+          "word": "because"
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "start": 325.74,
+      "end": 329.53,
+      "text": "It is just there.",
+      "words": [
+        {
+          "start": 325.74,
+          "end": 326.28,
+          "word": "It"
+        },
+        {
+          "start": 326.28,
+          "end": 327.12,
+          "word": "is"
+        },
+        {
+          "start": 328.05,
+          "end": 328.81,
+          "word": "just"
+        },
+        {
+          "start": 328.81,
+          "end": 329.53,
+          "word": "there."
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "start": 330.96,
+      "end": 335.87,
+      "text": "No one can give you, no-one can sell it",
+      "words": [
+        {
+          "start": 330.96,
+          "end": 331.16,
+          "word": "No"
+        },
+        {
+          "start": 331.16,
+          "end": 331.34,
+          "word": "one"
+        },
+        {
+          "start": 331.34,
+          "end": 331.64,
+          "word": "can"
+        },
+        {
+          "start": 331.64,
+          "end": 331.96,
+          "word": "give"
+        },
+        {
+          "start": 331.96,
+          "end": 332.4,
+          "word": "you,"
+        },
+        {
+          "start": 334.03,
+          "end": 334.25,
+          "word": "no"
+        },
+        {
+          "start": 334.25,
+          "end": 334.49,
+          "word": "-one"
+        },
+        {
+          "start": 334.49,
+          "end": 334.87,
+          "word": "can"
+        },
+        {
+          "start": 334.87,
+          "end": 335.05,
+          "word": "sell"
+        },
+        {
+          "start": 335.05,
+          "end": 335.87,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "start": 336.76,
+      "end": 338.68,
+      "text": "nor anyone who share with",
+      "words": [
+        {
+          "start": 336.76,
+          "end": 337.28,
+          "word": "nor"
+        },
+        {
+          "start": 337.28,
+          "end": 337.64,
+          "word": "anyone"
+        },
+        {
+          "start": 337.64,
+          "end": 337.76,
+          "word": "who"
+        },
+        {
+          "start": 337.76,
+          "end": 338.2,
+          "word": "share"
+        },
+        {
+          "start": 338.2,
+          "end": 338.68,
+          "word": "with"
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "start": 339.34,
+      "end": 344.6,
+      "text": "its just their and that love",
+      "words": [
+        {
+          "start": 339.34,
+          "end": 339.8,
+          "word": "its"
+        },
+        {
+          "start": 339.8,
+          "end": 340.22,
+          "word": "just"
+        },
+        {
+          "start": 340.22,
+          "end": 340.72,
+          "word": "their"
+        },
+        {
+          "start": 342.44,
+          "end": 343.44,
+          "word": "and"
+        },
+        {
+          "start": 343.44,
+          "end": 343.84,
+          "word": "that"
+        },
+        {
+          "start": 343.84,
+          "end": 344.6,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "start": 345.31,
+      "end": 348.94,
+      "text": "has to be felt and shared",
+      "words": [
+        {
+          "start": 345.31,
+          "end": 345.99,
+          "word": "has"
+        },
+        {
+          "start": 345.99,
+          "end": 346.31,
+          "word": "to"
+        },
+        {
+          "start": 346.31,
+          "end": 347.31,
+          "word": "be"
+        },
+        {
+          "start": 347.66,
+          "end": 348.04,
+          "word": "felt"
+        },
+        {
+          "start": 348.04,
+          "end": 348.64,
+          "word": "and"
+        },
+        {
+          "start": 348.64,
+          "end": 348.94,
+          "word": "shared"
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "start": 351.12,
+      "end": 352.32,
+      "text": "because nothing do",
+      "words": [
+        {
+          "start": 351.12,
+          "end": 351.58,
+          "word": "because"
+        },
+        {
+          "start": 351.58,
+          "end": 352.0,
+          "word": "nothing"
+        },
+        {
+          "start": 352.0,
+          "end": 352.32,
+          "word": "do"
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "start": 354.02,
+      "end": 359.04,
+      "text": "with others whether other love",
+      "words": [
+        {
+          "start": 354.02,
+          "end": 354.48,
+          "word": "with"
+        },
+        {
+          "start": 354.48,
+          "end": 355.16,
+          "word": "others"
+        },
+        {
+          "start": 357.08,
+          "end": 358.22,
+          "word": "whether"
+        },
+        {
+          "start": 358.22,
+          "end": 358.64,
+          "word": "other"
+        },
+        {
+          "start": 358.64,
+          "end": 359.04,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "start": 359.04,
+      "end": 361.28,
+      "text": "or not makes no difference",
+      "words": [
+        {
+          "start": 359.04,
+          "end": 359.38,
+          "word": "or"
+        },
+        {
+          "start": 359.38,
+          "end": 359.9,
+          "word": "not"
+        },
+        {
+          "start": 359.9,
+          "end": 360.3,
+          "word": "makes"
+        },
+        {
+          "start": 360.3,
+          "end": 360.58,
+          "word": "no"
+        },
+        {
+          "start": 360.58,
+          "end": 361.28,
+          "word": "difference"
+        }
+      ]
+    },
+    {
+      "id": 68,
+      "start": 363.3,
+      "end": 365.54,
+      "text": "Its within yourself",
+      "words": [
+        {
+          "start": 363.3,
+          "end": 363.98,
+          "word": "Its"
+        },
+        {
+          "start": 363.98,
+          "end": 364.44,
+          "word": "within"
+        },
+        {
+          "start": 364.44,
+          "end": 365.54,
+          "word": "yourself"
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "start": 366.88,
+      "end": 374.4,
+      "text": "This feeling, this depth is there which you enjoy.",
+      "words": [
+        {
+          "start": 366.88,
+          "end": 367.84,
+          "word": "This"
+        },
+        {
+          "start": 367.84,
+          "end": 368.48,
+          "word": "feeling,"
+        },
+        {
+          "start": 370.36,
+          "end": 370.6,
+          "word": "this"
+        },
+        {
+          "start": 370.6,
+          "end": 371.12,
+          "word": "depth"
+        },
+        {
+          "start": 371.92,
+          "end": 372.96,
+          "word": "is"
+        },
+        {
+          "start": 372.96,
+          "end": 373.32,
+          "word": "there"
+        },
+        {
+          "start": 373.32,
+          "end": 373.62,
+          "word": "which"
+        },
+        {
+          "start": 373.62,
+          "end": 373.98,
+          "word": "you"
+        },
+        {
+          "start": 373.98,
+          "end": 374.4,
+          "word": "enjoy."
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "start": 382.6,
+      "end": 391.84,
+      "text": "It's the capacity everyone has this lots of it",
+      "words": [
+        {
+          "start": 382.6,
+          "end": 383.18,
+          "word": "It's"
+        },
+        {
+          "start": 383.18,
+          "end": 384.26,
+          "word": "the"
+        },
+        {
+          "start": 384.68,
+          "end": 385.6,
+          "word": "capacity"
+        },
+        {
+          "start": 387.14,
+          "end": 388.52,
+          "word": "everyone"
+        },
+        {
+          "start": 388.52,
+          "end": 389.08,
+          "word": "has"
+        },
+        {
+          "start": 389.08,
+          "end": 390.18,
+          "word": "this"
+        },
+        {
+          "start": 390.4,
+          "end": 390.94,
+          "word": "lots"
+        },
+        {
+          "start": 390.94,
+          "end": 391.28,
+          "word": "of"
+        },
+        {
+          "start": 391.28,
+          "end": 391.84,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "start": 393.92,
+      "end": 395.84,
+      "text": "sometimes we feel",
+      "words": [
+        {
+          "start": 393.92,
+          "end": 395.02,
+          "word": "sometimes"
+        },
+        {
+          "start": 395.02,
+          "end": 395.34,
+          "word": "we"
+        },
+        {
+          "start": 395.34,
+          "end": 395.84,
+          "word": "feel"
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "start": 397.15,
+      "end": 398.89,
+      "text": "You have lost it",
+      "words": [
+        {
+          "start": 397.15,
+          "end": 398.05,
+          "word": "You"
+        },
+        {
+          "start": 398.05,
+          "end": 398.25,
+          "word": "have"
+        },
+        {
+          "start": 398.25,
+          "end": 398.51,
+          "word": "lost"
+        },
+        {
+          "start": 398.51,
+          "end": 398.89,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "start": 398.89,
+      "end": 400.47,
+      "text": "Sometimes you feel",
+      "words": [
+        {
+          "start": 398.89,
+          "end": 399.51,
+          "word": "Sometimes"
+        },
+        {
+          "start": 399.51,
+          "end": 399.97,
+          "word": "you"
+        },
+        {
+          "start": 399.97,
+          "end": 400.47,
+          "word": "feel"
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "start": 400.47,
+      "end": 413.46,
+      "text": "But its there as much as a expanse of sea",
+      "words": [
+        {
+          "start": 400.47,
+          "end": 401.99,
+          "word": "But"
+        },
+        {
+          "start": 402.54,
+          "end": 403.8,
+          "word": "its"
+        },
+        {
+          "start": 403.8,
+          "end": 404.42,
+          "word": "there"
+        },
+        {
+          "start": 404.42,
+          "end": 404.88,
+          "word": "as"
+        },
+        {
+          "start": 404.88,
+          "end": 405.2,
+          "word": "much"
+        },
+        {
+          "start": 405.2,
+          "end": 406.44,
+          "word": "as"
+        },
+        {
+          "start": 409.76,
+          "end": 411.16,
+          "word": "a"
+        },
+        {
+          "start": 411.26,
+          "end": 412.0,
+          "word": "expanse"
+        },
+        {
+          "start": 412.0,
+          "end": 412.84,
+          "word": "of"
+        },
+        {
+          "start": 412.84,
+          "end": 413.46,
+          "word": "sea"
+        }
+      ]
+    },
+    {
+      "id": 75,
+      "start": 414.68,
+      "end": 421.66,
+      "text": "See, you cannot say today is full and tomorrow it's not.",
+      "words": [
+        {
+          "start": 414.68,
+          "end": 415.8,
+          "word": "See,"
+        },
+        {
+          "start": 415.84,
+          "end": 416.08,
+          "word": "you"
+        },
+        {
+          "start": 416.08,
+          "end": 416.46,
+          "word": "cannot"
+        },
+        {
+          "start": 416.46,
+          "end": 417.06,
+          "word": "say"
+        },
+        {
+          "start": 417.66,
+          "end": 418.68,
+          "word": "today"
+        },
+        {
+          "start": 418.68,
+          "end": 419.04,
+          "word": "is"
+        },
+        {
+          "start": 419.04,
+          "end": 419.62,
+          "word": "full"
+        },
+        {
+          "start": 419.62,
+          "end": 420.42,
+          "word": "and"
+        },
+        {
+          "start": 420.42,
+          "end": 420.92,
+          "word": "tomorrow"
+        },
+        {
+          "start": 420.92,
+          "end": 421.26,
+          "word": "it's"
+        },
+        {
+          "start": 421.26,
+          "end": 421.66,
+          "word": "not."
+        }
+      ]
+    },
+    {
+      "id": 76,
+      "start": 422.48,
+      "end": 426.67,
+      "text": "It is eternal in the same way",
+      "words": [
+        {
+          "start": 422.48,
+          "end": 422.78,
+          "word": "It"
+        },
+        {
+          "start": 422.78,
+          "end": 423.04,
+          "word": "is"
+        },
+        {
+          "start": 423.04,
+          "end": 423.54,
+          "word": "eternal"
+        },
+        {
+          "start": 424.85,
+          "end": 425.81,
+          "word": "in"
+        },
+        {
+          "start": 425.81,
+          "end": 426.09,
+          "word": "the"
+        },
+        {
+          "start": 426.09,
+          "end": 426.33,
+          "word": "same"
+        },
+        {
+          "start": 426.33,
+          "end": 426.67,
+          "word": "way"
+        }
+      ]
+    },
+    {
+      "id": 77,
+      "start": 426.67,
+      "end": 430.53,
+      "text": "The source of your love",
+      "words": [
+        {
+          "start": 426.67,
+          "end": 426.93,
+          "word": "The"
+        },
+        {
+          "start": 426.93,
+          "end": 427.71,
+          "word": "source"
+        },
+        {
+          "start": 428.73,
+          "end": 429.75,
+          "word": "of"
+        },
+        {
+          "start": 429.75,
+          "end": 430.05,
+          "word": "your"
+        },
+        {
+          "start": 430.05,
+          "end": 430.53,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "start": 430.53,
+      "end": 431.63,
+      "text": "Is eternal",
+      "words": [
+        {
+          "start": 430.53,
+          "end": 431.03,
+          "word": "Is"
+        },
+        {
+          "start": 431.03,
+          "end": 431.63,
+          "word": "eternal"
+        }
+      ]
+    },
+    {
+      "id": 79,
+      "start": 433.58,
+      "end": 440.6,
+      "text": "You can't measure",
+      "words": [
+        {
+          "start": 433.58,
+          "end": 434.4,
+          "word": "You"
+        },
+        {
+          "start": 434.4,
+          "end": 435.56,
+          "word": "can't"
+        },
+        {
+          "start": 440.08,
+          "end": 440.6,
+          "word": "measure"
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "start": 440.6,
+      "end": 448.55,
+      "text": "Its difficult",
+      "words": [
+        {
+          "start": 440.6,
+          "end": 441.8,
+          "word": "Its"
+        },
+        {
+          "start": 447.75,
+          "end": 448.55,
+          "word": "difficult"
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "start": 452.29,
+      "end": 455.05,
+      "text": "But its beyond all",
+      "words": [
+        {
+          "start": 452.29,
+          "end": 453.51,
+          "word": "But"
+        },
+        {
+          "start": 453.51,
+          "end": 454.11,
+          "word": "its"
+        },
+        {
+          "start": 454.11,
+          "end": 454.59,
+          "word": "beyond"
+        },
+        {
+          "start": 454.59,
+          "end": 455.05,
+          "word": "all"
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "start": 455.05,
+      "end": 456.69,
+      "text": "Your human expressions",
+      "words": [
+        {
+          "start": 455.05,
+          "end": 455.43,
+          "word": "Your"
+        },
+        {
+          "start": 455.43,
+          "end": 455.83,
+          "word": "human"
+        },
+        {
+          "start": 455.83,
+          "end": 456.69,
+          "word": "expressions"
+        }
+      ]
+    },
+    {
+      "id": 83,
+      "start": 457.78,
+      "end": 461.61,
+      "text": "And it shows",
+      "words": [
+        {
+          "start": 457.78,
+          "end": 458.88,
+          "word": "And"
+        },
+        {
+          "start": 458.88,
+          "end": 459.98,
+          "word": "it"
+        },
+        {
+          "start": 461.1,
+          "end": 461.61,
+          "word": "shows"
+        }
+      ]
+    },
+    {
+      "id": 84,
+      "start": 466.73,
+      "end": 473.48,
+      "text": "your understanding. Your understanding of love,",
+      "words": [
+        {
+          "start": 466.73,
+          "end": 467.95,
+          "word": "your"
+        },
+        {
+          "start": 467.95,
+          "end": 468.65,
+          "word": "understanding."
+        },
+        {
+          "start": 471.36,
+          "end": 471.66,
+          "word": "Your"
+        },
+        {
+          "start": 471.66,
+          "end": 472.36,
+          "word": "understanding"
+        },
+        {
+          "start": 472.36,
+          "end": 472.92,
+          "word": "of"
+        },
+        {
+          "start": 472.92,
+          "end": 473.48,
+          "word": "love,"
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "start": 474.58,
+      "end": 475.76,
+      "text": "which has no words",
+      "words": [
+        {
+          "start": 474.58,
+          "end": 474.72,
+          "word": "which"
+        },
+        {
+          "start": 474.72,
+          "end": 474.96,
+          "word": "has"
+        },
+        {
+          "start": 474.96,
+          "end": 475.26,
+          "word": "no"
+        },
+        {
+          "start": 475.26,
+          "end": 475.76,
+          "word": "words"
+        }
+      ]
+    },
+    {
+      "id": 86,
+      "start": 477.1,
+      "end": 478.94,
+      "text": "and cannot explain",
+      "words": [
+        {
+          "start": 477.1,
+          "end": 477.92,
+          "word": "and"
+        },
+        {
+          "start": 477.92,
+          "end": 478.38,
+          "word": "cannot"
+        },
+        {
+          "start": 478.38,
+          "end": 478.94,
+          "word": "explain"
+        }
+      ]
+    },
+    {
+      "id": 87,
+      "start": 479.0,
+      "end": 483.03,
+      "text": "but by itself you will know",
+      "words": [
+        {
+          "start": 479.0,
+          "end": 480.14,
+          "word": "but"
+        },
+        {
+          "start": 481.01,
+          "end": 481.41,
+          "word": "by"
+        },
+        {
+          "start": 481.41,
+          "end": 481.95,
+          "word": "itself"
+        },
+        {
+          "start": 481.95,
+          "end": 482.23,
+          "word": "you"
+        },
+        {
+          "start": 482.23,
+          "end": 482.53,
+          "word": "will"
+        },
+        {
+          "start": 482.53,
+          "end": 483.03,
+          "word": "know"
+        }
+      ]
+    },
+    {
+      "id": 88,
+      "start": 483.89,
+      "end": 488.53,
+      "text": "that I have this quality to Love",
+      "words": [
+        {
+          "start": 483.89,
+          "end": 484.67,
+          "word": "that"
+        },
+        {
+          "start": 484.67,
+          "end": 484.97,
+          "word": "I"
+        },
+        {
+          "start": 484.97,
+          "end": 485.89,
+          "word": "have"
+        },
+        {
+          "start": 486.27,
+          "end": 486.83,
+          "word": "this"
+        },
+        {
+          "start": 486.83,
+          "end": 487.33,
+          "word": "quality"
+        },
+        {
+          "start": 487.33,
+          "end": 487.75,
+          "word": "to"
+        },
+        {
+          "start": 487.75,
+          "end": 488.53,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 89,
+      "start": 489.24,
+      "end": 490.58,
+      "text": "within myself",
+      "words": [
+        {
+          "start": 489.24,
+          "end": 489.86,
+          "word": "within"
+        },
+        {
+          "start": 489.86,
+          "end": 490.58,
+          "word": "myself"
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "start": 492.01,
+      "end": 494.67,
+      "text": "And i can enjoy with This Love",
+      "words": [
+        {
+          "start": 492.01,
+          "end": 492.57,
+          "word": "And"
+        },
+        {
+          "start": 492.57,
+          "end": 492.79,
+          "word": "i"
+        },
+        {
+          "start": 492.79,
+          "end": 493.13,
+          "word": "can"
+        },
+        {
+          "start": 493.13,
+          "end": 493.59,
+          "word": "enjoy"
+        },
+        {
+          "start": 493.59,
+          "end": 493.91,
+          "word": "with"
+        },
+        {
+          "start": 493.91,
+          "end": 494.11,
+          "word": "This"
+        },
+        {
+          "start": 494.11,
+          "end": 494.67,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "start": 495.49,
+      "end": 497.23,
+      "text": "Within Myself",
+      "words": [
+        {
+          "start": 495.49,
+          "end": 496.11,
+          "word": "Within"
+        },
+        {
+          "start": 496.11,
+          "end": 497.23,
+          "word": "Myself"
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "start": 498.23,
+      "end": 507.71,
+      "text": "This is a very unique gift",
+      "words": [
+        {
+          "start": 498.23,
+          "end": 498.91,
+          "word": "This"
+        },
+        {
+          "start": 498.91,
+          "end": 499.99,
+          "word": "is"
+        },
+        {
+          "start": 500.47,
+          "end": 500.89,
+          "word": "a"
+        },
+        {
+          "start": 500.89,
+          "end": 502.03,
+          "word": "very"
+        },
+        {
+          "start": 502.63,
+          "end": 503.79,
+          "word": "unique"
+        },
+        {
+          "start": 506.71,
+          "end": 507.71,
+          "word": "gift"
+        }
+      ]
+    },
+    {
+      "id": 93,
+      "start": 509.34,
+      "end": 511.28,
+      "text": "which only",
+      "words": [
+        {
+          "start": 509.34,
+          "end": 510.34,
+          "word": "which"
+        },
+        {
+          "start": 510.34,
+          "end": 511.28,
+          "word": "only"
+        }
+      ]
+    },
+    {
+      "id": 94,
+      "start": 514.0,
+      "end": 516.86,
+      "text": "Very few human beings have.",
+      "words": [
+        {
+          "start": 514.0,
+          "end": 514.72,
+          "word": "Very"
+        },
+        {
+          "start": 514.72,
+          "end": 515.4,
+          "word": "few"
+        },
+        {
+          "start": 515.4,
+          "end": 515.88,
+          "word": "human"
+        },
+        {
+          "start": 515.88,
+          "end": 516.26,
+          "word": "beings"
+        },
+        {
+          "start": 516.26,
+          "end": 516.86,
+          "word": "have."
+        }
+      ]
+    },
+    {
+      "id": 95,
+      "start": 521.51,
+      "end": 524.69,
+      "text": "Among animals also you find people who",
+      "words": [
+        {
+          "start": 521.51,
+          "end": 521.75,
+          "word": "Among"
+        },
+        {
+          "start": 521.75,
+          "end": 522.31,
+          "word": "animals"
+        },
+        {
+          "start": 522.31,
+          "end": 522.73,
+          "word": "also"
+        },
+        {
+          "start": 522.73,
+          "end": 522.97,
+          "word": "you"
+        },
+        {
+          "start": 522.97,
+          "end": 523.29,
+          "word": "find"
+        },
+        {
+          "start": 523.29,
+          "end": 523.71,
+          "word": "people"
+        },
+        {
+          "start": 523.71,
+          "end": 524.69,
+          "word": "who"
+        }
+      ]
+    },
+    {
+      "id": 96,
+      "start": 524.72,
+      "end": 525.98,
+      "text": "Have love,",
+      "words": [
+        {
+          "start": 524.72,
+          "end": 525.2,
+          "word": "Have"
+        },
+        {
+          "start": 525.2,
+          "end": 525.98,
+          "word": "love,"
+        }
+      ]
+    },
+    {
+      "id": 97,
+      "start": 527.4,
+      "end": 529.06,
+      "text": "but that Love",
+      "words": [
+        {
+          "start": 527.4,
+          "end": 528.22,
+          "word": "but"
+        },
+        {
+          "start": 528.22,
+          "end": 528.58,
+          "word": "that"
+        },
+        {
+          "start": 528.58,
+          "end": 529.06,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 98,
+      "start": 529.83,
+      "end": 531.49,
+      "text": "Is not deep",
+      "words": [
+        {
+          "start": 529.83,
+          "end": 530.67,
+          "word": "Is"
+        },
+        {
+          "start": 530.67,
+          "end": 530.93,
+          "word": "not"
+        },
+        {
+          "start": 530.93,
+          "end": 531.49,
+          "word": "deep"
+        }
+      ]
+    },
+    {
+      "id": 99,
+      "start": 532.57,
+      "end": 535.11,
+      "text": "That Love has no meaning",
+      "words": [
+        {
+          "start": 532.57,
+          "end": 533.47,
+          "word": "That"
+        },
+        {
+          "start": 533.47,
+          "end": 533.83,
+          "word": "Love"
+        },
+        {
+          "start": 533.83,
+          "end": 534.21,
+          "word": "has"
+        },
+        {
+          "start": 534.21,
+          "end": 534.51,
+          "word": "no"
+        },
+        {
+          "start": 534.51,
+          "end": 535.11,
+          "word": "meaning"
+        }
+      ]
+    },
+    {
+      "id": 100,
+      "start": 538.76,
+      "end": 541.2,
+      "text": "It Has some purpose",
+      "words": [
+        {
+          "start": 538.76,
+          "end": 539.66,
+          "word": "It"
+        },
+        {
+          "start": 539.66,
+          "end": 539.9,
+          "word": "Has"
+        },
+        {
+          "start": 539.9,
+          "end": 540.2,
+          "word": "some"
+        },
+        {
+          "start": 540.2,
+          "end": 541.2,
+          "word": "purpose"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "start": 541.46,
+      "end": 542.6,
+      "text": "Maybe",
+      "words": [
+        {
+          "start": 541.46,
+          "end": 542.6,
+          "word": "Maybe"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "start": 543.97,
+      "end": 546.15,
+      "text": "But it's Not Human",
+      "words": [
+        {
+          "start": 543.97,
+          "end": 544.67,
+          "word": "But"
+        },
+        {
+          "start": 544.67,
+          "end": 545.15,
+          "word": "it's"
+        },
+        {
+          "start": 545.15,
+          "end": 545.49,
+          "word": "Not"
+        },
+        {
+          "start": 545.49,
+          "end": 546.15,
+          "word": "Human"
+        }
+      ]
+    },
+    {
+      "id": 103,
+      "start": 547.53,
+      "end": 551.87,
+      "text": "So it lacks the beauty of human love.",
+      "words": [
+        {
+          "start": 547.53,
+          "end": 548.39,
+          "word": "So"
+        },
+        {
+          "start": 548.39,
+          "end": 548.67,
+          "word": "it"
+        },
+        {
+          "start": 548.67,
+          "end": 549.23,
+          "word": "lacks"
+        },
+        {
+          "start": 549.23,
+          "end": 550.13,
+          "word": "the"
+        },
+        {
+          "start": 550.13,
+          "end": 550.61,
+          "word": "beauty"
+        },
+        {
+          "start": 550.61,
+          "end": 550.95,
+          "word": "of"
+        },
+        {
+          "start": 550.95,
+          "end": 551.37,
+          "word": "human"
+        },
+        {
+          "start": 551.37,
+          "end": 551.87,
+          "word": "love."
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "start": 553.83,
+      "end": 555.19,
+      "text": "It lacks",
+      "words": [
+        {
+          "start": 553.83,
+          "end": 554.07,
+          "word": "It"
+        },
+        {
+          "start": 554.07,
+          "end": 555.19,
+          "word": "lacks"
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "start": 557.12,
+      "end": 558.62,
+      "text": "The understanding",
+      "words": [
+        {
+          "start": 557.12,
+          "end": 558.08,
+          "word": "The"
+        },
+        {
+          "start": 558.14,
+          "end": 558.62,
+          "word": "understanding"
+        }
+      ]
+    },
+    {
+      "id": 106,
+      "start": 558.9,
+      "end": 560.4,
+      "text": "Of Human Love",
+      "words": [
+        {
+          "start": 558.9,
+          "end": 559.5,
+          "word": "Of"
+        },
+        {
+          "start": 559.5,
+          "end": 559.9,
+          "word": "Human"
+        },
+        {
+          "start": 559.9,
+          "end": 560.4,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 107,
+      "start": 565.27,
+      "end": 567.75,
+      "text": "Its not easy to describe",
+      "words": [
+        {
+          "start": 565.27,
+          "end": 565.93,
+          "word": "Its"
+        },
+        {
+          "start": 565.93,
+          "end": 566.31,
+          "word": "not"
+        },
+        {
+          "start": 566.31,
+          "end": 566.67,
+          "word": "easy"
+        },
+        {
+          "start": 566.67,
+          "end": 567.05,
+          "word": "to"
+        },
+        {
+          "start": 567.05,
+          "end": 567.75,
+          "word": "describe"
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "start": 568.29,
+      "end": 569.81,
+      "text": "Or explain",
+      "words": [
+        {
+          "start": 568.29,
+          "end": 569.11,
+          "word": "Or"
+        },
+        {
+          "start": 569.11,
+          "end": 569.81,
+          "word": "explain"
+        }
+      ]
+    },
+    {
+      "id": 109,
+      "start": 570.19,
+      "end": 573.26,
+      "text": "Love in human words",
+      "words": [
+        {
+          "start": 570.19,
+          "end": 570.67,
+          "word": "Love"
+        },
+        {
+          "start": 571.34,
+          "end": 572.24,
+          "word": "in"
+        },
+        {
+          "start": 572.24,
+          "end": 572.62,
+          "word": "human"
+        },
+        {
+          "start": 572.62,
+          "end": 573.26,
+          "word": "words"
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "start": 574.73,
+      "end": 577.89,
+      "text": "This you can only feel within yourself",
+      "words": [
+        {
+          "start": 574.73,
+          "end": 575.65,
+          "word": "This"
+        },
+        {
+          "start": 575.65,
+          "end": 575.83,
+          "word": "you"
+        },
+        {
+          "start": 575.83,
+          "end": 576.11,
+          "word": "can"
+        },
+        {
+          "start": 576.11,
+          "end": 576.47,
+          "word": "only"
+        },
+        {
+          "start": 576.47,
+          "end": 576.79,
+          "word": "feel"
+        },
+        {
+          "start": 576.79,
+          "end": 577.15,
+          "word": "within"
+        },
+        {
+          "start": 577.15,
+          "end": 577.89,
+          "word": "yourself"
+        }
+      ]
+    },
+    {
+      "id": 111,
+      "start": 580.61,
+      "end": 583.49,
+      "text": "That is what once you start feeling",
+      "words": [
+        {
+          "start": 580.61,
+          "end": 581.43,
+          "word": "That"
+        },
+        {
+          "start": 581.43,
+          "end": 581.75,
+          "word": "is"
+        },
+        {
+          "start": 581.75,
+          "end": 581.97,
+          "word": "what"
+        },
+        {
+          "start": 581.97,
+          "end": 582.31,
+          "word": "once"
+        },
+        {
+          "start": 582.31,
+          "end": 582.57,
+          "word": "you"
+        },
+        {
+          "start": 582.57,
+          "end": 582.93,
+          "word": "start"
+        },
+        {
+          "start": 582.93,
+          "end": 583.49,
+          "word": "feeling"
+        }
+      ]
+    },
+    {
+      "id": 112,
+      "start": 584.45,
+      "end": 586.55,
+      "text": "You Can Feel",
+      "words": [
+        {
+          "start": 584.45,
+          "end": 585.39,
+          "word": "You"
+        },
+        {
+          "start": 585.39,
+          "end": 585.73,
+          "word": "Can"
+        },
+        {
+          "start": 585.73,
+          "end": 586.55,
+          "word": "Feel"
+        }
+      ]
+    },
+    {
+      "id": 113,
+      "start": 587.19,
+      "end": 589.51,
+      "text": "Who Is your Guru",
+      "words": [
+        {
+          "start": 587.19,
+          "end": 587.93,
+          "word": "Who"
+        },
+        {
+          "start": 587.93,
+          "end": 588.25,
+          "word": "Is"
+        },
+        {
+          "start": 588.25,
+          "end": 589.03,
+          "word": "your"
+        },
+        {
+          "start": 589.03,
+          "end": 589.51,
+          "word": "Guru"
+        }
+      ]
+    },
+    {
+      "id": 114,
+      "start": 592.31,
+      "end": 594.25,
+      "text": "Whom do think you are",
+      "words": [
+        {
+          "start": 592.31,
+          "end": 592.79,
+          "word": "Whom"
+        },
+        {
+          "start": 592.79,
+          "end": 593.01,
+          "word": "do"
+        },
+        {
+          "start": 593.01,
+          "end": 593.47,
+          "word": "think"
+        },
+        {
+          "start": 593.47,
+          "end": 593.85,
+          "word": "you"
+        },
+        {
+          "start": 593.85,
+          "end": 594.25,
+          "word": "are"
+        }
+      ]
+    },
+    {
+      "id": 115,
+      "start": 596.09,
+      "end": 602.08,
+      "text": "being taught and persuaded",
+      "words": [
+        {
+          "start": 596.09,
+          "end": 597.19,
+          "word": "being"
+        },
+        {
+          "start": 599.78,
+          "end": 600.62,
+          "word": "taught"
+        },
+        {
+          "start": 600.62,
+          "end": 601.24,
+          "word": "and"
+        },
+        {
+          "start": 601.24,
+          "end": 602.08,
+          "word": "persuaded"
+        }
+      ]
+    },
+    {
+      "id": 116,
+      "start": 603.11,
+      "end": 607.58,
+      "text": "are made to live in a particular manner.",
+      "words": [
+        {
+          "start": 603.11,
+          "end": 603.81,
+          "word": "are"
+        },
+        {
+          "start": 603.81,
+          "end": 604.09,
+          "word": "made"
+        },
+        {
+          "start": 604.09,
+          "end": 604.29,
+          "word": "to"
+        },
+        {
+          "start": 604.29,
+          "end": 604.89,
+          "word": "live"
+        },
+        {
+          "start": 605.5,
+          "end": 606.3,
+          "word": "in"
+        },
+        {
+          "start": 606.3,
+          "end": 606.58,
+          "word": "a"
+        },
+        {
+          "start": 606.58,
+          "end": 607.0,
+          "word": "particular"
+        },
+        {
+          "start": 607.0,
+          "end": 607.58,
+          "word": "manner."
+        }
+      ]
+    },
+    {
+      "id": 117,
+      "start": 609.29,
+      "end": 616.95,
+      "text": "All that is possible, everything is possible",
+      "words": [
+        {
+          "start": 609.29,
+          "end": 609.67,
+          "word": "All"
+        },
+        {
+          "start": 609.67,
+          "end": 609.89,
+          "word": "that"
+        },
+        {
+          "start": 609.89,
+          "end": 610.17,
+          "word": "is"
+        },
+        {
+          "start": 610.17,
+          "end": 610.85,
+          "word": "possible,"
+        },
+        {
+          "start": 615.31,
+          "end": 615.73,
+          "word": "everything"
+        },
+        {
+          "start": 615.73,
+          "end": 616.17,
+          "word": "is"
+        },
+        {
+          "start": 616.17,
+          "end": 616.95,
+          "word": "possible"
+        }
+      ]
+    },
+    {
+      "id": 118,
+      "start": 616.95,
+      "end": 620.48,
+      "text": "humanly possible but",
+      "words": [
+        {
+          "start": 616.95,
+          "end": 618.25,
+          "word": "humanly"
+        },
+        {
+          "start": 618.25,
+          "end": 619.07,
+          "word": "possible"
+        },
+        {
+          "start": 619.26,
+          "end": 620.48,
+          "word": "but"
+        }
+      ]
+    },
+    {
+      "id": 119,
+      "start": 620.99,
+      "end": 622.47,
+      "text": "To love",
+      "words": [
+        {
+          "start": 620.99,
+          "end": 621.81,
+          "word": "To"
+        },
+        {
+          "start": 621.81,
+          "end": 622.47,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 120,
+      "start": 623.11,
+      "end": 625.31,
+      "text": "And enjoy the love",
+      "words": [
+        {
+          "start": 623.11,
+          "end": 623.87,
+          "word": "And"
+        },
+        {
+          "start": 623.87,
+          "end": 624.49,
+          "word": "enjoy"
+        },
+        {
+          "start": 624.49,
+          "end": 624.89,
+          "word": "the"
+        },
+        {
+          "start": 624.89,
+          "end": 625.31,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 121,
+      "start": 625.31,
+      "end": 627.61,
+      "text": "it's not so easy",
+      "words": [
+        {
+          "start": 625.31,
+          "end": 625.73,
+          "word": "it's"
+        },
+        {
+          "start": 625.73,
+          "end": 626.09,
+          "word": "not"
+        },
+        {
+          "start": 626.09,
+          "end": 626.69,
+          "word": "so"
+        },
+        {
+          "start": 626.69,
+          "end": 627.61,
+          "word": "easy"
+        }
+      ]
+    },
+    {
+      "id": 122,
+      "start": 628.79,
+      "end": 631.97,
+      "text": "unless an until you're immersed",
+      "words": [
+        {
+          "start": 628.79,
+          "end": 629.85,
+          "word": "unless"
+        },
+        {
+          "start": 629.85,
+          "end": 630.15,
+          "word": "an"
+        },
+        {
+          "start": 630.15,
+          "end": 630.63,
+          "word": "until"
+        },
+        {
+          "start": 630.63,
+          "end": 631.43,
+          "word": "you're"
+        },
+        {
+          "start": 631.43,
+          "end": 631.97,
+          "word": "immersed"
+        }
+      ]
+    },
+    {
+      "id": 123,
+      "start": 631.97,
+      "end": 641.19,
+      "text": "It very gratifying",
+      "words": [
+        {
+          "start": 631.97,
+          "end": 632.55,
+          "word": "It"
+        },
+        {
+          "start": 639.31,
+          "end": 640.17,
+          "word": "very"
+        },
+        {
+          "start": 640.17,
+          "end": 641.19,
+          "word": "gratifying"
+        }
+      ]
+    },
+    {
+      "id": 124,
+      "start": 642.05,
+      "end": 652.0,
+      "text": "It is very lovable to see how people love each other.",
+      "words": [
+        {
+          "start": 642.05,
+          "end": 642.97,
+          "word": "It"
+        },
+        {
+          "start": 642.97,
+          "end": 643.27,
+          "word": "is"
+        },
+        {
+          "start": 643.27,
+          "end": 644.73,
+          "word": "very"
+        },
+        {
+          "start": 646.2,
+          "end": 646.84,
+          "word": "lovable"
+        },
+        {
+          "start": 648.44,
+          "end": 649.42,
+          "word": "to"
+        },
+        {
+          "start": 649.42,
+          "end": 649.92,
+          "word": "see"
+        },
+        {
+          "start": 649.92,
+          "end": 650.44,
+          "word": "how"
+        },
+        {
+          "start": 650.44,
+          "end": 650.84,
+          "word": "people"
+        },
+        {
+          "start": 650.84,
+          "end": 651.16,
+          "word": "love"
+        },
+        {
+          "start": 651.16,
+          "end": 651.44,
+          "word": "each"
+        },
+        {
+          "start": 651.44,
+          "end": 652.0,
+          "word": "other."
+        }
+      ]
+    },
+    {
+      "id": 125,
+      "start": 655.94,
+      "end": 663.18,
+      "text": "And then this Love spreads,",
+      "words": [
+        {
+          "start": 655.94,
+          "end": 656.44,
+          "word": "And"
+        },
+        {
+          "start": 656.44,
+          "end": 657.32,
+          "word": "then"
+        },
+        {
+          "start": 661.32,
+          "end": 662.22,
+          "word": "this"
+        },
+        {
+          "start": 662.22,
+          "end": 662.56,
+          "word": "Love"
+        },
+        {
+          "start": 662.56,
+          "end": 663.18,
+          "word": "spreads,"
+        }
+      ]
+    },
+    {
+      "id": 126,
+      "start": 666.84,
+      "end": 668.62,
+      "text": "Love begets Love!",
+      "words": [
+        {
+          "start": 666.84,
+          "end": 667.44,
+          "word": "Love"
+        },
+        {
+          "start": 667.44,
+          "end": 668.02,
+          "word": "begets"
+        },
+        {
+          "start": 668.02,
+          "end": 668.62,
+          "word": "Love!"
+        }
+      ]
+    },
+    {
+      "id": 127,
+      "start": 671.64,
+      "end": 678.19,
+      "text": "If somebody has Love it just spreads",
+      "words": [
+        {
+          "start": 671.64,
+          "end": 671.86,
+          "word": "If"
+        },
+        {
+          "start": 671.86,
+          "end": 672.4,
+          "word": "somebody"
+        },
+        {
+          "start": 673.23,
+          "end": 674.47,
+          "word": "has"
+        },
+        {
+          "start": 674.47,
+          "end": 675.03,
+          "word": "Love"
+        },
+        {
+          "start": 676.57,
+          "end": 677.35,
+          "word": "it"
+        },
+        {
+          "start": 677.35,
+          "end": 677.73,
+          "word": "just"
+        },
+        {
+          "start": 677.73,
+          "end": 678.19,
+          "word": "spreads"
+        }
+      ]
+    },
+    {
+      "id": 128,
+      "start": 679.43,
+      "end": 681.61,
+      "text": "you need not tell anyone",
+      "words": [
+        {
+          "start": 679.43,
+          "end": 680.35,
+          "word": "you"
+        },
+        {
+          "start": 680.35,
+          "end": 680.61,
+          "word": "need"
+        },
+        {
+          "start": 680.61,
+          "end": 680.79,
+          "word": "not"
+        },
+        {
+          "start": 680.79,
+          "end": 681.07,
+          "word": "tell"
+        },
+        {
+          "start": 681.07,
+          "end": 681.61,
+          "word": "anyone"
+        }
+      ]
+    },
+    {
+      "id": 129,
+      "start": 683.22,
+      "end": 685.64,
+      "text": "You Need Not Confess It",
+      "words": [
+        {
+          "start": 683.22,
+          "end": 683.92,
+          "word": "You"
+        },
+        {
+          "start": 683.92,
+          "end": 684.22,
+          "word": "Need"
+        },
+        {
+          "start": 684.22,
+          "end": 684.42,
+          "word": "Not"
+        },
+        {
+          "start": 684.42,
+          "end": 684.98,
+          "word": "Confess"
+        },
+        {
+          "start": 684.98,
+          "end": 685.64,
+          "word": "It"
+        }
+      ]
+    },
+    {
+      "id": 130,
+      "start": 685.8,
+      "end": 689.44,
+      "text": "but it will spread",
+      "words": [
+        {
+          "start": 685.8,
+          "end": 686.7,
+          "word": "but"
+        },
+        {
+          "start": 687.6,
+          "end": 688.64,
+          "word": "it"
+        },
+        {
+          "start": 688.64,
+          "end": 688.96,
+          "word": "will"
+        },
+        {
+          "start": 688.96,
+          "end": 689.44,
+          "word": "spread"
+        }
+      ]
+    },
+    {
+      "id": 131,
+      "start": 690.91,
+      "end": 695.7,
+      "text": "and This Is What One Has To Learn",
+      "words": [
+        {
+          "start": 690.91,
+          "end": 691.79,
+          "word": "and"
+        },
+        {
+          "start": 691.79,
+          "end": 692.09,
+          "word": "This"
+        },
+        {
+          "start": 692.09,
+          "end": 692.29,
+          "word": "Is"
+        },
+        {
+          "start": 692.29,
+          "end": 693.33,
+          "word": "What"
+        },
+        {
+          "start": 694.26,
+          "end": 694.66,
+          "word": "One"
+        },
+        {
+          "start": 694.66,
+          "end": 694.94,
+          "word": "Has"
+        },
+        {
+          "start": 694.94,
+          "end": 695.28,
+          "word": "To"
+        },
+        {
+          "start": 695.28,
+          "end": 695.7,
+          "word": "Learn"
+        }
+      ]
+    },
+    {
+      "id": 132,
+      "start": 698.32,
+      "end": 702.71,
+      "text": "how to see that love in another person.",
+      "words": [
+        {
+          "start": 698.32,
+          "end": 698.84,
+          "word": "how"
+        },
+        {
+          "start": 698.84,
+          "end": 699.64,
+          "word": "to"
+        },
+        {
+          "start": 700.41,
+          "end": 700.97,
+          "word": "see"
+        },
+        {
+          "start": 700.97,
+          "end": 701.35,
+          "word": "that"
+        },
+        {
+          "start": 701.35,
+          "end": 701.63,
+          "word": "love"
+        },
+        {
+          "start": 701.63,
+          "end": 701.85,
+          "word": "in"
+        },
+        {
+          "start": 701.85,
+          "end": 702.15,
+          "word": "another"
+        },
+        {
+          "start": 702.15,
+          "end": 702.71,
+          "word": "person."
+        }
+      ]
+    },
+    {
+      "id": 133,
+      "start": 708.78,
+      "end": 715.82,
+      "text": "Somehow we are here already in Love",
+      "words": [
+        {
+          "start": 708.78,
+          "end": 709.28,
+          "word": "Somehow"
+        },
+        {
+          "start": 710.95,
+          "end": 711.95,
+          "word": "we"
+        },
+        {
+          "start": 711.95,
+          "end": 712.93,
+          "word": "are"
+        },
+        {
+          "start": 713.82,
+          "end": 714.3,
+          "word": "here"
+        },
+        {
+          "start": 714.3,
+          "end": 714.8,
+          "word": "already"
+        },
+        {
+          "start": 714.8,
+          "end": 715.26,
+          "word": "in"
+        },
+        {
+          "start": 715.26,
+          "end": 715.82,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 134,
+      "start": 717.07,
+      "end": 720.86,
+      "text": "because of Sahaj happening,",
+      "words": [
+        {
+          "start": 717.07,
+          "end": 718.09,
+          "word": "because"
+        },
+        {
+          "start": 718.09,
+          "end": 718.47,
+          "word": "of"
+        },
+        {
+          "start": 718.47,
+          "end": 719.47,
+          "word": "Sahaj"
+        },
+        {
+          "start": 720.14,
+          "end": 720.86,
+          "word": "happening,"
+        }
+      ]
+    },
+    {
+      "id": 135,
+      "start": 722.95,
+      "end": 728.28,
+      "text": "We all love and enjoy love",
+      "words": [
+        {
+          "start": 722.95,
+          "end": 723.21,
+          "word": "We"
+        },
+        {
+          "start": 723.21,
+          "end": 724.31,
+          "word": "all"
+        },
+        {
+          "start": 724.41,
+          "end": 725.19,
+          "word": "love"
+        },
+        {
+          "start": 726.12,
+          "end": 726.86,
+          "word": "and"
+        },
+        {
+          "start": 726.86,
+          "end": 727.52,
+          "word": "enjoy"
+        },
+        {
+          "start": 727.52,
+          "end": 728.28,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 136,
+      "start": 729.08,
+      "end": 730.98,
+      "text": "shows on our faces",
+      "words": [
+        {
+          "start": 729.08,
+          "end": 729.78,
+          "word": "shows"
+        },
+        {
+          "start": 729.78,
+          "end": 730.08,
+          "word": "on"
+        },
+        {
+          "start": 730.08,
+          "end": 730.32,
+          "word": "our"
+        },
+        {
+          "start": 730.32,
+          "end": 730.98,
+          "word": "faces"
+        }
+      ]
+    },
+    {
+      "id": 137,
+      "start": 732.11,
+      "end": 734.47,
+      "text": "That'we're in Love",
+      "words": [
+        {
+          "start": 732.11,
+          "end": 732.71,
+          "word": "That"
+        },
+        {
+          "start": 732.71,
+          "end": 733.47,
+          "word": "'we're"
+        },
+        {
+          "start": 733.47,
+          "end": 733.79,
+          "word": "in"
+        },
+        {
+          "start": 733.79,
+          "end": 734.47,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 138,
+      "start": 735.56,
+      "end": 737.32,
+      "text": "In Our characters",
+      "words": [
+        {
+          "start": 735.56,
+          "end": 736.14,
+          "word": "In"
+        },
+        {
+          "start": 736.14,
+          "end": 736.48,
+          "word": "Our"
+        },
+        {
+          "start": 736.48,
+          "end": 737.32,
+          "word": "characters"
+        }
+      ]
+    },
+    {
+      "id": 139,
+      "start": 739.95,
+      "end": 741.41,
+      "text": "And Our lives",
+      "words": [
+        {
+          "start": 739.95,
+          "end": 740.55,
+          "word": "And"
+        },
+        {
+          "start": 740.55,
+          "end": 740.81,
+          "word": "Our"
+        },
+        {
+          "start": 740.81,
+          "end": 741.41,
+          "word": "lives"
+        }
+      ]
+    },
+    {
+      "id": 140,
+      "start": 742.33,
+      "end": 744.43,
+      "text": "that we are in love.",
+      "words": [
+        {
+          "start": 742.33,
+          "end": 743.31,
+          "word": "that"
+        },
+        {
+          "start": 743.31,
+          "end": 743.53,
+          "word": "we"
+        },
+        {
+          "start": 743.53,
+          "end": 743.77,
+          "word": "are"
+        },
+        {
+          "start": 743.77,
+          "end": 744.03,
+          "word": "in"
+        },
+        {
+          "start": 744.03,
+          "end": 744.43,
+          "word": "love."
+        }
+      ]
+    },
+    {
+      "id": 141,
+      "start": 746.7,
+      "end": 752.46,
+      "text": "What a thing which is not very normal,",
+      "words": [
+        {
+          "start": 746.7,
+          "end": 746.92,
+          "word": "What"
+        },
+        {
+          "start": 746.92,
+          "end": 747.16,
+          "word": "a"
+        },
+        {
+          "start": 747.16,
+          "end": 747.8,
+          "word": "thing"
+        },
+        {
+          "start": 748.51,
+          "end": 749.25,
+          "word": "which"
+        },
+        {
+          "start": 749.25,
+          "end": 750.25,
+          "word": "is"
+        },
+        {
+          "start": 750.98,
+          "end": 751.5,
+          "word": "not"
+        },
+        {
+          "start": 751.5,
+          "end": 751.84,
+          "word": "very"
+        },
+        {
+          "start": 751.84,
+          "end": 752.46,
+          "word": "normal,"
+        }
+      ]
+    },
+    {
+      "id": 142,
+      "start": 752.88,
+      "end": 755.69,
+      "text": "becomes so normal and",
+      "words": [
+        {
+          "start": 752.88,
+          "end": 753.16,
+          "word": "becomes"
+        },
+        {
+          "start": 753.16,
+          "end": 753.62,
+          "word": "so"
+        },
+        {
+          "start": 753.62,
+          "end": 754.22,
+          "word": "normal"
+        },
+        {
+          "start": 755.21,
+          "end": 755.69,
+          "word": "and"
+        }
+      ]
+    },
+    {
+      "id": 143,
+      "start": 756.13,
+      "end": 757.69,
+      "text": "it's all easily available to you!",
+      "words": [
+        {
+          "start": 756.13,
+          "end": 756.23,
+          "word": "it's"
+        },
+        {
+          "start": 756.23,
+          "end": 756.41,
+          "word": "all"
+        },
+        {
+          "start": 756.41,
+          "end": 756.83,
+          "word": "easily"
+        },
+        {
+          "start": 756.83,
+          "end": 757.33,
+          "word": "available"
+        },
+        {
+          "start": 757.33,
+          "end": 757.59,
+          "word": "to"
+        },
+        {
+          "start": 757.59,
+          "end": 757.69,
+          "word": "you!"
+        }
+      ]
+    },
+    {
+      "id": 144,
+      "start": 759.33,
+      "end": 761.86,
+      "text": "It' s the big blessing",
+      "words": [
+        {
+          "start": 759.33,
+          "end": 759.55,
+          "word": "It'"
+        },
+        {
+          "start": 759.75,
+          "end": 759.75,
+          "word": "s"
+        },
+        {
+          "start": 759.75,
+          "end": 759.89,
+          "word": "the"
+        },
+        {
+          "start": 759.89,
+          "end": 760.25,
+          "word": "big"
+        },
+        {
+          "start": 760.38,
+          "end": 761.86,
+          "word": "blessing"
+        }
+      ]
+    },
+    {
+      "id": 145,
+      "start": 763.48,
+      "end": 765.22,
+      "text": "That your human beings",
+      "words": [
+        {
+          "start": 763.48,
+          "end": 763.96,
+          "word": "That"
+        },
+        {
+          "start": 763.96,
+          "end": 764.32,
+          "word": "your"
+        },
+        {
+          "start": 764.32,
+          "end": 764.74,
+          "word": "human"
+        },
+        {
+          "start": 764.74,
+          "end": 765.22,
+          "word": "beings"
+        }
+      ]
+    },
+    {
+      "id": 146,
+      "start": 765.86,
+      "end": 771.87,
+      "text": "And this source of Love",
+      "words": [
+        {
+          "start": 765.86,
+          "end": 767.0,
+          "word": "And"
+        },
+        {
+          "start": 767.0,
+          "end": 768.38,
+          "word": "this"
+        },
+        {
+          "start": 768.89,
+          "end": 769.65,
+          "word": "source"
+        },
+        {
+          "start": 770.13,
+          "end": 771.17,
+          "word": "of"
+        },
+        {
+          "start": 771.17,
+          "end": 771.87,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 147,
+      "start": 773.22,
+      "end": 774.54,
+      "text": "Is there",
+      "words": [
+        {
+          "start": 773.22,
+          "end": 774.06,
+          "word": "Is"
+        },
+        {
+          "start": 774.06,
+          "end": 774.54,
+          "word": "there"
+        }
+      ]
+    },
+    {
+      "id": 148,
+      "start": 775.77,
+      "end": 778.69,
+      "text": "Plus feeling for Love is there",
+      "words": [
+        {
+          "start": 775.77,
+          "end": 776.37,
+          "word": "Plus"
+        },
+        {
+          "start": 776.37,
+          "end": 777.05,
+          "word": "feeling"
+        },
+        {
+          "start": 777.05,
+          "end": 777.53,
+          "word": "for"
+        },
+        {
+          "start": 777.53,
+          "end": 777.85,
+          "word": "Love"
+        },
+        {
+          "start": 777.85,
+          "end": 778.15,
+          "word": "is"
+        },
+        {
+          "start": 778.15,
+          "end": 778.69,
+          "word": "there"
+        }
+      ]
+    },
+    {
+      "id": 149,
+      "start": 779.97,
+      "end": 788.15,
+      "text": "It's a very intricate situation which cannot be explained in words.",
+      "words": [
+        {
+          "start": 779.97,
+          "end": 780.47,
+          "word": "It's"
+        },
+        {
+          "start": 780.47,
+          "end": 780.53,
+          "word": "a"
+        },
+        {
+          "start": 780.53,
+          "end": 780.83,
+          "word": "very"
+        },
+        {
+          "start": 780.83,
+          "end": 782.17,
+          "word": "intricate"
+        },
+        {
+          "start": 783.07,
+          "end": 784.13,
+          "word": "situation"
+        },
+        {
+          "start": 784.93,
+          "end": 785.89,
+          "word": "which"
+        },
+        {
+          "start": 785.89,
+          "end": 786.33,
+          "word": "cannot"
+        },
+        {
+          "start": 786.33,
+          "end": 787.19,
+          "word": "be"
+        },
+        {
+          "start": 787.19,
+          "end": 787.19,
+          "word": "explained"
+        },
+        {
+          "start": 787.19,
+          "end": 787.77,
+          "word": "in"
+        },
+        {
+          "start": 787.77,
+          "end": 788.15,
+          "word": "words."
+        }
+      ]
+    },
+    {
+      "id": 150,
+      "start": 791.61,
+      "end": 796.39,
+      "text": "Only one can be in it and enjoy,",
+      "words": [
+        {
+          "start": 791.61,
+          "end": 792.01,
+          "word": "Only"
+        },
+        {
+          "start": 792.01,
+          "end": 792.27,
+          "word": "one"
+        },
+        {
+          "start": 792.27,
+          "end": 793.31,
+          "word": "can"
+        },
+        {
+          "start": 793.47,
+          "end": 794.03,
+          "word": "be"
+        },
+        {
+          "start": 794.03,
+          "end": 794.33,
+          "word": "in"
+        },
+        {
+          "start": 794.33,
+          "end": 794.95,
+          "word": "it"
+        },
+        {
+          "start": 795.23,
+          "end": 795.99,
+          "word": "and"
+        },
+        {
+          "start": 795.99,
+          "end": 796.39,
+          "word": "enjoy,"
+        }
+      ]
+    },
+    {
+      "id": 151,
+      "start": 800.07,
+      "end": 804.68,
+      "text": "but today is the day when we are celebrating",
+      "words": [
+        {
+          "start": 800.07,
+          "end": 800.61,
+          "word": "but"
+        },
+        {
+          "start": 800.61,
+          "end": 801.05,
+          "word": "today"
+        },
+        {
+          "start": 801.05,
+          "end": 801.35,
+          "word": "is"
+        },
+        {
+          "start": 801.35,
+          "end": 801.47,
+          "word": "the"
+        },
+        {
+          "start": 801.47,
+          "end": 802.43,
+          "word": "day"
+        },
+        {
+          "start": 802.84,
+          "end": 803.4,
+          "word": "when"
+        },
+        {
+          "start": 803.4,
+          "end": 803.68,
+          "word": "we"
+        },
+        {
+          "start": 803.68,
+          "end": 803.96,
+          "word": "are"
+        },
+        {
+          "start": 803.96,
+          "end": 804.68,
+          "word": "celebrating"
+        }
+      ]
+    },
+    {
+      "id": 152,
+      "start": 806.81,
+      "end": 807.97,
+      "text": "The Guru Pooja",
+      "words": [
+        {
+          "start": 806.81,
+          "end": 807.27,
+          "word": "The"
+        },
+        {
+          "start": 807.27,
+          "end": 807.55,
+          "word": "Guru"
+        },
+        {
+          "start": 807.55,
+          "end": 807.97,
+          "word": "Pooja"
+        }
+      ]
+    },
+    {
+      "id": 153,
+      "start": 810.85,
+      "end": 813.97,
+      "text": "–the greatest guru that We have",
+      "words": [
+        {
+          "start": 810.85,
+          "end": 811.63,
+          "word": "–the"
+        },
+        {
+          "start": 811.63,
+          "end": 812.07,
+          "word": "greatest"
+        },
+        {
+          "start": 812.07,
+          "end": 812.49,
+          "word": "guru"
+        },
+        {
+          "start": 812.49,
+          "end": 812.77,
+          "word": "that"
+        },
+        {
+          "start": 812.77,
+          "end": 813.13,
+          "word": "We"
+        },
+        {
+          "start": 813.13,
+          "end": 813.97,
+          "word": "have"
+        }
+      ]
+    },
+    {
+      "id": 154,
+      "start": 814.93,
+      "end": 820.82,
+      "text": "Is love, Sahaj Love",
+      "words": [
+        {
+          "start": 814.93,
+          "end": 815.99,
+          "word": "Is"
+        },
+        {
+          "start": 816.89,
+          "end": 817.81,
+          "word": "love,"
+        },
+        {
+          "start": 819.84,
+          "end": 820.32,
+          "word": "Sahaj"
+        },
+        {
+          "start": 820.32,
+          "end": 820.82,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 155,
+      "start": 821.62,
+      "end": 824.24,
+      "text": "He' s the guru within us",
+      "words": [
+        {
+          "start": 821.62,
+          "end": 822.32,
+          "word": "He'"
+        },
+        {
+          "start": 822.4,
+          "end": 822.44,
+          "word": "s"
+        },
+        {
+          "start": 822.44,
+          "end": 822.58,
+          "word": "the"
+        },
+        {
+          "start": 822.58,
+          "end": 822.94,
+          "word": "guru"
+        },
+        {
+          "start": 822.94,
+          "end": 823.28,
+          "word": "within"
+        },
+        {
+          "start": 823.28,
+          "end": 824.24,
+          "word": "us"
+        }
+      ]
+    },
+    {
+      "id": 156,
+      "start": 824.43,
+      "end": 826.17,
+      "text": "which teaches us,",
+      "words": [
+        {
+          "start": 824.43,
+          "end": 824.89,
+          "word": "which"
+        },
+        {
+          "start": 824.89,
+          "end": 825.33,
+          "word": "teaches"
+        },
+        {
+          "start": 825.33,
+          "end": 826.17,
+          "word": "us,"
+        }
+      ]
+    },
+    {
+      "id": 157,
+      "start": 827.31,
+      "end": 829.01,
+      "text": "is somehow or other leads us.",
+      "words": [
+        {
+          "start": 827.31,
+          "end": 827.47,
+          "word": "is"
+        },
+        {
+          "start": 827.47,
+          "end": 827.71,
+          "word": "somehow"
+        },
+        {
+          "start": 827.71,
+          "end": 827.87,
+          "word": "or"
+        },
+        {
+          "start": 827.87,
+          "end": 827.97,
+          "word": "other"
+        },
+        {
+          "start": 827.97,
+          "end": 828.31,
+          "word": "leads"
+        },
+        {
+          "start": 828.31,
+          "end": 829.01,
+          "word": "us."
+        }
+      ]
+    },
+    {
+      "id": 158,
+      "start": 830.89,
+      "end": 841.44,
+      "text": "We are led into that great line of understanding",
+      "words": [
+        {
+          "start": 830.89,
+          "end": 831.09,
+          "word": "We"
+        },
+        {
+          "start": 831.09,
+          "end": 832.21,
+          "word": "are"
+        },
+        {
+          "start": 832.75,
+          "end": 833.21,
+          "word": "led"
+        },
+        {
+          "start": 833.21,
+          "end": 833.87,
+          "word": "into"
+        },
+        {
+          "start": 833.87,
+          "end": 834.89,
+          "word": "that"
+        },
+        {
+          "start": 835.66,
+          "end": 836.5,
+          "word": "great"
+        },
+        {
+          "start": 837.27,
+          "end": 838.53,
+          "word": "line"
+        },
+        {
+          "start": 839.52,
+          "end": 840.64,
+          "word": "of"
+        },
+        {
+          "start": 840.64,
+          "end": 841.44,
+          "word": "understanding"
+        }
+      ]
+    },
+    {
+      "id": 159,
+      "start": 843.36,
+      "end": 846.66,
+      "text": "for which we don't have to go any college",
+      "words": [
+        {
+          "start": 843.36,
+          "end": 844.22,
+          "word": "for"
+        },
+        {
+          "start": 844.22,
+          "end": 844.48,
+          "word": "which"
+        },
+        {
+          "start": 844.48,
+          "end": 844.68,
+          "word": "we"
+        },
+        {
+          "start": 844.68,
+          "end": 844.9,
+          "word": "don't"
+        },
+        {
+          "start": 844.9,
+          "end": 845.18,
+          "word": "have"
+        },
+        {
+          "start": 845.18,
+          "end": 845.38,
+          "word": "to"
+        },
+        {
+          "start": 845.38,
+          "end": 845.64,
+          "word": "go"
+        },
+        {
+          "start": 845.64,
+          "end": 846.1,
+          "word": "any"
+        },
+        {
+          "start": 846.1,
+          "end": 846.66,
+          "word": "college"
+        }
+      ]
+    },
+    {
+      "id": 160,
+      "start": 847.66,
+      "end": 850.04,
+      "text": ",to school and education",
+      "words": [
+        {
+          "start": 847.66,
+          "end": 848.14,
+          "word": ",to"
+        },
+        {
+          "start": 848.14,
+          "end": 848.78,
+          "word": "school"
+        },
+        {
+          "start": 848.78,
+          "end": 849.34,
+          "word": "and"
+        },
+        {
+          "start": 849.34,
+          "end": 850.04,
+          "word": "education"
+        }
+      ]
+    },
+    {
+      "id": 161,
+      "start": 851.12,
+      "end": 853.44,
+      "text": "it's something so much within",
+      "words": [
+        {
+          "start": 851.12,
+          "end": 851.68,
+          "word": "it's"
+        },
+        {
+          "start": 851.68,
+          "end": 852.14,
+          "word": "something"
+        },
+        {
+          "start": 852.14,
+          "end": 852.6,
+          "word": "so"
+        },
+        {
+          "start": 852.6,
+          "end": 852.84,
+          "word": "much"
+        },
+        {
+          "start": 852.84,
+          "end": 853.44,
+          "word": "within"
+        }
+      ]
+    },
+    {
+      "id": 162,
+      "start": 854.24,
+      "end": 864.05,
+      "text": "that it works and expresses itself,",
+      "words": [
+        {
+          "start": 854.24,
+          "end": 855.08,
+          "word": "that"
+        },
+        {
+          "start": 855.08,
+          "end": 855.38,
+          "word": "it"
+        },
+        {
+          "start": 855.38,
+          "end": 856.16,
+          "word": "works"
+        },
+        {
+          "start": 859.75,
+          "end": 861.37,
+          "word": "and"
+        },
+        {
+          "start": 861.37,
+          "end": 862.11,
+          "word": "expresses"
+        },
+        {
+          "start": 862.33,
+          "end": 864.05,
+          "word": "itself,"
+        }
+      ]
+    },
+    {
+      "id": 163,
+      "start": 865.48,
+      "end": 867.96,
+      "text": "expresses like light.",
+      "words": [
+        {
+          "start": 865.48,
+          "end": 865.98,
+          "word": "expresses"
+        },
+        {
+          "start": 865.98,
+          "end": 867.38,
+          "word": "like"
+        },
+        {
+          "start": 867.38,
+          "end": 867.96,
+          "word": "light."
+        }
+      ]
+    },
+    {
+      "id": 164,
+      "start": 869.53,
+      "end": 872.17,
+      "text": "Such people we can make out",
+      "words": [
+        {
+          "start": 869.53,
+          "end": 869.81,
+          "word": "Such"
+        },
+        {
+          "start": 869.81,
+          "end": 870.59,
+          "word": "people"
+        },
+        {
+          "start": 870.59,
+          "end": 871.37,
+          "word": "we"
+        },
+        {
+          "start": 871.37,
+          "end": 871.61,
+          "word": "can"
+        },
+        {
+          "start": 871.61,
+          "end": 871.91,
+          "word": "make"
+        },
+        {
+          "start": 871.91,
+          "end": 872.17,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 165,
+      "start": 872.17,
+      "end": 875.69,
+      "text": "because they are fully enlightened",
+      "words": [
+        {
+          "start": 872.17,
+          "end": 872.81,
+          "word": "because"
+        },
+        {
+          "start": 873.17,
+          "end": 874.13,
+          "word": "they"
+        },
+        {
+          "start": 874.13,
+          "end": 874.43,
+          "word": "are"
+        },
+        {
+          "start": 874.43,
+          "end": 874.97,
+          "word": "fully"
+        },
+        {
+          "start": 874.97,
+          "end": 875.69,
+          "word": "enlightened"
+        }
+      ]
+    },
+    {
+      "id": 166,
+      "start": 876.61,
+      "end": 878.33,
+      "text": "They have a light",
+      "words": [
+        {
+          "start": 876.61,
+          "end": 877.51,
+          "word": "They"
+        },
+        {
+          "start": 877.51,
+          "end": 877.79,
+          "word": "have"
+        },
+        {
+          "start": 877.79,
+          "end": 877.87,
+          "word": "a"
+        },
+        {
+          "start": 877.87,
+          "end": 878.33,
+          "word": "light"
+        }
+      ]
+    },
+    {
+      "id": 167,
+      "start": 879.36,
+      "end": 881.1,
+      "text": "And through the Light",
+      "words": [
+        {
+          "start": 879.36,
+          "end": 880.16,
+          "word": "And"
+        },
+        {
+          "start": 880.16,
+          "end": 880.46,
+          "word": "through"
+        },
+        {
+          "start": 880.46,
+          "end": 880.76,
+          "word": "the"
+        },
+        {
+          "start": 880.76,
+          "end": 881.1,
+          "word": "Light"
+        }
+      ]
+    },
+    {
+      "id": 168,
+      "start": 881.1,
+      "end": 882.2,
+      "text": "you see",
+      "words": [
+        {
+          "start": 881.1,
+          "end": 881.38,
+          "word": "you"
+        },
+        {
+          "start": 881.38,
+          "end": 882.2,
+          "word": "see"
+        }
+      ]
+    },
+    {
+      "id": 169,
+      "start": 882.49,
+      "end": 884.19,
+      "text": "The whole world",
+      "words": [
+        {
+          "start": 882.49,
+          "end": 883.07,
+          "word": "The"
+        },
+        {
+          "start": 883.07,
+          "end": 883.43,
+          "word": "whole"
+        },
+        {
+          "start": 883.43,
+          "end": 884.19,
+          "word": "world"
+        }
+      ]
+    },
+    {
+      "id": 170,
+      "start": 884.47,
+      "end": 886.35,
+      "text": "which is very innocent",
+      "words": [
+        {
+          "start": 884.47,
+          "end": 885.17,
+          "word": "which"
+        },
+        {
+          "start": 885.17,
+          "end": 885.37,
+          "word": "is"
+        },
+        {
+          "start": 885.37,
+          "end": 885.83,
+          "word": "very"
+        },
+        {
+          "start": 885.83,
+          "end": 886.35,
+          "word": "innocent"
+        }
+      ]
+    },
+    {
+      "id": 171,
+      "start": 886.35,
+      "end": 888.29,
+      "text": "and simple for them.",
+      "words": [
+        {
+          "start": 886.35,
+          "end": 887.03,
+          "word": "and"
+        },
+        {
+          "start": 887.03,
+          "end": 887.53,
+          "word": "simple"
+        },
+        {
+          "start": 887.53,
+          "end": 887.91,
+          "word": "for"
+        },
+        {
+          "start": 887.91,
+          "end": 888.29,
+          "word": "them."
+        }
+      ]
+    },
+    {
+      "id": 172,
+      "start": 897.12,
+      "end": 899.73,
+      "text": "We have love",
+      "words": [
+        {
+          "start": 897.12,
+          "end": 897.5,
+          "word": "We"
+        },
+        {
+          "start": 897.5,
+          "end": 898.48,
+          "word": "have"
+        },
+        {
+          "start": 899.31,
+          "end": 899.73,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 173,
+      "start": 899.73,
+      "end": 901.17,
+      "text": "For our children",
+      "words": [
+        {
+          "start": 899.73,
+          "end": 900.15,
+          "word": "For"
+        },
+        {
+          "start": 900.15,
+          "end": 900.41,
+          "word": "our"
+        },
+        {
+          "start": 900.41,
+          "end": 901.17,
+          "word": "children"
+        }
+      ]
+    },
+    {
+      "id": 174,
+      "start": 901.3,
+      "end": 904.45,
+      "text": "naturally, we",
+      "words": [
+        {
+          "start": 901.3,
+          "end": 902.54,
+          "word": "naturally,"
+        },
+        {
+          "start": 904.33,
+          "end": 904.45,
+          "word": "we"
+        }
+      ]
+    },
+    {
+      "id": 175,
+      "start": 904.45,
+      "end": 905.89,
+      "text": "Have a lot of parents",
+      "words": [
+        {
+          "start": 904.45,
+          "end": 904.73,
+          "word": "Have"
+        },
+        {
+          "start": 904.73,
+          "end": 904.85,
+          "word": "a"
+        },
+        {
+          "start": 904.85,
+          "end": 904.91,
+          "word": "lot"
+        },
+        {
+          "start": 904.91,
+          "end": 905.29,
+          "word": "of"
+        },
+        {
+          "start": 905.29,
+          "end": 905.89,
+          "word": "parents"
+        }
+      ]
+    },
+    {
+      "id": 176,
+      "start": 906.26,
+      "end": 906.73,
+      "text": "Naturally",
+      "words": [
+        {
+          "start": 906.26,
+          "end": 906.73,
+          "word": "Naturally"
+        }
+      ]
+    },
+    {
+      "id": 177,
+      "start": 907.56,
+      "end": 911.4,
+      "text": "Some people",
+      "words": [
+        {
+          "start": 907.56,
+          "end": 908.82,
+          "word": "Some"
+        },
+        {
+          "start": 909.04,
+          "end": 911.4,
+          "word": "people"
+        }
+      ]
+    },
+    {
+      "id": 178,
+      "start": 911.69,
+      "end": 913.89,
+      "text": "But that's love is",
+      "words": [
+        {
+          "start": 911.69,
+          "end": 912.75,
+          "word": "But"
+        },
+        {
+          "start": 912.75,
+          "end": 913.43,
+          "word": "that's"
+        },
+        {
+          "start": 913.43,
+          "end": 913.55,
+          "word": "love"
+        },
+        {
+          "start": 913.55,
+          "end": 913.89,
+          "word": "is"
+        }
+      ]
+    },
+    {
+      "id": 179,
+      "start": 913.89,
+      "end": 915.85,
+      "text": "Different from what",
+      "words": [
+        {
+          "start": 913.89,
+          "end": 914.57,
+          "word": "Different"
+        },
+        {
+          "start": 914.57,
+          "end": 915.49,
+          "word": "from"
+        },
+        {
+          "start": 915.49,
+          "end": 915.85,
+          "word": "what"
+        }
+      ]
+    },
+    {
+      "id": 180,
+      "start": 915.85,
+      "end": 917.59,
+      "text": "Love I'm telling you",
+      "words": [
+        {
+          "start": 915.85,
+          "end": 916.13,
+          "word": "Love"
+        },
+        {
+          "start": 916.13,
+          "end": 916.47,
+          "word": "I'm"
+        },
+        {
+          "start": 916.47,
+          "end": 916.69,
+          "word": "telling"
+        },
+        {
+          "start": 916.69,
+          "end": 917.59,
+          "word": "you"
+        }
+      ]
+    },
+    {
+      "id": 181,
+      "start": 919.93,
+      "end": 922.11,
+      "text": "That has some",
+      "words": [
+        {
+          "start": 919.93,
+          "end": 920.35,
+          "word": "That"
+        },
+        {
+          "start": 920.35,
+          "end": 921.33,
+          "word": "has"
+        },
+        {
+          "start": 921.55,
+          "end": 922.11,
+          "word": "some"
+        }
+      ]
+    },
+    {
+      "id": 182,
+      "start": 922.11,
+      "end": 923.63,
+      "text": "Connections",
+      "words": [
+        {
+          "start": 922.11,
+          "end": 923.63,
+          "word": "Connections"
+        }
+      ]
+    },
+    {
+      "id": 183,
+      "start": 924.01,
+      "end": 925.09,
+      "text": "Some meanings",
+      "words": [
+        {
+          "start": 924.01,
+          "end": 924.45,
+          "word": "Some"
+        },
+        {
+          "start": 924.45,
+          "end": 925.09,
+          "word": "meanings"
+        }
+      ]
+    },
+    {
+      "id": 184,
+      "start": 928.61,
+      "end": 929.55,
+      "text": "This",
+      "words": [
+        {
+          "start": 928.61,
+          "end": 929.55,
+          "word": "This"
+        }
+      ]
+    },
+    {
+      "id": 185,
+      "start": 929.55,
+      "end": 945.69,
+      "text": "This love which is, cannot be described in words has to felt with them.",
+      "words": [
+        {
+          "start": 929.55,
+          "end": 930.35,
+          "word": "This"
+        },
+        {
+          "start": 933.71,
+          "end": 934.47,
+          "word": "love"
+        },
+        {
+          "start": 934.47,
+          "end": 935.03,
+          "word": "which"
+        },
+        {
+          "start": 935.03,
+          "end": 936.05,
+          "word": "is,"
+        },
+        {
+          "start": 938.65,
+          "end": 938.99,
+          "word": "cannot"
+        },
+        {
+          "start": 938.99,
+          "end": 939.41,
+          "word": "be"
+        },
+        {
+          "start": 939.41,
+          "end": 940.33,
+          "word": "described"
+        },
+        {
+          "start": 942.09,
+          "end": 943.01,
+          "word": "in"
+        },
+        {
+          "start": 943.01,
+          "end": 943.47,
+          "word": "words"
+        },
+        {
+          "start": 943.47,
+          "end": 944.31,
+          "word": "has"
+        },
+        {
+          "start": 944.31,
+          "end": 944.57,
+          "word": "to"
+        },
+        {
+          "start": 944.57,
+          "end": 945.03,
+          "word": "felt"
+        },
+        {
+          "start": 945.03,
+          "end": 945.35,
+          "word": "with"
+        },
+        {
+          "start": 945.35,
+          "end": 945.69,
+          "word": "them."
+        }
+      ]
+    },
+    {
+      "id": 186,
+      "start": 949.69,
+      "end": 952.15,
+      "text": "Same when you talk of your guru",
+      "words": [
+        {
+          "start": 949.69,
+          "end": 950.03,
+          "word": "Same"
+        },
+        {
+          "start": 950.03,
+          "end": 950.43,
+          "word": "when"
+        },
+        {
+          "start": 950.43,
+          "end": 950.81,
+          "word": "you"
+        },
+        {
+          "start": 950.81,
+          "end": 951.21,
+          "word": "talk"
+        },
+        {
+          "start": 951.21,
+          "end": 951.51,
+          "word": "of"
+        },
+        {
+          "start": 951.51,
+          "end": 951.81,
+          "word": "your"
+        },
+        {
+          "start": 951.81,
+          "end": 952.15,
+          "word": "guru"
+        }
+      ]
+    },
+    {
+      "id": 187,
+      "start": 954.0,
+      "end": 958.25,
+      "text": "You should have that Love within yourself",
+      "words": [
+        {
+          "start": 954.0,
+          "end": 954.49,
+          "word": "You"
+        },
+        {
+          "start": 954.49,
+          "end": 954.77,
+          "word": "should"
+        },
+        {
+          "start": 954.77,
+          "end": 955.81,
+          "word": "have"
+        },
+        {
+          "start": 956.61,
+          "end": 957.09,
+          "word": "that"
+        },
+        {
+          "start": 957.09,
+          "end": 957.39,
+          "word": "Love"
+        },
+        {
+          "start": 957.39,
+          "end": 957.71,
+          "word": "within"
+        },
+        {
+          "start": 957.71,
+          "end": 958.25,
+          "word": "yourself"
+        }
+      ]
+    },
+    {
+      "id": 188,
+      "start": 961.02,
+      "end": 964.75,
+      "text": "Why do feel so much?",
+      "words": [
+        {
+          "start": 961.02,
+          "end": 961.51,
+          "word": "Why"
+        },
+        {
+          "start": 961.51,
+          "end": 961.99,
+          "word": "do"
+        },
+        {
+          "start": 961.99,
+          "end": 962.49,
+          "word": "feel"
+        },
+        {
+          "start": 962.97,
+          "end": 964.21,
+          "word": "so"
+        },
+        {
+          "start": 964.21,
+          "end": 964.75,
+          "word": "much?"
+        }
+      ]
+    },
+    {
+      "id": 189,
+      "start": 968.83,
+      "end": 977.27,
+      "text": "The reason is guru loves and you love guru",
+      "words": [
+        {
+          "start": 968.83,
+          "end": 969.03,
+          "word": "The"
+        },
+        {
+          "start": 969.03,
+          "end": 969.35,
+          "word": "reason"
+        },
+        {
+          "start": 969.35,
+          "end": 970.43,
+          "word": "is"
+        },
+        {
+          "start": 972.31,
+          "end": 972.85,
+          "word": "guru"
+        },
+        {
+          "start": 972.85,
+          "end": 973.43,
+          "word": "loves"
+        },
+        {
+          "start": 973.43,
+          "end": 973.97,
+          "word": "and"
+        },
+        {
+          "start": 975.19,
+          "end": 976.19,
+          "word": "you"
+        },
+        {
+          "start": 976.19,
+          "end": 976.67,
+          "word": "love"
+        },
+        {
+          "start": 976.67,
+          "end": 977.27,
+          "word": "guru"
+        }
+      ]
+    },
+    {
+      "id": 190,
+      "start": 978.26,
+      "end": 983.94,
+      "text": "That's the only reason, why should you love your guru?",
+      "words": [
+        {
+          "start": 978.26,
+          "end": 978.98,
+          "word": "That's"
+        },
+        {
+          "start": 978.98,
+          "end": 979.06,
+          "word": "the"
+        },
+        {
+          "start": 979.06,
+          "end": 979.36,
+          "word": "only"
+        },
+        {
+          "start": 979.36,
+          "end": 979.84,
+          "word": "reason,"
+        },
+        {
+          "start": 981.72,
+          "end": 982.08,
+          "word": "why"
+        },
+        {
+          "start": 982.08,
+          "end": 982.4,
+          "word": "should"
+        },
+        {
+          "start": 982.4,
+          "end": 982.74,
+          "word": "you"
+        },
+        {
+          "start": 982.74,
+          "end": 983.26,
+          "word": "love"
+        },
+        {
+          "start": 983.26,
+          "end": 983.66,
+          "word": "your"
+        },
+        {
+          "start": 983.66,
+          "end": 983.94,
+          "word": "guru?"
+        }
+      ]
+    },
+    {
+      "id": 191,
+      "start": 985.33,
+      "end": 987.15,
+      "text": "Now there is no reason for that.",
+      "words": [
+        {
+          "start": 985.33,
+          "end": 985.59,
+          "word": "Now"
+        },
+        {
+          "start": 985.59,
+          "end": 985.79,
+          "word": "there"
+        },
+        {
+          "start": 985.79,
+          "end": 985.93,
+          "word": "is"
+        },
+        {
+          "start": 985.93,
+          "end": 986.09,
+          "word": "no"
+        },
+        {
+          "start": 986.09,
+          "end": 986.45,
+          "word": "reason"
+        },
+        {
+          "start": 986.45,
+          "end": 986.81,
+          "word": "for"
+        },
+        {
+          "start": 986.81,
+          "end": 987.15,
+          "word": "that."
+        }
+      ]
+    },
+    {
+      "id": 192,
+      "start": 988.84,
+      "end": 990.24,
+      "text": "Because Love Is Love",
+      "words": [
+        {
+          "start": 988.84,
+          "end": 989.22,
+          "word": "Because"
+        },
+        {
+          "start": 989.22,
+          "end": 989.54,
+          "word": "Love"
+        },
+        {
+          "start": 989.54,
+          "end": 989.8,
+          "word": "Is"
+        },
+        {
+          "start": 989.8,
+          "end": 990.24,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 193,
+      "start": 991.97,
+      "end": 999.17,
+      "text": "and this how the Guru becomes very important in life",
+      "words": [
+        {
+          "start": 991.97,
+          "end": 992.61,
+          "word": "and"
+        },
+        {
+          "start": 992.61,
+          "end": 992.85,
+          "word": "this"
+        },
+        {
+          "start": 992.85,
+          "end": 993.49,
+          "word": "how"
+        },
+        {
+          "start": 994.64,
+          "end": 995.72,
+          "word": "the"
+        },
+        {
+          "start": 995.72,
+          "end": 995.98,
+          "word": "Guru"
+        },
+        {
+          "start": 995.98,
+          "end": 996.76,
+          "word": "becomes"
+        },
+        {
+          "start": 996.83,
+          "end": 997.85,
+          "word": "very"
+        },
+        {
+          "start": 997.85,
+          "end": 998.47,
+          "word": "important"
+        },
+        {
+          "start": 998.47,
+          "end": 998.77,
+          "word": "in"
+        },
+        {
+          "start": 998.77,
+          "end": 999.17,
+          "word": "life"
+        }
+      ]
+    },
+    {
+      "id": 194,
+      "start": 1000.51,
+      "end": 1007.5,
+      "text": "We have people who loves their gurus",
+      "words": [
+        {
+          "start": 1000.51,
+          "end": 1001.35,
+          "word": "We"
+        },
+        {
+          "start": 1001.35,
+          "end": 1001.67,
+          "word": "have"
+        },
+        {
+          "start": 1001.67,
+          "end": 1002.35,
+          "word": "people"
+        },
+        {
+          "start": 1003.31,
+          "end": 1004.27,
+          "word": "who"
+        },
+        {
+          "start": 1004.27,
+          "end": 1004.97,
+          "word": "loves"
+        },
+        {
+          "start": 1005.96,
+          "end": 1006.66,
+          "word": "their"
+        },
+        {
+          "start": 1006.66,
+          "end": 1007.5,
+          "word": "gurus"
+        }
+      ]
+    },
+    {
+      "id": 195,
+      "start": 1009.17,
+      "end": 1021.16,
+      "text": "And are very much in chaste understanding of Their Love",
+      "words": [
+        {
+          "start": 1009.17,
+          "end": 1009.63,
+          "word": "And"
+        },
+        {
+          "start": 1009.63,
+          "end": 1009.97,
+          "word": "are"
+        },
+        {
+          "start": 1009.97,
+          "end": 1010.33,
+          "word": "very"
+        },
+        {
+          "start": 1010.33,
+          "end": 1011.25,
+          "word": "much"
+        },
+        {
+          "start": 1013.77,
+          "end": 1015.09,
+          "word": "in"
+        },
+        {
+          "start": 1016.18,
+          "end": 1017.36,
+          "word": "chaste"
+        },
+        {
+          "start": 1017.65,
+          "end": 1018.57,
+          "word": "understanding"
+        },
+        {
+          "start": 1019.18,
+          "end": 1020.42,
+          "word": "of"
+        },
+        {
+          "start": 1020.42,
+          "end": 1020.78,
+          "word": "Their"
+        },
+        {
+          "start": 1020.78,
+          "end": 1021.16,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 196,
+      "start": 1023.94,
+      "end": 1028.48,
+      "text": "In this great opportunity of love that we are,",
+      "words": [
+        {
+          "start": 1023.94,
+          "end": 1024.78,
+          "word": "In"
+        },
+        {
+          "start": 1024.78,
+          "end": 1025.14,
+          "word": "this"
+        },
+        {
+          "start": 1025.14,
+          "end": 1025.48,
+          "word": "great"
+        },
+        {
+          "start": 1025.48,
+          "end": 1026.28,
+          "word": "opportunity"
+        },
+        {
+          "start": 1026.28,
+          "end": 1026.94,
+          "word": "of"
+        },
+        {
+          "start": 1026.94,
+          "end": 1027.3,
+          "word": "love"
+        },
+        {
+          "start": 1027.3,
+          "end": 1027.68,
+          "word": "that"
+        },
+        {
+          "start": 1027.68,
+          "end": 1028.02,
+          "word": "we"
+        },
+        {
+          "start": 1028.02,
+          "end": 1028.48,
+          "word": "are,"
+        }
+      ]
+    },
+    {
+      "id": 197,
+      "start": 1030.33,
+      "end": 1038.86,
+      "text": "We're here to enjoy each other fully from our heart.",
+      "words": [
+        {
+          "start": 1030.33,
+          "end": 1030.67,
+          "word": "We're"
+        },
+        {
+          "start": 1030.67,
+          "end": 1031.35,
+          "word": "here"
+        },
+        {
+          "start": 1032.4,
+          "end": 1033.2,
+          "word": "to"
+        },
+        {
+          "start": 1033.2,
+          "end": 1033.68,
+          "word": "enjoy"
+        },
+        {
+          "start": 1033.68,
+          "end": 1034.0,
+          "word": "each"
+        },
+        {
+          "start": 1034.0,
+          "end": 1034.94,
+          "word": "other"
+        },
+        {
+          "start": 1035.33,
+          "end": 1035.93,
+          "word": "fully"
+        },
+        {
+          "start": 1036.76,
+          "end": 1037.9,
+          "word": "from"
+        },
+        {
+          "start": 1037.9,
+          "end": 1038.24,
+          "word": "our"
+        },
+        {
+          "start": 1038.24,
+          "end": 1038.86,
+          "word": "heart."
+        }
+      ]
+    },
+    {
+      "id": 198,
+      "start": 1040.83,
+      "end": 1044.74,
+      "text": "That there is",
+      "words": [
+        {
+          "start": 1040.83,
+          "end": 1041.49,
+          "word": "That"
+        },
+        {
+          "start": 1043.28,
+          "end": 1043.7,
+          "word": "there"
+        },
+        {
+          "start": 1043.7,
+          "end": 1044.74,
+          "word": "is"
+        }
+      ]
+    },
+    {
+      "id": 199,
+      "start": 1044.9,
+      "end": 1046.76,
+      "text": "This ocean within us",
+      "words": [
+        {
+          "start": 1044.9,
+          "end": 1045.38,
+          "word": "This"
+        },
+        {
+          "start": 1045.38,
+          "end": 1045.82,
+          "word": "ocean"
+        },
+        {
+          "start": 1045.82,
+          "end": 1046.22,
+          "word": "within"
+        },
+        {
+          "start": 1046.22,
+          "end": 1046.76,
+          "word": "us"
+        }
+      ]
+    },
+    {
+      "id": 200,
+      "start": 1047.69,
+      "end": 1051.31,
+      "text": "And you have just get submerged in the ocean",
+      "words": [
+        {
+          "start": 1047.69,
+          "end": 1048.47,
+          "word": "And"
+        },
+        {
+          "start": 1048.47,
+          "end": 1048.61,
+          "word": "you"
+        },
+        {
+          "start": 1048.61,
+          "end": 1048.81,
+          "word": "have"
+        },
+        {
+          "start": 1048.81,
+          "end": 1049.25,
+          "word": "just"
+        },
+        {
+          "start": 1049.25,
+          "end": 1049.71,
+          "word": "get"
+        },
+        {
+          "start": 1049.71,
+          "end": 1050.37,
+          "word": "submerged"
+        },
+        {
+          "start": 1050.37,
+          "end": 1050.67,
+          "word": "in"
+        },
+        {
+          "start": 1050.67,
+          "end": 1050.85,
+          "word": "the"
+        },
+        {
+          "start": 1050.85,
+          "end": 1051.31,
+          "word": "ocean"
+        }
+      ]
+    },
+    {
+      "id": 201,
+      "start": 1051.95,
+      "end": 1055.03,
+      "text": "If your lost in those oceans",
+      "words": [
+        {
+          "start": 1051.95,
+          "end": 1052.99,
+          "word": "If"
+        },
+        {
+          "start": 1052.99,
+          "end": 1053.35,
+          "word": "your"
+        },
+        {
+          "start": 1053.35,
+          "end": 1053.71,
+          "word": "lost"
+        },
+        {
+          "start": 1053.71,
+          "end": 1053.99,
+          "word": "in"
+        },
+        {
+          "start": 1053.99,
+          "end": 1054.27,
+          "word": "those"
+        },
+        {
+          "start": 1054.27,
+          "end": 1055.03,
+          "word": "oceans"
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "start": 1055.22,
+      "end": 1059.16,
+      "text": "Then will be no problems",
+      "words": [
+        {
+          "start": 1055.22,
+          "end": 1055.98,
+          "word": "Then"
+        },
+        {
+          "start": 1055.98,
+          "end": 1056.24,
+          "word": "will"
+        },
+        {
+          "start": 1056.24,
+          "end": 1056.4,
+          "word": "be"
+        },
+        {
+          "start": 1057.14,
+          "end": 1058.3,
+          "word": "no"
+        },
+        {
+          "start": 1058.3,
+          "end": 1059.16,
+          "word": "problems"
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "start": 1061.14,
+      "end": 1062.35,
+      "text": "No questions",
+      "words": [
+        {
+          "start": 1061.14,
+          "end": 1061.61,
+          "word": "No"
+        },
+        {
+          "start": 1061.61,
+          "end": 1062.35,
+          "word": "questions"
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "start": 1063.82,
+      "end": 1075.29,
+      "text": "Everything will be our own and we can manage everything without any argument,",
+      "words": [
+        {
+          "start": 1063.82,
+          "end": 1065.22,
+          "word": "Everything"
+        },
+        {
+          "start": 1065.22,
+          "end": 1065.54,
+          "word": "will"
+        },
+        {
+          "start": 1065.54,
+          "end": 1065.78,
+          "word": "be"
+        },
+        {
+          "start": 1065.78,
+          "end": 1066.08,
+          "word": "our"
+        },
+        {
+          "start": 1066.08,
+          "end": 1066.44,
+          "word": "own"
+        },
+        {
+          "start": 1068.07,
+          "end": 1068.91,
+          "word": "and"
+        },
+        {
+          "start": 1068.91,
+          "end": 1069.17,
+          "word": "we"
+        },
+        {
+          "start": 1069.17,
+          "end": 1069.39,
+          "word": "can"
+        },
+        {
+          "start": 1069.39,
+          "end": 1070.05,
+          "word": "manage"
+        },
+        {
+          "start": 1070.18,
+          "end": 1071.56,
+          "word": "everything"
+        },
+        {
+          "start": 1071.56,
+          "end": 1072.62,
+          "word": "without"
+        },
+        {
+          "start": 1074.03,
+          "end": 1074.83,
+          "word": "any"
+        },
+        {
+          "start": 1074.83,
+          "end": 1075.29,
+          "word": "argument,"
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "start": 1075.81,
+      "end": 1084.2,
+      "text": "Without any questioning. That is what is being Sahaj.",
+      "words": [
+        {
+          "start": 1075.81,
+          "end": 1076.25,
+          "word": "Without"
+        },
+        {
+          "start": 1076.25,
+          "end": 1077.19,
+          "word": "any"
+        },
+        {
+          "start": 1077.19,
+          "end": 1077.73,
+          "word": "questioning."
+        },
+        {
+          "start": 1080.99,
+          "end": 1081.15,
+          "word": "That"
+        },
+        {
+          "start": 1081.15,
+          "end": 1081.45,
+          "word": "is"
+        },
+        {
+          "start": 1081.45,
+          "end": 1081.85,
+          "word": "what"
+        },
+        {
+          "start": 1081.85,
+          "end": 1083.07,
+          "word": "is"
+        },
+        {
+          "start": 1083.3,
+          "end": 1083.76,
+          "word": "being"
+        },
+        {
+          "start": 1083.76,
+          "end": 1084.2,
+          "word": "Sahaj."
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "start": 1085.45,
+      "end": 1089.66,
+      "text": "The sahaja way if you have this love",
+      "words": [
+        {
+          "start": 1085.45,
+          "end": 1085.79,
+          "word": "The"
+        },
+        {
+          "start": 1085.79,
+          "end": 1086.13,
+          "word": "sahaja"
+        },
+        {
+          "start": 1086.13,
+          "end": 1086.45,
+          "word": "way"
+        },
+        {
+          "start": 1086.45,
+          "end": 1086.77,
+          "word": "if"
+        },
+        {
+          "start": 1086.77,
+          "end": 1087.11,
+          "word": "you"
+        },
+        {
+          "start": 1087.11,
+          "end": 1088.05,
+          "word": "have"
+        },
+        {
+          "start": 1088.66,
+          "end": 1089.12,
+          "word": "this"
+        },
+        {
+          "start": 1089.12,
+          "end": 1089.66,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "start": 1089.95,
+      "end": 1093.99,
+      "text": "You enjoy yourself",
+      "words": [
+        {
+          "start": 1089.95,
+          "end": 1090.75,
+          "word": "You"
+        },
+        {
+          "start": 1090.75,
+          "end": 1091.33,
+          "word": "enjoy"
+        },
+        {
+          "start": 1092.07,
+          "end": 1093.99,
+          "word": "yourself"
+        }
+      ]
+    },
+    {
+      "id": 208,
+      "start": 1093.99,
+      "end": 1098.09,
+      "text": "And enjoy everybody else because it's sahaja",
+      "words": [
+        {
+          "start": 1093.99,
+          "end": 1094.37,
+          "word": "And"
+        },
+        {
+          "start": 1094.37,
+          "end": 1094.69,
+          "word": "enjoy"
+        },
+        {
+          "start": 1094.69,
+          "end": 1095.13,
+          "word": "everybody"
+        },
+        {
+          "start": 1095.13,
+          "end": 1095.99,
+          "word": "else"
+        },
+        {
+          "start": 1096.21,
+          "end": 1096.99,
+          "word": "because"
+        },
+        {
+          "start": 1096.99,
+          "end": 1097.55,
+          "word": "it's"
+        },
+        {
+          "start": 1097.55,
+          "end": 1098.09,
+          "word": "sahaja"
+        }
+      ]
+    },
+    {
+      "id": 209,
+      "start": 1098.73,
+      "end": 1103.92,
+      "text": "Don't have to make any efforts, don´t have try anything.",
+      "words": [
+        {
+          "start": 1098.73,
+          "end": 1099.59,
+          "word": "Don't"
+        },
+        {
+          "start": 1099.59,
+          "end": 1099.81,
+          "word": "have"
+        },
+        {
+          "start": 1099.81,
+          "end": 1099.99,
+          "word": "to"
+        },
+        {
+          "start": 1099.99,
+          "end": 1100.17,
+          "word": "make"
+        },
+        {
+          "start": 1100.17,
+          "end": 1100.53,
+          "word": "any"
+        },
+        {
+          "start": 1100.53,
+          "end": 1100.93,
+          "word": "efforts,"
+        },
+        {
+          "start": 1102.24,
+          "end": 1102.52,
+          "word": "don´t"
+        },
+        {
+          "start": 1102.52,
+          "end": 1102.74,
+          "word": "have"
+        },
+        {
+          "start": 1102.74,
+          "end": 1103.28,
+          "word": "try"
+        },
+        {
+          "start": 1103.28,
+          "end": 1103.92,
+          "word": "anything."
+        }
+      ]
+    },
+    {
+      "id": 210,
+      "start": 1104.95,
+      "end": 1107.53,
+      "text": "Just it is there and It works!",
+      "words": [
+        {
+          "start": 1104.95,
+          "end": 1105.31,
+          "word": "Just"
+        },
+        {
+          "start": 1105.31,
+          "end": 1105.53,
+          "word": "it"
+        },
+        {
+          "start": 1105.53,
+          "end": 1105.77,
+          "word": "is"
+        },
+        {
+          "start": 1105.77,
+          "end": 1106.23,
+          "word": "there"
+        },
+        {
+          "start": 1106.23,
+          "end": 1106.83,
+          "word": "and"
+        },
+        {
+          "start": 1106.83,
+          "end": 1107.11,
+          "word": "It"
+        },
+        {
+          "start": 1107.11,
+          "end": 1107.53,
+          "word": "works!"
+        }
+      ]
+    },
+    {
+      "id": 211,
+      "start": 1113.98,
+      "end": 1123.17,
+      "text": "The feeling of love has no way",
+      "words": [
+        {
+          "start": 1113.98,
+          "end": 1115.02,
+          "word": "The"
+        },
+        {
+          "start": 1118.28,
+          "end": 1118.8,
+          "word": "feeling"
+        },
+        {
+          "start": 1118.8,
+          "end": 1119.26,
+          "word": "of"
+        },
+        {
+          "start": 1119.26,
+          "end": 1119.86,
+          "word": "love"
+        },
+        {
+          "start": 1121.59,
+          "end": 1122.33,
+          "word": "has"
+        },
+        {
+          "start": 1122.33,
+          "end": 1122.65,
+          "word": "no"
+        },
+        {
+          "start": 1122.65,
+          "end": 1123.17,
+          "word": "way"
+        }
+      ]
+    },
+    {
+      "id": 212,
+      "start": 1124.89,
+      "end": 1126.51,
+      "text": "Of expressing itself",
+      "words": [
+        {
+          "start": 1124.89,
+          "end": 1125.41,
+          "word": "Of"
+        },
+        {
+          "start": 1125.41,
+          "end": 1125.87,
+          "word": "expressing"
+        },
+        {
+          "start": 1125.87,
+          "end": 1126.51,
+          "word": "itself"
+        }
+      ]
+    },
+    {
+      "id": 213,
+      "start": 1128.43,
+      "end": 1130.35,
+      "text": ".It's just There",
+      "words": [
+        {
+          "start": 1128.43,
+          "end": 1129.41,
+          "word": ".It's"
+        },
+        {
+          "start": 1129.41,
+          "end": 1129.75,
+          "word": "just"
+        },
+        {
+          "start": 1129.75,
+          "end": 1130.35,
+          "word": "There"
+        }
+      ]
+    },
+    {
+      "id": 214,
+      "start": 1131.57,
+      "end": 1133.51,
+      "text": ",it cannot express",
+      "words": [
+        {
+          "start": 1131.57,
+          "end": 1132.45,
+          "word": ",it"
+        },
+        {
+          "start": 1132.45,
+          "end": 1132.77,
+          "word": "cannot"
+        },
+        {
+          "start": 1132.77,
+          "end": 1133.51,
+          "word": "express"
+        }
+      ]
+    },
+    {
+      "id": 215,
+      "start": 1135.79,
+      "end": 1136.59,
+      "text": "because",
+      "words": [
+        {
+          "start": 1135.79,
+          "end": 1136.59,
+          "word": "because"
+        }
+      ]
+    },
+    {
+      "id": 216,
+      "start": 1137.9,
+      "end": 1139.88,
+      "text": "..it is without expression",
+      "words": [
+        {
+          "start": 1137.9,
+          "end": 1138.42,
+          "word": "..it"
+        },
+        {
+          "start": 1138.42,
+          "end": 1138.74,
+          "word": "is"
+        },
+        {
+          "start": 1138.74,
+          "end": 1139.18,
+          "word": "without"
+        },
+        {
+          "start": 1139.18,
+          "end": 1139.88,
+          "word": "expression"
+        }
+      ]
+    },
+    {
+      "id": 217,
+      "start": 1141.71,
+      "end": 1143.43,
+      "text": "...it Is",
+      "words": [
+        {
+          "start": 1141.71,
+          "end": 1142.61,
+          "word": "...it"
+        },
+        {
+          "start": 1142.61,
+          "end": 1143.43,
+          "word": "Is"
+        }
+      ]
+    },
+    {
+      "id": 218,
+      "start": 1143.43,
+      "end": 1145.01,
+      "text": "....just To be felt",
+      "words": [
+        {
+          "start": 1143.43,
+          "end": 1143.89,
+          "word": "....just"
+        },
+        {
+          "start": 1143.89,
+          "end": 1144.15,
+          "word": "To"
+        },
+        {
+          "start": 1144.15,
+          "end": 1144.29,
+          "word": "be"
+        },
+        {
+          "start": 1144.29,
+          "end": 1145.01,
+          "word": "felt"
+        }
+      ]
+    },
+    {
+      "id": 219,
+      "start": 1145.97,
+      "end": 1147.57,
+      "text": "within yourself",
+      "words": [
+        {
+          "start": 1145.97,
+          "end": 1146.89,
+          "word": "within"
+        },
+        {
+          "start": 1146.89,
+          "end": 1147.57,
+          "word": "yourself"
+        }
+      ]
+    },
+    {
+      "id": 220,
+      "start": 1148.85,
+      "end": 1152.15,
+      "text": "Then you want to do so many things.",
+      "words": [
+        {
+          "start": 1148.85,
+          "end": 1149.89,
+          "word": "Then"
+        },
+        {
+          "start": 1149.89,
+          "end": 1150.15,
+          "word": "you"
+        },
+        {
+          "start": 1150.15,
+          "end": 1150.45,
+          "word": "want"
+        },
+        {
+          "start": 1150.45,
+          "end": 1150.71,
+          "word": "to"
+        },
+        {
+          "start": 1150.71,
+          "end": 1151.01,
+          "word": "do"
+        },
+        {
+          "start": 1151.01,
+          "end": 1151.35,
+          "word": "so"
+        },
+        {
+          "start": 1151.35,
+          "end": 1151.61,
+          "word": "many"
+        },
+        {
+          "start": 1151.61,
+          "end": 1152.15,
+          "word": "things."
+        }
+      ]
+    },
+    {
+      "id": 221,
+      "start": 1153.96,
+      "end": 1155.58,
+      "text": "You want help everyone,",
+      "words": [
+        {
+          "start": 1153.96,
+          "end": 1154.22,
+          "word": "You"
+        },
+        {
+          "start": 1154.22,
+          "end": 1154.46,
+          "word": "want"
+        },
+        {
+          "start": 1154.46,
+          "end": 1154.86,
+          "word": "help"
+        },
+        {
+          "start": 1154.86,
+          "end": 1155.58,
+          "word": "everyone,"
+        }
+      ]
+    },
+    {
+      "id": 222,
+      "start": 1156.93,
+      "end": 1158.11,
+      "text": "and yourself",
+      "words": [
+        {
+          "start": 1156.93,
+          "end": 1157.19,
+          "word": "and"
+        },
+        {
+          "start": 1157.19,
+          "end": 1158.11,
+          "word": "yourself"
+        }
+      ]
+    },
+    {
+      "id": 223,
+      "start": 1161.23,
+      "end": 1164.55,
+      "text": "Do good for others",
+      "words": [
+        {
+          "start": 1161.23,
+          "end": 1161.91,
+          "word": "Do"
+        },
+        {
+          "start": 1162.61,
+          "end": 1163.29,
+          "word": "good"
+        },
+        {
+          "start": 1163.29,
+          "end": 1163.53,
+          "word": "for"
+        },
+        {
+          "start": 1163.53,
+          "end": 1164.55,
+          "word": "others"
+        }
+      ]
+    },
+    {
+      "id": 224,
+      "start": 1165.35,
+      "end": 1170.26,
+      "text": "So much has been done by great leaders of the world",
+      "words": [
+        {
+          "start": 1165.35,
+          "end": 1165.85,
+          "word": "So"
+        },
+        {
+          "start": 1165.85,
+          "end": 1166.33,
+          "word": "much"
+        },
+        {
+          "start": 1166.36,
+          "end": 1167.26,
+          "word": "has"
+        },
+        {
+          "start": 1167.26,
+          "end": 1167.54,
+          "word": "been"
+        },
+        {
+          "start": 1167.54,
+          "end": 1167.78,
+          "word": "done"
+        },
+        {
+          "start": 1167.78,
+          "end": 1168.34,
+          "word": "by"
+        },
+        {
+          "start": 1168.34,
+          "end": 1168.66,
+          "word": "great"
+        },
+        {
+          "start": 1168.66,
+          "end": 1169.26,
+          "word": "leaders"
+        },
+        {
+          "start": 1169.26,
+          "end": 1169.58,
+          "word": "of"
+        },
+        {
+          "start": 1169.58,
+          "end": 1169.78,
+          "word": "the"
+        },
+        {
+          "start": 1169.78,
+          "end": 1170.26,
+          "word": "world"
+        }
+      ]
+    },
+    {
+      "id": 225,
+      "start": 1171.51,
+      "end": 1173.33,
+      "text": "because they had that love",
+      "words": [
+        {
+          "start": 1171.51,
+          "end": 1171.85,
+          "word": "because"
+        },
+        {
+          "start": 1171.85,
+          "end": 1172.21,
+          "word": "they"
+        },
+        {
+          "start": 1172.21,
+          "end": 1172.51,
+          "word": "had"
+        },
+        {
+          "start": 1172.51,
+          "end": 1172.83,
+          "word": "that"
+        },
+        {
+          "start": 1172.83,
+          "end": 1173.33,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 226,
+      "start": 1173.78,
+      "end": 1176.62,
+      "text": "They have nothing else but this Love",
+      "words": [
+        {
+          "start": 1173.78,
+          "end": 1174.52,
+          "word": "They"
+        },
+        {
+          "start": 1174.52,
+          "end": 1174.66,
+          "word": "have"
+        },
+        {
+          "start": 1174.66,
+          "end": 1175.0,
+          "word": "nothing"
+        },
+        {
+          "start": 1175.0,
+          "end": 1175.32,
+          "word": "else"
+        },
+        {
+          "start": 1175.32,
+          "end": 1175.56,
+          "word": "but"
+        },
+        {
+          "start": 1175.56,
+          "end": 1175.88,
+          "word": "this"
+        },
+        {
+          "start": 1175.88,
+          "end": 1176.62,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 227,
+      "start": 1177.51,
+      "end": 1181.79,
+      "text": "which could not contain them with their hands themselves",
+      "words": [
+        {
+          "start": 1177.51,
+          "end": 1178.33,
+          "word": "which"
+        },
+        {
+          "start": 1178.33,
+          "end": 1178.87,
+          "word": "could"
+        },
+        {
+          "start": 1178.87,
+          "end": 1179.13,
+          "word": "not"
+        },
+        {
+          "start": 1179.13,
+          "end": 1179.59,
+          "word": "contain"
+        },
+        {
+          "start": 1179.59,
+          "end": 1179.83,
+          "word": "them"
+        },
+        {
+          "start": 1179.83,
+          "end": 1180.13,
+          "word": "with"
+        },
+        {
+          "start": 1180.13,
+          "end": 1180.27,
+          "word": "their"
+        },
+        {
+          "start": 1180.27,
+          "end": 1180.47,
+          "word": "hands"
+        },
+        {
+          "start": 1180.47,
+          "end": 1181.79,
+          "word": "themselves"
+        }
+      ]
+    },
+    {
+      "id": 228,
+      "start": 1181.86,
+      "end": 1185.28,
+      "text": "So they tried to spread it,",
+      "words": [
+        {
+          "start": 1181.86,
+          "end": 1182.5,
+          "word": "So"
+        },
+        {
+          "start": 1182.98,
+          "end": 1183.96,
+          "word": "they"
+        },
+        {
+          "start": 1183.96,
+          "end": 1184.24,
+          "word": "tried"
+        },
+        {
+          "start": 1184.24,
+          "end": 1184.58,
+          "word": "to"
+        },
+        {
+          "start": 1184.58,
+          "end": 1184.8,
+          "word": "spread"
+        },
+        {
+          "start": 1184.8,
+          "end": 1185.28,
+          "word": "it,"
+        }
+      ]
+    },
+    {
+      "id": 229,
+      "start": 1186.65,
+      "end": 1190.17,
+      "text": "and They are called now as our Guru",
+      "words": [
+        {
+          "start": 1186.65,
+          "end": 1186.99,
+          "word": "and"
+        },
+        {
+          "start": 1186.99,
+          "end": 1187.31,
+          "word": "They"
+        },
+        {
+          "start": 1187.31,
+          "end": 1187.57,
+          "word": "are"
+        },
+        {
+          "start": 1187.57,
+          "end": 1187.85,
+          "word": "called"
+        },
+        {
+          "start": 1187.85,
+          "end": 1188.53,
+          "word": "now"
+        },
+        {
+          "start": 1188.53,
+          "end": 1189.33,
+          "word": "as"
+        },
+        {
+          "start": 1189.33,
+          "end": 1189.65,
+          "word": "our"
+        },
+        {
+          "start": 1189.65,
+          "end": 1190.17,
+          "word": "Guru"
+        }
+      ]
+    },
+    {
+      "id": 230,
+      "start": 1191.25,
+      "end": 1192.77,
+      "text": "–as Our Masters.",
+      "words": [
+        {
+          "start": 1191.25,
+          "end": 1191.77,
+          "word": "–as"
+        },
+        {
+          "start": 1191.77,
+          "end": 1192.05,
+          "word": "Our"
+        },
+        {
+          "start": 1192.05,
+          "end": 1192.77,
+          "word": "Masters."
+        }
+      ]
+    },
+    {
+      "id": 231,
+      "start": 1194.42,
+      "end": 1196.28,
+      "text": "Where's the love within",
+      "words": [
+        {
+          "start": 1194.42,
+          "end": 1194.7,
+          "word": "Where's"
+        },
+        {
+          "start": 1194.7,
+          "end": 1194.82,
+          "word": "the"
+        },
+        {
+          "start": 1194.82,
+          "end": 1195.48,
+          "word": "love"
+        },
+        {
+          "start": 1195.48,
+          "end": 1196.28,
+          "word": "within"
+        }
+      ]
+    },
+    {
+      "id": 232,
+      "start": 1197.34,
+      "end": 1203.16,
+      "text": "which approached people in that unique manner?",
+      "words": [
+        {
+          "start": 1197.34,
+          "end": 1198.16,
+          "word": "which"
+        },
+        {
+          "start": 1198.16,
+          "end": 1198.86,
+          "word": "approached"
+        },
+        {
+          "start": 1198.86,
+          "end": 1199.52,
+          "word": "people"
+        },
+        {
+          "start": 1200.38,
+          "end": 1201.34,
+          "word": "in"
+        },
+        {
+          "start": 1201.34,
+          "end": 1202.04,
+          "word": "that"
+        },
+        {
+          "start": 1202.04,
+          "end": 1202.52,
+          "word": "unique"
+        },
+        {
+          "start": 1202.52,
+          "end": 1203.16,
+          "word": "manner?"
+        }
+      ]
+    },
+    {
+      "id": 233,
+      "start": 1205.41,
+      "end": 1211.27,
+      "text": "That is a thing we cannot possess",
+      "words": [
+        {
+          "start": 1205.41,
+          "end": 1205.69,
+          "word": "That"
+        },
+        {
+          "start": 1205.69,
+          "end": 1205.91,
+          "word": "is"
+        },
+        {
+          "start": 1205.91,
+          "end": 1206.03,
+          "word": "a"
+        },
+        {
+          "start": 1206.03,
+          "end": 1206.39,
+          "word": "thing"
+        },
+        {
+          "start": 1206.39,
+          "end": 1207.81,
+          "word": "we"
+        },
+        {
+          "start": 1209.77,
+          "end": 1210.29,
+          "word": "cannot"
+        },
+        {
+          "start": 1210.29,
+          "end": 1211.27,
+          "word": "possess"
+        }
+      ]
+    },
+    {
+      "id": 234,
+      "start": 1211.99,
+      "end": 1213.53,
+      "text": "you can not claim",
+      "words": [
+        {
+          "start": 1211.99,
+          "end": 1212.51,
+          "word": "you"
+        },
+        {
+          "start": 1212.51,
+          "end": 1212.77,
+          "word": "can"
+        },
+        {
+          "start": 1212.77,
+          "end": 1213.09,
+          "word": "not"
+        },
+        {
+          "start": 1213.09,
+          "end": 1213.53,
+          "word": "claim"
+        }
+      ]
+    },
+    {
+      "id": 235,
+      "start": 1215.77,
+      "end": 1217.21,
+      "text": "It Is there",
+      "words": [
+        {
+          "start": 1215.77,
+          "end": 1216.29,
+          "word": "It"
+        },
+        {
+          "start": 1216.29,
+          "end": 1216.61,
+          "word": "Is"
+        },
+        {
+          "start": 1216.61,
+          "end": 1217.21,
+          "word": "there"
+        }
+      ]
+    },
+    {
+      "id": 236,
+      "start": 1218.46,
+      "end": 1220.14,
+      "text": "And it works",
+      "words": [
+        {
+          "start": 1218.46,
+          "end": 1219.18,
+          "word": "And"
+        },
+        {
+          "start": 1219.18,
+          "end": 1219.48,
+          "word": "it"
+        },
+        {
+          "start": 1219.48,
+          "end": 1220.14,
+          "word": "works"
+        }
+      ]
+    },
+    {
+      "id": 237,
+      "start": 1221.67,
+      "end": 1223.71,
+      "text": "It works automatically.",
+      "words": [
+        {
+          "start": 1221.67,
+          "end": 1222.47,
+          "word": "It"
+        },
+        {
+          "start": 1222.47,
+          "end": 1222.87,
+          "word": "works"
+        },
+        {
+          "start": 1222.87,
+          "end": 1223.71,
+          "word": "automatically."
+        }
+      ]
+    },
+    {
+      "id": 238,
+      "start": 1226.84,
+      "end": 1229.28,
+      "text": "This is what we have to know that",
+      "words": [
+        {
+          "start": 1226.84,
+          "end": 1227.14,
+          "word": "This"
+        },
+        {
+          "start": 1227.14,
+          "end": 1227.5,
+          "word": "is"
+        },
+        {
+          "start": 1227.5,
+          "end": 1227.8,
+          "word": "what"
+        },
+        {
+          "start": 1227.8,
+          "end": 1228.06,
+          "word": "we"
+        },
+        {
+          "start": 1228.06,
+          "end": 1228.28,
+          "word": "have"
+        },
+        {
+          "start": 1228.28,
+          "end": 1228.56,
+          "word": "to"
+        },
+        {
+          "start": 1228.56,
+          "end": 1228.84,
+          "word": "know"
+        },
+        {
+          "start": 1228.84,
+          "end": 1229.28,
+          "word": "that"
+        }
+      ]
+    },
+    {
+      "id": 239,
+      "start": 1229.28,
+      "end": 1234.95,
+      "text": "We are that love,",
+      "words": [
+        {
+          "start": 1229.28,
+          "end": 1229.66,
+          "word": "We"
+        },
+        {
+          "start": 1229.66,
+          "end": 1230.64,
+          "word": "are"
+        },
+        {
+          "start": 1233.93,
+          "end": 1234.43,
+          "word": "that"
+        },
+        {
+          "start": 1234.43,
+          "end": 1234.95,
+          "word": "love,"
+        }
+      ]
+    },
+    {
+      "id": 240,
+      "start": 1237.57,
+      "end": 1239.05,
+      "text": "That Love Is within us",
+      "words": [
+        {
+          "start": 1237.57,
+          "end": 1237.79,
+          "word": "That"
+        },
+        {
+          "start": 1237.79,
+          "end": 1238.15,
+          "word": "Love"
+        },
+        {
+          "start": 1238.15,
+          "end": 1238.43,
+          "word": "Is"
+        },
+        {
+          "start": 1238.43,
+          "end": 1238.71,
+          "word": "within"
+        },
+        {
+          "start": 1238.71,
+          "end": 1239.05,
+          "word": "us"
+        }
+      ]
+    },
+    {
+      "id": 241,
+      "start": 1239.05,
+      "end": 1242.92,
+      "text": "You Have To Have Knowledge",
+      "words": [
+        {
+          "start": 1239.05,
+          "end": 1239.27,
+          "word": "You"
+        },
+        {
+          "start": 1239.27,
+          "end": 1239.49,
+          "word": "Have"
+        },
+        {
+          "start": 1239.49,
+          "end": 1239.77,
+          "word": "To"
+        },
+        {
+          "start": 1239.77,
+          "end": 1240.65,
+          "word": "Have"
+        },
+        {
+          "start": 1242.06,
+          "end": 1242.92,
+          "word": "Knowledge"
+        }
+      ]
+    },
+    {
+      "id": 242,
+      "start": 1245.76,
+      "end": 1247.71,
+      "text": "A Complete knowledge",
+      "words": [
+        {
+          "start": 1245.76,
+          "end": 1246.54,
+          "word": "A"
+        },
+        {
+          "start": 1246.54,
+          "end": 1247.32,
+          "word": "Complete"
+        },
+        {
+          "start": 1247.32,
+          "end": 1247.71,
+          "word": "knowledge"
+        }
+      ]
+    },
+    {
+      "id": 243,
+      "start": 1248.21,
+      "end": 1249.94,
+      "text": "That We Are",
+      "words": [
+        {
+          "start": 1248.21,
+          "end": 1249.17,
+          "word": "That"
+        },
+        {
+          "start": 1249.17,
+          "end": 1249.55,
+          "word": "We"
+        },
+        {
+          "start": 1249.55,
+          "end": 1249.94,
+          "word": "Are"
+        }
+      ]
+    },
+    {
+      "id": 244,
+      "start": 1251.05,
+      "end": 1251.93,
+      "text": "That Love",
+      "words": [
+        {
+          "start": 1251.05,
+          "end": 1251.51,
+          "word": "That"
+        },
+        {
+          "start": 1251.51,
+          "end": 1251.93,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 245,
+      "start": 1254.27,
+      "end": 1256.87,
+      "text": "That will solve our problem",
+      "words": [
+        {
+          "start": 1254.27,
+          "end": 1255.07,
+          "word": "That"
+        },
+        {
+          "start": 1255.07,
+          "end": 1255.39,
+          "word": "will"
+        },
+        {
+          "start": 1255.39,
+          "end": 1255.71,
+          "word": "solve"
+        },
+        {
+          "start": 1255.71,
+          "end": 1256.07,
+          "word": "our"
+        },
+        {
+          "start": 1256.07,
+          "end": 1256.87,
+          "word": "problem"
+        }
+      ]
+    },
+    {
+      "id": 246,
+      "start": 1258.85,
+      "end": 1260.82,
+      "text": "Because you can explain everything",
+      "words": [
+        {
+          "start": 1258.85,
+          "end": 1259.24,
+          "word": "Because"
+        },
+        {
+          "start": 1259.24,
+          "end": 1259.4,
+          "word": "you"
+        },
+        {
+          "start": 1259.4,
+          "end": 1259.72,
+          "word": "can"
+        },
+        {
+          "start": 1259.72,
+          "end": 1260.18,
+          "word": "explain"
+        },
+        {
+          "start": 1260.18,
+          "end": 1260.82,
+          "word": "everything"
+        }
+      ]
+    },
+    {
+      "id": 247,
+      "start": 1260.82,
+      "end": 1262.1,
+      "text": "All your behaviour",
+      "words": [
+        {
+          "start": 1260.82,
+          "end": 1261.2,
+          "word": "All"
+        },
+        {
+          "start": 1261.2,
+          "end": 1261.5,
+          "word": "your"
+        },
+        {
+          "start": 1261.5,
+          "end": 1262.1,
+          "word": "behaviour"
+        }
+      ]
+    },
+    {
+      "id": 248,
+      "start": 1262.74,
+      "end": 1268.1,
+      "text": "all your failures, everything you can explain when",
+      "words": [
+        {
+          "start": 1262.74,
+          "end": 1263.78,
+          "word": "all"
+        },
+        {
+          "start": 1263.78,
+          "end": 1264.14,
+          "word": "your"
+        },
+        {
+          "start": 1264.14,
+          "end": 1264.76,
+          "word": "failures,"
+        },
+        {
+          "start": 1265.52,
+          "end": 1266.18,
+          "word": "everything"
+        },
+        {
+          "start": 1266.18,
+          "end": 1266.48,
+          "word": "you"
+        },
+        {
+          "start": 1266.48,
+          "end": 1266.98,
+          "word": "can"
+        },
+        {
+          "start": 1266.98,
+          "end": 1267.6,
+          "word": "explain"
+        },
+        {
+          "start": 1267.6,
+          "end": 1268.1,
+          "word": "when"
+        }
+      ]
+    },
+    {
+      "id": 249,
+      "start": 1268.48,
+      "end": 1272.47,
+      "text": "You know that you are endowed with that love.",
+      "words": [
+        {
+          "start": 1268.48,
+          "end": 1268.78,
+          "word": "You"
+        },
+        {
+          "start": 1268.78,
+          "end": 1269.0,
+          "word": "know"
+        },
+        {
+          "start": 1269.0,
+          "end": 1269.34,
+          "word": "that"
+        },
+        {
+          "start": 1269.34,
+          "end": 1269.68,
+          "word": "you"
+        },
+        {
+          "start": 1269.68,
+          "end": 1270.86,
+          "word": "are"
+        },
+        {
+          "start": 1270.99,
+          "end": 1271.57,
+          "word": "endowed"
+        },
+        {
+          "start": 1271.57,
+          "end": 1271.95,
+          "word": "with"
+        },
+        {
+          "start": 1271.95,
+          "end": 1272.09,
+          "word": "that"
+        },
+        {
+          "start": 1272.09,
+          "end": 1272.47,
+          "word": "love."
+        }
+      ]
+    },
+    {
+      "id": 250,
+      "start": 1276.18,
+      "end": 1281.06,
+      "text": "This is what the Guru...is the Love within",
+      "words": [
+        {
+          "start": 1276.18,
+          "end": 1276.4,
+          "word": "This"
+        },
+        {
+          "start": 1276.4,
+          "end": 1276.68,
+          "word": "is"
+        },
+        {
+          "start": 1276.68,
+          "end": 1276.98,
+          "word": "what"
+        },
+        {
+          "start": 1276.98,
+          "end": 1277.32,
+          "word": "the"
+        },
+        {
+          "start": 1277.32,
+          "end": 1278.72,
+          "word": "Guru...is"
+        },
+        {
+          "start": 1279.74,
+          "end": 1280.36,
+          "word": "the"
+        },
+        {
+          "start": 1280.36,
+          "end": 1280.7,
+          "word": "Love"
+        },
+        {
+          "start": 1280.7,
+          "end": 1281.06,
+          "word": "within"
+        }
+      ]
+    },
+    {
+      "id": 251,
+      "start": 1281.52,
+      "end": 1285.88,
+      "text": "which wants to share Love",
+      "words": [
+        {
+          "start": 1281.52,
+          "end": 1282.02,
+          "word": "which"
+        },
+        {
+          "start": 1282.98,
+          "end": 1283.64,
+          "word": "wants"
+        },
+        {
+          "start": 1283.64,
+          "end": 1284.02,
+          "word": "to"
+        },
+        {
+          "start": 1284.02,
+          "end": 1285.02,
+          "word": "share"
+        },
+        {
+          "start": 1285.34,
+          "end": 1285.88,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 252,
+      "start": 1285.88,
+      "end": 1286.76,
+      "text": "With others",
+      "words": [
+        {
+          "start": 1285.88,
+          "end": 1286.18,
+          "word": "With"
+        },
+        {
+          "start": 1286.18,
+          "end": 1286.76,
+          "word": "others"
+        }
+      ]
+    },
+    {
+      "id": 253,
+      "start": 1288.55,
+      "end": 1290.99,
+      "text": "Which want's To give Love",
+      "words": [
+        {
+          "start": 1288.55,
+          "end": 1289.43,
+          "word": "Which"
+        },
+        {
+          "start": 1289.43,
+          "end": 1289.89,
+          "word": "want's"
+        },
+        {
+          "start": 1289.89,
+          "end": 1290.01,
+          "word": "To"
+        },
+        {
+          "start": 1290.01,
+          "end": 1290.49,
+          "word": "give"
+        },
+        {
+          "start": 1290.49,
+          "end": 1290.99,
+          "word": "Love"
+        }
+      ]
+    },
+    {
+      "id": 254,
+      "start": 1290.99,
+      "end": 1291.79,
+      "text": "To Others",
+      "words": [
+        {
+          "start": 1290.99,
+          "end": 1291.17,
+          "word": "To"
+        },
+        {
+          "start": 1291.17,
+          "end": 1291.79,
+          "word": "Others"
+        }
+      ]
+    },
+    {
+      "id": 255,
+      "start": 1296.56,
+      "end": 1301.5,
+      "text": "this Is What is Peace and Joy",
+      "words": [
+        {
+          "start": 1296.56,
+          "end": 1297.44,
+          "word": "this"
+        },
+        {
+          "start": 1297.44,
+          "end": 1297.76,
+          "word": "Is"
+        },
+        {
+          "start": 1297.76,
+          "end": 1298.14,
+          "word": "What"
+        },
+        {
+          "start": 1298.14,
+          "end": 1298.74,
+          "word": "is"
+        },
+        {
+          "start": 1298.74,
+          "end": 1299.32,
+          "word": "Peace"
+        },
+        {
+          "start": 1299.8,
+          "end": 1300.96,
+          "word": "and"
+        },
+        {
+          "start": 1300.96,
+          "end": 1301.5,
+          "word": "Joy"
+        }
+      ]
+    },
+    {
+      "id": 256,
+      "start": 1303.17,
+      "end": 1316.89,
+      "text": "I can go on talking about love, but to feel it within yourself is the biggest thing.",
+      "words": [
+        {
+          "start": 1303.17,
+          "end": 1304.05,
+          "word": "I"
+        },
+        {
+          "start": 1304.05,
+          "end": 1304.33,
+          "word": "can"
+        },
+        {
+          "start": 1304.33,
+          "end": 1304.61,
+          "word": "go"
+        },
+        {
+          "start": 1304.61,
+          "end": 1304.89,
+          "word": "on"
+        },
+        {
+          "start": 1304.89,
+          "end": 1305.23,
+          "word": "talking"
+        },
+        {
+          "start": 1305.23,
+          "end": 1305.67,
+          "word": "about"
+        },
+        {
+          "start": 1305.67,
+          "end": 1306.15,
+          "word": "love,"
+        },
+        {
+          "start": 1308.18,
+          "end": 1308.54,
+          "word": "but"
+        },
+        {
+          "start": 1308.54,
+          "end": 1309.38,
+          "word": "to"
+        },
+        {
+          "start": 1310.18,
+          "end": 1310.54,
+          "word": "feel"
+        },
+        {
+          "start": 1310.54,
+          "end": 1311.56,
+          "word": "it"
+        },
+        {
+          "start": 1314.09,
+          "end": 1314.59,
+          "word": "within"
+        },
+        {
+          "start": 1314.59,
+          "end": 1315.33,
+          "word": "yourself"
+        },
+        {
+          "start": 1315.33,
+          "end": 1315.83,
+          "word": "is"
+        },
+        {
+          "start": 1315.83,
+          "end": 1316.09,
+          "word": "the"
+        },
+        {
+          "start": 1316.09,
+          "end": 1316.39,
+          "word": "biggest"
+        },
+        {
+          "start": 1316.39,
+          "end": 1316.89,
+          "word": "thing."
+        }
+      ]
+    },
+    {
+      "id": 257,
+      "start": 1318.92,
+      "end": 1324.85,
+      "text": "Like water – if you are thirsty we can give You water",
+      "words": [
+        {
+          "start": 1318.92,
+          "end": 1319.3,
+          "word": "Like"
+        },
+        {
+          "start": 1319.3,
+          "end": 1319.84,
+          "word": "water"
+        },
+        {
+          "start": 1319.84,
+          "end": 1320.66,
+          "word": "–"
+        },
+        {
+          "start": 1320.95,
+          "end": 1321.29,
+          "word": "if"
+        },
+        {
+          "start": 1321.29,
+          "end": 1321.49,
+          "word": "you"
+        },
+        {
+          "start": 1321.49,
+          "end": 1321.75,
+          "word": "are"
+        },
+        {
+          "start": 1321.75,
+          "end": 1322.31,
+          "word": "thirsty"
+        },
+        {
+          "start": 1322.59,
+          "end": 1323.65,
+          "word": "we"
+        },
+        {
+          "start": 1323.65,
+          "end": 1323.89,
+          "word": "can"
+        },
+        {
+          "start": 1323.89,
+          "end": 1324.09,
+          "word": "give"
+        },
+        {
+          "start": 1324.09,
+          "end": 1324.27,
+          "word": "You"
+        },
+        {
+          "start": 1324.27,
+          "end": 1324.85,
+          "word": "water"
+        }
+      ]
+    },
+    {
+      "id": 258,
+      "start": 1325.43,
+      "end": 1327.25,
+      "text": "But We cannot drink!",
+      "words": [
+        {
+          "start": 1325.43,
+          "end": 1326.17,
+          "word": "But"
+        },
+        {
+          "start": 1326.17,
+          "end": 1326.37,
+          "word": "We"
+        },
+        {
+          "start": 1326.37,
+          "end": 1326.65,
+          "word": "cannot"
+        },
+        {
+          "start": 1326.65,
+          "end": 1327.25,
+          "word": "drink!"
+        }
+      ]
+    },
+    {
+      "id": 259,
+      "start": 1327.7,
+      "end": 1331.74,
+      "text": "You have to drink water and you have",
+      "words": [
+        {
+          "start": 1327.7,
+          "end": 1328.54,
+          "word": "You"
+        },
+        {
+          "start": 1328.54,
+          "end": 1328.84,
+          "word": "have"
+        },
+        {
+          "start": 1328.84,
+          "end": 1329.1,
+          "word": "to"
+        },
+        {
+          "start": 1329.1,
+          "end": 1329.36,
+          "word": "drink"
+        },
+        {
+          "start": 1329.36,
+          "end": 1330.1,
+          "word": "water"
+        },
+        {
+          "start": 1330.16,
+          "end": 1331.24,
+          "word": "and"
+        },
+        {
+          "start": 1331.24,
+          "end": 1331.44,
+          "word": "you"
+        },
+        {
+          "start": 1331.44,
+          "end": 1331.74,
+          "word": "have"
+        }
+      ]
+    },
+    {
+      "id": 260,
+      "start": 1334.59,
+      "end": 1337.05,
+      "text": "feel the taste,",
+      "words": [
+        {
+          "start": 1334.59,
+          "end": 1336.09,
+          "word": "feel"
+        },
+        {
+          "start": 1336.09,
+          "end": 1336.53,
+          "word": "the"
+        },
+        {
+          "start": 1336.53,
+          "end": 1337.05,
+          "word": "taste,"
+        }
+      ]
+    },
+    {
+      "id": 261,
+      "start": 1338.68,
+      "end": 1341.94,
+      "text": "feeling what it does",
+      "words": [
+        {
+          "start": 1338.68,
+          "end": 1339.04,
+          "word": "feeling"
+        },
+        {
+          "start": 1339.04,
+          "end": 1340.78,
+          "word": "what"
+        },
+        {
+          "start": 1340.94,
+          "end": 1341.26,
+          "word": "it"
+        },
+        {
+          "start": 1341.26,
+          "end": 1341.94,
+          "word": "does"
+        }
+      ]
+    },
+    {
+      "id": 262,
+      "start": 1342.26,
+      "end": 1346.39,
+      "text": "And all that is together.",
+      "words": [
+        {
+          "start": 1342.26,
+          "end": 1343.2,
+          "word": "And"
+        },
+        {
+          "start": 1343.2,
+          "end": 1343.64,
+          "word": "all"
+        },
+        {
+          "start": 1343.64,
+          "end": 1344.22,
+          "word": "that"
+        },
+        {
+          "start": 1344.22,
+          "end": 1345.54,
+          "word": "is"
+        },
+        {
+          "start": 1345.83,
+          "end": 1346.39,
+          "word": "together."
+        }
+      ]
+    },
+    {
+      "id": 263,
+      "start": 1348.12,
+      "end": 1349.24,
+      "text": "That's not separate",
+      "words": [
+        {
+          "start": 1348.12,
+          "end": 1348.46,
+          "word": "That's"
+        },
+        {
+          "start": 1348.46,
+          "end": 1348.72,
+          "word": "not"
+        },
+        {
+          "start": 1348.72,
+          "end": 1349.24,
+          "word": "separate"
+        }
+      ]
+    },
+    {
+      "id": 264,
+      "start": 1351.0,
+      "end": 1354.98,
+      "text": "I don't think this subject was too subtle for you people",
+      "words": [
+        {
+          "start": 1351.0,
+          "end": 1351.46,
+          "word": "I"
+        },
+        {
+          "start": 1351.46,
+          "end": 1351.82,
+          "word": "don't"
+        },
+        {
+          "start": 1351.82,
+          "end": 1351.98,
+          "word": "think"
+        },
+        {
+          "start": 1351.98,
+          "end": 1352.28,
+          "word": "this"
+        },
+        {
+          "start": 1352.28,
+          "end": 1352.74,
+          "word": "subject"
+        },
+        {
+          "start": 1352.74,
+          "end": 1353.22,
+          "word": "was"
+        },
+        {
+          "start": 1353.22,
+          "end": 1353.54,
+          "word": "too"
+        },
+        {
+          "start": 1353.54,
+          "end": 1353.86,
+          "word": "subtle"
+        },
+        {
+          "start": 1353.86,
+          "end": 1354.2,
+          "word": "for"
+        },
+        {
+          "start": 1354.2,
+          "end": 1354.46,
+          "word": "you"
+        },
+        {
+          "start": 1354.46,
+          "end": 1354.98,
+          "word": "people"
+        }
+      ]
+    },
+    {
+      "id": 265,
+      "start": 1356.19,
+      "end": 1358.81,
+      "text": "We've reached a certain amount",
+      "words": [
+        {
+          "start": 1356.19,
+          "end": 1357.07,
+          "word": "We've"
+        },
+        {
+          "start": 1357.07,
+          "end": 1357.51,
+          "word": "reached"
+        },
+        {
+          "start": 1357.51,
+          "end": 1357.79,
+          "word": "a"
+        },
+        {
+          "start": 1357.79,
+          "end": 1358.11,
+          "word": "certain"
+        },
+        {
+          "start": 1358.11,
+          "end": 1358.81,
+          "word": "amount"
+        }
+      ]
+    },
+    {
+      "id": 266,
+      "start": 1359.42,
+      "end": 1362.2,
+      "text": "of understanding about love",
+      "words": [
+        {
+          "start": 1359.42,
+          "end": 1360.44,
+          "word": "of"
+        },
+        {
+          "start": 1360.44,
+          "end": 1361.1,
+          "word": "understanding"
+        },
+        {
+          "start": 1361.1,
+          "end": 1361.48,
+          "word": "about"
+        },
+        {
+          "start": 1361.48,
+          "end": 1362.2,
+          "word": "love"
+        }
+      ]
+    },
+    {
+      "id": 267,
+      "start": 1364.22,
+      "end": 1372.99,
+      "text": "I hope it grows and you grow into It, all of You.",
+      "words": [
+        {
+          "start": 1364.22,
+          "end": 1365.04,
+          "word": "I"
+        },
+        {
+          "start": 1365.04,
+          "end": 1365.78,
+          "word": "hope"
+        },
+        {
+          "start": 1366.26,
+          "end": 1366.94,
+          "word": "it"
+        },
+        {
+          "start": 1366.94,
+          "end": 1367.46,
+          "word": "grows"
+        },
+        {
+          "start": 1368.35,
+          "end": 1369.47,
+          "word": "and"
+        },
+        {
+          "start": 1369.47,
+          "end": 1369.71,
+          "word": "you"
+        },
+        {
+          "start": 1369.71,
+          "end": 1369.97,
+          "word": "grow"
+        },
+        {
+          "start": 1369.97,
+          "end": 1370.35,
+          "word": "into"
+        },
+        {
+          "start": 1370.35,
+          "end": 1370.99,
+          "word": "It,"
+        },
+        {
+          "start": 1372.17,
+          "end": 1372.39,
+          "word": "all"
+        },
+        {
+          "start": 1372.39,
+          "end": 1372.61,
+          "word": "of"
+        },
+        {
+          "start": 1372.61,
+          "end": 1372.99,
+          "word": "You."
+        }
+      ]
+    },
+    {
+      "id": 268,
+      "start": 1373.89,
+      "end": 1375.29,
+      "text": "And enjoy it!",
+      "words": [
+        {
+          "start": 1373.89,
+          "end": 1374.17,
+          "word": "And"
+        },
+        {
+          "start": 1374.17,
+          "end": 1374.53,
+          "word": "enjoy"
+        },
+        {
+          "start": 1374.53,
+          "end": 1375.29,
+          "word": "it!"
+        }
+      ]
+    },
+    {
+      "id": 269,
+      "start": 1376.22,
+      "end": 1377.22,
+      "text": "May God bless you!",
+      "words": [
+        {
+          "start": 1376.22,
+          "end": 1376.38,
+          "word": "May"
+        },
+        {
+          "start": 1376.38,
+          "end": 1376.6,
+          "word": "God"
+        },
+        {
+          "start": 1376.6,
+          "end": 1376.94,
+          "word": "bless"
+        },
+        {
+          "start": 1376.94,
+          "end": 1377.22,
+          "word": "you!"
+        }
+      ]
+    }
+  ]
+}

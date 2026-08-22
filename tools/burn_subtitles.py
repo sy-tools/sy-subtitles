@@ -24,25 +24,30 @@ from pathlib import Path
 
 from .srt_utils import parse_srt
 
-# Vendored rather than apt-installed: the typeface was chosen because its
-# Ukrainian text is 101% of Georgia's width, so line breaks match the preview.
-# A silent substitution would re-wrap the entire corpus.
-# Source: Google Fonts static Roboto Regular v51, Apache-2.0 (LICENSE-Roboto.txt).
-# Its Win metrics (upm 2048, ascent 1946, descent 512) are what make
-# ROBOTO_WIN_FACTOR correct and are pinned by tests.
+# Vendored rather than apt-installed: a silent substitution would re-wrap the
+# entire corpus. The typeface matches what the preview actually draws. The SPA
+# asks for `'Fraunces', Georgia, …`, but Fraunces ships no Cyrillic, so every
+# Ukrainian subtitle on screen is rendered by the fallback — Georgia. PT Serif
+# is the free face that lands closest to it: a serif of the same colour, and
+# 99.8% of Georgia's width over 400 sampled corpus lines, so line breaks match.
+# Source: Google Fonts PT Serif Web Regular v1.000W, OFL (LICENSE-PTSerif.txt).
+# Its Win metrics (upm 1000, ascent 1039, descent 286) are what make
+# PT_SERIF_WIN_FACTOR correct and are pinned by tests.
 # Absolute: the CLI is run from wherever the caller stands, and a relative
 # default would only resolve from the repo root.
-DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "assets" / "fonts" / "Roboto-Regular.ttf")
-DEFAULT_FONT_NAME = "Roboto"
+DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "assets" / "fonts" / "PT_Serif-Web-Regular.ttf")
+DEFAULT_FONT_NAME = "PT Serif"
 
 # Fullscreen's 10% horizontal insets.
 SIDE_INSET_RATIO = 0.10
 
 # ASS FontSize is mapped onto the font's Win cell height, not CSS pixels:
 #   FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm
-# Roboto: (1946 + 512) / 2048. Its hhea metrics disagree by 2.4%, so rendered
-# glyph height must be confirmed on a real frame, not trusted from arithmetic.
-ROBOTO_WIN_FACTOR = 1.2002
+# PT Serif: (1039 + 286) / 1000. Its hhea and Win metrics agree exactly (both
+# 1325/1000), so libass's FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the
+# arithmetic value — a face whose two metric sets disagree would not, and its
+# rendered glyph height would have to be confirmed on a real frame.
+PT_SERIF_WIN_FACTOR = 1.325
 
 # Guards against a pathological measurement arriving from the browser.
 FONT_RATIO_MIN = 0.02
@@ -109,7 +114,7 @@ def css_font_px(font_ratio, height):
     return ratio * height
 
 
-def font_size_for(font_ratio, height, win_factor=ROBOTO_WIN_FACTOR):
+def font_size_for(font_ratio, height, win_factor=PT_SERIF_WIN_FACTOR):
     """ASS FontSize for a font-height-to-frame-height ratio."""
     return round(css_font_px(font_ratio, height) * win_factor)
 
@@ -393,13 +398,13 @@ _FONTSELECT_TROUBLE = (
 
 
 def _normalized_face(name):
-    """Fold a face name for comparison: 'Roboto-Regular' ~ 'Roboto Regular'."""
+    """Fold a face name for comparison: 'PTSerif-Regular' ~ 'PT Serif Regular'."""
     return re.sub(r"[\s_-]+", "", name).casefold()
 
 
-# Style words that name the plain cut of a family, so "Roboto" and
-# "Roboto Regular" mean the same face. Deliberately short: "Light" and
-# "Condensed" are *different* widths and must not be folded away.
+# Style words that name the plain cut of a family, so "PT Serif" and
+# "PT Serif Regular" mean the same face. Deliberately short: "Bold" and
+# "Caption" are *different* widths and must not be folded away.
 _NEUTRAL_STYLE_WORDS = ("regular", "book", "roman", "normal")
 
 
@@ -407,9 +412,9 @@ def accepted_faces(font_name, font_file=None):
     """Folded names a font provider may legitimately report for our font.
 
     Read out of the TTF when we have it, because a name that merely *looks*
-    related is not evidence: "Roboto Condensed" and "Roboto Slab" both begin
-    with "Roboto", and Condensed is 10-15% narrower — the very corpus-wide
-    re-wrap this module exists to prevent. Matching is exact over this set.
+    related is not evidence: "PT Serif Caption" begins with "PT Serif" and sets
+    12.6% wider (it is cut for small sizes) — the very corpus-wide re-wrap this
+    module exists to prevent. Matching is exact over this set.
 
     Pillow reads the family, not fontTools: fontTools is a test-only dependency,
     and Pillow is already required at run time to measure with this same file.
@@ -446,7 +451,7 @@ def font_selection_error(stderr, font_name, font_file=None, require_evidence=Tru
     # libass selects the primary face first; only when a glyph is missing from
     # it does it log "Glyph 0x… not found, selecting one more font" and then a
     # second resolution line for the fallback face. Twelve of the corpus's
-    # videos carry Devanagari mantras that Roboto does not cover: their
+    # videos carry Devanagari mantras that PT Serif does not cover: their
     # fallback resolutions are legitimate — the layout metrics all come from
     # the primary — and condemning them made those talks unrenderable. A wrong
     # face BEFORE any fallback marker is still the substitution this function
