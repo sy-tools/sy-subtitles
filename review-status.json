@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-23T04:21:00.826116+00:00",
+  "updated_at": "2026-08-23T04:24:07.424236+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -51,10 +51,10 @@
       "updated_at": "2026-07-11T01:08:28Z"
     },
     "1992-07-19_Guru-Puja": {
-      "status": "pending",
+      "status": "approved",
       "reviewer": null,
       "issue_number": 987,
-      "updated_at": "2026-08-23T04:20:50Z"
+      "updated_at": "2026-08-23T04:24:05Z"
     },
     "1993-09-19_Ganesha-Puja-Cabella": {
       "status": "approved",
