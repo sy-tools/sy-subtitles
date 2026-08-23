@@ -57,7 +57,7 @@ sy-subtitles/
 │               ├── uk.srt          # Final Ukrainian subtitles
 │               └── report.txt      # Validation report
 ├── assets/                         # Vendored binary assets
-│   └── fonts/                      # Roboto TTF + license — libass reads it via fontsdir,
+│   └── fonts/                      # PT Serif TTF + license — libass reads it via fontsdir,
 │                                   #   so a burned line breaks exactly where the SPA's does
 ├── glossary/                       # Translation knowledge base
 │   ├── terms_lookup.yaml           # 374 EN→UK terms

@@ -186,11 +186,13 @@ python -m tools.build_map assemble       --talk-dir PATH --video-slug SLUG [--la
 
 # Burn subtitles into a video (SRT -> ASS -> ffmpeg+libass). Sizing comes from
 # ratios measured by the SPA against the displayed video, not pixels.
-# --font-file defaults to the vendored assets/fonts/Roboto-Regular.ttf, resolved
-# absolutely from the module, so the CLI works from any directory.
+# --font-file defaults to the vendored assets/fonts/PT_Serif-Web-Regular.ttf,
+# resolved absolutely from the module, so the CLI works from any directory.
+# PT Serif is the serif the preview really draws: its stack is
+# `'Fraunces', Georgia, …` and Fraunces has no Cyrillic, so Georgia wins.
 python -m tools.burn_subtitles --srt PATH --video PATH --output PATH \
   --font-ratio 0.0711 --padtop-ratio 0.0741 --padbot-ratio 0.0333 \
-  [--font-file PATH] [--font-name Roboto] [--gradient-steps 64] [--ass-out PATH] \
+  [--font-file PATH] [--font-name "PT Serif"] [--gradient-steps 64] [--ass-out PATH] \
   [--progress-file PATH]   # ffmpeg -progress sink; burn-subtitles.yml's gates poll it
 
 # Validate SRT subtitles (timing source: --whisper-json OR --en-srt, en-srt preferred)

@@ -178,6 +178,13 @@ def _wire(pg, calls, review_status, tree=None):
         "**/api.github.com/repos/**/issues?creator=*",
         lambda r: r.fulfill(status=200, content_type="application/json", body="[]"),
     )
+    # Duplicate guard: "take for review" lists the talk-review issues before it
+    # creates one, so a talk that already has an issue is claimed rather than
+    # given a second one. Empty by default; tests override to supply an issue.
+    pg.route(
+        "**/api.github.com/repos/**/issues?labels=talk-review*",
+        lambda r: r.fulfill(status=200, content_type="application/json", body="[]"),
+    )
     pg.route("**/raw.githubusercontent.com/**", lambda r: r.fulfill(status=404, body="not found"))
     pg.route(
         "**/raw.githubusercontent.com/**/meta.yaml",
@@ -298,6 +305,105 @@ def test_take_for_review_creates_issue_when_none_exists(server, browser):
     assert body["title"] == "Review: 2001-01-01_Test-Talk"
     assert "talk-review" in body["labels"]
     assert body["assignees"] == ["tester"]
+    ctx.close()
+
+
+def test_take_for_review_reattaches_to_an_issue_missing_from_the_cache(server, browser):
+    """A talk whose issue is absent from the cached review-status must be
+    claimed on its EXISTING issue, not given a second one.
+
+    review-status.json is a snapshot: a tab opened before the pipeline filed the
+    issue (or holding a stale copy) shows no issue number for the talk. Creating
+    one then is not a harmless extra — sync-review-status.py keeps a single entry
+    per talk, so the pair fights and the loser's label and assignee vanish. That
+    is how an approved, claimed talk fell back to "needs review" with no
+    reviewer (#957 lost to the older #954).
+    """
+    calls = []
+    ctx, pg = _page(browser, calls, {"version": 1, "talks": {}})
+    pg.add_init_script("localStorage.setItem('sy_expert_mode', '1');localStorage.setItem('sy_filter_expert', 'all');")
+    # The cache knows nothing, but GitHub already has the talk's issue.
+    pg.route(
+        "**/api.github.com/repos/**/issues?labels=talk-review*",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                [
+                    {
+                        "number": 42,
+                        "title": "Review: 2001-01-01_Test-Talk",
+                        "state": "open",
+                        "updated_at": "2026-08-12T07:08:06Z",
+                    }
+                ]
+            ),
+        ),
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    pg.click(".take-review-btn")
+    pg.wait_for_function(
+        "document.querySelector(\".stat-card[data-filter='mine'] .num\")"
+        " && document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent.includes('1')",
+        timeout=5000,
+    )
+    posts = [c for c in calls if c["method"] == "POST"]
+    assert posts and posts[0]["url"].endswith("/issues/42/assignees"), (
+        f"the existing issue #42 must be claimed, not duplicated; got {[p['url'] for p in posts]}"
+    )
+    assert not [p for p in posts if p["url"].endswith("/issues")], "no second review issue may be created"
+    ctx.close()
+
+
+def test_take_for_review_picks_the_freshest_of_duplicate_issues(server, browser):
+    """With duplicates already on GitHub, claim the one sync-review-status.py
+    will treat as authoritative — freshest activity — so the optimistic badge
+    and the bot's commit agree instead of flipping against each other."""
+    calls = []
+    ctx, pg = _page(browser, calls, {"version": 1, "talks": {}})
+    pg.add_init_script("localStorage.setItem('sy_expert_mode', '1');localStorage.setItem('sy_filter_expert', 'all');")
+    pg.route(
+        "**/api.github.com/repos/**/issues?labels=talk-review*",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                [
+                    # Newest-created first, as the API returns them — the stale
+                    # one trails, which is what used to win.
+                    {
+                        "number": 57,
+                        "title": "Review: 2001-01-01_Test-Talk",
+                        "state": "open",
+                        "updated_at": "2026-08-12T21:57:55Z",
+                    },
+                    {
+                        "number": 42,
+                        "title": "Review: 2001-01-01_Test-Talk",
+                        "state": "open",
+                        "updated_at": "2026-08-12T07:08:06Z",
+                    },
+                ]
+            ),
+        ),
+    )
+    pg.route(
+        "**/api.github.com/repos/**/issues/57/assignees",
+        _record(calls)(201, {"number": 57}),
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    pg.click(".take-review-btn")
+    pg.wait_for_function(
+        "document.querySelector(\".stat-card[data-filter='mine'] .num\")"
+        " && document.querySelector(\".stat-card[data-filter='mine'] .num\").textContent.includes('1')",
+        timeout=5000,
+    )
+    posts = [c for c in calls if c["method"] == "POST"]
+    assert posts and posts[0]["url"].endswith("/issues/57/assignees"), (
+        f"the freshest duplicate #57 must win over the stale #42; got {[p['url'] for p in posts]}"
+    )
     ctx.close()
 
 

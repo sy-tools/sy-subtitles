@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-12T21:58:17.128907+00:00",
+  "updated_at": "2026-08-23T04:24:07.424236+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -51,10 +51,10 @@
       "updated_at": "2026-07-11T01:08:28Z"
     },
     "1992-07-19_Guru-Puja": {
-      "status": "in-progress",
-      "reviewer": "Dmytro7-sys",
-      "issue_number": 2,
-      "updated_at": "2026-04-23T10:44:47Z"
+      "status": "approved",
+      "reviewer": null,
+      "issue_number": 987,
+      "updated_at": "2026-08-23T04:24:05Z"
     },
     "1993-09-19_Ganesha-Puja-Cabella": {
       "status": "approved",
@@ -363,10 +363,10 @@
       "updated_at": "2026-07-17T18:49:22Z"
     },
     "1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "Dmytro7-sys",
       "issue_number": 347,
-      "updated_at": "2026-07-17T07:06:17Z"
+      "updated_at": "2026-08-18T12:15:55Z"
     },
     "1977-03-22_Advice-at-Bharatiya-Vidya-Bhavan": {
       "status": "pending",
@@ -573,10 +573,22 @@
       "updated_at": "2026-08-07T21:15:10Z"
     },
     "2004-07-04_Guru-Puja-Follow-My-Message-of-Love": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 957,
+      "updated_at": "2026-08-12T21:58:15Z"
+    },
+    "1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours-Only-If-Sahasrara-is-Completely-Open": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": 954,
-      "updated_at": "2026-08-12T07:08:06Z"
+      "issue_number": 969,
+      "updated_at": "2026-08-13T08:52:35Z"
+    },
+    "1986-09-07_Shri-Ganesha-Puja-Establishing-Shri-Ganesha-Principle": {
+      "status": "approved",
+      "reviewer": null,
+      "issue_number": 979,
+      "updated_at": "2026-08-18T04:27:15Z"
     }
   }
 }
