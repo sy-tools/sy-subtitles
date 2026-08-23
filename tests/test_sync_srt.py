@@ -595,6 +595,102 @@ class TestSyncSrtToTranscript:
         )
         assert "error" in result
 
+    def test_omit_phrase_removal_does_not_reach_transcript(self, tmp_path):
+        """Taking a declared omit remark off the screen must leave the transcript alone.
+
+        `glossary/subtitle_omit.yaml` phrases live in the transcript and never
+        in a subtitle. When an SRT edit only strips such a phrase, propagating
+        it would delete the remark from the one artefact that is supposed to
+        keep it.
+        """
+        talk_dir = tmp_path / "talks" / "test"
+        video = talk_dir / "Video" / "final"
+        video.mkdir(parents=True)
+
+        old_srt = """1
+00:00:01,000 --> 00:00:05,000
+Перше речення першого абзацу. (сміх)
+
+2
+00:00:05,100 --> 00:00:10,000
+Друге речення першого абзацу.
+"""
+        new_srt = """1
+00:00:01,000 --> 00:00:05,000
+Перше речення першого абзацу.
+
+2
+00:00:05,100 --> 00:00:10,000
+Друге речення першого абзацу.
+"""
+        (talk_dir / "uk_old.srt").write_text(old_srt, encoding="utf-8")
+        (video / "uk.srt").write_text(new_srt, encoding="utf-8")
+        transcript = talk_dir / "transcript_uk.txt"
+        transcript.write_text(
+            HEADER + "Перше речення першого абзацу. (сміх) Друге речення першого абзацу.\n",
+            encoding="utf-8",
+        )
+        before = transcript.read_bytes()
+
+        result = sync_srt_to_transcript(
+            old_srt=str(talk_dir / "uk_old.srt"),
+            new_srt=str(video / "uk.srt"),
+            transcript=str(transcript),
+        )
+
+        assert "error" not in result
+        assert result["changed"] == 0
+        assert transcript.read_bytes() == before
+
+    def test_deleted_omit_only_block_leaves_transcript_alone(self, tmp_path):
+        """A block that was nothing but an omit remark is the same case as above.
+
+        Dropping it from the SRT is correct; deleting the remark from the
+        transcript along with it is not.
+        """
+        talk_dir = tmp_path / "talks" / "test"
+        video = talk_dir / "Video" / "final"
+        video.mkdir(parents=True)
+
+        old_srt = """1
+00:00:01,000 --> 00:00:05,000
+Перше речення першого абзацу.
+
+2
+00:00:05,100 --> 00:00:07,000
+(сміх)
+
+3
+00:00:07,100 --> 00:00:10,000
+Друге речення першого абзацу.
+"""
+        new_srt = """1
+00:00:01,000 --> 00:00:05,000
+Перше речення першого абзацу.
+
+2
+00:00:07,100 --> 00:00:10,000
+Друге речення першого абзацу.
+"""
+        (talk_dir / "uk_old.srt").write_text(old_srt, encoding="utf-8")
+        (video / "uk.srt").write_text(new_srt, encoding="utf-8")
+        transcript = talk_dir / "transcript_uk.txt"
+        transcript.write_text(
+            HEADER + "Перше речення першого абзацу. (сміх) Друге речення першого абзацу.\n",
+            encoding="utf-8",
+        )
+        before = transcript.read_bytes()
+
+        result = sync_srt_to_transcript(
+            old_srt=str(talk_dir / "uk_old.srt"),
+            new_srt=str(video / "uk.srt"),
+            transcript=str(transcript),
+        )
+
+        assert "error" not in result
+        assert result["removed"] == 0
+        assert transcript.read_bytes() == before
+
     def test_no_changes_does_not_rewrite_file(self, talk):
         """When nothing changed the transcript file should be byte-identical."""
         before = (talk / "transcript_uk.txt").read_bytes()
