@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from tools.sync_common import load_base_from_git
 from tools.sync_pr import BOT_AUTHOR, SYNC_TRAILER, _classify, _list_changed, resolve_baseline, run
 
 HEADER = "Мова промови: англійська | Транскрипт (українська)"
@@ -364,6 +365,25 @@ class TestBaselineResolution:
 
         with pytest.raises(subprocess.CalledProcessError):
             _list_changed("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+
+    def test_an_unreadable_baseline_is_not_reported_as_a_new_file(self, repo, tmp_path):
+        """A baseline git cannot read must not read as "the file is new".
+
+        _plan_talk takes False from load_base_from_git to mean the transcript
+        was added in this PR and skips the talk. A baseline that does not
+        resolve then yields an empty plan, exit 0 and a green check with not
+        one edit synced — the same failure-looks-like-success shape as a
+        swallowed `git diff`. Only a path genuinely absent at a resolvable
+        commit may answer False.
+        """
+        _repo_path, base_sha = repo
+        dest = tmp_path / "out.txt"
+
+        with pytest.raises(RuntimeError):
+            load_base_from_git("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", "talks/test/transcript_uk.txt", dest)
+
+        assert load_base_from_git(base_sha, "talks/test/never-existed.txt", dest) is False
+        assert load_base_from_git(base_sha, "talks/test/transcript_uk.txt", dest) is True
 
     def test_baseline_is_the_last_bot_sync_commit(self, repo):
         repo_path, _base_sha = repo

@@ -12,9 +12,16 @@ from pathlib import Path
 def load_base_from_git(sha: str, path: str, dest: Path) -> bool:
     """Write the `sha:path` version of a file to `dest`.
 
-    Returns False if the file didn't exist at that SHA (e.g. newly added
-    in the PR). Uses `git show` with binary capture so content round-trips
-    untouched.
+    Returns False ONLY when the file genuinely did not exist at that SHA
+    (e.g. it was added in this PR). Uses `git show` with binary capture so
+    content round-trips untouched.
+
+    Any other git failure is raised. `git show` cannot say why it failed, and
+    reading every failure as "the file is new" turns an unresolvable baseline
+    into the sentence _plan_talk renders as "transcript is new in this PR —
+    skip": an empty plan, exit 0, a green check, and not one human edit
+    synced. That is the same failure-looks-like-success shape as a swallowed
+    `git diff`, so the two possibilities are told apart explicitly.
     """
     try:
         data = subprocess.run(
@@ -22,8 +29,24 @@ def load_base_from_git(sha: str, path: str, dest: Path) -> bool:
             capture_output=True,
             check=True,
         ).stdout
-    except subprocess.CalledProcessError:
-        return False
+    except subprocess.CalledProcessError as exc:
+        commit_resolves = (
+            subprocess.run(
+                ["git", "rev-parse", "--verify", "--quiet", f"{sha}^{{commit}}"],
+                capture_output=True,
+            ).returncode
+            == 0
+        )
+        path_is_there = (
+            subprocess.run(
+                ["git", "cat-file", "-e", f"{sha}:{path}"],
+                capture_output=True,
+            ).returncode
+            == 0
+        )
+        if commit_resolves and not path_is_there:
+            return False
+        raise RuntimeError(f"git show {sha}:{path} failed: {exc.stderr.decode('utf-8', 'replace').strip()}") from exc
     dest.write_bytes(data)
     return True
 
