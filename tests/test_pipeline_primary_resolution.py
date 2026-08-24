@@ -28,3 +28,19 @@ def test_the_primary_is_resolved_through_the_shared_module():
         "both the prepare step and the snapshot check must resolve the primary the same way"
     )
     assert "--role primary" in text
+
+
+def test_every_primary_lookup_guards_against_an_empty_answer():
+    """`--role primary` can succeed and print nothing.
+
+    resolve_roles answers with an all-`ignored` map for a multi-video talk
+    that declares nothing and has no built subtitles yet, so the CLI exits 0
+    with no output. An unguarded call then carries an empty slug into a path,
+    where `tests/fixtures/pipeline_snapshots/<talk>/` exists as a directory
+    and the -d check waves it through.
+    """
+    text = _text()
+    lookups = text.count("tools.video_roles --talk-dir")
+    guards = text.count("no video declares 'sync: primary' in meta.yaml")
+
+    assert guards == lookups, f"{lookups} primary lookups but only {guards} empty-answer guards"

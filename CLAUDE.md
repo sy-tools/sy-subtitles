@@ -231,6 +231,7 @@ python -m tools.resync_srt --primary-uk PATH --primary-en PATH \
 # Which videos those are comes from meta.yaml `sync:` via tools.video_roles;
 # independent and ignored videos are never built. Needs source/en.srt on BOTH
 # primary and derived; skips videos without it.
+#   --primary-slug is an override and must agree with meta.yaml, or it errors.
 python -m tools.build_secondary_srts --talk-dir PATH [--primary-slug SLUG] [--run-id ID]
 
 # Snap an English SRT onto whisper word timestamps (EN-subtitle timing; forced word-align)

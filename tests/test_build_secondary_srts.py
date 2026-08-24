@@ -12,11 +12,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from tests.srt_helpers import write_srt_ms as _write_srt
 from tools.build_secondary_srts import build_secondary_srts
 from tools.srt_utils import parse_srt
+from tools.video_roles import RoleError
 
 _EN_TEXT = [f"This is sentence number {i} of the talk today." for i in range(1, 13)]
 _UK_TEXT = [f"Це речення номер {i} сьогоднішньої промови." for i in range(1, 13)]
@@ -249,3 +251,38 @@ def test_the_primary_comes_from_the_declaration_when_not_given(tmp_path):
 
     assert {r["slug"] for r in results} == {"Talk-Cut"}
     assert _result_for(results, "Talk-Cut")["status"] == "built"
+
+
+def test_a_primary_slug_that_contradicts_the_declaration_is_refused(tmp_path):
+    """`--primary-slug` is an override, not a second opinion.
+
+    The declaration is read and then discarded in favour of whatever the
+    caller passed, with the two never compared. Naming the derived video
+    instead makes the `slug == primary_slug` clause skip the one video that
+    should have been built, and the run reports success with nothing done —
+    the silent guessing tools/video_roles.py exists to remove.
+    """
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "Puja": {"en": _blocks(["one", "two"]), "uk": _blocks(["раз", "два"])},
+            "Puja-Talk": {"en": _blocks(["one", "two"], offset_ms=5000), "sync": "derived"},
+        },
+    )
+
+    with pytest.raises(RoleError, match="contradicts"):
+        build_secondary_srts(str(talk), primary_slug="Puja-Talk")
+
+
+def test_a_primary_slug_matching_the_declaration_is_accepted(tmp_path):
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "Puja": {"en": _blocks(["one", "two"]), "uk": _blocks(["раз", "два"])},
+            "Puja-Talk": {"en": _blocks(["one", "two"], offset_ms=5000), "sync": "derived"},
+        },
+    )
+
+    results = build_secondary_srts(str(talk), primary_slug="Puja")
+
+    assert _result_for(results, "Puja-Talk")["status"] == "built"

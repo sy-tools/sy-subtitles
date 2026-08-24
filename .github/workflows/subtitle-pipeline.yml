@@ -1031,6 +1031,13 @@ jobs:
           # under `sync:`) and generates derived-video SRTs via offset_srt
           # apply. Verify only the primary — derived videos are trivially so.
           primary=$(python -m tools.video_roles --talk-dir "talks/${TALK_ID}" --role primary)
+          if [ -z "$primary" ]; then
+            # Without this the snapshot path collapses to the talk directory,
+            # which exists, so the -d guard below passes and verify_snapshot
+            # runs with an empty --video-slug.
+            echo "::error::${TALK_ID}: no video declares 'sync: primary' in meta.yaml"
+            exit 1
+          fi
           echo "Primary video: ${primary}"
           snap="tests/fixtures/pipeline_snapshots/${TALK_ID}/${primary}"
           if [ ! -d "$snap" ]; then
