@@ -353,6 +353,18 @@ class TestBaselineResolution:
     files that moved on main as reversed changes.
     """
 
+    def test_a_git_failure_is_not_reported_as_no_changes(self, repo):
+        """A tool that cannot determine what changed must never claim nothing did.
+
+        Returning an empty list on a failed `git diff` makes the run exit 0
+        with a green check while every human edit in the PR goes unsynced.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        with pytest.raises(subprocess.CalledProcessError):
+            _list_changed("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+
     def test_baseline_is_the_last_bot_sync_commit(self, repo):
         repo_path, _base_sha = repo
         _git(repo_path, "branch", "-f", "origin/main", "HEAD")

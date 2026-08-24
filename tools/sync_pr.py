@@ -104,11 +104,14 @@ def resolve_baseline(head: str = "HEAD", remote_main: str = "origin/main") -> st
 
 
 def _list_changed(baseline: str) -> list[str]:
-    try:
-        out = _run_git("diff", "--name-only", baseline, "HEAD", "--", *SYNC_PATHSPECS)
-    except subprocess.CalledProcessError as exc:
-        _gha_error(f"git diff failed: {exc.stderr}")
-        return []
+    """Paths this PR touched, or raise.
+
+    A swallowed failure here is indistinguishable from a clean PR: the run
+    would print "No transcript or SRT changes" and exit 0, leaving every
+    human edit unsynced under a green check. `::error::` only annotates —
+    it does not set an exit status — so the exception must propagate.
+    """
+    out = _run_git("diff", "--name-only", baseline, "HEAD", "--", *SYNC_PATHSPECS)
     return [line for line in out.splitlines() if line.strip()]
 
 

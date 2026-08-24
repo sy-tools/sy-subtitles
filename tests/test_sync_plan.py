@@ -31,6 +31,21 @@ def test_apply_plan_writes_every_entry(tmp_path, monkeypatch):
     assert written == ["talks/t/transcript_uk.txt"]
 
 
+def test_apply_plan_refuses_a_plan_that_failed(tmp_path, monkeypatch):
+    """The whole point of the plan is that a failure writes nothing. A caller
+    that forgets to check `ok` must not be able to write through it."""
+    monkeypatch.chdir(tmp_path)
+    target = tmp_path / "talks/t/transcript_uk.txt"
+    target.parent.mkdir(parents=True)
+    target.write_text("old", encoding="utf-8")
+
+    plan = SyncPlan(writes={"talks/t/transcript_uk.txt": "new"}, failures=["Video2: cannot align"])
+    with pytest.raises(RuntimeError, match="refusing to apply"):
+        apply_plan(plan)
+
+    assert target.read_text(encoding="utf-8") == "old"
+
+
 @pytest.fixture
 def talk(tmp_path, monkeypatch):
     """A talk laid out like the repo's, including the rendered video that
@@ -56,6 +71,10 @@ def test_shadow_copies_what_the_sync_reads_and_writes(talk):
     assert (shadow / "transcript_uk.txt").is_file()
     assert (shadow / "Video1" / "final" / "uk.srt").is_file()
     assert (shadow / "Video1" / "final" / "build_manifest.yaml").is_file()
+    # validate_subtitles resolves the EN SRT relative to the UK SRT it is given
+    # (srt.parent.parent/source/en.srt). Leaving it out of the shadow silently
+    # drops compare_block_count, the last text guard on an en-srt primary.
+    assert (shadow / "Video1" / "source" / "en.srt").is_file()
 
 
 def test_shadow_leaves_the_rendered_video_behind(talk):
@@ -65,7 +84,6 @@ def test_shadow_leaves_the_rendered_video_behind(talk):
     shadow = shadow_talk("talks/1990-01-01_Some-Talk", talk.parent.parent / "tmp")
 
     assert not (shadow / "Video1" / "final" / "talk.mp4").exists()
-    assert not (shadow / "Video1" / "source" / "en.srt").exists()
 
 
 def test_collect_writes_reports_only_what_the_shadow_changed(talk):

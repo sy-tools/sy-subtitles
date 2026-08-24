@@ -57,27 +57,6 @@ sy-subtitles/
 │           └── final/
 │               ├── uk.srt          # Final Ukrainian subtitles
 │               └── report.txt      # Validation report
-### Video sync roles
-
-A talk's videos are different recordings of the same event, so a subtitle
-edit in one has to reach the others. How each video participates is declared
-per video in `meta.yaml` under `sync:`, and read only through
-`tools/video_roles.py` (`python -m tools.video_roles --talk-dir PATH [--role primary]`):
-
-| Role | Meaning |
-|---|---|
-| `primary` | Authoritative subtitle text. Exactly one per talk. |
-| `derived` | Mirrors the primary's text positionally; keeps its own timing. |
-| `independent` | Its own slice of the transcript (a separate talk on the same day); synced against the transcript, never against the primary. |
-| `ignored` | Never read, never written — a yogi's introduction, a presents ceremony, a camera angle with no subtitles. |
-
-A multi-video talk MUST declare; there is no default, because a default in
-a resolver is seen by nobody and fires in CI. The one exception is a talk
-that has never had more than one subtitled video. Rules of thumb: the full
-recording is `primary` and the `Talk` cut is `derived`; a video without
-`source/en.srt` cannot be `primary`, since resyncing needs an EN bridge on
-both sides.
-
 ├── assets/                         # Vendored binary assets
 │   └── fonts/                      # PT Serif TTF + license — libass reads it via fontsdir,
 │                                   #   so a burned line breaks exactly where the SPA's does
@@ -138,6 +117,31 @@ both sides.
     ├── pipeline-matrix-dryrun.yml  # Matrix dry-run validation
     └── burn-subtitles.yml          # Render uk.srt into the video (SPA-dispatched)
 ```
+
+### Video sync roles
+
+A talk's videos are different recordings of the same event, so a subtitle
+edit in one has to reach the others. How each video participates is declared
+per video in `meta.yaml` under `sync:`, and read only through
+`tools/video_roles.py` (`python -m tools.video_roles --talk-dir PATH [--role primary]`):
+
+| Role | Meaning |
+|---|---|
+| `primary` | Authoritative subtitle text. Exactly one per talk. |
+| `derived` | Mirrors the primary's text positionally; keeps its own timing. |
+| `independent` | Its own slice of the transcript (a separate talk on the same day); synced against the transcript, never against the primary. |
+| `ignored` | Never read, never written — a yogi's introduction, a presents ceremony, a camera angle with no subtitles. |
+
+A multi-video talk MUST declare once more than one of its videos carries a
+`uk.srt`; there is no default, because a default in a resolver is seen by
+nobody and fires in CI. Below that threshold the resolver still answers: the
+one subtitled (or lone) video is `primary` and every other video is
+`ignored`. Mind the consequence — a second video that simply has not been
+built yet resolves to `ignored`, so it is never built and never synced.
+Declare the roles as soon as a talk gains a second video. Rules of thumb: the full
+recording is `primary` and the `Talk` cut is `derived`; a video without
+`source/en.srt` cannot be `primary`, since resyncing needs an EN bridge on
+both sides.
 
 ## Workflows
 

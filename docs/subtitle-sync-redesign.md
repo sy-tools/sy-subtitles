@@ -1,6 +1,9 @@
 # Subtitle sync redesign
 
-Status: approved design, not yet implemented
+Status: implemented — phase 1 (PR #990) and phase 2 (PRs #991-#995).
+Sections 2 and 14 describe the PRE-redesign system; read them as history,
+not as current behaviour. `docs/subtitle-sync-redesign-phase2.md` records
+where the built system departs from this spec.
 Date: 2026-08-24
 
 ## 1. Problem

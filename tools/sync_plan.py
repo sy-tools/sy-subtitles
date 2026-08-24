@@ -18,7 +18,10 @@ from pathlib import Path
 # burned-in mp4 (close to a gigabyte in the largest talk), and nothing in
 # the sync reads it. Talk-level files first, then per-video ones.
 SHADOW_TALK_FILES = ("meta.yaml", "transcript_uk.txt")
-SHADOW_VIDEO_FILES = ("final/uk.srt", "final/build_manifest.yaml")
+# source/en.srt is read, never written: validate_subtitles resolves it from
+# the UK SRT it is handed, so a shadow without it silently drops
+# compare_block_count — the last text guard on an en-srt primary.
+SHADOW_VIDEO_FILES = ("final/uk.srt", "final/build_manifest.yaml", "source/en.srt")
 
 
 @dataclass
@@ -87,7 +90,9 @@ def collect_writes(shadow: Path, talk_dir: str) -> dict[str, str]:
 
 
 def apply_plan(plan: SyncPlan) -> list[str]:
-    """Write the plan. Callers must check `plan.ok` first."""
+    """Write the plan. Refuses a plan that did not pass the gate."""
+    if not plan.ok:
+        raise RuntimeError(f"refusing to apply a plan with {len(plan.failures)} failure(s): {plan.failures}")
     for path, content in sorted(plan.writes.items()):
         Path(path).write_text(content, encoding="utf-8")
     return sorted(plan.writes)
