@@ -32,6 +32,8 @@ import yaml
 
 from .offset_srt import apply_offset, detect_offset
 from .resync_srt import resync
+from .video_roles import primary_slug as resolve_primary
+from .video_roles import resolve_roles
 
 
 def _video_slugs(talk_dir: Path) -> list[str]:
@@ -52,20 +54,29 @@ def _write_manifest(path: Path, mode: str, primary_slug: str, run_id) -> None:
         yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
 
 
-def build_secondary_srts(talk_dir, primary_slug: str, run_id=None) -> list[dict]:
-    """Derive a UK SRT for every secondary video that can have one.
+def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None) -> list[dict]:
+    """Derive a UK SRT for every DERIVED video that can have one.
 
-    Returns one result dict per non-primary video:
+    Which videos those are comes from meta.yaml's `sync:` model, read through
+    tools.video_roles — not from "everything that is not the primary". An
+    `independent` video is a separate recording that happens to share a date;
+    offsetting the primary's subtitles onto it would be nonsense, and an
+    `ignored` one is never written at all.
+
+    Returns one result dict per derived video:
         {"slug", "status": "built"|"skipped", "mode": str|None, "reason": str|None}
     Skipping (missing en.srt) is a normal outcome, not an error.
     """
     talk_dir = Path(talk_dir)
+    roles = resolve_roles(talk_dir)
+    if primary_slug is None:
+        primary_slug = resolve_primary(talk_dir)
     primary_en = talk_dir / primary_slug / "source" / "en.srt"
     primary_uk = talk_dir / primary_slug / "final" / "uk.srt"
 
     results: list[dict] = []
     for slug in _video_slugs(talk_dir):
-        if slug == primary_slug:
+        if slug == primary_slug or roles.get(slug) != "derived":
             continue
 
         secondary_en = talk_dir / slug / "source" / "en.srt"
@@ -106,7 +117,11 @@ def build_secondary_srts(talk_dir, primary_slug: str, run_id=None) -> list[dict]
 def main() -> None:
     p = argparse.ArgumentParser(description="Build UK SRTs for secondary videos of a multi-video talk")
     p.add_argument("--talk-dir", required=True, help="Path to the talk directory (contains meta.yaml)")
-    p.add_argument("--primary-slug", required=True, help="Slug of the primary video")
+    p.add_argument(
+        "--primary-slug",
+        default=None,
+        help="Override the primary declared in meta.yaml (`sync: primary`)",
+    )
     p.add_argument("--run-id", default=None, help="CI run id, recorded in build_manifest.yaml")
     args = p.parse_args()
 

@@ -42,6 +42,22 @@ def test_a_talk_with_no_videos_resolves_to_nothing(tmp_path):
         primary_slug(talk)
 
 
+def test_a_lone_video_is_primary_before_it_has_any_subtitles(tmp_path):
+    """The pipeline asks for the primary at the START of a build, when the
+    talk has no uk.srt anywhere. A single-video talk never needs a
+    declaration, so it must still answer."""
+    talk = _talk(tmp_path, {"videos": [{"slug": "Only-Video"}]})
+    assert resolve_roles(talk) == {"Only-Video": "primary"}
+    assert primary_slug(talk) == "Only-Video"
+
+
+def test_a_multi_video_talk_with_no_subtitles_yet_must_still_declare(tmp_path):
+    """Nothing can pick between them, and guessing is what this removes."""
+    talk = _talk(tmp_path, {"videos": [{"slug": "Puja"}, {"slug": "Puja-Talk"}]})
+    with pytest.raises(RoleError):
+        primary_slug(talk)
+
+
 def test_multi_video_talk_without_declarations_is_a_hard_error(tmp_path):
     talk = _talk(
         tmp_path,

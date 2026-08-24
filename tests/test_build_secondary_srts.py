@@ -35,8 +35,8 @@ def _blocks(texts: list[str], offset_ms: int = 0, jitter: int = 0, dur: int = 20
 def _setup_talk(tmp_path: Path, videos: dict[str, dict]) -> Path:
     """Create a talk dir.
 
-    videos: ordered dict slug -> {"en": blocks|None, "uk": blocks|None}.
-    The first slug is treated as the primary by the caller.
+    videos: ordered dict slug -> {"en": blocks|None, "uk": blocks|None,
+    "sync": role}. The first slug is the primary unless a role says otherwise.
     """
     talk = tmp_path / "talk"
     talk.mkdir(parents=True)
@@ -44,7 +44,15 @@ def _setup_talk(tmp_path: Path, videos: dict[str, dict]) -> Path:
         "title": "Test Talk",
         "date": "1982-01-01",
         "language": "en",
-        "videos": [{"slug": s, "title": s, "video_ref": "r1x"} for s in videos],
+        "videos": [
+            {
+                "slug": s,
+                "title": s,
+                "video_ref": "r1x",
+                "sync": cfg.get("sync", "primary" if i == 0 else "derived"),
+            }
+            for i, (s, cfg) in enumerate(videos.items())
+        ],
     }
     (talk / "meta.yaml").write_text(yaml.dump(meta, sort_keys=False), encoding="utf-8")
     (talk / "transcript_uk.txt").write_text("Текст промови.", encoding="utf-8")
@@ -207,3 +215,37 @@ def test_returns_one_result_per_secondary(tmp_path):
     )
     results = build_secondary_srts(talk, "vid1")
     assert {r["slug"] for r in results} == {"vid2", "vid3"}
+
+
+def test_an_independent_video_is_not_derived_from_the_primary(tmp_path):
+    """A talk on the same day is its own recording: it shares no text with
+    the puja, so offsetting the puja's subtitles onto it would be nonsense.
+    2000-07-23_Guru-Puja-Shraddha carries two of them."""
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "Puja": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT)},
+            "Puja-Talk": {"en": _blocks(_EN_TEXT, offset_ms=5000)},
+            "After-Puja": {"en": _blocks(_EN_TEXT, offset_ms=9000), "sync": "independent"},
+        },
+    )
+
+    results = build_secondary_srts(talk)
+
+    assert {r["slug"] for r in results} == {"Puja-Talk"}
+    assert not (talk / "After-Puja" / "final" / "uk.srt").exists()
+
+
+def test_the_primary_comes_from_the_declaration_when_not_given(tmp_path):
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "Talk-Cut": {"en": _blocks(_EN_TEXT, offset_ms=5000), "sync": "derived"},
+            "Full-Recording": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT), "sync": "primary"},
+        },
+    )
+
+    results = build_secondary_srts(talk)
+
+    assert {r["slug"] for r in results} == {"Talk-Cut"}
+    assert _result_for(results, "Talk-Cut")["status"] == "built"

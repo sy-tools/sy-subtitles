@@ -594,28 +594,17 @@ jobs:
           TALK_ID="${{ needs.discover.outputs.talk_id }}"
           TALK="talks/$TALK_ID"
 
-          # Find video with most spoken words (not longest duration — puja videos are long but silent)
-          FIRST_VIDEO=$(python3 -c "
-          import json, yaml, sys
-          with open('$TALK/meta.yaml') as f:
-            meta = yaml.safe_load(f)
-          best_slug, best_words = None, 0
-          for v in meta['videos']:
-            wpath = f'$TALK/{v[\"slug\"]}/source/whisper.json'
-            try:
-              with open(wpath) as wf:
-                segs = json.load(wf)['segments']
-              nwords = sum(len(s.get('words', [])) for s in segs)
-            except: nwords = 0
-            print(f'  {v[\"slug\"]}: {nwords} words', file=sys.stderr)
-            if nwords > best_words:
-              best_words = nwords
-              best_slug = v['slug']
-          if best_slug is None:
-            best_slug = meta['videos'][0]['slug']
-            print(f'WARNING: no whisper.json found, using first video: {best_slug}', file=sys.stderr)
-          print(best_slug)
-          ")
+          # The primary video is declared in meta.yaml under `sync:` and read
+          # through tools.video_roles — the one interpreter of that key. It
+          # used to be guessed here by counting whisper words, which cannot
+          # answer before whisper has run and disagrees with the declaration
+          # on 1998-05-10, whose Talk cut is the authoritative recording.
+          FIRST_VIDEO=$(python -m tools.video_roles --talk-dir "$TALK" --role primary)
+          if [ -z "$FIRST_VIDEO" ]; then
+            echo "::error::${TALK_ID}: no video declares 'sync: primary' in meta.yaml"
+            exit 1
+          fi
+          echo "Primary video: $FIRST_VIDEO"
 
           echo "talk_id=$TALK_ID" >> "$GITHUB_OUTPUT"
           echo "video_slug=$FIRST_VIDEO" >> "$GITHUB_OUTPUT"
@@ -1038,27 +1027,10 @@ jobs:
         env:
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
-          # The pipeline builds only the PRIMARY video (most whisper words)
-          # and generates offset-video SRTs via offset_srt apply. Verify only
-          # the primary — offset videos are trivially derived.
-          primary=$(python3 -c "
-          import json, os, yaml
-          talk=os.environ['TALK_ID']
-          with open(f'talks/{talk}/meta.yaml') as f:
-              meta=yaml.safe_load(f)
-          best_slug, best_words = None, -1
-          for v in meta['videos']:
-              wpath=f'talks/{talk}/{v[\"slug\"]}/source/whisper.json'
-              try:
-                  with open(wpath) as wf:
-                      segs=json.load(wf)['segments']
-                  nw=sum(len(s.get('words', [])) for s in segs)
-              except Exception:
-                  nw=0
-              if nw>best_words:
-                  best_words, best_slug = nw, v['slug']
-          print(best_slug)
-          ")
+          # The pipeline builds only the PRIMARY video (declared in meta.yaml
+          # under `sync:`) and generates derived-video SRTs via offset_srt
+          # apply. Verify only the primary — derived videos are trivially so.
+          primary=$(python -m tools.video_roles --talk-dir "talks/${TALK_ID}" --role primary)
           echo "Primary video: ${primary}"
           snap="tests/fixtures/pipeline_snapshots/${TALK_ID}/${primary}"
           if [ ! -d "$snap" ]; then

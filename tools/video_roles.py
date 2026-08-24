@@ -71,7 +71,11 @@ def resolve_roles(talk_dir: str | Path) -> dict[str, str]:
     # nothing to disambiguate. A declaration always outranks this: a
     # derived video whose SRT has not been built yet is still derived.
     if not any(v.get("sync") for v in videos) and len(subtitled) <= 1:
-        return {v["slug"]: ("primary" if v["slug"] in subtitled else "ignored") for v in videos}
+        # Before the first build a talk has no uk.srt at all, and the pipeline
+        # still has to ask which video is primary. One video answers itself;
+        # several must declare, which is the guessing this module removes.
+        lone = videos[0]["slug"] if len(videos) == 1 else None
+        return {v["slug"]: ("primary" if v["slug"] in subtitled or v["slug"] == lone else "ignored") for v in videos}
 
     undeclared = [v["slug"] for v in videos if v["slug"] in subtitled and not v.get("sync")]
     if undeclared:
