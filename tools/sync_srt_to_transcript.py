@@ -176,12 +176,19 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
 
     def record_delete(view_pos: int, old_t: str) -> None:
         """Remove one block's sentence, taking any remark inside it along."""
-        lo_v, hi_v = view_pos, view_pos + len(old_t)
-        if lo_v > 0 and view[lo_v - 1] == " ":
-            lo_v -= 1
-        elif hi_v < len(view) and view[hi_v] == " ":
-            hi_v += 1
-        lo, hi = raw_span(offsets, lo_v, hi_v)
+        lo, hi = raw_span(offsets, view_pos, view_pos + len(old_t))
+        # Absorb one neighbouring space so the sentences around the hole are
+        # neither glued together nor doubly spaced. Measured in the RAW text,
+        # not the view: the view cannot see a declared remark, so "the next
+        # character" there can be a whole remark away in the transcript, and
+        # widening by it swallowed a remark that annotates the sentence which
+        # STAYS. Taking a single raw space can never reach a remark, and it
+        # closes the gap even between two of them — the shape
+        # 2000-07-23_Guru-Puja-Shraddha really has.
+        if hi < len(raw) and raw[hi] == " ":
+            hi += 1
+        elif lo > 0 and raw[lo - 1] == " ":
+            lo -= 1
         edits.append((lo, hi, ""))
 
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
@@ -265,9 +272,18 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 if omit_phrases and strip_omitted_phrases(old_t, omit_phrases) == new_t != old_t:
                     # The edit only took a declared remark off the screen. The
                     # transcript is meant to keep it — walk past and move on.
-                    pos = find_in_text_lenient(view, old_t, cursor)
-                    if pos != -1:
-                        cursor = pos + len(old_t)
+                    #
+                    # The walk looks for the STRIPPED text: `old_t` carries the
+                    # remark and the view by construction never does, so
+                    # searching for `old_t` here failed every single time,
+                    # stalling the cursor with nobody counting it — the very
+                    # shape the ambiguity guard exists to catch, in the branch
+                    # that runs on exactly the PRs that clean remarks up.
+                    pos = find_in_text_lenient(view, new_t, cursor)
+                    if pos == -1:
+                        drifted += 1
+                    else:
+                        cursor = pos + len(new_t)
                     print(
                         f"  {label}: «{old_t[:60]}» — omit remark dropped from the screen only; transcript keeps it",
                         file=sys.stderr,
@@ -367,9 +383,16 @@ def main():
     p.add_argument("--old-srt", required=True)
     p.add_argument("--new-srt", required=True)
     p.add_argument("--transcript", required=True)
+    p.add_argument(
+        "--talk-dir",
+        help=(
+            "the talk whose declared remarks apply; needed when --transcript is a copy "
+            "staged away from meta.yaml, as sync_pr stages it"
+        ),
+    )
     args = p.parse_args()
 
-    result = sync_srt_to_transcript(args.old_srt, args.new_srt, args.transcript)
+    result = sync_srt_to_transcript(args.old_srt, args.new_srt, args.transcript, talk_dir=args.talk_dir)
     if result.get("error"):
         print(f"FAIL: {result['error']}", file=sys.stderr)
         sys.exit(1)

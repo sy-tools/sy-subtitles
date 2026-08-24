@@ -2,7 +2,7 @@
 
 import pytest
 
-from tools.sync_srt_to_transcript import sync_srt_to_transcript
+from tools.sync_srt_to_transcript import main, sync_srt_to_transcript
 from tools.sync_transcript_to_srt import sync_transcript
 
 HEADER = "Мова промови: англійська | Транскрипт (українська)\n\n"
@@ -1205,3 +1205,212 @@ class TestStalledCursorIsNotBenign:
             assert "ambiguous" in result["error"], result
         else:
             assert after.strip() == "Перше речення. Особливий текст тут.", after
+
+
+def _srt(texts):
+    return "".join(
+        f"{i}\n00:00:{(i - 1) * 3:02d},000 --> 00:00:{(i - 1) * 3 + 2:02d},000\n{t}\n\n" for i, t in enumerate(texts, 1)
+    )
+
+
+def _staged(tmp_path, transcript, old_blocks, new_blocks, omit=None):
+    """A talk directory, an old and a new SRT, and the transcript to sync."""
+    talk = tmp_path / "talks" / "2000-01-01_Some-Talk"
+    talk.mkdir(parents=True)
+    meta = "videos:\n- slug: Video\n  sync: primary\n"
+    if omit:
+        meta += "subtitle_omit:\n" + "".join(f"- {phrase}\n" for phrase in omit)
+    (talk / "meta.yaml").write_text(meta, encoding="utf-8")
+    path = talk / "transcript_uk.txt"
+    path.write_text(transcript, encoding="utf-8")
+    old = tmp_path / "old.srt"
+    new = tmp_path / "new.srt"
+    old.write_text(_srt(old_blocks), encoding="utf-8")
+    new.write_text(_srt(new_blocks), encoding="utf-8")
+    return talk, old, new, path
+
+
+class TestARemarkWalkByDoesNotStallTheCursor:
+    """A block whose only change is a declared remark leaving the screen is
+    walked past, not rewritten.
+
+    The walk used to search the view for the block's OLD text — which carries
+    the remark, while the view by construction never does. It therefore failed
+    every time, stalling the cursor, and nothing counted that as drift. The
+    next deletion of a sentence the transcript repeats then took the copy from
+    the start of the file instead of the one that was on screen. This is the
+    shape of a remark-cleanup PR, the very kind of PR the branch was written
+    for.
+    """
+
+    def test_the_deletion_after_a_remark_block_finds_the_right_copy(self, tmp_path):
+        talk, old, new, path = _staged(
+            tmp_path,
+            "Однакове речення. Щось інше (сміх) тут. Однакове речення.\n",
+            ["Щось інше (сміх) тут.", "Однакове речення."],
+            ["Щось інше тут."],
+            omit=["(сміх)"],
+        )
+
+        result = sync_srt_to_transcript(str(old), str(new), str(path), talk_dir=str(talk))
+
+        assert "error" not in result, result.get("error")
+        assert path.read_text(encoding="utf-8") == "Однакове речення. Щось інше (сміх) тут.\n", (
+            "the copy that was on screen is the second one; the first must survive"
+        )
+
+
+class TestADeletionKeepsASurvivingSentencesRemark:
+    """A deleted block absorbs one neighbouring space so the text around the
+    hole is neither glued nor doubly spaced.
+
+    In view space that space is one character; in the transcript it can carry
+    a declared remark, and that remark annotates the sentence that STAYS. The
+    transcript is the one artefact that keeps remarks, so swallowing it there
+    destroys text no other file has — silently, under a green check.
+    """
+
+    def test_a_remark_before_the_deleted_sentence_survives(self, tmp_path):
+        talk, old, new, path = _staged(
+            tmp_path,
+            "Ми молимось. (сміх) Тиша в залі. Кінець.\n",
+            ["Ми молимось.", "Тиша в залі.", "Кінець."],
+            ["Ми молимось.", "Кінець."],
+            omit=["(сміх)"],
+        )
+
+        result = sync_srt_to_transcript(str(old), str(new), str(path), talk_dir=str(talk))
+
+        assert result.get("removed") == 1, result
+        assert path.read_text(encoding="utf-8") == "Ми молимось. (сміх) Кінець.\n"
+
+    def test_a_sentence_between_two_remarks_leaves_one_space_behind(self, tmp_path):
+        """The shape 2000-07-23_Guru-Puja-Shraddha really has: «Якраз вчасно!»
+        sits between the two remarks its meta.yaml declares.
+
+        Neither remark may be absorbed, and the hole between them must still
+        close to a single space — a run of blanks is a text-hygiene defect in
+        the file every other artefact is built from.
+        """
+        talk, old, new, path = _staged(
+            tmp_path,
+            "Усе там. (легкий сміх) Якраз вчасно! (ще більше сміху). Усе всередині вас.\n",
+            ["Усе там.", "Якраз вчасно!", "Усе всередині вас."],
+            ["Усе там.", "Усе всередині вас."],
+            omit=["(легкий сміх)", "(ще більше сміху)"],
+        )
+
+        sync_srt_to_transcript(str(old), str(new), str(path), talk_dir=str(talk))
+
+        assert path.read_text(encoding="utf-8") == "Усе там. (легкий сміх) (ще більше сміху). Усе всередині вас.\n"
+
+    def test_a_plain_deletion_still_closes_the_gap(self, tmp_path):
+        talk, old, new, path = _staged(
+            tmp_path,
+            "Ми молимось. Тиша в залі. Кінець.\n",
+            ["Ми молимось.", "Тиша в залі.", "Кінець."],
+            ["Ми молимось.", "Кінець."],
+        )
+
+        sync_srt_to_transcript(str(old), str(new), str(path), talk_dir=str(talk))
+
+        assert path.read_text(encoding="utf-8") == "Ми молимось. Кінець.\n"
+
+
+class TestEveryDeletionPathAsksTheSameQuestion:
+    """difflib reports a deletion two ways: as a `delete` opcode, and bundled
+    into a `replace` group where one old block finds no new counterpart.
+
+    Both remove a sentence from the transcript, so both need the ambiguity
+    guard. Guarding only the first leaves the second free to delete the wrong
+    copy of a repeated sentence once the cursor has drifted — and a deletion
+    is the one edit no later run can undo.
+    """
+
+    def test_a_deletion_bundled_into_a_replace_is_guarded_too(self, tmp_path):
+        talk, old, new, path = _staged(
+            tmp_path,
+            "Спільна фраза. Щось посередині. Спільна фраза. Схожий фрагмент розмови.\n",
+            # Block 1 is not in the transcript at all, so the cursor drifts.
+            # Block 2's deletion is bundled with block 3's edit into one
+            # `replace` group.
+            ["Особливий текст тут!", "Спільна фраза.", "Схожий фрагмент розмови."],
+            ["Особливий текст тут!", "Схожий фрагмент бесіді."],
+        )
+        before = path.read_text(encoding="utf-8")
+
+        result = sync_srt_to_transcript(str(old), str(new), str(path), talk_dir=str(talk))
+
+        assert "error" in result, "an ambiguous deletion must not be resolved by picking the first copy"
+        assert path.read_text(encoding="utf-8") == before, "nothing may be written when an edit is ambiguous"
+
+
+class TestReblockingThatCannotBeWalkedPastIsDrift:
+    """The same words redistributed over a different number of blocks change
+    nothing in the transcript — but the cursor still has to walk past them.
+
+    When it cannot, the cursor is as stale as after any other failed walk, and
+    the next deletion of repeated text picks the copy from the start of the
+    file. The counter the ambiguity guard reads has to see it.
+    """
+
+    def test_a_reblocking_the_cursor_cannot_pass_arms_the_guard(self, tmp_path):
+        talk, old, new, path = _staged(
+            tmp_path,
+            "Розділювач тут. Спільна фраза. Щось посередині. Спільна фраза. Кінець.\n",
+            # Block 1 is re-cut in two by this PR and is not in the transcript,
+            # so the cursor cannot walk past it. Block 2 keeps the two groups
+            # apart, so the re-blocking is its own opcode; block 3's deletion
+            # is then the plain `delete` path.
+            ["Текст якого немає.", "Розділювач тут.", "Спільна фраза.", "Кінець."],
+            ["Текст якого", "немає.", "Розділювач тут.", "Кінець."],
+        )
+        before = path.read_text(encoding="utf-8")
+
+        result = sync_srt_to_transcript(str(old), str(new), str(path), talk_dir=str(talk))
+
+        assert "error" in result, "a re-blocking the cursor could not pass leaves it just as stale"
+        assert path.read_text(encoding="utf-8") == before
+
+
+class TestTheCommandLineSpeaksTheSameVocabulary:
+    """`sync_pr` hands this tool the talk directory so a transcript staged in
+    a temp dir still resolves the talk's own declared remarks.
+
+    The CLI had no way to say it. Reproducing a sync_pr run by hand therefore
+    silently used the global remark list only, and an edit that merely took a
+    talk-level remark off the screen was read as a text edit — deleting from
+    the transcript the one artefact meant to keep it.
+    """
+
+    def test_talk_dir_reaches_the_sync_from_the_command_line(self, tmp_path, monkeypatch):
+        talk, old, new, path = _staged(
+            tmp_path,
+            "Сьогодні ми зібралися тут (ще більше сміху) щоб святкувати.\n",
+            ["Сьогодні ми зібралися тут (ще більше сміху) щоб святкувати."],
+            ["Сьогодні ми зібралися тут щоб святкувати."],
+            omit=["(ще більше сміху)"],
+        )
+        staged = tmp_path / "staged" / "effective_old.txt"
+        staged.parent.mkdir()
+        staged.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+
+        monkeypatch.setattr(
+            "sys.argv",
+            [
+                "sync_srt_to_transcript",
+                "--old-srt",
+                str(old),
+                "--new-srt",
+                str(new),
+                "--transcript",
+                str(staged),
+                "--talk-dir",
+                str(talk),
+            ],
+        )
+        main()
+
+        assert staged.read_text(encoding="utf-8") == path.read_text(encoding="utf-8"), (
+            "the remark is declared by the talk and must survive a staged-copy sync"
+        )
