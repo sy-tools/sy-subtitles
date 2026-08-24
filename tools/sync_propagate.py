@@ -82,13 +82,13 @@ def propagate_primary_to_derived(
     not break the alignment it is supposed to travel along. Nothing is written
     unless every change could be placed.
 
-    Returns {"changed": n, "removed": n} or {"error": ...}.
+    Returns {"changed": n, "removed": n, "skipped": n} or {"error": ...}.
     """
     edits, deleted, err = _primary_edits(primary_old, primary_new)
     if err:
         return err
     if not edits and not deleted:
-        return {"changed": 0, "removed": 0}
+        return {"changed": 0, "removed": 0, "skipped": 0}
 
     mapping = align_blocks(primary_old, derived_old)
     current = [b["text"] for b in derived_blocks]
@@ -131,4 +131,8 @@ def propagate_primary_to_derived(
     for i, block in enumerate(derived_blocks):
         block["idx"] = i + 1
 
-    return {"changed": len(replacements), "removed": len(drops)}
+    # Skips are legitimate — an excerpt cut simply lacks most of the primary —
+    # but a `derived` video is meant to mirror it, so an edit that did not
+    # arrive has to be visible to whoever reads the run.
+    skipped = len(edits) - len(replacements)
+    return {"changed": len(replacements), "removed": len(drops), "skipped": skipped}

@@ -161,3 +161,45 @@ class TestAlignmentIsEvidenceNotArithmetic:
         assert "error" not in result, result
         assert derived_blocks[1]["text"] == "дерайвед каже інше", "a block that never matched must not be rewritten"
         assert result["changed"] == 0
+
+
+class TestSkippedEditsAreCounted:
+    """A skip is legitimate but must never be invisible.
+
+    A derived cut that is a strict excerpt genuinely lacks most of the primary,
+    and skipping an edit there is correct. But a `derived` video is supposed to
+    mirror its primary, so an edit that does not arrive is something a reviewer
+    has to be able to see — silence is what makes a lost correction invisible.
+    1988-05-08_Sahasrara-Puja's Talk cut is a separate translation of the same
+    words: 123 of its 382 blocks do not match, so edits there simply do not
+    land until the video is rebuilt.
+    """
+
+    def test_an_edit_with_no_counterpart_is_reported(self):
+        primary_old = ["спільний", "лише у праймері", "кінець"]
+        primary_new = ["спільний", "лише у праймері ЗМІНЕНО", "кінець"]
+        derived_old = ["спільний", "кінець"]
+        derived_blocks = [
+            {"idx": 1, "text": "спільний", "start_ms": 0, "end_ms": 1000},
+            {"idx": 2, "text": "кінець", "start_ms": 1000, "end_ms": 2000},
+        ]
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, derived_blocks)
+
+        assert "error" not in result, result
+        assert result["changed"] == 0
+        assert result["skipped"] == 1, "a skipped edit must be counted, not swallowed"
+
+    def test_nothing_skipped_when_every_edit_lands(self):
+        primary_old = ["один", "два"]
+        primary_new = ["один", "ДВА"]
+        derived_old = ["один", "два"]
+        derived_blocks = [
+            {"idx": 1, "text": "один", "start_ms": 0, "end_ms": 1000},
+            {"idx": 2, "text": "два", "start_ms": 1000, "end_ms": 2000},
+        ]
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, derived_blocks)
+
+        assert result["changed"] == 1
+        assert result["skipped"] == 0

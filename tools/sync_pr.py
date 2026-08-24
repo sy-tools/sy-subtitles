@@ -384,7 +384,8 @@ def _plan_derived(
         if result["changed"] or result["removed"]:
             write_srt(blocks, str(srt_file))
         print(
-            f"  [{talk_id}/{slug}] changed {result['changed']}, removed {result['removed']}",
+            f"  [{talk_id}/{slug}] changed {result['changed']}, removed {result['removed']}"
+            + (f", SKIPPED {result['skipped']} (no counterpart on this cut)" if result.get("skipped") else ""),
             file=sys.stderr,
         )
 
