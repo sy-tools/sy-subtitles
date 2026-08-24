@@ -23,6 +23,7 @@ import unicodedata
 from pathlib import Path
 
 from .srt_utils import parse_srt, write_srt
+from .sync_common import find_diff_islands
 from .text_segmentation import (
     MAX_CPL,
     build_blocks_from_paragraphs,
@@ -30,8 +31,6 @@ from .text_segmentation import (
     load_transcript,
     talk_omit_phrases,
 )
-
-MIN_FRAGMENT = 3  # shortest fragment worth trying to locate in a block
 
 
 def prepare_blocks(paragraphs: list) -> list:
@@ -52,106 +51,6 @@ def find_paragraph_blocks(srt_blocks: list, para_blocks: list) -> list | None:
         if all(srt_blocks[start + j]["text"] == target[j] for j in range(len(target))):
             return list(range(start, start + len(target)))
     return None
-
-
-def _tighten(old_f: str, new_f: str, offset: int, min_len: int) -> tuple[str, str, int]:
-    """Drop the characters an island shares on both sides.
-
-    Word alignment is robust but coarse: an SRT that drifted from the
-    transcript by a single punctuation mark would fail to match a whole word
-    («щось.» against «щось!»). Trimming the island's shared edges describes
-    the same edit with a smaller fragment, which survives that drift. The
-    fragment never begins or ends on whitespace — that is exactly where one
-    subtitle block ends and the next begins.
-    """
-    lo, limit = 0, min(len(old_f), len(new_f))
-    while lo < limit and old_f[lo] == new_f[lo] and len(old_f) - lo > min_len:
-        lo += 1
-    hi_o, hi_n = len(old_f), len(new_f)
-    while hi_o > lo and hi_n > lo and old_f[hi_o - 1] == new_f[hi_n - 1] and hi_o - lo > min_len:
-        hi_o -= 1
-        hi_n -= 1
-    while lo > 0 and old_f[lo].isspace():
-        lo -= 1
-    while hi_o < len(old_f) and old_f[hi_o - 1].isspace():
-        hi_o += 1
-        hi_n += 1
-    return old_f[lo:hi_o], new_f[lo:hi_n], offset + lo
-
-
-def find_diff_islands(
-    old_para: str,
-    new_para: str,
-    min_len: int = MIN_FRAGMENT,
-    merge_gap_words: int = 1,
-) -> list[tuple[str, str, int]]:
-    """Every changed region between old and new paragraph text.
-
-    Returns (old_fragment, new_fragment, offset_in_old) per island, in order.
-    Trimming one common prefix and one common suffix — what this used to do —
-    calls everything between the first and last change "the change". Two edits
-    in a long paragraph then produce a fragment that exists in no single
-    subtitle block, and the sync fails on text it could have placed exactly.
-
-    The diff runs over WORDS, not characters. A character diff of Ukrainian
-    prose aligns on repeated function words and produces islands that start
-    mid-word or on a space — and a space is exactly where one subtitle block
-    ends and the next begins. Words are also the unit _locate_fragment maps
-    in, so an island lands on a block boundary by construction or not at all.
-
-    Changes separated by at most `merge_gap_words` unchanged words become one
-    island: splitting on every micro-gap yields fragments too short to place
-    unambiguously, and adjacent changes are one edit anyway. Each island then
-    grows whole words of context until its old fragment reaches `min_len`.
-    """
-    if old_para == new_para:
-        return []
-
-    old_toks = list(re.finditer(r"\S+", old_para))
-    new_toks = list(re.finditer(r"\S+", new_para))
-    ops = [
-        (i1, i2, j1, j2)
-        for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(
-            None, [m.group() for m in old_toks], [m.group() for m in new_toks], autojunk=False
-        ).get_opcodes()
-        if tag != "equal"
-    ]
-    if not ops:
-        # Whitespace-only change: nothing a subtitle block would show.
-        return []
-
-    groups: list[list[int]] = []
-    for i1, i2, j1, j2 in ops:
-        if groups and i1 - groups[-1][1] <= merge_gap_words:
-            groups[-1][1], groups[-1][3] = i2, j2
-        else:
-            groups.append([i1, i2, j1, j2])
-
-    def span(toks, lo, hi, para):
-        """Character slice covering words [lo, hi), or an empty anchor."""
-        if hi > lo:
-            return toks[lo].start(), toks[hi - 1].end()
-        anchor = toks[lo].start() if lo < len(toks) else len(para)
-        return anchor, anchor
-
-    islands = []
-    for i1, i2, j1, j2 in groups:
-        # Words outside a group are equal in both texts, so the two windows
-        # widen in lockstep.
-        while True:
-            o_lo, o_hi = span(old_toks, i1, i2, old_para)
-            if o_hi - o_lo >= min_len:
-                break
-            if i1 > 0 and j1 > 0:
-                i1, j1 = i1 - 1, j1 - 1
-            elif i2 < len(old_toks) and j2 < len(new_toks):
-                i2, j2 = i2 + 1, j2 + 1
-            else:
-                break
-        o_lo, o_hi = span(old_toks, i1, i2, old_para)
-        n_lo, n_hi = span(new_toks, j1, j2, new_para)
-        islands.append(_tighten(old_para[o_lo:o_hi], new_para[n_lo:n_hi], o_lo, min_len))
-    return islands
 
 
 def _locate_fragment(old_paras: list, p_idx: int, frag_lo: int, frag_hi: int, srt_blocks: list) -> tuple | None:

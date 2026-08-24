@@ -828,6 +828,86 @@ class TestSyncSrtToTranscript:
         # the block-2 «Так.» (after «тут.») is gone, the leading one survives
         assert "Так. вітаю всіх присутніх тут. Дякую вам." in text
 
+    def test_a_block_is_found_across_a_declared_remark(self, tmp_path):
+        """The transcript keeps «(сміється)»; the screen never shows it.
+
+        The block text therefore does not occur in the raw transcript at all,
+        and looking there is why the sync fails on the two corpus talks that
+        carry a remark inside a subtitled sentence.
+        """
+        talk_dir = tmp_path / "talks" / "test"
+        talk_dir.mkdir(parents=True)
+        old_srt = talk_dir / "old.srt"
+        new_srt = talk_dir / "new.srt"
+        old_srt.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nПросте визначення тут.\n",
+            encoding="utf-8",
+        )
+        new_srt.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nПросте визначення там.\n",
+            encoding="utf-8",
+        )
+        transcript = talk_dir / "transcript_uk.txt"
+        transcript.write_text(HEADER + "Просте визначення (сміється) тут.\n", encoding="utf-8")
+
+        result = sync_srt_to_transcript(str(old_srt), str(new_srt), str(transcript))
+
+        assert "error" not in result, result.get("error")
+        assert result["changed"] == 1
+        assert transcript.read_text(encoding="utf-8") == HEADER + "Просте визначення (сміється) там.\n"
+
+    def test_an_edit_that_would_swallow_a_remark_is_refused(self, tmp_path):
+        """Rewriting the whole sentence would take the remark with it. The
+        transcript is the one artefact that keeps remarks, so refuse rather
+        than decide where it should land."""
+        talk_dir = tmp_path / "talks" / "test"
+        talk_dir.mkdir(parents=True)
+        old_srt = talk_dir / "old.srt"
+        new_srt = talk_dir / "new.srt"
+        old_srt.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nПросте визначення тут.\n",
+            encoding="utf-8",
+        )
+        new_srt.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nЗовсім інша фраза.\n",
+            encoding="utf-8",
+        )
+        transcript = talk_dir / "transcript_uk.txt"
+        before = HEADER + "Просте визначення (сміється) тут.\n"
+        transcript.write_text(before, encoding="utf-8")
+
+        result = sync_srt_to_transcript(str(old_srt), str(new_srt), str(transcript))
+
+        assert "error" in result
+        assert "сміється" in result["error"] or "remark" in result["error"]
+        assert transcript.read_text(encoding="utf-8") == before
+
+    def test_a_deleted_block_takes_its_remark_with_it(self, tmp_path):
+        """Deleting the sentence from the screen removes it from the
+        transcript too, remark included — the remark belonged to that
+        sentence."""
+        talk_dir = tmp_path / "talks" / "test"
+        talk_dir.mkdir(parents=True)
+        old_srt = talk_dir / "old.srt"
+        new_srt = talk_dir / "new.srt"
+        old_srt.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nПросте визначення тут.\n\n"
+            "2\n00:00:05,100 --> 00:00:09,000\nДруге речення.\n",
+            encoding="utf-8",
+        )
+        new_srt.write_text(
+            "1\n00:00:05,100 --> 00:00:09,000\nДруге речення.\n",
+            encoding="utf-8",
+        )
+        transcript = talk_dir / "transcript_uk.txt"
+        transcript.write_text(HEADER + "Просте визначення (сміється) тут. Друге речення.\n", encoding="utf-8")
+
+        result = sync_srt_to_transcript(str(old_srt), str(new_srt), str(transcript))
+
+        assert "error" not in result, result.get("error")
+        assert result["removed"] == 1
+        assert transcript.read_text(encoding="utf-8") == HEADER + "Друге речення.\n"
+
     def test_cli_entrypoint_writes_file(self, talk):
         """The module CLI should run end-to-end and update the transcript."""
         import subprocess
