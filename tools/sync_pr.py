@@ -47,12 +47,16 @@ from pathlib import Path
 
 import yaml
 
+from .srt_utils import parse_srt, write_srt
 from .sync_common import load_base_from_git
+from .sync_invariants import check_writes
 from .sync_plan import SyncPlan, apply_plan, collect_writes, shadow_talk
+from .sync_propagate import propagate_primary_to_derived
 from .sync_srt_to_transcript import sync_srt_to_transcript
 from .sync_transcript_to_srt import sync_transcript
 from .validate_subtitles import manifest_validate_flags
 from .validate_subtitles import validate as validate_subtitles
+from .video_roles import RoleError, resolve_roles
 
 
 def _gha_error(msg: str) -> None:
@@ -187,12 +191,21 @@ def _plan_talk(
     shadow = shadow_talk(talk_dir, tmp / "shadow")
     transcript_path = shadow / "transcript_uk.txt"
 
+    try:
+        roles = resolve_roles(shadow)
+    except RoleError as exc:
+        plan.failures.append(str(exc))
+        return plan
+
     # Step A: propagate each changed SRT's edits onto the shadow transcript
     # AND onto a per-video copy of the base transcript (effective-old
     # baseline).
     effective_old: dict[str, Path] = {}
     for srt in srt_paths:
         video_slug = srt.split("/")[2]
+        if roles.get(video_slug, "ignored") == "ignored":
+            print(f"  [{talk_id}/{video_slug}] sync: ignored — skip", file=sys.stderr)
+            continue
         if not Path(srt).exists():
             # `git diff --name-only` also lists deletions — nothing to sync
             print(f"  [{talk_id}/{video_slug}] SRT deleted in this PR — skip", file=sys.stderr)
@@ -242,7 +255,21 @@ def _plan_talk(
         print(f"  [{talk_id}] meta.yaml has no videos — skip Step B", file=sys.stderr)
         return plan
 
+    derived = [s for s in slugs if roles.get(s) == "derived"]
+    primary = next((s for s, r in roles.items() if r == "primary"), None)
+    if derived and not (primary and (shadow / primary / "final" / "uk.srt").exists()):
+        # Nothing to mirror: the primary has no subtitles in this PR. The
+        # transcript is the only source left, so the derived videos take the
+        # independent path this once rather than going unsynced.
+        print(f"  [{talk_id}] primary has no uk.srt — derived videos sync from the transcript", file=sys.stderr)
+        derived = []
     for slug in slugs:
+        role = roles.get(slug, "ignored")
+        if role == "ignored" or (role == "derived" and slug in derived):
+            # Ignored videos are never written. Derived ones take their text
+            # from the primary below, not from a character diff against a
+            # block cut that was never the transcript's.
+            continue
         srt_file = shadow / slug / "final" / "uk.srt"
         if not srt_file.exists():
             print(f"  [{talk_id}/{slug}] no uk.srt — skip", file=sys.stderr)
@@ -287,9 +314,79 @@ def _plan_talk(
         if not passed:
             plan.failures.append(f"{talk_id}/{slug}: validation failed — needs full subtitle rebuild via pipeline")
 
+    if derived:
+        _plan_derived(plan, talk_dir, shadow, roles, derived, baseline, tmp)
+
     if plan.ok:
         plan.writes.update(collect_writes(shadow, talk_dir))
     return plan
+
+
+def _texts(path: Path) -> list[str]:
+    return [b["text"] for b in parse_srt(str(path))]
+
+
+def _plan_derived(
+    plan: SyncPlan,
+    talk_dir: str,
+    shadow: Path,
+    roles: dict[str, str],
+    derived: list[str],
+    baseline: str,
+    tmp: Path,
+) -> None:
+    """Copy the primary's text onto every derived video, positionally.
+
+    The correspondence between the two cuts is taken from their BASELINE
+    texts, so the edit being propagated cannot break the alignment it travels
+    along. 66 of the corpus's 68 derived videos match their primary block for
+    block; the two that do not are pre-secondary-machinery talks, where an
+    unmatched block simply has nothing to receive.
+    """
+    talk_id = Path(talk_dir).name
+    primary = next((s for s, r in roles.items() if r == "primary"), None)
+    if primary is None:
+        plan.failures.append(f"{talk_id}: no video is `sync: primary` — cannot update derived videos")
+        return
+
+    primary_srt = shadow / primary / "final" / "uk.srt"
+    if not primary_srt.exists():
+        print(f"  [{talk_id}/{primary}] primary has no uk.srt — skip derived", file=sys.stderr)
+        return
+
+    base_primary = tmp / f"{talk_id}__{primary}.propagate_base.srt"
+    if not _show_base(baseline, f"{talk_dir}/{primary}/final/uk.srt", base_primary):
+        print(f"  [{talk_id}/{primary}] primary is new in this PR — skip derived", file=sys.stderr)
+        return
+
+    primary_old = _texts(base_primary)
+    primary_new = _texts(primary_srt)
+
+    for slug in derived:
+        srt_file = shadow / slug / "final" / "uk.srt"
+        if not srt_file.exists():
+            print(f"  [{talk_id}/{slug}] no uk.srt — skip", file=sys.stderr)
+            continue
+
+        base_derived = tmp / f"{talk_id}__{slug}.propagate_base.srt"
+        derived_old = (
+            _texts(base_derived)
+            if _show_base(baseline, f"{talk_dir}/{slug}/final/uk.srt", base_derived)
+            else _texts(srt_file)
+        )
+
+        print(f"  [{talk_id}/{slug}] {primary} → SRT (derived, positional)", file=sys.stderr)
+        blocks = parse_srt(str(srt_file))
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+        if "error" in result:
+            plan.failures.append(f"{talk_id}/{slug}: {result['error']}")
+            continue
+        if result["changed"] or result["removed"]:
+            write_srt(blocks, str(srt_file))
+        print(
+            f"  [{talk_id}/{slug}] changed {result['changed']}, removed {result['removed']}",
+            file=sys.stderr,
+        )
 
 
 def run(baseline: str | None = None) -> int:
@@ -310,6 +407,10 @@ def run(baseline: str | None = None) -> int:
         print(f"  {talk_id}", file=sys.stderr)
         print("========================================", file=sys.stderr)
         plan.merge(_plan_talk(talk_dir, srt_by_talk.get(talk_dir, []), baseline, tmp))
+
+    # The gate runs on planned content, before anything reaches disk: a text
+    # sync may rewrite what a subtitle says and drop a block, never retime one.
+    plan.failures.extend(check_writes(plan.writes))
 
     if not plan.ok:
         for failure in plan.failures:

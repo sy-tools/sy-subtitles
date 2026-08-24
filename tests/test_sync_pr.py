@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from tools.srt_utils import parse_srt
 from tools.sync_common import load_base_from_git
 from tools.sync_pr import BOT_AUTHOR, SYNC_TRAILER, _classify, _list_changed, resolve_baseline, run
 
@@ -37,8 +38,10 @@ BASE_TRANSCRIPT = (
 META_TWO_VIDEOS = """videos:
   - slug: Video1
     title: Video One
+    sync: primary
   - slug: Video2
     title: Video Two
+    sync: derived
 """
 
 
@@ -466,3 +469,88 @@ class TestBaselineResolution:
         changed = _list_changed(resolve_baseline(remote_main="origin/main"))
         assert "talks/test/Video1/final/uk.srt" in changed
         assert "README.md" not in changed
+
+
+class TestRoleAwareSync:
+    """Which video is written, and from what."""
+
+    def test_an_ignored_video_is_never_written(self, repo):
+        repo_path, _base_sha = repo
+        meta = repo_path / "talks/test/meta.yaml"
+        meta.write_text(meta.read_text(encoding="utf-8").replace("sync: derived", "sync: ignored"), encoding="utf-8")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        before = v2.read_text(encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        assert run() == 0
+        assert "Змінене речення" in (repo_path / "talks/test/Video1/final/uk.srt").read_text(encoding="utf-8")
+        assert v2.read_text(encoding="utf-8") == before, "an ignored video must not be touched"
+
+    def test_a_derived_video_takes_its_text_from_the_primary(self, repo):
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        assert run() == 0
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        assert "Змінене речення" in v2.read_text(encoding="utf-8")
+        assert [b["text"] for b in parse_srt(str(v1))] == [b["text"] for b in parse_srt(str(v2))]
+
+    def test_an_undeclared_multi_video_talk_fails_instead_of_guessing(self, repo):
+        repo_path, _base_sha = repo
+        meta = repo_path / "talks/test/meta.yaml"
+        meta.write_text(
+            meta.read_text(encoding="utf-8").replace("    sync: primary\n", "").replace("    sync: derived\n", ""),
+            encoding="utf-8",
+        )
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        before = transcript.read_text(encoding="utf-8")
+        transcript.write_text(before.replace("Перше речення", "Змінене речення"), encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript with no roles declared")
+
+        assert run() == 1
+        assert "Змінене речення" not in (repo_path / "talks/test/Video1/final/uk.srt").read_text(encoding="utf-8")
+
+    def test_a_plan_that_would_move_a_timecode_is_refused(self, repo, monkeypatch):
+        """The gate is the last line of defence: even if propagation produced
+        a retimed block, nothing may reach disk."""
+        from tools import sync_pr as driver
+
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        real_plan = driver._plan_talk
+
+        def retiming_plan(*args, **kwargs):
+            plan = real_plan(*args, **kwargs)
+            for path in list(plan.writes):
+                if path.endswith("uk.srt"):
+                    plan.writes[path] = plan.writes[path].replace("00:00:01,000", "00:00:02,500")
+            return plan
+
+        monkeypatch.setattr(driver, "_plan_talk", retiming_plan)
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        before = v1.read_text(encoding="utf-8")
+
+        assert run() == 1
+        assert v1.read_text(encoding="utf-8") == before
