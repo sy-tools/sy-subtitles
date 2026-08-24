@@ -41,7 +41,8 @@
 sy-subtitles/
 ├── talks/                          # Talk data (one dir per talk)
 │   └── {date}_{slug}/
-│       ├── meta.yaml               # Talk metadata (title, date, videos[]; links as obfuscated video_ref)
+│       ├── meta.yaml               # Talk metadata (title, date, videos[]; links as obfuscated video_ref;
+│                                  #   each video's `sync:` role — see "Video sync roles" below)
 │       ├── transcript_en.txt       # English transcript
 │       ├── transcript_uk.txt       # Ukrainian translation (pipeline output)
 │       ├── review_report.md        # AI review report
@@ -56,6 +57,27 @@ sy-subtitles/
 │           └── final/
 │               ├── uk.srt          # Final Ukrainian subtitles
 │               └── report.txt      # Validation report
+### Video sync roles
+
+A talk's videos are different recordings of the same event, so a subtitle
+edit in one has to reach the others. How each video participates is declared
+per video in `meta.yaml` under `sync:`, and read only through
+`tools/video_roles.py` (`python -m tools.video_roles --talk-dir PATH [--role primary]`):
+
+| Role | Meaning |
+|---|---|
+| `primary` | Authoritative subtitle text. Exactly one per talk. |
+| `derived` | Mirrors the primary's text positionally; keeps its own timing. |
+| `independent` | Its own slice of the transcript (a separate talk on the same day); synced against the transcript, never against the primary. |
+| `ignored` | Never read, never written — a yogi's introduction, a presents ceremony, a camera angle with no subtitles. |
+
+A multi-video talk MUST declare; there is no default, because a default in
+a resolver is seen by nobody and fires in CI. The one exception is a talk
+that has never had more than one subtitled video. Rules of thumb: the full
+recording is `primary` and the `Talk` cut is `derived`; a video without
+`source/en.srt` cannot be `primary`, since resyncing needs an EN bridge on
+both sides.
+
 ├── assets/                         # Vendored binary assets
 │   └── fonts/                      # PT Serif TTF + license — libass reads it via fontsdir,
 │                                   #   so a burned line breaks exactly where the SPA's does

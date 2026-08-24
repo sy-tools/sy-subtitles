@@ -201,6 +201,11 @@ python -m tools.validate_subtitles --srt PATH --transcript PATH \
   [--skip-text-check] [--skip-time-check] [--skip-cps-check] [--skip-duration-check] \
   [--compare-block-count]   # en-srt + --skip-text-check: guard UK block count vs EN
 
+# Resolve a talk's subtitle sync roles (the ONE interpreter of meta.yaml `sync:`)
+python -m tools.video_roles --talk-dir talks/{date}_{slug} [--role primary]
+#   sync: primary | derived | independent | ignored — see ARCHITECTURE.md
+#   "Video sync roles" and docs/subtitle-sync-redesign.md
+
 # Sync transcript edits into existing SRT (for PR workflow)
 python -m tools.sync_transcript_to_srt --talk-dir PATH --video-slug SLUG \
   --old-transcript OLD --new-transcript NEW

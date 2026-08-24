@@ -7,6 +7,8 @@ videos:
 - slug: Navaratri-Puja
   title: Navaratri Puja
   video_ref: r1XFgVXRABQBEcV0hdTxhVW1JZVEE
+  sync: primary
 - slug: Navaratri-Puja-Talk
   title: Navaratri Puja Talk
   video_ref: r1UFRGXhFXRhceWUhaTRRSWlJZVEE
+  sync: derived

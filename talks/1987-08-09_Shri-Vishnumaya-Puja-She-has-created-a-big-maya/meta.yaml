@@ -7,6 +7,8 @@ videos:
 - slug: Vishnumaya-Puja
   title: Vishnumaya Puja
   video_ref: r1ChFbTABDER5RU0BNG1hTWVxZSw
+  sync: primary
 - slug: Vishnumaya-Puja-Talk
   title: Vishnumaya Puja Talk
   video_ref: r1WkNbRAFMFhtUUkBBHVRaUF1ZSw
+  sync: derived

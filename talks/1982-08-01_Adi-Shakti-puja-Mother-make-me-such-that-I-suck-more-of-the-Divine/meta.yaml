@@ -7,12 +7,16 @@ videos:
 - slug: Adi-Shakti-Puja-Cheltenham-UK-DP
   title: Adi Shakti Puja Cheltenham UK DP
   video_ref: r1BFoRC0dTQxZIAkhZQBxXW1hcUUI
+  sync: primary
 - slug: Babies-receive-names-Cheltenham-UK-DP
   title: Babies receive names Cheltenham UK DP
   video_ref: r1V1sXCEcDF0IbAEhZTxVUW1hcUUI
+  sync: derived
 - slug: Mantras-used-before-Puja-Cheltenham-UK-DP
   title: Mantras used before Puja Cheltenham UK DP
   video_ref: r1XVsVUENbEEJLVkhdTRVUW1hcUUI
+  sync: derived
 - slug: Adi-Shakti-Puja-Talk-Cheltenham-UK-DP
   title: Adi Shakti Puja Talk Cheltenham UK DP
   video_ref: r1VFVHWUYGExEVBEhaSxVUW1hcUUI
+  sync: derived

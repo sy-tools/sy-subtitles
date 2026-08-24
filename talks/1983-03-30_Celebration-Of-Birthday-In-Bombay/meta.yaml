@@ -7,8 +7,10 @@ videos:
 - slug: Birthday-Puja-and-Havan
   title: Birthday Puja and Havan
   video_ref: r1UVkWW0UGExAeVkheQBRWW1lYUUE
+  sync: primary
 - slug: Birthday-Puja-English-Talk
   title: Birthday Puja English Talk
   video_ref: r1XVtAUUxVQ0BOB0hcSBpUW1lYUUE
+  sync: derived
 other_languages:
 - mr

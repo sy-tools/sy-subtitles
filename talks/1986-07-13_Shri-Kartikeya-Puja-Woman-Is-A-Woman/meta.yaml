@@ -7,6 +7,8 @@ videos:
 - slug: Kartikeya-Puja-Grosshartpenning
   title: Kartikeya Puja Grosshartpenning
   video_ref: r1FwRbFgoVW0MRSU5TWk4VWFhRWFFC
+  sync: primary
 - slug: Kartikeya-Puja-Talk-Woman-Is-A-Woman
   title: 'Kartikeya Puja Talk: Woman Is A Woman'
   video_ref: r1WU0NFVUWQx8FVkBPFVBbUF1ZSw
+  sync: derived

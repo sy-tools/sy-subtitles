@@ -7,6 +7,8 @@ videos:
 - slug: Krishna-Puja
   title: Krishna Puja
   video_ref: r1XBALQVVAEhVUUkBIFFNeVVxZSw
+  sync: primary
 - slug: Krishna-Puja-Talk
   title: Krishna Puja Talk
   video_ref: r1XEBaQAAXFxtVBUBKH1NYUF1ZSw
+  sync: derived

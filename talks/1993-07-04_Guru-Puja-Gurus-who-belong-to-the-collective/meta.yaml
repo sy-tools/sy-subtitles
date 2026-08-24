@@ -7,6 +7,8 @@ videos:
 - slug: Guru-Puja
   title: Guru Puja
   video_ref: r1BltEXEJVFBZIWUhYTR5TWFhRWUI
+  sync: primary
 - slug: Guru-Puja-Talk-Gurus-Who-Belong-To-The-Collective
   title: 'Guru Puja Talk: Gurus Who Belong To The Collective'
   video_ref: r1VwpHCEFWFxUbAkhbSx9QWFhRWUI
+  sync: derived
