@@ -24,10 +24,12 @@ do for that video (direct transcript edits and other videos' SRT
 edits, which still need to propagate here).
 
 Invocation:
-    python -m tools.sync_pr --base-sha $BASE_SHA
+    python -m tools.sync_pr [--baseline SHA]
 
-The tool reads `git diff --name-only $BASE_SHA HEAD` itself so the
-workflow doesn't need to pre-filter. Exits 0 on success, 1 on any
+The baseline defaults to the last bot sync commit on this branch (see
+resolve_baseline) — NOT the PR base, which would replay every edit the
+bot has already applied. The tool takes the diff itself, scoped to the
+sync pathspecs, so the workflow doesn't need to pre-filter. Exits 0 on success, 1 on any
 sync/validate failure (with a GitHub Actions ::error:: line per
 failure). Intentionally mutates the working tree (the workflow then
 commits whatever changed).
@@ -57,9 +59,48 @@ def _run_git(*args: str) -> str:
     return result.stdout
 
 
-def _list_changed(base_sha: str) -> list[str]:
+SYNC_TRAILER = "Sync-Bot: v1"
+BOT_AUTHOR = "github-actions[bot]"
+
+# Only these paths can carry a human edit; everything else in a diff is
+# noise (a merge from main, a docs change riding along in a manual PR).
+SYNC_PATHSPECS = ("talks/*/transcript_uk.txt", "talks/*/*/final/uk.srt")
+
+
+def resolve_baseline(head: str = "HEAD", remote_main: str = "origin/main") -> str:
+    """Return the commit a human edit should be measured against.
+
+    The last bot sync commit on THIS branch if there is one, otherwise the
+    point where the branch diverged from main. Never the PR's base tip: a
+    two-dot diff against a non-ancestor reports every file that moved on
+    main as a reversed change, and the sync would dutifully un-edit and
+    commit them.
+
+    The search is bounded by `remote_main..head` and walks --first-parent,
+    so bot commits belonging to other PRs that arrived through a merge are
+    not candidates. Author and trailer must BOTH match: the trailer alone
+    is text a human can type.
+    """
+    sep = "\x1f"
+    out = _run_git(
+        "log",
+        "--first-parent",
+        f"{remote_main}..{head}",
+        f"--format=%H{sep}%an{sep}%B%x1e",
+    )
+    for entry in out.split("\x1e"):
+        entry = entry.strip()
+        if not entry:
+            continue
+        sha, author, body = entry.split(sep, 2)
+        if author == BOT_AUTHOR and SYNC_TRAILER in body:
+            return sha
+    return _run_git("merge-base", remote_main, head).strip()
+
+
+def _list_changed(baseline: str) -> list[str]:
     try:
-        out = _run_git("diff", "--name-only", base_sha, "HEAD")
+        out = _run_git("diff", "--name-only", baseline, "HEAD", "--", *SYNC_PATHSPECS)
     except subprocess.CalledProcessError as exc:
         _gha_error(f"git diff failed: {exc.stderr}")
         return []
@@ -101,7 +142,7 @@ def _classify(changed: list[str]) -> tuple[dict[str, list[str]], dict[str, bool]
 def _process_talk(
     talk_dir: str,
     srt_paths: list[str],
-    base_sha: str,
+    baseline: str,
     tmp: Path,
 ) -> bool:
     """Process a single talk. Returns True on success, False on failure.
@@ -127,7 +168,7 @@ def _process_talk(
         return True
 
     base_transcript = tmp / f"{talk_id}.base_transcript.txt"
-    if not _show_base(base_sha, str(transcript_path), base_transcript):
+    if not _show_base(baseline, str(transcript_path), base_transcript):
         print(f"  [{talk_id}] transcript is new in this PR — skip", file=sys.stderr)
         return True
 
@@ -142,7 +183,7 @@ def _process_talk(
             print(f"  [{talk_id}/{video_slug}] SRT deleted in this PR — skip", file=sys.stderr)
             continue
         base_srt = tmp / f"{talk_id}__{video_slug}.base.srt"
-        if not _show_base(base_sha, srt, base_srt):
+        if not _show_base(baseline, srt, base_srt):
             print(f"  [{talk_id}/{video_slug}] SRT is new in this PR — skip", file=sys.stderr)
             continue
 
@@ -242,8 +283,10 @@ def _process_talk(
     return not step_b_failed
 
 
-def run(base_sha: str) -> int:
-    changed = _list_changed(base_sha)
+def run(baseline: str | None = None) -> int:
+    if baseline is None:
+        baseline = resolve_baseline()
+    changed = _list_changed(baseline)
     srt_by_talk, transcript_talks = _classify(changed)
     all_talks = sorted(set(srt_by_talk) | set(transcript_talks))
     if not all_talks:
@@ -260,7 +303,7 @@ def run(base_sha: str) -> int:
         print("\n========================================", file=sys.stderr)
         print(f"  {talk_id}", file=sys.stderr)
         print("========================================", file=sys.stderr)
-        ok = _process_talk(talk_dir, srt_paths, base_sha, tmp)
+        ok = _process_talk(talk_dir, srt_paths, baseline, tmp)
         overall_ok = overall_ok and ok
 
     return 0 if overall_ok else 1
@@ -268,9 +311,13 @@ def run(base_sha: str) -> int:
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Two-pass sync driver for sync-subtitles PRs")
-    p.add_argument("--base-sha", required=True, help="Base SHA of the PR to diff against")
+    p.add_argument(
+        "--baseline",
+        default=None,
+        help="Commit to diff against (default: last bot sync commit, else merge-base with origin/main)",
+    )
     args = p.parse_args()
-    sys.exit(run(args.base_sha))
+    sys.exit(run(args.baseline))
 
 
 if __name__ == "__main__":

@@ -33,3 +33,38 @@ def test_sync_job_skips_draft_prs():
     assert "github.event.pull_request.draft == false" in cond, (
         "the sync job must not run on draft PRs (edit auto-sync pushes there)"
     )
+
+
+def test_workflow_has_a_concurrency_group_per_pr():
+    """Overlapping runs race on the final push.
+
+    The loser is rejected non-fast-forward, which surfaces as a spurious
+    red check on a PR whose sync actually succeeded.
+    """
+    wf = _load()
+    group = wf["concurrency"]["group"]
+    assert "pull_request.number" in group, "concurrency must be scoped per PR, not global"
+    assert wf["concurrency"]["cancel-in-progress"] is True
+
+
+def test_workflow_does_not_pass_a_base_sha():
+    """The baseline comes from git history, not from the PR base.
+
+    Diffing from the PR base replays every edit the bot already committed,
+    which is why no sync run has ever been green twice.
+    """
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert "base.sha" not in text
+    assert "--base-sha" not in text
+
+
+def test_bot_commit_carries_the_trailer_the_resolver_looks_for():
+    """The baseline is found by trailer; a commit without it is invisible.
+
+    Asserted against the constant itself so the two can never drift.
+    """
+    from tools.sync_pr import BOT_AUTHOR, SYNC_TRAILER
+
+    text = WORKFLOW.read_text(encoding="utf-8")
+    assert SYNC_TRAILER in text, "the bot commit must carry the sync trailer"
+    assert f'git config user.name "{BOT_AUTHOR}"' in text

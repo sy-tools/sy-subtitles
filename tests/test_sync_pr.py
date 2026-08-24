@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.sync_pr import _classify, run
+from tools.sync_pr import BOT_AUTHOR, SYNC_TRAILER, _classify, _list_changed, resolve_baseline, run
 
 HEADER = "Мова промови: англійська | Транскрипт (українська)"
 
@@ -268,3 +268,101 @@ class TestSyncPrIntegration:
         # Untouched by sync — the SRT is already final.
         srt_after = (talk / "Video1" / "final" / "uk.srt").read_text(encoding="utf-8")
         assert srt_after == BASE_SRT
+
+
+def _commit(repo_path: Path, message: str, *, author: str | None = None) -> str:
+    """Commit whatever is staged (allowing empty) and return the new SHA."""
+    env = ["-c", f"user.name={author}"] if author else []
+    _git(repo_path, *env, "commit", "-q", "--allow-empty", "-m", message)
+    return _git(repo_path, "rev-parse", "HEAD").strip()
+
+
+class TestBaselineResolution:
+    """What the sync diffs against.
+
+    Anchoring on the PR base replays every edit the bot already applied,
+    so no run can be green twice; anchoring on a non-ancestor tip reports
+    files that moved on main as reversed changes.
+    """
+
+    def test_baseline_is_the_last_bot_sync_commit(self, repo):
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        human = _commit(repo_path, "human edit")
+        bot = _commit(
+            repo_path,
+            f"Sync subtitles and transcript edits [skip ci]\n\n{SYNC_TRAILER}",
+            author=BOT_AUTHOR,
+        )
+        _commit(repo_path, "another human edit")
+
+        assert resolve_baseline(remote_main="origin/main") == bot
+        assert resolve_baseline(remote_main="origin/main") != human
+
+    def test_baseline_falls_back_to_merge_base_not_branch_tip(self, repo):
+        """With no bot commit, the baseline is where the branch diverged.
+
+        Never the tip of main: main moves on independently, and a two-dot
+        diff against a non-ancestor reports everything that moved there as
+        a reversed change, which the sync would dutifully un-edit (R5).
+        """
+        repo_path, _base_sha = repo
+        fork_point = _git(repo_path, "rev-parse", "HEAD").strip()
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        _commit(repo_path, "work on the PR branch")
+
+        # main moves on independently of this branch.
+        _git(repo_path, "checkout", "-q", "origin/main")
+        _commit(repo_path, "unrelated change on main")
+        _git(repo_path, "checkout", "-q", "-")
+
+        assert resolve_baseline(remote_main="origin/main") == fork_point
+
+    def test_baseline_ignores_a_bot_commit_merged_in_from_main(self, repo):
+        """A merge drags in other PRs' bot commits.
+
+        They sit off this branch's first-parent spine and their trees
+        belong to another history, so diffing from one would replay every
+        edit this branch has already applied. Here `origin/main` is stale
+        at the fork point, which puts the foreign commit inside the
+        revision range — only the --first-parent walk keeps it out.
+        """
+        repo_path, _base_sha = repo
+        fork_point = _git(repo_path, "rev-parse", "HEAD").strip()
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        _git(repo_path, "checkout", "-q", "-b", "other-pr", fork_point)
+        foreign_bot = _commit(
+            repo_path,
+            f"Sync subtitles and transcript edits [skip ci]\n\n{SYNC_TRAILER}",
+            author=BOT_AUTHOR,
+        )
+        _git(repo_path, "checkout", "-q", "main")
+        _git(repo_path, "merge", "-q", "--no-ff", "-m", "Merge branch 'other-pr'", "other-pr")
+
+        resolved = resolve_baseline(remote_main="origin/main")
+        assert resolved != foreign_bot
+        assert resolved == fork_point
+
+    def test_baseline_ignores_a_trailer_from_a_human_author(self, repo):
+        """The trailer alone is text anyone can type; the author must match."""
+        repo_path, _base_sha = repo
+        fork_point = _git(repo_path, "rev-parse", "HEAD").strip()
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        _commit(repo_path, f"looks official\n\n{SYNC_TRAILER}", author="Some Human")
+
+        assert resolve_baseline(remote_main="origin/main") == fork_point
+
+    def test_list_changed_ignores_paths_outside_the_sync_scope(self, repo):
+        """Anything that is not a transcript or a final SRT is noise."""
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        (repo_path / "README.md").write_text("noise\n", encoding="utf-8")
+        srt = repo_path / "talks/test/Video1/final/uk.srt"
+        srt.write_text(srt.read_text(encoding="utf-8").replace("Перше", "Змінене"), encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit a subtitle and a readme")
+
+        changed = _list_changed(resolve_baseline(remote_main="origin/main"))
+        assert "talks/test/Video1/final/uk.srt" in changed
+        assert "README.md" not in changed

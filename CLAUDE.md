@@ -210,8 +210,11 @@ python -m tools.sync_srt_to_transcript --old-srt OLD --new-srt NEW \
   --transcript transcript_uk.txt
 
 # Two-pass sync driver for sync-subtitles PR workflow (used by Actions).
-# Discovers changed files itself via `git diff --name-only $BASE_SHA HEAD`.
-python -m tools.sync_pr --base-sha SHA
+# Resolves its own baseline: the last `github-actions[bot]` commit carrying the
+# `Sync-Bot: v1` trailer on this branch, else the merge-base with origin/main —
+# never the PR base, which replays edits the bot already applied. Discovers
+# changed files itself, scoped to transcript_uk.txt and final/uk.srt.
+python -m tools.sync_pr [--baseline SHA]
 
 # Resync UK SRT from primary video timeline onto secondary video timeline
 python -m tools.resync_srt --primary-uk PATH --primary-en PATH \
