@@ -270,6 +270,14 @@ def _resolve_edits(
     corpus's 165 SRTs contain duplicate block texts.
     """
     edits: list[dict] = []
+    # Where the next lookup inside a given block may start: without this every
+    # island searching for the same fragment resolves to the first occurrence,
+    # and the last edit silently overwrites the earlier ones.
+    claimed: dict[int, int] = {}
+
+    def place(block: dict, offset_from: int = 0) -> int:
+        return block["text"].find(old_frag, max(offset_from, claimed.get(id(block), 0)))
+
     align: dict | None = None
     for p_idx in changed_paras:
         islands = find_diff_islands(old_paras[p_idx], new_paras[p_idx])
@@ -285,7 +293,7 @@ def _resolve_edits(
                 if block["text"][offset : offset + len(old_frag)] != old_frag:
                     # Offset arithmetic thrown off by whitespace variance —
                     # still the right block.
-                    offset = block["text"].find(old_frag)
+                    offset = place(block)
                     if offset == -1:
                         block = None
             if block is None:
@@ -295,9 +303,9 @@ def _resolve_edits(
                 bi = _locate_by_alignment(align, p_idx, frag_lo, frag_lo + len(old_frag))
                 if bi is not None:
                     for cand in (bi, bi - 1, bi + 1):
-                        if 0 <= cand < len(srt_blocks) and old_frag in srt_blocks[cand]["text"]:
+                        if 0 <= cand < len(srt_blocks) and place(srt_blocks[cand]) != -1:
                             block = srt_blocks[cand]
-                            offset = block["text"].find(old_frag)
+                            offset = place(block)
                             break
             if block is None:
                 # Third tier: the paragraph's own blocks, then the whole file.
@@ -318,8 +326,14 @@ def _resolve_edits(
                             "run the full subtitle pipeline to rebuild"
                         )
                     }
-                block, offset = hits[0], hits[0]["text"].find(old_frag)
+                block, offset = hits[0], place(hits[0])
+            claimed[id(block)] = offset + len(old_frag)
             edits.append({"block": block, "offset": offset, "old": old_frag, "new": new_frag, "p_idx": p_idx})
+    places = {(id(e["block"]), e["offset"]) for e in edits}
+    if len(places) != len(edits):
+        return [], {
+            "error": "two edits resolved to the same place in one block — run the full subtitle pipeline to rebuild"
+        }
     return edits, None
 
 

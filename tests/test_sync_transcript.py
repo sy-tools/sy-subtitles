@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from tools.sync_transcript_to_srt import (
+    _apply_edits,
     _resolve_edits,
     find_diff_islands,
     find_paragraph_blocks,
@@ -921,12 +922,27 @@ class TestFindDiffIslands:
         for old_f, _new_f, offset in islands:
             assert old[offset : offset + len(old_f)] == old_f
 
-    def test_no_island_begins_or_ends_on_whitespace(self):
+    @pytest.mark.parametrize(
+        ("old", "new"),
+        [
+            # Plain sentence rewrites: already word-aligned, nothing to trim.
+            (
+                "Перше речення першого абзацу. Друге речення першого абзацу.",
+                "Змінене речення першого абзацу. Інше речення першого абзацу.",
+            ),
+            # A changed word shorter than MIN_FRAGMENT forces the island to
+            # widen onto its neighbour — the case that actually reaches the
+            # trim. Without it these yield (' ту', ' цю', 9) and (' та', ' то', 12).
+            ("Вона мала ту силу.", "Вона мала цю силу."),
+            ("Ми знаємо це та він прийшов.", "Ми знаємо це то він прийшов."),
+        ],
+    )
+    def test_no_island_begins_or_ends_on_whitespace(self, old, new):
         """A space is exactly where one subtitle block ends and the next
         begins, so a fragment padded with one can never be found."""
-        old = "Перше речення першого абзацу. Друге речення першого абзацу."
-        new = "Змінене речення першого абзацу. Інше речення першого абзацу."
-        for old_f, new_f, _ in find_diff_islands(old, new):
+        islands = find_diff_islands(old, new)
+        assert islands
+        for old_f, new_f, _ in islands:
             assert old_f == old_f.strip()
             assert new_f == new_f.strip()
 
@@ -978,3 +994,47 @@ class TestSeveralEditsInOneParagraph:
         assert "error" not in result, result.get("error")
         srt = (talk_dir / "Video" / "final" / "uk.srt").read_text(encoding="utf-8")
         assert "Перше слово другого тексту." in srt
+
+
+class TestRepeatedFragmentInOneBlock:
+    """Two edits to the same repeated word must not collapse onto one offset.
+
+    Tier 1 locates a fragment by arithmetic from its own paragraph offset, so
+    it keeps the two apart. Tiers 2 and 3 re-derive the offset with `find`,
+    which returns the FIRST occurrence for both islands: the first edit is
+    overwritten by the second and the second sentence is left untouched,
+    producing text that existed in neither version — with no error.
+
+    17% of the corpus's 85k blocks contain a repeated word, and the drifted
+    block cut that sends a lookup to tier 2 is the common case (the transcript
+    word stream differs from the primary SRT in 74 of 94 talks).
+    """
+
+    def test_two_edits_to_a_repeated_word_do_not_collapse(self):
+        old_para = "Вона сказала так і потім вона сказала так знову."
+        new_para = "Вона сказала ТАК і потім вона сказала ІНАКШЕ знову."
+        # The trailing word makes the block differ from the paragraph, so tier 1
+        # declines and the lookup falls through to the re-searching tiers.
+        blocks = [
+            {"idx": 1, "text": "Вона сказала так і потім вона сказала так знову вже.", "start_ms": 0, "end_ms": 3000}
+        ]
+
+        edits, err = _resolve_edits([old_para], [new_para], [0], blocks)
+        assert err is None, err
+        assert _apply_edits(edits) is None
+
+        assert blocks[0]["text"] == "Вона сказала ТАК і потім вона сказала ІНАКШЕ знову вже."
+
+    def test_a_second_edit_does_not_overwrite_the_first(self):
+        """The pre-fix failure wrote text that was in neither version: both
+        islands landed on offset 13, so the second splice replaced the first."""
+        old_para = "Вона сказала так і потім вона сказала так знову."
+        new_para = "Вона сказала ТАК і потім вона сказала ІНАКШЕ знову."
+        blocks = [
+            {"idx": 1, "text": "Вона сказала так і потім вона сказала так знову вже.", "start_ms": 0, "end_ms": 3000}
+        ]
+
+        edits, err = _resolve_edits([old_para], [new_para], [0], blocks)
+
+        assert err is None, err
+        assert sorted(e["offset"] for e in edits) == [13, 38]
