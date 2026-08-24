@@ -19,6 +19,7 @@ import argparse
 import difflib
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 from .srt_utils import parse_srt, write_srt
@@ -245,17 +246,85 @@ def _locate_by_alignment(align: dict, p_idx: int, frag_lo: int, frag_hi: int) ->
     return None
 
 
-def _on_screen(para: str, srt_blocks: list) -> bool:
-    """Does this paragraph's text appear on this video at all?
+# Typographic variants that mean the same character. The transcript and the
+# subtitles are edited by different hands at different times, so one side
+# carries a curly quote or an em dash where the other carries the plain form.
+_TYPO_VARIANTS = str.maketrans(
+    {
+        "\u2019": "'",
+        "\u2018": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\u00ab": '"',
+        "\u00bb": '"',
+        "\u2014": "-",
+        "\u2013": "-",
+        "\u2011": "-",
+        "\u2026": ".",
+        "\u00a0": " ",
+    }
+)
 
-    Whitespace-normalised, because the paragraph is cut across blocks. This is
-    the difference between a paragraph another video carries and one whose
+
+def _fold(text: str) -> str:
+    """Case-, punctuation- and spacing-insensitive form of `text`."""
+    out: list[str] = []
+    for ch in text.translate(_TYPO_VARIANTS):
+        if unicodedata.category(ch).startswith("P"):
+            continue
+        if ch.isspace():
+            if out and out[-1] != " ":
+                out.append(" ")
+            continue
+        out.append(ch.casefold())
+    return "".join(out).strip()
+
+
+def _fold_blocks(srt_blocks: list) -> tuple[str, list[int]]:
+    """The blocks as one folded stream, plus the owning block of each char."""
+    chars: list[str] = []
+    owner: list[int] = []
+    for bi, block in enumerate(srt_blocks):
+        for ch in block["text"].translate(_TYPO_VARIANTS):
+            if unicodedata.category(ch).startswith("P"):
+                continue
+            if ch.isspace():
+                if chars and chars[-1] != " ":
+                    chars.append(" ")
+                    owner.append(bi)
+                continue
+            for folded in ch.casefold():
+                chars.append(folded)
+                owner.append(bi)
+        # A block boundary is a word boundary on screen.
+        if chars and chars[-1] != " ":
+            chars.append(" ")
+            owner.append(bi)
+    return "".join(chars), owner
+
+
+def _on_screen_spans(para: str, folded: str, owner: list[int]) -> list[tuple[int, int]]:
+    """Block ranges [lo, hi) where this paragraph's text appears on screen.
+
+    Empty when the video does not carry the paragraph at all — which is the
+    difference between a paragraph another video carries and one whose
     alignment merely lost a coin toss to an identical twin.
+
+    Compared with case, punctuation and typography folded away. An exact
+    substring test answers "never heard of it" for 13 paragraphs the corpus
+    plainly shows on screen, differing only by a comma, a capital or a
+    transliteration variant — and every one of those is a human edit dropped
+    under a green check.
     """
-    text = " ".join(para.split())
-    if not text:
-        return False
-    return text in " ".join(" ".join(b["text"].split()) for b in srt_blocks)
+    needle = _fold(para)
+    if not needle:
+        return []
+    spans: list[tuple[int, int]] = []
+    at = folded.find(needle)
+    while at != -1:
+        spans.append((owner[at], owner[at + len(needle) - 1] + 1))
+        at = folded.find(needle, at + 1)
+    return spans
 
 
 def _paragraph_block_range(align: dict, p_idx: int) -> tuple[int, int] | None:
@@ -292,6 +361,7 @@ def _resolve_edits(
         return block["text"].find(old_frag, max(offset_from, claimed.get(id(block), 0)))
 
     align: dict | None = None
+    folded_blocks: tuple[str, list[int]] | None = None
     for p_idx in changed_paras:
         islands = find_diff_islands(old_paras[p_idx], new_paras[p_idx])
         if any(not old_frag for old_frag, _, _ in islands):
@@ -316,36 +386,88 @@ def _resolve_edits(
                 bi = _locate_by_alignment(align, p_idx, frag_lo, frag_lo + len(old_frag))
                 if bi is not None:
                     for cand in (bi, bi - 1, bi + 1):
-                        if 0 <= cand < len(srt_blocks) and place(srt_blocks[cand]) != -1:
+                        if not 0 <= cand < len(srt_blocks):
+                            continue
+                        offset = place(srt_blocks[cand])
+                        if offset != -1:
                             block = srt_blocks[cand]
-                            offset = place(block)
                             break
+                        if old_frag in srt_blocks[cand]["text"]:
+                            # The block does hold the fragment; every
+                            # occurrence is just claimed by an earlier island.
+                            # That says nothing about the alignment having
+                            # named the wrong block, and stepping to the
+                            # neighbour writes this edit into a different
+                            # sentence — silently, under a green check.
+                            return [], {
+                                "error": (
+                                    f"P{p_idx + 1}: «{old_frag[:60]}» has no unclaimed place in the block "
+                                    "the alignment names — run the full subtitle pipeline to rebuild"
+                                )
+                            }
+                    else:
+                        offset = None
             if block is None:
                 # Third tier: the paragraph's own blocks, then the whole file.
                 # Uniqueness is the only guard left, so anything that appears
                 # twice is refused rather than guessed at.
-                scope = _paragraph_block_range(align, p_idx) if align else None
-                if scope is None and align and align["word_block"] and not _on_screen(old_paras[p_idx], srt_blocks):
-                    # Not one word of this paragraph anchored AND its text is
-                    # nowhere on this video: the video does not carry it. A
-                    # talk's videos each hold a slice of one shared transcript,
-                    # and an `independent` video has none of the primary's
-                    # paragraphs — searching the whole file for its edit lands
-                    # on whatever coincidentally matches.
+                # Which blocks carry this paragraph. The screen answers it
+                # best: the span is measured from the text itself, so it needs
+                # no tolerance. The anchored range is the fallback — it covers
+                # only the words difflib matched, so a fragment at the
+                # paragraph's edge can sit a block outside it.
+                anchored = _paragraph_block_range(align, p_idx) if align else None
+                spans = []
+                if align and align["word_block"]:
+                    if folded_blocks is None:
+                        folded_blocks = _fold_blocks(srt_blocks)
+                    spans = _on_screen_spans(old_paras[p_idx], *folded_blocks)
+                if len(spans) == 1:
+                    scope = spans[0]
+                elif anchored is not None:
+                    scope = (max(0, anchored[0] - 1), min(len(srt_blocks), anchored[1] + 1))
+                elif not align or not align["word_block"]:
+                    scope = None
+                elif not spans:
+                    # Not one word anchored AND the text is nowhere on screen:
+                    # the video does not carry this paragraph. A talk's videos
+                    # each hold a slice of one shared transcript, and an
+                    # `independent` video has none of the primary's paragraphs
+                    # — hunting the file for its edit lands on whatever
+                    # coincidentally matches.
                     #
-                    # Zero anchors alone is NOT enough. difflib matches
+                    # Zero anchors alone would NOT be enough: difflib matches
                     # monotonically, so a paragraph repeated in the transcript
-                    # has its words taken by the earlier copy, leaving this one
-                    # at zero even though it is plainly on screen — the closing
-                    # blessing of an abridged video is exactly that shape.
+                    # has its words taken by the earlier copy while this one is
+                    # plainly on screen — the closing blessing of an abridged
+                    # video is exactly that shape.
                     continue
-                hits = []
+                else:
+                    return [], {
+                        "error": (
+                            f"P{p_idx + 1}: this paragraph appears {len(spans)} times on this video and "
+                            "none of its words anchored, so which copy the edit belongs to is a guess — "
+                            "run the full subtitle pipeline to rebuild"
+                        )
+                    }
                 if scope is not None:
+                    # Bounded by the blocks that carry this paragraph, never
+                    # widened to the file. An island can straddle a block
+                    # boundary, and then no single block holds it; widening
+                    # turns that into a unique hit somewhere else entirely and
+                    # rewrites an unrelated sentence.
                     hits = [b for b in srt_blocks[scope[0] : scope[1]] if old_frag in b["text"]]
-                if not hits:
+                    if not hits:
+                        return [], {
+                            "error": (
+                                f"P{p_idx + 1}: «{old_frag[:60]}» is in no single block of this paragraph — "
+                                "the change straddles a block boundary. Run the full subtitle pipeline to rebuild"
+                            )
+                        }
+                else:
                     hits = [b for b in srt_blocks if old_frag in b["text"]]
-                if not hits:
-                    return [], {"error": f"P{p_idx + 1}: cannot find «{old_frag[:60]}» in SRT blocks"}
+                    if not hits:
+                        return [], {"error": f"P{p_idx + 1}: cannot find «{old_frag[:60]}» in SRT blocks"}
                 if len(hits) > 1:
                     return [], {
                         "error": (

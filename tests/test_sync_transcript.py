@@ -1152,3 +1152,143 @@ class TestADuplicatedParagraphIsStillThisVideos:
         assert "error" in result or "Нехай Бог благословить усіх вас." in texts, (
             f"an edit whose text is plainly on screen was silently dropped: {result} {texts}"
         )
+
+
+class TestAClaimedBlockIsNotTheWrongBlock:
+    """Tier 2 probes the named block and its two neighbours with `place()`.
+
+    `place()` is claim-aware, so it answers -1 both for «this block does not
+    hold the fragment» and for «it does, but an earlier island already took
+    every occurrence». Reading the second as the first steps to the neighbour
+    and writes the edit into a different sentence — silently, under a green
+    check. Reproduced: an edit to «Ми казали про це слово.» landed in the
+    unrelated, unedited «Вони думали про це слово.»
+    """
+
+    def test_an_edit_whose_place_is_claimed_fails_instead_of_moving_next_door(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        (video / "uk.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nМи казали про це слово. Дельта епсилон омікрон.\n\n"
+            "2\n00:00:05,100 --> 00:00:09,000\nВони думали про це слово.\n",
+            encoding="utf-8",
+        )
+        # The transcript carries «Дельта епсилон омікрон.» twice; the video
+        # shows it once, merged into the same block as «Ми казали…». The
+        # zero-anchored copy resolves first and claims the tail of that block.
+        old = (
+            HEADER + "Дельта епсилон омікрон.\n\nМи казали про це слово.\n\nДельта епсилон омікрон.\n\n"
+            "Вони думали про це слово.\n\nАбзац лише в транскрипті.\n"
+        )
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new = old.replace(
+            "Дельта епсилон омікрон.\n\nМи казали про це слово.", "Дельта епсилон тау.\n\nМи казали, що це слово.", 1
+        )
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        before = [b["text"] for b in parse_srt(str(video / "uk.srt"))]
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+
+        assert "error" in result, "a claimed place is not evidence that the alignment named the wrong block"
+        assert [b["text"] for b in parse_srt(str(video / "uk.srt"))] == before, (
+            "nothing may be written when an edit cannot be placed"
+        )
+
+
+class TestAStraddlingChangeIsNotHuntedAcrossTheFile:
+    """The tier-3 hunt widened to the whole file whenever the paragraph's own
+    blocks held no match.
+
+    A change that straddles a block boundary is exactly that case: no single
+    block holds the fragment. Widening then finds a lone coincidental match
+    somewhere else and rewrites an unrelated sentence — and the uniqueness
+    guard cannot help, because the right block was never a candidate.
+    """
+
+    def test_a_change_across_a_block_boundary_fails_instead_of_matching_elsewhere(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        (video / "uk.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:04,000\nМи зібралися сьогодні разом.\n\n"
+            "2\n00:00:04,100 --> 00:00:07,000\nНехай Бог благословить вас\n\n"
+            "3\n00:00:07,100 --> 00:00:10,000\nі подарує вам радість.\n\n"
+            "4\n00:00:10,100 --> 00:00:14,000\nЯ прошу вас і повторюю це щодня.\n",
+            encoding="utf-8",
+        )
+        # The blessing is cut across blocks 2 and 3, so the island «вас і по»
+        # sits in neither. Block 4 holds those characters by coincidence.
+        blessing = "Нехай Бог благословить вас і подарує вам радість."
+        old = (
+            HEADER + "Ми зібралися сьогодні разом.\n\n" + blessing + "\n\n" + blessing + "\n\n"
+            "Я прошу вас і повторюю це щодня.\n"
+        )
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new_path = talk / "new.txt"
+        new_path.write_text(
+            old.replace(blessing + "\n\nЯ прошу", "Нехай Бог благословить усіх і дарує вам радість.\n\nЯ прошу", 1),
+            encoding="utf-8",
+        )
+
+        before = [b["text"] for b in parse_srt(str(video / "uk.srt"))]
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+
+        assert "error" in result, "a fragment in none of the paragraph's own blocks must not be hunted file-wide"
+        assert [b["text"] for b in parse_srt(str(video / "uk.srt"))] == before, (
+            "«Я прошу вас і повторюю це щодня.» was never edited and must not change"
+        )
+
+
+class TestOnScreenIsJudgedOnWordsNotTypography:
+    """Whether a video carries a paragraph is decided by comparing its text
+    with the screen.
+
+    An exact substring test answers «never heard of it» for 13 real corpus
+    paragraphs that differ from the subtitles only by a comma, a capital or a
+    transliteration variant — among them 1999-11-07_Diwali-Puja P115/P127/P130
+    and the mantra lines of 1982-08-01_Adi-Shakti-puja. Every one of those is a
+    human edit dropped under a green check. The comparison therefore folds
+    case, punctuation and typography away, and joins the blocks, because the
+    paragraph is cut across several of them.
+    """
+
+    def test_a_paragraph_the_subtitles_punctuate_differently_is_still_synced(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        # The blessing reached the screen without its comma and capitals, and
+        # cut across two blocks. Not one of its words matches the transcript's
+        # in the first block, so nothing anchors it.
+        (video / "uk.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\n"
+            "Перша довга розповідь про подію яка тривала багато годин поспіль.\n\n"
+            "2\n00:00:05,100 --> 00:00:08,000\nнехай бог благословить вас\n\n"
+            "3\n00:00:08,100 --> 00:00:11,000\nі подарує велику радість\n",
+            encoding="utf-8",
+        )
+        blessing = "Нехай Бог благословить вас, і подарує велику радість."
+        old = (
+            HEADER
+            + "Перша довга розповідь про подію яка тривала багато годин поспіль.\n\n"
+            + blessing
+            + "\n\nДруга довга розповідь про зовсім іншу подію того самого дня.\n\n"
+            + blessing
+            + "\n"
+        )
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new_path = talk / "new.txt"
+        # Edit the LAST copy — difflib gives the anchors to the earlier one.
+        new_path.write_text(
+            old[: old.rindex(blessing)] + "Нехай Бог благословить вас, і подарує велику радощі.\n",
+            encoding="utf-8",
+        )
+
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+
+        assert "error" not in result, result.get("error")
+        texts = [b["text"] for b in parse_srt(str(video / "uk.srt"))]
+        assert texts[2] == "і подарує велику радощі", "the edit belongs to the block that carries the changed words"
+        assert texts[0].startswith("Перша довга розповідь"), "no other block may change"
+        assert texts[1] == "нехай бог благословить вас"
