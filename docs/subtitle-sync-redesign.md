@@ -103,6 +103,21 @@ videos:
 | `independent` | Its own cut of the text (e.g. an after-puja talk). Syncs both ways with the transcript directly, never against the primary. |
 | `ignored` | Never read, never written by sync. |
 
+This model is not new. It already exists implicitly, guessed afresh in
+three places that disagree: `subtitle-pipeline.yml:604` picks the primary by
+whichever video has the most words in `whisper.json` (falling back to the
+first video); `tools/build_secondary_srts.py` takes `--primary-slug` as a
+CLI argument from outside; `build_manifest.yaml` records the role after the
+fact as build provenance and is read only by `manifest_validate_flags`; and
+`tools/sync_pr.py` does not know about it at all, treating every SRT as an
+equal source of truth. That is why one talk carries three `role: primary`
+manifests and eight legacy talks carry none. Declaring it in `meta.yaml`
+moves an existing implicit fact into one explicit place that is available
+before a build, survives legacy talks, and is editable by a human.
+
+A follow-up (out of scope here) can let `subtitle-pipeline.yml` read the
+declaration instead of its word-count heuristic.
+
 Resolution rules:
 
 - A talk with exactly one video that has a `final/uk.srt` treats it as
@@ -116,11 +131,12 @@ Resolution rules:
 The 9 talks identified above are filled in by hand as part of this work.
 N is small and fixed; a script would add risk without saving effort.
 
-SPA exposure (see section 9) offers three choices — primary, derived, and
-ignored. `independent` stays a hand-set value in `meta.yaml` for the rare
-case where a video carries its own slice of the transcript. Marking such a
-video `ignored` from the SPA is legal and simply means transcript edits
-never reach its subtitles.
+All four values are selectable in the SPA (see section 10). `independent`
+is rare but real — `2000-07-23_Guru-Puja-Shraddha`'s two after-puja talks
+share no text with the primary yet have 23/24 and 16/16 of their blocks in
+the transcript verbatim — so hiding it behind hand-editing would make the
+common way to handle that case (`ignored`) silently lose those subtitles
+from every future transcript edit.
 
 ## 5. Baseline: what counts as a human edit
 
@@ -273,9 +289,10 @@ The add-talk screen (`site/index.html` around line 7500, serialized by
 `buildMetaYaml` in `site/js/add_talk_data.js:76`) gains per-video controls:
 
 - one **primary** selection across the talk's videos (single choice),
-- a **derived** toggle on each remaining video,
-- anything left unmarked is **ignored**, stated in the UI so the
-  consequence is visible rather than implied.
+- a per-video role for every other video: **derived**, **independent**, or
+  **ignored**,
+- the consequence of each choice stated in the UI rather than implied —
+  `ignored` means transcript edits never reach that video's subtitles.
 
 `buildMetaYaml` serializes the resulting `sync:` value per video. The
 control is disabled until a primary is chosen, and choosing a primary is
