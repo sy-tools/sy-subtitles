@@ -245,6 +245,19 @@ def _locate_by_alignment(align: dict, p_idx: int, frag_lo: int, frag_hi: int) ->
     return None
 
 
+def _on_screen(para: str, srt_blocks: list) -> bool:
+    """Does this paragraph's text appear on this video at all?
+
+    Whitespace-normalised, because the paragraph is cut across blocks. This is
+    the difference between a paragraph another video carries and one whose
+    alignment merely lost a coin toss to an identical twin.
+    """
+    text = " ".join(para.split())
+    if not text:
+        return False
+    return text in " ".join(" ".join(b["text"].split()) for b in srt_blocks)
+
+
 def _paragraph_block_range(align: dict, p_idx: int) -> tuple[int, int] | None:
     """Block range [lo, hi) carrying paragraph `p_idx`'s matched words."""
     start, count = align["starts"][p_idx], len(align["words"][p_idx])
@@ -312,13 +325,19 @@ def _resolve_edits(
                 # Uniqueness is the only guard left, so anything that appears
                 # twice is refused rather than guessed at.
                 scope = _paragraph_block_range(align, p_idx) if align else None
-                if scope is None and align and align["word_block"]:
-                    # The alignment matched words elsewhere in this SRT but not
-                    # one word of this paragraph: the video does not carry it.
-                    # A talk's videos each hold a slice of one shared
-                    # transcript, and an `independent` video has none of the
-                    # primary's paragraphs — searching the whole file for its
-                    # edit lands on whatever coincidentally matches.
+                if scope is None and align and align["word_block"] and not _on_screen(old_paras[p_idx], srt_blocks):
+                    # Not one word of this paragraph anchored AND its text is
+                    # nowhere on this video: the video does not carry it. A
+                    # talk's videos each hold a slice of one shared transcript,
+                    # and an `independent` video has none of the primary's
+                    # paragraphs — searching the whole file for its edit lands
+                    # on whatever coincidentally matches.
+                    #
+                    # Zero anchors alone is NOT enough. difflib matches
+                    # monotonically, so a paragraph repeated in the transcript
+                    # has its words taken by the earlier copy, leaving this one
+                    # at zero even though it is plainly on screen — the closing
+                    # blessing of an abridged video is exactly that shape.
                     continue
                 hits = []
                 if scope is not None:
@@ -335,6 +354,16 @@ def _resolve_edits(
                         )
                     }
                 block, offset = hits[0], place(hits[0])
+                if offset == -1:
+                    # The block holds the fragment, but only before what an
+                    # earlier island already claimed — there is nowhere left
+                    # for this one to go. Splicing at -1 writes garbage.
+                    return [], {
+                        "error": (
+                            f"P{p_idx + 1}: «{old_frag[:60]}» has no unclaimed place in its block — "
+                            "run the full subtitle pipeline to rebuild"
+                        )
+                    }
             claimed[id(block)] = offset + len(old_frag)
             edits.append({"block": block, "offset": offset, "old": old_frag, "new": new_frag, "p_idx": p_idx})
     places = {(id(e["block"]), e["offset"]) for e in edits}

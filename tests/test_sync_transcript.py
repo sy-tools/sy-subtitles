@@ -1083,3 +1083,72 @@ class TestAForeignParagraphIsNotThisVideos:
         assert [b["text"] for b in parse_srt(str(video / "uk.srt"))] == before, (
             "an edit to a paragraph this video does not carry must not touch it"
         )
+
+
+class TestClaimCursorCannotProduceANegativeOffset:
+    """Tier 3 picks its block with a claim-UNAWARE test and then computes the
+    offset with the claim-AWARE `place()`.
+
+    When the block's only occurrence of the fragment lies before what an
+    earlier island already claimed, `place()` returns -1. Tiers 1 and 2 check
+    for that; tier 3 did not, so the edit was recorded at offset -1 and spliced
+    with a negative index — text that existed in neither version, no error.
+    Reachable on an en-srt build that legitimately dropped a sentence the
+    transcript still carries.
+    """
+
+    def test_an_unplaceable_second_island_fails_instead_of_splicing_at_minus_one(self):
+        old_para = "Це унікальне слово тут і знову унікальне слово там кінець"
+        new_para = "Це особливе слово тут і знову дивовижне слово там кінець"
+        blocks = [{"idx": 1, "text": "Це унікальне слово тут і кінець", "start_ms": 0, "end_ms": 3000}]
+
+        edits, err = _resolve_edits([old_para], [new_para], [0], blocks)
+
+        assert err is not None, "an island with nowhere left to go must not be placed"
+        assert all(e["offset"] >= 0 for e in edits)
+
+
+class TestADuplicatedParagraphIsStillThisVideos:
+    """The foreign-paragraph skip keys on «no word of this paragraph anchored».
+
+    difflib matches monotonically, so a short paragraph whose text repeats in
+    the transcript gets its words anchored to the OTHER occurrence, leaving
+    this one with zero — even though it is plainly on the screen. Twelve real
+    paragraph/video pairs are in that state, among them the closing blessing
+    of 1993-05-18_Shri-Fatima-Puja and 1999-11-07_Diwali-Puja. Skipping there
+    drops a human's edit under a green check.
+    """
+
+    def test_a_zero_anchored_paragraph_that_is_on_screen_is_not_skipped(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        # The video is abridged: it ends after the first blessing. The
+        # transcript carries the whole event, so the SAME closing line appears
+        # twice in it and once on screen — difflib gives that block to the
+        # earlier paragraph, leaving the later one with nothing anchored.
+        (video / "uk.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\n"
+            "Перша довга розповідь про подію яка тривала багато годин поспіль.\n\n"
+            "2\n00:00:05,100 --> 00:00:09,000\nНехай Бог благословить вас.\n",
+            encoding="utf-8",
+        )
+        old = (
+            HEADER
+            + "Перша довга розповідь про подію яка тривала багато годин поспіль.\n\n"
+            + "Нехай Бог благословить вас.\n\n"
+            + "Друга довга розповідь про зовсім іншу подію того самого дня.\n\n"
+            + "Нехай Бог благословить вас.\n"
+        )
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        # The reviewer edits the LAST paragraph — the zero-anchored twin.
+        new = old[: old.rfind("Нехай Бог благословить вас.")] + "Нехай Бог благословить усіх вас.\n"
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+
+        texts = [b["text"] for b in parse_srt(str(video / "uk.srt"))]
+        assert "error" in result or "Нехай Бог благословить усіх вас." in texts, (
+            f"an edit whose text is plainly on screen was silently dropped: {result} {texts}"
+        )
