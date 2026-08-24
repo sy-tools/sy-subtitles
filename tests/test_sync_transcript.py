@@ -4,6 +4,7 @@ import sys
 
 import pytest
 
+from tools.srt_utils import parse_srt
 from tools.sync_transcript_to_srt import (
     _apply_edits,
     _resolve_edits,
@@ -1038,3 +1039,47 @@ class TestRepeatedFragmentInOneBlock:
 
         assert err is None, err
         assert sorted(e["offset"] for e in edits) == [13, 38]
+
+
+class TestAForeignParagraphIsNotThisVideos:
+    """A talk's videos each carry a slice of one shared transcript.
+
+    An `independent` video — a separate talk given the same day — has none of
+    the primary's paragraphs. Falling back to a whole-file search for such a
+    paragraph's edit finds whatever coincidentally matches: reproduced on
+    2000-07-23_Guru-Puja-Shraddha, where editing «Сьогодні» in the primary's
+    first paragraph rewrote «Однією» to «Однйєю» in a video that never
+    contained the sentence at all.
+    """
+
+    def test_an_edit_to_a_paragraph_this_video_lacks_is_left_alone(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        # This video carries only the SECOND paragraph. «дні» appears in it by
+        # coincidence, inside a different word.
+        srt_content = """1
+00:00:01,000 --> 00:00:05,000
+Однією з особливостей є великодушність.
+
+2
+00:00:05,100 --> 00:00:10,000
+Друге речення цього відео.
+"""
+        (video / "uk.srt").write_text(srt_content, encoding="utf-8")
+        old = (
+            HEADER
+            + "Сьогодні ми тут, щоб пізнати Принцип.\n\nОднією з особливостей є великодушність. Друге речення цього відео.\n"
+        )
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new = old.replace("Сьогодні ми тут", "Сьогоднй ми тут", 1)
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        before = [b["text"] for b in parse_srt(str(video / "uk.srt"))]
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+
+        assert "error" not in result, result.get("error")
+        assert [b["text"] for b in parse_srt(str(video / "uk.srt"))] == before, (
+            "an edit to a paragraph this video does not carry must not touch it"
+        )

@@ -312,6 +312,14 @@ def _resolve_edits(
                 # Uniqueness is the only guard left, so anything that appears
                 # twice is refused rather than guessed at.
                 scope = _paragraph_block_range(align, p_idx) if align else None
+                if scope is None and align and align["word_block"]:
+                    # The alignment matched words elsewhere in this SRT but not
+                    # one word of this paragraph: the video does not carry it.
+                    # A talk's videos each hold a slice of one shared
+                    # transcript, and an `independent` video has none of the
+                    # primary's paragraphs — searching the whole file for its
+                    # edit lands on whatever coincidentally matches.
+                    continue
                 hits = []
                 if scope is not None:
                     hits = [b for b in srt_blocks[scope[0] : scope[1]] if old_frag in b["text"]]
