@@ -5,8 +5,8 @@ import sys
 import pytest
 
 from tools.sync_transcript_to_srt import (
-    _apply_diff,
-    _find_diff,
+    _resolve_edits,
+    find_diff_islands,
     find_paragraph_blocks,
     prepare_blocks,
     sync_transcript,
@@ -507,37 +507,67 @@ class TestFragmentScoping:
         assert srt[0]["text"] == "Мати дала нам силу і любов."  # untouched
         assert srt[1]["text"] == "Ми прийшли сюди й ми раді."  # the actual edit
 
-    def test_drifted_srt_with_ambiguous_fragment_errors_instead_of_guessing(self, tmp_path):
-        """When SRT text has drifted from the transcript (word streams no longer
-        equal) and the fragment appears in several blocks, refuse loudly —
-        the caller falls back to the full pipeline."""
+    def test_a_paragraph_repeating_itself_verbatim_edits_the_right_copy(self, tmp_path):
+        """Both blocks carry the same sentence and both drifted from the
+        transcript, so neither exact mapping nor uniqueness can separate them.
+        The order-preserving alignment can: the first sentence is the first
+        block."""
         talk = tmp_path / "talks" / "test"
         video = talk / "Video" / "final"
         video.mkdir(parents=True)
-        # SRT drifted: «щось!» vs transcript «щось.»
+        srt_content = """1
+00:00:01,000 --> 00:00:05,000
+Так само і тут!
+
+2
+00:00:05,100 --> 00:00:10,000
+Так само і тут!
+"""
+        (video / "uk.srt").write_text(srt_content, encoding="utf-8")
+        old = HEADER + "Так само і тут. Так само і тут.\n\nІнший абзац зовсім.\n"
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new = HEADER + "Так само й тут. Так само і тут.\n\nІнший абзац зовсім.\n"
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+        assert not result.get("error"), result.get("error")
+
+        from tools.srt_utils import parse_srt
+
+        srt = parse_srt(str(talk / "Video" / "final" / "uk.srt"))
+        assert [b["text"] for b in srt] == ["Так само й тут!", "Так само і тут!"]
+
+    def test_drifted_srt_still_places_an_edit_whose_fragment_is_unique(self, tmp_path):
+        """Word-level islands are tightened character by character, so a block
+        that drifted by one punctuation mark still matches: the fragment for
+        « і » → « й » is «о і», which occurs in exactly one block here."""
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
         srt_content = """1
 00:00:01,000 --> 00:00:05,000
 Так само і тут щось!
 
 2
 00:00:05,100 --> 00:00:10,000
-І знову і тут інше.
+І знову тут інше.
 """
         (video / "uk.srt").write_text(srt_content, encoding="utf-8")
-        old = HEADER + "Так само і тут щось.\n\nІ знову і тут інше.\n"
+        old = HEADER + "Так само і тут щось.\n\nІ знову тут інше.\n"
         (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
-        new = HEADER + "Так само й тут щось.\n\nІ знову і тут інше.\n"
+        new = HEADER + "Так само й тут щось.\n\nІ знову тут інше.\n"
         new_path = talk / "new.txt"
         new_path.write_text(new, encoding="utf-8")
 
         result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
-        assert "error" in result
+        assert not result.get("error"), result.get("error")
 
         from tools.srt_utils import parse_srt
 
         srt = parse_srt(str(talk / "Video" / "final" / "uk.srt"))
-        assert srt[0]["text"] == "Так само і тут щось!"  # nothing written
-        assert srt[1]["text"] == "І знову і тут інше."
+        assert srt[0]["text"] == "Так само й тут щось!"
+        assert srt[1]["text"] == "І знову тут інше."
 
     def test_drifted_srt_with_unique_fragment_still_applies(self, tmp_path):
         """Drifted SRT (whisper-shaped blocks) keeps working when the fragment
@@ -570,43 +600,117 @@ class TestFragmentScoping:
         assert srt[1]["text"] == "І знову і тут інше."
 
 
-class TestFindDiff:
-    """Unit tests for _find_diff helper."""
-
-    def test_single_word_change(self):
-        old_f, new_f, offset = _find_diff("Перше речення абзацу.", "Перше речення параграфу.")
-        # Prefix/suffix trimming: common suffix "у." is trimmed
-        assert "абзац" in old_f
-        assert "парагра" in new_f or "параграф" in new_f
-        assert "Перше речення абзацу."[offset : offset + len(old_f)] == old_f
-
-    def test_empty_old_returns_empty(self):
-        old_f, _, _ = _find_diff("", "нове")
-        assert old_f == ""
-
-    def test_multiple_changes(self):
-        old_f, new_f, offset = _find_diff("AAAA. Текст. BBBB!", "CCCC. Текст. DDDD!")
-        # Both changes captured in one fragment
-        assert "AAAA" in old_f
-        assert "BBBB" in old_f
-        assert "CCCC" in new_f
-        assert "DDDD" in new_f
-        assert offset == 0
-
-
-class TestApplyDiffEdgeCases:
-    """Edge cases for _apply_diff."""
+class TestResolveEditsEdgeCases:
+    """Edge cases for _resolve_edits — nothing may be applied on a failure."""
 
     def test_empty_old_frag_errors(self):
-        result = _apply_diff("", "нове", [], 0)
-        assert "error" in result
-        assert "cannot determine" in result["error"]
+        _edits, err = _resolve_edits([""], ["нове"], [0], [])
+        assert err is not None
+        assert "cannot determine" in err["error"]
 
     def test_frag_not_found_in_blocks(self):
         blocks = [{"text": "Зовсім інший текст."}]
-        result = _apply_diff("Перше.", "Друге.", blocks, 0)
-        assert "error" in result
-        assert "cannot find" in result["error"]
+        _edits, err = _resolve_edits(["Перше."], ["Друге."], [0], blocks)
+        assert err is not None
+        assert "cannot find" in err["error"]
+
+    def test_an_unanchorable_fragment_appearing_twice_is_refused(self):
+        """Last resort: nothing in the paragraph matches any subtitle word, so
+        there is no anchor and no paragraph scope — only a search of the whole
+        file. 51 of the corpus's 165 SRTs contain duplicate block texts, so a
+        first-match guess there would silently rewrite the wrong subtitle.
+        """
+        blocks = [{"text": "ххх ВВВ ууу"}, {"text": "ххх ВВВ ууу"}]
+        _edits, err = _resolve_edits(["ААА ВВВ."], ["ААА ССС."], [0], blocks)
+        assert err is not None
+        assert "ambiguous" in err["error"]
+
+
+class TestParagraphScopedFallback:
+    """When the SRT's word stream has drifted from the transcript's — true of
+    74 of the corpus's 94 talks, because an en-srt build legitimately drops
+    transcript-only content — exact word-position mapping gives up on every
+    edit. Searching the whole file then makes any short fragment ambiguous.
+    The paragraph's own blocks are the right place to look.
+    """
+
+    @pytest.fixture
+    def drifted_talk(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        # Block 2 is missing the transcript's second sentence entirely, so the
+        # word streams differ. «, і» occurs in three blocks.
+        (video / "uk.srt").write_text(
+            """1
+00:00:01,000 --> 00:00:05,000
+Спокій, і радість, і любов.
+
+2
+00:00:05,100 --> 00:00:10,000
+Другий абзац, і його слова.
+
+3
+00:00:10,100 --> 00:00:15,000
+Третій абзац, і кінець.
+""",
+            encoding="utf-8",
+        )
+        old = (
+            HEADER + "Спокій, і радість, і любов.\n\nДругий абзац, і його слова. Речення якого немає на екрані.\n\n"
+            "Третій абзац, і кінець.\n"
+        )
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        return talk
+
+    def test_a_short_fragment_is_placed_in_its_own_paragraph(self, drifted_talk):
+        new = (
+            HEADER + "Спокій, і радість, і любов.\n\nДругий абзац, й його слова. Речення якого немає на екрані.\n\n"
+            "Третій абзац, і кінець.\n"
+        )
+        new_path = drifted_talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(str(drifted_talk), "Video", str(drifted_talk / "transcript_uk_old.txt"), str(new_path))
+        assert not result.get("error"), result.get("error")
+
+        from tools.srt_utils import parse_srt
+
+        srt = parse_srt(str(drifted_talk / "Video" / "final" / "uk.srt"))
+        assert srt[0]["text"] == "Спокій, і радість, і любов.", "another paragraph's block must not move"
+        assert srt[1]["text"] == "Другий абзац, й його слова."
+        assert srt[2]["text"] == "Третій абзац, і кінець."
+
+    def test_a_repeated_phrase_inside_the_paragraph_edits_the_right_block(self, drifted_talk):
+        """Scoping alone cannot separate three copies of « і » inside one
+        paragraph; the anchor word next to the edit can."""
+        old = HEADER + "Так, і так. Ще, і ще. Знов, і знов.\n\nІнший абзац.\n"
+        (drifted_talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        (drifted_talk / "Video" / "final" / "uk.srt").write_text(
+            """1
+00:00:01,000 --> 00:00:05,000
+Так, і так!
+
+2
+00:00:05,100 --> 00:00:10,000
+Ще, і ще!
+
+3
+00:00:10,100 --> 00:00:15,000
+Знов, і знов!
+""",
+            encoding="utf-8",
+        )
+        new_path = drifted_talk / "new2.txt"
+        new_path.write_text(HEADER + "Так, і так. Ще, й ще. Знов, і знов.\n\nІнший абзац.\n", encoding="utf-8")
+
+        result = sync_transcript(str(drifted_talk), "Video", str(drifted_talk / "transcript_uk_old.txt"), str(new_path))
+        assert not result.get("error"), result.get("error")
+
+        from tools.srt_utils import parse_srt
+
+        srt = parse_srt(str(drifted_talk / "Video" / "final" / "uk.srt"))
+        assert [b["text"] for b in srt] == ["Так, і так!", "Ще, й ще!", "Знов, і знов!"]
 
 
 class TestMain:
@@ -722,3 +826,155 @@ class TestOmitContext:
 
         assert "error" not in result, result.get("error")
         assert result["changed"] == 0
+
+
+class TestAlignedLocation:
+    """Pinning an edit when the streams have drifted.
+
+    A paragraph usually repeats its own short phrases, so scoping to the
+    paragraph is not enough: « і » can occur five times inside it. The words
+    the paragraph and the subtitles still share pin the edit to one block.
+    """
+
+    def test_a_repeated_fragment_inside_one_paragraph_is_still_placed(self, tmp_path):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        # Every block drifted from the transcript by its final punctuation,
+        # and «, і» occurs in all three.
+        (video / "uk.srt").write_text(
+            """1
+00:00:01,000 --> 00:00:05,000
+Спокій, і радість тут!
+
+2
+00:00:05,100 --> 00:00:10,000
+Любов, і мудрість там!
+
+3
+00:00:10,100 --> 00:00:15,000
+Сила, і терпіння скрізь!
+""",
+            encoding="utf-8",
+        )
+        old = HEADER + "Спокій, і радість тут. Любов, і мудрість там. Сила, і терпіння скрізь.\n\nДругий абзац.\n"
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        # Only the MIDDLE occurrence changes.
+        new = HEADER + "Спокій, і радість тут. Любов, й мудрість там. Сила, і терпіння скрізь.\n\nДругий абзац.\n"
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+        assert not result.get("error"), result.get("error")
+
+        from tools.srt_utils import parse_srt
+
+        srt = parse_srt(str(talk / "Video" / "final" / "uk.srt"))
+        assert srt[0]["text"] == "Спокій, і радість тут!", "the first occurrence must not move"
+        assert srt[1]["text"] == "Любов, й мудрість там!"
+        assert srt[2]["text"] == "Сила, і терпіння скрізь!", "the last occurrence must not move"
+
+
+class TestFindDiffIslands:
+    """One paragraph can carry several unrelated edits.
+
+    Trimming a common prefix and suffix calls everything between the first
+    and last change "the change" — in a long paragraph that is a fragment
+    that exists in no single subtitle block, so the sync fails on text it
+    could have placed exactly.
+    """
+
+    def test_two_distant_edits_are_two_islands(self):
+        old = "AAAA. Текст посередині. BBBB!"
+        new = "CCCC. Текст посередині. DDDD!"
+        islands = find_diff_islands(old, new)
+        assert len(islands) == 2
+        (old1, new1, off1), (old2, new2, off2) = islands
+        assert "AAAA" in old1 and "CCCC" in new1
+        assert "BBBB" in old2 and "DDDD" in new2
+        assert old[off1 : off1 + len(old1)] == old1
+        assert old[off2 : off2 + len(old2)] == old2
+
+    def test_a_single_edit_is_one_island(self):
+        islands = find_diff_islands("Перше речення абзацу.", "Перше речення параграфу.")
+        assert len(islands) == 1
+        old_f, new_f, offset = islands[0]
+        assert "абзац" in old_f
+        assert "парагра" in new_f
+        assert "Перше речення абзацу."[offset : offset + len(old_f)] == old_f
+
+    def test_no_change_is_no_islands(self):
+        assert find_diff_islands("однаково", "однаково") == []
+
+    def test_adjacent_edits_stay_one_island(self):
+        """Splitting on every micro-gap would produce fragments too short to
+        locate; changes one word apart are one edit."""
+        islands = find_diff_islands("кіт і пес", "лев і тигр")
+        assert len(islands) == 1
+
+    def test_many_edits_produce_many_locatable_fragments(self):
+        old = " ".join(f"Речення номер {i} тут." for i in range(12))
+        new = " ".join(f"Речення номер {i} там." for i in range(12))
+        islands = find_diff_islands(old, new)
+        assert len(islands) == 12
+        assert all(len(o) < 40 for o, _, _ in islands), "no island may span the whole paragraph"
+        for old_f, _new_f, offset in islands:
+            assert old[offset : offset + len(old_f)] == old_f
+
+    def test_no_island_begins_or_ends_on_whitespace(self):
+        """A space is exactly where one subtitle block ends and the next
+        begins, so a fragment padded with one can never be found."""
+        old = "Перше речення першого абзацу. Друге речення першого абзацу."
+        new = "Змінене речення першого абзацу. Інше речення першого абзацу."
+        for old_f, new_f, _ in find_diff_islands(old, new):
+            assert old_f == old_f.strip()
+            assert new_f == new_f.strip()
+
+    def test_an_empty_old_paragraph_yields_nothing_to_locate(self):
+        assert find_diff_islands("", "нове") == [("", "нове", 0)]
+
+
+class TestSeveralEditsInOneParagraph:
+    def test_two_edits_in_one_paragraph_reach_both_blocks(self, talk_dir):
+        """The paragraph spans two subtitle blocks and both sentences change.
+
+        A single prefix/suffix-trimmed fragment would span both blocks, exist
+        in neither, and fail the run.
+        """
+        new_transcript = (
+            HEADER + "Змінене речення першого абзацу. Інше речення першого абзацу.\n\nЄдине речення другого абзацу.\n"
+        )
+        (talk_dir / "transcript_uk.txt").write_text(new_transcript, encoding="utf-8")
+
+        result = sync_transcript(
+            talk_dir=str(talk_dir),
+            video_slug="Video",
+            old_transcript=str(talk_dir / "transcript_uk_old.txt"),
+            new_transcript=str(talk_dir / "transcript_uk.txt"),
+        )
+
+        assert "error" not in result, result.get("error")
+        srt = (talk_dir / "Video" / "final" / "uk.srt").read_text(encoding="utf-8")
+        assert "Змінене речення першого абзацу." in srt
+        assert "Інше речення першого абзацу." in srt
+        assert "Перше речення" not in srt
+        assert "Друге речення" not in srt
+
+    def test_two_edits_inside_one_block_both_apply(self, talk_dir):
+        """Both islands land in block 3. Applying left to right would shift
+        the second island's offset and corrupt the block."""
+        new_transcript = (
+            HEADER + "Перше речення першого абзацу. Друге речення першого абзацу.\n\nПерше слово другого тексту.\n"
+        )
+        (talk_dir / "transcript_uk.txt").write_text(new_transcript, encoding="utf-8")
+
+        result = sync_transcript(
+            talk_dir=str(talk_dir),
+            video_slug="Video",
+            old_transcript=str(talk_dir / "transcript_uk_old.txt"),
+            new_transcript=str(talk_dir / "transcript_uk.txt"),
+        )
+
+        assert "error" not in result, result.get("error")
+        srt = (talk_dir / "Video" / "final" / "uk.srt").read_text(encoding="utf-8")
+        assert "Перше слово другого тексту." in srt
