@@ -68,3 +68,15 @@ def test_bot_commit_carries_the_trailer_the_resolver_looks_for():
     text = WORKFLOW.read_text(encoding="utf-8")
     assert SYNC_TRAILER in text, "the bot commit must carry the sync trailer"
     assert f'git config user.name "{BOT_AUTHOR}"' in text
+
+
+def test_commit_step_only_runs_on_success():
+    """A failed sync leaves a clean tree, so there is nothing to preserve.
+
+    `if: always()` used to commit whatever had landed before the failure —
+    a red check and a half-applied push at the same time.
+    """
+    wf = _load()
+    steps = wf["jobs"]["sync"]["steps"]
+    commit = next(s for s in steps if s.get("name") == "Commit and push")
+    assert commit.get("if") == "success()", "a failed sync must never push a partial result"

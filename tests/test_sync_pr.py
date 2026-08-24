@@ -269,6 +269,34 @@ class TestSyncPrIntegration:
         srt_after = (talk / "Video1" / "final" / "uk.srt").read_text(encoding="utf-8")
         assert srt_after == BASE_SRT
 
+    def test_a_failure_on_one_video_leaves_the_whole_talk_untouched(self, repo):
+        """Video2's SRT is mangled so its sync cannot succeed.
+
+        The transcript edit that Video1 would have produced must NOT land:
+        a red check and a partial push together are what put main into a
+        split state where a talk's subtitles and transcript disagree.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text("garbage that is not an SRT at all\n", encoding="utf-8")
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v1.write_text(
+            v1.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"),
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit Video1, break Video2")
+
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        before = transcript.read_text(encoding="utf-8")
+
+        exit_code = run()
+
+        assert exit_code == 1, "a broken video must fail the run"
+        assert transcript.read_text(encoding="utf-8") == before, "nothing may be written when any target fails"
+
 
 def _commit(repo_path: Path, message: str, *, author: str | None = None) -> str:
     """Commit whatever is staged (allowing empty) and return the new SHA."""

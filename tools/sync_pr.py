@@ -29,21 +29,26 @@ Invocation:
 The baseline defaults to the last bot sync commit on this branch (see
 resolve_baseline) — NOT the PR base, which would replay every edit the
 bot has already applied. The tool takes the diff itself, scoped to the
-sync pathspecs, so the workflow doesn't need to pre-filter. Exits 0 on success, 1 on any
-sync/validate failure (with a GitHub Actions ::error:: line per
-failure). Intentionally mutates the working tree (the workflow then
-commits whatever changed).
+sync pathspecs, so the workflow doesn't need to pre-filter. Exits 0 on
+success, 1 on any sync/validate failure (with a GitHub Actions ::error::
+line per failure).
+
+Every talk is synced against a shadow copy of itself and the working tree
+is written only once every target of every talk has succeeded, so a
+non-zero exit leaves nothing for the workflow to commit.
 """
 
 import argparse
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
 
 from .sync_common import load_base_from_git
+from .sync_plan import SyncPlan, apply_plan, collect_writes, shadow_talk
 from .sync_srt_to_transcript import sync_srt_to_transcript
 from .sync_transcript_to_srt import sync_transcript
 from .validate_subtitles import manifest_validate_flags
@@ -139,43 +144,50 @@ def _classify(changed: list[str]) -> tuple[dict[str, list[str]], dict[str, bool]
     return srt_by_talk, transcript_talks
 
 
-def _process_talk(
+def _plan_talk(
     talk_dir: str,
     srt_paths: list[str],
     baseline: str,
     tmp: Path,
-) -> bool:
-    """Process a single talk. Returns True on success, False on failure.
+) -> SyncPlan:
+    """Compute every write this talk needs. Never touches the working tree.
+
+    The talk's sync-relevant files are copied into a shadow directory and
+    the sync steps run against the copy; whatever they changed there
+    becomes the plan. Nothing is collected unless every target succeeded.
 
     Flow:
       1. Snapshot base_transcript → tmp.
       2. For each changed SRT:
          a. Snapshot its base_srt → tmp.
-         b. Run sync_srt_to_transcript on the WORKING transcript (accumulating).
+         b. Run sync_srt_to_transcript on the SHADOW transcript (accumulating).
          c. Run sync_srt_to_transcript on a COPY of base_transcript (per-video
             effective-old baseline).
       3. For each video in the talk (per meta.yaml):
          a. Pick old_transcript = effective_old_for_video[slug] if it exists,
             else base_transcript.
-         b. Run sync_transcript_to_srt(old_transcript, working_transcript).
-         c. Optimize if block count changed.
-         d. Validate. (Deferred — workflow still runs validate separately.)
+         b. Run sync_transcript_to_srt(old_transcript, shadow transcript).
+         c. Validate the resulting SRT against the resulting transcript.
     """
+    plan = SyncPlan()
     talk_id = Path(talk_dir).name
-    transcript_path = Path(talk_dir) / "transcript_uk.txt"
-    if not transcript_path.exists():
+    real_transcript = Path(talk_dir) / "transcript_uk.txt"
+    if not real_transcript.exists():
         print(f"  [{talk_id}] no transcript_uk.txt — skip", file=sys.stderr)
-        return True
+        return plan
 
     base_transcript = tmp / f"{talk_id}.base_transcript.txt"
-    if not _show_base(baseline, str(transcript_path), base_transcript):
+    if not _show_base(baseline, str(real_transcript), base_transcript):
         print(f"  [{talk_id}] transcript is new in this PR — skip", file=sys.stderr)
-        return True
+        return plan
 
-    # Step A: propagate each changed SRT's edits onto the real transcript AND
-    # onto a per-video copy of the base transcript (effective-old baseline).
+    shadow = shadow_talk(talk_dir, tmp / "shadow")
+    transcript_path = shadow / "transcript_uk.txt"
+
+    # Step A: propagate each changed SRT's edits onto the shadow transcript
+    # AND onto a per-video copy of the base transcript (effective-old
+    # baseline).
     effective_old: dict[str, Path] = {}
-    step_a_failed = False
     for srt in srt_paths:
         video_slug = srt.split("/")[2]
         if not Path(srt).exists():
@@ -188,14 +200,14 @@ def _process_talk(
             continue
 
         print(f"  [{talk_id}/{video_slug}] SRT → transcript (accumulate)", file=sys.stderr)
+        shadow_srt = shadow / video_slug / "final" / "uk.srt"
         result = sync_srt_to_transcript(
             old_srt=str(base_srt),
-            new_srt=srt,
+            new_srt=str(shadow_srt),
             transcript=str(transcript_path),
         )
         if "error" in result:
-            _gha_error(f"{srt}: {result['error']}")
-            step_a_failed = True
+            plan.failures.append(f"{srt}: {result['error']}")
             continue
 
         # Per-video baseline: apply this SRT's diff to a fresh copy of
@@ -207,32 +219,26 @@ def _process_talk(
         shutil.copyfile(base_transcript, effective)
         baseline_result = sync_srt_to_transcript(
             old_srt=str(base_srt),
-            new_srt=srt,
+            new_srt=str(shadow_srt),
             transcript=str(effective),
         )
         if "error" in baseline_result:
             # Shouldn't normally differ from the accumulate run, but bail
             # loudly if it does.
-            _gha_error(f"{srt}: effective-old baseline failed: {baseline_result['error']}")
-            step_a_failed = True
+            plan.failures.append(f"{srt}: effective-old baseline failed: {baseline_result['error']}")
             continue
         effective_old[video_slug] = effective
 
-    if step_a_failed:
-        return False
-
-    # Step B: sync the (possibly-updated) transcript out to every video's SRT
-    # using either the per-video effective-old (for videos whose SRT was
-    # edited) or plain base_transcript (for videos whose SRT is untouched).
-    meta_path = Path(talk_dir) / "meta.yaml"
-    slugs = _list_video_slugs(meta_path)
+    # Step B runs even when Step A failed, so one run reports every problem
+    # instead of hiding the later ones behind the first. A single failure
+    # still blocks the whole write.
+    slugs = _list_video_slugs(shadow / "meta.yaml")
     if not slugs:
         print(f"  [{talk_id}] meta.yaml has no videos — skip Step B", file=sys.stderr)
-        return True
+        return plan
 
-    step_b_failed = False
     for slug in slugs:
-        srt_file = Path(talk_dir) / slug / "final" / "uk.srt"
+        srt_file = shadow / slug / "final" / "uk.srt"
         if not srt_file.exists():
             print(f"  [{talk_id}/{slug}] no uk.srt — skip", file=sys.stderr)
             continue
@@ -242,14 +248,13 @@ def _process_talk(
         print(f"  [{talk_id}/{slug}] transcript → SRT (old={baseline_label})", file=sys.stderr)
 
         result = sync_transcript(
-            talk_dir=talk_dir,
+            talk_dir=str(shadow),
             video_slug=slug,
             old_transcript=str(old_transcript),
             new_transcript=str(transcript_path),
         )
         if "error" in result:
-            _gha_error(f"{talk_id}/{slug}: {result['error']} — needs full pipeline rebuild")
-            step_b_failed = True
+            plan.failures.append(f"{talk_id}/{slug}: {result['error']} — needs full pipeline rebuild")
             continue
 
         # Block-count-changed edits (sync_transcript returns error) no longer
@@ -258,9 +263,8 @@ def _process_talk(
 
         # Validate the updated SRT against the updated transcript. Matches
         # the old bash step's flags: we skip time/duration checks because
-        # Step B doesn't touch timecodes (except via optimize, which
-        # recomputes them safely). On top of that, apply the build mode
-        # flags from build_manifest.yaml — en-srt primaries legitimately
+        # Step B doesn't touch timecodes. On top of that, apply the build
+        # mode flags from build_manifest.yaml — en-srt primaries legitimately
         # drop transcript-only blocks and secondaries are derivative, so
         # validating stricter than the pipeline would reject its outputs.
         print(f"  [{talk_id}/{slug}] validate", file=sys.stderr)
@@ -273,14 +277,14 @@ def _process_talk(
                 **flags,
             )
         except Exception as exc:  # noqa: BLE001
-            _gha_error(f"{talk_id}/{slug}: validate raised: {exc}")
-            step_b_failed = True
+            plan.failures.append(f"{talk_id}/{slug}: validate raised: {exc}")
             continue
         if not passed:
-            _gha_error(f"{talk_id}/{slug}: validation failed — needs full subtitle rebuild via pipeline")
-            step_b_failed = True
+            plan.failures.append(f"{talk_id}/{slug}: validation failed — needs full subtitle rebuild via pipeline")
 
-    return not step_b_failed
+    if plan.ok:
+        plan.writes.update(collect_writes(shadow, talk_dir))
+    return plan
 
 
 def run(baseline: str | None = None) -> int:
@@ -293,20 +297,24 @@ def run(baseline: str | None = None) -> int:
         print("No transcript or SRT changes", file=sys.stderr)
         return 0
 
-    tmp = Path("/tmp/sync_pr")
-    tmp.mkdir(parents=True, exist_ok=True)
-
-    overall_ok = True
+    tmp = Path(tempfile.mkdtemp(prefix="sync_pr_"))
+    plan = SyncPlan()
     for talk_dir in all_talks:
-        srt_paths = srt_by_talk.get(talk_dir, [])
         talk_id = Path(talk_dir).name
         print("\n========================================", file=sys.stderr)
         print(f"  {talk_id}", file=sys.stderr)
         print("========================================", file=sys.stderr)
-        ok = _process_talk(talk_dir, srt_paths, baseline, tmp)
-        overall_ok = overall_ok and ok
+        plan.merge(_plan_talk(talk_dir, srt_by_talk.get(talk_dir, []), baseline, tmp))
 
-    return 0 if overall_ok else 1
+    if not plan.ok:
+        for failure in plan.failures:
+            _gha_error(failure)
+        print(f"{len(plan.failures)} target(s) failed — nothing written", file=sys.stderr)
+        return 1
+
+    written = apply_plan(plan)
+    print(f"Wrote {len(written)} file(s)", file=sys.stderr)
+    return 0
 
 
 def main() -> None:

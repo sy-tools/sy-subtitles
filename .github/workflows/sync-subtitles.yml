@@ -43,20 +43,15 @@ jobs:
       # tools.sync_pr resolves its own baseline — the last bot sync commit
       # on this branch, else the merge-base with main — then runs the
       # two-pass SRT↔transcript sync (with per-video effective-old
-      # baselines for mixed PRs), validates, and writes everything back
-      # into the working tree. Exits non-zero on any sync/validate
-      # failure, emitting ::error:: annotations.
-      # We capture the exit code so that partial progress still gets
-      # committed before we fail the job.
+      # baselines for mixed PRs) against a shadow copy of each talk. It
+      # writes nothing unless every target of every talk succeeded, so a
+      # non-zero exit means the working tree is untouched and there is no
+      # partial result to preserve. Failures come out as ::error:: lines.
       - name: Sync, optimize, validate
-        id: sync
-        run: |
-          set +e
-          python -m tools.sync_pr
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        run: python -m tools.sync_pr
 
       - name: Commit and push
-        if: always()
+        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -74,11 +69,3 @@ jobs:
           # match, so the user.name above is load-bearing too.
           git commit -m "Sync subtitles and transcript edits [skip ci]" -m "Sync-Bot: v1"
           git push
-
-      - name: Fail if sync had errors
-        if: always()
-        run: |
-          if [ "${{ steps.sync.outputs.exit_code }}" != "0" ]; then
-            echo "::error::Some subtitles could not be synced automatically. See earlier log lines."
-            exit 1
-          fi
