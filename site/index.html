@@ -921,6 +921,7 @@ var I18N = {
     'add.sync_derived': '\u0417\u0430\u043B\u0435\u0436\u043D\u0435',
     'add.sync_independent': '\u041E\u043A\u0440\u0435\u043C\u0435',
     'add.sync_ignored': '\u041D\u0435 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438',
+    'add.sync_needs_one_primary': '\u041f\u043e\u0437\u043d\u0430\u0447\u0442\u0435 \u0440\u0456\u0432\u043d\u043e \u043e\u0434\u043d\u0435 \u0432\u0456\u0434\u0435\u043e \u044f\u043a \u00ab\u041e\u0441\u043d\u043e\u0432\u043d\u0435\u00bb \u2014 \u0431\u0435\u0437 \u043d\u044c\u043e\u0433\u043e \u043f\u0440\u043e\u043c\u043e\u0432\u0443 \u043d\u0435 \u043c\u043e\u0436\u043d\u0430 \u043d\u0456 \u0437\u0456\u0431\u0440\u0430\u0442\u0438, \u043d\u0456 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0456\u0437\u0443\u0432\u0430\u0442\u0438.',
     'add.vimeo_url': 'Vimeo URL',
 
     'add.link': '+ \u0414\u043E\u0434\u0430\u0442\u0438',
@@ -1131,6 +1132,7 @@ var I18N = {
     'add.sync_derived': 'Derived',
     'add.sync_independent': 'Independent',
     'add.sync_ignored': 'Ignored',
+    'add.sync_needs_one_primary': 'Mark exactly one video as Primary — without it the talk can be neither built nor synced.',
     'add.vimeo_url': 'Vimeo URL',
 
     'add.link': '+ Add Talk',
@@ -7507,20 +7509,26 @@ function addVideoRowWithUrl(vimeoUrl, videoTitle) {
 // changed by hand are left alone.
 function applyDefaultSyncRoles() {
   var rows = Array.prototype.slice.call(document.querySelectorAll('#add-videos > div'));
-  var roles = defaultSyncRoles(rows.map(function(row) {
-    var title = row.querySelector('.add-video-title').value.trim();
-    return { slug: slugify(title || 'Video') };
+  // Decided over the rows that will actually be emitted, not over every row on
+  // screen: a blank row taking the `primary` slot and then being dropped
+  // leaves a meta.yaml with no primary, which cannot be synced or built.
+  var roles = syncRolesForRows(rows.map(function(row) {
+    return {
+      title: row.querySelector('.add-video-title').value,
+      url: row.querySelector('.add-video-url').value,
+    };
   }));
   rows.forEach(function(row, i) {
     var sel = row.querySelector('.add-video-sync');
     if (!sel || sel.dataset.touched) return;
-    sel.value = roles[i] || 'primary';
+    if (roles[i]) sel.value = roles[i];
   });
   // A lone video needs no declaration at all — hide the control rather than
   // ask a question with one answer.
+  var declaring = roles.filter(Boolean).length > 0;
   rows.forEach(function(row) {
     var label = row.querySelector('.add-video-sync').parentElement;
-    label.style.display = rows.length < 2 ? 'none' : '';
+    label.style.display = declaring ? '' : 'none';
   });
 }
 
@@ -7542,7 +7550,12 @@ function updateAddPreview() {
   var url = document.getElementById('add-url').value.trim();
 
   var videos = [];
-  var rowCount = document.querySelectorAll('#add-videos > div').length;
+  // How many videos this talk will actually declare — blank rows are not one.
+  var rowCount = Array.prototype.slice
+    .call(document.querySelectorAll('#add-videos > div'))
+    .filter(function(row) {
+      return row.querySelector('.add-video-title').value.trim() || row.querySelector('.add-video-url').value.trim();
+    }).length;
   document.querySelectorAll('#add-videos > div').forEach(function(row) {
     var vTitle = row.querySelector('.add-video-title').value.trim();
     var vUrl = row.querySelector('.add-video-url').value.trim();
@@ -7583,6 +7596,16 @@ SPA.submitAddTalk = function() {
   var url = document.getElementById('add-url').value.trim();
 
   if (!title || !date) { alert('Title and date are required'); return false; }
+
+  // A multi-video talk needs exactly one primary. Without it tools/video_roles.py
+  // refuses the talk outright, so it can be neither synced nor built — and the
+  // editor only finds out from a red check well after submitting.
+  var yamlPreview = document.getElementById('add-preview').textContent;
+  var declared = (yamlPreview.match(/^  sync: \w+$/gm) || []);
+  if (declared.length && declared.filter(function(l) { return l.trim() === 'sync: primary'; }).length !== 1) {
+    alert(t('add.sync_needs_one_primary'));
+    return false;
+  }
 
   var slug = slugify(title);
   var talkId = date + '_' + slug;

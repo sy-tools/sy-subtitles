@@ -1,6 +1,11 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { parseAddTalkHash, buildMetaYaml, defaultSyncRoles } = require('../site/js/add_talk_data');
+const {
+  parseAddTalkHash,
+  buildMetaYaml,
+  defaultSyncRoles,
+  syncRolesForRows,
+} = require('../site/js/add_talk_data');
 const { decodeVideoRef } = require('../site/js/vimeo_codec');
 
 // The bookmarklet encodes its payload exactly like this, then opens the SPA
@@ -251,5 +256,47 @@ describe('buildMetaYaml — sync roles', () => {
       videos: [{ slug: 'Only-Video', title: 'Only Video' }],
     });
     assert.ok(!yaml.includes('sync:'));
+  });
+});
+
+// The form seeds roles from one list of rows and emits meta.yaml from another:
+// every row versus only the rows an editor filled in. A blank row between them
+// takes the `primary` slot and is then dropped, leaving a meta.yaml that
+// tools/video_roles.py refuses outright — the talk can be neither synced nor
+// built, which is the exact failure the role control exists to prevent.
+describe('syncRolesForRows — roles follow the rows that are actually emitted', () => {
+  it('does not let a blank row absorb the primary role', () => {
+    const roles = syncRolesForRows([
+      { title: '', url: '' },
+      { title: 'Guru Puja', url: 'https://vimeo.com/1' },
+      { title: 'Guru Puja Talk', url: 'https://vimeo.com/2' },
+    ]);
+    assert.strictEqual(roles[0], null, 'a blank row declares nothing');
+    assert.deepStrictEqual(roles.slice(1), ['primary', 'derived']);
+  });
+
+  it('leaves one filled row undeclared however many blanks surround it', () => {
+    const roles = syncRolesForRows([
+      { title: '', url: '' },
+      { title: 'Guru Puja', url: 'https://vimeo.com/1' },
+    ]);
+    assert.deepStrictEqual(roles, [null, null]);
+  });
+
+  it('treats a row with only a url as filled', () => {
+    const roles = syncRolesForRows([
+      { title: '', url: 'https://vimeo.com/1' },
+      { title: 'Guru Puja Talk', url: '' },
+    ]);
+    assert.deepStrictEqual(roles, ['primary', 'derived']);
+  });
+
+  it('always emits exactly one primary when it declares anything', () => {
+    const roles = syncRolesForRows([
+      { title: 'Puja Talk', url: 'https://vimeo.com/1' },
+      { title: '', url: '' },
+      { title: 'Second Talk', url: 'https://vimeo.com/2' },
+    ]).filter(Boolean);
+    assert.strictEqual(roles.filter((r) => r === 'primary').length, 1);
   });
 });

@@ -80,6 +80,31 @@ function defaultSyncRoles(videos) {
   return list.map(function (_v, i) { return i === primary ? 'primary' : 'derived'; });
 }
 
+// Roles for the form's video rows, aligned to the rows given.
+//
+// The form keeps blank rows around for the editor to type into, and only rows
+// carrying a title or a url reach meta.yaml. Seeding roles across every row
+// lets a blank one take the `primary` slot and then vanish, leaving a talk
+// with no primary at all — which tools/video_roles.py refuses, so the talk can
+// be neither synced nor built. Roles are therefore decided over exactly the
+// rows that will be emitted; a blank row gets null and declares nothing.
+function syncRolesForRows(rows) {
+  var list = rows || [];
+  var filled = [];
+  list.forEach(function (row, i) {
+    var title = String((row && row.title) || '').trim();
+    var url = String((row && row.url) || '').trim();
+    if (title || url) {
+      // Mirrors the slug the preview builds: slugify(title || 'Video').
+      filled.push({ index: i, slug: (title || 'Video').replace(/\s+/g, '-') });
+    }
+  });
+  var roles = defaultSyncRoles(filled);
+  var out = list.map(function () { return null; });
+  filled.forEach(function (row, k) { out[row.index] = roles[k] || null; });
+  return out;
+}
+
 // Render a scalar as a single-quoted YAML string, escaping embedded quotes by
 // doubling them (the YAML single-quote escape). Quoting makes the value safe
 // regardless of content — a colon, leading symbol, etc. can no longer be
@@ -137,6 +162,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isAmrutaUrl: isAmrutaUrl,
     buildMetaYaml: buildMetaYaml,
     defaultSyncRoles: defaultSyncRoles,
+    syncRolesForRows: syncRolesForRows,
     SYNC_ROLES: SYNC_ROLES,
   };
 }
