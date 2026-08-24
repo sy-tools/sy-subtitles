@@ -294,6 +294,15 @@ The add-talk screen (`site/index.html` around line 7500, serialized by
 - the consequence of each choice stated in the UI rather than implied —
   `ignored` means transcript edits never reach that video's subtitles.
 
+The roles are chosen **by hand**. Automatic detection was considered and
+dropped: at add-talk time there is nothing to detect from. The SPA commits
+only `meta.yaml` (plus the EN transcript); `source/en.srt` arrives later via
+`tools.download`, and the transcript is one document per talk, so it cannot
+tell the talk's videos apart. Detection would therefore have to run at a
+different moment, in a second implementation — the normaliser-twin shape
+this project has already been bitten by. Reviewers know from the video
+titles which recording is the full one.
+
 `buildMetaYaml` serializes the resulting `sync:` value per video. The
 control is disabled until a primary is chosen, and choosing a primary is
 required whenever the talk has more than one video, mirroring section 4's
@@ -303,49 +312,6 @@ Per `CLAUDE.md`, the new control is built from existing design-system
 tokens, ships a `site/styleguide.html` entry in the same change, has its
 logic in `site/js/add_talk_data.js` under `node --test`, and the change is
 verified with `pytest -m smoke` and by opening the page in a browser.
-
-## 10.1 Auto-detecting the roles from existing material
-
-The reviewer should not have to work the model out from scratch. The SPA
-pre-selects the roles and the reviewer confirms or overrides them. The
-proposal is never written without confirmation.
-
-**When the talk already has subtitles** (any video with a `final/uk.srt`,
-or `source/en.srt` when Ukrainian is not built yet) the proposal is
-computed from the material, not guessed:
-
-1. Parse each video's block texts.
-2. Align every pair with an LCS over block texts (the JS twin of the
-   `difflib.SequenceMatcher` measurement in section 3).
-3. `primary` = the video whose block list is a superset of the greatest
-   number of the others. Ties (identical block lists — multiple cameras or
-   sources of the same recording) break toward the slug that does NOT
-   contain `Talk`, then toward `meta.yaml` order.
-4. `derived` = every video aligning >= 99% of its blocks onto the primary.
-5. Everything else = `ignored`, flagged in the UI as "no shared text with
-   the primary" so the reviewer can promote it to `independent` by hand if
-   it carries its own slice of the transcript.
-
-Validated against the 54 talks that currently declare a primary: rule 3
-picks the declared primary in **49** cases, and the other **5 are ties**
-where every candidate has an identical block list — the rule never
-contradicts a declared primary, it only needs the tie-break. Rule 4
-reproduces the 60-of-62 alignment measured in section 3.
-
-**When the talk is new** there is no material: the add-talk screen has the
-video titles and links, but no SRTs (those arrive later, via
-`tools.download` in the pipeline). The proposal falls back to a name
-heuristic — the video whose slug does not contain `Talk` is offered as
-primary — and is labelled in the UI as a guess, not a detection. Across the
-corpus only 1 of 54 declared primaries contains `Talk`, so the heuristic is
-sound but it is still a guess and says so.
-
-**One implementation, not two.** The detector lives in a single JS module
-(`site/js/video_sync_roles.js`) under `node --test`. No Python twin is
-written: the 9 existing talks are filled in by hand (small fixed N,
-`feedback_small_n_prefer_manual`), using the SPA's proposal as the check.
-A second implementation would be a normaliser-twin of the kind that already
-bit this project.
 
 ## 11. Failure modes and the livelock question
 
@@ -385,9 +351,6 @@ TDD throughout; each item is a failing test first.
 - `tests/test_sync_subtitles_workflow.py`: no `if: always()` on the push;
   `concurrency:` present; commit trailer present.
 - `tests/test_add_talk_data.js`: `sync:` serialization for all four values.
-- New `tests/test_video_sync_roles.js`: superset detection; tie-break on
-  identical block lists; the 99% threshold; a video sharing no text lands in
-  `ignored`; the name heuristic when no material is present.
 - `tests/test_spa_boot_smoke.py` plus a browser check for the new control.
 - Golden corpus (`GOLDEN_TALKS_SCOPE=all`) after the `meta.yaml` fill-in.
 - New `tests/test_video_roles.py`: single-video implicit primary; missing
@@ -402,16 +365,18 @@ Separate PRs, each leaving the system no worse than it found it:
 
 1. Baseline, merge-base, concurrency (fixes R3, R5, R8).
 2. Atomicity: plan / gate / commit (fixes R4, R2).
-3. Derivation model in `meta.yaml` + fill in the 9 talks.
-4. Positional primary -> derived propagation + invariant gate.
+3. The model as one unit: the `sync:` schema, the shared resolver
+   `tools/video_roles.py`, the declarations for every multi-video talk
+   (including the 9 that have none today), and the one-off comparison
+   against the current word-count heuristic. Schema, reader and data land
+   together; a schema without a reader has nothing to prove it right.
+4. Positional primary -> derived propagation + invariant gate (needs 3).
 5. Multi-island `_find_diff` (fixes R1).
 6. Omit-aware Step A and remark protection (fixes R6, R7).
-7. SPA controls for all four roles + auto-detection (sections 10, 10.1).
-8. Shared resolver `tools/video_roles.py`, plus the corpus comparison against
-   today's heuristic (section 14).
-9. Convert every call site to the resolver: both `subtitle-pipeline.yml`
-   heuristics, `build_secondary_srts`, and `build_manifest.yaml`'s `role`
-   as derived output (section 14).
+7. SPA controls for all four roles, chosen by hand (section 10).
+8. Convert every remaining call site to the resolver: both
+   `subtitle-pipeline.yml` heuristics, `build_secondary_srts`, and
+   `build_manifest.yaml`'s `role` as derived output (section 14).
 
 ## 14. One mechanism everywhere
 
@@ -436,7 +401,7 @@ re-implementing anything in inline Python.
 | `subtitle-pipeline.yml:930` | `build_secondary_srts --primary-slug "${VIDEO_SLUG}"` | primary and the derived set come from the resolver |
 | `tools/build_secondary_srts.py:55` | `primary_slug` is a required argument; every other video is treated as secondary | resolver-supplied; `ignored` videos are skipped, `independent` videos are not derived from the primary |
 | `tools/sync_pr.py` | no notion of roles; every changed SRT is an equal source | roles drive Steps A/B/C (section 6) |
-| `site/js/video_sync_roles.js` | — | detection + editing in the SPA (sections 10, 10.1) |
+| `site/js/add_talk_data.js` | serialises `videos:` without roles | serialises the chosen `sync:` value per video (section 10) |
 
 **`build_manifest.yaml` keeps a narrower job.** It stays the record of *how a
 file was built* (`mode: en-srt` / `whisper`, `run_id`, `built_at`) and keeps
@@ -453,8 +418,7 @@ triggered. The `new-talk` / add-talk path (section 10) is what guarantees
 that, and the hard error names the talk when it is missing.
 
 **Behaviour check, not a leap of faith.** Before the conversion lands, the
-resolver's answer is compared against the current heuristic's answer for
-every talk in the corpus; any disagreement is reviewed by hand and resolved
-in the declaration, not by softening the resolver. Section 10.1 already
-measured the shape of that comparison: the block-superset rule matches the
-declared primary in 49 of 54 talks and the other 5 are ties.
+resolver's answer is compared against the current word-count heuristic's
+answer for every talk in the corpus. Any disagreement is reviewed by hand
+and resolved in the declaration — never by softening the resolver. This is a
+one-off check run while writing the declarations, not a shipped feature.
