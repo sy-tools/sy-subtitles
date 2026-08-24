@@ -294,6 +294,26 @@ The add-talk screen (`site/index.html` around line 7500, serialized by
 - the consequence of each choice stated in the UI rather than implied —
   `ignored` means transcript edits never reach that video's subtitles.
 
+**Form default (names only).** The form pre-selects the first video whose
+slug does not match `(^|[-_])talk([-_]|$)` as `primary` and every other
+video as `derived`; a `Talk` video is never pre-selected as primary. Only
+the video titles and links exist at this point, so the default can use
+nothing else — no subtitle or `en.srt` check is possible here.
+
+Measured against the 55 multi-video talks that declare a primary today,
+this name rule agrees in **51**. Of the four disagreements, three are not
+counter-examples but missing filters that only a resolver with material can
+apply (one candidate has no subtitles at all; one has no `source/en.srt`,
+so no EN bridge to derive from; one is a tie between two cameras with
+identical block lists). Exactly one is a genuine counter-example:
+`1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours...` declares its `Talk`
+video primary. The reviewer sees the default and changes it in one click.
+
+The same default is NOT applied in the resolver: a missing declaration on a
+multi-video talk stays a hard error. A default in the form is seen by a
+human; a default in the resolver is seen by nobody and would fire in CI —
+the exact silent guessing this work removes from `subtitle-pipeline.yml`.
+
 The roles are chosen **by hand**. Automatic detection was considered and
 dropped: at add-talk time there is nothing to detect from. The SPA commits
 only `meta.yaml` (plus the EN transcript); `source/en.srt` arrives later via
