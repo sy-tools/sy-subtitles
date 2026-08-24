@@ -1176,3 +1176,32 @@ class TestStalledCursorIsNotBenign:
             assert "ambiguous" in result["error"], result
         else:
             assert after == "Це дуже важливо. Це НАДЗВИЧАЙНО важливо.\n", after
+
+    def test_a_deletion_after_drift_does_not_remove_an_earlier_copy(self, tmp_path):
+        """The drift guard covered replaces only.
+
+        A deletion took `find_in_text(view, old_t, cursor)` straight, so with
+        the cursor stalled it removed the FIRST occurrence — a different
+        sentence of the transcript — and reported success. 99 of 164 corpus
+        SRTs stall the cursor somewhere, so the precondition is common.
+        """
+        transcript = tmp_path / "transcript_uk.txt"
+        transcript.write_text("Перше речення. Особливий текст тут. Перше речення.\n", encoding="utf-8")
+        old = tmp_path / "old.srt"
+        old.write_text(
+            "1\n00:00:00,000 --> 00:00:02,000\nОсобливий текст тут!\n\n"
+            "2\n00:00:02,000 --> 00:00:04,000\nПерше речення.\n\n",
+            encoding="utf-8",
+        )
+        new = tmp_path / "new.srt"
+        # Block 1 stays (drifted by '!'), block 2 — the SECOND «Перше речення.» — is deleted.
+        new.write_text("1\n00:00:00,000 --> 00:00:02,000\nОсобливий текст тут!\n\n", encoding="utf-8")
+
+        result = sync_srt_to_transcript(old_srt=str(old), new_srt=str(new), transcript=str(transcript))
+
+        after = transcript.read_text(encoding="utf-8")
+        assert not after.startswith(" Особливий"), f"the FIRST copy was deleted: {after!r}"
+        if "error" in result:
+            assert "ambiguous" in result["error"], result
+        else:
+            assert after.strip() == "Перше речення. Особливий текст тут.", after

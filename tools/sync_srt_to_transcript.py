@@ -218,7 +218,12 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
             # past this text for later find()s to land correctly.
             if _joined(old_slice) == _joined(new_slice):
                 pos = find_in_text_lenient(view, old_slice[0], cursor)
-                if pos != -1:
+                if pos == -1:
+                    # The cursor could not walk past this re-blocked text, so
+                    # it is stale from here on exactly as a drifted block
+                    # leaves it — the ambiguity guard has to know.
+                    drifted += 1
+                else:
                     cursor = pos + len(_joined(old_slice))
                 continue
             matches = (
@@ -241,7 +246,9 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 label = f"Block {src_block['idx']}"
                 if match_idx is None:
                     # Treat as deletion
-                    pos = find_in_text(view, old_t, cursor)
+                    pos, ambiguous = locate(old_t, label)
+                    if ambiguous:
+                        return ambiguous
                     if pos == -1:
                         print(
                             f"  {label}: «{old_t[:60]}» not in transcript — skipping (placeholder?)",
@@ -307,7 +314,9 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                     )
                     skipped += 1
                     continue
-                pos = find_in_text(view, old_t, cursor)
+                pos, ambiguous = locate(old_t, label)
+                if ambiguous:
+                    return ambiguous
                 if pos == -1:
                     print(
                         f"  {label}: «{old_t[:60]}» not in transcript — skipping (placeholder?)",
