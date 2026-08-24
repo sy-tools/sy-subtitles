@@ -297,6 +297,46 @@ class TestSyncPrIntegration:
         assert exit_code == 1, "a broken video must fail the run"
         assert transcript.read_text(encoding="utf-8") == before, "nothing may be written when any target fails"
 
+    def test_a_second_run_after_the_bot_commit_is_a_no_op(self, repo):
+        """The whole point of the redesign, end to end.
+
+        A PR gets one human edit, the bot syncs and commits. The next
+        event on that PR must find nothing left to do — diffing from the
+        PR base instead would re-apply the bot's own work against a
+        transcript that already contains it, which is why no run has ever
+        been green twice.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v1.write_text(
+            v1.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"),
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "human edits Video1")
+
+        assert run() == 0
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        assert "Змінене речення" in transcript.read_text(encoding="utf-8")
+        assert "Змінене речення" in v2.read_text(encoding="utf-8")
+
+        _git(repo_path, "add", "-A")
+        _commit(
+            repo_path,
+            f"Sync subtitles and transcript edits [skip ci]\n\n{SYNC_TRAILER}",
+            author=BOT_AUTHOR,
+        )
+        after_bot = {path: path.read_text(encoding="utf-8") for path in (transcript, v1, v2)}
+
+        assert run() == 0, "the follow-up run must not fail"
+        for path, content in after_bot.items():
+            assert path.read_text(encoding="utf-8") == content, (
+                f"{path.name} was rewritten by a run that had nothing to do"
+            )
+
 
 def _commit(repo_path: Path, message: str, *, author: str | None = None) -> str:
     """Commit whatever is staged (allowing empty) and return the new SHA."""
