@@ -1080,3 +1080,99 @@ CLI правка.
         assert "Вітаю." in text
         # Order check: Привіт comes before Вітаю
         assert text.index("Привіт.") < text.index("Вітаю.")
+
+
+class TestOmitPhrasesFollowTheTalk:
+    """Declared remarks belong to the TALK, not to whatever directory a copy
+    of the transcript happens to sit in.
+
+    sync_pr runs this tool twice per changed SRT: once against the shadow
+    transcript (meta.yaml alongside) and once against a bare copy staged in a
+    temp dir. Reading the talk-level `subtitle_omit:` from the transcript's
+    own neighbour makes those two runs disagree, and the second one fails the
+    whole PR for a perfectly valid edit. Its sibling sync_transcript already
+    takes the talk directory for exactly this reason.
+    """
+
+    @staticmethod
+    def _talk(tmp_path):
+        talk = tmp_path / "talks" / "2000-01-01_Some-Talk"
+        talk.mkdir(parents=True)
+        (talk / "meta.yaml").write_text(
+            "videos:\n- slug: Video\n  sync: primary\nsubtitle_omit:\n- (ще більше сміху)\n",
+            encoding="utf-8",
+        )
+        text = "Сьогодні ми зібралися тут (ще більше сміху) щоб святкувати Ґуру Пуджу.\n"
+        (talk / "transcript_uk.txt").write_text(text, encoding="utf-8")
+        old = tmp_path / "old.srt"
+        new = tmp_path / "new.srt"
+        old.write_text(
+            "1\n00:00:00,000 --> 00:00:04,000\nСьогодні ми зібралися тут щоб святкувати Ґуру Пуджу.\n\n",
+            encoding="utf-8",
+        )
+        new.write_text(
+            "1\n00:00:00,000 --> 00:00:04,000\nСьогодні ми зустрілися тут щоб святкувати Ґуру Пуджу.\n\n",
+            encoding="utf-8",
+        )
+        return talk, old, new, text
+
+    def test_a_staged_copy_resolves_the_same_remarks_as_the_original(self, tmp_path):
+        talk, old, new, text = self._talk(tmp_path)
+        staged = tmp_path / "staged" / "effective_old.txt"
+        staged.parent.mkdir()
+        staged.write_text(text, encoding="utf-8")
+
+        beside_meta = sync_srt_to_transcript(
+            old_srt=str(old), new_srt=str(new), transcript=str(talk / "transcript_uk.txt"), talk_dir=str(talk)
+        )
+        away_from_meta = sync_srt_to_transcript(
+            old_srt=str(old), new_srt=str(new), transcript=str(staged), talk_dir=str(talk)
+        )
+
+        assert "error" not in beside_meta, beside_meta
+        assert "error" not in away_from_meta, away_from_meta
+        assert away_from_meta["changed"] == beside_meta["changed"] == 1
+        # The remark survives in both, because both used the talk's vocabulary.
+        assert "(ще більше сміху)" in staged.read_text(encoding="utf-8")
+        assert "зустрілися" in staged.read_text(encoding="utf-8")
+
+
+class TestStalledCursorIsNotBenign:
+    """A cursor that could not advance must not silently pick an earlier copy.
+
+    The `equal` walk tolerates drift: when an unchanged block is not found in
+    the transcript verbatim it counts it as drift and leaves the cursor where
+    it was. That is fine when the text ahead is unique. When it is not, the
+    next lookup takes the FIRST occurrence at or after a stale cursor — an
+    earlier sentence — and rewrites that instead. 51 of the corpus's 165 SRTs
+    contain duplicate block texts, so this is a live combination.
+
+    Pre-existing behaviour: the drift-tolerant walk predates this stack. It is
+    fixed here because this PR reworks exactly these lookups.
+    """
+
+    def test_a_drifted_block_does_not_let_a_later_edit_hit_an_earlier_copy(self, tmp_path):
+        transcript = tmp_path / "transcript_uk.txt"
+        transcript.write_text("Це дуже важливо. Це дуже важливо.\n", encoding="utf-8")
+        # Block 1 is UNCHANGED but drifted by one character, so the cursor stalls.
+        old = tmp_path / "old.srt"
+        old.write_text(
+            "1\n00:00:00,000 --> 00:00:02,000\nЦе дуже важливо!\n\n"
+            "2\n00:00:02,000 --> 00:00:04,000\nЦе дуже важливо.\n\n",
+            encoding="utf-8",
+        )
+        new = tmp_path / "new.srt"
+        new.write_text(
+            "1\n00:00:00,000 --> 00:00:02,000\nЦе дуже важливо!\n\n"
+            "2\n00:00:02,000 --> 00:00:04,000\nЦе НАДЗВИЧАЙНО важливо.\n\n",
+            encoding="utf-8",
+        )
+
+        result = sync_srt_to_transcript(old_srt=str(old), new_srt=str(new), transcript=str(transcript))
+
+        after = transcript.read_text(encoding="utf-8")
+        assert after != "Це НАДЗВИЧАЙНО важливо. Це дуже важливо.\n", "the edit to subtitle 2 was applied to sentence 1"
+        if "error" in result:
+            assert "ambiguous" in result["error"], result
+        else:
+            assert after == "Це дуже важливо. Це НАДЗВИЧАЙНО важливо.\n", after

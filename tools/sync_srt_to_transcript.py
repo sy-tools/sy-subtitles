@@ -33,6 +33,7 @@ Usage:
 import argparse
 import difflib
 import sys
+from pathlib import Path
 
 from .srt_utils import parse_srt, write_srt
 from .sync_common import (
@@ -81,8 +82,14 @@ def _match_blocks_by_similarity(old_slice: list[str], new_slice: list[str]) -> l
     return matches
 
 
-def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
+def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir: str | None = None) -> dict:
     """Apply text-level diff between old_srt and new_srt to the transcript file.
+
+    `talk_dir` names the talk whose declared remarks apply. It defaults to the
+    transcript's own directory, which is right for a file in place and wrong
+    for a copy staged elsewhere — sync_pr stages one per video, and reading
+    the remarks from a temp dir there would silently use a different
+    vocabulary than the run beside meta.yaml.
 
     Lookups run against an omit-stripped VIEW of the transcript, because that
     is the text the subtitles were built from: a block reading «A B» does not
@@ -102,7 +109,8 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
     # Declared editorial remarks ("(сміх)") live in the transcript and never on
     # screen, so an SRT edit that only takes one off the screen must not travel
     # back — it would delete the remark from the one artefact that keeps it.
-    omit_phrases = global_omit_phrases() + talk_omit_phrases(transcript)
+    omit_source = Path(talk_dir) / "transcript_uk.txt" if talk_dir else transcript
+    omit_phrases = global_omit_phrases() + talk_omit_phrases(omit_source)
     mapped = strip_with_map(raw, omit_phrases)
     # strip_with_map returns None only when it cannot reproduce the canonical
     # stripper byte for byte; the raw text is then the honest fallback.
@@ -113,6 +121,26 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
     matcher = difflib.SequenceMatcher(a=old_texts, b=new_texts, autojunk=False)
 
     cursor = 0  # position in the VIEW; it only ever moves forward
+
+    def locate(needle: str, label: str) -> tuple[int, dict | None]:
+        """Where `needle` is, or why we refuse to guess.
+
+        The cursor is what tells two identical sentences apart. A drifted
+        block leaves it where it was, so from that point on `find(..., cursor)`
+        no longer means "the next one" — it means "the first one from
+        somewhere earlier", which is a different sentence.
+        """
+        pos = find_in_text(view, needle, cursor)
+        if pos != -1 and drifted and view.count(needle) > 1:
+            return -1, {
+                "error": (
+                    f"{label}: «{needle[:60]}» appears {view.count(needle)} times in the transcript and an "
+                    f"earlier block had drifted, so which one this edit belongs to is ambiguous. "
+                    f"Run the full pipeline."
+                )
+            }
+        return pos, None
+
     changed = 0
     removed = 0
     skipped = 0
@@ -238,7 +266,9 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str) -> dict:
                         file=sys.stderr,
                     )
                     continue
-                pos = find_in_text(view, old_t, cursor)
+                pos, ambiguous = locate(old_t, label)
+                if ambiguous:
+                    return ambiguous
                 if pos == -1:
                     return {
                         "error": (
