@@ -539,6 +539,39 @@ class TestRoleAwareSync:
         assert v2.read_text(encoding="utf-8") == before_v2, "nothing may be written when an edit cannot be placed"
         assert transcript.read_text(encoding="utf-8") == before_transcript
 
+    def test_an_edit_that_did_not_reach_a_derived_cut_is_annotated(self, repo, capsys):
+        """A skip is legitimate — an excerpt cut lacks most of the primary —
+        but a `derived` video is meant to mirror it.
+
+        The count reached only a stderr line in a green run's log, which reads
+        as "nothing to do" to anyone scanning the checks. It is the reviewer's
+        one cue that a correction stopped at the primary, so it belongs in the
+        run's annotations.
+        """
+        repo_path, _base_sha = repo
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        # The derived cut is a strict excerpt: it carries the second paragraph
+        # only, so the edit below has nowhere to land on it.
+        v2.write_text(
+            "1\n00:00:12,000 --> 00:00:18,000\nЄдине речення другого абзацу.\n",
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "give the derived video an excerpt cut")
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        assert run() == 0
+        err = capsys.readouterr().err
+        assert "::warning::" in err, "a correction that stopped at the primary must be annotated, not just logged"
+        assert "Video2" in err
+
     def test_an_ignored_video_is_never_written(self, repo):
         repo_path, _base_sha = repo
         meta = repo_path / "talks/test/meta.yaml"

@@ -100,24 +100,50 @@ def propagate_primary_to_derived(
         forward = align_blocks(derived_old, current)
         mapping = {i: forward[j] for i, j in mapping.items() if j in forward}
 
-    # An edit with no counterpart is only safe to skip when the derived video
+    # A change with no counterpart is only safe to skip when the derived video
     # genuinely lacks that content — a Talk cut is often a strict excerpt, and
     # most of the primary is legitimately missing from it. What is NOT safe is
     # finding the very text on the derived side in a block the alignment could
-    # not pair up: the two cuts split it differently, so the edit belongs
-    # there and skipping drops a human's correction under a green check.
+    # not pair up: the two cuts split it differently, so the change belongs
+    # there and skipping drops a human's work under a green check.
+    #
     # Looked for only among UNMAPPED blocks — a short line like «Гаразд.»
     # recurs all over a talk, and a mapped block is already accounted for.
+    # Consecutive unmapped blocks are joined into one stream so the search
+    # sees the text the way the screen shows it: the derived cut can just as
+    # easily SPLIT a primary block across two of its own as merge two into
+    # one, and looking inside single blocks only ever caught the merge.
+    # Runs are kept apart, so no match may span blocks that are not adjacent.
     taken = set(mapping.values())
-    unpaired = "\n".join(t for j, t in enumerate(current) if j not in taken)
-    stranded = [i for i in edits if i not in mapping and primary_old[i] in unpaired]
+    runs, run, prev = [], [], None
+    for j, text in enumerate(current):
+        if j in taken:
+            continue
+        if prev is not None and j != prev + 1:
+            runs.append(run)
+            run = []
+        run.append(" ".join(text.split()))
+        prev = j
+    if run:
+        runs.append(run)
+    unpaired = "\n".join(" ".join(r) for r in runs)
+
+    # Deletions count too. A block the human removed from the primary has to
+    # leave the derived video with it, and an unplaceable deletion used to
+    # vanish without even a count — leaving the removed sentence on screen for
+    # good, where no later run can notice it is stale.
+    stranded = [
+        i
+        for i in sorted(set(edits) | set(deleted))
+        if i not in mapping and " ".join(primary_old[i].split()) in unpaired
+    ]
     if stranded:
         first = primary_old[stranded[0]]
         return {
             "error": (
-                f"{len(stranded)} edited block(s) have no counterpart on the derived video, yet their text "
-                f"is on it under a different cut (e.g. «{first[:60]}»). Placing the edit would be a guess, "
-                f"and skipping it would lose the correction. Run the full pipeline."
+                f"{len(stranded)} changed block(s) have no counterpart on the derived video, yet their text "
+                f"is on it under a different cut (e.g. «{first[:60]}»). Placing the change would be a guess, "
+                f"and skipping it would lose a human's work. Run the full pipeline."
             )
         }
 
@@ -132,7 +158,9 @@ def propagate_primary_to_derived(
         block["idx"] = i + 1
 
     # Skips are legitimate — an excerpt cut simply lacks most of the primary —
-    # but a `derived` video is meant to mirror it, so an edit that did not
-    # arrive has to be visible to whoever reads the run.
-    skipped = len(edits) - len(replacements)
+    # but a `derived` video is meant to mirror it, so a change that did not
+    # arrive has to be visible to whoever reads the run. Deletions are counted
+    # alongside replacements: "removed 0" reads as "nothing to remove", which
+    # is exactly what an unplaceable deletion is not.
+    skipped = (len(edits) - len(replacements)) + (len(deleted) - len(drops))
     return {"changed": len(replacements), "removed": len(drops), "skipped": skipped}

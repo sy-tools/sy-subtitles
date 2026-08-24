@@ -63,6 +63,10 @@ def _gha_error(msg: str) -> None:
     print(f"::error::{msg}", file=sys.stderr)
 
 
+def _gha_warning(msg: str) -> None:
+    print(f"::warning::{msg}", file=sys.stderr)
+
+
 def _run_git(*args: str) -> str:
     result = subprocess.run(["git", *args], capture_output=True, text=True, check=True)
     return result.stdout
@@ -388,6 +392,15 @@ def _plan_derived(
             + (f", SKIPPED {result['skipped']} (no counterpart on this cut)" if result.get("skipped") else ""),
             file=sys.stderr,
         )
+        if result.get("skipped"):
+            # A `derived` video is meant to mirror the primary. A skip is
+            # legitimate on an excerpt cut, but it is also the reviewer's only
+            # cue that a correction stopped at the primary — and a line in a
+            # green run's log reads as "nothing to do".
+            _gha_warning(
+                f"{talk_id}/{slug}: {result['skipped']} change(s) from the primary have no counterpart "
+                f"on this cut and were not applied"
+            )
 
 
 def run(baseline: str | None = None) -> int:

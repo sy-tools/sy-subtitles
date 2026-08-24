@@ -203,3 +203,73 @@ class TestSkippedEditsAreCounted:
 
         assert result["changed"] == 1
         assert result["skipped"] == 0
+
+
+class TestTextOnTheDerivedCutIsFoundWhicheverWayItWasCut:
+    """The stranded check asks whether an unplaceable edit's text is on the
+    derived video under a different cut.
+
+    It looked for the primary's whole block inside a single unmapped derived
+    block, which only ever matches when the derived cut MERGED what the
+    primary split. The opposite is just as common — the derived cut splits one
+    primary block across two — and there the text is on screen with a block
+    boundary through the middle of it. Across the corpus's 68 derived pairs
+    that direction is the more frequent of the two, and every instance took
+    the silent path this check exists to close.
+    """
+
+    def test_an_edit_whose_text_the_derived_cut_split_is_not_skipped_silently(self):
+        primary_old = ["Перше речення. Друге речення.", "Третє."]
+        primary_new = ["Перше речення. ВИПРАВЛЕНО.", "Третє."]
+        derived_old = ["Перше речення.", "Друге речення.", "Третє."]
+        blocks = _blocks(*derived_old)
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+
+        assert "error" in result, "the edited text is on the derived video, split across two of its blocks"
+        assert [b["text"] for b in blocks] == derived_old, "nothing may be written when an edit cannot be placed"
+
+    def test_text_that_is_genuinely_absent_is_still_a_quiet_skip(self):
+        """A Talk cut is a strict excerpt — most of the primary is not on it."""
+        primary_old = ["Лише у повному записі.", "Спільне речення."]
+        primary_new = ["Лише у повному записі, змінено.", "Спільне речення."]
+        derived_old = ["Спільне речення."]
+        blocks = _blocks(*derived_old)
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+
+        assert result == {"changed": 0, "removed": 0, "skipped": 1}
+
+
+class TestADeletionIsAnEditToo:
+    """A block deleted from the primary has to leave the derived video too.
+
+    The stranded check and the skipped count both walked the edits only, so a
+    deletion that could not be placed vanished twice over: no error, and not
+    even a count. The sentence a human removed from the talk then stayed on
+    the derived video for good, under a green check — and unlike a missed
+    replacement, no later run can notice it is stale.
+    """
+
+    def test_a_deletion_whose_text_is_on_the_derived_cut_fails_loudly(self):
+        primary_old = ["Перше речення.", "Друге речення.", "Третє."]
+        primary_new = ["Друге речення.", "Третє."]
+        derived_old = ["Перше речення. Друге речення.", "Третє."]
+        blocks = _blocks(*derived_old)
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+
+        assert "error" in result, "the deleted sentence is on the derived video inside a merged block"
+        assert [b["text"] for b in blocks] == derived_old
+
+    def test_a_deletion_with_no_counterpart_is_counted(self):
+        primary_old = ["Один.", "Лише у повному записі.", "Три."]
+        primary_new = ["Один.", "Три."]
+        derived_old = ["Один.", "Три."]
+        blocks = _blocks(*derived_old)
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+
+        assert result == {"changed": 0, "removed": 0, "skipped": 1}, (
+            "a deletion that did not travel must read as skipped work, not as nothing to do"
+        )
