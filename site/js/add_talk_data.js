@@ -19,6 +19,17 @@ var _vimeoCodec =
       ? globalThis
       : this;
 
+// talk_slug provides slugify — the twin of tools/talk_slug.py and the single
+// source the preview already uses. Same resolution as _vimeoCodec above:
+// require()d in Node, a global set by <script src="js/talk_slug.js"> in the
+// browser, where it is loaded before this file.
+var _talkSlug =
+  typeof require !== 'undefined' && typeof module !== 'undefined'
+    ? require('./talk_slug')
+    : typeof globalThis !== 'undefined'
+      ? globalThis
+      : this;
+
 function parseAddTalkHash(hash) {
   var qm = hash.indexOf('?');
   if (qm === -1 || hash.indexOf('data=') === -1) {
@@ -95,8 +106,15 @@ function syncRolesForRows(rows) {
     var title = String((row && row.title) || '').trim();
     var url = String((row && row.url) || '').trim();
     if (title || url) {
-      // Mirrors the slug the preview builds: slugify(title || 'Video').
-      filled.push({ index: i, slug: (title || 'Video').replace(/\s+/g, '-') });
+      // The slug the preview really builds, from the one slugify there is.
+      // Replacing whitespace by hand instead leaves the punctuation in, and
+      // TALK_CUT then misses «Guru Puja Talk: Creativity» — the form of 23 of
+      // the 175 video titles in the corpus — so the Talk cut is not
+      // recognised as one and takes the primary role by default.
+      filled.push({
+        index: i,
+        slug: _talkSlug.slugify(title || 'Video-' + (filled.length + 1)),
+      });
     }
   });
   var roles = defaultSyncRoles(filled);

@@ -275,6 +275,18 @@ describe('syncRolesForRows — roles follow the rows that are actually emitted',
     assert.deepStrictEqual(roles.slice(1), ['primary', 'derived']);
   });
 
+  // The corpus names its Talk cuts «Guru Puja Talk: Creativity» — 23 of the
+  // 175 video titles in talks/*/meta.yaml put punctuation right after «Talk».
+  // The row's name has to be built the way the preview builds it, or the Talk
+  // cut is not recognised as one and becomes the default primary.
+  it('recognises a Talk cut whose title punctuates straight after «Talk»', () => {
+    const roles = syncRolesForRows([
+      { title: 'Guru Puja Talk: Creativity', url: 'https://vimeo.com/1' },
+      { title: 'Guru Puja', url: 'https://vimeo.com/2' },
+    ]);
+    assert.deepStrictEqual(roles, ['derived', 'primary']);
+  });
+
   it('leaves one filled row undeclared however many blanks surround it', () => {
     const roles = syncRolesForRows([
       { title: '', url: '' },
