@@ -117,3 +117,47 @@ class TestDerivedChangedStructurallyToo:
         result = propagate_primary_to_derived(["Перше."], ["Змінене."], ["Перше."], derived)
         assert "error" not in result
         assert derived == []
+
+
+class TestAlignmentIsEvidenceNotArithmetic:
+    """A `replace` opcode is difflib saying it found NO correspondence.
+
+    Mapping one whose two sides happen to be the same length declares that
+    every block in a divergent region corresponds, and propagation then writes
+    the primary's text over a derived block that says something else. Two
+    corpus talks carry 187 such blocks between them — most of
+    1988-05-08_Sahasrara-Puja, whose Talk cut is a separate translation of the
+    same words («хитаються» where the primary says «втрачають впевненість»).
+    """
+
+    def test_an_equal_length_replace_is_not_a_correspondence(self):
+        source = ["однаковий", "праймері каже одне", "теж інше", "кінець"]
+        target = ["однаковий", "дерайвед каже інше", "зовсім не те", "кінець"]
+
+        mapping = align_blocks(source, target)
+
+        assert mapping == {0: 0, 3: 3}, "only blocks that actually match may map"
+
+    def test_an_uneven_replace_run_maps_nothing_rather_than_guessing(self):
+        source = ["вступ", "ааа", "ббб", "ввв", "кінець"]
+        target = ["вступ", "ххх", "ууу", "кінець"]
+
+        assert align_blocks(source, target) == {0: 0, 4: 3}
+
+    def test_a_divergent_block_is_never_overwritten_from_the_primary(self):
+        """The clobber: editing primary block 1 must not rewrite a derived
+        block that never held the primary's text in the first place."""
+        primary_old = ["однаковий", "праймері каже одне", "кінець"]
+        primary_new = ["однаковий", "праймері каже ВИПРАВЛЕНО", "кінець"]
+        derived_old = ["однаковий", "дерайвед каже інше", "кінець"]
+        derived_blocks = [
+            {"idx": 1, "text": "однаковий", "start_ms": 0, "end_ms": 1000},
+            {"idx": 2, "text": "дерайвед каже інше", "start_ms": 1000, "end_ms": 2000},
+            {"idx": 3, "text": "кінець", "start_ms": 2000, "end_ms": 3000},
+        ]
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, derived_blocks)
+
+        assert "error" not in result, result
+        assert derived_blocks[1]["text"] == "дерайвед каже інше", "a block that never matched must not be rewritten"
+        assert result["changed"] == 0

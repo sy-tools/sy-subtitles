@@ -20,16 +20,25 @@ import difflib
 def align_blocks(source_texts: list[str], target_texts: list[str]) -> dict[int, int]:
     """Source block index -> target block index, for blocks that correspond.
 
-    Only runs difflib pairs one-for-one: an `equal` run, or a `replace` whose
-    two sides have the same length. Anything else is a structural difference
-    between the two cuts, and guessing across it is what corrupts subtitles.
+    Correspondence means the two blocks hold the same text. A `replace` opcode
+    is difflib reporting that it found none; pairing one up because its two
+    sides happen to be the same length declares a correspondence nobody
+    established, and propagation then writes the primary's text over a derived
+    block that says something else. An equal-length `replace` is still walked,
+    but only the positions whose text actually matches are kept — difflib
+    emits such a run when a region differs, and identical blocks can sit
+    inside it.
     """
     mapping: dict[int, int] = {}
     matcher = difflib.SequenceMatcher(None, source_texts, target_texts, autojunk=False)
     for tag, i1, i2, j1, j2 in matcher.get_opcodes():
-        if tag == "equal" or (tag == "replace" and (i2 - i1) == (j2 - j1)):
+        if tag == "equal":
             for k in range(i2 - i1):
                 mapping[i1 + k] = j1 + k
+        elif tag == "replace" and (i2 - i1) == (j2 - j1):
+            for k in range(i2 - i1):
+                if source_texts[i1 + k] == target_texts[j1 + k]:
+                    mapping[i1 + k] = j1 + k
     return mapping
 
 
@@ -90,6 +99,27 @@ def propagate_primary_to_derived(
         # that no longer exists.
         forward = align_blocks(derived_old, current)
         mapping = {i: forward[j] for i, j in mapping.items() if j in forward}
+
+    # An edit with no counterpart is only safe to skip when the derived video
+    # genuinely lacks that content — a Talk cut is often a strict excerpt, and
+    # most of the primary is legitimately missing from it. What is NOT safe is
+    # finding the very text on the derived side in a block the alignment could
+    # not pair up: the two cuts split it differently, so the edit belongs
+    # there and skipping drops a human's correction under a green check.
+    # Looked for only among UNMAPPED blocks — a short line like «Гаразд.»
+    # recurs all over a talk, and a mapped block is already accounted for.
+    taken = set(mapping.values())
+    unpaired = "\n".join(t for j, t in enumerate(current) if j not in taken)
+    stranded = [i for i in edits if i not in mapping and primary_old[i] in unpaired]
+    if stranded:
+        first = primary_old[stranded[0]]
+        return {
+            "error": (
+                f"{len(stranded)} edited block(s) have no counterpart on the derived video, yet their text "
+                f"is on it under a different cut (e.g. «{first[:60]}»). Placing the edit would be a guess, "
+                f"and skipping it would lose the correction. Run the full pipeline."
+            )
+        }
 
     replacements = {mapping[i]: text for i, text in edits.items() if i in mapping}
     drops = sorted({mapping[i] for i in deleted if i in mapping}, reverse=True)

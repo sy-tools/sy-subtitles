@@ -474,6 +474,71 @@ class TestBaselineResolution:
 class TestRoleAwareSync:
     """Which video is written, and from what."""
 
+    def test_an_ignored_videos_srt_edit_never_reaches_the_transcript(self, repo):
+        """`ignored` means never read as well as never written.
+
+        Only the write direction was covered. Without the read guard, text
+        from a video explicitly marked out of the sync flows into the
+        transcript and from there into the primary and every derived video —
+        exactly what the role exists to prevent.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        meta = repo_path / "talks/test/meta.yaml"
+        meta.write_text(meta.read_text(encoding="utf-8").replace("sync: derived", "sync: ignored"), encoding="utf-8")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        before_transcript = transcript.read_text(encoding="utf-8")
+        before_v1 = v1.read_text(encoding="utf-8")
+
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(
+            v2.read_text(encoding="utf-8").replace("Перше речення", "Сміття з ігнорованого"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit an ignored video's subtitles")
+
+        assert run() == 0
+        assert transcript.read_text(encoding="utf-8") == before_transcript, (
+            "an ignored video must not feed the transcript"
+        )
+        assert v1.read_text(encoding="utf-8") == before_v1
+
+    def test_a_derived_cut_that_cannot_receive_an_edit_fails_loudly(self, repo):
+        """A cut whose boundaries were never the transcript's.
+
+        Two of the primary's sentences share one cue here, so the edited block
+        has no counterpart — yet its text is plainly still on the derived
+        video. Skipping would drop a human's correction under a green check;
+        placing it would be a guess. The run must go red and write nothing.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\n"
+            "Перше речення першого абзацу. Друге речення першого абзацу.\n\n"
+            "2\n00:00:05,100 --> 00:00:07,000\nЄдине речення другого абзацу.\n",
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "give the derived video its own cut")
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        before_v2 = v2.read_text(encoding="utf-8")
+        before_transcript = transcript.read_text(encoding="utf-8")
+
+        assert run() == 1
+        assert v2.read_text(encoding="utf-8") == before_v2, "nothing may be written when an edit cannot be placed"
+        assert transcript.read_text(encoding="utf-8") == before_transcript
+
     def test_an_ignored_video_is_never_written(self, repo):
         repo_path, _base_sha = repo
         meta = repo_path / "talks/test/meta.yaml"
