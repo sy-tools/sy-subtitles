@@ -56,6 +56,30 @@ function isAmrutaUrl(u) {
   }
 }
 
+// How each of a talk's videos takes part in subtitle sync. The Python twin is
+// tools/video_roles.py, the ONE interpreter of meta.yaml's `sync:` key.
+var SYNC_ROLES = ['primary', 'derived', 'independent', 'ignored'];
+
+// A slug that names a `Talk` cut of a puja — «Guru-Puja-Talk-Gravity» — as
+// opposed to one that merely contains the letters (« Talking-To-Yogis »).
+var TALK_CUT = /(^|[-_])talk([-_]|$)/i;
+
+// The form's starting point, from the video NAMES alone. At add-talk time the
+// talk has no subtitles and no en.srt to inspect — only what amruta listed,
+// where the full recording comes first and the Talk cut is a shortened version
+// of it. A multi-video talk that declares nothing cannot be synced or built at
+// all, so the form must offer something; the editor changes it when the
+// default is wrong (1998-05-10 is the one talk whose Talk cut is primary).
+//
+// A single video needs no declaration: tools/video_roles.py resolves it.
+function defaultSyncRoles(videos) {
+  var list = videos || [];
+  if (list.length < 2) return [];
+  var primary = list.findIndex(function (v) { return !TALK_CUT.test(String((v && v.slug) || '')); });
+  if (primary === -1) primary = 0;
+  return list.map(function (_v, i) { return i === primary ? 'primary' : 'derived'; });
+}
+
 // Render a scalar as a single-quoted YAML string, escaping embedded quotes by
 // doubling them (the YAML single-quote escape). Quoting makes the value safe
 // regardless of content — a colon, leading symbol, etc. can no longer be
@@ -90,6 +114,10 @@ function buildMetaYaml(fields) {
       // committed meta.yaml never carries a plaintext Vimeo URL. base64url is
       // YAML-safe, so it stays unquoted.
       if (v.url) yaml += "  video_ref: " + _vimeoCodec.encodeVideoRef(v.url) + "\n";
+      // How this video takes part in subtitle sync — read by
+      // tools/video_roles.py. Omitted for a single-video talk, which needs
+      // no declaration.
+      if (v.sync) yaml += "  sync: " + v.sync + "\n";
     });
   }
   if (f.transcriptBase64) {
@@ -104,5 +132,11 @@ function buildMetaYaml(fields) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseAddTalkHash: parseAddTalkHash, isAmrutaUrl: isAmrutaUrl, buildMetaYaml: buildMetaYaml };
+  module.exports = {
+    parseAddTalkHash: parseAddTalkHash,
+    isAmrutaUrl: isAmrutaUrl,
+    buildMetaYaml: buildMetaYaml,
+    defaultSyncRoles: defaultSyncRoles,
+    SYNC_ROLES: SYNC_ROLES,
+  };
 }

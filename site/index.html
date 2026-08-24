@@ -916,6 +916,11 @@ var I18N = {
     'add.submit': '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 PR',
     'add.field_transcript': '\u0422\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0442 (\u0437\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438)',
     'add.video_title': '\u041D\u0430\u0437\u0432\u0430 \u0432\u0456\u0434\u0435\u043E',
+    'add.sync_role': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u044F',
+    'add.sync_primary': '\u041E\u0441\u043D\u043E\u0432\u043D\u0435',
+    'add.sync_derived': '\u0417\u0430\u043B\u0435\u0436\u043D\u0435',
+    'add.sync_independent': '\u041E\u043A\u0440\u0435\u043C\u0435',
+    'add.sync_ignored': '\u041D\u0435 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438',
     'add.vimeo_url': 'Vimeo URL',
 
     'add.link': '+ \u0414\u043E\u0434\u0430\u0442\u0438',
@@ -1121,6 +1126,11 @@ var I18N = {
     'add.submit': 'Create PR',
     'add.field_transcript': 'Transcript (from page)',
     'add.video_title': 'Video title',
+    'add.sync_role': 'Sync',
+    'add.sync_primary': 'Primary',
+    'add.sync_derived': 'Derived',
+    'add.sync_independent': 'Independent',
+    'add.sync_ignored': 'Ignored',
     'add.vimeo_url': 'Vimeo URL',
 
     'add.link': '+ Add Talk',
@@ -7460,6 +7470,7 @@ function showAddTalk(hash) {
     });
   }
   if (!container.children.length) SPA.addVideoRow();
+  applyDefaultSyncRoles();
   updateAddPreview();
   ['add-url','add-title','add-date','add-location','add-language','add-transcript'].forEach(function(id) {
     var el = document.getElementById(id);
@@ -7470,18 +7481,52 @@ function showAddTalk(hash) {
 function addVideoRowWithUrl(vimeoUrl, videoTitle) {
   var container = document.getElementById('add-videos');
   var div = document.createElement('div');
-  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;';
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;margin-bottom:8px;align-items:end;';
+  var opts = SYNC_ROLES.map(function(r) {
+    return '<option value="' + r + '">' + t('add.sync_' + r) + '</option>';
+  }).join('');
   div.innerHTML = '<label><span style="color:var(--fg4);font-size:13px;">' + t('add.video_title') + '</span>'
     + '<input class="add-video-title input compact" type="text" value="' + esc(videoTitle || '') + '" style="margin-top:4px"></label>'
     + '<label><span style="color:var(--fg4);font-size:13px;">' + t('add.vimeo_url') + '</span>'
     + '<input class="add-video-url input compact" type="url" value="' + esc(vimeoUrl || '') + '" style="margin-top:4px"></label>'
-    + '<button type="button" onclick="this.parentElement.remove();updateAddPreview()" style="padding:8px;background:var(--danger-bg);color:var(--danger-fg);border:1px solid var(--danger-border);border-radius:4px;cursor:pointer;">&times;</button>';
+    + '<label><span style="color:var(--fg4);font-size:13px;">' + t('add.sync_role') + '</span>'
+    + '<select class="add-video-sync input compact" style="margin-top:4px">' + opts + '</select></label>'
+    + '<button type="button" onclick="this.parentElement.remove();applyDefaultSyncRoles();updateAddPreview()" style="padding:8px;background:var(--danger-bg);color:var(--danger-fg);border:1px solid var(--danger-border);border-radius:4px;cursor:pointer;">&times;</button>';
   container.appendChild(div);
-  div.querySelectorAll('input').forEach(function(inp) { inp.addEventListener('input', updateAddPreview); });
+  div.querySelectorAll('input').forEach(function(inp) {
+    inp.addEventListener('input', function() { applyDefaultSyncRoles(); updateAddPreview(); });
+  });
+  div.querySelector('.add-video-sync').addEventListener('change', function() {
+    this.dataset.touched = '1';
+    updateAddPreview();
+  });
+}
+
+// Seed every untouched role select from the video NAMES — the only signal the
+// form has: a talk has no subtitles yet when it is added. Rows the editor
+// changed by hand are left alone.
+function applyDefaultSyncRoles() {
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#add-videos > div'));
+  var roles = defaultSyncRoles(rows.map(function(row) {
+    var title = row.querySelector('.add-video-title').value.trim();
+    return { slug: slugify(title || 'Video') };
+  }));
+  rows.forEach(function(row, i) {
+    var sel = row.querySelector('.add-video-sync');
+    if (!sel || sel.dataset.touched) return;
+    sel.value = roles[i] || 'primary';
+  });
+  // A lone video needs no declaration at all — hide the control rather than
+  // ask a question with one answer.
+  rows.forEach(function(row) {
+    var label = row.querySelector('.add-video-sync').parentElement;
+    label.style.display = rows.length < 2 ? 'none' : '';
+  });
 }
 
 SPA.addVideoRow = function() {
   addVideoRowWithUrl('');
+  applyDefaultSyncRoles();
   updateAddPreview();
 };
 
@@ -7497,10 +7542,20 @@ function updateAddPreview() {
   var url = document.getElementById('add-url').value.trim();
 
   var videos = [];
+  var rowCount = document.querySelectorAll('#add-videos > div').length;
   document.querySelectorAll('#add-videos > div').forEach(function(row) {
     var vTitle = row.querySelector('.add-video-title').value.trim();
     var vUrl = row.querySelector('.add-video-url').value.trim();
-    if (vTitle || vUrl) videos.push({ title: vTitle, url: vUrl, slug: slugify(vTitle || 'Video-' + (videos.length + 1)) });
+    var vSync = row.querySelector('.add-video-sync');
+    if (vTitle || vUrl) {
+      videos.push({
+        title: vTitle,
+        url: vUrl,
+        slug: slugify(vTitle || 'Video-' + (videos.length + 1)),
+        // A single-video talk declares nothing: tools/video_roles.py resolves it.
+        sync: rowCount > 1 && vSync ? vSync.value : '',
+      });
+    }
   });
 
   var transcript = document.getElementById('add-transcript').value.trim();

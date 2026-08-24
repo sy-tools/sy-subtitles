@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { parseAddTalkHash, buildMetaYaml } = require('../site/js/add_talk_data');
+const { parseAddTalkHash, buildMetaYaml, defaultSyncRoles } = require('../site/js/add_talk_data');
 const { decodeVideoRef } = require('../site/js/vimeo_codec');
 
 // The bookmarklet encodes its payload exactly like this, then opens the SPA
@@ -178,5 +178,78 @@ describe('buildMetaYaml — YAML-safe quoting', () => {
     assert.doesNotMatch(yaml, /^amruta_url:/m);
     assert.doesNotMatch(yaml, /^videos:/m);
     assert.doesNotMatch(yaml, /^transcript_en_base64:/m);
+  });
+});
+
+// --- sync roles -------------------------------------------------------------
+// A multi-video talk that declares no `sync:` cannot be synced or built at all
+// (tools/video_roles.py refuses to guess), so the add-talk form is where the
+// declaration has to be made.
+
+describe('defaultSyncRoles — the form default', () => {
+  it('leaves a single video undeclared: there is nothing to disambiguate', () => {
+    assert.deepStrictEqual(defaultSyncRoles([{ slug: 'Only-Video' }]), []);
+    assert.deepStrictEqual(defaultSyncRoles([]), []);
+  });
+
+  it('makes the recording primary and the Talk cut derived', () => {
+    assert.deepStrictEqual(
+      defaultSyncRoles([{ slug: 'Guru-Puja' }, { slug: 'Guru-Puja-Talk-Gravity' }]),
+      ['primary', 'derived'],
+    );
+  });
+
+  it('does not make a Talk cut primary just because it is listed first', () => {
+    assert.deepStrictEqual(
+      defaultSyncRoles([{ slug: 'Ganesha-Puja-Talk' }, { slug: 'Ganesha-Puja' }]),
+      ['derived', 'primary'],
+    );
+  });
+
+  it('marks every video after the primary derived', () => {
+    assert.deepStrictEqual(
+      defaultSyncRoles([{ slug: 'Puja' }, { slug: 'Puja-Talk' }, { slug: 'Cam-2' }]),
+      ['primary', 'derived', 'derived'],
+    );
+  });
+
+  it('still yields exactly one primary when every video looks like a Talk cut', () => {
+    assert.deepStrictEqual(
+      defaultSyncRoles([{ slug: 'A-Talk' }, { slug: 'B-Talk' }]),
+      ['primary', 'derived'],
+    );
+  });
+
+  it('does not treat "Talk" inside a word as a Talk cut', () => {
+    assert.deepStrictEqual(
+      defaultSyncRoles([{ slug: 'Talking-To-Yogis' }, { slug: 'Something-Else' }]),
+      ['primary', 'derived'],
+    );
+  });
+});
+
+describe('buildMetaYaml — sync roles', () => {
+  it('serialises sync per video', () => {
+    const yaml = buildMetaYaml({
+      title: 'T',
+      date: '1992-07-19',
+      language: 'en',
+      videos: [
+        { slug: 'Guru-Puja', title: 'Guru Puja', sync: 'primary' },
+        { slug: 'Guru-Puja-Talk', title: 'Guru Puja Talk', sync: 'derived' },
+      ],
+    });
+    assert.ok(yaml.includes("- slug: Guru-Puja\n  title: 'Guru Puja'\n  sync: primary\n"));
+    assert.ok(yaml.includes('  sync: derived\n'));
+  });
+
+  it('omits sync when there is nothing to declare', () => {
+    const yaml = buildMetaYaml({
+      title: 'T',
+      date: '1992-07-19',
+      language: 'en',
+      videos: [{ slug: 'Only-Video', title: 'Only Video' }],
+    });
+    assert.ok(!yaml.includes('sync:'));
   });
 });
