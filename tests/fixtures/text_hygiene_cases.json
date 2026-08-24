@@ -354,6 +354,20 @@
       "input": "say \"hi\" — now",
       "lang": "en",
       "expected": "say \"hi\" — now"
+    },
+    {
+      "fn": "sanitize_live_text",
+      "lang": "uk",
+      "input": " \"Привіт",
+      "expected": " «Привіт",
+      "why": "U+2028 is a line break the field sanitizer folds to a space, so a quote after it opens"
+    },
+    {
+      "fn": "sanitize_live_text",
+      "lang": "uk",
+      "input": " \"Привіт",
+      "expected": " «Привіт",
+      "why": "same for U+2029; typing and saving must not disagree on the direction"
     }
   ]
 }
