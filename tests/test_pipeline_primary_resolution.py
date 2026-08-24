@@ -38,9 +38,19 @@ def test_every_primary_lookup_guards_against_an_empty_answer():
     with no output. An unguarded call then carries an empty slug into a path,
     where `tests/fixtures/pipeline_snapshots/<talk>/` exists as a directory
     and the -d check waves it through.
-    """
-    text = _text()
-    lookups = text.count("tools.video_roles --talk-dir")
-    guards = text.count("no video declares 'sync: primary' in meta.yaml")
 
-    assert guards == lookups, f"{lookups} primary lookups but only {guards} empty-answer guards"
+    Counting the annotation is not enough. `::error::` writes a line into the
+    log and sets no exit status — the same shape the sync driver had to have
+    removed from `_list_changed` — so a guard that annotates and carries on is
+    no guard at all. Each one must also fail its step.
+    """
+    lines = _text().splitlines()
+    lookups = sum(1 for line in lines if "tools.video_roles --talk-dir" in line)
+    guards = 0
+    for i, line in enumerate(lines):
+        if "no video declares 'sync: primary' in meta.yaml" not in line:
+            continue
+        if any(later.strip() == "exit 1" for later in lines[i + 1 : i + 4]):
+            guards += 1
+
+    assert guards == lookups, f"{lookups} primary lookups but only {guards} of them stop the step"
