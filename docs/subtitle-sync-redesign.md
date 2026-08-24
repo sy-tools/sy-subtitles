@@ -115,8 +115,8 @@ manifests and eight legacy talks carry none. Declaring it in `meta.yaml`
 moves an existing implicit fact into one explicit place that is available
 before a build, survives legacy talks, and is editable by a human.
 
-A follow-up (out of scope here) can let `subtitle-pipeline.yml` read the
-declaration instead of its word-count heuristic.
+Every one of those places is converted to read the declaration in this
+work — see section 14. One mechanism, one source.
 
 Resolution rules:
 
@@ -390,6 +390,11 @@ TDD throughout; each item is a failing test first.
   `ignored`; the name heuristic when no material is present.
 - `tests/test_spa_boot_smoke.py` plus a browser check for the new control.
 - Golden corpus (`GOLDEN_TALKS_SCOPE=all`) after the `meta.yaml` fill-in.
+- New `tests/test_video_roles.py`: single-video implicit primary; missing
+  declaration on a multi-video talk is a hard error; `ignored` and
+  `independent` are excluded from derivation; the CLI's output shape.
+- `tests/test_pipeline_*`: the pipeline resolves the primary without needing
+  `whisper.json` to exist.
 
 ## 13. Rollout
 
@@ -401,4 +406,55 @@ Separate PRs, each leaving the system no worse than it found it:
 4. Positional primary -> derived propagation + invariant gate.
 5. Multi-island `_find_diff` (fixes R1).
 6. Omit-aware Step A and remark protection (fixes R6, R7).
-7. SPA add-talk controls + role auto-detection (section 10.1).
+7. SPA controls for all four roles + auto-detection (sections 10, 10.1).
+8. Shared resolver `tools/video_roles.py`, plus the corpus comparison against
+   today's heuristic (section 14).
+9. Convert every call site to the resolver: both `subtitle-pipeline.yml`
+   heuristics, `build_secondary_srts`, and `build_manifest.yaml`'s `role`
+   as derived output (section 14).
+
+## 14. One mechanism everywhere
+
+The declaration is worthless if the rest of the system keeps guessing. Every
+place that currently decides, records, or consumes the primary/derived
+relationship is converted to the `meta.yaml` declaration.
+
+**A shared resolver.** One function, `tools/video_roles.py::resolve_roles(talk_dir)`,
+returns the roles for a talk: it reads `meta.yaml`, applies section 4's
+resolution rules (single-video implicit primary; a missing declaration on a
+multi-video talk is a hard error naming the talk), and is the ONLY place the
+model is interpreted. It ships with a CLI (`python -m tools.video_roles
+--talk-dir PATH [--role primary]`) so workflow steps consume it without
+re-implementing anything in inline Python.
+
+**Call sites converted:**
+
+| where | today | after |
+|---|---|---|
+| `subtitle-pipeline.yml:596` | inline Python: video with most words in `whisper.json`, fallback `videos[0]` | `tools.video_roles --role primary` |
+| `subtitle-pipeline.yml:1044` | a **second, non-identical copy** of that heuristic (`best_words` starts at `-1`, no fallback branch) | the same call |
+| `subtitle-pipeline.yml:930` | `build_secondary_srts --primary-slug "${VIDEO_SLUG}"` | primary and the derived set come from the resolver |
+| `tools/build_secondary_srts.py:55` | `primary_slug` is a required argument; every other video is treated as secondary | resolver-supplied; `ignored` videos are skipped, `independent` videos are not derived from the primary |
+| `tools/sync_pr.py` | no notion of roles; every changed SRT is an equal source | roles drive Steps A/B/C (section 6) |
+| `site/js/video_sync_roles.js` | — | detection + editing in the SPA (sections 10, 10.1) |
+
+**`build_manifest.yaml` keeps a narrower job.** It stays the record of *how a
+file was built* (`mode: en-srt` / `whisper`, `run_id`, `built_at`) and keeps
+feeding `manifest_validate_flags` (`tools/validate_subtitles.py:339`). Its
+`role` key becomes derived output written from the resolver, never an input
+to the sync model — which is what let one talk accumulate three
+`role: primary` manifests.
+
+**Ordering constraint.** The pipeline resolves the primary *before* whisper
+runs, whereas the old heuristic needed `whisper.json` to exist. That is an
+improvement (the choice no longer depends on build artifacts), but it means
+the declaration must be present for multi-video talks before the pipeline is
+triggered. The `new-talk` / add-talk path (section 10) is what guarantees
+that, and the hard error names the talk when it is missing.
+
+**Behaviour check, not a leap of faith.** Before the conversion lands, the
+resolver's answer is compared against the current heuristic's answer for
+every talk in the corpus; any disagreement is reviewed by hand and resolved
+in the declaration, not by softening the resolver. Section 10.1 already
+measured the shape of that comparison: the block-superset rule matches the
+declared primary in 49 of 54 talks and the other 5 are ties.
