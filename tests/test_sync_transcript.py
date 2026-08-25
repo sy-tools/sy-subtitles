@@ -1292,3 +1292,68 @@ class TestOnScreenIsJudgedOnWordsNotTypography:
         assert texts[2] == "і подарує велику радощі", "the edit belongs to the block that carries the changed words"
         assert texts[0].startswith("Перша довга розповідь"), "no other block may change"
         assert texts[1] == "нехай бог благословить вас"
+
+
+class TestADeletionLeavesNoStrayWhitespace:
+    """Removing words from a paragraph must not leave their spaces on screen.
+
+    An island covers the words that changed, never the whitespace around them
+    — that is what keeps a fragment inside one block. A pure deletion then
+    splices out the words and leaves the space that joined them to their
+    neighbours: a blank at the block's edge, or two in a row in the middle.
+    The paragraph the edit came from has neither, so the block and its own
+    transcript disagree, and the derived videos inherit the blank too.
+
+    Real shape: PR #962, «будь ласка, бо це…» → «бо це…» at a block's start and
+    «Краще [потрібно] усвідомити» → «Краще усвідомити» in the middle of one.
+    """
+
+    @staticmethod
+    def _sync(tmp_path, block_text, old_para, new_para):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        (video / "uk.srt").write_text(f"1\n00:00:01,000 --> 00:00:05,000\n{block_text}\n", encoding="utf-8")
+        (talk / "transcript_uk_old.txt").write_text(HEADER + old_para + "\n", encoding="utf-8")
+        (talk / "transcript_uk.txt").write_text(HEADER + old_para + "\n", encoding="utf-8")
+        new_path = talk / "new.txt"
+        new_path.write_text(HEADER + new_para + "\n", encoding="utf-8")
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+        assert "error" not in result, result.get("error")
+        return parse_srt(str(video / "uk.srt"))[0]["text"]
+
+    def test_a_deletion_at_the_start_of_a_block_leaves_no_leading_space(self, tmp_path):
+        text = self._sync(
+            tmp_path,
+            "будь ласка, бо це дуже інтенсивний процес.",
+            "Він не повинен фотографувати, будь ласка, бо це дуже інтенсивний процес.",
+            "Він не повинен фотографувати, бо це дуже інтенсивний процес.",
+        )
+        assert text == "бо це дуже інтенсивний процес."
+
+    def test_a_deletion_inside_a_block_leaves_one_space_not_two(self, tmp_path):
+        text = self._sync(
+            tmp_path,
+            "Краще [потрібно] усвідомити і побачити.",
+            "Тож навіщо критикувати? Краще [потрібно] усвідомити і побачити.",
+            "Тож навіщо критикувати? Краще усвідомити і побачити.",
+        )
+        assert text == "Краще усвідомити і побачити."
+
+    def test_a_deletion_at_the_end_of_a_block_leaves_no_trailing_space(self, tmp_path):
+        text = self._sync(
+            tmp_path,
+            "Тож навіщо критикувати наших ближніх [потім]",
+            "Тож навіщо критикувати наших ближніх [потім] і що з того?",
+            "Тож навіщо критикувати наших ближніх і що з того?",
+        )
+        assert text == "Тож навіщо критикувати наших ближніх"
+
+    def test_a_replacement_is_left_exactly_as_the_paragraph_has_it(self, tmp_path):
+        text = self._sync(
+            tmp_path,
+            "Ви ж не судді, призначені судом.",
+            "Не судіть інших. Ви ж не судді, призначені судом.",
+            "Не судіть інших. Ви ж не судді, яких призначили.",
+        )
+        assert text == "Ви ж не судді, яких призначили."

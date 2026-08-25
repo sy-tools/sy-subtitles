@@ -395,6 +395,26 @@ def _resolve_edits(
     return edits, None
 
 
+def _close_gap(text: str, at: int) -> str:
+    """Remove the space a deletion orphaned at `at`.
+
+    An island covers the words that changed and never the whitespace around
+    them — that is what keeps a fragment inside one block. Splicing a pure
+    deletion out therefore leaves behind the space that joined the removed
+    words to their neighbours: a blank at the block's edge, or two in a row
+    in the middle. The paragraph the edit came from has neither, so the block
+    would disagree with its own transcript, and every derived video would
+    inherit the blank.
+    """
+    if 0 < at < len(text) and text[at - 1] == " " and text[at] == " ":
+        return text[: at - 1] + text[at:]
+    if at == 0 and text.startswith(" "):
+        return text[1:]
+    if at == len(text) and text.endswith(" "):
+        return text[:-1]
+    return text
+
+
 def _apply_edits(edits: list[dict]) -> dict | None:
     """Splice every resolved edit into its block, then check CPL.
 
@@ -404,7 +424,8 @@ def _apply_edits(edits: list[dict]) -> dict | None:
     """
     for edit in sorted(edits, key=lambda e: -e["offset"]):
         block, offset, old_frag, new_frag = edit["block"], edit["offset"], edit["old"], edit["new"]
-        block["text"] = block["text"][:offset] + new_frag + block["text"][offset + len(old_frag) :]
+        text = block["text"][:offset] + new_frag + block["text"][offset + len(old_frag) :]
+        block["text"] = text if new_frag else _close_gap(text, offset)
         print(f"  P{edit['p_idx'] + 1}: «{old_frag[:60]}» → «{new_frag[:60]}»", file=sys.stderr)
 
     for edit in edits:
