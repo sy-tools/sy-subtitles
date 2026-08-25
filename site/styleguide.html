@@ -116,6 +116,24 @@ from the real <code>exportIconSvg()</code>, so it cannot drift from the app.</p>
   <select class="select-chip"><option>Styled select (.select-chip)</option><option>Two</option></select>
 </div>
 
+<h3>Form field row (<code>.input.compact</code>)</h3>
+<p>The add-talk screen's per-video row. A <code>&lt;select&gt;</code> takes the same
+<code>.input.compact</code> as the text fields so a form reads as one control set rather than
+two. The sync role says how a video takes part in subtitle sync — the vocabulary is
+<code>tools/video_roles.py</code>'s, and a multi-video talk that declares nothing cannot be
+synced or built at all.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;max-width:560px">
+  <label><span style="color:var(--fg4);font-size:13px;">Video title</span>
+    <input class="input compact" type="text" value="Guru Puja" style="margin-top:4px"></label>
+  <label><span style="color:var(--fg4);font-size:13px;">Vimeo URL</span>
+    <input class="input compact" type="url" value="https://vimeo.com/…" style="margin-top:4px"></label>
+  <label><span style="color:var(--fg4);font-size:13px;">Sync</span>
+    <select class="input compact" style="margin-top:4px">
+      <option>Primary</option><option>Derived</option>
+      <option>Independent</option><option>Ignored</option>
+    </select></label>
+</div>
+
 <h2>Badges</h2>
 <div class="sg-row">
   <span class="review-badge needs-review">needs review</span>
