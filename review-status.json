@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-23T04:24:07.424236+00:00",
+  "updated_at": "2026-08-25T07:27:12.474422+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -135,10 +135,10 @@
       "updated_at": "2026-07-11T13:35:52Z"
     },
     "1989-05-06_Sahasrara-Puja-Jump-Into-the-Ocean-of-Joy": {
-      "status": "in-progress",
+      "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 158,
-      "updated_at": "2026-08-09T21:49:56Z"
+      "updated_at": "2026-08-25T07:27:10Z"
     },
     "1993-05-09_Sahasrara-Puja-Achieve-The-Perfect-State": {
       "status": "pending",
