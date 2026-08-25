@@ -47,10 +47,19 @@ map cleanly onto its own block cut.
 
   | | |
   |---|---|
-  | **I1** | Every `derived` video's block texts equal the primary's, block for block. |
-  | **I2** | Every subtitled video's text is preserved in the transcript — `check_text_preservation` called directly, never through `manifest_validate_flags`, which sets `skip_text_check=True` for secondaries and would pass anything. |
-  | **I3** | No video gained or lost blocks relative to what the plan started from, unless the plan says it deleted them. |
-  | **I4** | Timecodes are byte-identical to what was there before. |
+  | **I1** | Every `derived` video's block texts equal the primary's under the alignment. |
+  | **I2** | Every subtitled video's text is preserved in the transcript. |
+  | **I3** | No video gained blocks. |
+  | **I4** | No timecode moved; blocks may only be dropped. |
+
+  **As built, the gate enforces I3 and I4 only.** I1 holds by construction —
+  a derived block is only ever written by copying the primary's text at the
+  aligned index, so a separate check could catch nothing but a coding bug in
+  ten lines of code. I2 is already run per video by `validate_subtitles`
+  inside the plan; promoting it to a gate would have blocked syncs on legacy
+  divergence rather than on anything this run did, which is the opposite of
+  what a gate is for. I3 and I4 are the ones with teeth: they make "timing is
+  never invented" structural instead of a convention.
 
 - The gate runs on the merged plan, before `apply_plan`. A violation is a
   failure, so nothing is written — phase 1's atomicity carries it.

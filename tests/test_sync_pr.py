@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from tools.srt_utils import parse_srt
 from tools.sync_common import load_base_from_git
 from tools.sync_pr import BOT_AUTHOR, SYNC_TRAILER, _classify, _list_changed, resolve_baseline, run
 
@@ -37,8 +38,10 @@ BASE_TRANSCRIPT = (
 META_TWO_VIDEOS = """videos:
   - slug: Video1
     title: Video One
+    sync: primary
   - slug: Video2
     title: Video Two
+    sync: derived
 """
 
 
@@ -466,3 +469,186 @@ class TestBaselineResolution:
         changed = _list_changed(resolve_baseline(remote_main="origin/main"))
         assert "talks/test/Video1/final/uk.srt" in changed
         assert "README.md" not in changed
+
+
+class TestRoleAwareSync:
+    """Which video is written, and from what."""
+
+    def test_an_ignored_videos_srt_edit_never_reaches_the_transcript(self, repo):
+        """`ignored` means never read as well as never written.
+
+        Only the write direction was covered. Without the read guard, text
+        from a video explicitly marked out of the sync flows into the
+        transcript and from there into the primary and every derived video —
+        exactly what the role exists to prevent.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        meta = repo_path / "talks/test/meta.yaml"
+        meta.write_text(meta.read_text(encoding="utf-8").replace("sync: derived", "sync: ignored"), encoding="utf-8")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        before_transcript = transcript.read_text(encoding="utf-8")
+        before_v1 = v1.read_text(encoding="utf-8")
+
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(
+            v2.read_text(encoding="utf-8").replace("Перше речення", "Сміття з ігнорованого"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit an ignored video's subtitles")
+
+        assert run() == 0
+        assert transcript.read_text(encoding="utf-8") == before_transcript, (
+            "an ignored video must not feed the transcript"
+        )
+        assert v1.read_text(encoding="utf-8") == before_v1
+
+    def test_a_derived_cut_that_cannot_receive_an_edit_fails_loudly(self, repo):
+        """A cut whose boundaries were never the transcript's.
+
+        Two of the primary's sentences share one cue here, so the edited block
+        has no counterpart — yet its text is plainly still on the derived
+        video. Skipping would drop a human's correction under a green check;
+        placing it would be a guess. The run must go red and write nothing.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\n"
+            "Перше речення першого абзацу. Друге речення першого абзацу.\n\n"
+            "2\n00:00:05,100 --> 00:00:07,000\nЄдине речення другого абзацу.\n",
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "give the derived video its own cut")
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        before_v2 = v2.read_text(encoding="utf-8")
+        before_transcript = transcript.read_text(encoding="utf-8")
+
+        assert run() == 1
+        assert v2.read_text(encoding="utf-8") == before_v2, "nothing may be written when an edit cannot be placed"
+        assert transcript.read_text(encoding="utf-8") == before_transcript
+
+    def test_an_edit_that_did_not_reach_a_derived_cut_is_annotated(self, repo, capsys):
+        """A skip is legitimate — an excerpt cut lacks most of the primary —
+        but a `derived` video is meant to mirror it.
+
+        The count reached only a stderr line in a green run's log, which reads
+        as "nothing to do" to anyone scanning the checks. It is the reviewer's
+        one cue that a correction stopped at the primary, so it belongs in the
+        run's annotations.
+        """
+        repo_path, _base_sha = repo
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        # The derived cut is a strict excerpt: it carries the second paragraph
+        # only, so the edit below has nowhere to land on it.
+        v2.write_text(
+            "1\n00:00:12,000 --> 00:00:18,000\nЄдине речення другого абзацу.\n",
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "give the derived video an excerpt cut")
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        assert run() == 0
+        err = capsys.readouterr().err
+        assert "::warning::" in err, "a correction that stopped at the primary must be annotated, not just logged"
+        assert "Video2" in err
+
+    def test_an_ignored_video_is_never_written(self, repo):
+        repo_path, _base_sha = repo
+        meta = repo_path / "talks/test/meta.yaml"
+        meta.write_text(meta.read_text(encoding="utf-8").replace("sync: derived", "sync: ignored"), encoding="utf-8")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        before = v2.read_text(encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        assert run() == 0
+        assert "Змінене речення" in (repo_path / "talks/test/Video1/final/uk.srt").read_text(encoding="utf-8")
+        assert v2.read_text(encoding="utf-8") == before, "an ignored video must not be touched"
+
+    def test_a_derived_video_takes_its_text_from_the_primary(self, repo):
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        assert run() == 0
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        assert "Змінене речення" in v2.read_text(encoding="utf-8")
+        assert [b["text"] for b in parse_srt(str(v1))] == [b["text"] for b in parse_srt(str(v2))]
+
+    def test_an_undeclared_multi_video_talk_fails_instead_of_guessing(self, repo):
+        repo_path, _base_sha = repo
+        meta = repo_path / "talks/test/meta.yaml"
+        meta.write_text(
+            meta.read_text(encoding="utf-8").replace("    sync: primary\n", "").replace("    sync: derived\n", ""),
+            encoding="utf-8",
+        )
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        before = transcript.read_text(encoding="utf-8")
+        transcript.write_text(before.replace("Перше речення", "Змінене речення"), encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript with no roles declared")
+
+        assert run() == 1
+        assert "Змінене речення" not in (repo_path / "talks/test/Video1/final/uk.srt").read_text(encoding="utf-8")
+
+    def test_a_plan_that_would_move_a_timecode_is_refused(self, repo, monkeypatch):
+        """The gate is the last line of defence: even if propagation produced
+        a retimed block, nothing may reach disk."""
+        from tools import sync_pr as driver
+
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        transcript.write_text(
+            transcript.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit the transcript")
+
+        real_plan = driver._plan_talk
+
+        def retiming_plan(*args, **kwargs):
+            plan = real_plan(*args, **kwargs)
+            for path in list(plan.writes):
+                if path.endswith("uk.srt"):
+                    plan.writes[path] = plan.writes[path].replace("00:00:01,000", "00:00:02,500")
+            return plan
+
+        monkeypatch.setattr(driver, "_plan_talk", retiming_plan)
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        before = v1.read_text(encoding="utf-8")
+
+        assert run() == 1
+        assert v1.read_text(encoding="utf-8") == before
