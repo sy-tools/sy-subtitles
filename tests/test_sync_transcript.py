@@ -1357,3 +1357,67 @@ class TestADeletionLeavesNoStrayWhitespace:
             "Не судіть інших. Ви ж не судді, яких призначили.",
         )
         assert text == "Ви ж не судді, яких призначили."
+
+
+class TestReParagraphingIsNotAnEdit:
+    """A transcript whose paragraphs were re-cut, and nothing else.
+
+    Two corpus transcripts reached the repo as a single crushed paragraph,
+    from an extractor that dropped the source's line breaks. Restoring them
+    changes the paragraph count and not one word — but the count guard fires
+    first and calls it "need full rebuild", so a formatting repair could not
+    be committed at all.
+
+    The reverse direction already knows this shape: a `replace` group whose
+    two sides join to the same text is pure re-blocking, and the transcript
+    needs no change. Say the same thing here.
+    """
+
+    @staticmethod
+    def _talk(tmp_path, paragraphs):
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        (video / "uk.srt").write_text(
+            "1\n00:00:01,000 --> 00:00:05,000\nПерше речення першого абзацу.\n\n"
+            "2\n00:00:05,100 --> 00:00:09,000\nДруге речення першого абзацу.\n\n"
+            "3\n00:00:09,100 --> 00:00:13,000\nЄдине речення другого абзацу.\n",
+            encoding="utf-8",
+        )
+        (talk / "transcript_uk.txt").write_text(HEADER + "\n\n".join(paragraphs) + "\n", encoding="utf-8")
+        return talk
+
+    CRUSHED = ["Перше речення першого абзацу. Друге речення першого абзацу. Єдине речення другого абзацу."]
+    RESTORED = [
+        "Перше речення першого абзацу. Друге речення першого абзацу.",
+        "Єдине речення другого абзацу.",
+    ]
+
+    def test_restoring_the_paragraphs_is_a_no_op_not_a_failure(self, tmp_path):
+        talk = self._talk(tmp_path, self.CRUSHED)
+        old = talk / "old.txt"
+        old.write_text((talk / "transcript_uk.txt").read_text(encoding="utf-8"), encoding="utf-8")
+        new = talk / "new.txt"
+        new.write_text(HEADER + "\n\n".join(self.RESTORED) + "\n", encoding="utf-8")
+        before = (talk / "Video" / "final" / "uk.srt").read_text(encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(old), str(new))
+
+        assert "error" not in result, result.get("error")
+        assert result["changed"] == 0, "no word changed, so there is nothing to sync"
+        assert (talk / "Video" / "final" / "uk.srt").read_text(encoding="utf-8") == before
+
+    def test_a_paragraph_count_change_that_also_edits_text_still_fails(self, tmp_path):
+        """The guard is still needed: a restructured transcript cannot be
+        diffed paragraph by paragraph, and the block cut has to be rebuilt."""
+        talk = self._talk(tmp_path, self.CRUSHED)
+        old = talk / "old.txt"
+        old.write_text((talk / "transcript_uk.txt").read_text(encoding="utf-8"), encoding="utf-8")
+        edited = [self.RESTORED[0].replace("Перше", "Змінене"), self.RESTORED[1]]
+        new = talk / "new.txt"
+        new.write_text(HEADER + "\n\n".join(edited) + "\n", encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(old), str(new))
+
+        assert "error" in result
+        assert "Paragraph count changed" in result["error"]
