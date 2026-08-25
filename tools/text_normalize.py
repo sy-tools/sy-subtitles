@@ -115,7 +115,13 @@ _ELLIPSIS_SPACE_RE = re.compile(r"(?<=\w)[ \t]+\.\.\.")
 # alternate, and every odd space: the typing-time pass leaves whitespace alone,
 # so the character before a just-typed quote is often the NBSP contenteditable
 # injected for the space before it.
-_QUOTE_OPENS_AFTER = set(" \t\n\r([{«–") | set(ODD_SPACES)
+#
+# _FIELD_BREAKS is spelled out here rather than left implicit: sanitize_field_text
+# folds every one of them to a space, so a quote after one opens once the value
+# is stored. Missing U+2028 made the typing-time pass close it instead, and the
+# field then showed the opposite of what saving produced.
+_FIELD_BREAKS = "\t\n\r\u2028\u2029"
+_QUOTE_OPENS_AFTER = set(" ([{«–") | set(_FIELD_BREAKS) | set(ODD_SPACES)
 
 # Read the left neighbour THROUGH these: a stray zero-width character (or a
 # leading BOM) must not decide the direction of a quote.
