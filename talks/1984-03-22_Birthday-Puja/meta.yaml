@@ -9,6 +9,8 @@ videos:
 - slug: Birthday-Puja-Be-Sweet
   title: 'Birthday Puja: Be Sweet'
   video_ref: r1AFhGDUNVQEUcVEhWSxRYUlJbWEA
+  sync: primary
 - slug: Birthday-Puja-Talk-Be-Sweet
   title: 'Birthday Puja Talk: Be Sweet'
   video_ref: r1VFlGDU1SF0pMU0heQB9ZUlJbWEA
+  sync: derived

@@ -7,6 +7,8 @@ videos:
 - slug: Ganesha-Puja
   title: Ganesha Puja
   video_ref: r1Uw1NXBBTFkcfVEhXQR5SWVVbUUE
+  sync: primary
 - slug: Ganesha-Puja-Talk
   title: Ganesha Puja Talk
   video_ref: r1Ug0WDBFWREUUV0hcTxxXWllbUUE
+  sync: derived

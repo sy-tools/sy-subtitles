@@ -7,6 +7,8 @@ videos:
 - slug: Guru-Puja-Talk
   title: Guru Puja Talk
   video_ref: r1VV1AXRJbQENLAkhdShlXWFBdVkQ
+  sync: derived
 - slug: Guru-Puja
   title: Guru Puja
   video_ref: r1BA1CD0UHTRAbVkheTxVWWlNdWUE
+  sync: primary

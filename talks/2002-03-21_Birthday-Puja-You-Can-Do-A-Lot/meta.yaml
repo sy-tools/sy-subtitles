@@ -7,6 +7,8 @@ videos:
 - slug: 79th-Birthday-Puja-Delhi-India-DP-RAW
   title: 79th Birthday Puja Delhi India DP-RAW
   video_ref: r1RVZaTQhNURBBHk5WWUoYUlNQWFFC
+  sync: primary
 - slug: 79th-Birthday-Puja-Talk-Delhi-India-DP-RAW
   title: 79th Birthday Puja Talk Delhi India DP-RAW
   video_ref: r1QQZVRFFFUkRCFE5eX0oYUlNQWFFC
+  sync: derived

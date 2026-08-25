@@ -7,6 +7,8 @@ videos:
 - slug: Ganesha-Puja-Troinex-Switzerland-DP
   title: Ganesha Puja Troinex Switzerland DP
   video_ref: r1UFRHCkMEQkcVAEhbSRtTWVhcUUI
+  sync: primary
 - slug: Ganesha-Puja-Talk-Innocence-Joy
   title: 'Ganesha Puja Talk: Innocence & Joy'
   video_ref: r1V1pBCxJSE0AbA0haSRVYWFhcUUI
+  sync: derived

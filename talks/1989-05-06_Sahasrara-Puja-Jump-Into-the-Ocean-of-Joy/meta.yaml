@@ -7,6 +7,8 @@ videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
   video_ref: r1UV9DXEQETUBPUkheTB5TX1hbUkQ
+  sync: primary
 - slug: Sahasrara-Puja-Talk
   title: Sahasrara Puja Talk
   video_ref: r1A1QRD0VbRhIYA0hcShVRXVNcVkQ
+  sync: derived

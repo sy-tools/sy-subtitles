@@ -7,6 +7,8 @@ videos:
 - slug: Navaratri-Puja-Cabella-Italy-DP-RAW
   title: Navaratri Puja Cabella Italy DP-RAW
   video_ref: r1F1RaFQxEAUAWSU5fWEEfUF1TWFFC
+  sync: primary
 - slug: Navaratri-Puja-Talk
   title: Navaratri Puja Talk
   video_ref: r1Bl5CX0RSE0BPU0hcQRVSWlRbUkA
+  sync: derived

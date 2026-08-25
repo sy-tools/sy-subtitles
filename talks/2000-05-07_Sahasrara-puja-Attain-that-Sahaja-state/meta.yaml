@@ -7,6 +7,8 @@ videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
   video_ref: r1VwgSW0IGTRUeU0hWTR5WU1VbVEI
+  sync: primary
 - slug: Sahasrara-Puja-Talk-Attain-That-Sahaja-State
   title: 'Sahasrara Puja Talk: Attain That Sahaja State'
   video_ref: r1XQ8SURBaFhAZV0hWThtWU1VbVEI
+  sync: derived

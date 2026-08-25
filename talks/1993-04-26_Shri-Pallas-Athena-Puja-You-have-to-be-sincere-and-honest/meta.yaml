@@ -7,6 +7,8 @@ videos:
 - slug: Athena-Puja-Greece-DP-RAW
   title: Athena Puja Greece DP-RAW
   video_ref: r1BFURX0dbF0caBEhZSxxYU1ZaUUs
+  sync: primary
 - slug: Athena-Puja-Talk-Greece-DP-RAW
   title: Athena Puja Talk Greece DP-RAW
   video_ref: r1VFlEW0YHFBAbUkhfThRZU1ZaUUs
+  sync: derived

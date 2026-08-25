@@ -24,32 +24,47 @@ do for that video (direct transcript edits and other videos' SRT
 edits, which still need to propagate here).
 
 Invocation:
-    python -m tools.sync_pr --base-sha $BASE_SHA
+    python -m tools.sync_pr [--baseline SHA]
 
-The tool reads `git diff --name-only $BASE_SHA HEAD` itself so the
-workflow doesn't need to pre-filter. Exits 0 on success, 1 on any
-sync/validate failure (with a GitHub Actions ::error:: line per
-failure). Intentionally mutates the working tree (the workflow then
-commits whatever changed).
+The baseline defaults to the last bot sync commit on this branch (see
+resolve_baseline) — NOT the PR base, which would replay every edit the
+bot has already applied. The tool takes the diff itself, scoped to the
+sync pathspecs, so the workflow doesn't need to pre-filter. Exits 0 on
+success, 1 on any sync/validate failure (with a GitHub Actions ::error::
+line per failure).
+
+Every talk is synced against a shadow copy of itself and the working tree
+is written only once every target of every talk has succeeded, so a
+non-zero exit leaves nothing for the workflow to commit.
 """
 
 import argparse
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import yaml
 
+from .srt_utils import parse_srt, write_srt
 from .sync_common import load_base_from_git
+from .sync_invariants import check_writes
+from .sync_plan import SyncPlan, apply_plan, collect_writes, shadow_talk
+from .sync_propagate import propagate_primary_to_derived
 from .sync_srt_to_transcript import sync_srt_to_transcript
 from .sync_transcript_to_srt import sync_transcript
 from .validate_subtitles import manifest_validate_flags
 from .validate_subtitles import validate as validate_subtitles
+from .video_roles import RoleError, resolve_roles
 
 
 def _gha_error(msg: str) -> None:
     print(f"::error::{msg}", file=sys.stderr)
+
+
+def _gha_warning(msg: str) -> None:
+    print(f"::warning::{msg}", file=sys.stderr)
 
 
 def _run_git(*args: str) -> str:
@@ -57,12 +72,54 @@ def _run_git(*args: str) -> str:
     return result.stdout
 
 
-def _list_changed(base_sha: str) -> list[str]:
-    try:
-        out = _run_git("diff", "--name-only", base_sha, "HEAD")
-    except subprocess.CalledProcessError as exc:
-        _gha_error(f"git diff failed: {exc.stderr}")
-        return []
+SYNC_TRAILER = "Sync-Bot: v1"
+BOT_AUTHOR = "github-actions[bot]"
+
+# Only these paths can carry a human edit; everything else in a diff is
+# noise (a merge from main, a docs change riding along in a manual PR).
+SYNC_PATHSPECS = ("talks/*/transcript_uk.txt", "talks/*/*/final/uk.srt")
+
+
+def resolve_baseline(head: str = "HEAD", remote_main: str = "origin/main") -> str:
+    """Return the commit a human edit should be measured against.
+
+    The last bot sync commit on THIS branch if there is one, otherwise the
+    point where the branch diverged from main. Never the PR's base tip: a
+    two-dot diff against a non-ancestor reports every file that moved on
+    main as a reversed change, and the sync would dutifully un-edit and
+    commit them.
+
+    The search is bounded by `remote_main..head` and walks --first-parent,
+    so bot commits belonging to other PRs that arrived through a merge are
+    not candidates. Author and trailer must BOTH match: the trailer alone
+    is text a human can type.
+    """
+    sep = "\x1f"
+    out = _run_git(
+        "log",
+        "--first-parent",
+        f"{remote_main}..{head}",
+        f"--format=%H{sep}%an{sep}%B%x1e",
+    )
+    for entry in out.split("\x1e"):
+        entry = entry.strip()
+        if not entry:
+            continue
+        sha, author, body = entry.split(sep, 2)
+        if author == BOT_AUTHOR and SYNC_TRAILER in body:
+            return sha
+    return _run_git("merge-base", remote_main, head).strip()
+
+
+def _list_changed(baseline: str) -> list[str]:
+    """Paths this PR touched, or raise.
+
+    A swallowed failure here is indistinguishable from a clean PR: the run
+    would print "No transcript or SRT changes" and exit 0, leaving every
+    human edit unsynced under a green check. `::error::` only annotates —
+    it does not set an exit status — so the exception must propagate.
+    """
+    out = _run_git("diff", "--name-only", baseline, "HEAD", "--", *SYNC_PATHSPECS)
     return [line for line in out.splitlines() if line.strip()]
 
 
@@ -98,63 +155,80 @@ def _classify(changed: list[str]) -> tuple[dict[str, list[str]], dict[str, bool]
     return srt_by_talk, transcript_talks
 
 
-def _process_talk(
+def _plan_talk(
     talk_dir: str,
     srt_paths: list[str],
-    base_sha: str,
+    baseline: str,
     tmp: Path,
-) -> bool:
-    """Process a single talk. Returns True on success, False on failure.
+) -> SyncPlan:
+    """Compute every write this talk needs. Never touches the working tree.
+
+    The talk's sync-relevant files are copied into a shadow directory and
+    the sync steps run against the copy; whatever they changed there
+    becomes the plan. Nothing is collected unless every target succeeded.
 
     Flow:
       1. Snapshot base_transcript → tmp.
       2. For each changed SRT:
          a. Snapshot its base_srt → tmp.
-         b. Run sync_srt_to_transcript on the WORKING transcript (accumulating).
+         b. Run sync_srt_to_transcript on the SHADOW transcript (accumulating).
          c. Run sync_srt_to_transcript on a COPY of base_transcript (per-video
             effective-old baseline).
       3. For each video in the talk (per meta.yaml):
          a. Pick old_transcript = effective_old_for_video[slug] if it exists,
             else base_transcript.
-         b. Run sync_transcript_to_srt(old_transcript, working_transcript).
-         c. Optimize if block count changed.
-         d. Validate. (Deferred — workflow still runs validate separately.)
+         b. Run sync_transcript_to_srt(old_transcript, shadow transcript).
+         c. Validate the resulting SRT against the resulting transcript.
     """
+    plan = SyncPlan()
     talk_id = Path(talk_dir).name
-    transcript_path = Path(talk_dir) / "transcript_uk.txt"
-    if not transcript_path.exists():
+    real_transcript = Path(talk_dir) / "transcript_uk.txt"
+    if not real_transcript.exists():
         print(f"  [{talk_id}] no transcript_uk.txt — skip", file=sys.stderr)
-        return True
+        return plan
 
     base_transcript = tmp / f"{talk_id}.base_transcript.txt"
-    if not _show_base(base_sha, str(transcript_path), base_transcript):
+    if not _show_base(baseline, str(real_transcript), base_transcript):
         print(f"  [{talk_id}] transcript is new in this PR — skip", file=sys.stderr)
-        return True
+        return plan
 
-    # Step A: propagate each changed SRT's edits onto the real transcript AND
-    # onto a per-video copy of the base transcript (effective-old baseline).
+    shadow = shadow_talk(talk_dir, tmp / "shadow")
+    transcript_path = shadow / "transcript_uk.txt"
+
+    try:
+        roles = resolve_roles(shadow)
+    except RoleError as exc:
+        plan.failures.append(str(exc))
+        return plan
+
+    # Step A: propagate each changed SRT's edits onto the shadow transcript
+    # AND onto a per-video copy of the base transcript (effective-old
+    # baseline).
     effective_old: dict[str, Path] = {}
-    step_a_failed = False
     for srt in srt_paths:
         video_slug = srt.split("/")[2]
+        if roles.get(video_slug, "ignored") == "ignored":
+            print(f"  [{talk_id}/{video_slug}] sync: ignored — skip", file=sys.stderr)
+            continue
         if not Path(srt).exists():
             # `git diff --name-only` also lists deletions — nothing to sync
             print(f"  [{talk_id}/{video_slug}] SRT deleted in this PR — skip", file=sys.stderr)
             continue
         base_srt = tmp / f"{talk_id}__{video_slug}.base.srt"
-        if not _show_base(base_sha, srt, base_srt):
+        if not _show_base(baseline, srt, base_srt):
             print(f"  [{talk_id}/{video_slug}] SRT is new in this PR — skip", file=sys.stderr)
             continue
 
         print(f"  [{talk_id}/{video_slug}] SRT → transcript (accumulate)", file=sys.stderr)
+        shadow_srt = shadow / video_slug / "final" / "uk.srt"
         result = sync_srt_to_transcript(
             old_srt=str(base_srt),
-            new_srt=srt,
+            new_srt=str(shadow_srt),
             transcript=str(transcript_path),
+            talk_dir=str(shadow),
         )
         if "error" in result:
-            _gha_error(f"{srt}: {result['error']}")
-            step_a_failed = True
+            plan.failures.append(f"{srt}: {result['error']}")
             continue
 
         # Per-video baseline: apply this SRT's diff to a fresh copy of
@@ -166,32 +240,41 @@ def _process_talk(
         shutil.copyfile(base_transcript, effective)
         baseline_result = sync_srt_to_transcript(
             old_srt=str(base_srt),
-            new_srt=srt,
+            new_srt=str(shadow_srt),
             transcript=str(effective),
+            talk_dir=str(shadow),
         )
         if "error" in baseline_result:
             # Shouldn't normally differ from the accumulate run, but bail
             # loudly if it does.
-            _gha_error(f"{srt}: effective-old baseline failed: {baseline_result['error']}")
-            step_a_failed = True
+            plan.failures.append(f"{srt}: effective-old baseline failed: {baseline_result['error']}")
             continue
         effective_old[video_slug] = effective
 
-    if step_a_failed:
-        return False
-
-    # Step B: sync the (possibly-updated) transcript out to every video's SRT
-    # using either the per-video effective-old (for videos whose SRT was
-    # edited) or plain base_transcript (for videos whose SRT is untouched).
-    meta_path = Path(talk_dir) / "meta.yaml"
-    slugs = _list_video_slugs(meta_path)
+    # Step B runs even when Step A failed, so one run reports every problem
+    # instead of hiding the later ones behind the first. A single failure
+    # still blocks the whole write.
+    slugs = _list_video_slugs(shadow / "meta.yaml")
     if not slugs:
         print(f"  [{talk_id}] meta.yaml has no videos — skip Step B", file=sys.stderr)
-        return True
+        return plan
 
-    step_b_failed = False
+    derived = [s for s in slugs if roles.get(s) == "derived"]
+    primary = next((s for s, r in roles.items() if r == "primary"), None)
+    if derived and not (primary and (shadow / primary / "final" / "uk.srt").exists()):
+        # Nothing to mirror: the primary has no subtitles in this PR. The
+        # transcript is the only source left, so the derived videos take the
+        # independent path this once rather than going unsynced.
+        print(f"  [{talk_id}] primary has no uk.srt — derived videos sync from the transcript", file=sys.stderr)
+        derived = []
     for slug in slugs:
-        srt_file = Path(talk_dir) / slug / "final" / "uk.srt"
+        role = roles.get(slug, "ignored")
+        if role == "ignored" or (role == "derived" and slug in derived):
+            # Ignored videos are never written. Derived ones take their text
+            # from the primary below, not from a character diff against a
+            # block cut that was never the transcript's.
+            continue
+        srt_file = shadow / slug / "final" / "uk.srt"
         if not srt_file.exists():
             print(f"  [{talk_id}/{slug}] no uk.srt — skip", file=sys.stderr)
             continue
@@ -201,14 +284,13 @@ def _process_talk(
         print(f"  [{talk_id}/{slug}] transcript → SRT (old={baseline_label})", file=sys.stderr)
 
         result = sync_transcript(
-            talk_dir=talk_dir,
+            talk_dir=str(shadow),
             video_slug=slug,
             old_transcript=str(old_transcript),
             new_transcript=str(transcript_path),
         )
         if "error" in result:
-            _gha_error(f"{talk_id}/{slug}: {result['error']} — needs full pipeline rebuild")
-            step_b_failed = True
+            plan.failures.append(f"{talk_id}/{slug}: {result['error']} — needs full pipeline rebuild")
             continue
 
         # Block-count-changed edits (sync_transcript returns error) no longer
@@ -217,9 +299,8 @@ def _process_talk(
 
         # Validate the updated SRT against the updated transcript. Matches
         # the old bash step's flags: we skip time/duration checks because
-        # Step B doesn't touch timecodes (except via optimize, which
-        # recomputes them safely). On top of that, apply the build mode
-        # flags from build_manifest.yaml — en-srt primaries legitimately
+        # Step B doesn't touch timecodes. On top of that, apply the build
+        # mode flags from build_manifest.yaml — en-srt primaries legitimately
         # drop transcript-only blocks and secondaries are derivative, so
         # validating stricter than the pipeline would reject its outputs.
         print(f"  [{talk_id}/{slug}] validate", file=sys.stderr)
@@ -232,45 +313,139 @@ def _process_talk(
                 **flags,
             )
         except Exception as exc:  # noqa: BLE001
-            _gha_error(f"{talk_id}/{slug}: validate raised: {exc}")
-            step_b_failed = True
+            plan.failures.append(f"{talk_id}/{slug}: validate raised: {exc}")
             continue
         if not passed:
-            _gha_error(f"{talk_id}/{slug}: validation failed — needs full subtitle rebuild via pipeline")
-            step_b_failed = True
+            plan.failures.append(f"{talk_id}/{slug}: validation failed — needs full subtitle rebuild via pipeline")
 
-    return not step_b_failed
+    if derived:
+        _plan_derived(plan, talk_dir, shadow, roles, derived, baseline, tmp)
+
+    if plan.ok:
+        plan.writes.update(collect_writes(shadow, talk_dir))
+    return plan
 
 
-def run(base_sha: str) -> int:
-    changed = _list_changed(base_sha)
+def _texts(path: Path) -> list[str]:
+    return [b["text"] for b in parse_srt(str(path))]
+
+
+def _plan_derived(
+    plan: SyncPlan,
+    talk_dir: str,
+    shadow: Path,
+    roles: dict[str, str],
+    derived: list[str],
+    baseline: str,
+    tmp: Path,
+) -> None:
+    """Copy the primary's text onto every derived video, positionally.
+
+    The correspondence between the two cuts is taken from their BASELINE
+    texts, so the edit being propagated cannot break the alignment it travels
+    along. 66 of the corpus's 68 derived videos match their primary block for
+    block; the two that do not are pre-secondary-machinery talks, where an
+    unmatched block simply has nothing to receive.
+    """
+    talk_id = Path(talk_dir).name
+    primary = next((s for s, r in roles.items() if r == "primary"), None)
+    if primary is None:
+        plan.failures.append(f"{talk_id}: no video is `sync: primary` — cannot update derived videos")
+        return
+
+    primary_srt = shadow / primary / "final" / "uk.srt"
+    if not primary_srt.exists():
+        print(f"  [{talk_id}/{primary}] primary has no uk.srt — skip derived", file=sys.stderr)
+        return
+
+    base_primary = tmp / f"{talk_id}__{primary}.propagate_base.srt"
+    if not _show_base(baseline, f"{talk_dir}/{primary}/final/uk.srt", base_primary):
+        print(f"  [{talk_id}/{primary}] primary is new in this PR — skip derived", file=sys.stderr)
+        return
+
+    primary_old = _texts(base_primary)
+    primary_new = _texts(primary_srt)
+
+    for slug in derived:
+        srt_file = shadow / slug / "final" / "uk.srt"
+        if not srt_file.exists():
+            print(f"  [{talk_id}/{slug}] no uk.srt — skip", file=sys.stderr)
+            continue
+
+        base_derived = tmp / f"{talk_id}__{slug}.propagate_base.srt"
+        derived_old = (
+            _texts(base_derived)
+            if _show_base(baseline, f"{talk_dir}/{slug}/final/uk.srt", base_derived)
+            else _texts(srt_file)
+        )
+
+        print(f"  [{talk_id}/{slug}] {primary} → SRT (derived, positional)", file=sys.stderr)
+        blocks = parse_srt(str(srt_file))
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+        if "error" in result:
+            plan.failures.append(f"{talk_id}/{slug}: {result['error']}")
+            continue
+        if result["changed"] or result["removed"]:
+            write_srt(blocks, str(srt_file))
+        print(
+            f"  [{talk_id}/{slug}] changed {result['changed']}, removed {result['removed']}"
+            + (f", SKIPPED {result['skipped']} (no counterpart on this cut)" if result.get("skipped") else ""),
+            file=sys.stderr,
+        )
+        if result.get("skipped"):
+            # A `derived` video is meant to mirror the primary. A skip is
+            # legitimate on an excerpt cut, but it is also the reviewer's only
+            # cue that a correction stopped at the primary — and a line in a
+            # green run's log reads as "nothing to do".
+            _gha_warning(
+                f"{talk_id}/{slug}: {result['skipped']} change(s) from the primary have no counterpart "
+                f"on this cut and were not applied"
+            )
+
+
+def run(baseline: str | None = None) -> int:
+    if baseline is None:
+        baseline = resolve_baseline()
+    changed = _list_changed(baseline)
     srt_by_talk, transcript_talks = _classify(changed)
     all_talks = sorted(set(srt_by_talk) | set(transcript_talks))
     if not all_talks:
         print("No transcript or SRT changes", file=sys.stderr)
         return 0
 
-    tmp = Path("/tmp/sync_pr")
-    tmp.mkdir(parents=True, exist_ok=True)
-
-    overall_ok = True
+    tmp = Path(tempfile.mkdtemp(prefix="sync_pr_"))
+    plan = SyncPlan()
     for talk_dir in all_talks:
-        srt_paths = srt_by_talk.get(talk_dir, [])
         talk_id = Path(talk_dir).name
         print("\n========================================", file=sys.stderr)
         print(f"  {talk_id}", file=sys.stderr)
         print("========================================", file=sys.stderr)
-        ok = _process_talk(talk_dir, srt_paths, base_sha, tmp)
-        overall_ok = overall_ok and ok
+        plan.merge(_plan_talk(talk_dir, srt_by_talk.get(talk_dir, []), baseline, tmp))
 
-    return 0 if overall_ok else 1
+    # The gate runs on planned content, before anything reaches disk: a text
+    # sync may rewrite what a subtitle says and drop a block, never retime one.
+    plan.failures.extend(check_writes(plan.writes))
+
+    if not plan.ok:
+        for failure in plan.failures:
+            _gha_error(failure)
+        print(f"{len(plan.failures)} target(s) failed — nothing written", file=sys.stderr)
+        return 1
+
+    written = apply_plan(plan)
+    print(f"Wrote {len(written)} file(s)", file=sys.stderr)
+    return 0
 
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Two-pass sync driver for sync-subtitles PRs")
-    p.add_argument("--base-sha", required=True, help="Base SHA of the PR to diff against")
+    p.add_argument(
+        "--baseline",
+        default=None,
+        help="Commit to diff against (default: last bot sync commit, else merge-base with origin/main)",
+    )
     args = p.parse_args()
-    sys.exit(run(args.base_sha))
+    sys.exit(run(args.baseline))
 
 
 if __name__ == "__main__":
