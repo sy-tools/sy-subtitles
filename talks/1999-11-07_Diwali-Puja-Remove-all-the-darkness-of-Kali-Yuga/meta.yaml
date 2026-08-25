@@ -7,6 +7,8 @@ videos:
 - slug: Diwali-Puja
   title: Diwali Puja
   video_ref: r1U1UWUBBSEBZJV0hXTxhXWVFaVEA
+  sync: primary
 - slug: Diwali-Puja-Talk-Remove-all-the-darkness-of-Kali-Yuga
   title: 'Diwali Puja Talk: Remove all the darkness of Kali Yuga'
   video_ref: r1VVVEWhFbQxBMVEhZTBxXWVFaVEA
+  sync: derived

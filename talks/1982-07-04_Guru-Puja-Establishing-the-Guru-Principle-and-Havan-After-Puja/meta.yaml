@@ -7,12 +7,16 @@ videos:
 - slug: Guru-Puja
   title: Guru Puja
   video_ref: r1AA5FW0QBTRBIUUhaQRxZW1hcVEE
+  sync: primary
 - slug: Guru-Puja-Part-2-and-Havan-London-NITL-RAW
   title: Guru Puja Part 2 and Havan London NITL-RAW
   video_ref: r1AQlAXURQQEMUUkhaTBVZWFVeUEo
+  sync: ignored
 - slug: Guru-Puja-Talk-Establishing-The-Guru-Principle
   title: 'Guru Puja Talk: Establishing The Guru Principle'
   video_ref: r1VQoVUEQDQUVPU0haThRWW1hcVEE
+  sync: derived
 - slug: Presents-After-Shri-Guru-Puja
   title: Presents After Shri Guru Puja
   video_ref: r1BAoWXkNXFBVOBUhbSR5TX1ZcUkE
+  sync: ignored

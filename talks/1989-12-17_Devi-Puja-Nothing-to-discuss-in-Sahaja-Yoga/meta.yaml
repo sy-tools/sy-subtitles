@@ -7,6 +7,8 @@ videos:
 - slug: Puja-Alibag
   title: Puja Alibag
   video_ref: r1UAhNXUUEEUEUBEhaSh5YWlRbUkA
+  sync: primary
 - slug: Puja-Talk
   title: Puja Talk
   video_ref: r1BloXUEBaEUMVB0hfQBxSWlRbUkA
+  sync: derived

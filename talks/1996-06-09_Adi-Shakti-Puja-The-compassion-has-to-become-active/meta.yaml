@@ -7,6 +7,8 @@ videos:
 - slug: Adi-Shakti-Puja-Cabella-Italy-DP-RAW
   title: Adi Shakti Puja Cabella Italy DP-RAW
   video_ref: r1XFVCCEUAEBJOVUhcQBxQXFNZU0s
+  sync: primary
 - slug: Adi-Shakti-Puja-Talk-Cabella-Italy-DP-RAW
   title: Adi Shakti Puja Talk Cabella Italy DP-RAW
   video_ref: r1BApCX0NRFhIfUUhYTRxQXFNZU0s
+  sync: derived

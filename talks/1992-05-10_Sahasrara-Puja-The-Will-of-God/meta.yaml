@@ -7,9 +7,12 @@ videos:
 - slug: Sahasrara-Puja-Cabella-NITL-RAW
   title: Sahasrara Puja Cabella NITL-RAW
   video_ref: r1U1lGW0NVQBIdBEhcQRlZUlldUUo
+  sync: derived
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
   video_ref: r1A1lCWRcBRkMeU0heTBRWWlRfUkA
+  sync: primary
 - slug: Sahasrara-Day-Talk-The-Will-of-God
   title: 'Sahasrara Day Talk: The Will of God'
   video_ref: r1VQhECEAEREVOVEheThhWWlRfUkA
+  sync: derived

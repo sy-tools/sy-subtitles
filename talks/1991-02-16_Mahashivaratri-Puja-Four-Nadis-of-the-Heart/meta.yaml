@@ -7,6 +7,8 @@ videos:
 - slug: Mahashivaratri-Puja
   title: Mahashivaratri Puja
   video_ref: r1XF0XXkBaQUFLUUheSBhXWVFeV0Q
+  sync: primary
 - slug: Mahashivaratri-Puja-CAM-2
   title: Mahashivaratri Puja CAM 2
   video_ref: r1BlpCWkIDFhAZVkhXQB9XWVFeV0Q
+  sync: derived

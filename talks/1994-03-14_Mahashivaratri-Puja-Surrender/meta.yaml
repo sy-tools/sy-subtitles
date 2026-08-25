@@ -7,6 +7,8 @@ videos:
 - slug: Sadashiva-Puja
   title: Sadashiva Puja
   video_ref: r1BA1DX0RRQUtPV0hZSxxZW1hcVEE
+  sync: primary
 - slug: Sadashiva-Puja-Talk
   title: Sadashiva Puja Talk
   video_ref: r1VA4QDxcEQkRJWEhXTR1ZW1hcVEE
+  sync: derived

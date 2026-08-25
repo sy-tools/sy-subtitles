@@ -7,9 +7,12 @@ videos:
 - slug: Guru-Puja-Talk-Creativity
   title: 'Guru Puja Talk: Creativity'
   video_ref: r1U1tHXEJWQhZIUEhWSB9SWVhcUUI
+  sync: derived
 - slug: Guru-Puja
   title: Guru Puja
   video_ref: r1BF8RUEJRFxBIB0hcTR1TW1RbUkA
+  sync: ignored
 - slug: Guru-Puja-2
   title: Guru Puja 2
   video_ref: r1XQ5FCkwDTRZPU0hWQBVYU1NQU0I
+  sync: primary

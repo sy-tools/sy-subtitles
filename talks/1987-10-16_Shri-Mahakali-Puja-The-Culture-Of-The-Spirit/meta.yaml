@@ -7,6 +7,8 @@ videos:
 - slug: Mahakali-Puja
   title: Mahakali Puja
   video_ref: r1XQpCWkAEEBEcUUhcSBlXWFhRWUI
+  sync: primary
 - slug: Mahakali-Puja-Talk-The-Culture-Of-The-Spirit
   title: 'Mahakali Puja Talk: The Culture Of The Spirit'
   video_ref: r1AVlAWRYAEBYbA0heTBlUWFhRWUI
+  sync: derived

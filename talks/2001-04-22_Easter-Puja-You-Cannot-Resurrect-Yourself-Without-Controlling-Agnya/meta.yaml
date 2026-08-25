@@ -7,6 +7,8 @@ videos:
 - slug: Easter-Puja-Istanbul-Turkey-DP-RAW
   title: Easter Puja Istanbul Turkey DP-RAW
   video_ref: r1EgRZTF9AUUJGHU5SWUsfVF9TUFFC
+  sync: primary
 - slug: Easter-Puja-Talk-Istanbul-Turkey-DP-RAW
   title: Easter Puja Talk Istanbul Turkey DP-RAW
   video_ref: r1RARVEF8QUUNBTE5QVk0fVF9TUFFC
+  sync: derived

@@ -11,7 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from tools.sync_pr import _classify, run
+from tools.sync_common import load_base_from_git
+from tools.sync_pr import BOT_AUTHOR, SYNC_TRAILER, _classify, _list_changed, resolve_baseline, run
 
 HEADER = "Мова промови: англійська | Транскрипт (українська)"
 
@@ -268,3 +269,200 @@ class TestSyncPrIntegration:
         # Untouched by sync — the SRT is already final.
         srt_after = (talk / "Video1" / "final" / "uk.srt").read_text(encoding="utf-8")
         assert srt_after == BASE_SRT
+
+    def test_a_failure_on_one_video_leaves_the_whole_talk_untouched(self, repo):
+        """Video2's SRT is mangled so its sync cannot succeed.
+
+        The transcript edit that Video1 would have produced must NOT land:
+        a red check and a partial push together are what put main into a
+        split state where a talk's subtitles and transcript disagree.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text("garbage that is not an SRT at all\n", encoding="utf-8")
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v1.write_text(
+            v1.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"),
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit Video1, break Video2")
+
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        before = transcript.read_text(encoding="utf-8")
+
+        exit_code = run()
+
+        assert exit_code == 1, "a broken video must fail the run"
+        assert transcript.read_text(encoding="utf-8") == before, "nothing may be written when any target fails"
+
+    def test_a_second_run_after_the_bot_commit_is_a_no_op(self, repo):
+        """The whole point of the redesign, end to end.
+
+        A PR gets one human edit, the bot syncs and commits. The next
+        event on that PR must find nothing left to do — diffing from the
+        PR base instead would re-apply the bot's own work against a
+        transcript that already contains it, which is why no run has ever
+        been green twice.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v1.write_text(
+            v1.read_text(encoding="utf-8").replace("Перше речення", "Змінене речення"),
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "human edits Video1")
+
+        assert run() == 0
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        assert "Змінене речення" in transcript.read_text(encoding="utf-8")
+        assert "Змінене речення" in v2.read_text(encoding="utf-8")
+
+        _git(repo_path, "add", "-A")
+        _commit(
+            repo_path,
+            f"Sync subtitles and transcript edits [skip ci]\n\n{SYNC_TRAILER}",
+            author=BOT_AUTHOR,
+        )
+        after_bot = {path: path.read_text(encoding="utf-8") for path in (transcript, v1, v2)}
+
+        assert run() == 0, "the follow-up run must not fail"
+        for path, content in after_bot.items():
+            assert path.read_text(encoding="utf-8") == content, (
+                f"{path.name} was rewritten by a run that had nothing to do"
+            )
+
+
+def _commit(repo_path: Path, message: str, *, author: str | None = None) -> str:
+    """Commit whatever is staged (allowing empty) and return the new SHA."""
+    env = ["-c", f"user.name={author}"] if author else []
+    _git(repo_path, *env, "commit", "-q", "--allow-empty", "-m", message)
+    return _git(repo_path, "rev-parse", "HEAD").strip()
+
+
+class TestBaselineResolution:
+    """What the sync diffs against.
+
+    Anchoring on the PR base replays every edit the bot already applied,
+    so no run can be green twice; anchoring on a non-ancestor tip reports
+    files that moved on main as reversed changes.
+    """
+
+    def test_a_git_failure_is_not_reported_as_no_changes(self, repo):
+        """A tool that cannot determine what changed must never claim nothing did.
+
+        Returning an empty list on a failed `git diff` makes the run exit 0
+        with a green check while every human edit in the PR goes unsynced.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        with pytest.raises(subprocess.CalledProcessError):
+            _list_changed("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
+
+    def test_an_unreadable_baseline_is_not_reported_as_a_new_file(self, repo, tmp_path):
+        """A baseline git cannot read must not read as "the file is new".
+
+        _plan_talk takes False from load_base_from_git to mean the transcript
+        was added in this PR and skips the talk. A baseline that does not
+        resolve then yields an empty plan, exit 0 and a green check with not
+        one edit synced — the same failure-looks-like-success shape as a
+        swallowed `git diff`. Only a path genuinely absent at a resolvable
+        commit may answer False.
+        """
+        _repo_path, base_sha = repo
+        dest = tmp_path / "out.txt"
+
+        with pytest.raises(RuntimeError):
+            load_base_from_git("deadbeefdeadbeefdeadbeefdeadbeefdeadbeef", "talks/test/transcript_uk.txt", dest)
+
+        assert load_base_from_git(base_sha, "talks/test/never-existed.txt", dest) is False
+        assert load_base_from_git(base_sha, "talks/test/transcript_uk.txt", dest) is True
+
+    def test_baseline_is_the_last_bot_sync_commit(self, repo):
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        human = _commit(repo_path, "human edit")
+        bot = _commit(
+            repo_path,
+            f"Sync subtitles and transcript edits [skip ci]\n\n{SYNC_TRAILER}",
+            author=BOT_AUTHOR,
+        )
+        _commit(repo_path, "another human edit")
+
+        assert resolve_baseline(remote_main="origin/main") == bot
+        assert resolve_baseline(remote_main="origin/main") != human
+
+    def test_baseline_falls_back_to_merge_base_not_branch_tip(self, repo):
+        """With no bot commit, the baseline is where the branch diverged.
+
+        Never the tip of main: main moves on independently, and a two-dot
+        diff against a non-ancestor reports everything that moved there as
+        a reversed change, which the sync would dutifully un-edit (R5).
+        """
+        repo_path, _base_sha = repo
+        fork_point = _git(repo_path, "rev-parse", "HEAD").strip()
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        _commit(repo_path, "work on the PR branch")
+
+        # main moves on independently of this branch.
+        _git(repo_path, "checkout", "-q", "origin/main")
+        _commit(repo_path, "unrelated change on main")
+        _git(repo_path, "checkout", "-q", "-")
+
+        assert resolve_baseline(remote_main="origin/main") == fork_point
+
+    def test_baseline_ignores_a_bot_commit_merged_in_from_main(self, repo):
+        """A merge drags in other PRs' bot commits.
+
+        They sit off this branch's first-parent spine and their trees
+        belong to another history, so diffing from one would replay every
+        edit this branch has already applied. Here `origin/main` is stale
+        at the fork point, which puts the foreign commit inside the
+        revision range — only the --first-parent walk keeps it out.
+        """
+        repo_path, _base_sha = repo
+        fork_point = _git(repo_path, "rev-parse", "HEAD").strip()
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        _git(repo_path, "checkout", "-q", "-b", "other-pr", fork_point)
+        foreign_bot = _commit(
+            repo_path,
+            f"Sync subtitles and transcript edits [skip ci]\n\n{SYNC_TRAILER}",
+            author=BOT_AUTHOR,
+        )
+        _git(repo_path, "checkout", "-q", "main")
+        _git(repo_path, "merge", "-q", "--no-ff", "-m", "Merge branch 'other-pr'", "other-pr")
+
+        resolved = resolve_baseline(remote_main="origin/main")
+        assert resolved != foreign_bot
+        assert resolved == fork_point
+
+    def test_baseline_ignores_a_trailer_from_a_human_author(self, repo):
+        """The trailer alone is text anyone can type; the author must match."""
+        repo_path, _base_sha = repo
+        fork_point = _git(repo_path, "rev-parse", "HEAD").strip()
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        _commit(repo_path, f"looks official\n\n{SYNC_TRAILER}", author="Some Human")
+
+        assert resolve_baseline(remote_main="origin/main") == fork_point
+
+    def test_list_changed_ignores_paths_outside_the_sync_scope(self, repo):
+        """Anything that is not a transcript or a final SRT is noise."""
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        (repo_path / "README.md").write_text("noise\n", encoding="utf-8")
+        srt = repo_path / "talks/test/Video1/final/uk.srt"
+        srt.write_text(srt.read_text(encoding="utf-8").replace("Перше", "Змінене"), encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit a subtitle and a readme")
+
+        changed = _list_changed(resolve_baseline(remote_main="origin/main"))
+        assert "talks/test/Video1/final/uk.srt" in changed
+        assert "README.md" not in changed

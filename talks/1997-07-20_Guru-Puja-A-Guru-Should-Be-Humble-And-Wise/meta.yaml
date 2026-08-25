@@ -7,6 +7,8 @@ videos:
 - slug: Guru-Puja
   title: Guru Puja
   video_ref: r1BAhHXBcGEEVMVkhaSx9VU1JeWUE
+  sync: primary
 - slug: Guru-Puja-Talk-A-Guru-Should-Be-Humble-And-Wise
   title: 'Guru Puja Talk: A Guru Should Be Humble And Wise'
   video_ref: r1AA4VWkYERUpJU0hWSxlVU1JeWUE
+  sync: derived

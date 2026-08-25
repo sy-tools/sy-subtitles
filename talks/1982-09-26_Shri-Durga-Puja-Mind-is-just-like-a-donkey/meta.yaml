@@ -7,9 +7,12 @@ videos:
 - slug: Durga-Puja-P1
   title: Durga Puja P1
   video_ref: r1AVhBC0UHFhVPVkheSh9RX1dQVEI
+  sync: primary
 - slug: Durga-Puja-P2
   title: Durga Puja P2
   video_ref: r1CRVZQFQQRRpQBUBOFFNcU11ZSw
+  sync: derived
 - slug: Durga-Puja-Talk-Mind-Is-Just-Like-A-Donkey
   title: 'Durga Puja Talk: Mind Is Just Like A Donkey'
   video_ref: r1XRdZTQBGQ0kAV0BOFFNZUF1ZSw
+  sync: derived

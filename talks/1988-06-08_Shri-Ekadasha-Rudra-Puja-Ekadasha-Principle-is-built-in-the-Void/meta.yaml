@@ -7,6 +7,8 @@ videos:
 - slug: Ekadasha-Rudra-Puja
   title: Ekadasha Rudra Puja
   video_ref: r1UFRMCkADEEtJA0heThhRWlZeWEI
+  sync: primary
 - slug: Ekadasha-Rudra-Puja-Talk
   title: Ekadasha Rudra Puja Talk
   video_ref: r1VFlCXUIHQURLVkhWTBVYU1deWEI
+  sync: derived

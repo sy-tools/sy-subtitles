@@ -7,11 +7,14 @@ videos:
 - slug: Adi-Shakti-Puja-Cam-2
   title: Adi Shakti Puja Cam 2
   video_ref: r1AF9BX0IAREAeV0hcTR1XWFdbWUc
+  sync: derived
 - slug: Adi-Shakti-Puja-Cam-1
   title: Adi Shakti Puja Cam 1
   video_ref: r1BFsXWhZbTBFOBEhcQB9VWFdbWUc
+  sync: primary
 - slug: Adi-Shakti-Puja-Talk-Detachment
   title: 'Adi Shakti Puja Talk: Detachment'
   video_ref: r1UlkWUBABQkMZVkhYTBxWW1dbWUc
+  sync: derived
 other_languages:
 - mr

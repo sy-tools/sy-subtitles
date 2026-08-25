@@ -7,6 +7,8 @@ videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
   video_ref: r1XA5HDUdXRUcYAkhZTB9QUlhfUEc
+  sync: primary
 - slug: Sahasrara-Puja-Talk-Consciousness-And-Evolution
   title: 'Sahasrara Puja Talk: Consciousness And Evolution'
   video_ref: r1U1VFWEQGQ0MdA0hfQBlYXVhfUEc
+  sync: derived

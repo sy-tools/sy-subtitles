@@ -201,6 +201,11 @@ python -m tools.validate_subtitles --srt PATH --transcript PATH \
   [--skip-text-check] [--skip-time-check] [--skip-cps-check] [--skip-duration-check] \
   [--compare-block-count]   # en-srt + --skip-text-check: guard UK block count vs EN
 
+# Resolve a talk's subtitle sync roles (the ONE interpreter of meta.yaml `sync:`)
+python -m tools.video_roles --talk-dir talks/{date}_{slug} [--role primary]
+#   sync: primary | derived | independent | ignored — see ARCHITECTURE.md
+#   "Video sync roles" and docs/subtitle-sync-redesign.md
+
 # Sync transcript edits into existing SRT (for PR workflow)
 python -m tools.sync_transcript_to_srt --talk-dir PATH --video-slug SLUG \
   --old-transcript OLD --new-transcript NEW
@@ -210,8 +215,11 @@ python -m tools.sync_srt_to_transcript --old-srt OLD --new-srt NEW \
   --transcript transcript_uk.txt
 
 # Two-pass sync driver for sync-subtitles PR workflow (used by Actions).
-# Discovers changed files itself via `git diff --name-only $BASE_SHA HEAD`.
-python -m tools.sync_pr --base-sha SHA
+# Resolves its own baseline: the last `github-actions[bot]` commit carrying the
+# `Sync-Bot: v1` trailer on this branch, else the merge-base with origin/main —
+# never the PR base, which replays edits the bot already applied. Discovers
+# changed files itself, scoped to transcript_uk.txt and final/uk.srt.
+python -m tools.sync_pr [--baseline SHA]
 
 # Resync UK SRT from primary video timeline onto secondary video timeline
 python -m tools.resync_srt --primary-uk PATH --primary-en PATH \

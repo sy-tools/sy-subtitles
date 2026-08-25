@@ -7,6 +7,8 @@ videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
   video_ref: r1VEYIQwMXSk8CAUBMFFRYVVxZSw
+  sync: primary
 - slug: Sahasrara-Puja-Talk-Continue-To-Live-A-Life-Of-Reality
   title: 'Sahasrara Puja Talk: Continue To Live A Life Of Reality'
   video_ref: r1WBZYFwNGRUxYUkBAG1FeUV1ZSw
+  sync: derived
