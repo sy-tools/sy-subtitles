@@ -11,12 +11,16 @@ videos:
 - slug: Guru-Puja
   title: Guru Puja
   video_ref: r1VV4SCEEDR0AZU0hdTx9VWVleUkA
+  sync: primary
 - slug: Guru-Puja-Talk-Shraddha
   title: 'Guru Puja Talk: Shraddha'
   video_ref: r1AV1GWhBQE0MaVEhWShxSWVleUkA
+  sync: derived
 - slug: Guru-Puja-1st-Talk-after-Puja
   title: Guru Puja 1st Talk after Puja
   video_ref: r1UA1AD00DQxIeU0hYTxRTWVleUkA
+  sync: independent
 - slug: Guru-Puja-2nd-Talk-after-Puja
   title: Guru Puja 2nd Talk after Puja
   video_ref: r1AVoXDUQDREAaUkheQBVTWVleUkA
+  sync: independent

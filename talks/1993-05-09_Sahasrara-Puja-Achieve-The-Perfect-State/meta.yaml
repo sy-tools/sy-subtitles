@@ -7,6 +7,8 @@ videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
   video_ref: r1V1hHXRAGEEtJWEhbSBVWWlRfUkA
+  sync: primary
 - slug: Sahasrara-Day-Puja-Talk-Achieve-The-Perfect-State
   title: 'Sahasrara Day Puja Talk: Achieve The Perfect State'
   video_ref: r1BAoQXUZXE0cVV0hdSRhWWlRfUkA
+  sync: derived

@@ -19,6 +19,17 @@ var _vimeoCodec =
       ? globalThis
       : this;
 
+// talk_slug provides slugify — the twin of tools/talk_slug.py and the single
+// source the preview already uses. Same resolution as _vimeoCodec above:
+// require()d in Node, a global set by <script src="js/talk_slug.js"> in the
+// browser, where it is loaded before this file.
+var _talkSlug =
+  typeof require !== 'undefined' && typeof module !== 'undefined'
+    ? require('./talk_slug')
+    : typeof globalThis !== 'undefined'
+      ? globalThis
+      : this;
+
 function parseAddTalkHash(hash) {
   var qm = hash.indexOf('?');
   if (qm === -1 || hash.indexOf('data=') === -1) {
@@ -56,6 +67,62 @@ function isAmrutaUrl(u) {
   }
 }
 
+// How each of a talk's videos takes part in subtitle sync. The Python twin is
+// tools/video_roles.py, the ONE interpreter of meta.yaml's `sync:` key.
+var SYNC_ROLES = ['primary', 'derived', 'independent', 'ignored'];
+
+// A slug that names a `Talk` cut of a puja — «Guru-Puja-Talk-Gravity» — as
+// opposed to one that merely contains the letters (« Talking-To-Yogis »).
+var TALK_CUT = /(^|[-_])talk([-_]|$)/i;
+
+// The form's starting point, from the video NAMES alone. At add-talk time the
+// talk has no subtitles and no en.srt to inspect — only what amruta listed,
+// where the full recording comes first and the Talk cut is a shortened version
+// of it. A multi-video talk that declares nothing cannot be synced or built at
+// all, so the form must offer something; the editor changes it when the
+// default is wrong (1998-05-10 is the one talk whose Talk cut is primary).
+//
+// A single video needs no declaration: tools/video_roles.py resolves it.
+function defaultSyncRoles(videos) {
+  var list = videos || [];
+  if (list.length < 2) return [];
+  var primary = list.findIndex(function (v) { return !TALK_CUT.test(String((v && v.slug) || '')); });
+  if (primary === -1) primary = 0;
+  return list.map(function (_v, i) { return i === primary ? 'primary' : 'derived'; });
+}
+
+// Roles for the form's video rows, aligned to the rows given.
+//
+// The form keeps blank rows around for the editor to type into, and only rows
+// carrying a title or a url reach meta.yaml. Seeding roles across every row
+// lets a blank one take the `primary` slot and then vanish, leaving a talk
+// with no primary at all — which tools/video_roles.py refuses, so the talk can
+// be neither synced nor built. Roles are therefore decided over exactly the
+// rows that will be emitted; a blank row gets null and declares nothing.
+function syncRolesForRows(rows) {
+  var list = rows || [];
+  var filled = [];
+  list.forEach(function (row, i) {
+    var title = String((row && row.title) || '').trim();
+    var url = String((row && row.url) || '').trim();
+    if (title || url) {
+      // The slug the preview really builds, from the one slugify there is.
+      // Replacing whitespace by hand instead leaves the punctuation in, and
+      // TALK_CUT then misses «Guru Puja Talk: Creativity» — the form of 23 of
+      // the 175 video titles in the corpus — so the Talk cut is not
+      // recognised as one and takes the primary role by default.
+      filled.push({
+        index: i,
+        slug: _talkSlug.slugify(title || 'Video-' + (filled.length + 1)),
+      });
+    }
+  });
+  var roles = defaultSyncRoles(filled);
+  var out = list.map(function () { return null; });
+  filled.forEach(function (row, k) { out[row.index] = roles[k] || null; });
+  return out;
+}
+
 // Render a scalar as a single-quoted YAML string, escaping embedded quotes by
 // doubling them (the YAML single-quote escape). Quoting makes the value safe
 // regardless of content — a colon, leading symbol, etc. can no longer be
@@ -90,6 +157,10 @@ function buildMetaYaml(fields) {
       // committed meta.yaml never carries a plaintext Vimeo URL. base64url is
       // YAML-safe, so it stays unquoted.
       if (v.url) yaml += "  video_ref: " + _vimeoCodec.encodeVideoRef(v.url) + "\n";
+      // How this video takes part in subtitle sync — read by
+      // tools/video_roles.py. Omitted for a single-video talk, which needs
+      // no declaration.
+      if (v.sync) yaml += "  sync: " + v.sync + "\n";
     });
   }
   if (f.transcriptBase64) {
@@ -104,5 +175,12 @@ function buildMetaYaml(fields) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { parseAddTalkHash: parseAddTalkHash, isAmrutaUrl: isAmrutaUrl, buildMetaYaml: buildMetaYaml };
+  module.exports = {
+    parseAddTalkHash: parseAddTalkHash,
+    isAmrutaUrl: isAmrutaUrl,
+    buildMetaYaml: buildMetaYaml,
+    defaultSyncRoles: defaultSyncRoles,
+    syncRolesForRows: syncRolesForRows,
+    SYNC_ROLES: SYNC_ROLES,
+  };
 }

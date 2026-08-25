@@ -7,6 +7,8 @@ videos:
 - slug: Bhavasagara-Puja-Brisbane-NITL-RAW
   title: Bhavasagara Puja Brisbane NITL-RAW
   video_ref: r1AwhHC0dUFEAaA0hcSRRXXFRQUUo
+  sync: primary
 - slug: Bhavasagara-Puja-Talk-Meditation-Will-Protect-You
   title: 'Bhavasagara Puja Talk: Meditation Will Protect You'
   video_ref: r1CExQFlUUQR4FAkBNHFJSUV1ZSw
+  sync: derived

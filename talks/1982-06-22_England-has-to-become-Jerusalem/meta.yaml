@@ -7,12 +7,16 @@ videos:
 - slug: England-has-to-become-Jerusalem-1
   title: England has to become Jerusalem 1
   video_ref: r1AA1ADUVVQRJOBUhaSB5ZW1VeUEo
+  sync: primary
 - slug: England-has-to-become-Jerusalem-2
   title: England has to become Jerusalem 2
   video_ref: r1WBJeRFdGS0hVUkBNGFNaU11ZSw
+  sync: derived
 - slug: England-has-to-become-Jerusalem-3
   title: England has to become Jerusalem 3
   video_ref: r1CUdeRFtMQBkCAkBIGVNaU11ZSw
+  sync: derived
 - slug: yogi-intro-Public-Program
   title: yogi intro Public Program
   video_ref: r1XkVaEARBQBxSBkBKHlheUV1ZSw
+  sync: ignored

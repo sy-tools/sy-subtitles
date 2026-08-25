@@ -102,7 +102,12 @@ var ELLIPSIS_SPACE_RE = /([\p{L}\p{N}_])[ \t]+\.\.\./gu;
 // alternate, and every odd space: the typing-time pass leaves whitespace
 // alone, so the character before a just-typed quote is often the NBSP
 // contenteditable injected for the space before it.
-var QUOTE_OPENS_AFTER = ' \t\n\r([{«–' + ODD_SPACES;
+// FIELD_BREAKS is spelled out here rather than left implicit: sanitizeFieldText
+// folds every one of them to a space, so a quote after one opens once the value
+// is stored. Missing U+2028 made the typing-time pass close it instead, and the
+// field then showed the opposite of what saving produced.
+var FIELD_BREAKS = '\t\n\r\u2028\u2029';
+var QUOTE_OPENS_AFTER = ' ([{«–' + FIELD_BREAKS + ODD_SPACES;
 
 // Read the left neighbour THROUGH these: a stray zero-width character (or a
 // leading BOM) must not decide the direction of a quote.

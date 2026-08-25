@@ -7,6 +7,8 @@ videos:
 - slug: Christmas-Puja
   title: Christmas Puja
   video_ref: r1AVQWWkYEREcZA0hXTB1YWFBZVEE
+  sync: primary
 - slug: Christmas-Puja-Talk
   title: Christmas Puja Talk
   video_ref: r1Ug8SXhVWTEpJUEhWSR1YWFBZVEE
+  sync: derived

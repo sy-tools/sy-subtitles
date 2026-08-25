@@ -7,6 +7,8 @@ videos:
 - slug: Easter-Puja
   title: Easter Puja
   video_ref: r1Bl0WWkABE0UYVUhXTBRSWVlbV0I
+  sync: primary
 - slug: Easter-Puja-Talk
   title: Easter Puja Talk
   video_ref: r1VQlMCxJXR0QUAkhbQR1SWVlbV0I
+  sync: derived

@@ -7,6 +7,8 @@ videos:
 - slug: Birthday-Puja
   title: Birthday Puja
   video_ref: r1VwkVWEFQRkBMBUhaSB9XWlNdWUE
+  sync: primary
 - slug: Birthday-Puja-Talk
   title: Birthday Puja Talk
   video_ref: r1XVoQCxUBQEFMUkhfQB1YWlNdWUE
+  sync: derived

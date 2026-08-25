@@ -14,6 +14,13 @@ on:
 permissions:
   contents: write
 
+# Overlapping runs race on the final push: the loser's push is rejected
+# non-fast-forward, which would surface as a spurious red on a PR whose
+# sync actually succeeded. One run per PR, newest wins.
+concurrency:
+  group: sync-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   sync:
     # Draft PRs are the SPA edit auto-sync's live workspace: it commits the
@@ -33,24 +40,18 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
 
-      # tools.sync_pr walks `git diff --name-only $BASE HEAD`, runs the
+      # tools.sync_pr resolves its own baseline — the last bot sync commit
+      # on this branch, else the merge-base with main — then runs the
       # two-pass SRT↔transcript sync (with per-video effective-old
-      # baselines for mixed PRs), optimizes, validates, and writes
-      # everything back into the working tree. Exits non-zero on any
-      # sync/optimize/validate failure, emitting ::error:: annotations.
-      # We capture the exit code so that partial progress still gets
-      # committed before we fail the job.
+      # baselines for mixed PRs) against a shadow copy of each talk. It
+      # writes nothing unless every target of every talk succeeded, so a
+      # non-zero exit means the working tree is untouched and there is no
+      # partial result to preserve. Failures come out as ::error:: lines.
       - name: Sync, optimize, validate
-        id: sync
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          set +e
-          python -m tools.sync_pr --base-sha "$BASE_SHA"
-          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        run: python -m tools.sync_pr
 
       - name: Commit and push
-        if: always()
+        if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -62,13 +63,9 @@ jobs:
           # changed vs the PR base and runs the reverse SRT->transcript pass,
           # which conflicts with the just-applied edit and fails red. The
           # skip-ci token stops the bot commit from recursively triggering us.
-          git commit -m "Sync subtitles and transcript edits [skip ci]"
+          # The Sync-Bot trailer is how the next run recognises this commit
+          # as its own and anchors its diff here instead of on the PR base
+          # (tools.sync_pr.resolve_baseline). Author + trailer must both
+          # match, so the user.name above is load-bearing too.
+          git commit -m "Sync subtitles and transcript edits [skip ci]" -m "Sync-Bot: v1"
           git push
-
-      - name: Fail if sync had errors
-        if: always()
-        run: |
-          if [ "${{ steps.sync.outputs.exit_code }}" != "0" ]; then
-            echo "::error::Some subtitles could not be synced automatically. See earlier log lines."
-            exit 1
-          fi

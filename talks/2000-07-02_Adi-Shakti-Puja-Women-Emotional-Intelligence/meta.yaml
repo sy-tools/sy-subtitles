@@ -7,6 +7,8 @@ videos:
 - slug: Adi-Shakti-Puja
   title: Adi Shakti Puja
   video_ref: r1Ck1fQVNNQ0sAAkBAHVVaVVxZSw
+  sync: primary
 - slug: Adi-Shakti-Puja-Talk-Emotional-Intelligence
   title: 'Adi Shakti Puja Talk: Emotional Intelligence'
   video_ref: r1XUFREVFGRxhZA0BLGFJSUV1ZSw
+  sync: derived

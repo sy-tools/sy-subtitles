@@ -400,6 +400,25 @@ class TestCheckAndFix:
         assert fix_text('\ufeff"Привіт", – сказав\n', uk=True) == "\ufeff«Привіт», – сказав\n"
 
 
+class TestQuoteAfterALineSeparator:
+    """U+2028 and U+2029 are line breaks the field sanitizer folds to a space,
+    so a quote right after one OPENS. The typing-time pass leaves whitespace
+    alone and saw them as ordinary characters, so it closed the quote instead —
+    typing produced «...» and saving produced the opposite.
+    """
+
+    def test_a_quote_after_a_line_separator_opens(self):
+        assert sanitize_live_text('\u2028"Привіт', "uk") == "\u2028«Привіт"
+
+    def test_a_quote_after_a_paragraph_separator_opens(self):
+        assert sanitize_live_text('\u2029"Привіт', "uk") == "\u2029«Привіт"
+
+    def test_live_and_stored_agree_on_it(self):
+        for sep in ("\u2028", "\u2029"):
+            text = sep + '"'
+            assert sanitize_edited_text(sanitize_live_text(text, "uk"), "uk") == sanitize_edited_text(text, "uk")
+
+
 class TestLiveMatchesStored:
     """Live normalization must be invisible to the store: whatever the field
     shows after a keystroke, blurring it must produce the same bytes as if no
