@@ -208,6 +208,7 @@ def _plan_talk(
             old_srt=str(base_srt),
             new_srt=str(shadow_srt),
             transcript=str(transcript_path),
+            talk_dir=str(shadow),
         )
         if "error" in result:
             plan.failures.append(f"{srt}: {result['error']}")
@@ -224,6 +225,7 @@ def _plan_talk(
             old_srt=str(base_srt),
             new_srt=str(shadow_srt),
             transcript=str(effective),
+            talk_dir=str(shadow),
         )
         if "error" in baseline_result:
             # Shouldn't normally differ from the accumulate run, but bail

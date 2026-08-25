@@ -212,7 +212,9 @@ python -m tools.sync_transcript_to_srt --talk-dir PATH --video-slug SLUG \
 
 # Sync SRT text edits back into transcript_uk.txt (reverse direction, for PR workflow)
 python -m tools.sync_srt_to_transcript --old-srt OLD --new-srt NEW \
-  --transcript transcript_uk.txt
+  --transcript transcript_uk.txt [--talk-dir PATH]
+#   --talk-dir names the talk whose declared remarks apply; pass it whenever
+#   --transcript is a copy staged away from meta.yaml (as sync_pr stages it).
 
 # Two-pass sync driver for sync-subtitles PR workflow (used by Actions).
 # Resolves its own baseline: the last `github-actions[bot]` commit carrying the
