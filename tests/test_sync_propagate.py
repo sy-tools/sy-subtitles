@@ -273,3 +273,32 @@ class TestADeletionIsAnEditToo:
         assert result == {"changed": 0, "removed": 0, "skipped": 1}, (
             "a deletion that did not travel must read as skipped work, not as nothing to do"
         )
+
+
+class TestTheRefusalSaysWhatHappened:
+    """A block structure the propagation cannot follow stops the run.
+
+    The message reported the arithmetic difference between the two block
+    counts, which reads as «the primary gained -1 block(s)» whenever difflib
+    bundles an edit and a deletion into one group — a shape a reviewer meets
+    on a perfectly ordinary PR. It is the only thing they are given to act on.
+    """
+
+    def test_an_edit_bundled_with_a_deletion_is_described_plainly(self):
+        blocks = _blocks("Один.", "Два.", "Три.")
+
+        result = propagate_primary_to_derived(
+            ["Один.", "Два.", "Три."], ["Одне.", "Три."], ["Один.", "Два.", "Три."], blocks
+        )
+
+        assert "error" in result
+        assert "-1" not in result["error"], result["error"]
+        assert "2 block(s) became 1" in result["error"], result["error"]
+
+    def test_an_insertion_is_described_the_same_way(self):
+        blocks = _blocks("Один.", "Три.")
+
+        result = propagate_primary_to_derived(["Один.", "Три."], ["Один.", "Два.", "Три."], ["Один.", "Три."], blocks)
+
+        assert "error" in result
+        assert "0 block(s) became 1" in result["error"], result["error"]

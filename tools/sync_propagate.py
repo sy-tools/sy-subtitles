@@ -62,8 +62,9 @@ def _primary_edits(primary_old: list[str], primary_new: list[str]) -> tuple[dict
                 [],
                 {
                     "error": (
-                        f"the primary gained {j2 - j1 - (i2 - i1)} block(s) — a derived video has no "
-                        f"timecode for text that was never on it. Run the full pipeline."
+                        f"the primary's block structure changed ({i2 - i1} block(s) became {j2 - j1}) — "
+                        f"a derived video has no timecode for text that was never on it. "
+                        f"Run the full pipeline."
                     )
                 },
             )
