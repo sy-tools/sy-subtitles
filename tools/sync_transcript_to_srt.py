@@ -460,6 +460,19 @@ def sync_transcript(talk_dir: str, video_slug: str, old_transcript: str, new_tra
         return {"error": f"No SRT: {srt_path}"}
 
     if len(old_paras) != len(new_paras):
+        # Pure re-paragraphing: the same words re-cut into a different number
+        # of paragraphs. Nothing was edited, so nothing needs syncing — the
+        # subtitles already say exactly this. Two corpus transcripts arrived
+        # as one crushed paragraph from an extractor that dropped the source's
+        # line breaks, and without this the repair could not be committed at
+        # all. Its twin in sync_srt_to_transcript reads a re-blocked SRT the
+        # same way.
+        if " ".join(" ".join(old_paras).split()) == " ".join(" ".join(new_paras).split()):
+            print(
+                f"Paragraphs re-cut {len(old_paras)} → {len(new_paras)}, text unchanged — nothing to sync",
+                file=sys.stderr,
+            )
+            return {"changed": 0}
         return {"error": f"Paragraph count changed: {len(old_paras)} → {len(new_paras)} (need full rebuild)"}
 
     srt_blocks = parse_srt(str(srt_path))
