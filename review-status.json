@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-08-25T07:27:12.474422+00:00",
+  "updated_at": "2026-08-28T21:39:26.119370+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -589,6 +589,12 @@
       "reviewer": null,
       "issue_number": 979,
       "updated_at": "2026-08-18T04:27:15Z"
+    },
+    "1993-10-10_Shri-Virata-and-Viratangana-Puja-I-have-to-have-16000-children": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1008,
+      "updated_at": "2026-08-28T21:39:14Z"
     }
   }
 }
