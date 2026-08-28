@@ -156,9 +156,11 @@ Triggered manually via `workflow_dispatch`. Full pipeline:
 
 ### sync-subtitles.yml
 Triggered on PRs that modify `transcript_uk.txt` **or** `*/final/uk.srt`.
-Runs the two-pass driver (`tools/sync_pr.py`): SRT edits are first synced
-back into the transcript (reverse), then the transcript is synced out to
-every video's SRT (forward) — text-only swaps, no re-timing — and validates.
+Runs the sync driver (`tools/sync_pr.py`): SRT edits are first synced
+back into the transcript (reverse), a block boundary moved on a derived
+video is carried straight to the primary (re-cuts cannot travel through a
+transcript), then the transcript is synced out to every video's SRT
+(forward) — text-only swaps, no re-timing — and validates.
 
 ### sync-review-status.yml
 Triggered on Issue label/assign changes. Syncs GitHub Issues → `review-status.json`.

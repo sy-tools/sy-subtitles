@@ -6,7 +6,13 @@ never the same — is why derived videos went unsynced. The primary is right
 there; the only question is which block matches which.
 """
 
-from tools.sync_propagate import align_blocks, propagate_primary_to_derived
+from tools.sync_propagate import (
+    Recut,
+    align_blocks,
+    extract_recuts,
+    propagate_primary_to_derived,
+    propagate_recuts_to_target,
+)
 
 
 def _blocks(*texts):
@@ -302,3 +308,194 @@ class TestTheRefusalSaysWhatHappened:
 
         assert "error" in result
         assert "0 block(s) became 1" in result["error"], result["error"]
+
+
+class TestARecutTravelsAsOneUnit:
+    """Moving a word across a block boundary is one indivisible change.
+
+    A reviewer nudging «в» from the end of one subtitle to the start of the
+    next (PR #1001, talks/1992-07-19_Guru-Puja blocks 178/179) edits two
+    blocks that only make sense together. Propagated per-block, the half that
+    lands without its partner either duplicates the word or — when the other
+    half falls outside an excerpt cut — takes it off the screen entirely,
+    while the run stays green.
+    """
+
+    def test_a_recut_whose_other_half_is_off_the_excerpt_keeps_the_word_on_screen(self):
+        """The excerpt ends between the two blocks, so the block that would
+        have received «в» is not on this video at all. Applying only the
+        giving half deletes an audible word from the subtitles for good."""
+        primary_old = ["Вступ.", "живиться, оберігається, контролюється абсолютно; в", "правильний час,"]
+        primary_new = ["Вступ.", "живиться, оберігається, контролюється абсолютно;", "в правильний час,"]
+        derived_old = ["Вступ.", "живиться, оберігається, контролюється абсолютно; в"]
+        blocks = _blocks(*derived_old)
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+
+        assert "error" in result, "half a re-cut cannot be applied without losing the moved word"
+        assert [b["text"] for b in blocks] == derived_old, "nothing may be written when a re-cut cannot be placed whole"
+
+
+class TestExtractRecuts:
+    """Telling a re-cut apart from an edit, before either travels anywhere.
+
+    The predicate is the one `sync_srt_to_transcript` already uses to keep a
+    re-cut out of the transcript (tools/sync_srt_to_transcript.py:226): the two
+    sides join to the same words. Here it decides the opposite question — the
+    transcript does not want this change, so which channel does?
+    """
+
+    def test_a_word_moved_across_a_boundary_is_one_unit(self):
+        old = ["Вступ.", "контролюється абсолютно; в", "правильний час,", "Кінець."]
+        new = ["Вступ.", "контролюється абсолютно;", "в правильний час,", "Кінець."]
+
+        recuts, err = extract_recuts(old, new)
+
+        assert err is None
+        assert recuts == [
+            Recut(
+                start=1,
+                old_texts=("контролюється абсолютно; в", "правильний час,"),
+                new_texts=("контролюється абсолютно;", "в правильний час,"),
+            )
+        ]
+
+    def test_an_ordinary_text_edit_is_not_a_recut(self):
+        recuts, err = extract_recuts(["Один.", "Два."], ["Один.", "ДВА."])
+        assert err is None
+        assert recuts == []
+
+    def test_a_whitespace_only_change_to_one_block_is_an_edit_not_a_recut(self):
+        """A re-cut redistributes words BETWEEN blocks; a single block whose
+        spacing changed has no boundary to move."""
+        recuts, err = extract_recuts(["Один    два."], ["Один два."])
+        assert err is None
+        assert recuts == []
+
+    def test_a_merge_is_refused_by_name(self):
+        """Two blocks joined into one need a cue `(start1, end2)` that never
+        existed — `check_writes` forbids inventing it, rightly."""
+        recuts, err = extract_recuts(["Перше речення.", "Друге речення."], ["Перше речення. Друге речення."])
+
+        assert recuts == []
+        assert err is not None
+        assert "merge" in err["error"].lower(), err["error"]
+
+    def test_a_split_is_refused_by_name(self):
+        """The new boundary's timecode exists in no data source
+        (feedback_no_proportional)."""
+        recuts, err = extract_recuts(["Перше речення. Друге речення."], ["Перше речення.", "Друге речення."])
+
+        assert recuts == []
+        assert err is not None
+        assert "split" in err["error"].lower(), err["error"]
+
+
+class TestARecutReachesTheOtherVideo:
+    def test_a_recut_lands_whole_on_a_video_that_mirrors_the_old_cut(self):
+        source_old = ["Вступ.", "контролюється абсолютно; в", "правильний час,", "Кінець."]
+        source_new = ["Вступ.", "контролюється абсолютно;", "в правильний час,", "Кінець."]
+        blocks = _blocks(*source_old)
+        cues_before = [(b["start_ms"], b["end_ms"]) for b in blocks]
+
+        result = propagate_primary_to_derived(source_old, source_new, list(source_old), blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == source_new
+        assert [(b["start_ms"], b["end_ms"]) for b in blocks] == cues_before, "a re-cut moves words, never a cue"
+
+    def test_a_recut_the_other_video_already_carries_is_a_noop(self):
+        """PR #1001's shape: the human re-cut the derived video, so by the time
+        the change reaches it from the primary it is already there."""
+        source_old = ["Вступ.", "контролюється абсолютно; в", "правильний час,"]
+        source_new = ["Вступ.", "контролюється абсолютно;", "в правильний час,"]
+        target_old = list(source_new)
+        blocks = _blocks(*target_old)
+
+        result = propagate_primary_to_derived(source_old, source_new, target_old, blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == target_old, "agreement is not a conflict"
+
+    def test_a_recut_region_the_excerpt_lacks_entirely_is_skipped(self):
+        source_old = ["Лише у повному записі; в", "повному записі далі,", "Спільне."]
+        source_new = ["Лише у повному записі;", "в повному записі далі,", "Спільне."]
+        target_old = ["Спільне."]
+        blocks = _blocks(*target_old)
+
+        result = propagate_primary_to_derived(source_old, source_new, target_old, blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == target_old
+        assert result["skipped"] == 1, "a re-cut that did not travel must read as skipped work"
+
+    def test_a_recut_the_other_video_cut_differently_fails(self):
+        """Both videos hold the words, split at different places. Placing the
+        boundary would be a guess; skipping would lose the reviewer's work."""
+        source_old = ["Вступ.", "контролюється абсолютно; в", "правильний час,"]
+        source_new = ["Вступ.", "контролюється абсолютно;", "в правильний час,"]
+        target_old = ["Вступ.", "контролюється", "абсолютно; в правильний час,"]
+        blocks = _blocks(*target_old)
+
+        result = propagate_primary_to_derived(source_old, source_new, target_old, blocks)
+
+        assert "error" in result
+        assert [b["text"] for b in blocks] == target_old, "nothing may be written when a re-cut cannot be placed"
+
+    def test_duplicate_block_texts_do_not_mislead_placement(self):
+        """51 of the corpus's 165 SRTs repeat a block text verbatim. Placement
+        is positional; a matching phrase elsewhere must not attract the edit."""
+        source_old = ["Гаразд.", "Інше.", "Гаразд.", "речення; в", "другій частині,"]
+        source_new = ["Гаразд.", "Інше.", "Гаразд.", "речення;", "в другій частині,"]
+        blocks = _blocks(*source_old)
+
+        result = propagate_primary_to_derived(source_old, source_new, list(source_old), blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == source_new
+
+
+class TestARecutTravelsFromADerivedVideoToThePrimary:
+    """The missing leg. `docs/subtitle-sync-redesign.md` §6 Step A calls for an
+    edited derived SRT to be normalised onto the primary positionally; only
+    the text half of it was ever built, so a boundary fix made on a derived
+    video stranded there (PR #1001).
+    """
+
+    def test_a_boundary_fix_made_on_the_derived_video_reaches_the_primary(self):
+        derived_old = ["Вступ.", "контролюється абсолютно; в", "правильний час,"]
+        derived_new = ["Вступ.", "контролюється абсолютно;", "в правильний час,"]
+        primary_blocks = _blocks(*derived_old)
+        cues_before = [(b["start_ms"], b["end_ms"]) for b in primary_blocks]
+
+        result = propagate_recuts_to_target(derived_old, derived_new, list(derived_old), primary_blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in primary_blocks] == derived_new
+        assert result["recut"] == 1
+        assert [(b["start_ms"], b["end_ms"]) for b in primary_blocks] == cues_before
+
+    def test_a_plain_text_edit_is_left_for_the_transcript_path(self):
+        """Text edits reach the primary through the transcript (Steps A and B).
+        Carrying them here too would apply them twice — and Step B would then
+        fail to find the old wording it is looking for."""
+        derived_old = ["Вступ.", "Друге."]
+        derived_new = ["Вступ.", "ДРУГЕ."]
+        primary_blocks = _blocks(*derived_old)
+
+        result = propagate_recuts_to_target(derived_old, derived_new, list(derived_old), primary_blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in primary_blocks] == derived_old, "only re-cuts travel on this leg"
+        assert result["recut"] == 0
+
+    def test_the_primary_is_never_clobbered_when_it_says_something_else(self):
+        derived_old = ["Вступ.", "контролюється абсолютно; в", "правильний час,"]
+        derived_new = ["Вступ.", "контролюється абсолютно;", "в правильний час,"]
+        primary_old = ["Вступ.", "праймері каже щось інше; в", "правильний час,"]
+        blocks = _blocks(*primary_old)
+
+        result = propagate_recuts_to_target(derived_old, derived_new, primary_old, blocks)
+
+        assert "error" in result
+        assert [b["text"] for b in blocks] == primary_old
