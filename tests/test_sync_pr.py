@@ -783,3 +783,101 @@ class TestARecutMadeOnADerivedVideoReachesThePrimary:
         err = capsys.readouterr().err
         assert "::warning::" in err, "a re-cut that could not travel must be annotated, not just logged"
         assert "Video2" in err
+
+
+# The entangled shape: the reviewer fixed the WORDING and the BOUNDARY in the
+# same two blocks (PR #1001, blocks 351/352). The two sides no longer join to
+# the same words, so the source's own baseline diff cannot prove a re-cut.
+ENTANGLED_SRT = """1
+00:00:01,000 --> 00:00:03,000
+Перше речення першого абзацу. Друге
+
+2
+00:00:03,100 --> 00:00:05,000
+гарне речення першого абзацу.
+
+3
+00:00:05,100 --> 00:00:07,000
+Єдине речення другого абзацу.
+"""
+
+# Long cues so only CPL can fail. The entangled edit below rewords the second
+# sentence to exactly 84 characters — Step B's own CPL guard lets that through —
+# and moves the boundary so the derived video's first block reaches 98.
+LONG_CUE_SRT = """1
+00:00:01,000 --> 00:00:07,000
+Перше речення першого абзацу.
+
+2
+00:00:07,100 --> 00:00:13,000
+Друге речення першого абзацу.
+
+3
+00:00:13,100 --> 00:00:19,000
+Єдине речення другого абзацу.
+"""
+
+LONG_CUE_ENTANGLED_SRT = """1
+00:00:01,000 --> 00:00:07,000
+Перше речення першого абзацу. Друге значно і суттєво розширене та доповнене новими словами речення
+
+2
+00:00:07,100 --> 00:00:13,000
+першого абзацу.
+
+3
+00:00:13,100 --> 00:00:19,000
+Єдине речення другого абзацу.
+"""
+
+
+class TestAnEntangledRecutReachesThePrimary:
+    """The wording and the boundary fixed in one pass still both travel.
+
+    The re-cut leg runs AFTER Step B and compares against the primary's
+    CURRENT state: by then the primary holds the new words in the old cut,
+    the derived video holds the same words in the new cut, and what remains
+    between the two windows is a pure boundary move. Comparing the edited
+    video against its own baseline instead — what the leg used to do — sees
+    no re-cut at all, and the two videos silently stay cut differently.
+    """
+
+    def test_a_boundary_fix_entangled_with_a_word_edit_reaches_the_primary(self, repo):
+        repo_path, base_sha = repo
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(ENTANGLED_SRT, encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "fix the wording and the boundary in the same two blocks")
+
+        assert run(base_sha) == 0
+
+        v1_blocks = parse_srt(str(repo_path / "talks/test/Video1/final/uk.srt"))
+        assert [b["text"] for b in v1_blocks] == [
+            "Перше речення першого абзацу. Друге",
+            "гарне речення першого абзацу.",
+            "Єдине речення другого абзацу.",
+        ], "the primary must receive the new cut, not just the new wording"
+        assert [(b["start_ms"], b["end_ms"]) for b in v1_blocks] == [
+            (b["start_ms"], b["end_ms"]) for b in parse_srt(str(v2))
+        ], "a re-cut moves words, never a cue"
+
+    def test_a_recut_that_breaks_the_line_limit_is_caught_by_deferred_validation(self, repo):
+        """The re-cut leg changes block lengths AFTER Step B, so validation
+        has to run after the leg or an over-CPL block it produces is never
+        judged at all. Here the boundary move leaves a 98-character block:
+        the run must red with nothing written, not go green around the gate."""
+        repo_path, _base_sha = repo
+        for slug in ("Video1", "Video2"):
+            (repo_path / f"talks/test/{slug}/final/uk.srt").write_text(LONG_CUE_SRT, encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "re-time both videos onto long cues")
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        (repo_path / "talks/test/Video2/final/uk.srt").write_text(LONG_CUE_ENTANGLED_SRT, encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "expand the wording and move the boundary in one commit")
+
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        before = v1.read_text(encoding="utf-8")
+        assert run() == 1, "an over-CPL block produced by the re-cut leg must red the run"
+        assert v1.read_text(encoding="utf-8") == before, "nothing may be written when validation fails"

@@ -21,6 +21,17 @@ without this channel a boundary fix strands on whichever video the reviewer
 happened to be looking at, and the divergence then fails every later edit
 that touches those blocks. A re-cut is placed as ONE unit or not at all:
 half of it applied is a word moved off the screen with nothing to catch it.
+
+The derived -> primary leg (`propagate_recuts_to_target`) runs AFTER the
+text edits have reached the primary through the transcript, and compares
+each candidate span against the primary's CURRENT text rather than the
+source's baseline. A reviewer usually fixes the wording and the boundary in
+the same blocks; such a span's own two sides do not join equal, but once
+Step B has delivered the words, the primary holds them in the old cut and
+what remains between the two windows IS a pure boundary move. A window that
+does not hold the same words is an error, never a silent skip: the sync only
+carries changes made on top of a derived video that was in sync with the
+primary, and anything else needs the full pipeline.
 """
 
 import difflib
@@ -59,8 +70,11 @@ class Recut:
     """One boundary move: the same words, re-split across the same N blocks.
 
     `start` indexes the first block in the SOURCE video's old cut. The two
-    tuples are the same length (N >= 2) and join to the same string — that
-    equality is what makes this a re-cut rather than an edit.
+    tuples are the same length (N >= 2). For a unit `extract_recuts` proves,
+    they join to the same string — that equality is what makes it a re-cut
+    rather than an edit. For a CANDIDATE unit (`_candidate_units`) they need
+    not: the reviewer may have fixed the wording in the same blocks, and the
+    re-cut equality is then established against the target's current text.
     """
 
     start: int
@@ -103,6 +117,17 @@ def _recuts_in_run(old_run: list[str], new_run: list[str], offset: int) -> list[
     return recuts
 
 
+def _uneven_replace_error(i1: int, i2: int, new_count: int) -> dict:
+    """The merge/split refusal: joined-equal sides with different block counts."""
+    shape = "merge" if (i2 - i1) > new_count else "split"
+    return {
+        "error": (
+            f"blocks {i1 + 1}–{i2} are a {shape} ({i2 - i1} block(s) became {new_count}), not a re-cut — "
+            f"the resulting subtitle needs a timecode that no video measured. Run the full pipeline."
+        )
+    }
+
+
 def extract_recuts(old_texts: list[str], new_texts: list[str]) -> tuple[list[Recut], dict | None]:
     """The re-cuts in a diff, or why one of them cannot travel.
 
@@ -124,13 +149,7 @@ def extract_recuts(old_texts: list[str], new_texts: list[str]) -> tuple[list[Rec
             recuts.extend(_recuts_in_run(old_slice, new_slice, i1))
             continue
         if joined_text(old_slice) == joined_text(new_slice):
-            shape = "merge" if (i2 - i1) > (j2 - j1) else "split"
-            return [], {
-                "error": (
-                    f"blocks {i1 + 1}–{i2} are a {shape} ({i2 - i1} block(s) became {j2 - j1}), not a re-cut — "
-                    f"the resulting subtitle needs a timecode that no video measured. Run the full pipeline."
-                )
-            }
+            return [], _uneven_replace_error(i1, i2, j2 - j1)
         # An uneven run that is not joined-equal is a structural change the
         # text path reports on; _primary_edits raises it with its own message.
     return recuts, None
@@ -237,35 +256,58 @@ def _place_recuts(
 
     Returns (placements, skipped, claimed target indices, error). A placement
     is (target index of the unit's first block, the unit).
+
+    The anchor window is scanned position by position, never judged
+    wholesale: a divergent block sitting next to the unit is unmapped, so the
+    window grows past the unit (1988-05-08_Sahasrara-Puja diverges in 123 of
+    382 blocks), and the widened window would otherwise red a PR whose
+    re-cut never touched the divergent block.
     """
     placements: list[tuple[int, Recut]] = []
     claimed: set[int] = set()
     absent: list[Recut] = []
 
+    def refuse(recut: Recut, window: list[str]) -> tuple[list, int, set, dict]:
+        return (
+            [],
+            0,
+            set(),
+            {
+                "error": (
+                    f"a re-cut of {len(recut.old_texts)} block(s) cannot be placed: this video reads "
+                    f"«{joined_text(window)[:60]}» where the change expects "
+                    f"«{joined_text(recut.old_texts)[:60]}». Placing the boundary would be a guess, and "
+                    f"applying part of it would move a word off the screen. Run the full pipeline."
+                )
+            },
+        )
+
     for recut in recuts:
+        n = len(recut.new_texts)
         lo, hi = _target_window(recut, mapping, len(current))
-        window = current[lo:hi]
-        if window == list(recut.new_texts):
-            claimed.update(range(lo, hi))  # already re-cut: agreement, not conflict
-        elif window == list(recut.old_texts):
-            placements.append((lo, recut))
-            claimed.update(range(lo, hi))
-        elif lo >= hi:
+        wanted = joined_text(recut.new_texts)  # == joined(old_texts): these units are proven re-cuts
+        offsets = [j for j in range(lo, hi - n + 1) if joined_text(current[j : j + n]) == wanted]
+        exact_new = [j for j in offsets if current[j : j + n] == list(recut.new_texts)]
+        if not offsets:
+            if any(i in mapping for i in range(recut.start, recut.start + n)):
+                # Part of the unit is on this video (an excerpt often ends
+                # mid-unit) but the whole unit does not fit — applying the
+                # part alone would take the moved word off the screen.
+                return refuse(recut, current[lo:hi])
             absent.append(recut)
+            continue
+        if len(offsets) > 1 and exact_new != offsets:
+            return refuse(recut, current[lo:hi])
+        j = offsets[0]
+        if j in exact_new:
+            claimed.update(range(j, j + n))  # already re-cut: agreement, not conflict
+        elif current[j : j + n] == list(recut.old_texts):
+            placements.append((j, recut))
+            claimed.update(range(j, j + n))
         else:
-            return (
-                [],
-                0,
-                set(),
-                {
-                    "error": (
-                        f"a re-cut of {len(recut.old_texts)} block(s) cannot be placed: this video reads "
-                        f"«{joined_text(window)[:60]}» where the change expects "
-                        f"«{joined_text(recut.old_texts)[:60]}». Placing the boundary would be a guess, and "
-                        f"applying part of it would move a word off the screen. Run the full pipeline."
-                    )
-                },
-            )
+            # The same words under a THIRD cut: neither the old boundary nor
+            # the new one. Following it would be a guess.
+            return refuse(recut, current[j : j + n])
 
     # An absent unit is only safe to skip when the video genuinely lacks those
     # words — an excerpt cut is often a strict subset. If the words ARE on it,
@@ -300,35 +342,136 @@ def _apply_recuts(placements: list[tuple[int, Recut]], blocks: list[dict]) -> in
     return changed
 
 
+def _candidate_units(source_old: list[str], source_new: list[str]) -> tuple[list[Recut], dict | None]:
+    """Every span that COULD carry a boundary move: equal-count changed runs.
+
+    Unlike `extract_recuts`, joined-equality of the source's own two sides is
+    not required — a reviewer who fixed the wording and the boundary in the
+    same blocks produced a span whose sides do not join equal, yet whose
+    boundary move still has to travel. Whether a unit really is a re-cut is
+    decided against the TARGET's current text, in `_match_candidates`. A
+    single changed block is never a candidate: one block has no boundary to
+    move, and its text travels through the transcript.
+    """
+    units: list[Recut] = []
+    matcher = difflib.SequenceMatcher(None, source_old, source_new, autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag != "replace":
+            continue
+        if (i2 - i1) != (j2 - j1):
+            if joined_text(source_old[i1:i2]) == joined_text(source_new[j1:j2]):
+                return [], _uneven_replace_error(i1, i2, j2 - j1)
+            continue  # a structural change; the text path reports it
+        old_run, new_run = source_old[i1:i2], source_new[j1:j2]
+        k, n = 0, len(old_run)
+        while k < n:
+            if old_run[k] == new_run[k]:
+                k += 1
+                continue
+            end = k
+            while end < n and old_run[end] != new_run[end]:
+                end += 1
+            if end - k >= 2:
+                units.append(Recut(i1 + k, tuple(old_run[k:end]), tuple(new_run[k:end])))
+            k = end
+    return units, None
+
+
+def _match_candidates(
+    units: list[Recut], mapping: dict[int, int], current: list[str]
+) -> tuple[list[tuple[int, Recut]], dict | None]:
+    """Where each candidate unit sits on the target as it stands NOW.
+
+    The anchor window can be wider than the unit — a block that diverges next
+    to it is unmapped, so the window grows past it (1988-05-08_Sahasrara-Puja
+    diverges in 123 of 382 blocks) — and judging the window wholesale would
+    red a PR whose edit never touched the divergent block. The unit's words
+    are instead looked for at every in-window position. Exactly one
+    joined-equal position either already carries the new cut (agreement) or
+    receives it whole; none means the target does not hold these words — the
+    two videos were not in sync to begin with, which the sync cannot repair;
+    several would make placement a guess, and a guessed boundary is a word
+    moved off the screen.
+    """
+    placements: list[tuple[int, Recut]] = []
+    claimed: set[int] = set()
+    for unit in units:
+        n = len(unit.new_texts)
+        lo, hi = _target_window(unit, mapping, len(current))
+        wanted = joined_text(unit.new_texts)
+        offsets = [j for j in range(lo, hi - n + 1) if joined_text(current[j : j + n]) == wanted]
+        exact = [j for j in offsets if current[j : j + n] == list(unit.new_texts)]
+        if not offsets:
+            return [], {
+                "error": (
+                    f"a re-cut of {n} block(s) cannot be placed: this video reads "
+                    f"«{joined_text(current[lo:hi])[:60]}» where the re-cut leaves «{wanted[:60]}». "
+                    f"The two videos were not in sync to begin with — the sync only carries changes "
+                    f"made on top of an agreeing cut. Run the full pipeline."
+                )
+            }
+        if len(offsets) > 1 and exact != offsets:
+            return [], {
+                "error": (
+                    f"a re-cut of {n} block(s) cannot be placed: its words occur more than once inside "
+                    f"the target window («{wanted[:60]}»), so placing the boundary would be a guess. "
+                    f"Run the full pipeline."
+                )
+            }
+        if exact:
+            claimed.update(range(exact[0], exact[0] + n))
+            continue  # the target already carries the new cut: agreement
+        j = offsets[0]
+        if claimed & set(range(j, j + n)):
+            return [], {
+                "error": (
+                    f"two re-cut units contend for the same target blocks around «{wanted[:60]}» — "
+                    f"placing either would be a guess. Run the full pipeline."
+                )
+            }
+        placements.append((j, unit))
+        claimed.update(range(j, j + n))
+    return placements, None
+
+
 def propagate_recuts_to_target(
     source_old: list[str],
     source_new: list[str],
     target_old: list[str],
     target_blocks: list[dict],
 ) -> dict:
-    """Carry ONLY the re-cuts of `source` onto `target_blocks`, in place.
+    """Carry the boundary moves of `source` onto `target_blocks`, in place.
 
-    The derived -> primary leg. Text edits deliberately do not travel here:
-    they reach every video through the transcript, and applying them twice
-    would leave Step B unable to find the wording it is looking for.
+    The derived -> primary leg. It runs AFTER Step B, so each candidate span
+    is compared against the target's CURRENT text: by then the target holds
+    the PR's new words in its old cut, the edited video holds the same words
+    in the new cut, and what remains between the two windows is a pure
+    re-cut. That is what lets a boundary move survive a wording change made
+    in the same blocks — the span's own two sides need not join equal, the
+    window and the unit must.
 
-    Returns {"recut": units applied, "skipped": units with no counterpart}
-    or {"error": ...}.
+    Text edits still do not travel here: a single changed block is never a
+    candidate, and a candidate whose words already sit on the target in the
+    same cut is agreement. A window that holds OTHER words is an error, not
+    a skip — the sync only carries changes made on top of a derived video
+    that was in sync with the primary.
+
+    Returns {"recut": units applied} or {"error": ...}.
     """
-    recuts, err = extract_recuts(source_old, source_new)
+    units, err = _candidate_units(source_old, source_new)
     if err:
         return err
-    if not recuts:
-        return {"recut": 0, "skipped": 0}
+    if not units:
+        return {"recut": 0}
 
     current = [b["text"] for b in target_blocks]
     mapping = _carried_mapping(source_old, target_old, current)
-    placements, skipped, _claimed, err = _place_recuts(recuts, mapping, current)
+    placements, err = _match_candidates(units, mapping, current)
     if err:
         return err
 
     _apply_recuts(placements, target_blocks)
-    return {"recut": len(placements), "skipped": skipped}
+    return {"recut": len(placements)}
 
 
 def propagate_primary_to_derived(

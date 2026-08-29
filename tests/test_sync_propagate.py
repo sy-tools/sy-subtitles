@@ -442,6 +442,40 @@ class TestARecutReachesTheOtherVideo:
         assert "error" in result
         assert [b["text"] for b in blocks] == target_old, "nothing may be written when a re-cut cannot be placed"
 
+    def test_a_recut_lands_beside_a_divergent_block(self):
+        """The 1988-05-08_Sahasrara-Puja shape on the primary -> derived leg:
+        the block next to the unit is a separate translation, so it is
+        unmapped and the anchor window grows past the unit. Judged wholesale,
+        the widened window reds a PR whose re-cut never touched the divergent
+        block; scanned position by position, the unit lands exactly."""
+        primary_old = ["праймері каже своє.", "Ви знаєте, як її очистити.", "Ви знаєте, що з цим робити."]
+        primary_new = ["праймері каже своє.", "Ви знаєте, як її", "очистити. Ви знаєте, що з цим робити."]
+        derived_old = ["дерайвед каже своє.", "Ви знаєте, як її очистити.", "Ви знаєте, що з цим робити."]
+        blocks = _blocks(*derived_old)
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == [
+            "дерайвед каже своє.",
+            "Ви знаєте, як її",
+            "очистити. Ви знаєте, що з цим робити.",
+        ]
+
+    def test_a_recut_already_carried_beside_a_divergent_block_is_agreement(self):
+        """Same shape, but the human already re-cut the derived video in this
+        PR — the widened window must read as agreement, not as a conflict."""
+        primary_old = ["праймері каже своє.", "Ви знаєте, як її очистити.", "Ви знаєте, що з цим робити."]
+        primary_new = ["праймері каже своє.", "Ви знаєте, як її", "очистити. Ви знаєте, що з цим робити."]
+        derived_old = ["дерайвед каже своє.", "Ви знаєте, як її очистити.", "Ви знаєте, що з цим робити."]
+        derived_now = ["дерайвед каже своє.", "Ви знаєте, як її", "очистити. Ви знаєте, що з цим робити."]
+        blocks = _blocks(*derived_now)
+
+        result = propagate_primary_to_derived(primary_old, primary_new, derived_old, blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == derived_now, "agreement is not a conflict"
+
     def test_duplicate_block_texts_do_not_mislead_placement(self):
         """51 of the corpus's 165 SRTs repeat a block text verbatim. Placement
         is positional; a matching phrase elsewhere must not attract the edit."""
@@ -499,3 +533,111 @@ class TestARecutTravelsFromADerivedVideoToThePrimary:
 
         assert "error" in result
         assert [b["text"] for b in blocks] == primary_old
+
+
+class TestARecutEntangledWithAWordEdit:
+    """A reviewer usually fixes the wording and the boundary in one pass.
+
+    Such a change is not joined-equal — the words really did change — so
+    comparing the edited video against its own baseline cannot see the
+    boundary move at all, and PR #1001's shortening of «таким самим чином»
+    would have silently left the two videos cut differently.
+
+    By the time the text edits have reached the target through the transcript,
+    though, the target holds the NEW words in the OLD cut, and the difference
+    that remains IS a pure re-cut. That is the moment to compare — and the
+    comparison is against the target's CURRENT text, not the source's
+    baseline. A window that does not hold the same words then is not a skip
+    but an error: the sync only carries changes made on top of a derived
+    video that was in sync with the primary, and anything else needs the
+    full pipeline.
+    """
+
+    def test_a_boundary_move_survives_a_word_change_in_the_same_blocks(self):
+        # The reviewer shortened the wording AND moved the conjunction, in the
+        # same two blocks — so the two sides do NOT join to the same words.
+        source_old = [
+            "Вступ.",
+            "Без жодних зусиль ви отримали свою Реалізацію, і",
+            "якщо хтось приходить, робіть таким самим чином.",
+        ]
+        source_new = [
+            "Вступ.",
+            "Без жодних зусиль ви отримали свою Реалізацію,",
+            "і якщо хтось приходить, робіть так само.",
+        ]
+        # The target has already received the reworded sentence from the
+        # transcript, but still splits it the old way.
+        target_now = [
+            "Вступ.",
+            "Без жодних зусиль ви отримали свою Реалізацію, і",
+            "якщо хтось приходить, робіть так само.",
+        ]
+        blocks = _blocks(*target_now)
+        cues_before = [(b["start_ms"], b["end_ms"]) for b in blocks]
+
+        result = propagate_recuts_to_target(source_old, source_new, list(source_old), blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == source_new, "the boundary must move even though the words changed"
+        assert result["recut"] == 1
+        assert [(b["start_ms"], b["end_ms"]) for b in blocks] == cues_before
+
+    def test_a_target_whose_text_diverged_reds_the_run(self):
+        """Divergence is an ERROR, never a silent skip. The sync only carries
+        changes made on top of a derived video that was in sync with the
+        primary via main; a window that reads differently after Step B has
+        delivered every text edit means the two videos were not in sync to
+        begin with — outside what the sync can handle. And whatever the
+        verdict, not one character of the target may move."""
+        source_old = ["Вступ.", "стара фраза; в", "правильний час,"]
+        source_new = ["Вступ.", "нова фраза;", "в правильний час,"]
+        target_now = ["Вступ.", "зовсім інший переклад; в", "правильний час,"]
+        blocks = _blocks(*target_now)
+
+        result = propagate_recuts_to_target(source_old, source_new, list(source_old), blocks)
+
+        assert "error" in result
+        assert "not in sync" in result["error"], result["error"]
+        assert "pipeline" in result["error"], result["error"]
+        assert [b["text"] for b in blocks] == target_now, "a divergent block must never be clobbered"
+
+
+class TestTheTargetWindowIsScannedNotSwallowed:
+    """The anchor window is judged sub-window by sub-window, never wholesale.
+
+    `_target_window` bounds the unit by its mapped NEIGHBOURS, so a divergent
+    block sitting next to the unit — 1988-05-08_Sahasrara-Puja's Talk cut is a
+    separate translation in 123 of its 382 blocks — is unmapped and the window
+    grows past the unit. Judging the whole window would red a PR whose edit
+    never touched the divergent block. The unit's words are instead looked for
+    at each in-window position; exactly one hit places the unit, none is a
+    real divergence, and several is a guess nothing may take.
+    """
+
+    def test_a_divergent_neighbour_does_not_widen_the_window_into_a_false_red(self):
+        source_old = ["дерайвед каже своє.", "слова тут; в", "інший блок,"]
+        source_new = ["дерайвед каже своє.", "слова тут;", "в інший блок,"]
+        target_old = ["праймері каже своє.", "слова тут; в", "інший блок,"]
+        blocks = _blocks(*target_old)
+
+        result = propagate_recuts_to_target(source_old, source_new, target_old, blocks)
+
+        assert "error" not in result, result
+        assert [b["text"] for b in blocks] == ["праймері каже своє.", "слова тут;", "в інший блок,"]
+        assert result["recut"] == 1
+
+    def test_words_that_appear_twice_inside_the_window_refuse_to_guess(self):
+        """One in-window position holds the unit's exact new cut, another
+        holds the same words cut the old way. Either could be the unit's
+        counterpart; placing (or declaring agreement) would be a guess."""
+        source_old = ["дерайвед каже своє.", "Так. Так,", "так."]
+        source_new = ["дерайвед каже своє.", "Так.", "Так, так."]
+        target_old = ["праймері каже своє.", "Так. Так,", "так.", "Так.", "Так, так."]
+        blocks = _blocks(*target_old)
+
+        result = propagate_recuts_to_target(source_old, source_new, target_old, blocks)
+
+        assert "error" in result
+        assert "more than once" in result["error"], result["error"]
+        assert [b["text"] for b in blocks] == target_old, "nothing may be written on an ambiguous window"
