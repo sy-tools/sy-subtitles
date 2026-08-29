@@ -92,6 +92,94 @@ def find_in_text_lenient(text: str, needle: str, cursor: int) -> int:
     return text.lower().find(needle.lower(), cursor)
 
 
+def _whitespace_tolerant(needle: str) -> re.Pattern:
+    """`needle` as a pattern whose every gap matches any run of whitespace.
+
+    A subtitle block joins its words with single spaces; the transcript may
+    separate the same words with a newline (or a blank line) because blocks
+    are cut from paragraphs and then merged across them. The words are the
+    text — the gaps between them are layout.
+    """
+    return re.compile(r"\s+".join(re.escape(w) for w in needle.split()))
+
+
+def find_span(text: str, needle: str, cursor: int) -> tuple[int, int]:
+    """Where `needle` sits in `text` at/after `cursor`, as (start, end).
+
+    Returns (-1, -1) when absent. Exact matches win; otherwise the gaps are
+    allowed to be any whitespace, which is how a block that joins two
+    transcript lines is found. The END is measured, never assumed to be
+    `start + len(needle)`: a gap of "\n\n" makes the real span longer, and
+    a span cut one character short leaves a broken tail in the transcript.
+    """
+    if not needle.strip():
+        return (-1, -1)
+    pos = text.find(needle, cursor)
+    if pos != -1:
+        return (pos, pos + len(needle))
+    m = _whitespace_tolerant(needle).search(text, cursor)
+    return (m.start(), m.end()) if m else (-1, -1)
+
+
+def find_span_lenient(text: str, needle: str, cursor: int) -> tuple[int, int]:
+    """find_span, falling back to a case-insensitive search.
+
+    Used for cursor tracking across blocks with benign case drift
+    (manual capitalization edits) — a stalled cursor makes later
+    duplicate-text operations pick the wrong occurrence.
+    """
+    span = find_span(text, needle, cursor)
+    if span[0] != -1:
+        return span
+    if not needle.strip():
+        return (-1, -1)
+    # Both sides folded: a pattern built from the original casing would never
+    # match the folded text, which silently turns benign case drift into a
+    # stalled cursor — the very thing this fallback exists to prevent.
+    m = _whitespace_tolerant(needle.lower()).search(text.lower(), cursor)
+    return (m.start(), m.end()) if m else (-1, -1)
+
+
+def count_occurrences(text: str, needle: str) -> int:
+    """How many times `needle` occurs in `text`, gaps being any whitespace.
+
+    The ambiguity guard counts with this so a block found only as a
+    whitespace variant is still weighed against its own duplicates.
+    """
+    if not needle.strip():
+        return 0
+    return len(_whitespace_tolerant(needle).findall(text))
+
+
+def translate_span(needle: str, variant: str, lo: int, hi: int) -> tuple[int, int]:
+    """Carry a [lo, hi) span of `needle` onto `variant`.
+
+    `variant` is what find_span matched: the same characters as `needle` save
+    for the whitespace runs between words. The map is per character, not per
+    word — find_diff_islands trims a shared suffix, so an island can end
+    mid-word ("Початок наступного" of "…наступного."), and rounding the end
+    up to the token boundary would overwrite the punctuation that never
+    changed.
+    """
+    imap = [0] * (len(needle) + 1)
+    i = j = 0
+    while i < len(needle):
+        if needle[i].isspace():
+            gap_i, gap_j = i, j
+            while i < len(needle) and needle[i].isspace():
+                i += 1
+            while j < len(variant) and variant[j].isspace():
+                j += 1
+            for k in range(gap_i, i):
+                imap[k] = gap_j
+        else:
+            imap[i] = j
+            i += 1
+            j += 1
+    imap[len(needle)] = j
+    return imap[lo], imap[hi]
+
+
 def delete_from_text(text: str, cursor: int, needle: str) -> dict:
     """Remove the first occurrence of `needle` in `text` at/after `cursor`.
 
