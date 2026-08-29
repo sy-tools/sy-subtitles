@@ -193,18 +193,27 @@ Step A   edited SRT -> transcript
          SRT is first normalised onto the primary positionally, then
          treated as a primary edit.
 
-Step A2  edited derived SRT -> primary (re-cuts only)
+Step B   transcript -> SRT
+         Applies to primary and independent videos. Uses the multi-island
+         _find_diff (section 8).
+
+Step A2  edited derived SRT -> primary (boundaries only; runs after B)
          A RE-CUT — the same words re-split across the same number of
          blocks — cannot reach the other videos through the transcript,
          which records no boundaries. It is carried straight to the
          primary positionally, as a whole unit, and Step C fans it out
-         from there. Text edits deliberately do NOT travel this leg:
-         they go via the transcript, and applying them here too would
-         leave Step B unable to find the wording it is looking for.
-
-Step B   transcript -> SRT
-         Applies to primary and independent videos. Uses the multi-island
-         _find_diff (section 8).
+         from there. The leg runs AFTER Step B and matches each
+         candidate span against the primary's CURRENT text: by then the
+         primary holds the PR's word edits in its old cut, so a
+         boundary move survives a wording change made in the same
+         blocks (the entangled shape PR #1001 really had). Text edits
+         deliberately do NOT travel this leg — they went via the
+         transcript in Steps A and B — and a window that does not hold
+         the same words is an error, not a skip: the sync only carries
+         changes made on top of a derived video that was in sync with
+         the primary. Validation is deferred past this leg so it judges
+         the final planned primary — a re-cut changes block lengths,
+         and CPL is a real gate.
 
 Step C   primary -> derived
          Positional block substitution. Not a text search.

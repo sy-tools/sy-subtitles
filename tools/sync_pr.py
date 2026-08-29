@@ -12,6 +12,13 @@ in bash:
   diff the (possibly Step-A-updated) transcript against a per-video
   effective-old baseline and apply the result to that video's uk.srt.
 
+  Step A2 (derived SRT → primary, boundaries only): after Step B, carry
+  any block re-cut made on a derived video onto the primary, matching
+  each unit against the primary's CURRENT text — which by then holds
+  the PR's word edits in the old cut, so a boundary move survives a
+  wording change made in the same blocks. Validation runs after this
+  leg, on the final planned primary.
+
 The per-video effective-old baseline is the key fix for mixed PRs
 (transcript edited AND a uk.srt edited in the same commit). Without
 it, Step B would try to match the BASE transcript's text in the
@@ -257,10 +264,6 @@ def _plan_talk(
             continue
         effective_old[video_slug] = effective
 
-    # Step A2: carry any boundary fix made on a derived video onto the
-    # primary, so Step B and Step C work from cuts that agree.
-    _plan_recuts_to_primary(plan, talk_dir, shadow, roles, recut_sources, baseline, tmp)
-
     # Step B runs even when Step A failed, so one run reports every problem
     # instead of hiding the later ones behind the first. A single failure
     # still blocks the whole write.
@@ -269,6 +272,7 @@ def _plan_talk(
         print(f"  [{talk_id}] meta.yaml has no videos — skip Step B", file=sys.stderr)
         return plan
 
+    to_validate: list[str] = []
     derived = [s for s in slugs if roles.get(s) == "derived"]
     primary = next((s for s, r in roles.items() if r == "primary"), None)
     if derived and not (primary and (shadow / primary / "final" / "uk.srt").exists()):
@@ -306,13 +310,28 @@ def _plan_talk(
         # Block-count-changed edits (sync_transcript returns error) no longer
         # auto-optimize — the pipeline rebuilds timing properly via whisper.
         # See feedback_no_proportional: approximate timing is banned.
+        to_validate.append(slug)
 
-        # Validate the updated SRT against the updated transcript. Matches
-        # the old bash step's flags: we skip time/duration checks because
-        # Step B doesn't touch timecodes. On top of that, apply the build
-        # mode flags from build_manifest.yaml — en-srt primaries legitimately
-        # drop transcript-only blocks and secondaries are derivative, so
-        # validating stricter than the pipeline would reject its outputs.
+    # Step A2: carry any boundary fix made on a derived video onto the
+    # primary, so Step C fans it out from a cut both videos agree on. It runs
+    # AFTER Step B on purpose: the units are matched against the primary's
+    # CURRENT text — which by now holds the PR's word edits in the old cut —
+    # so a boundary move survives a wording change made in the same blocks
+    # (the entangled shape PR #1001 really had).
+    _plan_recuts_to_primary(plan, talk_dir, shadow, roles, recut_sources, baseline, tmp)
+
+    # Validate the updated SRTs against the updated transcript. Deferred past
+    # the re-cut leg so it judges the FINAL planned primary: a re-cut changes
+    # block lengths, and CPL is a real gate — a block the leg pushes over the
+    # limit must red the run, and validating the intermediate instead would
+    # let it through. Matches the old bash step's flags: time/duration checks
+    # are skipped because the sync never touches timecodes. On top of that,
+    # apply the build mode flags from build_manifest.yaml — en-srt primaries
+    # legitimately drop transcript-only blocks and secondaries are
+    # derivative, so validating stricter than the pipeline would reject its
+    # outputs.
+    for slug in to_validate:
+        srt_file = shadow / slug / "final" / "uk.srt"
         print(f"  [{talk_id}/{slug}] validate", file=sys.stderr)
         flags = {"skip_time_check": True, "skip_duration_check": True}
         flags.update(manifest_validate_flags(srt_file))
@@ -358,9 +377,12 @@ def _plan_recuts_to_primary(
     this leg the fix strands on the video being reviewed, the two cuts diverge,
     and every later edit touching those blocks fails.
 
-    Only re-cuts travel here. Applying the text edits too would land them on
-    the primary before Step B, which would then fail to find the old wording
-    it is looking for.
+    Only boundaries move here, and only after Step B: by then the primary
+    holds the PR's word edits in its old cut, so a candidate span matches the
+    primary's current words even when the reviewer fixed the wording in the
+    same blocks. A window that does not hold the same words is an error, not
+    a skip — the sync only carries changes made on top of a derived video
+    that was in sync with the primary.
     """
     talk_id = Path(talk_dir).name
     primary = next((s for s, r in roles.items() if r == "primary"), None)
@@ -373,19 +395,20 @@ def _plan_recuts_to_primary(
 
     for slug, base_srt, shadow_srt in sources:
         source_old, source_new = _texts(base_srt), _texts(shadow_srt)
-        recuts, err = extract_recuts(source_old, source_new)
-        if err:
-            plan.failures.append(f"{talk_id}/{slug}: {err['error']}")
-            continue
-        if not recuts:
-            continue
         if not have_primary:
-            # No shared cut family to keep in step. A green run would otherwise
-            # read as "it propagated".
-            _gha_warning(
-                f"{talk_id}/{slug}: {len(recuts)} block-boundary fix(es) stay on this video — "
-                f"{primary} has no uk.srt to keep in step"
-            )
+            # No shared cut family to keep in step, and no other cut to
+            # diverge from. Only a PROVABLE re-cut (joined-equal sides) is
+            # worth an annotation: without a primary to compare against, an
+            # entangled candidate cannot be told apart from adjacent text
+            # edits. A green run would otherwise read as "it propagated".
+            recuts, err = extract_recuts(source_old, source_new)
+            if err:
+                plan.failures.append(f"{talk_id}/{slug}: {err['error']}")
+            elif recuts:
+                _gha_warning(
+                    f"{talk_id}/{slug}: {len(recuts)} block-boundary fix(es) stay on this video — "
+                    f"{primary} has no uk.srt to keep in step"
+                )
             continue
 
         print(f"  [{talk_id}/{slug}] SRT → {primary} (re-cut, positional)", file=sys.stderr)
@@ -396,12 +419,7 @@ def _plan_recuts_to_primary(
             continue
         if result["recut"]:
             write_srt(blocks, str(primary_srt))
-        print(f"  [{talk_id}/{slug}] re-cut {result['recut']}, skipped {result['skipped']}", file=sys.stderr)
-        if result["skipped"]:
-            _gha_warning(
-                f"{talk_id}/{slug}: {result['skipped']} block-boundary fix(es) have no counterpart on "
-                f"{primary} and were not applied"
-            )
+        print(f"  [{talk_id}/{slug}] re-cut {result['recut']}", file=sys.stderr)
 
 
 def _plan_derived(
