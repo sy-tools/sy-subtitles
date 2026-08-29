@@ -652,3 +652,134 @@ class TestRoleAwareSync:
 
         assert run() == 1
         assert v1.read_text(encoding="utf-8") == before
+
+
+# A boundary fix: the same words, re-split between blocks 1 and 2. Block 3 is
+# additionally edited, so the PR carries a re-cut AND a plain text edit — the
+# mixed shape PR #1001 really had.
+RECUT_SRT = """1
+00:00:01,000 --> 00:00:03,000
+Перше речення першого
+
+2
+00:00:03,100 --> 00:00:05,000
+абзацу. Друге речення першого абзацу.
+
+3
+00:00:05,100 --> 00:00:07,000
+Змінене речення другого абзацу.
+"""
+
+
+class TestARecutMadeOnADerivedVideoReachesThePrimary:
+    """PR #1001: a reviewer nudged a word across a block boundary in the SPA.
+
+    The transcript cannot carry a boundary, so the change had no route to the
+    talk's other videos and stranded on the one being reviewed. The two cuts
+    then disagreed — and a disagreement is not cosmetic: the next edit touching
+    those blocks fails, because the primary's text no longer has a counterpart
+    on the derived video.
+    """
+
+    def test_the_boundary_fix_and_the_text_edit_both_reach_the_primary(self, repo):
+        repo_path, base_sha = repo
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(RECUT_SRT, encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "fix a block boundary and a wording on the derived video")
+
+        assert run(base_sha) == 0
+
+        v1_blocks = parse_srt(str(repo_path / "talks/test/Video1/final/uk.srt"))
+        assert [b["text"] for b in v1_blocks] == [
+            "Перше речення першого",
+            "абзацу. Друге речення першого абзацу.",
+            "Змінене речення другого абзацу.",
+        ], "the primary must receive the new cut as well as the new wording"
+
+        base_cues = [(b["start_ms"], b["end_ms"]) for b in parse_srt(str(repo_path / "talks/test/Video2/final/uk.srt"))]
+        assert [(b["start_ms"], b["end_ms"]) for b in v1_blocks] == base_cues, "a re-cut moves words, never a cue"
+
+    def test_the_transcript_keeps_the_words_the_recut_only_reshuffled(self, repo):
+        """A boundary lives on the screen, not in the transcript. The re-cut
+        must leave that paragraph byte-identical while the real edit lands."""
+        repo_path, base_sha = repo
+        (repo_path / "talks/test/Video2/final/uk.srt").write_text(RECUT_SRT, encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "fix a block boundary and a wording on the derived video")
+
+        assert run(base_sha) == 0
+
+        transcript = (repo_path / "talks/test/transcript_uk.txt").read_text(encoding="utf-8")
+        assert "Перше речення першого абзацу. Друге речення першого абзацу." in transcript
+        assert "Змінене речення другого абзацу." in transcript
+
+    def test_a_later_edit_to_a_recut_block_no_longer_fails(self, repo):
+        """The trap the stranding sets. Once both videos agree on the cut, an
+        ordinary edit to one of those blocks propagates like any other."""
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        (repo_path / "talks/test/Video2/final/uk.srt").write_text(RECUT_SRT, encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "fix a block boundary on the derived video")
+        assert run() == 0
+
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "Sync subtitles and transcript edits\n\n" + SYNC_TRAILER, author=BOT_AUTHOR)
+
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(v2.read_text(encoding="utf-8").replace("Перше речення", "Виправлене речення"), encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "edit a block that was re-cut earlier")
+
+        assert run() == 0, "with the cuts in step, an edit inside them is ordinary work"
+        v1_texts = [b["text"] for b in parse_srt(str(repo_path / "talks/test/Video1/final/uk.srt"))]
+        assert v1_texts[0] == "Виправлене речення першого"
+
+    def test_a_recut_the_primary_cannot_receive_stops_the_run(self, repo):
+        """The primary is a separate translation of the same words here, so
+        the alignment pairs nothing up. Guessing where the boundary belongs is
+        exactly what must not happen."""
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v1.write_text(
+            "1\n00:00:01,000 --> 00:00:03,000\nПраймері каже щось інше першого\n\n"
+            "2\n00:00:03,100 --> 00:00:05,000\nабзацу. Праймері каже щось інше.\n\n"
+            "3\n00:00:05,100 --> 00:00:07,000\nЄдине речення другого абзацу.\n",
+            encoding="utf-8",
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "give the primary its own wording")
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(RECUT_SRT.replace("Змінене речення", "Єдине речення"), encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "re-cut the derived video")
+
+        before_v1 = v1.read_text(encoding="utf-8")
+        assert run() == 1
+        assert v1.read_text(encoding="utf-8") == before_v1, "nothing may be written when a re-cut cannot be placed"
+
+    def test_a_recut_with_no_primary_srt_is_annotated_rather_than_silent(self, repo, capsys):
+        """No primary subtitles means no shared cut family to keep in step.
+        The re-cut stays on the one video — which the reviewer has to be told,
+        because a green run otherwise reads as "it propagated"."""
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        (repo_path / "talks/test/Video1/final/uk.srt").unlink()
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "the primary has no subtitles yet")
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+
+        (repo_path / "talks/test/Video2/final/uk.srt").write_text(
+            RECUT_SRT.replace("Змінене речення", "Єдине речення"), encoding="utf-8"
+        )
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "re-cut the derived video")
+
+        assert run() == 0
+        err = capsys.readouterr().err
+        assert "::warning::" in err, "a re-cut that could not travel must be annotated, not just logged"
+        assert "Video2" in err

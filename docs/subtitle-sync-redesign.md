@@ -193,6 +193,15 @@ Step A   edited SRT -> transcript
          SRT is first normalised onto the primary positionally, then
          treated as a primary edit.
 
+Step A2  edited derived SRT -> primary (re-cuts only)
+         A RE-CUT — the same words re-split across the same number of
+         blocks — cannot reach the other videos through the transcript,
+         which records no boundaries. It is carried straight to the
+         primary positionally, as a whole unit, and Step C fans it out
+         from there. Text edits deliberately do NOT travel this leg:
+         they go via the transcript, and applying them here too would
+         leave Step B unable to find the wording it is looking for.
+
 Step B   transcript -> SRT
          Applies to primary and independent videos. Uses the multi-island
          _find_diff (section 8).
@@ -208,10 +217,16 @@ appears" is explicitly rejected: 51 of 165 SRTs contain duplicate block
 texts, and `tools/sync_transcript_to_srt.py:157` already treats a multi-hit
 match as an error for this reason.
 
+**A re-cut is one unit.** Applying half of a boundary move — because the
+other half fell outside an excerpt cut — takes the moved word off the screen
+with nothing to catch it. A unit lands whole, is skipped whole when the video
+genuinely lacks those words, or reds the run.
+
 **Block-count changes.** Step C may propagate a deletion (drop the aligned
 block, leave the gap). An insert or a split cannot be propagated, because
 the derived video's timing for new blocks would have to be invented, which
-`feedback_no_proportional` forbids. Those cases red the run, matching the
+`feedback_no_proportional` forbids. A merge is refused for the same reason:
+the joined subtitle would need a cue no video measured. Those cases red the run, matching the
 shape `tools/sync_srt_to_transcript.py:211` already uses for inserts.
 
 **Conflict rule.** Multiple SRT sources merge block-wise; a conflict exists

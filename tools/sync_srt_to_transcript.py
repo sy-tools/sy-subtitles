@@ -40,6 +40,7 @@ from .sync_common import (
     find_diff_islands,
     find_in_text,
     find_in_text_lenient,
+    joined_text,
     raw_span,
     span_drops_text,
     strip_with_map,
@@ -49,12 +50,6 @@ from .text_segmentation import (
     strip_omitted_phrases,
     talk_omit_phrases,
 )
-
-
-def _joined(slice_: list[str]) -> str:
-    """Block texts as one whitespace-normalised string, for comparing content
-    independently of how it is split into blocks."""
-    return " ".join(" ".join(t.split()) for t in slice_)
 
 
 def _match_blocks_by_similarity(old_slice: list[str], new_slice: list[str]) -> list[int | None]:
@@ -223,7 +218,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
             # apart that used to share a subtitle). Nothing was edited, so the
             # transcript needs no change — and the cursor still has to walk
             # past this text for later find()s to land correctly.
-            if _joined(old_slice) == _joined(new_slice):
+            if joined_text(old_slice) == joined_text(new_slice):
                 pos = find_in_text_lenient(view, old_slice[0], cursor)
                 if pos == -1:
                     # The cursor could not walk past this re-blocked text, so
@@ -231,7 +226,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                     # leaves it — the ambiguity guard has to know.
                     drifted += 1
                 else:
-                    cursor = pos + len(_joined(old_slice))
+                    cursor = pos + len(joined_text(old_slice))
                 continue
             matches = (
                 list(range(i2 - i1)) if (i2 - i1) == (j2 - j1) else _match_blocks_by_similarity(old_slice, new_slice)

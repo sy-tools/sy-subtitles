@@ -51,7 +51,7 @@ from .srt_utils import parse_srt, write_srt
 from .sync_common import load_base_from_git
 from .sync_invariants import check_writes
 from .sync_plan import SyncPlan, apply_plan, collect_writes, shadow_talk
-from .sync_propagate import propagate_primary_to_derived
+from .sync_propagate import extract_recuts, propagate_primary_to_derived, propagate_recuts_to_target
 from .sync_srt_to_transcript import sync_srt_to_transcript
 from .sync_transcript_to_srt import sync_transcript
 from .validate_subtitles import manifest_validate_flags
@@ -205,6 +205,7 @@ def _plan_talk(
     # AND onto a per-video copy of the base transcript (effective-old
     # baseline).
     effective_old: dict[str, Path] = {}
+    recut_sources: list[tuple[str, Path, Path]] = []
     for srt in srt_paths:
         video_slug = srt.split("/")[2]
         if roles.get(video_slug, "ignored") == "ignored":
@@ -219,8 +220,13 @@ def _plan_talk(
             print(f"  [{talk_id}/{video_slug}] SRT is new in this PR — skip", file=sys.stderr)
             continue
 
-        print(f"  [{talk_id}/{video_slug}] SRT → transcript (accumulate)", file=sys.stderr)
         shadow_srt = shadow / video_slug / "final" / "uk.srt"
+        if roles.get(video_slug) == "derived":
+            # Step A2 below. Collected before the transcript pass because a
+            # re-cut is precisely what that pass discards.
+            recut_sources.append((video_slug, base_srt, shadow_srt))
+
+        print(f"  [{talk_id}/{video_slug}] SRT → transcript (accumulate)", file=sys.stderr)
         result = sync_srt_to_transcript(
             old_srt=str(base_srt),
             new_srt=str(shadow_srt),
@@ -250,6 +256,10 @@ def _plan_talk(
             plan.failures.append(f"{srt}: effective-old baseline failed: {baseline_result['error']}")
             continue
         effective_old[video_slug] = effective
+
+    # Step A2: carry any boundary fix made on a derived video onto the
+    # primary, so Step B and Step C work from cuts that agree.
+    _plan_recuts_to_primary(plan, talk_dir, shadow, roles, recut_sources, baseline, tmp)
 
     # Step B runs even when Step A failed, so one run reports every problem
     # instead of hiding the later ones behind the first. A single failure
@@ -328,6 +338,70 @@ def _plan_talk(
 
 def _texts(path: Path) -> list[str]:
     return [b["text"] for b in parse_srt(str(path))]
+
+
+def _plan_recuts_to_primary(
+    plan: SyncPlan,
+    talk_dir: str,
+    shadow: Path,
+    roles: dict[str, str],
+    sources: list[tuple[str, Path, Path]],
+    baseline: str,
+    tmp: Path,
+) -> None:
+    """Carry a boundary fix made on a DERIVED video onto the primary.
+
+    The missing half of the redesign's Step A: an edited derived SRT is
+    normalised onto the primary positionally. Text edits get there through the
+    transcript, but a re-cut cannot — the transcript records no boundaries, and
+    `sync_srt_to_transcript` rightly refuses to treat one as an edit. Without
+    this leg the fix strands on the video being reviewed, the two cuts diverge,
+    and every later edit touching those blocks fails.
+
+    Only re-cuts travel here. Applying the text edits too would land them on
+    the primary before Step B, which would then fail to find the old wording
+    it is looking for.
+    """
+    talk_id = Path(talk_dir).name
+    primary = next((s for s, r in roles.items() if r == "primary"), None)
+    if primary is None:
+        return
+
+    primary_srt = shadow / primary / "final" / "uk.srt"
+    base_primary = tmp / f"{talk_id}__{primary}.recut_base.srt"
+    have_primary = primary_srt.exists() and _show_base(baseline, f"{talk_dir}/{primary}/final/uk.srt", base_primary)
+
+    for slug, base_srt, shadow_srt in sources:
+        source_old, source_new = _texts(base_srt), _texts(shadow_srt)
+        recuts, err = extract_recuts(source_old, source_new)
+        if err:
+            plan.failures.append(f"{talk_id}/{slug}: {err['error']}")
+            continue
+        if not recuts:
+            continue
+        if not have_primary:
+            # No shared cut family to keep in step. A green run would otherwise
+            # read as "it propagated".
+            _gha_warning(
+                f"{talk_id}/{slug}: {len(recuts)} block-boundary fix(es) stay on this video — "
+                f"{primary} has no uk.srt to keep in step"
+            )
+            continue
+
+        print(f"  [{talk_id}/{slug}] SRT → {primary} (re-cut, positional)", file=sys.stderr)
+        blocks = parse_srt(str(primary_srt))
+        result = propagate_recuts_to_target(source_old, source_new, _texts(base_primary), blocks)
+        if "error" in result:
+            plan.failures.append(f"{talk_id}/{slug}: {result['error']}")
+            continue
+        if result["recut"]:
+            write_srt(blocks, str(primary_srt))
+        print(f"  [{talk_id}/{slug}] re-cut {result['recut']}, skipped {result['skipped']}", file=sys.stderr)
+        if result["skipped"]:
+            _gha_warning(
+                f"{talk_id}/{slug}: {result['skipped']} block-boundary fix(es) have no counterpart on "
+                f"{primary} and were not applied"
+            )
 
 
 def _plan_derived(

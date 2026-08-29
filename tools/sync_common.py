@@ -15,6 +15,19 @@ from .text_segmentation import strip_omitted_phrases
 MIN_FRAGMENT = 3  # shortest fragment worth trying to locate in a block
 
 
+def joined_text(texts) -> str:
+    """Block (or paragraph) texts as one whitespace-normalised string.
+
+    The predicate that separates a re-cut from an edit: when two sides of a
+    diff join to the same string, the words did not change — only the
+    boundaries between them did. `sync_srt_to_transcript` uses it to keep a
+    re-cut OUT of the transcript, and `sync_propagate` uses it to route that
+    same re-cut onto the talk's other videos. One definition, because two
+    copies of a normaliser drift (#920/#922).
+    """
+    return " ".join(" ".join(t.split()) for t in texts)
+
+
 def load_base_from_git(sha: str, path: str, dest: Path) -> bool:
     """Write the `sha:path` version of a file to `dest`.
 

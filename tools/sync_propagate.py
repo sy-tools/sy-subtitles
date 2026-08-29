@@ -12,9 +12,21 @@ texts, so "replace it wherever it appears" would rewrite the wrong subtitle.
 Text that has no counterpart on the derived video is skipped — a Talk cut is
 often a subset of the full recording. Text that has no timing there is a
 failure, never an invention (feedback_no_proportional).
+
+A RE-CUT — the same words re-split across the same number of blocks, when a
+reviewer nudges a word across a boundary — travels here too, and only here.
+The transcript cannot carry it (it records no boundaries, and
+`sync_srt_to_transcript` rightly refuses to treat a re-cut as an edit), so
+without this channel a boundary fix strands on whichever video the reviewer
+happened to be looking at, and the divergence then fails every later edit
+that touches those blocks. A re-cut is placed as ONE unit or not at all:
+half of it applied is a word moved off the screen with nothing to catch it.
 """
 
 import difflib
+from dataclasses import dataclass
+
+from .sync_common import joined_text
 
 
 def align_blocks(source_texts: list[str], target_texts: list[str]) -> dict[int, int]:
@@ -42,8 +54,99 @@ def align_blocks(source_texts: list[str], target_texts: list[str]) -> dict[int, 
     return mapping
 
 
-def _primary_edits(primary_old: list[str], primary_new: list[str]) -> tuple[dict[int, str], list[int], dict | None]:
-    """What changed on the primary: {old index: new text}, deleted indices."""
+@dataclass(frozen=True)
+class Recut:
+    """One boundary move: the same words, re-split across the same N blocks.
+
+    `start` indexes the first block in the SOURCE video's old cut. The two
+    tuples are the same length (N >= 2) and join to the same string — that
+    equality is what makes this a re-cut rather than an edit.
+    """
+
+    start: int
+    old_texts: tuple[str, ...]
+    new_texts: tuple[str, ...]
+
+
+def _recuts_in_run(old_run: list[str], new_run: list[str], offset: int) -> list[Recut]:
+    """The re-cut units inside one equal-count `replace` run.
+
+    difflib reports a maximal run of changed blocks as ONE opcode, so a
+    boundary fix arrives bundled with any ordinary edit that happens to sit
+    beside it — in PR #1001 the re-cut of blocks 178/179 and a wording change
+    three blocks later came through as a single `replace`. Testing the whole
+    run for joined-equality therefore misses the re-cut entirely. Each unit is
+    instead found on its own: the SHORTEST span from a moved block whose two
+    sides join to the same words, which is the span whose boundaries actually
+    moved and nothing more.
+    """
+    recuts: list[Recut] = []
+    k, n = 0, len(old_run)
+    while k < n:
+        if old_run[k] == new_run[k]:
+            k += 1
+            continue
+        found = None
+        for end in range(k + 2, n + 1):
+            # A unit has to END on a block that moved too, or an untouched
+            # neighbour gets swept in and the unit reads wider than it is.
+            if old_run[end - 1] == new_run[end - 1]:
+                continue
+            if joined_text(old_run[k:end]) == joined_text(new_run[k:end]):
+                found = end
+                break
+        if found is None:
+            k += 1  # an ordinary edit; it reaches the other videos as text
+            continue
+        recuts.append(Recut(offset + k, tuple(old_run[k:found]), tuple(new_run[k:found])))
+        k = found
+    return recuts
+
+
+def extract_recuts(old_texts: list[str], new_texts: list[str]) -> tuple[list[Recut], dict | None]:
+    """The re-cuts in a diff, or why one of them cannot travel.
+
+    A re-cut is the same words re-split across the same number of blocks;
+    everything else belongs to the text path, which reaches the other videos
+    through the transcript. A joined-equal run whose two sides have DIFFERENT
+    block counts is a merge or a split, and both are refused: the cue a merged
+    subtitle would need (`start` of the first, `end` of the last) and the
+    boundary a split would need exist in no data source, and `check_writes`
+    forbids inventing either.
+    """
+    recuts: list[Recut] = []
+    matcher = difflib.SequenceMatcher(None, old_texts, new_texts, autojunk=False)
+    for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+        if tag != "replace":
+            continue
+        old_slice, new_slice = old_texts[i1:i2], new_texts[j1:j2]
+        if (i2 - i1) == (j2 - j1):
+            recuts.extend(_recuts_in_run(old_slice, new_slice, i1))
+            continue
+        if joined_text(old_slice) == joined_text(new_slice):
+            shape = "merge" if (i2 - i1) > (j2 - j1) else "split"
+            return [], {
+                "error": (
+                    f"blocks {i1 + 1}–{i2} are a {shape} ({i2 - i1} block(s) became {j2 - j1}), not a re-cut — "
+                    f"the resulting subtitle needs a timecode that no video measured. Run the full pipeline."
+                )
+            }
+        # An uneven run that is not joined-equal is a structural change the
+        # text path reports on; _primary_edits raises it with its own message.
+    return recuts, None
+
+
+def _primary_edits(
+    primary_old: list[str], primary_new: list[str]
+) -> tuple[dict[int, str], list[int], list[Recut], dict | None]:
+    """What changed on the primary: {old index: new text}, deletions, re-cuts."""
+    recuts, err = extract_recuts(primary_old, primary_new)
+    if err:
+        return {}, [], [], err
+    # Blocks a unit owns are carried whole; counting them again as independent
+    # per-block edits would apply half a boundary move on its own.
+    covered = {i for r in recuts for i in range(r.start, r.start + len(r.old_texts))}
+
     edits: dict[int, str] = {}
     deleted: list[int] = []
     matcher = difflib.SequenceMatcher(None, primary_old, primary_new, autojunk=False)
@@ -54,11 +157,14 @@ def _primary_edits(primary_old: list[str], primary_new: list[str]) -> tuple[dict
             deleted.extend(range(i1, i2))
         elif tag == "replace" and (i2 - i1) == (j2 - j1):
             for k in range(i2 - i1):
+                if (i1 + k) in covered:
+                    continue
                 if primary_old[i1 + k] != primary_new[j1 + k]:
                     edits[i1 + k] = primary_new[j1 + k]
         else:
             return (
                 {},
+                [],
                 [],
                 {
                     "error": (
@@ -68,7 +174,161 @@ def _primary_edits(primary_old: list[str], primary_new: list[str]) -> tuple[dict
                     )
                 },
             )
-    return edits, deleted, None
+    return edits, deleted, recuts, None
+
+
+def _carried_mapping(source_old: list[str], target_old: list[str], current: list[str]) -> dict[int, int]:
+    """Source index -> index in the target's CURRENT blocks.
+
+    The correspondence is taken from the two BASELINE texts, so an edit does
+    not break the alignment it is supposed to travel along. When the target
+    changed structurally in this PR too (the human edited it, or it is
+    unreadable), the correspondence is carried forward onto what is actually
+    there now rather than indexing into a shape that no longer exists.
+    """
+    mapping = align_blocks(source_old, target_old)
+    if len(target_old) != len(current):
+        forward = align_blocks(target_old, current)
+        mapping = {i: forward[j] for i, j in mapping.items() if j in forward}
+    return mapping
+
+
+def _target_window(recut: Recut, mapping: dict[int, int], n_target: int) -> tuple[int, int]:
+    """The half-open range on the target where this unit's blocks must sit.
+
+    Read off the unit's MAPPED NEIGHBOURS, never off the unit's own indices:
+    once the target already carries the new cut, its blocks no longer match
+    the source's old ones and map nowhere — which is agreement, not absence.
+    """
+    start, n = recut.start, len(recut.old_texts)
+    before = [i for i in mapping if i < start]
+    after = [i for i in mapping if i >= start + n]
+    lo = mapping[max(before)] + 1 if before else 0
+    hi = mapping[min(after)] if after else n_target
+    return (lo, hi) if hi >= lo else (lo, lo)
+
+
+def _unpaired_stream(current: list[str], taken: set[int]) -> str:
+    """The target's unaccounted-for blocks, as the screen shows them.
+
+    Consecutive blocks are joined into one run so the search sees text the way
+    it is read: the other cut can SPLIT a block as easily as merge two, and
+    looking inside single blocks only ever caught the merge. Runs are kept
+    apart, so no match may span blocks that are not adjacent.
+    """
+    runs, run, prev = [], [], None
+    for j, text in enumerate(current):
+        if j in taken:
+            continue
+        if prev is not None and j != prev + 1:
+            runs.append(run)
+            run = []
+        run.append(" ".join(text.split()))
+        prev = j
+    if run:
+        runs.append(run)
+    return "\n".join(" ".join(r) for r in runs)
+
+
+def _place_recuts(
+    recuts: list[Recut], mapping: dict[int, int], current: list[str]
+) -> tuple[list[tuple[int, Recut]], int, set[int], dict | None]:
+    """Decide each unit's fate: apply here, already done, absent, or refuse.
+
+    Returns (placements, skipped, claimed target indices, error). A placement
+    is (target index of the unit's first block, the unit).
+    """
+    placements: list[tuple[int, Recut]] = []
+    claimed: set[int] = set()
+    absent: list[Recut] = []
+
+    for recut in recuts:
+        lo, hi = _target_window(recut, mapping, len(current))
+        window = current[lo:hi]
+        if window == list(recut.new_texts):
+            claimed.update(range(lo, hi))  # already re-cut: agreement, not conflict
+        elif window == list(recut.old_texts):
+            placements.append((lo, recut))
+            claimed.update(range(lo, hi))
+        elif lo >= hi:
+            absent.append(recut)
+        else:
+            return (
+                [],
+                0,
+                set(),
+                {
+                    "error": (
+                        f"a re-cut of {len(recut.old_texts)} block(s) cannot be placed: this video reads "
+                        f"«{joined_text(window)[:60]}» where the change expects "
+                        f"«{joined_text(recut.old_texts)[:60]}». Placing the boundary would be a guess, and "
+                        f"applying part of it would move a word off the screen. Run the full pipeline."
+                    )
+                },
+            )
+
+    # An absent unit is only safe to skip when the video genuinely lacks those
+    # words — an excerpt cut is often a strict subset. If the words ARE on it,
+    # under some cut this alignment could not pair up, skipping would drop a
+    # reviewer's work under a green check.
+    unpaired = _unpaired_stream(current, set(mapping.values()) | claimed)
+    for recut in absent:
+        if joined_text(recut.old_texts) in unpaired:
+            return (
+                [],
+                0,
+                set(),
+                {
+                    "error": (
+                        f"a re-cut has no counterpart on this video, yet its words are on it under a different "
+                        f"cut (e.g. «{joined_text(recut.old_texts)[:60]}»). Placing the boundary would be a "
+                        f"guess. Run the full pipeline."
+                    )
+                },
+            )
+    return placements, len(absent), claimed, None
+
+
+def _apply_recuts(placements: list[tuple[int, Recut]], blocks: list[dict]) -> int:
+    """Write the placed units. Only `text` moves; every cue stays where it is."""
+    changed = 0
+    for lo, recut in placements:
+        for k, text in enumerate(recut.new_texts):
+            if blocks[lo + k]["text"] != text:
+                blocks[lo + k]["text"] = text
+                changed += 1
+    return changed
+
+
+def propagate_recuts_to_target(
+    source_old: list[str],
+    source_new: list[str],
+    target_old: list[str],
+    target_blocks: list[dict],
+) -> dict:
+    """Carry ONLY the re-cuts of `source` onto `target_blocks`, in place.
+
+    The derived -> primary leg. Text edits deliberately do not travel here:
+    they reach every video through the transcript, and applying them twice
+    would leave Step B unable to find the wording it is looking for.
+
+    Returns {"recut": units applied, "skipped": units with no counterpart}
+    or {"error": ...}.
+    """
+    recuts, err = extract_recuts(source_old, source_new)
+    if err:
+        return err
+    if not recuts:
+        return {"recut": 0, "skipped": 0}
+
+    current = [b["text"] for b in target_blocks]
+    mapping = _carried_mapping(source_old, target_old, current)
+    placements, skipped, _claimed, err = _place_recuts(recuts, mapping, current)
+    if err:
+        return err
+
+    _apply_recuts(placements, target_blocks)
+    return {"recut": len(placements), "skipped": skipped}
 
 
 def propagate_primary_to_derived(
@@ -83,23 +343,26 @@ def propagate_primary_to_derived(
     not break the alignment it is supposed to travel along. Nothing is written
     unless every change could be placed.
 
+    Re-cuts travel as whole units alongside the per-block edits; a unit the
+    derived video already carries is agreement, and counts as neither.
+
     Returns {"changed": n, "removed": n, "skipped": n} or {"error": ...}.
     """
-    edits, deleted, err = _primary_edits(primary_old, primary_new)
+    edits, deleted, recuts, err = _primary_edits(primary_old, primary_new)
     if err:
         return err
-    if not edits and not deleted:
+    if not edits and not deleted and not recuts:
         return {"changed": 0, "removed": 0, "skipped": 0}
 
-    mapping = align_blocks(primary_old, derived_old)
     current = [b["text"] for b in derived_blocks]
-    if len(derived_old) != len(current):
-        # The derived SRT changed structurally in this PR too (the human
-        # edited it, or it is unreadable). Carry the correspondence forward
-        # onto what is actually there now rather than indexing into a shape
-        # that no longer exists.
-        forward = align_blocks(derived_old, current)
-        mapping = {i: forward[j] for i, j in mapping.items() if j in forward}
+    mapping = _carried_mapping(primary_old, derived_old, current)
+
+    # Re-cuts resolve first: a unit the derived video already carries occupies
+    # blocks that match neither cut's neighbours, and leaving them unaccounted
+    # for would make the stranded check below read them as loose text.
+    placements, recut_skipped, claimed, err = _place_recuts(recuts, mapping, current)
+    if err:
+        return err
 
     # A change with no counterpart is only safe to skip when the derived video
     # genuinely lacks that content — a Talk cut is often a strict excerpt, and
@@ -110,24 +373,7 @@ def propagate_primary_to_derived(
     #
     # Looked for only among UNMAPPED blocks — a short line like «Гаразд.»
     # recurs all over a talk, and a mapped block is already accounted for.
-    # Consecutive unmapped blocks are joined into one stream so the search
-    # sees the text the way the screen shows it: the derived cut can just as
-    # easily SPLIT a primary block across two of its own as merge two into
-    # one, and looking inside single blocks only ever caught the merge.
-    # Runs are kept apart, so no match may span blocks that are not adjacent.
-    taken = set(mapping.values())
-    runs, run, prev = [], [], None
-    for j, text in enumerate(current):
-        if j in taken:
-            continue
-        if prev is not None and j != prev + 1:
-            runs.append(run)
-            run = []
-        run.append(" ".join(text.split()))
-        prev = j
-    if run:
-        runs.append(run)
-    unpaired = "\n".join(" ".join(r) for r in runs)
+    unpaired = _unpaired_stream(current, set(mapping.values()) | claimed)
 
     # Deletions count too. A block the human removed from the primary has to
     # leave the derived video with it, and an unplaceable deletion used to
@@ -151,8 +397,12 @@ def propagate_primary_to_derived(
     replacements = {mapping[i]: text for i, text in edits.items() if i in mapping}
     drops = sorted({mapping[i] for i in deleted if i in mapping}, reverse=True)
 
+    # Re-cuts and replacements both address pre-deletion indices, so they are
+    # written before any block is dropped.
+    changed = _apply_recuts(placements, derived_blocks)
     for j, text in replacements.items():
         derived_blocks[j]["text"] = text
+    changed += len(replacements)
     for j in drops:
         del derived_blocks[j]
     for i, block in enumerate(derived_blocks):
@@ -163,5 +413,5 @@ def propagate_primary_to_derived(
     # arrive has to be visible to whoever reads the run. Deletions are counted
     # alongside replacements: "removed 0" reads as "nothing to remove", which
     # is exactly what an unplaceable deletion is not.
-    skipped = (len(edits) - len(replacements)) + (len(deleted) - len(drops))
-    return {"changed": len(replacements), "removed": len(drops), "skipped": skipped}
+    skipped = (len(edits) - len(replacements)) + (len(deleted) - len(drops)) + recut_skipped
+    return {"changed": changed, "removed": len(drops), "skipped": skipped}
