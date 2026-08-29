@@ -197,6 +197,24 @@ Step B   transcript -> SRT
          Applies to primary and independent videos. Uses the multi-island
          _find_diff (section 8).
 
+Step A2  edited derived SRT -> primary (boundaries only; runs after B)
+         A RE-CUT — the same words re-split across the same number of
+         blocks — cannot reach the other videos through the transcript,
+         which records no boundaries. It is carried straight to the
+         primary positionally, as a whole unit, and Step C fans it out
+         from there. The leg runs AFTER Step B and matches each
+         candidate span against the primary's CURRENT text: by then the
+         primary holds the PR's word edits in its old cut, so a
+         boundary move survives a wording change made in the same
+         blocks (the entangled shape PR #1001 really had). Text edits
+         deliberately do NOT travel this leg — they went via the
+         transcript in Steps A and B — and a window that does not hold
+         the same words is an error, not a skip: the sync only carries
+         changes made on top of a derived video that was in sync with
+         the primary. Validation is deferred past this leg so it judges
+         the final planned primary — a re-cut changes block lengths,
+         and CPL is a real gate.
+
 Step C   primary -> derived
          Positional block substitution. Not a text search.
 ```
@@ -208,10 +226,16 @@ appears" is explicitly rejected: 51 of 165 SRTs contain duplicate block
 texts, and `tools/sync_transcript_to_srt.py:157` already treats a multi-hit
 match as an error for this reason.
 
+**A re-cut is one unit.** Applying half of a boundary move — because the
+other half fell outside an excerpt cut — takes the moved word off the screen
+with nothing to catch it. A unit lands whole, is skipped whole when the video
+genuinely lacks those words, or reds the run.
+
 **Block-count changes.** Step C may propagate a deletion (drop the aligned
 block, leave the gap). An insert or a split cannot be propagated, because
 the derived video's timing for new blocks would have to be invented, which
-`feedback_no_proportional` forbids. Those cases red the run, matching the
+`feedback_no_proportional` forbids. A merge is refused for the same reason:
+the joined subtitle would need a cue no video measured. Those cases red the run, matching the
 shape `tools/sync_srt_to_transcript.py:211` already uses for inserts.
 
 **Conflict rule.** Multiple SRT sources merge block-wise; a conflict exists

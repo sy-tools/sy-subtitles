@@ -216,7 +216,11 @@ python -m tools.sync_srt_to_transcript --old-srt OLD --new-srt NEW \
 #   --talk-dir names the talk whose declared remarks apply; pass it whenever
 #   --transcript is a copy staged away from meta.yaml (as sync_pr stages it).
 
-# Two-pass sync driver for sync-subtitles PR workflow (used by Actions).
+# Sync driver for the sync-subtitles PR workflow (used by Actions).
+# Reverse (SRT->transcript), forward (transcript->SRT), re-cut (derived->primary),
+# then primary->derived. A re-cut (same words, new block boundary) travels only on
+# the re-cut leg — the transcript records no boundaries — and it runs AFTER the
+# forward leg so a boundary move survives a wording change in the same blocks.
 # Resolves its own baseline: the last `github-actions[bot]` commit carrying the
 # `Sync-Bot: v1` trailer on this branch, else the merge-base with origin/main —
 # never the PR base, which replays edits the bot already applied. Discovers
