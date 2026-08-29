@@ -37,13 +37,16 @@ from pathlib import Path
 
 from .srt_utils import parse_srt, write_srt
 from .sync_common import (
+    count_occurrences,
     find_diff_islands,
-    find_in_text,
-    find_in_text_lenient,
+    find_span,
+    find_span_lenient,
     joined_text,
     raw_span,
+    restore_gaps,
     span_drops_text,
     strip_with_map,
+    translate_span,
 )
 from .text_segmentation import (
     global_omit_phrases,
@@ -117,24 +120,25 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
 
     cursor = 0  # position in the VIEW; it only ever moves forward
 
-    def locate(needle: str, label: str) -> tuple[int, dict | None]:
-        """Where `needle` is, or why we refuse to guess.
+    def locate(needle: str, label: str) -> tuple[tuple[int, int], dict | None]:
+        """Where `needle` sits, or why we refuse to guess.
 
         The cursor is what tells two identical sentences apart. A drifted
         block leaves it where it was, so from that point on `find(..., cursor)`
         no longer means "the next one" — it means "the first one from
         somewhere earlier", which is a different sentence.
         """
-        pos = find_in_text(view, needle, cursor)
-        if pos != -1 and drifted and view.count(needle) > 1:
-            return -1, {
+        span = find_span(view, needle, cursor)
+        occurrences = count_occurrences(view, needle)
+        if span[0] != -1 and drifted and occurrences > 1:
+            return (-1, -1), {
                 "error": (
-                    f"{label}: «{needle[:60]}» appears {view.count(needle)} times in the transcript and an "
+                    f"{label}: «{needle[:60]}» appears {occurrences} times in the transcript and an "
                     f"earlier block had drifted, so which one this edit belongs to is ambiguous. "
                     f"Run the full pipeline."
                 )
             }
-        return pos, None
+        return span, None
 
     changed = 0
     removed = 0
@@ -143,20 +147,26 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
     # Raw (start, end, replacement) triples, applied once everything succeeded.
     edits: list[tuple[int, int, str]] = []
 
-    def record_replace(view_pos: int, old_t: str, new_t: str, label: str) -> dict | None:
+    def record_replace(lo_v: int, hi_v: int, old_t: str, new_t: str, label: str) -> dict | None:
         """Rewrite one block's text in the transcript, keeping any remark."""
-        lo_v, hi_v = view_pos, view_pos + len(old_t)
-        if not span_drops_text(offsets, lo_v, hi_v):
-            lo, hi = raw_span(offsets, lo_v, hi_v)
-            edits.append((lo, hi, new_t))
+        matched = view[lo_v:hi_v]
+        # Overwriting the whole span is only safe when it reads exactly like
+        # the block. When the transcript spells the same words across a line
+        # break, replacing the span would glue two paragraphs into one — and
+        # paragraphs decide the block cut, so the next rebuild would re-cut
+        # the talk. Edit only what actually changed instead.
+        if matched == old_t and not span_drops_text(offsets, lo_v, hi_v):
+            edits.append((*raw_span(offsets, lo_v, hi_v), new_t))
             return None
-        # A declared remark sits inside this sentence. Rewrite only the parts
-        # that actually changed so the remark survives around them.
+        # Either a declared remark sits inside this sentence, or the transcript
+        # spaces these words differently. Rewrite only the parts that actually
+        # changed, so the remark — or the line break — survives around them.
         for old_frag, new_frag, off in find_diff_islands(old_t, new_t):
             if not old_frag:
                 return {"error": f"{label}: cannot tell what changed around a declared remark. Run the full pipeline."}
-            frag_lo = lo_v + off
-            frag_hi = frag_lo + len(old_frag)
+            frag_lo_rel, frag_hi_rel = translate_span(old_t, matched, off, off + len(old_frag))
+            frag_lo = lo_v + frag_lo_rel
+            frag_hi = lo_v + frag_hi_rel
             if span_drops_text(offsets, frag_lo, frag_hi):
                 return {
                     "error": (
@@ -165,13 +175,30 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                         f"rewritten automatically. Run the full pipeline."
                     )
                 }
+            # The island may straddle the line break itself: find_diff_islands
+            # merges changes one word apart, and grows a short island by whole
+            # words, so a single-letter edit at the start of a line («В» → «У»)
+            # reaches here. Writing new_frag verbatim would put a space where
+            # the file has a newline and glue the two paragraphs together.
+            matched_frag = matched[frag_lo_rel:frag_hi_rel]
+            replacement = new_frag
+            if matched_frag != old_frag:
+                replacement = restore_gaps(new_frag, matched_frag)
+                if replacement is None:
+                    return {
+                        "error": (
+                            f"{label}: this edit changes the words around a line break in the "
+                            f"transcript, so which gap the break belongs to is a guess. "
+                            f"Run the full pipeline."
+                        )
+                    }
             lo, hi = raw_span(offsets, frag_lo, frag_hi)
-            edits.append((lo, hi, new_frag))
+            edits.append((lo, hi, replacement))
         return None
 
-    def record_delete(view_pos: int, old_t: str) -> None:
+    def record_delete(lo_v: int, hi_v: int) -> None:
         """Remove one block's sentence, taking any remark inside it along."""
-        lo, hi = raw_span(offsets, view_pos, view_pos + len(old_t))
+        lo, hi = raw_span(offsets, lo_v, hi_v)
         # Absorb one neighbouring space so the sentences around the hole are
         # neither glued together nor doubly spaced. Measured in the RAW text,
         # not the view: the view cannot see a declared remark, so "the next
@@ -198,11 +225,11 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 # Lenient (case-insensitive) fallback: benign capitalization
                 # drift must not stall the cursor, or a later deletion of
                 # duplicated text grabs an earlier occurrence.
-                pos = find_in_text_lenient(view, old_texts[k], cursor)
-                if pos == -1:
+                _, end = find_span_lenient(view, old_texts[k], cursor)
+                if end == -1:
                     drifted += 1
                     continue
-                cursor = pos + len(old_texts[k])
+                cursor = end
 
         elif tag == "replace":
             # Pair old blocks to new blocks by similarity ratio. Equal-count
@@ -219,14 +246,14 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
             # transcript needs no change — and the cursor still has to walk
             # past this text for later find()s to land correctly.
             if joined_text(old_slice) == joined_text(new_slice):
-                pos = find_in_text_lenient(view, old_slice[0], cursor)
-                if pos == -1:
+                _, end = find_span_lenient(view, joined_text(old_slice), cursor)
+                if end == -1:
                     # The cursor could not walk past this re-blocked text, so
                     # it is stale from here on exactly as a drifted block
                     # leaves it — the ambiguity guard has to know.
                     drifted += 1
                 else:
-                    cursor = pos + len(joined_text(old_slice))
+                    cursor = end
                 continue
             matches = (
                 list(range(i2 - i1)) if (i2 - i1) == (j2 - j1) else _match_blocks_by_similarity(old_slice, new_slice)
@@ -248,18 +275,18 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 label = f"Block {src_block['idx']}"
                 if match_idx is None:
                     # Treat as deletion
-                    pos, ambiguous = locate(old_t, label)
+                    (lo_v, hi_v), ambiguous = locate(old_t, label)
                     if ambiguous:
                         return ambiguous
-                    if pos == -1:
+                    if lo_v == -1:
                         print(
                             f"  {label}: «{old_t[:60]}» not in transcript — skipping (placeholder?)",
                             file=sys.stderr,
                         )
                         skipped += 1
                         continue
-                    record_delete(pos, old_t)
-                    cursor = pos + len(old_t)
+                    record_delete(lo_v, hi_v)
+                    cursor = hi_v
                     removed += 1
                     print(f"  {label}: removed «{old_t[:60]}»", file=sys.stderr)
                     continue
@@ -274,32 +301,32 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                     # stalling the cursor with nobody counting it — the very
                     # shape the ambiguity guard exists to catch, in the branch
                     # that runs on exactly the PRs that clean remarks up.
-                    pos = find_in_text_lenient(view, new_t, cursor)
-                    if pos == -1:
+                    _, end = find_span_lenient(view, new_t, cursor)
+                    if end == -1:
                         drifted += 1
                     else:
-                        cursor = pos + len(new_t)
+                        cursor = end
                     print(
                         f"  {label}: «{old_t[:60]}» — omit remark dropped from the screen only; transcript keeps it",
                         file=sys.stderr,
                     )
                     continue
-                pos, ambiguous = locate(old_t, label)
+                (lo_v, hi_v), ambiguous = locate(old_t, label)
                 if ambiguous:
                     return ambiguous
-                if pos == -1:
+                if lo_v == -1:
                     return {
                         "error": (
                             f"{label}: cannot find «{old_t[:60]}» in transcript (searching from offset {cursor})."
                         )
                     }
                 if old_t == new_t:
-                    cursor = pos + len(old_t)
+                    cursor = hi_v
                     continue
-                err = record_replace(pos, old_t, new_t, label)
+                err = record_replace(lo_v, hi_v, old_t, new_t, label)
                 if err:
                     return err
-                cursor = pos + len(old_t)
+                cursor = hi_v
                 changed += 1
                 print(f"  {label}: «{old_t[:60]}» → «{new_t[:60]}»", file=sys.stderr)
 
@@ -315,9 +342,9 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 if omit_phrases and not strip_omitted_phrases(old_t, omit_phrases):
                     # The block was nothing but declared remarks. Dropping it
                     # from the SRT is right; the transcript still keeps them.
-                    pos = find_in_text_lenient(view, old_t, cursor)
-                    if pos != -1:
-                        cursor = pos + len(old_t)
+                    _, end = find_span_lenient(view, old_t, cursor)
+                    if end != -1:
+                        cursor = end
                     print(
                         f"  {label}: «{old_t[:60]}» — omit-only block dropped from "
                         f"the screen only; transcript keeps it",
@@ -325,18 +352,18 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                     )
                     skipped += 1
                     continue
-                pos, ambiguous = locate(old_t, label)
+                (lo_v, hi_v), ambiguous = locate(old_t, label)
                 if ambiguous:
                     return ambiguous
-                if pos == -1:
+                if lo_v == -1:
                     print(
                         f"  {label}: «{old_t[:60]}» not in transcript — skipping (placeholder?)",
                         file=sys.stderr,
                     )
                     skipped += 1
                     continue
-                record_delete(pos, old_t)
-                cursor = pos + len(old_t)
+                record_delete(lo_v, hi_v)
+                cursor = hi_v
                 removed += 1
                 print(f"  {label}: removed «{old_t[:60]}»", file=sys.stderr)
 
