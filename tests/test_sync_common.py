@@ -10,7 +10,7 @@ subsequent edit at the wrong byte.
 
 import pytest
 
-from tools.sync_common import raw_span, span_drops_text, strip_with_map
+from tools.sync_common import find_span, find_span_lenient, raw_span, span_drops_text, strip_with_map
 from tools.text_segmentation import strip_omitted_phrases
 
 PHRASES = ["(сміх)", "(ще більше сміху)"]
@@ -101,3 +101,31 @@ class TestSpans:
         _view, offsets = strip_with_map("Він сказав (сміх) добре.", PHRASES)
 
         assert span_drops_text(offsets, 3, 3) is False
+
+
+class TestFindSpan:
+    """The lookup the whole cursor discipline rests on: the NEXT occurrence."""
+
+    def test_an_earlier_whitespace_variant_wins_over_a_later_exact_match(self):
+        """Every caller reads the result as "the next one from the cursor".
+
+        Trying the exact search first and only then the tolerant one inverts
+        that: a block whose transcript copy spans a line break is skipped in
+        favour of a later verbatim occurrence — a different sentence.
+        """
+        text = "X. A\nB. Y. A B. Z."
+
+        assert find_span(text, "A B", 0) == (3, 6)
+
+    def test_a_lenient_span_indexes_the_original_text(self):
+        """The offsets must address the text passed in, not a folded copy.
+
+        Folding is not length-preserving in Unicode ("İ".lower() is two
+        characters), so offsets measured against text.lower() address the
+        wrong characters — and a splice at those offsets corrupts the file.
+        """
+        text = "İ так. Привіт Світ. Кінець."
+
+        lo, hi = find_span_lenient(text, "привіт світ", 0)
+
+        assert text[lo:hi] == "Привіт Світ"

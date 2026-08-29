@@ -43,6 +43,7 @@ from .sync_common import (
     find_span_lenient,
     joined_text,
     raw_span,
+    restore_gaps,
     span_drops_text,
     strip_with_map,
     translate_span,
@@ -174,8 +175,25 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                         f"rewritten automatically. Run the full pipeline."
                     )
                 }
+            # The island may straddle the line break itself: find_diff_islands
+            # merges changes one word apart, and grows a short island by whole
+            # words, so a single-letter edit at the start of a line («В» → «У»)
+            # reaches here. Writing new_frag verbatim would put a space where
+            # the file has a newline and glue the two paragraphs together.
+            matched_frag = matched[frag_lo_rel:frag_hi_rel]
+            replacement = new_frag
+            if matched_frag != old_frag:
+                replacement = restore_gaps(new_frag, matched_frag)
+                if replacement is None:
+                    return {
+                        "error": (
+                            f"{label}: this edit changes the words around a line break in the "
+                            f"transcript, so which gap the break belongs to is a guess. "
+                            f"Run the full pipeline."
+                        )
+                    }
             lo, hi = raw_span(offsets, frag_lo, frag_hi)
-            edits.append((lo, hi, new_frag))
+            edits.append((lo, hi, replacement))
         return None
 
     def record_delete(lo_v: int, hi_v: int) -> None:

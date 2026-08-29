@@ -1420,9 +1420,10 @@ class TestBlockSpanningALineBreak:
     """A subtitle block may join two lines of the transcript with a space.
 
     Blocks are cut from paragraphs and then merged across them, so across the
-    corpus 415 blocks in 73 talks read «A. B» while the transcript reads
-    «A.\\nB». The lookup is a plain str.find, so such a block is not found —
-    and one edited block aborts the entire sync run with "nothing written".
+    corpus 415 blocks — in 73 videos across 45 talks — read «A. B» while the
+    transcript reads «A.\\nB». The lookup was a plain str.find, so such a block
+    was not found, and one edited block aborted the entire sync run with
+    "nothing written".
     """
 
     @pytest.fixture
@@ -1544,3 +1545,64 @@ class TestBlockSpanningALineBreak:
         assert "Змінений початок." in text
         assert "Третє речення." in text
         assert "о.Третє" not in text and "..Третє" not in text
+
+    def _run(self, tmp_path, transcript_body, old_block, new_block):
+        talk_dir = tmp_path / "talks" / "test"
+        video = talk_dir / "Video" / "final"
+        video.mkdir(parents=True)
+        (talk_dir / "uk_old.srt").write_text(f"1\n00:00:01,000 --> 00:00:05,000\n{old_block}\n", encoding="utf-8")
+        (video / "uk.srt").write_text(f"1\n00:00:01,000 --> 00:00:05,000\n{new_block}\n", encoding="utf-8")
+        (talk_dir / "transcript_uk.txt").write_text(HEADER + transcript_body, encoding="utf-8")
+        result = sync_srt_to_transcript(
+            old_srt=str(talk_dir / "uk_old.srt"),
+            new_srt=str(video / "uk.srt"),
+            transcript=str(talk_dir / "transcript_uk.txt"),
+        )
+        return result, (talk_dir / "transcript_uk.txt").read_text(encoding="utf-8")
+
+    def test_an_edit_on_both_sides_of_the_break_keeps_the_break(self, tmp_path):
+        """Adjacent changes either side of the break merge into ONE island.
+
+        find_diff_islands joins changes separated by at most one word, so the
+        island straddles the gap and its replacement carries a plain space.
+        """
+        result, text = self._run(
+            tmp_path,
+            "Це кінець рядка.\nОсь початок наступного.\n",
+            "Це кінець рядка. Ось початок наступного.",
+            "Це кінець фрази. Он початок наступного.",
+        )
+        assert not result.get("error"), result.get("error")
+        assert "Це кінець фрази.\nОн початок наступного." in text, repr(text)
+
+    def test_a_one_character_edit_next_to_the_break_keeps_the_break(self, tmp_path):
+        """An island shorter than MIN_FRAGMENT grows left, across the gap.
+
+        Ukrainian lines routinely start with a one-letter word (І, В, А), so a
+        single-character edit there is enough to reach this path.
+        """
+        result, text = self._run(
+            tmp_path,
+            "Кінець рядка і.\nВ початок наступного.\n",
+            "Кінець рядка і. В початок наступного.",
+            "Кінець рядка і. У початок наступного.",
+        )
+        assert not result.get("error"), result.get("error")
+        assert "Кінець рядка і.\nУ початок наступного." in text, repr(text)
+
+    def test_an_edit_that_changes_the_word_count_around_a_break_refuses(self, tmp_path):
+        """When the gaps cannot be paired, say so instead of guessing.
+
+        Dropping a sentence that ended a transcript line leaves fewer gaps in
+        the replacement than the file has, so which one was the line break is
+        a guess. Gluing the paragraphs on a guess re-cuts the talk silently;
+        an explicit refusal sends it to the pipeline instead.
+        """
+        result, text = self._run(
+            tmp_path,
+            "І всюди, усі почувалися краще.\nЦе так дивовижно!\n",
+            "І всюди, усі почувалися краще. Це так дивовижно!",
+            "Це дуже дивовижно!",
+        )
+        assert "line break" in result.get("error", ""), result
+        assert text.endswith("І всюди, усі почувалися краще.\nЦе так дивовижно!\n"), repr(text)
