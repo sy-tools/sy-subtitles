@@ -1,62 +1,54 @@
-# Language Review – 1979-01-01_Letter-Human-Chitta-has-many-illusions, 2026-07-12 (Fable pass)
+# Language Review – 1979-01-01_Letter-Human-Chitta-has-many-illusions, 1979-01-01
 
 ## Process
 
-2+1 review (Reviewer L + Reviewer S + Critic) on `transcript_uk.txt`
-(Letter translated from Marathi, 1979, THE LIFE ETERNAL). Second pass,
-after the 2026-06-01 review (dash style + conjunction comma already
-applied). Marathi original checked on amruta.org: the /mr/ page exists
-but states "Transcript (Marathi) – NEEDED", so the English translation
-remains the only available source. Editorial markers from the source
-(e.g. "(??)") are preserved.
+Reviewed `transcript_uk.txt` (full paragraphed Ukrainian text of the letter «Людська Чітта має багато ілюзій», translated from Marathi, THE LIFE ETERNAL 1979) against `transcript_en.txt` using 2 parallel reviewers + 1 critic filter.
+
+Paragraph numbering used below: P1 = header lines 1–4, P2 = source note (line 6), P3 = letter body (line 7), P4 = signature (line 8).
+
+Mechanical checks performed on the file:
+- Dash: 8 × en-dash U+2013, all spaced ` – `; no em-dash U+2014.
+- Apostrophe: 2 × U+2019 (`Матір’ю`, `Саундар’я`); no ASCII `'`.
+- No quotation marks present (nothing to normalise to «»); no ellipsis present.
+- No Latin characters mixed into Cyrillic words; no double spaces; no space before punctuation.
 
 ## Results
 
 ### L. Language (Orthography + Grammar + Punctuation)
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| L1 | 7 | Comma before the closing dash of a parenthetical: the comma after «сказала» closes the що-clause before the FIRST dash; no comma belongs before the second | «…Я сказала, – правильне воно чи хибне, – можна встановити…» | «…Я сказала, – правильне воно чи хибне – можна встановити…» |
-| L2 | 7 | Invalid rection «навчитися, що…» (навчитися чого / + inf., not a що-clause) | «на власному досвіді навчитеся, що любов та Істина – одне ціле» (EN "learn … that") | «на власному досвіді пізнаєте, що…» |
-| L3 | 7 | Reflexive possessive required with 2nd-person subject | «ви усвідомите вашу дуже тонку Брахма Таттву» | «ви усвідомите свою дуже тонку Брахма Таттву» |
-| L4 | 7 | Sentence-initial «В» before a consonant (у/в alternation) | «В Сахаджа Йозі вона є силою…» | «У Сахаджа Йозі вона є силою…» |
-| L5 | 8 | Politeness capitalization «Ваша» addressing MANY readers (uppercase is for letters to one person); Letter 1 closes lowercase | «Назавжди Ваша, Мати Нірмала» | «Назавжди ваша, Мати Нірмала» |
-| L6 | 7 | «Коли вони усунені» → «Коли їх усунено»? | impersonal preference | OK — both forms valid, no change |
-| L7 | 7 | «це турбує вашу увагу» — awkward collocation | mirrors awkward EN "disturbs your attention" | OK — mirrors source, no change |
+| L1 | P3 | Comma immediately followed by dash (`, –`) after subordinate clause | «Але те, що Я сказала, – правильне воно чи хибне – можна встановити за вібраціями.» | «Але те, що Я сказала – правильне воно чи хибне – можна встановити за вібраціями.» |
+| L2 | P3 | Active participle «люблячої» (bookish/non-native form) | «в товаристві вічно люблячої Бхаґаваті» | «в товаристві Бхаґаваті, сповненої вічної любові» |
+| L3 | P3 | Sentence fragment: subordinate «Коли…» clause with no main clause | «Коли ви на власному досвіді пізнаєте, що любов та Істина – одне ціле.» | Merge with the following sentence: «Коли ви на власному досвіді пізнаєте, що любов та Істина – одне ціле, і коли через свій досвід ви усвідомите…» |
 
 ### S. SY Domain (Capitalization + Terminology + Consistency)
 | # | Paragraph | Error | Context | Fix |
 |---|-----------|-------|---------|-----|
-| S1 | 6 | «з мараті» — minority transliteration; corpus norm «маратхі» (14 vs 3 files), aspirate convention (тх/дх) | «Лист, перекладений з мараті, 1979 р.» | «…з маратхі, 1979 р.» |
-| S2 | 7 | Dangling idiom «віддавши своє серце на милість» — «на милість» requires a complement (кому?) and adds meaning absent in EN "surrendering your heart" | «і, віддавши своє серце на милість, звільнитися від ілюзії» | «і, віддавши своє серце, звільнитися від ілюзії» |
-| S3 | 7 | Kundalini pronouns «Вона» uppercase | mirrors EN "She"; consistent within the text | OK — no change |
-| S4 | 7 | Glossary check: Кундаліні Шакті, Бхаґаваті, Санкальпа, Брахма Таттва, Параматма, Чітта, Джада/Саундар’я Шакті, Брахман | throughout | OK — all match `terms_lookup.yaml`, no change |
-| S5 | 7 | «вічно люблячої» — active participle | style preference | OK — established SY usage, no change |
+| S1 | P3 | Locative «Йозі» implies base «Йога» (г), but glossary base is «Сахаджа Йоґа» (ґ) | «У Сахаджа Йозі вона є силою блаженства свідомості.» / «У Парам-йозі вона є найвищим блаженством» | «У Сахаджа Йоґі…» / «У Парам-йоґі…» |
+| S2 | P3 | Pronoun referring to Дух (Spirit) in lowercase | «Вібрації блаженства линуть від Духа, бо його світло сяє незатьмарено» | «…бо Його світло сяє незатьмарено» |
+| S3 | P3 | Pronoun for Kundalini capitalised, although Kundalini is not listed among the uppercase-pronoun cases (Shri Mataji / Incarnations) | «навіть у дрімотному стані Вона усвідомлює…», «хоча Вона є Матір’ю, у стані свідка Вона знає…», «Вона легко пробуджується» | Lowercase «вона» |
+
+Verified as correct (no finding): «Чітта» (glossary: Chitta → Чітта); «Кундаліні», «Кундаліні Шакті»; «Бхаґаваті» (glossary: Бхаґаваті, ґ); «Санкальпою» (glossary: sankalpa → Санкальпа); «Брахма Таттва» (feminine agreement «яка тече», «її промені», «подібна» consistent throughout); «Параматма»; «стан свідка» (witness state); «Дух/Духа», «Істина» uppercase per capitalisation rules; «Всесвіт» uppercase as in the source «Universe»; «Боги» uppercase (corpus majority); «Джада Шакті», «Саундар’я Шакті», «Брахма Шакті», «Брахма-бхутва Шакті» transliterations; «віддавши своє серце на милість» (glossary: surrender → віддача на милість); «Я сказала», «Це Мої благословення» uppercase for Shri Mataji; language names «маратхі», «англійська», «українська» lowercase; «Мати Нірмала».
 
 ### Critic Filter
 | Source | # | Verdict | Reason |
 |--------|---|---------|--------|
-| L | L1 | Keep | Genuine punctuation rule (no stray comma before the closing dash here). |
-| L | L2 | Keep | Genuine rection error; «пізнаєте» is faithful to EN "learn". |
-| L | L3 | Keep | Genuine grammar (reflexive possessive). |
-| L | L4 | Keep | Genuine у/в orthography at sentence start. |
-| L | L5 | Keep | Orthography: uppercase Ви/Ваша only when addressing one person; also aligns with Letter 1. |
-| L | L6, L7 | Remove | Preferences / source-mirroring, not errors. |
-| S | S1 | Keep | Corpus consistency + transliteration convention. |
-| S | S2 | Remove | Overruled by the project reviewer: «віддати на милість» carries the devotional sense of "surrender" intended here; the phrase stays. |
-| S | S3–S5 | Remove | Confirmations, not corrections. |
+| L | L1 | Remove | False positive. The comma closes the subordinate clause «що Я сказала» and is obligatory; the dash then opens the parenthetical insertion. The combined `, –` is standard Ukrainian punctuation. Dropping the comma would leave the subordinate clause unclosed. |
+| L | L2 | Remove | Style preference, not an error. «Люблячий» is an established adjectival form; «вічно люблячої» renders «ever loving» closely and reads naturally in devotional register. |
+| L | L3 | Remove | False positive. The English source has the same fragment («When you will learn with your experience's that love and Truth are one.»), followed by «And when…». The translation faithfully mirrors the structure of the published letter; merging sentences would alter the source text. |
+| S | S1 | Remove | False positive. «Сахаджа Йозі» is the established locative across the corpus (326 occurrences of «Йозі» vs. 7 of «Йоґі»); the strict ґ→дз alternation form («Йодзі») is used nowhere. «Парам-йозі» follows the same pattern and is internally consistent within the letter. |
+| S | S2 | Remove | False positive. The capitalisation rules list Shri Mataji and Incarnations only; pronouns for the Spirit are not mandated uppercase. The source has lowercase «its». Lowercase «його» is correct. |
+| S | S3 | Remove | False positive. The source itself capitalises «She» for Kundalini as the Mother power («although she is Mother»); the corpus follows the same convention (e.g. «Кундаліні, бо Вона є Матір’ю»). Uppercase «Вона» is consistent and reverent. No conflict with L. |
 
 ### Approved Corrections
 | # | Paragraph | Error | Fix |
 |---|-----------|-------|-----|
-| 1 | 6 | «з мараті» | «з маратхі» |
-| 2 | 7 | «…чи хибне, – можна…» | «…чи хибне – можна…» |
-| 3 | 7 | «навчитеся, що» | «пізнаєте, що» |
-| 4 | 7 | «вашу дуже тонку Брахма Таттву» | «свою дуже тонку Брахма Таттву» |
-| 5 | 7 | «В Сахаджа Йозі» | «У Сахаджа Йозі» |
-| 6 | 8 | «Назавжди Ваша» | «Назавжди ваша» |
+| – | – | No corrections approved | – |
 
 ## Summary
 
-- Language (L): 7 issues found, 5 approved by Critic
-- SY Domain (S): 5 issues found, 1 approved by Critic
-- Applied to `transcript_uk.txt`: 6 corrections
+- Language (L): 3 issues found, 0 approved by Critic
+- SY Domain (S): 3 issues found, 0 approved by Critic
+- Total corrections applied: 0
+
+`transcript_uk.txt` is unchanged: orthography, punctuation characters, deity-pronoun capitalisation, and SY terminology all conform to `glossary/CLAUDE.md`, `terms_lookup.yaml`, and corpus conventions.
