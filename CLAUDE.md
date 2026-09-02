@@ -18,7 +18,7 @@ Source language: English. Target language: Ukrainian.
 1. Download talk: `python -m tools.download --url "https://www.amruta.org/..."`
 2. Push source files (`meta.yaml`, `transcript_en.txt`, `en.srt`)
 3. Trigger pipeline: `gh workflow run subtitle-pipeline.yml -f talk_id={date}_{slug}`
-   Optional inputs: `model=claude-opus-5|claude-opus-4-8|claude-fable-5|claude-sonnet-5`
+   Optional inputs: `model=claude-opus-5|claude-opus-4-8|claude-fable-5-1|claude-sonnet-5`
    (default `claude-opus-5`), `build_model=...` (build-step-only override,
    default `same-as-model`), `oauth_token=default|EXTRA` (Claude account:
    value `X` → secret `CLAUDE_CODE_OAUTH_TOKEN_X`; missing/empty named secret

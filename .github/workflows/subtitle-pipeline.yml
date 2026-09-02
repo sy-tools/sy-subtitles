@@ -47,7 +47,7 @@ on:
         options:
           - claude-opus-4-8
           - claude-opus-5
-          - claude-fable-5
+          - claude-fable-5-1
           - claude-sonnet-5
         default: claude-opus-5
       build_model:
@@ -57,7 +57,7 @@ on:
           - same-as-model
           - claude-opus-4-8
           - claude-opus-5
-          - claude-fable-5
+          - claude-fable-5-1
           - claude-sonnet-5
         default: same-as-model
       oauth_token:
