@@ -1,0 +1,18 @@
+title: 'Birthday Puja: Our maryadas'
+date: '1985-03-17'
+location: Kew Ashram, Melbourne (Australia)
+amruta_url: https://www.amruta.org/1985/03/17/birthday-puja-1985/
+language: en
+videos:
+- slug: Birthday-Puja-P1
+  title: Birthday Puja P1
+  video_ref: r1W0JYEgZCRRtXBkBJFVhSWFxZSw
+  sync: derived
+- slug: Birthday-Puja-P2
+  title: Birthday Puja P2
+  video_ref: r1XkFeQgcWRxxVU0BBGVhSWFxZSw
+  sync: primary
+- slug: Birthday-Puja-Talk
+  title: Birthday Puja Talk
+  video_ref: r1XRIKRQMQEh0AAUBIH1NSUF1ZSw
+  sync: derived
