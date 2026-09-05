@@ -16,6 +16,7 @@
      Classic (non-deferred) scripts, so globals are defined before the inline
      app script below runs. -->
 <script src="js/preferences.js"></script>
+<script src="js/typo_hints.js"></script>
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
 <script src="js/edit_store.js"></script>
@@ -369,6 +370,10 @@
           <span class="prefs-row__label" data-i18n="prefs.theme">Theme</span>
           <span class="prefs-seg" id="prefs-theme"></span>
         </div>
+        <label class="prefs-row">
+          <span class="prefs-row__label" data-i18n="prefs.typo">Highlight typos</span>
+          <span class="prefs-switch"><input type="checkbox" id="prefs-typo" onchange="SPA.toggleTypoHints()"></span>
+        </label>
         <label class="prefs-row">
           <span class="prefs-row__label" data-i18n="prefs.expert">Expert mode</span>
           <span class="prefs-switch"><input type="checkbox" id="prefs-expert" onchange="SPA.toggleExpert()"></span>
@@ -919,6 +924,7 @@ var I18N = {
     'prefs.title': '\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F',
     'prefs.theme': '\u0422\u0435\u043C\u0430',
     'prefs.expert': '\u0415\u043A\u0441\u043F\u0435\u0440\u0442\u043D\u0438\u0439 \u0440\u0435\u0436\u0438\u043C',
+    'prefs.typo': '\u041f\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u0442\u0438 \u043e\u043f\u0438\u0441\u043a\u0438',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
     'prefs.theme.auto': '\u0410\u0432\u0442\u043E',
@@ -1135,6 +1141,7 @@ var I18N = {
     'prefs.title': 'Settings',
     'prefs.theme': 'Theme',
     'prefs.expert': 'Expert mode',
+    'prefs.typo': 'Highlight typos',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
     'prefs.theme.auto': 'Auto',
@@ -3802,6 +3809,184 @@ document.addEventListener('focusout', function(e) {
   if (!isEditField(el)) return;
   var clean = sanitizeEditedText(el.innerText, editFieldLang(el));
   if (el.innerText !== clean) el.textContent = clean;
+});
+
+// ============================================================
+// Typo hints
+// ============================================================
+// Underlines words that neither a Ukrainian dictionary nor this project's own
+// vocabulary knows. Both live in a worker (js/typo_worker.js) because parsing
+// the dictionary costs seconds and hundreds of megabytes; it is started only
+// when the preference is on and terminated when it goes off.
+//
+// Nothing here touches the DOM. The CSS Custom Highlight API paints ranges
+// over the text as it stands, so the caret, the undo stack and the innerText
+// the edit store reads are all left exactly as they were — which is the only
+// reason this can run inside a live contenteditable at all.
+var typoWorker = null;
+var typoSeq = 0;
+var typoScanTimer = null;
+var typoObserver = null;
+// The fields the outstanding request was built from, held so the reply can be
+// matched back to the very elements whose text was measured — and the text as
+// it was measured, because that is what the offsets in the reply describe.
+var typoFieldsInFlight = [];
+var typoTextsInFlight = [];
+// The request whose spans are currently on screen. Equal to typoSeq once the
+// paint has caught up with the text; behind it while a scan is in flight.
+var typoPaintedSeq = 0;
+
+function typoHintsSupported() {
+  return typeof CSS !== 'undefined' && !!CSS.highlights && typeof Highlight !== 'undefined';
+}
+
+// `.edited` is two different things: the preview's editable line, and a STATE
+// class the review grid puts on the whole cell once it has been edited. Asking
+// for contenteditable as well keeps the state class out — otherwise a cell and
+// the field inside it both answer, and the word underneath is painted twice.
+function typoFields() {
+  return Array.prototype.slice.call(
+    document.querySelectorAll('.cell-text[contenteditable], .edited[contenteditable]')
+  );
+}
+
+// A Range over characters [start, end) of `el`'s text, walking its text nodes:
+// contenteditable splits one visible line into several nodes as it is edited.
+function typoRange(el, start, end) {
+  var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  var range = document.createRange();
+  var pos = 0;
+  var node;
+  var open = false;
+  while ((node = walker.nextNode())) {
+    var len = node.nodeValue.length;
+    if (!open && pos + len >= start) { range.setStart(node, start - pos); open = true; }
+    if (open && pos + len >= end) { range.setEnd(node, end - pos); return range; }
+    pos += len;
+  }
+  return null;
+}
+
+function paintTypoHints(fields, spansPerField) {
+  var ranges = [];
+  for (var i = 0; i < fields.length; i++) {
+    var spans = spansPerField[i] || [];
+    for (var j = 0; j < spans.length; j++) {
+      var r = typoRange(fields[i], spans[j].start, spans[j].end);
+      if (r) ranges.push(r);
+    }
+  }
+  // Rebuilt whole rather than patched: a re-render replaces the cells, and a
+  // Range still pointing at a detached node would paint nothing while keeping
+  // the registry growing. Added one by one rather than spread as arguments —
+  // a long transcript can produce more ranges than a call can take.
+  var highlight = new Highlight();
+  ranges.forEach(function(r) { highlight.add(r); });
+  CSS.highlights.set('sy-typo', highlight);
+}
+
+function clearTypoHints() {
+  if (typoHintsSupported()) CSS.highlights.delete('sy-typo');
+}
+
+// Every trigger funnels through here: a keystroke, a re-render, the worker
+// becoming ready. One debounce, one full scan — the worker judges a whole talk
+// in milliseconds, so there is nothing to gain from tracking which cell changed
+// and a great deal of stale-element bookkeeping to lose.
+function scheduleTypoScan() {
+  if (!typoWorker) return;
+  clearTimeout(typoScanTimer);
+  typoScanTimer = setTimeout(function() {
+    var fields = typoFields();
+    if (!fields.length) return;
+    typoSeq++;
+    typoFieldsInFlight = fields;
+    // textContent, not innerText: the spans come back as offsets and are turned
+    // into Ranges by walking the text nodes, which is exactly what textContent
+    // concatenates. innerText is the RENDERED text — it drops the indentation
+    // the cell markup carries — so measuring on one and painting on the other
+    // slides every underline off its word.
+    typoTextsInFlight = fields.map(function(el) { return el.textContent; });
+    typoWorker.postMessage({ seq: typoSeq, texts: typoTextsInFlight });
+  }, 200);
+}
+
+// Whether every field still holds the exact text its offsets were measured on.
+function typoTextIsUnchanged() {
+  if (typoFieldsInFlight.length !== typoTextsInFlight.length) return false;
+  for (var i = 0; i < typoFieldsInFlight.length; i++) {
+    if (typoFieldsInFlight[i].textContent !== typoTextsInFlight[i]) return false;
+  }
+  return true;
+}
+
+// The dictionary never arrived, or the worker died carrying it. Stopping is not
+// enough: left switched on, the preference claims a feature that is not
+// running, and the user's next click reads as "turn it off" rather than as a
+// retry. The switch has to say what is true.
+function typoWorkerFailed(why) {
+  console.warn('typo hints: ' + why);
+  stopTypoWorker();
+  writePref(localStorage, 'typoHints', false);
+  renderPrefsMenu();
+}
+
+function startTypoWorker() {
+  if (typoWorker || !typoHintsSupported()) return;
+  typoWorker = new Worker('js/typo_worker.js');
+  // A worker that died — its script unreachable offline, or the parse killed for
+  // memory — otherwise stays a live-looking object that swallows every scan.
+  typoWorker.onerror = function(e) {
+    typoWorkerFailed('worker failed — ' + ((e && e.message) || e));
+  };
+  typoWorker.onmessage = function(e) {
+    var msg = e.data || {};
+    if (msg.failed) {
+      // Offline, or the dictionary is missing. Stop rather than leave the user
+      // waiting for underlines that will never come.
+      typoWorkerFailed('dictionary unavailable — ' + msg.failed);
+      return;
+    }
+    if (msg.ready) { scheduleTypoScan(); return; }
+    // A reply for text the user has already typed past: its offsets no longer
+    // describe what is on screen, so painting it would underline the wrong
+    // letters. The next scan is already scheduled.
+    //
+    // The sequence number alone does not catch this. It advances when a request
+    // is SENT, so an edit made between the send and the reply leaves the two
+    // equal — and the stale offsets were painted onto the new text. Offsets
+    // describe the string they were measured on, so that is what must still be
+    // on screen; the edit has already scheduled the scan that replaces this.
+    if (msg.seq !== typoSeq) return;
+    if (!typoTextIsUnchanged()) return;
+    paintTypoHints(typoFieldsInFlight, msg.spans);
+    typoPaintedSeq = msg.seq;
+  };
+  typoObserver = new MutationObserver(scheduleTypoScan);
+  ['review-grid', 'edit-list'].forEach(function(id) {
+    var host = document.getElementById(id);
+    if (host) typoObserver.observe(host, { childList: true, subtree: true });
+  });
+}
+
+function stopTypoWorker() {
+  if (typoObserver) { typoObserver.disconnect(); typoObserver = null; }
+  if (typoWorker) { typoWorker.terminate(); typoWorker = null; }
+  clearTimeout(typoScanTimer);
+  clearTypoHints();
+}
+
+SPA.toggleTypoHints = function() {
+  var on = !readPref(localStorage, 'typoHints');
+  writePref(localStorage, 'typoHints', on);
+  if (on) startTypoWorker(); else stopTypoWorker();
+  renderPrefsMenu();
+};
+
+// Bubble phase, after the capture-phase listener that rewrites typography: the
+// hints must judge the text as it ends up, not as it was typed.
+document.addEventListener('input', function(e) {
+  if (isEditField(e.target)) scheduleTypoScan();
 });
 
 function renderMarkers() {
@@ -7769,6 +7954,15 @@ function renderPrefsMenu() {
   // after the value changed out of band the switch and the flag contradicted
   // each other, and the click that followed flipped the stale variable, moving
   // expert mode the opposite way from what the switch was showing.
+  //
+  // The typo switch has no such second painter: storage is its only source.
+  var typo = document.getElementById('prefs-typo');
+  if (typo) {
+    typo.checked = readPref(localStorage, 'typoHints');
+    // The browser has to be able to paint the hints at all. Saying so beats
+    // offering a switch that silently does nothing.
+    typo.disabled = !typoHintsSupported();
+  }
 }
 
 SPA.togglePrefsMenu = function() {
@@ -7875,6 +8069,23 @@ function applyExpertMode() {
   if (flag) flag.hidden = !expertMode;
 }
 applyExpertMode();
+
+// Resume typo hints for someone who left them on. The worker downloads and
+// parses a 1.5 MB dictionary, so this is deliberately NOT part of boot: it is
+// deferred until the page is otherwise idle, and the editor is usable the whole
+// time it loads.
+// The two schedulers take incompatible second arguments — an options object vs
+// a delay — so they are called apart rather than through one reference. The
+// preference is read AGAIN when the callback runs: the user can reach the menu
+// inside that window, and starting a worker they just switched off would leave
+// hints painted under a switch that says otherwise.
+if (readPref(localStorage, 'typoHints')) {
+  var resumeTypoHints = function() {
+    if (readPref(localStorage, 'typoHints')) startTypoWorker();
+  };
+  if (window.requestIdleCallback) window.requestIdleCallback(resumeTypoHints, { timeout: 2000 });
+  else window.setTimeout(resumeTypoHints, 1);
+}
 
 // Reflect an offline-at-load state in the freshness bar immediately, before any
 // manifest fetch resolves.

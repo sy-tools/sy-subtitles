@@ -1,7 +1,7 @@
 // Service Worker for SPA caching
 // Browser detects changes by comparing sw.js byte-for-byte.
 // CACHE_VERSION: bump when cache format changes or to force purge.
-var CACHE_VERSION = 17;
+var CACHE_VERSION = 18;
 var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 
 // Routing predicates (isImmutable / isApiOrRaw / isNavigation / pickStrategy) are
@@ -33,6 +33,7 @@ var SHELL_ASSETS = [
   'css/tokens.css',
   'css/components.css',
   'js/preferences.js',
+  'js/typo_hints.js',
   'js/preview_srt_parser.js',
   'js/preview_state.js',
   'js/edit_store.js',
@@ -60,6 +61,14 @@ var SHELL_ASSETS = [
   'js/export_menu.js'
 ];
 
+// Scripts that load inside the typo-hints Worker rather than through a <script>
+// tag, so the shell lockstep above cannot see them. Left uncached, switching the
+// hints on while offline starts a worker whose script 404s: it dies quietly, and
+// every later scan is posted into a corpse. The dictionary they read is
+// deliberately absent — 9 MB has no business in an install-time precache, and
+// the hints are a feature the user opts into, not part of booting.
+var WORKER_ASSETS = ['js/typo_worker.js', 'js/vendor/typo.js'];
+
 // Cross-origin libs the shell needs to boot (js-yaml parses every meta.yaml).
 // Best-effort: a CDN hiccup must not fail the whole install, so each is added
 // individually and swallows its own error.
@@ -74,7 +83,7 @@ self.addEventListener('install', function(e) {
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then(function(c) {
-      return c.addAll(SHELL_ASSETS).then(function() {
+      return c.addAll(SHELL_ASSETS.concat(WORKER_ASSETS)).then(function() {
         return Promise.all(SHELL_CDN.map(function(u) {
           // Best-effort: a CDN hiccup must not fail the install — but log it, so a
           // silently-missing js-yaml (which parses every meta.yaml) is diagnosable.

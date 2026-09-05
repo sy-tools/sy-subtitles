@@ -6316,3 +6316,177 @@ class TestPreferencesMenu:
         )
         # Node.DOCUMENT_POSITION_FOLLOWING — the gear comes after the flag.
         assert order & 4, "the flag must read as a label for the control it sits beside"
+
+
+@pytest.mark.e2e
+class TestTypoHints:
+    """Words neither a Ukrainian dictionary nor this project's own vocabulary
+    knows get a wavy underline while the translator types.
+
+    The dictionary is served in miniature here: the real one is 9 MB and costs
+    seconds to parse, and none of that is what these tests are about. The rest
+    of the chain is real — the worker, the module inside it, the message round
+    trip and the painting.
+    """
+
+    REVIEW_UK = "#/review/2001-01-01_Test-Talk"
+
+    # The "dictionary" spells the words a test types deliberately, plus the
+    # fixture's own paragraphs — the hints judge every visible cell, so leaving
+    # those unknown would bury each assertion under the rest of the grid.
+    # `ґрантхі` is in no Ukrainian dictionary and comes from the project's list.
+    AFF = "SET UTF-8\n"
+    DIC = "6\nваші\nслабшають\nперший\nдругий\nабзац\nмова\n"
+    OWN_WORDS = "ґрантхі\n"
+
+    def _serve_small_dictionary(self, page):
+        page.route("**/dict/uk_UA.aff", lambda r: r.fulfill(status=200, content_type="text/plain", body=self.AFF))
+        page.route("**/dict/uk_UA.dic", lambda r: r.fulfill(status=200, content_type="text/plain", body=self.DIC))
+        page.route(
+            "**/dict/words_uk.txt",
+            lambda r: r.fulfill(status=200, content_type="text/plain", body=self.OWN_WORDS),
+        )
+
+    def _open_editor_with_hints_on(self, page, server):
+        self._serve_small_dictionary(page)
+        page.add_init_script("localStorage.setItem('sy_typo_hints', '1');")
+        goto_spa(page, server, self.REVIEW_UK)
+        page.wait_for_selector(".cell.uk .cell-text", timeout=10000)
+
+    def _type_into_first_cell(self, page, text):
+        page.evaluate(
+            """(text) => {
+              var el = document.querySelector('.cell.uk .cell-text');
+              el.focus();
+              el.innerText = text;
+              el.dispatchEvent(new Event('input', { bubbles: true }));
+            }""",
+            text,
+        )
+
+    def _painted_words(self, page):
+        """What the highlight registry covers once the paint has caught up.
+
+        Scans are debounced and answered asynchronously, so reading the registry
+        the moment it exists can return the spans of the text as it was BEFORE
+        the last keystroke — offsets that no longer describe the screen.
+        """
+        page.wait_for_function(
+            "() => typoPaintedSeq > 0 && typoPaintedSeq === typoSeq",
+            timeout=15000,
+        )
+        return page.evaluate("() => [...CSS.highlights.get('sy-typo')].map(r => r.toString())")
+
+    def test_underlines_a_word_no_source_knows(self, server, page):
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+
+        assert self._painted_words(page) == ["відрації"]
+
+    def test_leaves_the_project_vocabulary_alone(self, server, page):
+        """`ґрантхі` is in no Ukrainian dictionary — the project's own wordlist
+        is the whole reason the hints are usable on this material."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші ґрантхі слабшають")
+
+        assert self._painted_words(page) == []
+
+    def test_paints_without_touching_the_text(self, server, page):
+        """The whole point of the Highlight API: the cell the edit store reads
+        must be byte-identical to what the user typed, with no wrapper element
+        inserted around the underlined word."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        self._painted_words(page)
+
+        assert page.evaluate("document.querySelector('.cell.uk .cell-text').innerText") == "ваші відрації слабшають"
+        assert page.evaluate("document.querySelectorAll('.cell.uk .cell-text *').length") == 0
+
+    def test_keeps_the_caret_where_the_user_left_it(self, server, page):
+        """A repaint must not move the caret: this runs on every keystroke, and
+        a caret that jumps makes the editor unusable."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        self._painted_words(page)
+        page.evaluate(
+            """() => {
+              var el = document.querySelector('.cell.uk .cell-text');
+              var r = document.createRange();
+              r.setStart(el.firstChild, 7);
+              r.collapse(true);
+              var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+            }"""
+        )
+        before = page.evaluate("getSelection().getRangeAt(0).startOffset")
+        page.evaluate("scheduleTypoScan()")
+        page.wait_for_timeout(600)
+
+        assert page.evaluate("getSelection().getRangeAt(0).startOffset") == before
+
+    def test_the_hints_go_when_the_preference_does(self, server, page):
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        assert self._painted_words(page) == ["відрації"]
+
+        page.evaluate("SPA.toggleTypoHints()")
+
+        assert page.evaluate("CSS.highlights.has('sy-typo')") is False
+        assert page.evaluate("localStorage.getItem('sy_typo_hints')") is None
+
+    def test_nothing_is_painted_until_the_preference_is_on(self, server, page):
+        self._serve_small_dictionary(page)
+        goto_spa(page, server, self.REVIEW_UK)
+        page.wait_for_selector(".cell.uk .cell-text", timeout=10000)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        page.wait_for_timeout(600)
+
+        assert page.evaluate("CSS.highlights.has('sy-typo')") is False
+
+    def test_refuses_a_reply_measured_before_the_last_keystroke(self, server, page):
+        """`seq` advances when a request is SENT, so an edit made between the
+        send and the reply left the two counters equal and the stale offsets
+        were painted onto the new text — underlining the wrong letters until the
+        next scan landed. Offsets only describe the string they were measured
+        on, so that string is what has to still be on screen."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        assert self._painted_words(page) == ["відрації"]
+
+        # The user types on, then the reply for the previous text arrives. Read
+        # back in the same evaluate, before the rescan this edit schedules.
+        # Offsets 5-13 covered `відрації` in the old text; in the new one they
+        # cover `ваші від`.
+        result = page.evaluate(
+            """() => {
+              const el = document.querySelector('.cell.uk .cell-text');
+              const before = typoPaintedSeq;
+              el.innerText = 'ЗЗЗЗ ваші відрації слабшають';
+              typoWorker.onmessage({ data: { seq: typoSeq, spans: [[{ start: 5, end: 13 }]] } });
+              return {
+                seq_before: before,
+                seq_after: typoPaintedSeq,
+                painted: [...CSS.highlights.get('sy-typo')].map(r => r.toString()),
+              };
+            }"""
+        )
+
+        # Replacing the text detaches the ranges already painted, so what
+        # survives reads as empty. What must never appear is the slice those
+        # stale offsets describe in the NEW text.
+        assert "ваші від" not in result["painted"], f"stale offsets landed on the new text: {result}"
+
+    def test_a_dictionary_that_never_loads_turns_the_switch_back_off(self, server, page):
+        """The worker stops when the dictionary cannot be fetched, but the
+        preference and the switch went on saying the feature was running. That
+        is the same lie in the other direction: the user's next click reads as
+        "turn it off", so there is no way to retry."""
+        self._serve_small_dictionary(page)
+        page.route("**/dict/uk_UA.dic", lambda r: r.fulfill(status=404, body=""))
+        page.add_init_script("localStorage.setItem('sy_typo_hints', '1');")
+        goto_spa(page, server, self.REVIEW_UK)
+        page.wait_for_selector(".cell.uk .cell-text", timeout=10000)
+        page.wait_for_function("() => typoWorker === null", timeout=15000)
+
+        assert page.evaluate("localStorage.getItem('sy_typo_hints')") is None
+        page.click("#prefs-btn")
+        assert page.evaluate("document.getElementById('prefs-typo').checked") is False

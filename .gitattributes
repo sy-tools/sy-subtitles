@@ -13,3 +13,7 @@
 # may deliberately carry CRLF or other oddities; never renormalize them. The
 # hygiene scanner (tools/text_normalize.py) exempts them for the same reason.
 tests/fixtures/** -text
+
+# The vendored hunspell dictionary is 350k lines of word stems. It is real text,
+# so it stays line-ending-normalized, but a diff of it is never worth reading.
+site/dict/uk_UA.dic -diff

@@ -245,7 +245,51 @@ Data sources (zero backend):
 - GitHub Trees API → talk discovery (1 API call, cached with ETag)
 - `raw.githubusercontent.com` → meta.yaml, SRT, transcripts
 - `review-status.json` → review badges (static file, no API cost)
-- `localStorage` → markers, edits, cache
+- `localStorage` → markers, edits, preferences, cache
+
+### Typo hints
+
+A preference (the gear menu) underlines words that neither a general Ukrainian
+dictionary nor this project's own vocabulary knows, live in the subtitle editor.
+Neither source alone is usable here: the dictionary flags every transliterated
+term (`Ґрантхі`, `абхішека`), and a bare corpus without morphology flags every
+inflected form. Their intersection is what makes the hints quiet enough to leave
+on. Measured on a real reviewer PR, 11 flags across 403 edited blocks, all 11
+genuine, where the dictionary alone gave 55. Across the whole approved corpus —
+1.3M word tokens in 268 files — it flags 32 occurrences of 7 words, and every
+one is a real defect: `Mати`, `Toм`, `Aле`, `iндивідуально` and the like, whose
+first letter is Latin. Nothing else in the corpus is flagged at all.
+
+Both sides ask their own question of the same word. The dictionary is asked
+about it AS WRITTEN (it holds `Лакшмі`, not `лакшмі`, and keys its apostrophes
+with `'`); the wordlist is asked about the folded form. `tools/build_wordlist.py`
+judges the corpus by exactly that rule, so a word is never in neither place:
+lowercasing before asking once underlined 610 forms of this material's own
+vocabulary — `Ісус`, `Христос`, `Крішна`, `Лакшмі`.
+
+What this cannot do is judge a name by its case. The list is keyed by the folded
+form, so a name the corpus writes lowercase somewhere legitimate — `лакшмі` in a
+mantra, `деві` in `Сарва деві дева` — is thereafter accepted in lowercase
+everywhere. Capitalisation of the sacred vocabulary stays a matter for the
+language review (`glossary/CLAUDE.md`), not for these hints.
+
+A word mixing Cyrillic and Latin is flagged without asking either source: it is
+wrong however its pieces are judged, and the corpus holds no legitimate word of
+that shape. Read as Cyrillic only, `Mати` left the fragment `ати`, which the
+builder then shipped as vocabulary — so the most invisible typo in the language
+was also the one the hints could never see.
+
+- `site/dict/uk_UA.{aff,dic}` — vendored hunspell dictionary (MPL 1.1, `dict_uk`)
+- `site/dict/words_uk.txt` — only what that dictionary MISSES, built from the
+  talks and the glossary by `tools/build_wordlist.py`
+- `site/js/typo_worker.js` — holds both; parsing the dictionary costs ~4 s and
+  ~290 MB, so it runs off the main thread and only while the preference is on
+- `site/js/typo_hints.js` — which words to flag (pure; twin of the tokenizer in
+  `tools/build_wordlist.py`, pinned by `tests/fixtures/wordlist_normalization_cases.json`)
+
+Painting goes through the CSS Custom Highlight API, so the text is decorated
+where it stands — no wrapper element, and therefore no disturbance to the caret,
+the undo stack, or the text the edit store saves.
 
 ## Review Tracking
 

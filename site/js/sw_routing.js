@@ -8,7 +8,20 @@
 // (host-vs-substring matching, the navigation URL forms).
 
 // Versioned CDN bundles and static images — safe to serve cache-first.
-var IMMUTABLE_PATTERNS = ['cdn.jsdelivr.net', 'player.vimeo.com/api', '/icon.png'];
+//
+// The two hunspell files are here for their size: 9 MB that changes only when
+// the dictionary is re-vendored. Re-fetching them each session, for a feature
+// the user has already switched on, is the one cost that would make the typo
+// hints not worth having. Their companion words_uk.txt is deliberately absent —
+// it grows with every talk added, and must keep revalidating or a translator is
+// underlined for vocabulary the project has already accepted.
+var IMMUTABLE_PATTERNS = [
+  'cdn.jsdelivr.net',
+  'player.vimeo.com/api',
+  '/icon.png',
+  '/dict/uk_UA.aff',
+  '/dict/uk_UA.dic',
+];
 
 function isImmutable(url) {
   return IMMUTABLE_PATTERNS.some(function (p) { return url.indexOf(p) !== -1; });
