@@ -6207,3 +6207,42 @@ class TestPreferencesMenu:
         page.focus("#prefs-theme button:has-text('Dark')")
         page.keyboard.press(" ")
         assert page.evaluate("localStorage.getItem('sy_theme')") == "dark"
+
+    def test_expert_mode_says_so_next_to_the_gear(self, server, page):
+        """Expert mode changes what the index shows — extra badges, pipeline
+        links. Left unsaid, someone who switched it on last session has no cue
+        why their screen looks different, and the gear looks identical either
+        way."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        page.add_init_script("localStorage.setItem('sy_lang', 'uk');")
+        goto_spa(page, server)
+        flag = page.locator("#expert-flag")
+        assert flag.is_visible() is True
+        assert flag.inner_text().strip() == "Експертний режим"
+
+    def test_nothing_is_said_when_expert_mode_is_off(self, server, page):
+        goto_spa(page, server)
+        assert page.locator("#expert-flag").is_visible() is False
+
+    def test_the_flag_appears_the_moment_the_switch_is_thrown(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-expert")
+        assert page.locator("#expert-flag").is_visible() is True
+        page.click("#prefs-expert")
+        assert page.locator("#expert-flag").is_visible() is False
+
+    def test_the_flag_speaks_the_chosen_language(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+        goto_spa(page, server)
+        assert page.locator("#expert-flag").inner_text().strip() == "Expert mode"
+
+    def test_the_flag_sits_before_the_gear(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        order = page.evaluate(
+            "document.getElementById('expert-flag').compareDocumentPosition(document.getElementById('prefs-btn'))"
+        )
+        # Node.DOCUMENT_POSITION_FOLLOWING — the gear comes after the flag.
+        assert order & 4, "the flag must read as a label for the control it sits beside"

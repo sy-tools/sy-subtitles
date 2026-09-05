@@ -344,6 +344,11 @@
     </span>
     <span id="last-updated"></span>
     <button id="refresh-btn" onclick="SPA.refreshManifest()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;display:none;" data-i18n-title="title.refresh">&#x21bb;</button>
+    <!-- Expert mode changes what the index shows — extra badges, pipeline
+         links — so it says so, beside the control that switches it off. The
+         gear alone looks identical in both states, and someone who left the
+         mode on last session would have no cue why their screen differs. -->
+    <span id="expert-flag" class="expert-flag" data-i18n="prefs.expert" hidden>Expert mode</span>
     <!-- Preferences. Language, theme and expert mode used to be three separate
          buttons — two here and one injected into the footer — with no room for
          a fourth. The rows are rendered from js/preferences.js so the menu and
@@ -7855,6 +7860,8 @@ function applyExpertMode() {
   // here rather than assumed to match.
   var box = document.getElementById('prefs-expert');
   if (box) box.checked = expertMode;
+  var flag = document.getElementById('expert-flag');
+  if (flag) flag.hidden = !expertMode;
 }
 applyExpertMode();
 

@@ -1254,6 +1254,9 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 
    Anchored to the gear and right-aligned like .video-dropdown: it opens at the
    right edge of the window, where a left-aligned panel would overflow. */
+/* Says a non-default mode is on, beside the control that turns it off. Quiet
+   on purpose: it is a standing statement of fact, not something to act on. */
+.expert-flag { color: var(--fg5); font-size: var(--text-2xs); }
 .prefs { position: relative; display: inline-block; }
 .prefs-trigger { background: none; color: var(--fg5); border: 1px solid var(--border2);
   border-radius: var(--radius-sm); padding: 2px 6px; font-size: var(--text-xs);

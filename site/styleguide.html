@@ -147,7 +147,12 @@ styles it. A <strong>switch</strong> (<code>.prefs-switch</code>) is a real
 <code>&lt;input type="checkbox"&gt;</code>, tinted but drawn by the browser — a hand-rolled box
 loses the platform's forced-colours and high-contrast handling, and this menu is exactly where
 someone goes when something is hard to see.</p>
+<p>A mode that changes what the app shows says so beside the control that turns
+it off (<code>.expert-flag</code>) — the gear looks identical in both states, so
+without it someone who left expert mode on has no cue why their screen differs.
+Quiet on purpose: it states a fact, it is not something to act on.</p>
 <div class="sg-row" style="align-items:flex-start;gap:24px">
+  <span class="expert-flag">Expert mode</span>
   <button class="prefs-trigger" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg></button>
   <div class="prefs-menu open" style="position:static;margin:0">
     <div class="prefs-row">
