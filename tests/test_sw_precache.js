@@ -69,6 +69,16 @@ describe('SW shell precache', () => {
     );
   });
 
+  it('precaches the scripts the typo worker imports', () => {
+    // These load inside a Worker, so no <script src> tag names them and the
+    // shell lockstep above cannot. Left uncached, switching the hints on while
+    // offline starts a worker whose script 404s: it dies silently, and every
+    // later scan is posted into a corpse. The dictionary itself is deliberately
+    // NOT here — 9 MB has no business in an install-time precache.
+    const worker = swArray('WORKER_ASSETS');
+    assert.deepStrictEqual(worker.sort(), ['js/typo_worker.js', 'js/vendor/typo.js']);
+  });
+
   it('precaches exactly the css index.html links (no drift)', () => {
     const page = pageCss().sort();
     const precached = shellAssets().filter((a) => a.startsWith('css/')).sort();

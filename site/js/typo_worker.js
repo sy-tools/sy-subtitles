@@ -31,35 +31,42 @@ var dictionary = null;
 // tools/build_wordlist.py from the talks and the glossary.
 var ownWords = null;
 
-// Two sources, two conventions. The project's own list is keyed the way the
-// project writes — typographic apostrophe — and the dictionary is keyed the way
-// hunspell ships, so each is asked in its own spelling.
-function isKnown(word) {
-  return ownWords.has(word) || dictionary.check(dictionaryForm(word));
-}
+// The two sources composed into one question; see js/typo_hints.js.
+var isKnown = null;
 
 self.onmessage = function (e) {
   var msg = e.data || {};
-  if (!dictionary) return;
+  if (!isKnown) return;
   self.postMessage({
     seq: msg.seq,
     spans: (msg.texts || []).map(function (text) { return findUnknownWords(text, isKnown); }),
   });
 };
 
+// A failed request must not be read as text: an error page parses into a
+// dictionary that knows nothing, and every Cyrillic word in the talk would then
+// be underlined — a confident, entirely wrong answer, which is worse than none.
+function fetchText(url, init) {
+  return fetch(url, init).then(function (r) {
+    if (!r.ok) throw new Error(r.status + ' ' + url);
+    return r.text();
+  });
+}
+
 Promise.all([
   // The dictionary never changes, so let the HTTP cache hold it: re-parsing is
   // the expensive part, re-downloading 9 MB on every session would be worse.
-  fetch('../dict/uk_UA.aff').then(function (r) { return r.text(); }),
-  fetch('../dict/uk_UA.dic').then(function (r) { return r.text(); }),
+  fetchText('../dict/uk_UA.aff'),
+  fetchText('../dict/uk_UA.dic'),
   // The wordlist grows with every talk added, and it is small — always
   // revalidate so a translator is not underlined for vocabulary the project
   // has already accepted.
-  fetch('../dict/words_uk.txt', { cache: 'no-cache' }).then(function (r) { return r.text(); }),
+  fetchText('../dict/words_uk.txt', { cache: 'no-cache' }),
 ])
   .then(function (parts) {
     dictionary = new Typo('uk_UA', parts[0], parts[1], {});
     ownWords = new Set(parts[2].split('\n').filter(Boolean));
+    isKnown = isKnownWith(ownWords, function (w) { return dictionary.check(w); });
     self.postMessage({ ready: true });
   })
   .catch(function (err) {

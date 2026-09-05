@@ -23,10 +23,13 @@ DICTIONARY_STEM = "uk_UA"
 # Apostrophe forms are folded to the typographic one the project writes, so a
 # word is not counted twice for the shape of its apostrophe.
 _APOSTROPHES = str.maketrans({"'": "’", "ʼ": "’"})
-# Every apostrophe shape is part of a word here, or `п'ять` would be read as two
-# words and the list would vouch for the fragments instead of the word. So are
-# combining marks — the twin in site/js/typo_hints.js reads them the same way.
-_WORD_RE = re.compile(r"[Ѐ-ӿ̀-ͯ’'ʼ]+")
+# An apostrophe belongs to a word only BETWEEN letters: `п'ять` is one word, but
+# a word quoted as ’вібрації’ is not three characters longer, and `туру ’89`
+# holds no word at all. Taken greedily, the second case shipped a lone
+# apostrophe as vocabulary. Combining marks are part of a word wherever they
+# fall — the twin in site/js/typo_hints.js reads all of this the same way.
+_LETTERS = r"[Ѐ-ӿ̀-ͯ]"
+_WORD_RE = re.compile(rf"{_LETTERS}+(?:['’ʼ]{_LETTERS}+)*")
 # ...but a word carrying one is damage, not vocabulary: a stray acute inside
 # `потрі́бно` is the kind of wreckage a reviewer's edit leaves behind, and the
 # list must not bless it. The browser keeps such a word whole and hints on it;
@@ -34,9 +37,25 @@ _WORD_RE = re.compile(r"[Ѐ-ӿ̀-ͯ’'ʼ]+")
 _COMBINING_RE = re.compile(r"[̀-ͯ]")
 
 
+def fold_word(word: str) -> str:
+    """The form the list is keyed by — the twin of `normalizeWord` in
+    site/js/typo_hints.js, which folds what the user types the same way."""
+    return word.lower().translate(_APOSTROPHES)
+
+
+def read_words(text: str) -> set[str]:
+    """Every distinct word in `text`, AS WRITTEN.
+
+    Case survives this step because the dictionary is asked about the word as it
+    appears: it holds `Лакшмі` and not `лакшмі`, and collapsing the two here
+    would either bless the lowercase spelling or condemn the correct one.
+    """
+    return {w for w in _WORD_RE.findall(text) if not _COMBINING_RE.search(w)}
+
+
 def collect_words(text: str) -> set[str]:
-    """Every distinct word form in `text`, lowercased and apostrophe-folded."""
-    return {w.lower().translate(_APOSTROPHES) for w in _WORD_RE.findall(text) if not _COMBINING_RE.search(w)}
+    """Every distinct word form in `text`, folded for lookup."""
+    return {fold_word(w) for w in read_words(text)}
 
 
 def select_wordlist(
@@ -47,32 +66,39 @@ def select_wordlist(
     """The forms worth shipping: everything the talks and the glossary use that
     the general dictionary cannot spell.
 
-    The glossary is folded in whole rather than filtered by how often the corpus
+    Each word is judged AS WRITTEN and stored FOLDED. The browser asks the
+    dictionary about the word the user typed, so this must ask the same
+    question, or the two disagree on exactly the words that matter: `Лакшмі` is
+    spelled and stays out, so writing `лакшмі` is still called out, while `ріші`
+    — which the dictionary holds only capitalised and the talks write lowercase
+    — belongs in the list. Folding on the way in is what the lookup expects.
+
+    The glossary goes in whole rather than filtered by how often the corpus
     happens to use a term. A term is approved before it is common — frequency
     would drop the newest vocabulary, which is exactly what a translator is most
     likely to be typing for the first time.
     """
-    return sorted(w for w in corpus | glossary if not spelled(w))
+    return sorted({fold_word(w) for w in corpus | glossary if not spelled(w)})
 
 
 def read_corpus(repo_root: Path) -> set[str]:
-    """Every Ukrainian word form the talks already use — transcripts and the
-    subtitles built from them."""
+    """Every Ukrainian word the talks already use — transcripts and the subtitles
+    built from them, as written."""
     words: set[str] = set()
     for path in sorted(repo_root.glob("talks/*/transcript_uk.txt")) + sorted(repo_root.glob("talks/*/*/final/uk.srt")):
-        words |= collect_words(path.read_text(encoding="utf-8-sig"))
+        words |= read_words(path.read_text(encoding="utf-8-sig"))
     return words
 
 
 def read_glossary(path: Path) -> set[str]:
-    """The Ukrainian side of the term dictionary, word by word. A `uk` value can
-    hold several accepted spellings ("Аґія / Аґія чакра"); every word in every
-    variant counts as declared vocabulary."""
+    """The Ukrainian side of the term dictionary, word by word, as written. A
+    `uk` value can hold several accepted spellings ("Аґія / Аґія чакра"); every
+    word in every variant counts as declared vocabulary."""
     entries = yaml.safe_load(path.read_text(encoding="utf-8")) or []
     words: set[str] = set()
     for entry in entries:
         if isinstance(entry, dict) and entry.get("uk"):
-            words |= collect_words(str(entry["uk"]))
+            words |= read_words(str(entry["uk"]))
     return words
 
 
@@ -89,9 +115,9 @@ def _spell_checker(dict_dir: Path) -> Callable[[str], bool]:
 
     def spelled(word: str) -> bool:
         if word not in cache:
-            # Capitalised too: the dictionary marks proper nouns as capitalised
-            # forms, and the corpus is folded to lowercase.
-            cache[word] = bool(dictionary.lookup(word) or dictionary.lookup(word.capitalize()))
+            # Exactly the question the browser asks (js/typo_hints.js): the word
+            # as written, in the apostrophe hunspell keys its entries with.
+            cache[word] = bool(dictionary.lookup(word.replace("\u2019", "'")))
         return cache[word]
 
     return spelled

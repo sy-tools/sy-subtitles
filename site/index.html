@@ -3876,8 +3876,11 @@ function paintTypoHints(fields, spansPerField) {
   }
   // Rebuilt whole rather than patched: a re-render replaces the cells, and a
   // Range still pointing at a detached node would paint nothing while keeping
-  // the registry growing.
-  CSS.highlights.set('sy-typo', new Highlight(...ranges));
+  // the registry growing. Added one by one rather than spread as arguments —
+  // a long transcript can produce more ranges than a call can take.
+  var highlight = new Highlight();
+  ranges.forEach(function(r) { highlight.add(r); });
+  CSS.highlights.set('sy-typo', highlight);
 }
 
 function clearTypoHints() {
@@ -3908,11 +3911,18 @@ function scheduleTypoScan() {
 function startTypoWorker() {
   if (typoWorker || !typoHintsSupported()) return;
   typoWorker = new Worker('js/typo_worker.js');
+  // A worker that died — its script unreachable offline, or the parse killed for
+  // memory — otherwise stays a live-looking object that swallows every scan.
+  typoWorker.onerror = function(e) {
+    console.warn('typo hints: worker failed', (e && e.message) || e);
+    stopTypoWorker();
+  };
   typoWorker.onmessage = function(e) {
     var msg = e.data || {};
     if (msg.failed) {
       // Offline, or the dictionary is missing. Stop rather than leave the user
       // waiting for underlines that will never come.
+      console.warn('typo hints: dictionary unavailable —', msg.failed);
       stopTypoWorker();
       return;
     }
@@ -8037,10 +8047,16 @@ applyExpertMode();
 // deferred until the page is otherwise idle, and the editor is usable the whole
 // time it loads.
 // The two schedulers take incompatible second arguments — an options object vs
-// a delay — so they are called apart rather than through one reference.
+// a delay — so they are called apart rather than through one reference. The
+// preference is read AGAIN when the callback runs: the user can reach the menu
+// inside that window, and starting a worker they just switched off would leave
+// hints painted under a switch that says otherwise.
 if (readPref(localStorage, 'typoHints')) {
-  if (window.requestIdleCallback) window.requestIdleCallback(startTypoWorker, { timeout: 2000 });
-  else window.setTimeout(startTypoWorker, 1);
+  var resumeTypoHints = function() {
+    if (readPref(localStorage, 'typoHints')) startTypoWorker();
+  };
+  if (window.requestIdleCallback) window.requestIdleCallback(resumeTypoHints, { timeout: 2000 });
+  else window.setTimeout(resumeTypoHints, 1);
 }
 
 // Reflect an offline-at-load state in the freshness bar immediately, before any

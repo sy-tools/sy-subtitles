@@ -9,14 +9,18 @@
 // site/index.html, imported by js/typo_worker.js, AND required by the Node test
 // suite — no inline mirror.
 
-// Every apostrophe shape is inside the word: `п'ять` is one word, and splitting
-// it would put a hint under a fragment that is not a word at all.
+// An apostrophe belongs to a word only BETWEEN letters. `п'ять` is one word, so
+// splitting there would put a hint under a fragment that is not a word at all —
+// but a word quoted as ’слово’ is not two characters longer, and `туру ’89`
+// holds no word for a hint to land on.
 //
-// So are combining marks (U+0300-U+036F). A stray acute in `потрі́бно` is real
-// wreckage found in real reviewer edits: broken there, the hint would sit under
-// `потрі` and `бно` — two fragments the writer cannot act on — instead of under
-// the one word that is actually wrong.
-var WORD_RE = /[Ѐ-ӿ̀-ͯ’'ʼ]+/g;
+// Combining marks (U+0300-U+036F) are part of a word wherever they fall. A stray
+// acute in `потрі́бно` is real wreckage from a real reviewer's edit: broken
+// there, the hint would sit under `потрі` and `бно` — two fragments the writer
+// cannot act on — instead of under the one word that is actually wrong.
+//
+// Kept in step with tools/build_wordlist.py, which reads the corpus this way.
+var WORD_RE = /[Ѐ-ӿ̀-ͯ]+(?:['’ʼ][Ѐ-ӿ̀-ͯ]+)*/g;
 
 // The form a word is JUDGED in — the twin of tools/build_wordlist.py, which
 // folds the shipped list the same way. Lowercase because a sentence-initial
@@ -36,6 +40,21 @@ function dictionaryForm(word) {
   return word.replace(/’/g, "'");
 }
 
+// Composes the two sources into the single question findUnknownWords asks.
+//
+// Each is consulted in ITS OWN convention, and the word arrives here exactly as
+// written. Folding the case first looks harmless and is not: hunspell holds
+// Індія, Христос, Крішна and Лакшмі only as capitalised entries, so a lowercased
+// query is refused — and the shipped list cannot rescue them, because the
+// builder already counted them as spelled and left them out. That underlined
+// 610 forms of this material's own vocabulary. Asking as written also keeps the
+// other half right: lowercase `індія` really is a mistake.
+function isKnownWith(ownWords, check) {
+  return function (word) {
+    return ownWords.has(normalizeWord(word)) || check(dictionaryForm(word));
+  };
+}
+
 // Spans of the words `isKnown` rejects, as offsets into `text`.
 function findUnknownWords(text, isKnown) {
   var hits = [];
@@ -45,7 +64,13 @@ function findUnknownWords(text, isKnown) {
   // of a cell as the user typed.
   WORD_RE.lastIndex = 0;
   while ((m = WORD_RE.exec(String(text == null ? '' : text)))) {
-    if (isKnown(normalizeWord(m[0]))) continue;
+    // A lone letter is an initial (`Ч. П. Шрівастава`) or a stray keystroke —
+    // never a correction anyone can act on. The real one-letter Ukrainian words
+    // are in the dictionary anyway, so there is nothing to lose by keeping
+    // quiet, and this was the last thing the whole corpus tripped on.
+    if (m[0].length < 2) continue;
+    // As written: normalising is the oracle's job, and it differs per source.
+    if (isKnown(m[0])) continue;
     hits.push({ start: m.index, end: m.index + m[0].length, word: m[0] });
   }
   return hits;
@@ -56,5 +81,6 @@ if (typeof module !== 'undefined' && module.exports) {
     findUnknownWords: findUnknownWords,
     normalizeWord: normalizeWord,
     dictionaryForm: dictionaryForm,
+    isKnownWith: isKnownWith,
   };
 }

@@ -89,6 +89,14 @@ jobs:
         # lives in this lane because tools/ is exercised by the unit tests.
       - run: pytest tests/ -n auto -m 'not e2e' --tb=short --cov=tools --cov-report=term-missing
 
+        # The typo-hint wordlist is generated from the talks and the glossary and
+        # committed. Adding a talk introduces vocabulary the list does not carry
+        # yet, and a translator would then be underlined for words this project
+        # has already accepted. Too slow for the test lane (a pass over the whole
+        # corpus plus the dictionary), so it runs once here.
+      - name: Typo-hint wordlist is current
+        run: python -m tools.build_wordlist --check
+
   test-e2e:
     runs-on: ubuntu-latest
     strategy:

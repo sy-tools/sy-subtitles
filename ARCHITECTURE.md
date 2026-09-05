@@ -254,7 +254,16 @@ dictionary nor this project's own vocabulary knows, live in the subtitle editor.
 Neither source alone is usable here: the dictionary flags every transliterated
 term (`Ґрантхі`, `абхішека`), and a bare corpus without morphology flags every
 inflected form. Their intersection is what makes the hints quiet enough to leave
-on — measured on a real reviewer PR, 11 flags instead of 55, all genuine.
+on. Measured on a real reviewer PR, 11 flags across 403 edited blocks, all 11
+genuine, where the dictionary alone gave 55; and across the whole approved
+corpus — 531k words — **zero**.
+
+Both sides ask their own question of the same word. The dictionary is asked
+about it AS WRITTEN (it holds `Лакшмі`, not `лакшмі`, and keys its apostrophes
+with `'`); the wordlist is asked about the folded form. `tools/build_wordlist.py`
+judges the corpus by exactly that rule, so a word is never in neither place:
+lowercasing before asking once underlined 610 forms of this material's own
+vocabulary — `Ісус`, `Христос`, `Крішна`, `Лакшмі`.
 
 - `site/dict/uk_UA.{aff,dic}` — vendored hunspell dictionary (MPL 1.1, `dict_uk`)
 - `site/dict/words_uk.txt` — only what that dictionary MISSES, built from the
