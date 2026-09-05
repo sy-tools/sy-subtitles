@@ -7,6 +7,6 @@ coverage>=7.15.4
 ruff>=0.16.1
 pre-commit>=4.6.2
 playwright>=1.62.0
-hypothesis>=6.165.6
+hypothesis>=6.167.1
 fonttools>=4.63.0
 spylls>=0.1.7
