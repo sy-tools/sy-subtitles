@@ -49,11 +49,6 @@ ALLOWLIST = {
     # current language. (test_spa_auth_e2e.py:
     # test_avatar_tooltip_refreshes_on_language_toggle)
     "avatar.title = t('auth.signed_in') + ' ' + user.login + (writeUser ? '' : ' ' + t('auth.readonly_title'));",
-    # Theme button title mirrors the current theme mode; SPA.toggleLang()
-    # re-applies it via the themeBtn.title line below.
-    "if (btn) { btn.textContent = icons[mode]; btn.title = t('title.theme.' + mode); }",
-    "if (btn) { btn.textContent = icons[initMode]; btn.title = t('title.theme.' + initMode); }",
-    "if (themeBtn) themeBtn.title = t('title.theme.' + themeMode);",
     # Passphrase-gate reveal button lives in a modal shown BEFORE the app UI, so
     # the language toggle isn't reachable while it's up, and it's rebuilt each
     # time the gate opens.

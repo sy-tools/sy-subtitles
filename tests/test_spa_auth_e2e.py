@@ -148,7 +148,8 @@ def test_avatar_tooltip_refreshes_on_language_toggle(auth_server, auth_page):
     page.wait_for_selector("#gh-avatar", state="visible", timeout=10000)
     before = page.evaluate("document.getElementById('gh-avatar').title")
     assert before == "Signed in as tester"
-    page.click("#lang-btn")
+    page.click("#prefs-btn")
+    page.click("#prefs-lang button[aria-pressed='false']")
     after = page.evaluate("document.getElementById('gh-avatar').title")
     assert after != before, "avatar tooltip must refresh on language toggle"
     assert after == page.evaluate("t('auth.signed_in')") + " tester"

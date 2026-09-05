@@ -1099,22 +1099,14 @@ class TestThemeToggle:
         page.evaluate("window._vimeoPlayer._setTime(6)")
         page.wait_for_timeout(50)
 
-        # Force the theme cycle to a known dark state regardless of system preference.
-        # cycleTheme rotates auto→dark→light→auto; starting from unknown,
-        # we force 'dark' by setting localStorage directly then re-applying.
-        page.evaluate("""
-          () => {
-            localStorage.setItem('sy_theme', 'dark');
-            document.documentElement.setAttribute('data-theme', 'dark');
-          }
-        """)
+        # Pin a known theme regardless of the system preference.
+        page.evaluate("SPA.setTheme('dark')")
         page.wait_for_timeout(50)
 
         dark_shadow = page.evaluate("getComputedStyle(document.querySelector('.cell.uk.current')).boxShadow")
         assert "inset" in dark_shadow, f"Expected inset box-shadow in dark theme, got {dark_shadow!r}"
 
-        # Cycle to light theme.
-        page.evaluate("SPA.cycleTheme()")  # dark → light
+        page.evaluate("SPA.setTheme('light')")
         page.wait_for_timeout(50)
 
         light_shadow = page.evaluate("getComputedStyle(document.querySelector('.cell.uk.current')).boxShadow")

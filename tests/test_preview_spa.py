@@ -5053,7 +5053,8 @@ class TestPreviewResizeHandleI18n:
         page.wait_for_selector("#preview-player-resize", timeout=10000)
         before = page.evaluate("document.getElementById('preview-player-resize').title")
         assert before == "Drag to resize the player"
-        page.click("#lang-btn")
+        page.click("#prefs-btn")
+        page.click("#prefs-lang button[aria-pressed='false']")
         handle = "document.getElementById('preview-player-resize')"
         after_title = page.evaluate(f"{handle}.title")
         after_aria = page.evaluate(f"{handle}.getAttribute('aria-label')")
@@ -6070,3 +6071,248 @@ class TestEditFieldHygiene:
         assert "\n" not in cell, f"Shift+Enter inserted a break: {cell!r}"
         focused = page.evaluate("document.activeElement.classList.contains('edited')")
         assert focused is False, "Shift+Enter did not commit (blur) the cue"
+
+
+class TestPreferencesMenu:
+    """The gear menu is the only way into language, theme and expert mode.
+
+    These preferences follow the user across every view, so their controls live
+    in one panel rather than as separate header buttons — and each one has to
+    keep driving the same stored value the rest of the app reads.
+    """
+
+    def test_menu_is_closed_until_the_gear_is_clicked(self, server, page):
+        goto_spa(page, server)
+        assert page.locator("#prefs-menu").is_visible() is False
+        page.click("#prefs-btn")
+        assert page.locator("#prefs-menu").is_visible() is True
+
+    def test_escape_closes_the_menu_and_returns_focus_to_the_gear(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.keyboard.press("Escape")
+        assert page.locator("#prefs-menu").is_visible() is False
+        # Focus must come back, or a keyboard user is dropped at the top of the
+        # document with no idea where the menu went.
+        assert page.evaluate("document.activeElement.id") == "prefs-btn"
+
+    def test_clicking_outside_closes_the_menu(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("h1")
+        assert page.locator("#prefs-menu").is_visible() is False
+
+    def test_choosing_a_theme_applies_and_stores_it(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Dark')")
+        assert page.evaluate("document.documentElement.getAttribute('data-theme')") == "dark"
+        assert page.evaluate("localStorage.getItem('sy_theme')") == "dark"
+
+    def test_auto_clears_the_theme_so_the_os_decides_again(self, server, page):
+        """'auto' is the ABSENCE of a choice: leaving the key set would pin the
+        page to whatever theme was current when the user picked auto."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Dark')")
+        page.click("#prefs-theme button:has-text('Auto')")
+        assert page.evaluate("document.documentElement.getAttribute('data-theme')") is None
+        assert page.evaluate("localStorage.getItem('sy_theme')") is None
+
+    def test_the_chosen_theme_is_marked_pressed(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Light')")
+        pressed = page.evaluate(
+            "Array.from(document.querySelectorAll('#prefs-theme button'))"
+            ".filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent)"
+        )
+        assert pressed == ["Light"]
+
+    def test_switching_language_translates_the_page(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-lang button:has-text('UK')")
+        assert page.evaluate("localStorage.getItem('sy_lang')") == "uk"
+        assert page.evaluate("document.documentElement.lang") == "uk"
+
+    def test_the_menu_relabels_itself_on_a_language_switch(self, server, page):
+        """The rows are composed text, not data-i18n elements, so translatePage()
+        cannot reach them — they stick in the old language unless redrawn."""
+        page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        assert "Theme" in page.locator("#prefs-menu").inner_text()
+        page.click("#prefs-lang button:has-text('UK')")
+        assert "Авто" in page.locator("#prefs-theme").inner_text()
+
+    def test_expert_switch_reflects_the_stored_value_on_load(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        assert page.locator("#prefs-expert").is_checked() is True
+
+    def test_expert_switch_reads_a_stored_zero_as_off(self, server, page):
+        """Expert mode shipped as `=== '1'`, so users who turned it off carry a
+        literal "0" — treating that as truthy would switch it on for them."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '0');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        assert page.locator("#prefs-expert").is_checked() is False
+
+    def test_toggling_the_expert_switch_stores_and_applies_it(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-expert")
+        assert page.evaluate("localStorage.getItem('sy_expert_mode')") == "1"
+        assert page.evaluate("expertMode") is True
+
+    def test_the_gear_is_reachable_from_the_keyboard(self, server, page):
+        goto_spa(page, server)
+        page.evaluate("document.getElementById('prefs-btn').focus()")
+        page.keyboard.press("Enter")
+        assert page.locator("#prefs-menu").is_visible() is True
+
+    def test_the_menu_stays_open_while_choosing(self, server, page):
+        """Regression: the rows used to be rebuilt on every change, which
+        detached the clicked button before the event reached the document —
+        the outside-click handler then saw no .prefs ancestor and closed the
+        menu on every single choice."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Dark')")
+        assert page.locator("#prefs-menu").is_visible() is True
+
+    def test_the_menu_is_not_dressed_by_whatever_it_sits_in(self, server, page):
+        """The gear lives inside #freshness-bar, which is monospaced with wide
+        letter-spacing for dates and branch names. A settings panel full of
+        sentence labels must not inherit that — the component sets its own type,
+        which is also what makes the styleguide's rendering honest."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        font = page.evaluate("getComputedStyle(document.querySelector('.prefs-row__label')).fontFamily")
+        assert "mono" not in font.lower(), f"menu inherited the freshness bar's mono type: {font!r}"
+        spacing = page.evaluate("getComputedStyle(document.querySelector('.prefs-row__label')).letterSpacing")
+        assert spacing == "normal", f"menu inherited tracking meant for codes: {spacing!r}"
+
+    def test_space_chooses_an_option_instead_of_playing_the_video(self, server, page):
+        """In the preview view a bare Space toggles playback. The menu's options
+        are buttons, which the shortcut handler did not exempt — so Space on
+        "Dark" preventDefault()ed the button's own click and played the video
+        instead. The menu is the only way to these settings, so a keyboard user
+        had no way in at all."""
+        _goto_preview_video(page, server)
+        page.click("#prefs-btn")
+        page.focus("#prefs-theme button:has-text('Dark')")
+        page.keyboard.press(" ")
+        assert page.evaluate("localStorage.getItem('sy_theme')") == "dark"
+
+    def test_expert_mode_says_so_next_to_the_gear(self, server, page):
+        """Expert mode changes what the index shows — extra badges, pipeline
+        links. Left unsaid, someone who switched it on last session has no cue
+        why their screen looks different, and the gear looks identical either
+        way."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        page.add_init_script("localStorage.setItem('sy_lang', 'uk');")
+        goto_spa(page, server)
+        flag = page.locator("#expert-flag")
+        assert flag.is_visible() is True
+        assert flag.inner_text().strip() == "Експертний режим"
+
+    def test_nothing_is_said_when_expert_mode_is_off(self, server, page):
+        goto_spa(page, server)
+        assert page.locator("#expert-flag").is_visible() is False
+
+    def test_the_flag_appears_the_moment_the_switch_is_thrown(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-expert")
+        assert page.locator("#expert-flag").is_visible() is True
+        page.click("#prefs-expert")
+        assert page.locator("#expert-flag").is_visible() is False
+
+    def test_the_flag_follows_a_language_switch(self, server, page):
+        """Asserting the English text alone proved nothing: "Expert mode" is the
+        static fallback in the markup, so that assertion held even with the
+        data-i18n attribute deleted and translatePage() never reaching the flag.
+        Watching it cross from one language to the other is what needs the
+        translation to actually run."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        page.add_init_script("localStorage.setItem('sy_lang', 'uk');")
+        goto_spa(page, server)
+        flag = page.locator("#expert-flag")
+        assert flag.inner_text().strip() == "Експертний режим"
+        page.click("#prefs-btn")
+        page.click("#prefs-lang button:has-text('EN')")
+        assert flag.inner_text().strip() == "Expert mode"
+
+    def test_the_switch_and_the_flag_never_contradict_each_other(self, server, page):
+        """Two painters, one state: the flag was painted from the `expertMode`
+        variable while the menu painted the switch from storage, and nothing
+        reconciled them. A change made in another tab left one saying on and the
+        other off, in the same panel, at the same moment."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        # Another tab turns expert off. This tab is told nothing.
+        page.evaluate("localStorage.removeItem('sy_expert_mode')")
+        page.click("#prefs-btn")
+        checked = page.evaluate("document.getElementById('prefs-expert').checked")
+        flagged = page.locator("#expert-flag").is_visible()
+        assert checked == flagged, f"switch says {checked}, flag says {flagged}"
+
+    def test_the_switch_does_what_it_shows(self, server, page):
+        """Whatever it is showing, throwing it must move expert mode to the other
+        state. Painted from storage but toggled through a stale variable, an
+        unchecked box turned expert OFF — the opposite of what checking it
+        promises — and then snapped straight back to unchecked."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        page.evaluate("localStorage.removeItem('sy_expert_mode')")
+        page.click("#prefs-btn")
+        was_checked = page.evaluate("document.getElementById('prefs-expert').checked")
+        page.click("#prefs-expert")
+        now_on = page.evaluate("localStorage.getItem('sy_expert_mode') === '1'")
+        assert now_on is not was_checked, "the switch moved expert mode the way it was already set"
+
+    def test_the_flag_is_not_dressed_by_whatever_it_sits_in(self, server, page):
+        """The same trap the menu itself fell into: the flag sits in
+        #freshness-bar, which sets the mono family and the tracking meant for
+        codes and dates. The styleguide renders the component outside that bar,
+        so left inheriting, the catalog and the app disagree about what
+        .expert-flag looks like."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        font = page.evaluate("getComputedStyle(document.getElementById('expert-flag')).fontFamily")
+        assert "mono" not in font.lower(), f"flag inherited the freshness bar's mono type: {font!r}"
+        spacing = page.evaluate("getComputedStyle(document.getElementById('expert-flag')).letterSpacing")
+        assert spacing == "normal", f"flag inherited tracking meant for codes: {spacing!r}"
+
+    def test_escape_elsewhere_does_not_yank_focus_to_the_gear(self, server, page):
+        """The menu closes on an outside click but not on focus leaving it, so it
+        can still be open while the user works elsewhere. Escape then belongs to
+        whatever they are doing — leaving fullscreen, cancelling a dialog — and
+        must not drag the caret across the page to the gear."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        outside = page.evaluate(
+            """() => {
+                const el = document.querySelector('a[href]');
+                if (!el) return null;
+                if (!el.id) el.id = 'zz-outside-link';
+                el.focus();
+                return document.activeElement.id;
+            }"""
+        )
+        assert outside, "no focusable element outside the menu to test with"
+        page.keyboard.press("Escape")
+        assert page.evaluate("document.activeElement.id") == outside
+
+    def test_the_flag_sits_before_the_gear(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        order = page.evaluate(
+            "document.getElementById('expert-flag').compareDocumentPosition(document.getElementById('prefs-btn'))"
+        )
+        # Node.DOCUMENT_POSITION_FOLLOWING — the gear comes after the flag.
+        assert order & 4, "the flag must read as a label for the control it sits beside"
