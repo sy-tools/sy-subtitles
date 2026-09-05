@@ -134,6 +134,37 @@ synced or built at all.</p>
     </select></label>
 </div>
 
+<h2>Preferences menu</h2>
+<p>One home for the settings that follow the user across every view. The trigger
+(<code>.prefs-trigger</code>) sits in the header row; the panel (<code>.prefs-menu</code>) is
+anchored to it and right-aligned, since it opens at the right edge of the window. It is shown
+open here — in the app it carries <code>.open</code> only while up, and Escape or a click
+outside dismisses it.</p>
+<p>Two kinds of row. A <strong>segmented choice</strong> (<code>.prefs-seg</code>) puts every
+option on screen, so the user picks rather than clicking one button until the right value comes
+round; the current one is marked with <code>aria-pressed="true"</code>, which is also what
+styles it. A <strong>switch</strong> (<code>.prefs-switch</code>) is a real
+<code>&lt;input type="checkbox"&gt;</code>, tinted but drawn by the browser — a hand-rolled box
+loses the platform's forced-colours and high-contrast handling, and this menu is exactly where
+someone goes when something is hard to see.</p>
+<div class="sg-row" style="align-items:flex-start;gap:24px">
+  <button class="prefs-trigger" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg></button>
+  <div class="prefs-menu open" style="position:static;margin:0">
+    <div class="prefs-row">
+      <span class="prefs-row__label">Interface language</span>
+      <span class="prefs-seg"><button type="button" aria-pressed="true">UK</button><button type="button" aria-pressed="false">EN</button></span>
+    </div>
+    <div class="prefs-row">
+      <span class="prefs-row__label">Theme</span>
+      <span class="prefs-seg"><button type="button" aria-pressed="false">Auto</button><button type="button" aria-pressed="true">Dark</button><button type="button" aria-pressed="false">Light</button></span>
+    </div>
+    <label class="prefs-row">
+      <span class="prefs-row__label">Expert mode</span>
+      <span class="prefs-switch"><input type="checkbox" checked></span>
+    </label>
+  </div>
+</div>
+
 <h2>Badges</h2>
 <div class="sg-row">
   <span class="review-badge needs-review">needs review</span>

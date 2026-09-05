@@ -32,6 +32,7 @@ var SHELL_ASSETS = [
   'icon.png',
   'css/tokens.css',
   'css/components.css',
+  'js/preferences.js',
   'js/preview_srt_parser.js',
   'js/preview_state.js',
   'js/edit_store.js',

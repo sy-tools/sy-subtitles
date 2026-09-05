@@ -2516,13 +2516,16 @@ describe('i18n: data-i18n coverage in HTML', () => {
     assert.deepStrictEqual(missing, [], 'data-i18n-title keys not in I18N: ' + missing.join(', '));
   });
 
-  it('language toggle button exists', () => {
-    assert.ok(html.includes('id="lang-btn"'), 'lang-btn not found');
+  it('language is switchable from the preferences menu', () => {
+    // The standalone lang-btn is gone; the menu row is now the only way in, and
+    // it still drives the same SPA.toggleLang action the rest of the app calls.
+    assert.ok(html.includes('id="prefs-lang"'), 'prefs-lang row not found');
     assert.ok(html.includes('SPA.toggleLang()'), 'SPA.toggleLang() not found');
   });
 
-  it('LANG_KEY defined for localStorage', () => {
-    assert.ok(html.includes("var LANG_KEY = 'sy_lang'"), 'LANG_KEY not found');
+  it('the language storage key is owned by js/preferences.js', () => {
+    var prefs = fs.readFileSync('site/js/preferences.js', 'utf8');
+    assert.ok(prefs.includes("key: 'sy_lang'"), 'sy_lang not declared in preferences.js');
   });
 
   it('detectLang function exists', () => {
@@ -2698,13 +2701,17 @@ describe('Expert mode: pipeline button', () => {
     assert.ok(html.includes('actions/workflows/subtitle-pipeline.yml'));
   });
 
-  it('expert toggle persists to localStorage sy_expert_mode', () => {
-    assert.ok(html.includes("localStorage.getItem('sy_expert_mode')"));
-    assert.ok(html.includes("localStorage.setItem('sy_expert_mode'"));
+  it('expert toggle persists under the sy_expert_mode key', () => {
+    // The key itself moved into the preferences table; index.html reads and
+    // writes it through that table instead of touching localStorage directly.
+    var prefs = fs.readFileSync('site/js/preferences.js', 'utf8');
+    assert.ok(prefs.includes("key: 'sy_expert_mode'"), 'sy_expert_mode not declared in preferences.js');
+    assert.ok(html.includes("readPref(localStorage, 'expert')"));
+    assert.ok(html.includes("writePref(localStorage, 'expert'"));
   });
 
-  it('footer has expert toggle button', () => {
-    assert.ok(html.includes('id="footer-expert"'));
+  it('expert mode is switchable from the preferences menu', () => {
+    assert.ok(html.includes('id="prefs-expert"'), 'expert switch not found');
     assert.ok(html.includes('SPA.toggleExpert'));
   });
 });
@@ -2932,7 +2939,10 @@ describe('Expert mode: filter reset on toggle', () => {
 
   it('toggleExpert calls renderStats and renderIndex', () => {
     // Check that toggle function re-renders
-    var toggleMatch = html.match(/SPA\.toggleExpert[\s\S]{0,300}/);
+    // Anchored on the definition: the menu's onchange handler now mentions
+    // SPA.toggleExpert earlier in the file, and matching that instead would
+    // read 300 characters of markup and pass on nothing.
+    var toggleMatch = html.match(/SPA\.toggleExpert = function[\s\S]{0,300}/);
     assert.ok(toggleMatch, 'toggleExpert exists');
     assert.ok(toggleMatch[0].includes('renderStats'), 'should call renderStats');
     assert.ok(toggleMatch[0].includes('renderIndex'), 'should call renderIndex');
@@ -2964,7 +2974,6 @@ describe('Deploy stamps in HTML', () => {
   it('footer element exists with correct structure', () => {
     assert.ok(html.includes('id="app-footer"'));
     assert.ok(html.includes('id="footer-version"'));
-    assert.ok(html.includes('id="footer-expert"'));
   });
 });
 
@@ -3306,8 +3315,6 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
       if (text.length <= 2 || /^&#x?[0-9a-f]+;$/i.test(text)) continue;
       // Skip branch selector buttons (dynamic content like "main ▾")
       if (m[0].includes('class="branch-btn"')) continue;
-      // Skip theme/lang toggle buttons (single icon/label set by JS)
-      if (m[0].includes('id="theme-btn"') || m[0].includes('id="lang-btn"')) continue;
       // Must have data-i18n in the tag
       if (!m[0].includes('data-i18n=')) errors.push(text);
     }

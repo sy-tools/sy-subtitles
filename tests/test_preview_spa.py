@@ -5053,7 +5053,8 @@ class TestPreviewResizeHandleI18n:
         page.wait_for_selector("#preview-player-resize", timeout=10000)
         before = page.evaluate("document.getElementById('preview-player-resize').title")
         assert before == "Drag to resize the player"
-        page.click("#lang-btn")
+        page.click("#prefs-btn")
+        page.click("#prefs-lang button[aria-pressed='false']")
         handle = "document.getElementById('preview-player-resize')"
         after_title = page.evaluate(f"{handle}.title")
         after_aria = page.evaluate(f"{handle}.getAttribute('aria-label')")
@@ -6070,3 +6071,127 @@ class TestEditFieldHygiene:
         assert "\n" not in cell, f"Shift+Enter inserted a break: {cell!r}"
         focused = page.evaluate("document.activeElement.classList.contains('edited')")
         assert focused is False, "Shift+Enter did not commit (blur) the cue"
+
+
+class TestPreferencesMenu:
+    """The gear menu is the only way into language, theme and expert mode.
+
+    These preferences follow the user across every view, so their controls live
+    in one panel rather than as separate header buttons — and each one has to
+    keep driving the same stored value the rest of the app reads.
+    """
+
+    def test_menu_is_closed_until_the_gear_is_clicked(self, server, page):
+        goto_spa(page, server)
+        assert page.locator("#prefs-menu").is_visible() is False
+        page.click("#prefs-btn")
+        assert page.locator("#prefs-menu").is_visible() is True
+
+    def test_escape_closes_the_menu_and_returns_focus_to_the_gear(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.keyboard.press("Escape")
+        assert page.locator("#prefs-menu").is_visible() is False
+        # Focus must come back, or a keyboard user is dropped at the top of the
+        # document with no idea where the menu went.
+        assert page.evaluate("document.activeElement.id") == "prefs-btn"
+
+    def test_clicking_outside_closes_the_menu(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("h1")
+        assert page.locator("#prefs-menu").is_visible() is False
+
+    def test_choosing_a_theme_applies_and_stores_it(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Dark')")
+        assert page.evaluate("document.documentElement.getAttribute('data-theme')") == "dark"
+        assert page.evaluate("localStorage.getItem('sy_theme')") == "dark"
+
+    def test_auto_clears_the_theme_so_the_os_decides_again(self, server, page):
+        """'auto' is the ABSENCE of a choice: leaving the key set would pin the
+        page to whatever theme was current when the user picked auto."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Dark')")
+        page.click("#prefs-theme button:has-text('Auto')")
+        assert page.evaluate("document.documentElement.getAttribute('data-theme')") is None
+        assert page.evaluate("localStorage.getItem('sy_theme')") is None
+
+    def test_the_chosen_theme_is_marked_pressed(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Light')")
+        pressed = page.evaluate(
+            "Array.from(document.querySelectorAll('#prefs-theme button'))"
+            ".filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.textContent)"
+        )
+        assert pressed == ["Light"]
+
+    def test_switching_language_translates_the_page(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-lang button:has-text('UK')")
+        assert page.evaluate("localStorage.getItem('sy_lang')") == "uk"
+        assert page.evaluate("document.documentElement.lang") == "uk"
+
+    def test_the_menu_relabels_itself_on_a_language_switch(self, server, page):
+        """The rows are composed text, not data-i18n elements, so translatePage()
+        cannot reach them — they stick in the old language unless redrawn."""
+        page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        assert "Theme" in page.locator("#prefs-menu").inner_text()
+        page.click("#prefs-lang button:has-text('UK')")
+        assert "Авто" in page.locator("#prefs-theme").inner_text()
+
+    def test_expert_switch_reflects_the_stored_value_on_load(self, server, page):
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        assert page.locator("#prefs-expert").is_checked() is True
+
+    def test_expert_switch_reads_a_stored_zero_as_off(self, server, page):
+        """Expert mode shipped as `=== '1'`, so users who turned it off carry a
+        literal "0" — treating that as truthy would switch it on for them."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '0');")
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        assert page.locator("#prefs-expert").is_checked() is False
+
+    def test_toggling_the_expert_switch_stores_and_applies_it(self, server, page):
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-expert")
+        assert page.evaluate("localStorage.getItem('sy_expert_mode')") == "1"
+        assert page.evaluate("expertMode") is True
+
+    def test_the_gear_is_reachable_from_the_keyboard(self, server, page):
+        goto_spa(page, server)
+        page.evaluate("document.getElementById('prefs-btn').focus()")
+        page.keyboard.press("Enter")
+        assert page.locator("#prefs-menu").is_visible() is True
+
+    def test_the_menu_stays_open_while_choosing(self, server, page):
+        """Regression: the rows used to be rebuilt on every change, which
+        detached the clicked button before the event reached the document —
+        the outside-click handler then saw no .prefs ancestor and closed the
+        menu on every single choice."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        page.click("#prefs-theme button:has-text('Dark')")
+        assert page.locator("#prefs-menu").is_visible() is True
+
+    def test_the_menu_is_not_dressed_by_whatever_it_sits_in(self, server, page):
+        """The gear lives inside #freshness-bar, which is monospaced with wide
+        letter-spacing for dates and branch names. A settings panel full of
+        sentence labels must not inherit that — the component sets its own type,
+        which is also what makes the styleguide's rendering honest."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        font = page.evaluate("getComputedStyle(document.querySelector('.prefs-row__label')).fontFamily")
+        assert "mono" not in font.lower(), f"menu inherited the freshness bar's mono type: {font!r}"
+        spacing = page.evaluate("getComputedStyle(document.querySelector('.prefs-row__label')).letterSpacing")
+        assert spacing == "normal", f"menu inherited tracking meant for codes: {spacing!r}"

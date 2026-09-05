@@ -15,6 +15,7 @@
 <!-- Shared app logic — single source, also exercised by the Node test suite.
      Classic (non-deferred) scripts, so globals are defined before the inline
      app script below runs. -->
+<script src="js/preferences.js"></script>
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
 <script src="js/edit_store.js"></script>
@@ -343,8 +344,29 @@
     </span>
     <span id="last-updated"></span>
     <button id="refresh-btn" onclick="SPA.refreshManifest()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;display:none;" data-i18n-title="title.refresh">&#x21bb;</button>
-    <button id="lang-btn" onclick="SPA.toggleLang()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;" data-i18n-title="title.lang">UK</button>
-    <button id="theme-btn" onclick="SPA.cycleTheme()" style="background:none;color:var(--fg5);border:1px solid var(--border2);border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer;" data-i18n-title="title.theme.auto">&#x263C;</button>
+    <!-- Preferences. Language, theme and expert mode used to be three separate
+         buttons — two here and one injected into the footer — with no room for
+         a fourth. The rows are rendered from js/preferences.js so the menu and
+         the stored values can never disagree. -->
+    <div class="prefs">
+      <button id="prefs-btn" class="prefs-trigger" onclick="SPA.togglePrefsMenu()"
+              aria-haspopup="true" aria-expanded="false" aria-controls="prefs-menu"
+              data-i18n-title="prefs.title" data-i18n-aria-label="prefs.title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg></button>
+      <div id="prefs-menu" class="prefs-menu" role="group" data-i18n-aria-label="prefs.title">
+        <div class="prefs-row">
+          <span class="prefs-row__label" data-i18n="title.lang">Interface language</span>
+          <span class="prefs-seg" id="prefs-lang"></span>
+        </div>
+        <div class="prefs-row">
+          <span class="prefs-row__label" data-i18n="prefs.theme">Theme</span>
+          <span class="prefs-seg" id="prefs-theme"></span>
+        </div>
+        <label class="prefs-row">
+          <span class="prefs-row__label" data-i18n="prefs.expert">Expert mode</span>
+          <span class="prefs-switch"><input type="checkbox" id="prefs-expert" onchange="SPA.toggleExpert()"></span>
+        </label>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -551,7 +573,6 @@
 
 <footer id="app-footer" style="background:var(--bg2);border-top:1px solid var(--border);padding:4px 20px;font-size:11px;color:var(--fg6);display:flex;align-items:center;justify-content:space-between;">
   <span id="footer-version"></span>
-  <span id="footer-expert" style="display:none;"></span>
 </footer>
 
 <script>
@@ -887,9 +908,14 @@ var I18N = {
     'review.loading': '\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0442\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0442\u0456\u0432...',
     'title.refresh': '\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0438\u0442\u0438 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F',
     'title.srt_lang': '\u041C\u043E\u0432\u0430 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432',
-    'title.theme.auto': '\u0422\u0435\u043C\u0430: \u0430\u0432\u0442\u043E',
-    'title.theme.dark': '\u0422\u0435\u043C\u0430: \u0442\u0435\u043C\u043D\u0430',
-    'title.theme.light': '\u0422\u0435\u043C\u0430: \u0441\u0432\u0456\u0442\u043B\u0430',
+    'prefs.title': '\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F',
+    'prefs.theme': '\u0422\u0435\u043C\u0430',
+    'prefs.expert': '\u0415\u043A\u0441\u043F\u0435\u0440\u0442\u043D\u0438\u0439 \u0440\u0435\u0436\u0438\u043C',
+    'prefs.lang.uk': 'UK',
+    'prefs.lang.en': 'EN',
+    'prefs.theme.auto': '\u0410\u0432\u0442\u043E',
+    'prefs.theme.dark': '\u0422\u0435\u043C\u043D\u0430',
+    'prefs.theme.light': '\u0421\u0432\u0456\u0442\u043B\u0430',
     'freshness.updated': '\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E',
     'freshness.just_now': '\u0449\u043E\u0439\u043D\u043E',
     'freshness.min_ago': '\u0445\u0432 \u0442\u043E\u043C\u0443',
@@ -1098,9 +1124,14 @@ var I18N = {
     'review.loading': 'Loading transcripts...',
     'title.refresh': 'Check for updates',
     'title.srt_lang': 'Subtitle language',
-    'title.theme.auto': 'Theme: auto',
-    'title.theme.dark': 'Theme: dark',
-    'title.theme.light': 'Theme: light',
+    'prefs.title': 'Settings',
+    'prefs.theme': 'Theme',
+    'prefs.expert': 'Expert mode',
+    'prefs.lang.uk': 'UK',
+    'prefs.lang.en': 'EN',
+    'prefs.theme.auto': 'Auto',
+    'prefs.theme.dark': 'Dark',
+    'prefs.theme.light': 'Light',
     'freshness.updated': 'Updated',
     'freshness.just_now': 'just now',
     'freshness.min_ago': 'min ago',
@@ -1257,11 +1288,12 @@ var I18N = {
   }
 };
 
-var LANG_KEY = 'sy_lang';
-
+// Language is the one preference with no default to fall back TO: readPref
+// reports "unset" and the browser decides, so a Ukrainian browser opens in
+// Ukrainian without the user ever visiting the menu.
 function detectLang() {
-  var saved = localStorage.getItem(LANG_KEY);
-  if (saved === 'uk' || saved === 'en') return saved;
+  var saved = readPref(localStorage, 'lang');
+  if (saved) return saved;
   var nav = (navigator.language || navigator.userLanguage || '').toLowerCase();
   return nav.startsWith('uk') ? 'uk' : 'en';
 }
@@ -2698,7 +2730,7 @@ function showIndex() {
   });
 }
 
-var expertMode = localStorage.getItem('sy_expert_mode') === '1';
+var expertMode = readPref(localStorage, 'expert');
 function filterKey(isExpert) { return isExpert ? 'sy_filter_expert' : 'sy_filter_normal'; }
 function loadSavedFilter(isExpert) {
   var saved = localStorage.getItem(filterKey(isExpert));
@@ -7663,46 +7695,108 @@ SPA.submitAddTalk = function() {
 // Theme: auto / dark / light
 // ============================================================
 (function() {
-  var THEME_KEY = 'sy_theme';
-  var saved = localStorage.getItem(THEME_KEY); // 'dark', 'light', or null (auto)
-  if (saved) document.documentElement.setAttribute('data-theme', saved);
+  var cycle = PREFS.theme.values;
 
-  var icons = { auto: '\u263C', dark: '\u263E', light: '\u2600' };
-  var cycle = ['auto', 'dark', 'light'];
+  // Apply what is already stored before anything renders: readPref turns an
+  // unknown value into 'auto', so a stale key cannot leave data-theme pinned.
+  var saved = readPref(localStorage, 'theme');
+  if (saved !== 'auto') document.documentElement.setAttribute('data-theme', saved);
 
-  function getCurrent() { return localStorage.getItem(THEME_KEY) || 'auto'; }
+  function getCurrent() { return readPref(localStorage, 'theme'); }
 
-  function applyTheme(mode) {
-    if (mode === 'auto') {
-      document.documentElement.removeAttribute('data-theme');
-      localStorage.removeItem(THEME_KEY);
-    } else {
-      document.documentElement.setAttribute('data-theme', mode);
-      localStorage.setItem(THEME_KEY, mode);
-    }
-    var btn = document.getElementById('theme-btn');
-    if (btn) { btn.textContent = icons[mode]; btn.title = t('title.theme.' + mode); }
-  }
-
-  SPA.cycleTheme = function() {
-    var cur = getCurrent();
-    var next = cycle[(cycle.indexOf(cur) + 1) % cycle.length];
-    applyTheme(next);
+  // 'auto' is the ABSENCE of a choice: the attribute comes off and writePref
+  // clears the key, so the page follows prefers-color-scheme again.
+  SPA.setTheme = function(mode) {
+    if (mode === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', mode);
+    writePref(localStorage, 'theme', mode);
+    renderPrefsMenu();
   };
 
-  var initMode = getCurrent();
-  var btn = document.getElementById('theme-btn');
-  if (btn) { btn.textContent = icons[initMode]; btn.title = t('title.theme.' + initMode); }
+  // Kept as the action the rest of the app (and the test suite) already calls.
+  // The menu offers the three modes outright; this still walks them in order.
+  SPA.cycleTheme = function() {
+    SPA.setTheme(cycle[(cycle.indexOf(getCurrent()) + 1) % cycle.length]);
+  };
 })();
+
+// ============================================================
+// Preferences menu
+// ============================================================
+// Rows are drawn from PREFS, so a preference cannot appear in the menu with a
+// value the storage layer would reject \u2014 the menu and js/preferences.js read
+// the same table.
+// Buttons are created once and updated in place. Rebuilding them would detach
+// the very button being clicked before the event bubbles to the document — the
+// outside-click handler would then see a node with no .prefs ancestor and close
+// the menu on every choice — and it would drop keyboard focus along with it.
+function renderPrefsSeg(id, name, current, labelKey, onPick) {
+  var host = document.getElementById(id);
+  if (!host) return;
+  if (!host.children.length) {
+    PREFS[name].values.forEach(function(value) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.onclick = function() { onPick(value); };
+      host.appendChild(b);
+    });
+  }
+  PREFS[name].values.forEach(function(value, i) {
+    var b = host.children[i];
+    b.textContent = t(labelKey + value);
+    b.setAttribute('aria-pressed', String(value === current));
+  });
+}
+
+function renderPrefsMenu() {
+  renderPrefsSeg('prefs-lang', 'lang', currentLang, 'prefs.lang.', function(v) {
+    if (v !== currentLang) SPA.toggleLang();
+  });
+  renderPrefsSeg('prefs-theme', 'theme', readPref(localStorage, 'theme'), 'prefs.theme.', function(v) {
+    SPA.setTheme(v);
+  });
+  var expert = document.getElementById('prefs-expert');
+  if (expert) expert.checked = readPref(localStorage, 'expert');
+}
+
+SPA.togglePrefsMenu = function() {
+  var menu = document.getElementById('prefs-menu');
+  var btn = document.getElementById('prefs-btn');
+  if (!menu) return;
+  var open = !menu.classList.contains('open');
+  menu.classList.toggle('open', open);
+  if (btn) btn.setAttribute('aria-expanded', String(open));
+  if (open) renderPrefsMenu();
+};
+
+function closePrefsMenu() {
+  var menu = document.getElementById('prefs-menu');
+  var btn = document.getElementById('prefs-btn');
+  if (menu) menu.classList.remove('open');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+}
+
+// A menu that only closes by clicking its own trigger is a trap on touch, where
+// there is no Escape key \u2014 so a tap anywhere outside dismisses it too.
+document.addEventListener('click', function(e) {
+  var el = e.target;
+  if (!el || typeof el.closest !== 'function' || !el.closest('.prefs')) closePrefsMenu();
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var menu = document.getElementById('prefs-menu');
+  if (!menu || !menu.classList.contains('open')) return;
+  closePrefsMenu();
+  var btn = document.getElementById('prefs-btn');
+  if (btn) btn.focus();
+});
 
 // ============================================================
 // Language toggle: uk ↔ en
 // ============================================================
 SPA.toggleLang = function() {
   currentLang = currentLang === 'uk' ? 'en' : 'uk';
-  localStorage.setItem(LANG_KEY, currentLang);
-  var btn = document.getElementById('lang-btn');
-  if (btn) btn.textContent = currentLang.toUpperCase();
+  writePref(localStorage, 'lang', currentLang);
   translatePage();
   // The avatar tooltip is set imperatively (translated "signed in as" prefix +
   // the login), so translatePage() — which only touches data-i18n* elements —
@@ -7714,17 +7808,17 @@ SPA.toggleLang = function() {
     renderStats();
     renderIndex(document.getElementById('index-content'));
   }
-  // Update theme button title
-  var themeMode = localStorage.getItem('sy_theme') || 'auto';
-  var themeBtn = document.getElementById('theme-btn');
-  if (themeBtn) themeBtn.title = t('title.theme.' + themeMode);
+  // The menu's own rows are composed text (option labels), not data-i18n
+  // elements, so translatePage() above cannot reach them.
+  renderPrefsMenu();
 };
 
-// Initial i18n setup
+// Initial i18n setup. The menu's rows are composed text, so they are painted
+// here too — the panel is hidden until opened, but the switch's checked state
+// and the pressed option must be right the first time it is.
 (function() {
-  var btn = document.getElementById('lang-btn');
-  if (btn) btn.textContent = currentLang.toUpperCase();
   translatePage();
+  renderPrefsMenu();
 })();
 
 // ============================================================
@@ -7744,7 +7838,7 @@ updateFooter();
 // ============================================================
 SPA.toggleExpert = function() {
   expertMode = !expertMode;
-  localStorage.setItem('sy_expert_mode', expertMode ? '1' : '0');
+  writePref(localStorage, 'expert', expertMode);
   activeFilter = loadSavedFilter(expertMode);
   applyExpertMode();
   if (manifest) { renderStats(); renderIndex(document.getElementById('index-content')); }
@@ -7754,12 +7848,11 @@ function applyExpertMode() {
   document.querySelectorAll('.expert-only').forEach(function(el) {
     el.style.display = expertMode ? '' : 'none';
   });
-  var footerExpert = document.getElementById('footer-expert');
-  if (footerExpert) {
-    footerExpert.style.display = '';
-    footerExpert.innerHTML = '<button onclick="SPA.toggleExpert()" style="background:none;border:1px solid var(--border2);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;color:var(--fg6);">'
-      + (expertMode ? '&#x2699; expert' : '&#x2699;') + '</button>';
-  }
+  // The switch is the only way in now, and it can be driven from elsewhere
+  // (SPA.toggleExpert, a page load with the key already set), so it is painted
+  // here rather than assumed to match.
+  var box = document.getElementById('prefs-expert');
+  if (box) box.checked = expertMode;
 }
 applyExpertMode();
 

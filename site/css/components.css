@@ -1245,3 +1245,52 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
      still says which phase is running. */
   .burn-seg--active.burn-seg--empty::after { animation: none; opacity: 0.35; }
 }
+
+/* ── Preferences menu ────────────────────────────────────────────────────────
+   One home for the settings that follow the user across every view: interface
+   language, theme, expert mode. Before this they were separate buttons carrying
+   copy-pasted inline styles — two in the header row, one injected into the
+   footer — so there was no place to put the next one.
+
+   Anchored to the gear and right-aligned like .video-dropdown: it opens at the
+   right edge of the window, where a left-aligned panel would overflow. */
+.prefs { position: relative; display: inline-block; }
+.prefs-trigger { background: none; color: var(--fg5); border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); padding: 2px 6px; font-size: var(--text-xs);
+  font-family: inherit; cursor: pointer; line-height: 1.4; }
+.prefs-trigger:hover { color: var(--fg3); border-color: var(--border3); }
+.prefs-trigger svg { width: 13px; height: 13px; display: block; }
+/* Type is declared, not inherited: the gear sits inside #freshness-bar, which
+   is monospaced with wide tracking for dates and branch names. A panel of
+   sentence labels must not be dressed by whatever it happens to sit in — and
+   pinning it here is what keeps the styleguide's rendering honest. */
+.prefs-menu { position: absolute; top: 100%; right: 0; margin-top: var(--space-1);
+  z-index: var(--z-dropdown); min-width: 236px; display: none; padding: var(--space-1);
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-md); text-align: left;
+  font-family: var(--f-sans); letter-spacing: normal; }
+.prefs-menu.open { display: block; }
+.prefs-row { display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-4); padding: var(--space-2); }
+.prefs-row + .prefs-row { border-top: 1px solid var(--bg5); }
+.prefs-row__label { font-size: var(--text-sm); color: var(--fg3); white-space: nowrap; }
+
+/* Segmented choice. Every option is on screen, so the user picks the one they
+   want instead of clicking a single button until the right value comes round —
+   which is what the theme control used to require. */
+.prefs-seg { display: inline-flex; border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); overflow: hidden; }
+.prefs-seg button { background: none; border: none; cursor: pointer; padding: 2px 8px;
+  font-size: var(--text-xs); color: var(--fg5); font-family: inherit; }
+.prefs-seg button + button { border-left: 1px solid var(--border2); }
+.prefs-seg button:hover { background: var(--bg4); color: var(--fg3); }
+.prefs-seg button[aria-pressed="true"] { background: var(--stat-active-bg); color: var(--fg2); }
+.prefs-seg button:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+
+/* A real <input type="checkbox">, drawn by the browser and only tinted here: a
+   hand-rolled box loses the platform's own forced-colours and high-contrast
+   handling, and this menu is the one place a user goes when something is hard
+   to see. */
+.prefs-switch { display: inline-flex; align-items: center; cursor: pointer; }
+.prefs-switch input { accent-color: var(--link); width: 15px; height: 15px;
+  cursor: pointer; margin: 0; }
