@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1985-03-17_Birthday-Puja-Our-maryadas/Birthday-Puja-P2/final/uk.srt
+  Transcript: talks/1985-03-17_Birthday-Puja-Our-maryadas/transcript_uk.txt
+  EN SRT: talks/1985-03-17_Birthday-Puja-Our-maryadas/Birthday-Puja-P2/source/en.srt
+  SRT blocks: 224
+  EN SRT blocks: 239
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:29,041 — 01:32:48,166
+  SRT range:       00:00:29,041 — 01:32:48,166
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 224
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 224
+  CPS: avg=9.7, median=9.3, max=15.1
+  CPS > target: 23 (10.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=32.1, max=62
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #214: CPS=15.1 (29ch/1.9s) "вони роблять велетенську річ."
+    #125: CPS=15.0 (22ch/1.5s) "Діти можуть підходити."
+    #42: CPS=15.0 (25ch/1.7s) "і тоді приходите до Мене."
+    #86: CPS=15.0 (25ch/1.7s) "виходьте наперед ось так."
+    #137: CPS=15.0 (31ch/2.1s) "Ті, хто щойно омивав Мої Стопи,"
+    #100: CPS=15.0 (34ch/2.3s) "Тепер хай тримають старші дівчата,"
+    #135: CPS=15.0 (34ch/2.3s) "Не ті, хто щойно омивав Мої Стопи,"
+    #207: CPS=15.0 (34ch/2.3s) "Нехай підійдуть усі семеро дівчат."
+    #38: CPS=15.0 (37ch/2.5s) "і тому через Нього все влаштовується."
+    #49: CPS=15.0 (43ch/2.9s) "чоловік має бути чоловіком, жінка – жінкою."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 224
+  EN SRT blocks: 239
+  Ratio UK/EN: 0.94 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.7 (target ≤15.0)
+  CPS > 15.0: 23 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
