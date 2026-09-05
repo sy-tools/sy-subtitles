@@ -6347,11 +6347,26 @@ class TestTypoHints:
             lambda r: r.fulfill(status=200, content_type="text/plain", body=self.OWN_WORDS),
         )
 
-    def _open_editor_with_hints_on(self, page, server):
+    def _open_editor_with_hints_on(self, page, server, lang=None):
         self._serve_small_dictionary(page)
         page.add_init_script("localStorage.setItem('sy_typo_hints', '1');")
+        if lang:
+            page.add_init_script(f"localStorage.setItem('sy_lang', '{lang}');")
         goto_spa(page, server, self.REVIEW_UK)
         page.wait_for_selector(".cell.uk .cell-text", timeout=10000)
+
+    def _hover_the_mixed_word(self, page):
+        """Put the pointer in the middle of whatever sy-typo-script covers."""
+        box = page.evaluate(
+            """() => {
+              const marks = CSS.highlights.get('sy-typo-script');
+              if (!marks) return null;
+              const r = [...marks][0].getBoundingClientRect();
+              return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+            }"""
+        )
+        assert box, "nothing is marked as mixed-script"
+        page.mouse.move(box["x"], box["y"])
 
     def _type_into_first_cell(self, page, text):
         page.evaluate(
@@ -6441,6 +6456,103 @@ class TestTypoHints:
         page.wait_for_timeout(600)
 
         assert page.evaluate("CSS.highlights.has('sy-typo')") is False
+
+    def test_a_mixed_script_word_is_marked_apart_from_an_unknown_one(self, server, page):
+        """The two hints mean different things. An unknown word is a suggestion
+        to look again; a word carrying a Latin letter is a defect the checker is
+        certain of and can explain. Painted alike, the certain one reads as
+        another guess."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації Mати слабшають")
+        self._painted_words(page)
+
+        marks = page.evaluate(
+            """() => ({
+              unknown: [...(CSS.highlights.get('sy-typo') || [])].map(r => r.toString()),
+              script: [...(CSS.highlights.get('sy-typo-script') || [])].map(r => r.toString()),
+            })"""
+        )
+
+        assert marks["unknown"] == ["відрації"]
+        assert marks["script"] == ["Mати"]
+
+    def test_the_offending_letter_itself_is_marked(self, server, page):
+        """Naming the letter in words cannot work here: «T» and «Т» are the same
+        shape, so a tip reading "Latin «T» where «Т» belongs" shows the reader
+        two glyphs they cannot tell apart. The mark has to be ON the letter, in
+        the word, where the eye can go straight to it."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші Toм слабшають")
+        self._painted_words(page)
+
+        letters = page.evaluate("() => [...(CSS.highlights.get('sy-typo-letter') || [])].map(r => r.toString())")
+
+        assert letters == ["T", "o"], "the Latin letters of `Toм` are not marked"
+
+    def test_a_word_the_checker_merely_does_not_know_has_no_letter_marked(self, server, page):
+        """There is no offending letter to point at — the checker knows only
+        that neither source has the word."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        self._painted_words(page)
+
+        letters = page.evaluate("() => [...(CSS.highlights.get('sy-typo-letter') || [])].map(r => r.toString())")
+
+        assert letters == []
+
+    def test_hovering_a_mixed_script_word_names_the_letter(self, server, page):
+        """The whole difficulty of this typo is that there is nothing to see: the
+        word reads as correct. An underline alone sends the writer to stare at
+        it; the hint has to say which letter, and what belonged there."""
+        self._open_editor_with_hints_on(page, server, lang="uk")
+        self._type_into_first_cell(page, "ваші Mати слабшають")
+        self._painted_words(page)
+
+        self._hover_the_mixed_word(page)
+
+        tip = page.locator("#typo-tip")
+        tip.wait_for(state="visible", timeout=5000)
+        assert tip.inner_text().strip() == "Різні розкладки в одному слові: латинська «M» замість «М»"
+
+    def test_the_tip_goes_when_the_pointer_leaves(self, server, page):
+        self._open_editor_with_hints_on(page, server, lang="uk")
+        self._type_into_first_cell(page, "ваші Mати слабшають")
+        self._painted_words(page)
+        self._hover_the_mixed_word(page)
+        page.locator("#typo-tip").wait_for(state="visible", timeout=5000)
+
+        page.mouse.move(2, 2)
+
+        assert page.locator("#typo-tip").is_visible() is False
+
+    def test_an_unknown_word_gets_no_tip_because_there_is_nothing_to_say(self, server, page):
+        """`відрації` is flagged because neither source has it — which is all the
+        checker knows. A tip there could only repeat the underline."""
+        self._open_editor_with_hints_on(page, server, lang="uk")
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        self._painted_words(page)
+
+        box = page.evaluate(
+            """() => {
+              const r = [...CSS.highlights.get('sy-typo')][0].getBoundingClientRect();
+              return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+            }"""
+        )
+        page.mouse.move(box["x"], box["y"])
+        page.wait_for_timeout(300)
+
+        assert page.locator("#typo-tip").is_visible() is False
+
+    def test_the_tip_speaks_the_chosen_language(self, server, page):
+        self._open_editor_with_hints_on(page, server, lang="en")
+        self._type_into_first_cell(page, "ваші Mати слабшають")
+        self._painted_words(page)
+
+        self._hover_the_mixed_word(page)
+
+        tip = page.locator("#typo-tip")
+        tip.wait_for(state="visible", timeout=5000)
+        assert tip.inner_text().strip() == "Two keyboard layouts in one word: Latin «M» where «М» belongs"
 
     def test_refuses_a_reply_measured_before_the_last_keystroke(self, server, page):
         """`seq` advances when a request is SENT, so an edit made between the

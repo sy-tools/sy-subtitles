@@ -51,7 +51,45 @@ describe('findUnknownWords', () => {
     // its pieces are judged, so it is never put to the oracle.
     const hits = findUnknownWords('«Mати, ми вирішили»', knows('ати', 'ми', 'вирішили'));
 
-    assert.deepStrictEqual(hits, [{ start: 1, end: 5, word: 'Mати' }]);
+    assert.deepStrictEqual(hits, [
+      { start: 1, end: 5, word: 'Mати', latin: [{ char: 'M', at: 0, cyrillic: 'М' }] },
+    ]);
+  });
+
+  it('names the offending letter, because the word looks perfect', () => {
+    // The whole difficulty of this typo is that there is nothing to see. An
+    // underline alone leaves the writer staring at a word that reads correctly;
+    // what they need is which letter, and what it should have been.
+    const [hit] = findUnknownWords('це iндивідуально', knows('це'));
+
+    assert.deepStrictEqual(hit.latin, [{ char: 'i', at: 0, cyrillic: 'і' }]);
+  });
+
+  it('names every offending letter, not just the first', () => {
+    // `Toм` carries two: a Latin T and a Latin o. Naming one would send the
+    // writer to fix half a word and leave the hint standing.
+    const [hit] = findUnknownWords('його звали Toм', knows('його', 'звали'));
+
+    assert.deepStrictEqual(hit.latin, [
+      { char: 'T', at: 0, cyrillic: 'Т' },
+      { char: 'o', at: 1, cyrillic: 'о' },
+    ]);
+  });
+
+  it('admits when a Latin letter has no Cyrillic twin', () => {
+    // Only some Latin letters have a lookalike. `q` is simply out of place, and
+    // saying "should be X" when there is no X would be an invention.
+    const [hit] = findUnknownWords('слово qости', knows('слово'));
+
+    assert.deepStrictEqual(hit.latin, [{ char: 'q', at: 0, cyrillic: null }]);
+  });
+
+  it('says nothing about letters for a word that is merely unknown', () => {
+    // An unknown word carries no diagnosis: the module knows it is not in
+    // either source, and nothing more. Only a mixed-script hit can name a cause.
+    const [hit] = findUnknownWords('ваші відрації', knows('ваші'));
+
+    assert.equal('latin' in hit, false);
   });
 
   it('underlines the whole broken word, not the part that survived', () => {
@@ -137,6 +175,44 @@ describe('normalizeWord — twin of tools/build_wordlist.py', () => {
       assert.equal(normalizeWord(c.input), c.word);
     });
   }
+});
+
+// The sentence the reader is shown -------------------------------------------
+//
+// Composed here rather than in index.html so the joining and the two shapes of
+// clause can be tested. The wording itself arrives as arguments, because it is
+// translated and belongs to the SPA's i18n table.
+describe('mixedScriptMessage', () => {
+  const { mixedScriptMessage } = require('../site/js/typo_hints');
+  const PHRASES = {
+    title: 'Різні розкладки в одному слові',
+    instead: 'латинська «{lat}» замість «{cyr}»',
+    stray: 'латинська «{lat}»',
+  };
+
+  it('names the letter and what belonged in its place', () => {
+    const msg = mixedScriptMessage([{ char: 'M', at: 0, cyrillic: 'М' }], PHRASES);
+
+    assert.equal(msg, 'Різні розкладки в одному слові: латинська «M» замість «М»');
+  });
+
+  it('lists every offending letter in the order they appear', () => {
+    const msg = mixedScriptMessage(
+      [
+        { char: 'T', at: 0, cyrillic: 'Т' },
+        { char: 'o', at: 1, cyrillic: 'о' },
+      ],
+      PHRASES
+    );
+
+    assert.equal(msg, 'Різні розкладки в одному слові: латинська «T» замість «Т», латинська «o» замість «о»');
+  });
+
+  it('does not invent a replacement for a letter that has none', () => {
+    const msg = mixedScriptMessage([{ char: 'q', at: 0, cyrillic: null }], PHRASES);
+
+    assert.equal(msg, 'Різні розкладки в одному слові: латинська «q»');
+  });
 });
 
 describe('dictionaryForm', () => {

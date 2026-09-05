@@ -197,6 +197,59 @@ suggestion to look again, not a verdict the writer must clear before saving.</p>
   })();
 </script>
 
+<h2>Mixed-script hint</h2>
+<p>A word carrying a Latin letter where a Cyrillic one belongs
+(<code>::highlight(sy-typo-script)</code>) — <code>Mати</code>, <code>Toм</code>. Marked apart
+from the hint above because the two say different things: that one is a suggestion to look
+again, this one is a defect the checker is certain of and can name. <strong>Doubled and
+orange rather than wavy and red</strong>, so the two differ in shape as well as colour.</p>
+<p>The offending letter is marked inside the word (<code>::highlight(sy-typo-letter)</code>) —
+the one place a filled mark earns its keep. <code>T</code> and <code>Т</code> are the same
+shape, so naming the letter in words shows the reader two glyphs they cannot tell apart;
+marked where it stands, the eye goes straight to it.</p>
+<p>Hovering the word also shows <code>.typo-tip</code>, which says what belonged in its place.
+The tip floats over the page rather than sitting in the text — the hints never touch the
+document being edited.</p>
+<div class="sg-row"><p id="sg-typo-script" style="font-size:15px;margin:0">Mати дала нам світло, і Toм це знає</p></div>
+<div class="sg-row" style="justify-content:flex-start">
+  <span class="typo-tip" style="position:static;display:inline-block">Різні розкладки в одному слові: латинська «M» замість «М»</span>
+</div>
+<script>
+  // Painted by the real API against the real stylesheet, and the sentence is
+  // composed by the real module — so neither sample can drift from the app's.
+  (function () {
+    if (!window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
+    var node = document.getElementById('sg-typo-script').firstChild;
+    var ranges = [[0, 4], [24, 27]].map(function (s) {
+      var r = document.createRange();
+      r.setStart(node, s[0]);
+      r.setEnd(node, s[1]);
+      return r;
+    });
+    CSS.highlights.set('sy-typo-script', new Highlight(...ranges));
+    // The Latin letters inside those words: M of `Mати`, T and o of `Toм`.
+    var letters = [[0, 1], [24, 25], [25, 26]].map(function (s) {
+      var r = document.createRange();
+      r.setStart(node, s[0]);
+      r.setEnd(node, s[1]);
+      return r;
+    });
+    CSS.highlights.set('sy-typo-letter', new Highlight(...letters));
+  })();
+</script>
+<script src="js/typo_hints.js"></script>
+<script>
+  (function () {
+    var tip = document.querySelector('.typo-tip');
+    if (!tip || typeof mixedScriptMessage !== 'function') return;
+    tip.textContent = mixedScriptMessage([{ char: 'M', at: 0, cyrillic: 'М' }], {
+      title: 'Різні розкладки в одному слові',
+      instead: 'латинська «{lat}» замість «{cyr}»',
+      stray: 'латинська «{lat}»',
+    });
+  })();
+</script>
+
 <h2>Badges</h2>
 <div class="sg-row">
   <span class="review-badge needs-review">needs review</span>

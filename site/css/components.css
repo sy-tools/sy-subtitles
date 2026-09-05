@@ -1267,6 +1267,48 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
   text-underline-offset: 3px;
 }
 
+/* A word carrying a Latin letter where a Cyrillic one belongs — `Mати`, `Toм`.
+   Marked apart from the one above because the two say different things: that is
+   a suggestion to look again, this is a defect the checker is certain of and
+   can name. Doubled rather than wavy, and orange rather than red, so the two
+   differ in shape as well as in colour — the word itself offers no clue at all,
+   and neither should a reader have to compare hues to tell the marks apart. */
+::highlight(sy-typo-script) {
+  text-decoration: underline double var(--accent-orange);
+  text-underline-offset: 3px;
+}
+
+/* The Latin letter itself, inside the word above. This is the one place a
+   filled mark earns its keep: `T` and `Т` are the same shape, so naming the
+   letter in words shows the reader two glyphs they cannot tell apart. Marked
+   where it stands, the eye goes straight to it — and the word is short, so the
+   block is a letter wide, not a sentence. */
+::highlight(sy-typo-letter) {
+  background-color: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+/* Says which letter is wrong, since the word looks perfect. Floats above the
+   text rather than sitting in it: the editor's own content is never touched. */
+.typo-tip {
+  position: fixed;
+  /* Above the dropdowns it can appear beneath, below the modal layer: it is a
+     passing remark about a word, never something to raise over a dialog. */
+  z-index: var(--z-overlay);
+  max-width: 320px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: var(--bg4);
+  color: var(--fg2);
+  font-family: var(--f-sans);
+  font-size: var(--text-xs);
+  letter-spacing: normal;
+  line-height: 1.45;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
 /* Says a non-default mode is on, beside the control that turns it off. Quiet
    on purpose: it is a standing statement of fact, not something to act on.
    Type is declared, not inherited, for the same reason the menu declares its

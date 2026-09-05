@@ -30,6 +30,31 @@ var WORD_RE = /[Ѐ-ӿ̀-ͯA-Za-z]+(?:['’ʼ][Ѐ-ӿ̀-ͯA-Za-z]+)*/g;
 var CYRILLIC_RE = /[Ѐ-ӿ]/;
 var LATIN_RE = /[A-Za-z]/;
 
+// The Latin letters that can pass for a Ukrainian one, and what was meant. Only
+// these shapes ever produce this typo: the keyboard sits on the wrong layout for
+// a single stroke, and the result is indistinguishable by eye. Letters outside
+// this map are still reported — they are just as out of place — but with no
+// suggestion, because inventing one would be worse than admitting there is none.
+var LOOKALIKES = {
+  A: 'А', B: 'В', C: 'С', E: 'Е', H: 'Н', I: 'І', K: 'К', M: 'М',
+  O: 'О', P: 'Р', T: 'Т', X: 'Х', Y: 'У',
+  a: 'а', c: 'с', e: 'е', i: 'і', o: 'о', p: 'р', x: 'х', y: 'у',
+};
+
+// Which letters of a mixed-script word are the Latin ones, where they sit, and
+// what each should have been. This is the whole point of the hint: the word
+// reads as correct, so an underline alone tells the writer nothing they can act
+// on — they need the letter named.
+function latinLettersIn(word) {
+  var found = [];
+  for (var i = 0; i < word.length; i++) {
+    if (LATIN_RE.test(word[i])) {
+      found.push({ char: word[i], at: i, cyrillic: LOOKALIKES[word[i]] || null });
+    }
+  }
+  return found;
+}
+
 // The form a word is JUDGED in — the twin of tools/build_wordlist.py, which
 // folds the shipped list the same way. Lowercase because a sentence-initial
 // capital is not a mistake, and one apostrophe shape because an editor may
@@ -67,6 +92,21 @@ function isKnownWith(ownWords, check) {
   };
 }
 
+// The sentence shown for a mixed-script word. The wording arrives from the
+// caller because it is translated; what belongs here is the shape of the answer
+// — every offending letter, in the order it appears, and no invented
+// replacement for one that has no Cyrillic twin.
+//
+// `phrases` is { title, instead: '… {lat} … {cyr} …', stray: '… {lat} …' }.
+function mixedScriptMessage(latin, phrases) {
+  var clauses = latin.map(function (l) {
+    return l.cyrillic
+      ? phrases.instead.replace('{lat}', l.char).replace('{cyr}', l.cyrillic)
+      : phrases.stray.replace('{lat}', l.char);
+  });
+  return phrases.title + ': ' + clauses.join(', ');
+}
+
 // Spans of the words `isKnown` rejects, as offsets into `text`.
 function findUnknownWords(text, isKnown) {
   var hits = [];
@@ -90,11 +130,16 @@ function findUnknownWords(text, isKnown) {
     // oracle — asking about `ати` is asking the wrong question, and the answer
     // (yes, once the list had been taught the fragment) hid the defect
     // completely. The corpus holds no legitimate word of this shape.
-    if (!LATIN_RE.test(m[0])) {
+    var hit = { start: m.index, end: m.index + m[0].length, word: m[0] };
+    if (LATIN_RE.test(m[0])) {
+      // The only hit that carries a diagnosis. An unknown word gets none: all
+      // that is known about it is that neither source has it.
+      hit.latin = latinLettersIn(m[0]);
+    } else {
       // As written: normalising is the oracle's job, and it differs per source.
       if (isKnown(m[0])) continue;
     }
-    hits.push({ start: m.index, end: m.index + m[0].length, word: m[0] });
+    hits.push(hit);
   }
   return hits;
 }
@@ -105,5 +150,6 @@ if (typeof module !== 'undefined' && module.exports) {
     normalizeWord: normalizeWord,
     dictionaryForm: dictionaryForm,
     isKnownWith: isKnownWith,
+    mixedScriptMessage: mixedScriptMessage,
   };
 }
