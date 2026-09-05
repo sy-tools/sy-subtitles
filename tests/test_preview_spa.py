@@ -6379,6 +6379,22 @@ class TestTypoHints:
             text,
         )
 
+    def _wait_for_repaint(self, page, before):
+        """Wait for a paint LATER than `before` (from `_paint_count`).
+
+        `_painted_words` compares typoPaintedSeq with typoSeq, which a keystroke
+        has not yet moved — the scan behind it is debounced — so on its own that
+        comparison is answered by the paint that came before the keystroke.
+        """
+        page.wait_for_function(
+            "(before) => typoPaintedSeq > before && typoPaintedSeq === typoSeq",
+            arg=before,
+            timeout=15000,
+        )
+
+    def _paint_count(self, page):
+        return page.evaluate("() => typoPaintedSeq")
+
     def _painted_words(self, page):
         """What the highlight registry covers once the paint has caught up.
 
@@ -6522,6 +6538,46 @@ class TestTypoHints:
         page.locator("#typo-tip").wait_for(state="visible", timeout=5000)
 
         page.mouse.move(2, 2)
+
+        assert page.locator("#typo-tip").is_visible() is False
+
+    def test_the_tip_goes_when_the_last_flagged_word_is_fixed(self, server, page):
+        """Fixing the word the tip is about, with the pointer still on it.
+
+        The hands are on the keyboard, so no mousemove follows the keystroke —
+        and once the last flag is gone there is no mark left for a later
+        mousemove to land on either. The tip has to be settled by the repaint,
+        or it outlives the mistake it describes and cannot be dismissed at all.
+        """
+        self._open_editor_with_hints_on(page, server, lang="uk")
+        self._type_into_first_cell(page, "ваші Mати слабшають")
+        self._painted_words(page)
+        self._hover_the_mixed_word(page)
+        page.locator("#typo-tip").wait_for(state="visible", timeout=5000)
+
+        painted = self._paint_count(page)
+        self._type_into_first_cell(page, "ваші слабшають")
+        self._wait_for_repaint(page, painted)
+
+        assert page.locator("#typo-tip").is_visible() is False
+
+    def test_the_tip_goes_when_its_word_is_fixed_and_others_remain(self, server, page):
+        """The same keystroke, with another mixed word still on screen.
+
+        Marks remain, so nothing stops a mousemove here — but the pointer does
+        not move, and the Range the tip was placed from is replaced by the
+        repaint. Left alone, the tip keeps describing a letter that is no longer
+        under it.
+        """
+        self._open_editor_with_hints_on(page, server, lang="uk")
+        self._type_into_first_cell(page, "ваші Mати Toм")
+        self._painted_words(page)
+        self._hover_the_mixed_word(page)
+        page.locator("#typo-tip").wait_for(state="visible", timeout=5000)
+
+        painted = self._paint_count(page)
+        self._type_into_first_cell(page, "ваші слабшають Toм")
+        self._wait_for_repaint(page, painted)
 
         assert page.locator("#typo-tip").is_visible() is False
 
