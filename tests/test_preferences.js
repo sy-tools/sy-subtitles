@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { readPref, writePref } = require('../site/js/preferences');
+const { PREFS, readPref, writePref } = require('../site/js/preferences');
 
 // In-memory storage double — the same getItem/setItem/removeItem surface the
 // other SPA module tests use for localStorage.
@@ -79,5 +79,42 @@ describe('writePref', () => {
     writePref(storage, 'expert', true);
 
     assert.equal(storage.getItem('sy_expert_mode'), '1');
+  });
+
+  it('clears the key when expert mode is switched off', () => {
+    // This is the path whose storage semantics changed: the old code wrote a
+    // literal "0", this writes nothing at all. Both read as off — but only if
+    // the key really goes.
+    const storage = makeStorage({ sy_expert_mode: '1' });
+
+    writePref(storage, 'expert', false);
+
+    assert.equal(storage.getItem('sy_expert_mode'), null);
+  });
+
+  it('refuses a value the preference does not declare', () => {
+    // readPref already rejects an unknown value, so storing one would leave the
+    // app in a state it cannot read back: SPA.setTheme('sepia') would pin
+    // data-theme="sepia" while the menu showed Auto as the pressed option.
+    const storage = makeStorage({ sy_theme: 'dark' });
+
+    assert.throws(() => writePref(storage, 'theme', 'sepia'), /sepia/);
+    assert.equal(storage.getItem('sy_theme'), 'dark', 'storage must be left untouched');
+  });
+});
+
+describe('the round trip', () => {
+  it('reads back every value each preference accepts', () => {
+    // The table is the contract: whatever a preference declares, storing it and
+    // reading it back must give the same answer. Without this a value can be
+    // written that readPref then reports as something else entirely.
+    for (const [name, spec] of Object.entries(PREFS)) {
+      const values = spec.bool ? [true, false] : spec.values;
+      for (const value of values) {
+        const storage = makeStorage();
+        writePref(storage, name, value);
+        assert.equal(readPref(storage, name), value, `${name} did not survive ${value}`);
+      }
+    }
   });
 });

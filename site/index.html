@@ -348,13 +348,16 @@
          buttons — two here and one injected into the footer — with no room for
          a fourth. The rows are rendered from js/preferences.js so the menu and
          the stored values can never disagree. -->
+    <!-- A disclosure, not a menu: aria-expanded + aria-controls. `aria-haspopup`
+         would announce "menu button" and promise arrow-key navigation, but this
+         panel is Tab-navigated controls. -->
     <div class="prefs">
       <button id="prefs-btn" class="prefs-trigger" onclick="SPA.togglePrefsMenu()"
-              aria-haspopup="true" aria-expanded="false" aria-controls="prefs-menu"
+              aria-expanded="false" aria-controls="prefs-menu"
               data-i18n-title="prefs.title" data-i18n-aria-label="prefs.title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg></button>
       <div id="prefs-menu" class="prefs-menu" role="group" data-i18n-aria-label="prefs.title">
         <div class="prefs-row">
-          <span class="prefs-row__label" data-i18n="title.lang">Interface language</span>
+          <span class="prefs-row__label" data-i18n="prefs.lang">Interface language</span>
           <span class="prefs-seg" id="prefs-lang"></span>
         </div>
         <div class="prefs-row">
@@ -1030,7 +1033,7 @@ var I18N = {
     'auth.no_write': '\u0412\u0445\u0456\u0434 \u0432\u0438\u043A\u043E\u043D\u0430\u043D\u043E, \u0430\u043B\u0435 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043B\u0438\u0448\u0435 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443',
     'auth.write_granted': '\u0414\u043E\u0441\u0442\u0443\u043F \u043D\u0430 \u0437\u0430\u043F\u0438\u0441 \u043D\u0430\u0434\u0430\u043D\u043E \u2014 \u0432\u0441\u0456 \u0444\u0443\u043D\u043A\u0446\u0456\u0457 \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E',
     'auth.readonly_title': '(\u0431\u0435\u0437 \u0434\u043E\u0441\u0442\u0443\u043F\u0443 \u043D\u0430 \u0437\u0430\u043F\u0438\u0441)',
-    'title.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443',
+    'prefs.lang': '\u041C\u043E\u0432\u0430 \u0456\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0443',
     'export.title': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438',
     'export.srt': '\u0424\u0430\u0439\u043b \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432 (.srt)',
     'export.video_make': '\u0421\u0442\u0432\u043e\u0440\u0438\u0442\u0438 \u0432\u0456\u0434\u0435\u043e \u0437 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0430\u043c\u0438',
@@ -1246,7 +1249,7 @@ var I18N = {
     'auth.no_write': 'Signed in, but without write access — read-only features available',
     'auth.write_granted': 'Write access granted — all features enabled',
     'auth.readonly_title': '(no write access)',
-    'title.lang': 'Interface language',
+    'prefs.lang': 'Interface language',
     'export.title': 'Download',
     'export.srt': 'Subtitle file (.srt)',
     'export.video_make': 'Create the video with subtitles',
@@ -5499,6 +5502,11 @@ document.addEventListener('keydown', function(e) {
   if (!document.getElementById('view-preview').classList.contains('active')) return;
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
   if (e.target && e.target.isContentEditable) return;
+  // Inside the preferences panel the keys belong to the control under focus:
+  // swallowing Space would preventDefault() the option's own click, so it would
+  // play the video instead of choosing a theme. Scoped to this panel — the
+  // player's other buttons deliberately leave Space to the video.
+  if (e.target && e.target.closest && e.target.closest('.prefs')) return;
   if (e.key === 'f' || e.key === 'F') { SPA.toggleFullscreen(); return; }
   if (e.key === 'm' || e.key === 'M') { SPA.addMarkOrEdit(); return; }
   if (e.key === 'ArrowLeft') { e.preventDefault(); SPA.seek(-5); return; }
@@ -7695,14 +7703,10 @@ SPA.submitAddTalk = function() {
 // Theme: auto / dark / light
 // ============================================================
 (function() {
-  var cycle = PREFS.theme.values;
-
   // Apply what is already stored before anything renders: readPref turns an
   // unknown value into 'auto', so a stale key cannot leave data-theme pinned.
   var saved = readPref(localStorage, 'theme');
   if (saved !== 'auto') document.documentElement.setAttribute('data-theme', saved);
-
-  function getCurrent() { return readPref(localStorage, 'theme'); }
 
   // 'auto' is the ABSENCE of a choice: the attribute comes off and writePref
   // clears the key, so the page follows prefers-color-scheme again.
@@ -7711,12 +7715,6 @@ SPA.submitAddTalk = function() {
     else document.documentElement.setAttribute('data-theme', mode);
     writePref(localStorage, 'theme', mode);
     renderPrefsMenu();
-  };
-
-  // Kept as the action the rest of the app (and the test suite) already calls.
-  // The menu offers the three modes outright; this still walks them in order.
-  SPA.cycleTheme = function() {
-    SPA.setTheme(cycle[(cycle.indexOf(getCurrent()) + 1) % cycle.length]);
   };
 })();
 
@@ -7737,10 +7735,14 @@ function renderPrefsSeg(id, name, current, labelKey, onPick) {
     PREFS[name].values.forEach(function(value) {
       var b = document.createElement('button');
       b.type = 'button';
-      b.onclick = function() { onPick(value); };
+      // Through the host, not the closure: the buttons outlive this call, and
+      // a handler captured on the first render would go stale the moment a
+      // later one passes a different one.
+      b.onclick = function() { host._onPick(value); };
       host.appendChild(b);
     });
   }
+  host._onPick = onPick;
   PREFS[name].values.forEach(function(value, i) {
     var b = host.children[i];
     b.textContent = t(labelKey + value);

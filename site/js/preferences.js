@@ -33,6 +33,14 @@ function readPref(storage, name) {
 // set, and it sets that attribute from the stored key.
 function writePref(storage, name, value) {
   var spec = PREFS[name];
+  if (spec.bool) value = !!value;
+  // readPref rejects anything the preference does not declare, so storing such
+  // a value would leave the app in a state it cannot read back — the menu would
+  // show the fallback as chosen while the page rendered what was written.
+  // Refusing loudly here keeps the table the single source of truth.
+  else if (value !== spec.fallback && spec.values.indexOf(value) === -1) {
+    throw new Error('preferences: ' + name + ' cannot be ' + JSON.stringify(value));
+  }
   if (value === spec.fallback) {
     storage.removeItem(spec.key);
     return;

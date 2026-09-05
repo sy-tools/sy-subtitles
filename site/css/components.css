@@ -1272,7 +1272,7 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 .prefs-menu.open { display: block; }
 .prefs-row { display: flex; align-items: center; justify-content: space-between;
   gap: var(--space-4); padding: var(--space-2); }
-.prefs-row + .prefs-row { border-top: 1px solid var(--bg5); }
+.prefs-row + .prefs-row { border-top: 1px solid var(--border); }
 .prefs-row__label { font-size: var(--text-sm); color: var(--fg3); white-space: nowrap; }
 
 /* Segmented choice. Every option is on screen, so the user picks the one they

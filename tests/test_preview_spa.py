@@ -6195,3 +6195,15 @@ class TestPreferencesMenu:
         assert "mono" not in font.lower(), f"menu inherited the freshness bar's mono type: {font!r}"
         spacing = page.evaluate("getComputedStyle(document.querySelector('.prefs-row__label')).letterSpacing")
         assert spacing == "normal", f"menu inherited tracking meant for codes: {spacing!r}"
+
+    def test_space_chooses_an_option_instead_of_playing_the_video(self, server, page):
+        """In the preview view a bare Space toggles playback. The menu's options
+        are buttons, which the shortcut handler did not exempt — so Space on
+        "Dark" preventDefault()ed the button's own click and played the video
+        instead. The menu is the only way to these settings, so a keyboard user
+        had no way in at all."""
+        _goto_preview_video(page, server)
+        page.click("#prefs-btn")
+        page.focus("#prefs-theme button:has-text('Dark')")
+        page.keyboard.press(" ")
+        assert page.evaluate("localStorage.getItem('sy_theme')") == "dark"
