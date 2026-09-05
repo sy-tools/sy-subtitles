@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1985-03-17_Birthday-Puja-Our-maryadas/Birthday-Puja-P1/final/uk.srt
+  Transcript: talks/1985-03-17_Birthday-Puja-Our-maryadas/transcript_uk.txt
+  EN SRT: talks/1985-03-17_Birthday-Puja-Our-maryadas/Birthday-Puja-P1/source/en.srt
+  SRT blocks: 994
+  EN SRT blocks: 1315
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:01:29,458 — 01:11:12,583
+  SRT range:       00:01:29,458 — 01:11:14,583
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 994
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 994
+  CPS: avg=13.1, median=14.7, max=20.0
+  CPS > target: 136 (13.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #870: CPS=20.0 (78ch/3.9s) "Це нормально: їм доведеться вийти з ашраму на деякий час, а ..."
+    #576: CPS=20.0 (69ch/3.5s) "що «ця пані займається такою роботою, і Вона не повинна цьог..."
+    #865: CPS=20.0 (58ch/2.9s) "Давайте їм радість, дбайте про них, будьте добрими до них."
+    #579: CPS=20.0 (56ch/2.8s) "сказала одному чоловікові, Хаксару, який був її головною"
+    #602: CPS=20.0 (56ch/2.8s) "Він сказав: «Я дуже добре знаю цю пані, Вона дуже гідна."
+    #597: CPS=20.0 (41ch/2.1s) "Він просто сказав: «Я подам у відставку»."
+    #588: CPS=20.0 (29ch/1.5s) "Чому ви хочете Її відкликати?"
+    #864: CPS=19.7 (62ch/3.2s) "давайте їм радість, не завдавайте їм жодного [головного болю..."
+    #837: CPS=19.6 (76ch/3.9s) "але всі ви повинні знати, що таке Сахаджа Йоґа, що це означа..."
+    #866: CPS=19.6 (75ch/3.8s) "Це буде привабливішим, ніж коли хтось одразу каже: «Ти бхут,..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 994
+  EN SRT blocks: 1315
+  Ratio UK/EN: 0.76 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.1 (target ≤15.0)
+  CPS > 15.0: 136 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
