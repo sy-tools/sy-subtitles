@@ -164,11 +164,38 @@ Quiet on purpose: it states a fact, it is not something to act on.</p>
       <span class="prefs-seg"><button type="button" aria-pressed="false">Auto</button><button type="button" aria-pressed="true">Dark</button><button type="button" aria-pressed="false">Light</button></span>
     </div>
     <label class="prefs-row">
+      <span class="prefs-row__label">Highlight typos</span>
+      <span class="prefs-switch"><input type="checkbox" checked></span>
+    </label>
+    <label class="prefs-row">
       <span class="prefs-row__label">Expert mode</span>
       <span class="prefs-switch"><input type="checkbox" checked></span>
     </label>
   </div>
 </div>
+
+<h2>Typo hints</h2>
+<p>A word neither the Ukrainian dictionary nor the project's own vocabulary knows
+(<code>::highlight(sy-typo)</code>). Painted through the CSS Custom Highlight API, so it
+decorates the text where it stands — no wrapper element, so the caret, the undo stack and the
+text the editor saves are untouched. An underline rather than a filled background: it is a
+suggestion to look again, not a verdict the writer must clear before saving.</p>
+<div class="sg-row"><p id="sg-typo" style="font-size:15px;margin:0">ваші відрації слабшають, і ви думаєие що цей вузол потрібно розв’язати</p></div>
+<script>
+  // Painted by the real API against the real stylesheet, from the same kind of
+  // span the worker returns — so this sample cannot drift from the app's.
+  (function () {
+    if (!window.CSS || !CSS.highlights || typeof Highlight === 'undefined') return;
+    var node = document.getElementById('sg-typo').firstChild;
+    var ranges = [[5, 13], [23, 30]].map(function (s) {
+      var r = document.createRange();
+      r.setStart(node, s[0]);
+      r.setEnd(node, s[1]);
+      return r;
+    });
+    CSS.highlights.set('sy-typo', new Highlight(...ranges));
+  })();
+</script>
 
 <h2>Badges</h2>
 <div class="sg-row">

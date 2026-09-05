@@ -13,6 +13,7 @@ var PREFS = {
   lang: { key: 'sy_lang', values: ['uk', 'en'], fallback: null },
   theme: { key: 'sy_theme', values: ['auto', 'dark', 'light'], fallback: 'auto' },
   expert: { key: 'sy_expert_mode', bool: true, fallback: false },
+  typoHints: { key: 'sy_typo_hints', bool: true, fallback: false },
 };
 
 // The stored value, or the preference's fallback when nothing valid is stored.

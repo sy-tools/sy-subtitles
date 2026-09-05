@@ -1,0 +1,21 @@
+{
+  "_comment": [
+    "The form a Ukrainian word is JUDGED in, shared by the two implementations",
+    "that must agree: tools/build_wordlist.py folds the shipped list this way,",
+    "and site/js/typo_hints.js folds what the user types the same way before",
+    "looking it up. Any divergence underlines correct words — the list would be",
+    "keyed one way and queried another.",
+    "Read by tests/test_build_wordlist.py and tests/test_typo_hints.js."
+  ],
+  "cases": [
+    { "why": "a sentence-initial capital is not a mistake", "input": "Вібрації", "word": "вібрації" },
+    { "why": "a shouted word is the same word", "input": "ВІБРАЦІЇ", "word": "вібрації" },
+    { "why": "the project writes the typographic apostrophe", "input": "п’ять", "word": "п’ять" },
+    { "why": "a straight apostrophe folds onto it", "input": "п'ять", "word": "п’ять" },
+    { "why": "so does the modifier letter an editor may produce", "input": "пʼять", "word": "п’ять" },
+    { "why": "capital and apostrophe together", "input": "Об'єкт", "word": "об’єкт" },
+    { "why": "transliterated vocabulary keeps its ґ", "input": "Ґрантхі", "word": "ґрантхі" },
+    { "why": "the soft sign is a letter like any other", "input": "СІЛЬ", "word": "сіль" },
+    { "why": "an apostrophe inside a transliteration survives", "input": "Абх'яса", "word": "абх’яса" }
+  ]
+}

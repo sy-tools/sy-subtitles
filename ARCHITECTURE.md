@@ -245,7 +245,28 @@ Data sources (zero backend):
 - GitHub Trees API → talk discovery (1 API call, cached with ETag)
 - `raw.githubusercontent.com` → meta.yaml, SRT, transcripts
 - `review-status.json` → review badges (static file, no API cost)
-- `localStorage` → markers, edits, cache
+- `localStorage` → markers, edits, preferences, cache
+
+### Typo hints
+
+A preference (the gear menu) underlines words that neither a general Ukrainian
+dictionary nor this project's own vocabulary knows, live in the subtitle editor.
+Neither source alone is usable here: the dictionary flags every transliterated
+term (`Ґрантхі`, `абхішека`), and a bare corpus without morphology flags every
+inflected form. Their intersection is what makes the hints quiet enough to leave
+on — measured on a real reviewer PR, 11 flags instead of 55, all genuine.
+
+- `site/dict/uk_UA.{aff,dic}` — vendored hunspell dictionary (MPL 1.1, `dict_uk`)
+- `site/dict/words_uk.txt` — only what that dictionary MISSES, built from the
+  talks and the glossary by `tools/build_wordlist.py`
+- `site/js/typo_worker.js` — holds both; parsing the dictionary costs ~4 s and
+  ~290 MB, so it runs off the main thread and only while the preference is on
+- `site/js/typo_hints.js` — which words to flag (pure; twin of the tokenizer in
+  `tools/build_wordlist.py`, pinned by `tests/fixtures/wordlist_normalization_cases.json`)
+
+Painting goes through the CSS Custom Highlight API, so the text is decorated
+where it stands — no wrapper element, and therefore no disturbance to the caret,
+the undo stack, or the text the edit store saves.
 
 ## Review Tracking
 

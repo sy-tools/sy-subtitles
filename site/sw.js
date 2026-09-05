@@ -33,6 +33,7 @@ var SHELL_ASSETS = [
   'css/tokens.css',
   'css/components.css',
   'js/preferences.js',
+  'js/typo_hints.js',
   'js/preview_srt_parser.js',
   'js/preview_state.js',
   'js/edit_store.js',

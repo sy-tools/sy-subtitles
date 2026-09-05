@@ -117,6 +117,16 @@ describe('pickStrategy — the routing the fetch handler applies', () => {
     assert.strictEqual(pickStrategy('https://player.vimeo.com/api/player.js'), 'cache-first');
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/icon.png'), 'cache-first');
   });
+  it('the vendored dictionary is cache-first, its wordlist is not', () => {
+    // 9 MB of hunspell that changes only when it is re-vendored: fetching it
+    // over the network on every session, for a feature the user has already
+    // turned on, is the one cost that would make the hints not worth having.
+    // words_uk.txt is the opposite — it grows with every talk added, so it must
+    // keep revalidating or a translator is underlined for accepted vocabulary.
+    assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/dict/uk_UA.dic'), 'cache-first');
+    assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/dict/uk_UA.aff'), 'cache-first');
+    assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/dict/words_uk.txt'), 'network-first');
+  });
   it('everything else (app js/css, vimeo iframe) is network-first', () => {
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/js/app.js'), 'network-first');
     assert.strictEqual(pickStrategy('https://player.vimeo.com/video/123456'), 'network-first');

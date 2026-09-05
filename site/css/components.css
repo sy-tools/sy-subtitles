@@ -1254,6 +1254,19 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 
    Anchored to the gear and right-aligned like .video-dropdown: it opens at the
    right edge of the window, where a left-aligned panel would overflow. */
+/* A word neither the Ukrainian dictionary nor the project's own vocabulary
+   knows. Painted through the CSS Custom Highlight API, so it decorates the text
+   where it stands without a wrapper element — the caret, the undo stack and the
+   text the editor saves are all untouched.
+
+   Underline rather than a background: it is a suggestion to look again, not a
+   verdict, and a coloured block in the middle of a subtitle cell reads as an
+   error the writer must clear before saving. */
+::highlight(sy-typo) {
+  text-decoration: underline wavy var(--accent-red);
+  text-underline-offset: 3px;
+}
+
 /* Says a non-default mode is on, beside the control that turns it off. Quiet
    on purpose: it is a standing statement of fact, not something to act on.
    Type is declared, not inherited, for the same reason the menu declares its
