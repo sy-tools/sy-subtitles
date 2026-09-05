@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-02T18:42:57.037508+00:00",
+  "updated_at": "2026-09-05T05:06:09.576544+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -595,6 +595,12 @@
       "reviewer": null,
       "issue_number": 1008,
       "updated_at": "2026-08-28T21:39:14Z"
+    },
+    "1985-03-17_Birthday-Puja-Our-maryadas": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1038,
+      "updated_at": "2026-09-05T05:05:58Z"
     }
   }
 }
