@@ -19,8 +19,16 @@
 // there, the hint would sit under `потрі` and `бно` — two fragments the writer
 // cannot act on — instead of under the one word that is actually wrong.
 //
+// Latin letters are part of a word run too, though nothing Latin is ever
+// judged. They are here so a word wearing a Latin lookalike — `Mати`, `Toм`,
+// `Aле`, `iндивідуально`, 32 of them in the corpus — arrives WHOLE. Reading
+// only the Cyrillic left `ати`, and a hint under that points at the wreckage
+// while hiding its cause, which is the first letter.
+//
 // Kept in step with tools/build_wordlist.py, which reads the corpus this way.
-var WORD_RE = /[Ѐ-ӿ̀-ͯ]+(?:['’ʼ][Ѐ-ӿ̀-ͯ]+)*/g;
+var WORD_RE = /[Ѐ-ӿ̀-ͯA-Za-z]+(?:['’ʼ][Ѐ-ӿ̀-ͯA-Za-z]+)*/g;
+var CYRILLIC_RE = /[Ѐ-ӿ]/;
+var LATIN_RE = /[A-Za-z]/;
 
 // The form a word is JUDGED in — the twin of tools/build_wordlist.py, which
 // folds the shipped list the same way. Lowercase because a sentence-initial
@@ -37,7 +45,11 @@ function normalizeWord(word) {
 // ordinary Ukrainian word with an apostrophe — `розв’язати`, `об’єкт`, `сім’я` —
 // comes back unknown and gets underlined as a mistake.
 function dictionaryForm(word) {
-  return word.replace(/’/g, "'");
+  // Every shape normalizeWord folds, folded here too. Folding only ’ left the
+  // two halves of the oracle disagreeing about U+02BC on its own: the
+  // dictionary rejected such a word while the builder, asking through the aff
+  // file's `ICONV ʼ '`, counted it spelled and kept it out of the list.
+  return word.replace(/[’ʼ]/g, "'");
 }
 
 // Composes the two sources into the single question findUnknownWords asks.
@@ -69,8 +81,19 @@ function findUnknownWords(text, isKnown) {
     // are in the dictionary anyway, so there is nothing to lose by keeping
     // quiet, and this was the last thing the whole corpus tripped on.
     if (m[0].length < 2) continue;
-    // As written: normalising is the oracle's job, and it differs per source.
-    if (isKnown(m[0])) continue;
+    var hasCyrillic = CYRILLIC_RE.test(m[0]);
+    // A name or a code in Latin. The oracle only knows Ukrainian, so judging
+    // these would underline every one of them.
+    if (!hasCyrillic) continue;
+    // Two scripts glued together with no separator: `Mати`, `iндивідуально`.
+    // It is wrong however its pieces are judged, so it is never put to the
+    // oracle — asking about `ати` is asking the wrong question, and the answer
+    // (yes, once the list had been taught the fragment) hid the defect
+    // completely. The corpus holds no legitimate word of this shape.
+    if (!LATIN_RE.test(m[0])) {
+      // As written: normalising is the oracle's job, and it differs per source.
+      if (isKnown(m[0])) continue;
+    }
     hits.push({ start: m.index, end: m.index + m[0].length, word: m[0] });
   }
   return hits;

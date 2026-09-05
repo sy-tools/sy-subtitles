@@ -3828,8 +3828,10 @@ var typoSeq = 0;
 var typoScanTimer = null;
 var typoObserver = null;
 // The fields the outstanding request was built from, held so the reply can be
-// matched back to the very elements whose text was measured.
+// matched back to the very elements whose text was measured — and the text as
+// it was measured, because that is what the offsets in the reply describe.
 var typoFieldsInFlight = [];
+var typoTextsInFlight = [];
 // The request whose spans are currently on screen. Equal to typoSeq once the
 // paint has caught up with the text; behind it while a scan is in flight.
 var typoPaintedSeq = 0;
@@ -3904,8 +3906,29 @@ function scheduleTypoScan() {
     // concatenates. innerText is the RENDERED text — it drops the indentation
     // the cell markup carries — so measuring on one and painting on the other
     // slides every underline off its word.
-    typoWorker.postMessage({ seq: typoSeq, texts: fields.map(function(el) { return el.textContent; }) });
+    typoTextsInFlight = fields.map(function(el) { return el.textContent; });
+    typoWorker.postMessage({ seq: typoSeq, texts: typoTextsInFlight });
   }, 200);
+}
+
+// Whether every field still holds the exact text its offsets were measured on.
+function typoTextIsUnchanged() {
+  if (typoFieldsInFlight.length !== typoTextsInFlight.length) return false;
+  for (var i = 0; i < typoFieldsInFlight.length; i++) {
+    if (typoFieldsInFlight[i].textContent !== typoTextsInFlight[i]) return false;
+  }
+  return true;
+}
+
+// The dictionary never arrived, or the worker died carrying it. Stopping is not
+// enough: left switched on, the preference claims a feature that is not
+// running, and the user's next click reads as "turn it off" rather than as a
+// retry. The switch has to say what is true.
+function typoWorkerFailed(why) {
+  console.warn('typo hints: ' + why);
+  stopTypoWorker();
+  writePref(localStorage, 'typoHints', false);
+  renderPrefsMenu();
 }
 
 function startTypoWorker() {
@@ -3914,23 +3937,28 @@ function startTypoWorker() {
   // A worker that died — its script unreachable offline, or the parse killed for
   // memory — otherwise stays a live-looking object that swallows every scan.
   typoWorker.onerror = function(e) {
-    console.warn('typo hints: worker failed', (e && e.message) || e);
-    stopTypoWorker();
+    typoWorkerFailed('worker failed — ' + ((e && e.message) || e));
   };
   typoWorker.onmessage = function(e) {
     var msg = e.data || {};
     if (msg.failed) {
       // Offline, or the dictionary is missing. Stop rather than leave the user
       // waiting for underlines that will never come.
-      console.warn('typo hints: dictionary unavailable —', msg.failed);
-      stopTypoWorker();
+      typoWorkerFailed('dictionary unavailable — ' + msg.failed);
       return;
     }
     if (msg.ready) { scheduleTypoScan(); return; }
     // A reply for text the user has already typed past: its offsets no longer
     // describe what is on screen, so painting it would underline the wrong
     // letters. The next scan is already scheduled.
+    //
+    // The sequence number alone does not catch this. It advances when a request
+    // is SENT, so an edit made between the send and the reply leaves the two
+    // equal — and the stale offsets were painted onto the new text. Offsets
+    // describe the string they were measured on, so that is what must still be
+    // on screen; the edit has already scheduled the scan that replaces this.
     if (msg.seq !== typoSeq) return;
+    if (!typoTextIsUnchanged()) return;
     paintTypoHints(typoFieldsInFlight, msg.spans);
     typoPaintedSeq = msg.seq;
   };

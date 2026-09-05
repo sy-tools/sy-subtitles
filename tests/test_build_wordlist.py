@@ -53,6 +53,19 @@ def test_never_vouches_for_a_word_carrying_a_stray_accent():
     assert words == {"цей", "вузол", "розв’язати"}
 
 
+def test_never_vouches_for_a_word_wearing_a_latin_lookalike():
+    """`Mати` with a Latin M is damage, exactly like a stray combining acute:
+    the Cyrillic run left over is `ати`, which is not a word. Shipped, it
+    vouches for a fragment — and worse, it teaches the list that the fragment is
+    vocabulary, so the same wreckage stays invisible everywhere it appears.
+
+    site/js/typo_hints.js keeps the whole broken word and hints on it; here it
+    is simply not vouched for."""
+    words = collect_words("«Mати, ми вирішили»")
+
+    assert words == {"ми", "вирішили"}
+
+
 def test_ignores_latin_and_digits():
     """The list vouches for Ukrainian words. A Latin run in a Ukrainian talk is
     a name or a code the hint engine does not judge, and a digit is not a word."""
@@ -77,10 +90,13 @@ def test_judges_a_word_as_the_corpus_writes_it_and_stores_it_folded():
     """The browser asks the dictionary about the word as written, so this must
     too, or the two disagree on exactly the words that matter.
 
-    `Лакшмі` is spelled and stays out — a translator writing `лакшмі` should
-    still be told. `ріші` is a Sanskrit common noun the dictionary knows only
-    capitalised, and the corpus writes it lowercase, so it belongs in the list.
-    Both are stored folded, because that is how the list is looked up.
+    `Лакшмі` is spelled and stays out of the list on that spelling alone. `ріші`
+    is a Sanskrit common noun the dictionary knows only capitalised, and the
+    corpus writes it lowercase, so it belongs in the list. Both are stored
+    folded, because that is how the list is looked up — which is also the limit
+    of the scheme: once any legitimate lowercase use of a name reaches the
+    corpus (`лакшмі` in a mantra), the lowercase spelling is accepted
+    everywhere. Case of the sacred vocabulary belongs to the language review.
     """
     spelled = {"Лакшмі", "Ріші"}.__contains__
 
@@ -90,6 +106,16 @@ def test_judges_a_word_as_the_corpus_writes_it_and_stores_it_folded():
     # block) last. The order only has to be stable, so the file's diff stays
     # readable — it is never read alphabetically by a person or a machine.
     assert words == ["ріші", "ґрантхі"]
+
+
+def test_never_ships_a_letter_the_browser_will_never_ask_about():
+    """site/js/typo_hints.js does not judge a lone letter — an initial
+    (`Ч. П. Шрівастава`) or a stray keystroke is not a correction anyone can act
+    on. An entry for one is therefore never consulted: dead weight that also
+    claims to vouch for something it is never asked about."""
+    words = select_wordlist(corpus={"ї", "ґрантхі"}, glossary=set(), spelled=lambda w: False)
+
+    assert words == ["ґрантхі"]
 
 
 def test_keeps_a_glossary_term_the_corpus_has_never_used():
@@ -151,44 +177,35 @@ def test_folds_a_word_the_way_the_browser_will(case):
 # Against the real dictionary ---------------------------------------------------
 #
 # The builder's own oracle, asked the questions the browser will ask. Its twin
-# lives in tests/test_typo_hints.js and runs the SAME table through the real
-# browser composition — between them they pin both halves, which is what a case
-# bug once slipped past: lowercasing before asking underlined `Ісус`, `Христос`,
-# `Крішна` and `Лакшмі`, 610 forms of this material's own vocabulary.
+# lives in tests/test_typo_hints.js and runs the SAME table — shared through
+# fixtures/typo_oracle_cases.json rather than copied, since a copy is free to
+# drift — through the real browser composition. Between them they pin both
+# halves, which is what a case bug once slipped past: lowercasing before asking
+# underlined `Ісус`, `Христос`, `Крішна` and `Лакшмі`, 610 forms of this
+# material's own vocabulary.
+
+_ORACLE_CASES = json.loads((Path(__file__).parent / "fixtures" / "typo_oracle_cases.json").read_text(encoding="utf-8"))[
+    "cases"
+]
+
+
+@pytest.fixture(scope="module")
+def spelled():
+    """Parsing 9 MB of hunspell costs seconds — once for the module, not once
+    per case."""
+    from tools.build_wordlist import _spell_checker
+
+    return _spell_checker(SHIPPED.parent)
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize(
-    ("word", "expect_known"),
-    [
-        # Proper nouns the dictionary holds only capitalised. Judged as written,
-        # so the correct spelling passes...
-        ("Ісус", True),
-        ("Христос", True),
-        ("Лакшмі", True),
-        ("Індія", True),
-        # ...and the lowercase spelling of a name is still called out.
-        ("індія", False),
-        # An ordinary word with the apostrophe the project writes: the dictionary
-        # keys its 5420 apostrophe entries with the straight one.
-        ("розв’язати", True),
-        ("сім’я", True),
-        # Vocabulary only the shipped list can vouch for.
-        ("Ґрантхі", True),
-        ("абхішека", True),
-        # Real defects from the manual pass this feature automates (PR #1017).
-        ("відрації", False),
-        ("думаєие", False),
-        ("дужде", False),
-        ("пробуддженням", False),
-    ],
-)
-def test_the_real_dictionary_and_the_shipped_list_agree_with_the_browser(word, expect_known):
-    from tools.build_wordlist import DICTIONARY_STEM, _spell_checker, fold_word
+@pytest.mark.parametrize("case", _ORACLE_CASES, ids=[c["word"] for c in _ORACLE_CASES])
+def test_the_real_dictionary_and_the_shipped_list_agree_with_the_browser(case, spelled):
+    from tools.build_wordlist import DICTIONARY_STEM, fold_word
 
-    spelled = _spell_checker(SHIPPED.parent)
+    word, expect_known = case["word"], case["known"]
     shipped = set(SHIPPED.read_text(encoding="utf-8").split())
     # The composition site/js/typo_hints.js applies, spelled out here.
     known = fold_word(word) in shipped or spelled(word)
 
-    assert known is expect_known, f"{word}: {DICTIONARY_STEM} + words_uk.txt disagree with the browser"
+    assert known is expect_known, f"{word}: {DICTIONARY_STEM} + words_uk.txt disagree with the browser — {case['why']}"

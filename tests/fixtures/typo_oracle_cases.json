@@ -1,0 +1,19 @@
+{
+  "comment": "The question the typo hints ask of a word, answered by the REAL vendored dictionary and the REAL shipped wordlist. Read by BOTH twins: tests/test_typo_hints.js puts each word through the browser composition (site/js/typo_hints.js isKnownWith over typo.js), tests/test_build_wordlist.py puts the same word through the builder's (tools/build_wordlist.py fold_word + spylls). Kept here rather than copied into each so the two cannot drift — which is exactly how a case bug once shipped that underlined 610 forms of this material's own vocabulary, unseen because the e2e serves a six-word dictionary.",
+  "cases": [
+    { "word": "Ісус", "known": true, "why": "held by the dictionary only capitalised; judged as written, the correct spelling passes" },
+    { "word": "Христос", "known": true, "why": "same, and the single most common word of this material" },
+    { "word": "Лакшмі", "known": true, "why": "same" },
+    { "word": "Індія", "known": true, "why": "same" },
+    { "word": "індія", "known": false, "why": "a name in lowercase IS wrong; judging as written is what makes both answers right" },
+    { "word": "розв’язати", "known": true, "why": "the project writes ’ while the dictionary keys its 5420 apostrophe entries with '" },
+    { "word": "сім’я", "known": true, "why": "same" },
+    { "word": "пʼять", "known": true, "why": "U+02BC, the shape an editor or a paste can produce; folded by both halves of the oracle, not by one parser's ICONV" },
+    { "word": "Ґрантхі", "known": true, "why": "vocabulary only the shipped list can vouch for, at the start of a sentence" },
+    { "word": "абхішека", "known": true, "why": "same, lowercase" },
+    { "word": "відрації", "known": false, "why": "a real defect from the manual pass this feature automates (PR #1017)" },
+    { "word": "думаєие", "known": false, "why": "same" },
+    { "word": "дужде", "known": false, "why": "same" },
+    { "word": "пробуддженням", "known": false, "why": "same" }
+  ]
+}

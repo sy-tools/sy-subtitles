@@ -42,6 +42,29 @@ describe('findUnknownWords', () => {
     assert.deepStrictEqual(hits, []);
   });
 
+  it('hints on a word wearing a Latin lookalike', () => {
+    // `Mати` with a Latin M — 32 of these sit in the corpus (Mати, Toм, Aле,
+    // iндивідуально), and they are the one typo a proofreader cannot see at
+    // all. Reading only the Cyrillic run left `ати`, which is not a word: the
+    // oracle was asked the wrong question and the reader was told nothing.
+    // Note the oracle here KNOWS `ати` — a mixed-script word is wrong however
+    // its pieces are judged, so it is never put to the oracle.
+    const hits = findUnknownWords('«Mати, ми вирішили»', knows('ати', 'ми', 'вирішили'));
+
+    assert.deepStrictEqual(hits, [{ start: 1, end: 5, word: 'Mати' }]);
+  });
+
+  it('underlines the whole broken word, not the part that survived', () => {
+    // The hint has to sit under something the writer can act on. Under `ндиві…`
+    // it points at the wreckage and hides the cause, which is the first letter.
+    const hits = findUnknownWords('це iндивідуально', knows('це'));
+
+    assert.deepStrictEqual(
+      hits.map((h) => h.word),
+      ['iндивідуально']
+    );
+  });
+
   it('reports each occurrence, so every one can be underlined', () => {
     const hits = findUnknownWords('відрації і відрації', knows('і'));
 
@@ -127,6 +150,16 @@ describe('dictionaryForm', () => {
     assert.equal(dictionaryForm('розв’язати'), "розв'язати");
   });
 
+  it('folds every apostrophe shape, the way the wordlist half already does', () => {
+    // normalizeWord folds ' and ʼ and ’ together; this folded only ’, so the two
+    // halves of the oracle disagreed about U+02BC alone. A word typed with it
+    // was rejected by the dictionary and underlined, while the builder — which
+    // asks through spylls, and the aff file's `ICONV ʼ '` — called it spelled
+    // and left it out of the list. Nothing would then have rescued it.
+    assert.equal(dictionaryForm('пʼять'), "п'ять");
+    assert.equal(dictionaryForm('розв’язати'), "розв'язати");
+  });
+
   it('leaves a word without an apostrophe untouched', () => {
     assert.equal(dictionaryForm('вібрації'), 'вібрації');
   });
@@ -182,6 +215,10 @@ describe('isKnownWith', () => {
 // list, through the real composition. Its twin in tests/test_build_wordlist.py
 // puts the same table to the builder, so the two halves cannot drift apart.
 //
+// The table itself lives in tests/fixtures/typo_oracle_cases.json, read by both
+// twins — copied into each file, it could drift, which is the one thing this
+// pair exists to prevent.
+//
 // Loading 9 MB of hunspell costs a few seconds; it runs once for the file.
 describe('the real dictionary and the shipped list', () => {
   const Typo = require('../site/js/vendor/typo.js');
@@ -191,32 +228,13 @@ describe('the real dictionary and the shipped list', () => {
   const shipped = new Set(read('words_uk.txt').split('\n').filter(Boolean));
   const known = isKnownWith(shipped, (w) => dictionary.check(w));
 
-  const CASES = [
-    // Proper nouns the dictionary holds only capitalised. Judged as written, so
-    // the correct spelling passes...
-    ['Ісус', true],
-    ['Христос', true],
-    ['Лакшмі', true],
-    ['Індія', true],
-    // ...and the lowercase spelling of a name is still called out.
-    ['індія', false],
-    // Ordinary words carrying the apostrophe the project writes, against a
-    // dictionary that keys its 5420 apostrophe entries with the straight one.
-    ['розв’язати', true],
-    ['сім’я', true],
-    // Vocabulary only the shipped list can vouch for.
-    ['Ґрантхі', true],
-    ['абхішека', true],
-    // Real defects from the manual pass this feature automates (PR #1017).
-    ['відрації', false],
-    ['думаєие', false],
-    ['дужде', false],
-    ['пробуддженням', false],
-  ];
+  const ORACLE_CASES = JSON.parse(
+    fs.readFileSync(path.join(__dirname, 'fixtures', 'typo_oracle_cases.json'), 'utf8')
+  ).cases;
 
-  for (const [word, expected] of CASES) {
-    it(`${word} is ${expected ? 'known' : 'flagged'}`, () => {
-      assert.equal(known(word), expected);
+  for (const c of ORACLE_CASES) {
+    it(`${c.word} is ${c.known ? 'known' : 'flagged'} — ${c.why}`, () => {
+      assert.equal(known(c.word), c.known);
     });
   }
 });

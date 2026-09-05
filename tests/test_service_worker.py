@@ -26,7 +26,7 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
 # only the scheduling is not — so retry rather than widen the timeout forever.
 pytestmark = [pytest.mark.e2e, pytest.mark.flaky(reruns=2, reruns_delay=2)]
 
-CACHE = "sy-subtitles-c18"  # CACHE_NAME in sw.js (CACHE_VERSION = 17)
+CACHE = "sy-subtitles-c18"  # CACHE_NAME in sw.js (CACHE_VERSION = 18)
 SW_WAIT_MS = 15000
 
 

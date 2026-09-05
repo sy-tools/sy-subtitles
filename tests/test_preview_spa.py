@@ -6441,3 +6441,52 @@ class TestTypoHints:
         page.wait_for_timeout(600)
 
         assert page.evaluate("CSS.highlights.has('sy-typo')") is False
+
+    def test_refuses_a_reply_measured_before_the_last_keystroke(self, server, page):
+        """`seq` advances when a request is SENT, so an edit made between the
+        send and the reply left the two counters equal and the stale offsets
+        were painted onto the new text — underlining the wrong letters until the
+        next scan landed. Offsets only describe the string they were measured
+        on, so that string is what has to still be on screen."""
+        self._open_editor_with_hints_on(page, server)
+        self._type_into_first_cell(page, "ваші відрації слабшають")
+        assert self._painted_words(page) == ["відрації"]
+
+        # The user types on, then the reply for the previous text arrives. Read
+        # back in the same evaluate, before the rescan this edit schedules.
+        # Offsets 5-13 covered `відрації` in the old text; in the new one they
+        # cover `ваші від`.
+        result = page.evaluate(
+            """() => {
+              const el = document.querySelector('.cell.uk .cell-text');
+              const before = typoPaintedSeq;
+              el.innerText = 'ЗЗЗЗ ваші відрації слабшають';
+              typoWorker.onmessage({ data: { seq: typoSeq, spans: [[{ start: 5, end: 13 }]] } });
+              return {
+                seq_before: before,
+                seq_after: typoPaintedSeq,
+                painted: [...CSS.highlights.get('sy-typo')].map(r => r.toString()),
+              };
+            }"""
+        )
+
+        # Replacing the text detaches the ranges already painted, so what
+        # survives reads as empty. What must never appear is the slice those
+        # stale offsets describe in the NEW text.
+        assert "ваші від" not in result["painted"], f"stale offsets landed on the new text: {result}"
+
+    def test_a_dictionary_that_never_loads_turns_the_switch_back_off(self, server, page):
+        """The worker stops when the dictionary cannot be fetched, but the
+        preference and the switch went on saying the feature was running. That
+        is the same lie in the other direction: the user's next click reads as
+        "turn it off", so there is no way to retry."""
+        self._serve_small_dictionary(page)
+        page.route("**/dict/uk_UA.dic", lambda r: r.fulfill(status=404, body=""))
+        page.add_init_script("localStorage.setItem('sy_typo_hints', '1');")
+        goto_spa(page, server, self.REVIEW_UK)
+        page.wait_for_selector(".cell.uk .cell-text", timeout=10000)
+        page.wait_for_function("() => typoWorker === null", timeout=15000)
+
+        assert page.evaluate("localStorage.getItem('sy_typo_hints')") is None
+        page.click("#prefs-btn")
+        assert page.evaluate("document.getElementById('prefs-typo').checked") is False

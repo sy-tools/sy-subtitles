@@ -28,8 +28,16 @@ _APOSTROPHES = str.maketrans({"'": "’", "ʼ": "’"})
 # holds no word at all. Taken greedily, the second case shipped a lone
 # apostrophe as vocabulary. Combining marks are part of a word wherever they
 # fall — the twin in site/js/typo_hints.js reads all of this the same way.
-_LETTERS = r"[Ѐ-ӿ̀-ͯ]"
+#
+# Latin letters join a word run so that a word wearing a Latin lookalike arrives
+# whole and can be rejected as one. Read as Cyrillic only, `Mати` left `ати` —
+# not a word, unspelled by the dictionary, and therefore SHIPPED as vocabulary,
+# which then vouched for the fragment everywhere it appeared. Five such
+# fragments had reached the list this way.
+_LETTERS = r"[Ѐ-ӿ̀-ͯA-Za-z]"
 _WORD_RE = re.compile(rf"{_LETTERS}+(?:['’ʼ]{_LETTERS}+)*")
+_CYRILLIC_RE = re.compile(r"[Ѐ-ӿ]")
+_LATIN_RE = re.compile(r"[A-Za-z]")
 # ...but a word carrying one is damage, not vocabulary: a stray acute inside
 # `потрі́бно` is the kind of wreckage a reviewer's edit leaves behind, and the
 # list must not bless it. The browser keeps such a word whole and hints on it;
@@ -50,7 +58,14 @@ def read_words(text: str) -> set[str]:
     appears: it holds `Лакшмі` and not `лакшмі`, and collapsing the two here
     would either bless the lowercase spelling or condemn the correct one.
     """
-    return {w for w in _WORD_RE.findall(text) if not _COMBINING_RE.search(w)}
+    return {
+        w
+        for w in _WORD_RE.findall(text)
+        # Ukrainian words only: a Latin run is a name or a code the hint engine
+        # never judges, and a word mixing the two scripts is damage — the same
+        # kind as a stray combining mark, and vouched for just as wrongly.
+        if _CYRILLIC_RE.search(w) and not _LATIN_RE.search(w) and not _COMBINING_RE.search(w)
+    }
 
 
 def collect_words(text: str) -> set[str]:
@@ -77,8 +92,12 @@ def select_wordlist(
     happens to use a term. A term is approved before it is common — frequency
     would drop the newest vocabulary, which is exactly what a translator is most
     likely to be typing for the first time.
+
+    A lone letter is left out because the browser never asks about one: an
+    initial or a stray keystroke is not a correction anyone can act on, so an
+    entry for it could only ever be dead weight.
     """
-    return sorted({fold_word(w) for w in corpus | glossary if not spelled(w)})
+    return sorted({fold_word(w) for w in corpus | glossary if len(w) > 1 and not spelled(w)})
 
 
 def read_corpus(repo_root: Path) -> set[str]:
@@ -117,7 +136,10 @@ def _spell_checker(dict_dir: Path) -> Callable[[str], bool]:
         if word not in cache:
             # Exactly the question the browser asks (js/typo_hints.js): the word
             # as written, in the apostrophe hunspell keys its entries with.
-            cache[word] = bool(dictionary.lookup(word.replace("\u2019", "'")))
+            # Both shapes the project may carry are folded here rather than left
+            # to the aff file's `ICONV \u02bc '`, so the two twins agree by
+            # construction and not by a feature of one parser.
+            cache[word] = bool(dictionary.lookup(word.replace("\u2019", "'").replace("\u02bc", "'")))
         return cache[word]
 
     return spelled
