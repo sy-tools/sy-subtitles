@@ -584,6 +584,10 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Says which letter of a mixed-script word is the Latin one. Outside the
+     editable text on purpose: the hints never touch the document being edited. -->
+<div class="typo-tip" id="typo-tip" role="status" hidden></div>
+
 <footer id="app-footer" style="background:var(--bg2);border-top:1px solid var(--border);padding:4px 20px;font-size:11px;color:var(--fg6);display:flex;align-items:center;justify-content:space-between;">
   <span id="footer-version"></span>
 </footer>
@@ -927,6 +931,11 @@ var I18N = {
     'prefs.typo': '\u041f\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u0442\u0438 \u043e\u043f\u0438\u0441\u043a\u0438',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
+    // Composed by mixedScriptMessage in js/typo_hints.js: title, then one
+    // clause per Latin letter — with its Cyrillic twin, or without when it has none.
+    'typo.mixed.title': '\u0420\u0456\u0437\u043d\u0456 \u0440\u043e\u0437\u043a\u043b\u0430\u0434\u043a\u0438 \u0432 \u043e\u0434\u043d\u043e\u043c\u0443 \u0441\u043b\u043e\u0432\u0456',
+    'typo.mixed.instead': '\u043b\u0430\u0442\u0438\u043d\u0441\u044c\u043a\u0430 \u00ab{lat}\u00bb \u0437\u0430\u043c\u0456\u0441\u0442\u044c \u00ab{cyr}\u00bb',
+    'typo.mixed.stray': '\u043b\u0430\u0442\u0438\u043d\u0441\u044c\u043a\u0430 \u00ab{lat}\u00bb',
     'prefs.theme.auto': '\u0410\u0432\u0442\u043E',
     'prefs.theme.dark': '\u0422\u0435\u043C\u043D\u0430',
     'prefs.theme.light': '\u0421\u0432\u0456\u0442\u043B\u0430',
@@ -1142,6 +1151,9 @@ var I18N = {
     'prefs.theme': 'Theme',
     'prefs.expert': 'Expert mode',
     'prefs.typo': 'Highlight typos',
+    'typo.mixed.title': 'Two keyboard layouts in one word',
+    'typo.mixed.instead': 'Latin «{lat}» where «{cyr}» belongs',
+    'typo.mixed.stray': 'Latin «{lat}»',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
     'prefs.theme.auto': 'Auto',
@@ -3867,26 +3879,111 @@ function typoRange(el, start, end) {
   return null;
 }
 
+// The mixed-script spans currently on screen, each with the Range it is painted
+// through, so the pointer can be matched back to the word it is over without
+// asking the document where the caret would land.
+var typoScriptMarks = [];
+
 function paintTypoHints(fields, spansPerField) {
-  var ranges = [];
+  var plain = [];
+  var script = [];
+  var letters = [];
+  typoScriptMarks = [];
   for (var i = 0; i < fields.length; i++) {
     var spans = spansPerField[i] || [];
     for (var j = 0; j < spans.length; j++) {
-      var r = typoRange(fields[i], spans[j].start, spans[j].end);
-      if (r) ranges.push(r);
+      var span = spans[j];
+      var r = typoRange(fields[i], span.start, span.end);
+      if (!r) continue;
+      // `latin` rides along only on a mixed-script hit — the one kind of flag
+      // that carries a diagnosis rather than just an absence from both sources.
+      if (span.latin && span.latin.length) {
+        script.push(r);
+        typoScriptMarks.push({ range: r, latin: span.latin });
+        // And the letters themselves. Naming one in words cannot work here:
+        // `T` and `Т` are the same shape, so a sentence about them shows the
+        // reader two glyphs they cannot tell apart. The mark has to sit ON the
+        // letter, where the eye can go straight to it.
+        span.latin.forEach(function(l) {
+          var lr = typoRange(fields[i], span.start + l.at, span.start + l.at + 1);
+          if (lr) letters.push(lr);
+        });
+      } else {
+        plain.push(r);
+      }
     }
   }
   // Rebuilt whole rather than patched: a re-render replaces the cells, and a
   // Range still pointing at a detached node would paint nothing while keeping
   // the registry growing. Added one by one rather than spread as arguments —
   // a long transcript can produce more ranges than a call can take.
-  var highlight = new Highlight();
-  ranges.forEach(function(r) { highlight.add(r); });
-  CSS.highlights.set('sy-typo', highlight);
+  // Registered last so it paints over the word-wide mark it sits inside.
+  [['sy-typo', plain], ['sy-typo-script', script], ['sy-typo-letter', letters]].forEach(function(pair) {
+    var highlight = new Highlight();
+    pair[1].forEach(function(r) { highlight.add(r); });
+    CSS.highlights.set(pair[0], highlight);
+  });
 }
 
 function clearTypoHints() {
-  if (typoHintsSupported()) CSS.highlights.delete('sy-typo');
+  typoScriptMarks = [];
+  hideTypoTip();
+  if (typoHintsSupported()) {
+    CSS.highlights.delete('sy-typo');
+    CSS.highlights.delete('sy-typo-script');
+    CSS.highlights.delete('sy-typo-letter');
+  }
+}
+
+// ---- the tip ---------------------------------------------------------------
+//
+// A word wearing a Latin lookalike reads as perfectly correct, so the underline
+// alone sends the writer to stare at it and find nothing. The tip names the
+// letter. It lives outside the editable text — a floating element, positioned
+// from the painted Range — so the feature's one rule still holds: the document
+// being edited is never touched.
+
+function typoTipPhrases() {
+  return {
+    title: t('typo.mixed.title'),
+    instead: t('typo.mixed.instead'),
+    stray: t('typo.mixed.stray'),
+  };
+}
+
+function hideTypoTip() {
+  var tip = document.getElementById('typo-tip');
+  if (tip) tip.hidden = true;
+}
+
+function showTypoTip(mark) {
+  var tip = document.getElementById('typo-tip');
+  if (!tip) return;
+  tip.textContent = mixedScriptMessage(mark.latin, typoTipPhrases());
+  tip.hidden = false;
+  // Measured only once it is laid out, so the clamping below sees real numbers.
+  var word = mark.range.getBoundingClientRect();
+  var box = tip.getBoundingClientRect();
+  var left = Math.min(
+    Math.max(4, word.left + word.width / 2 - box.width / 2),
+    Math.max(4, window.innerWidth - box.width - 4)
+  );
+  // Above the word by default; below it when there is no room, so the tip never
+  // covers the very letters it is talking about.
+  var above = word.top - box.height - 6;
+  tip.style.left = left + 'px';
+  tip.style.top = (above >= 4 ? above : word.bottom + 6) + 'px';
+}
+
+function typoMarkAt(x, y) {
+  for (var i = 0; i < typoScriptMarks.length; i++) {
+    var rects = typoScriptMarks[i].range.getClientRects();
+    for (var j = 0; j < rects.length; j++) {
+      var r = rects[j];
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return typoScriptMarks[i];
+    }
+  }
+  return null;
 }
 
 // Every trigger funnels through here: a keystroke, a re-render, the worker
@@ -3987,6 +4084,17 @@ SPA.toggleTypoHints = function() {
 // hints must judge the text as it ends up, not as it was typed.
 document.addEventListener('input', function(e) {
   if (isEditField(e.target)) scheduleTypoScan();
+});
+
+// Two guards before any measuring: the hit test calls getClientRects(), which
+// forces layout, and a mousemove fires on every pixel across the whole page. A
+// pointer that is not over an editable cell cannot be over a marked word, and
+// with no marks there is nothing to be over.
+document.addEventListener('mousemove', function(e) {
+  if (!typoScriptMarks.length) return;
+  if (!isEditField(e.target)) { hideTypoTip(); return; }
+  var mark = typoMarkAt(e.clientX, e.clientY);
+  if (mark) showTypoTip(mark); else hideTypoTip();
 });
 
 function renderMarkers() {
