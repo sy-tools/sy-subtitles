@@ -7,11 +7,11 @@ videos:
 - slug: Birthday-Puja-P1
   title: Birthday Puja P1
   video_ref: r1W0JYEgZCRRtXBkBJFVhSWFxZSw
-  sync: derived
+  sync: primary
 - slug: Birthday-Puja-P2
   title: Birthday Puja P2
   video_ref: r1XkFeQgcWRxxVU0BBGVhSWFxZSw
-  sync: primary
+  sync: independent
 - slug: Birthday-Puja-Talk
   title: Birthday Puja Talk
   video_ref: r1XRIKRQMQEh0AAUBIH1NSUF1ZSw
