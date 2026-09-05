@@ -7762,8 +7762,13 @@ function renderPrefsMenu() {
   renderPrefsSeg('prefs-theme', 'theme', readPref(localStorage, 'theme'), 'prefs.theme.', function(v) {
     SPA.setTheme(v);
   });
-  var expert = document.getElementById('prefs-expert');
-  if (expert) expert.checked = readPref(localStorage, 'expert');
+  // The expert switch is deliberately NOT painted here. applyExpertMode() is
+  // its only painter — it draws the switch and the flag beside the gear from
+  // the same `expertMode` variable that decides what the index shows. Reading
+  // storage here instead gave one state two painters that nothing reconciled:
+  // after the value changed out of band the switch and the flag contradicted
+  // each other, and the click that followed flipped the stale variable, moving
+  // expert mode the opposite way from what the switch was showing.
 }
 
 SPA.togglePrefsMenu = function() {
@@ -7793,9 +7798,15 @@ document.addEventListener('keydown', function(e) {
   if (e.key !== 'Escape') return;
   var menu = document.getElementById('prefs-menu');
   if (!menu || !menu.classList.contains('open')) return;
+  // Focus comes back only if it was in the menu being closed. The menu closes
+  // on an outside click but not on focus leaving it, so it can still be open
+  // while the user is working elsewhere — and then Escape belongs to what they
+  // are doing (leaving fullscreen, cancelling a dialog), not to dragging the
+  // caret across the page to the gear.
+  var wasInside = menu.contains(document.activeElement);
   closePrefsMenu();
   var btn = document.getElementById('prefs-btn');
-  if (btn) btn.focus();
+  if (wasInside && btn) btn.focus();
 });
 
 // ============================================================

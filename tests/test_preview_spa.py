@@ -6232,11 +6232,81 @@ class TestPreferencesMenu:
         page.click("#prefs-expert")
         assert page.locator("#expert-flag").is_visible() is False
 
-    def test_the_flag_speaks_the_chosen_language(self, server, page):
+    def test_the_flag_follows_a_language_switch(self, server, page):
+        """Asserting the English text alone proved nothing: "Expert mode" is the
+        static fallback in the markup, so that assertion held even with the
+        data-i18n attribute deleted and translatePage() never reaching the flag.
+        Watching it cross from one language to the other is what needs the
+        translation to actually run."""
         page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
-        page.add_init_script("localStorage.setItem('sy_lang', 'en');")
+        page.add_init_script("localStorage.setItem('sy_lang', 'uk');")
         goto_spa(page, server)
-        assert page.locator("#expert-flag").inner_text().strip() == "Expert mode"
+        flag = page.locator("#expert-flag")
+        assert flag.inner_text().strip() == "Експертний режим"
+        page.click("#prefs-btn")
+        page.click("#prefs-lang button:has-text('EN')")
+        assert flag.inner_text().strip() == "Expert mode"
+
+    def test_the_switch_and_the_flag_never_contradict_each_other(self, server, page):
+        """Two painters, one state: the flag was painted from the `expertMode`
+        variable while the menu painted the switch from storage, and nothing
+        reconciled them. A change made in another tab left one saying on and the
+        other off, in the same panel, at the same moment."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        # Another tab turns expert off. This tab is told nothing.
+        page.evaluate("localStorage.removeItem('sy_expert_mode')")
+        page.click("#prefs-btn")
+        checked = page.evaluate("document.getElementById('prefs-expert').checked")
+        flagged = page.locator("#expert-flag").is_visible()
+        assert checked == flagged, f"switch says {checked}, flag says {flagged}"
+
+    def test_the_switch_does_what_it_shows(self, server, page):
+        """Whatever it is showing, throwing it must move expert mode to the other
+        state. Painted from storage but toggled through a stale variable, an
+        unchecked box turned expert OFF — the opposite of what checking it
+        promises — and then snapped straight back to unchecked."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        page.evaluate("localStorage.removeItem('sy_expert_mode')")
+        page.click("#prefs-btn")
+        was_checked = page.evaluate("document.getElementById('prefs-expert').checked")
+        page.click("#prefs-expert")
+        now_on = page.evaluate("localStorage.getItem('sy_expert_mode') === '1'")
+        assert now_on is not was_checked, "the switch moved expert mode the way it was already set"
+
+    def test_the_flag_is_not_dressed_by_whatever_it_sits_in(self, server, page):
+        """The same trap the menu itself fell into: the flag sits in
+        #freshness-bar, which sets the mono family and the tracking meant for
+        codes and dates. The styleguide renders the component outside that bar,
+        so left inheriting, the catalog and the app disagree about what
+        .expert-flag looks like."""
+        page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")
+        goto_spa(page, server)
+        font = page.evaluate("getComputedStyle(document.getElementById('expert-flag')).fontFamily")
+        assert "mono" not in font.lower(), f"flag inherited the freshness bar's mono type: {font!r}"
+        spacing = page.evaluate("getComputedStyle(document.getElementById('expert-flag')).letterSpacing")
+        assert spacing == "normal", f"flag inherited tracking meant for codes: {spacing!r}"
+
+    def test_escape_elsewhere_does_not_yank_focus_to_the_gear(self, server, page):
+        """The menu closes on an outside click but not on focus leaving it, so it
+        can still be open while the user works elsewhere. Escape then belongs to
+        whatever they are doing — leaving fullscreen, cancelling a dialog — and
+        must not drag the caret across the page to the gear."""
+        goto_spa(page, server)
+        page.click("#prefs-btn")
+        outside = page.evaluate(
+            """() => {
+                const el = document.querySelector('a[href]');
+                if (!el) return null;
+                if (!el.id) el.id = 'zz-outside-link';
+                el.focus();
+                return document.activeElement.id;
+            }"""
+        )
+        assert outside, "no focusable element outside the menu to test with"
+        page.keyboard.press("Escape")
+        assert page.evaluate("document.activeElement.id") == outside
 
     def test_the_flag_sits_before_the_gear(self, server, page):
         page.add_init_script("localStorage.setItem('sy_expert_mode', '1');")

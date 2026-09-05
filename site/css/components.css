@@ -1255,8 +1255,14 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
    Anchored to the gear and right-aligned like .video-dropdown: it opens at the
    right edge of the window, where a left-aligned panel would overflow. */
 /* Says a non-default mode is on, beside the control that turns it off. Quiet
-   on purpose: it is a standing statement of fact, not something to act on. */
-.expert-flag { color: var(--fg5); font-size: var(--text-2xs); }
+   on purpose: it is a standing statement of fact, not something to act on.
+   Type is declared, not inherited, for the same reason the menu declares its
+   own: this sits inside #freshness-bar, which is monospaced with the wide
+   tracking meant for dates and branch names. Prose in that dress reads as a
+   code — and the styleguide renders the component outside the bar, so an
+   inherited face would make the catalog disagree with the app. */
+.expert-flag { color: var(--fg5); font-size: var(--text-2xs);
+  font-family: var(--f-sans); letter-spacing: normal; }
 .prefs { position: relative; display: inline-block; }
 .prefs-trigger { background: none; color: var(--fg5); border: 1px solid var(--border2);
   border-radius: var(--radius-sm); padding: 2px 6px; font-size: var(--text-xs);

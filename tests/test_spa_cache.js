@@ -2528,6 +2528,18 @@ describe('i18n: data-i18n coverage in HTML', () => {
     assert.ok(prefs.includes("key: 'sy_lang'"), 'sy_lang not declared in preferences.js');
   });
 
+  it('no preference key is spelled out anywhere but js/preferences.js', () => {
+    // The whole point of the table is that one file decides what a preference
+    // is stored under and what values it may hold. The guards above check the
+    // table declares each key — but nothing stopped a later edit from reaching
+    // past it with a literal getItem('sy_theme'), which is how a menu and the
+    // rest of the app drift into reading different things. This is the negative
+    // half: the keys must not appear anywhere else.
+    var owned = ['sy_lang', 'sy_theme', 'sy_expert_mode'];
+    var strays = owned.filter(function(key) { return html.indexOf(key) !== -1; });
+    assert.deepStrictEqual(strays, [], 'index.html spells out a key that belongs to preferences.js: ' + strays);
+  });
+
   it('detectLang function exists', () => {
     assert.ok(html.includes('function detectLang()'), 'detectLang not found');
   });
