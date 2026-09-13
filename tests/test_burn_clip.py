@@ -8,7 +8,23 @@ what keeps those three from ever disagreeing about which clips exist.
 import pytest
 
 from tools import burn_clip
-from tools.burn_clip import CLIP_MAX_DIGITS, CLIP_MIN_MS, ClipError, parse_clip, rebase_cues, rendered_span_seconds
+from tools.burn_clip import (
+    CLIP_MAX_DIGITS,
+    CLIP_MIN_MS,
+    ClipError,
+    parse_clip,
+    rebase_cues,
+    rendered_span_seconds,
+    seconds_text,
+)
+
+
+class TestSecondsText:
+    """Whole milliseconds as exact seconds text — ffmpeg's -ss/-t and the messages alike."""
+
+    @pytest.mark.parametrize(("ms", "text"), [(0, "0.000"), (61, "0.061"), (2500, "2.500"), (1_234_567, "1234.567")])
+    def test_formats_without_float_rounding(self, ms, text):
+        assert seconds_text(ms) == text
 
 
 class TestParseClip:

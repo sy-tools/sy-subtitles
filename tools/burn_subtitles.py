@@ -22,7 +22,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from .burn_clip import ClipError, parse_clip, rebase_cues
+from .burn_clip import ClipError, parse_clip, rebase_cues, seconds_text
 from .srt_utils import parse_srt
 
 # Vendored rather than apt-installed: a silent substitution would re-wrap the
@@ -341,11 +341,6 @@ def build_ass_document(
     return "\n".join(lines) + "\n"
 
 
-def _seconds_arg(ms):
-    """Whole milliseconds as an exact ffmpeg seconds argument: 2500 -> "2.500"."""
-    return f"{ms // 1000}.{ms % 1000:03d}"
-
-
 def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None, clip=None):
     """ffmpeg argv. Audio is copied for the whole video, re-encoded for a clip.
 
@@ -371,7 +366,7 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None,
         # discarding everything up to START — most of the encode, for a clip
         # late in a two-hour talk — and the frames reach the ass filter with
         # their clock reset to zero, the timeline the cues were re-based onto.
-        cmd += ["-ss", _seconds_arg(start_ms), "-t", _seconds_arg(end_ms - start_ms)]
+        cmd += ["-ss", seconds_text(start_ms), "-t", seconds_text(end_ms - start_ms)]
     cmd += [
         "-i",
         video,
@@ -651,14 +646,13 @@ def main(argv=None):
     # The measurer takes CSS pixels, not the ASS FontSize — see css_font_px.
     measure = text_measurer(args.font_file, css_font_px(args.font_ratio, height))
     cues = parse_srt(args.srt)
+    total = len(cues)
     if clip:
         # First, so everything below sees only what this fragment draws, on its
         # own clock: band bridging runs on the cues as they will play, and the
         # backslash refusal and the font probe judge the frames being made —
         # not a cue from elsewhere in the talk that never reaches one.
-        total = len(cues)
         cues = rebase_cues(cues, *clip)
-        print(f"[burn] clip {clip[0]}-{clip[1]} ms: {len(cues)} of {total} cues on screen")
     # Refused here, before anything runs, so the message can name the cue — the
     # ValueError escape_ass_text would raise later names only the text, and the
     # reviewer is left grepping four hundred cues for it.
@@ -669,6 +663,12 @@ def main(argv=None):
                 "ASS reads \\N as a line break the layout never counted; "
                 "fix the subtitle text."
             )
+    if clip:
+        # Counted by the test build_ass_document draws by: a cue whose text
+        # escapes to nothing puts nothing on screen. Only after the backslash
+        # refusal, the one input escape_ass_text raises on.
+        drawn = sum(1 for cue in cues if escape_ass_text(cue["text"]))
+        print(f"[burn] clip {clip[0]}-{clip[1]} ms: {drawn} of {total} cues on screen")
     doc = build_ass_document(
         cues,
         width,

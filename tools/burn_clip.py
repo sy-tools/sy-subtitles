@@ -40,8 +40,12 @@ class ClipError(ValueError):
     """A clip that cannot be rendered, with a message fit for a ::error:: line."""
 
 
-def _seconds(ms):
-    """Whole milliseconds as exact seconds text: 2500 -> "2.500"."""
+def seconds_text(ms):
+    """Whole milliseconds as exact seconds text: 2500 -> "2.500".
+
+    Integer arithmetic, no float: the burner hands this to ffmpeg as -ss/-t, and
+    the messages here quote clips in the same form.
+    """
     return f"{ms // 1000}.{ms % 1000:03d}"
 
 
@@ -105,14 +109,14 @@ def rendered_span_seconds(start_ms, end_ms, source_seconds):
     start_us = start_ms * 1000
     if start_us >= source_us:
         raise ClipError(
-            f"clip {start_ms}-{end_ms} starts at {_seconds(start_ms)} s, "
+            f"clip {start_ms}-{end_ms} starts at {seconds_text(start_ms)} s, "
             f"past the end of the {source_seconds:.3f} s video"
         )
     span_us = min(end_ms * 1000, source_us) - start_us
     if span_us < CLIP_MIN_MS * 1000:
         raise ClipError(
             f"clip {start_ms}-{end_ms} leaves {span_us / 1_000_000:.3f} s of the {source_seconds:.3f} s video; "
-            f"the shortest clip is {_seconds(CLIP_MIN_MS)} s"
+            f"the shortest clip is {seconds_text(CLIP_MIN_MS)} s"
         )
     return span_us / 1_000_000
 

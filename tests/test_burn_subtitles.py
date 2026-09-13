@@ -1115,6 +1115,20 @@ class TestMain:
         assert "Т" in state["probe_document"]
         assert "♪" not in state["probe_document"] and "№" not in state["probe_document"]
 
+    def test_the_clip_log_counts_only_cues_that_draw(self, tmp_path, monkeypatch, capsys):
+        # build_ass_document skips a blank cue, so counting one would report a
+        # subtitle on screen that never appears. parse_srt drops blank blocks
+        # from a file, so the blank cue is injected past it.
+        cues = [
+            {"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "Перше"},
+            {"idx": 2, "start_ms": 3000, "end_ms": 4000, "text": "Третє"},
+            {"idx": 3, "start_ms": 3500, "end_ms": 3800, "text": "   "},
+        ]
+        run, _ = self._harness(tmp_path, monkeypatch, extra_args=["--clip=2000-5000"])
+        monkeypatch.setattr(burn_subtitles, "parse_srt", lambda path: [dict(cue) for cue in cues])
+        run()
+        assert "[burn] clip 2000-5000 ms: 1 of 3 cues on screen" in capsys.readouterr().out
+
     def test_a_backslash_outside_the_clip_does_not_block_it(self, tmp_path, monkeypatch):
         # The refusal protects the frame, and this cue never reaches one.
         srt_text = self.CLIP_SRT.replace("Перше ♪", r"Перше \N ♪")
