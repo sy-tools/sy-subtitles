@@ -5,6 +5,7 @@ from tools.workflow_validation import (
     InvalidWorkflowInput,
     validate_clip,
     validate_git_ref,
+    validate_request_id,
     validate_subs_scale,
     validate_talk_id,
     validate_video_ref,
@@ -331,3 +332,57 @@ def test_cli_reads_a_dash_leading_clip_as_a_value_in_the_equals_form(capsys: pyt
     assert excinfo.value.code == 1
     err = capsys.readouterr().err
     assert err.startswith("::error::") and "-5-3000" in err
+
+
+# makeRequestId in site/js/burn_video.js: "req-" + a millisecond stamp and a
+# 16-bit noise, both in lowercase base36. The widest stamp a safe integer can
+# spell is 11 characters; the widest noise, 0xffff, is "1ekf".
+@pytest.mark.parametrize("value", ["req-mu07udq0-1ekf", "req-0-0", "req-2gosa7pa2gv-1ekf", "req-abc-1"])
+def test_request_id_accepts_what_the_spa_generates(value: str) -> None:
+    assert validate_request_id(value) == value
+
+
+# The run name ends with the request id and the SPA reads its fields from the
+# RIGHT, so a request id carrying the separator would list this run as another
+# talk, author, scale and clip. The first value is the review's example.
+FORGED_REQUEST_ID = "1993-09-19_X/Talk · SomeoneElse · 150% · 0-5000 · req-x-y"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        FORGED_REQUEST_ID,
+        "",
+        "req-",
+        "req-abc",
+        "req-abc-",
+        "req--1",
+        "req-ABC-def",
+        "req-abc-def-ghi",
+        "req-abc_1-2",
+        " req-abc-1",
+        "req-abc-1 ",
+        "req-abc-1\n",
+        "req-2gosa7pa2gv0-1",  # a stamp wider than any safe integer spells
+        "req-abc-1ekf0",  # noise wider than 0xffff spells
+        "req-١٢-1",  # Arabic-Indic digits
+    ],
+)
+def test_request_id_rejects_the_rest(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_request_id(value)
+
+
+def test_cli_accepts_a_generated_request_id() -> None:
+    from tools.workflow_validation_cli import main
+
+    main(["--request-id=req-mu07udq0-1ekf"])  # must not raise / exit
+
+
+def test_cli_refuses_a_request_id_that_forges_run_name_fields(capsys: pytest.CaptureFixture[str]) -> None:
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main([f"--request-id={FORGED_REQUEST_ID}"])
+    assert excinfo.value.code == 1
+    assert capsys.readouterr().err.startswith("::error::invalid request_id")

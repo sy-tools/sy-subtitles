@@ -26,6 +26,11 @@ GIT_REF_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}$")
 SUBS_SCALE_RE = re.compile(r"[1-9][0-9]{0,3}")
 SUBS_SCALE_MIN = 10
 SUBS_SCALE_MAX = 1000
+# What makeRequestId in site/js/burn_video.js produces: "req-", a millisecond
+# stamp, "-", a 16-bit noise, both in lowercase base36. Eleven characters is the
+# widest stamp a safe integer spells; four is 0xffff ("1ekf"). The SPA's run-name
+# parser holds the same pattern (BURN_RUN_REQUEST_RE), pinned by a test.
+REQUEST_ID_RE = re.compile(r"req-[a-z0-9]{1,11}-[a-z0-9]{1,4}")
 
 
 class InvalidWorkflowInput(ValueError):
@@ -68,6 +73,20 @@ def validate_subs_scale(value: str) -> str:
         raise InvalidWorkflowInput(
             f"subs_scale must be a whole percent from {SUBS_SCALE_MIN} to {SUBS_SCALE_MAX}; got {value!r}"
         )
+    return value
+
+
+def validate_request_id(value: str) -> str:
+    """Validate the token a burn's caller finds its run by.
+
+    It is the last field of the run name, and the SPA lists created videos by
+    reading those fields from the right. Unchecked, a request_id such as
+    "1993-09-19_X/Talk · SomeoneElse · 150% · 0-5000 · req-x-y" would list the
+    run as another talk, author, scale and clip; refused here, the run fails
+    and never reaches that list, which reads successful runs only.
+    """
+    if not REQUEST_ID_RE.fullmatch(value):
+        raise InvalidWorkflowInput(f"invalid request_id: {value!r}")
     return value
 
 

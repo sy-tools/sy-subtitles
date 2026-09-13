@@ -208,3 +208,18 @@ def test_review_issue_reset_keeps_a_claimed_review_claimed() -> None:
         "reset must not unconditionally re-apply review:pending — an assigned issue stays in-progress"
     )
     assert "review:in-progress" in reset, "reset must be able to land on review:in-progress"
+
+
+def test_burn_validates_the_request_id_its_run_name_ends_with() -> None:
+    """burn-subtitles.yml's run name ends with the caller's request_id, and the
+    SPA lists created videos by reading the run-name fields from the RIGHT. An
+    unchecked request_id such as
+    "1993-09-19_X/Talk · SomeoneElse · 150% · 0-5000 · req-x-y" therefore
+    listed the run as another talk, author, scale and clip. Validate inputs must
+    refuse it, so the run fails and never reaches the SPA's list of successful
+    runs. Passed in the --flag="$VALUE" form, like the scale and the clip."""
+    wf = yaml.safe_load((WORKFLOWS / "burn-subtitles.yml").read_text(encoding="utf-8"))
+    step = next(s for s in wf["jobs"]["burn"]["steps"] if s.get("name") == "Validate inputs")
+    assert step["env"].get("REQUEST_ID") == "${{ inputs.request_id }}"
+    commands = "\n".join(ln for ln in step["run"].splitlines() if not ln.lstrip().startswith("#"))
+    assert '--request-id="$REQUEST_ID"' in commands

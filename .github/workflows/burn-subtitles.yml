@@ -43,7 +43,9 @@ on:
         required: true
         default: "0.0333"
       request_id:
-        description: Opaque token so the caller can find this run
+        description: >-
+          Token so the caller can find this run, req-STAMP-NOISE in lowercase
+          base36 as the SPA generates it; anything else fails validation
         required: true
       source_ref:
         description: >-
@@ -139,15 +141,19 @@ jobs:
           PADBOT_RATIO: ${{ inputs.padbot_ratio }}
           SUBS_SCALE: ${{ inputs.subs_scale }}
           CLIP: ${{ inputs.clip }}
+          REQUEST_ID: ${{ inputs.request_id }}
         run: |
           set -euo pipefail
-          # --flag="$VALUE" for the scale and the clip, never two words: on the
-          # runner's Python argparse reads a clip such as "-5-3000" as an option
-          # and dies with a usage error instead of the ::error:: that says what
-          # is wrong. An empty clip means the whole video and passes.
+          # --flag="$VALUE" for the scale, the clip and the request id, never
+          # two words: on the runner's Python argparse reads a clip such as
+          # "-5-3000" as an option and dies with a usage error instead of the
+          # ::error:: that says what is wrong. An empty clip means the whole
+          # video and passes. The request id ends the run name, whose fields the
+          # SPA reads from the right, so an unchecked one could carry forged
+          # talk, author, scale and clip fields into the list of created videos.
           python3 -m tools.workflow_validation_cli \
             --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG" \
-            --subs-scale="$SUBS_SCALE" --clip="$CLIP"
+            --subs-scale="$SUBS_SCALE" --clip="$CLIP" --request-id="$REQUEST_ID"
           test -f "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
             || { echo "::error::no final/uk.srt for $TALK_ID/$VIDEO_SLUG"; exit 1; }
           # The video_ref, checked HERE for two reasons. Presence: a talk whose

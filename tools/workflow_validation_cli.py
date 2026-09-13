@@ -9,6 +9,7 @@ from tools.workflow_validation import (
     die,
     validate_clip,
     validate_git_ref,
+    validate_request_id,
     validate_subs_scale,
     validate_talk_id,
     validate_video_ref,
@@ -22,11 +23,12 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--video-slug")
     parser.add_argument("--video-ref")
     parser.add_argument("--source-ref")
-    # Pass these two as --flag=VALUE. A separate word starting with "-", such
+    # Pass these three as --flag=VALUE. A separate word starting with "-", such
     # as the clip "-5-3000", is read by argparse as an option and dies with a
     # usage error before the validator can explain what is wrong.
     parser.add_argument("--subs-scale")
     parser.add_argument("--clip", help="empty means the whole video")
+    parser.add_argument("--request-id")
     args = parser.parse_args(argv)
     try:
         if args.source_ref is not None:
@@ -41,6 +43,8 @@ def main(argv: list[str] | None = None) -> None:
             validate_subs_scale(args.subs_scale)
         if args.clip is not None:
             validate_clip(args.clip)
+        if args.request_id is not None:
+            validate_request_id(args.request_id)
     except InvalidWorkflowInput as e:
         die(str(e))
 
