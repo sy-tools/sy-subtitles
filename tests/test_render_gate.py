@@ -79,6 +79,30 @@ class TestProgressFraction:
         assert render_gate.progress_fraction("", total_seconds=40.0) is None
 
 
+class TestEncodedCompletely:
+    """The final gate's verdict on a render that exited 0, at its boundary.
+
+    Built from the slack itself in powers of two — sixteen slacks encoded to
+    15/16 — so the remainder is COMPLETE_SLACK_SECONDS exactly, not a float's
+    width to one side of it, and a `<` in place of `<=` fails here.
+    """
+
+    TOTAL = render_gate.COMPLETE_SLACK_SECONDS * 16  # 3.2 s: short enough that the 98% floor refuses 15/16
+
+    def test_a_remainder_exactly_at_the_slack_is_complete(self):
+        fraction = 15 / 16
+        assert self.TOTAL * (1.0 - fraction) == render_gate.COMPLETE_SLACK_SECONDS
+        assert render_gate.encoded_completely(fraction, self.TOTAL) is True
+
+    def test_a_remainder_one_microsecond_past_the_slack_is_not(self):
+        # A microsecond is out_time's own resolution: the smallest real step past.
+        fraction = 1.0 - (render_gate.COMPLETE_SLACK_SECONDS + 1e-6) / self.TOTAL
+        assert render_gate.encoded_completely(fraction, self.TOTAL) is False
+
+    def test_no_progress_is_never_complete(self):
+        assert render_gate.encoded_completely(None, self.TOTAL) is False
+
+
 class TestWaitFor:
     def _wait(self, threshold, reader, exit_reader, **kw):
         kw.setdefault("total_seconds", 10.0)
@@ -159,6 +183,39 @@ class TestWaitFor:
         # touch short of the declared length.
         out = self._wait(None, lambda: "out_time_us=9900000\nprogress=end\n", lambda: 0)
         assert out.status == "reached"
+
+    def test_await_mode_accepts_a_short_clip_short_only_by_its_last_frames(self):
+        # Measured with ffmpeg 8.1: a complete 3 s clip at 24 fps ended at
+        # out_time 2.916667 s, 97.2%, under the proportional floor. A fragment
+        # render exists to be this short, so the floor alone condemns it.
+        out = self._wait(None, lambda: "out_time_us=2916667\nprogress=end\n", lambda: 0, total_seconds=3.0)
+        assert out.status == "reached"
+
+    def test_a_one_second_clip_that_stopped_halfway_is_truncated(self):
+        # Exit 0 with half its frames missing: what a 0.5 s slack let through.
+        out = self._wait(None, lambda: "out_time_us=500000\nprogress=end\n", lambda: 0, total_seconds=1.0)
+        assert out.status == "truncated"
+
+    def test_the_slack_is_absolute_so_a_long_render_that_short_is_still_truncated(self):
+        # The same 97.9% of a 149-minute talk leaves three minutes unencoded.
+        total = 149 * 60.0
+        out_us = round(total * 0.979 * 1_000_000)
+        out = self._wait(None, lambda: f"out_time_us={out_us}\nprogress=end\n", lambda: 0, total_seconds=total)
+        assert out.status == "truncated"
+
+    def test_a_short_clip_missing_more_than_the_slack_is_still_truncated(self):
+        # 95% of a 20 s clip: a whole second of picture is not a last frame.
+        out = self._wait(None, lambda: "out_time_us=19000000\nprogress=end\n", lambda: 0, total_seconds=20.0)
+        assert out.status == "truncated"
+
+    def test_the_slack_never_vouches_for_a_render_with_no_progress(self):
+        # A total under the slack would make "remainder <= slack" true of
+        # anything; no sample at all must stay a truncation regardless.
+        out = self._wait(None, lambda: "", lambda: 0, total_seconds=0.1)
+        assert out.status == "truncated"
+
+    def test_the_completion_slack_is_a_fifth_of_a_second(self):
+        assert render_gate.COMPLETE_SLACK_SECONDS == 0.2
 
     def test_await_mode_rejects_a_clean_exit_with_no_progress_at_all(self):
         # Exit 0 with an empty progress file: nothing proves any frame was
@@ -291,6 +348,13 @@ class TestCli:
         assert code == render_gate.EXIT_TRUNCATED
         out = capsys.readouterr().out
         assert "::error::" in out and "12%" in out
+
+    def test_a_short_clip_passes_the_final_gate(self, tmp_path, monkeypatch):
+        # End to end: the duration file holds the clip's span, as Start render
+        # writes it, and the last sample is the measured 3 s clip's final one.
+        monkeypatch.setattr(render_gate.time, "sleep", lambda s: None)
+        argv = self._files(tmp_path, progress="out_time_us=2916667\nprogress=end\n", duration="3.000000", exit_code=0)
+        assert render_gate.main(argv + ["--await-exit"]) == 0
 
     def test_a_stall_exits_non_zero(self, tmp_path, monkeypatch):
         monkeypatch.setattr(render_gate.time, "sleep", lambda s: None)

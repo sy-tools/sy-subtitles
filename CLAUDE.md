@@ -286,6 +286,8 @@ that live nowhere else.
 - `render_gate` — blocks until a detached burn encode passes a percentage. Each
   gate step in `burn-subtitles.yml` is one call, and a step *completing* is the
   only live progress channel the SPA has into a running job.
+- `burn_clip` — the one reading of a burn's `clip` input: the input guard, the
+  render and the span the gates measure all parse it here.
 - `retime_snapshot` — carry a dry-run snapshot's timings onto a new block cut.
   Run it after changing `text_segmentation` or `subtitle_omit`, which move block
   boundaries; see `TESTING.md`.

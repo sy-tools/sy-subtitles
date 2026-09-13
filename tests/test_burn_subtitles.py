@@ -571,6 +571,76 @@ class TestBuildFfmpegCommand:
         cmd = burn_subtitles.build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts")
         assert "-progress" not in cmd
 
+    def test_the_whole_video_argv_is_pinned(self):
+        # No seek, audio copied: a clip must leave the full render exactly as it was.
+        assert build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "fonts", progress_file="p.txt") == [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-progress",
+            "p.txt",
+            "-nostats",
+            "-i",
+            "in.mp4",
+            "-vf",
+            "ass=subs.ass:fontsdir=fonts",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
+            "out.mp4",
+        ]
+
+    def test_the_clip_argv_is_pinned(self):
+        # -ss/-t BEFORE -i: an input-side seek, so the output clock starts at
+        # zero where the re-based cues do. Audio is re-encoded, because a copied
+        # stream starts at a packet of the source, not at the seek point.
+        cmd = build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "fonts", progress_file="p.txt", clip=(2000, 5000))
+        assert cmd == [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-progress",
+            "p.txt",
+            "-nostats",
+            "-ss",
+            "2.000",
+            "-t",
+            "3.000",
+            "-i",
+            "in.mp4",
+            "-vf",
+            "ass=subs.ass:fontsdir=fonts",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+            "out.mp4",
+        ]
+
+    def test_clip_seconds_are_exact_to_the_millisecond(self):
+        cmd = build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts", clip=(1_234_567, 1_300_001))
+        assert cmd[cmd.index("-ss") + 1] == "1234.567"
+        assert cmd[cmd.index("-t") + 1] == "65.434"
+
     def test_build_ffmpeg_command_writes_progress_to_the_given_file(self):
         cmd = burn_subtitles.build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts", progress_file="/tmp/p.txt")
         assert cmd[cmd.index("-progress") + 1] == "/tmp/p.txt"
@@ -836,15 +906,16 @@ class TestMain:
         probe_stderr=LIBASS_SUCCESS_STDERR,
         cue_text="Перше речення.",
         missing_glyph=None,
+        srt_text=None,
     ):
         """Return (run, state); state survives a SystemExit raised inside main.
 
         `missing_glyph` stands in for libass: if the probe document contains that
         character, the fake probe answers the way libass does when no font can
-        supply it.
+        supply it. `srt_text` replaces the one-cue SRT built from `cue_text`.
         """
         srt = tmp_path / "uk.srt"
-        srt.write_text(f"1\n00:00:00,000 --> 00:00:02,000\n{cue_text}\n\n", encoding="utf-8")
+        srt.write_text(srt_text or f"1\n00:00:00,000 --> 00:00:02,000\n{cue_text}\n\n", encoding="utf-8")
         ass_out = tmp_path / "subs.ass"
         output = tmp_path / "out.mp4"
         state = {"seen": {}, "commands": [], "ass_out": ass_out, "output": output}
@@ -997,6 +1068,94 @@ class TestMain:
         with pytest.raises(SystemExit, match=r"(?s)backslash.*1|1.*backslash"):
             run()
         assert state["commands"] == []  # refused before the probe, not after it
+
+    # Rendered as --clip=2000-5000: one cue before the clip, one straddling each
+    # edge, one inside, one starting exactly at its end. ♪ and № appear only in
+    # the two cues the clip drops.
+    CLIP_SRT = (
+        "1\n00:00:00,000 --> 00:00:01,500\nПерше ♪\n\n"
+        "2\n00:00:01,500 --> 00:00:02,500\nДруге\n\n"
+        "3\n00:00:03,000 --> 00:00:04,000\nТретє\n\n"
+        "4\n00:00:04,500 --> 00:00:06,000\nЧетверте\n\n"
+        "5\n00:00:05,000 --> 00:00:07,000\nП’яте №\n\n"
+    )
+
+    def _text_events(self, doc):
+        """(start, end, text) of every Layer-1 text event."""
+        events = []
+        for line in doc.splitlines():
+            if line.startswith("Dialogue: 1,"):
+                _, start, end = line.split(",")[0:3]
+                events.append((start, end, line.rsplit("}", 1)[1]))
+        return events
+
+    def test_a_clip_seeks_the_input_and_renders_only_its_span(self, tmp_path, monkeypatch):
+        _, commands, _ = self._invoke(tmp_path, monkeypatch, srt_text=self.CLIP_SRT, extra_args=["--clip=2000-5000"])
+        encode = self._encode_command(commands)
+        assert encode[encode.index("-ss") + 1] == "2.000"
+        assert encode[encode.index("-t") + 1] == "3.000"
+        assert encode.index("-t") < encode.index("-i")
+        assert encode[encode.index("-c:a") + 1] == "aac"
+
+    def test_a_clip_rebases_the_cues_onto_the_fragment(self, tmp_path, monkeypatch):
+        _, _, ass_out = self._invoke(tmp_path, monkeypatch, srt_text=self.CLIP_SRT, extra_args=["--clip=2000-5000"])
+        assert self._text_events(ass_out.read_text(encoding="utf-8")) == [
+            ("0:00:00.00", "0:00:00.50", "Друге"),
+            ("0:00:01.00", "0:00:02.00", "Третє"),
+            ("0:00:02.50", "0:00:03.00", "Четверте"),
+        ]
+
+    def test_the_probe_covers_only_what_the_clip_draws(self, tmp_path, monkeypatch):
+        # The characters of cues outside the clip never reach the frame, so a
+        # glyph missing from them must not veto the fragment.
+        run, state = self._harness(
+            tmp_path, monkeypatch, srt_text=self.CLIP_SRT, extra_args=["--clip=2000-5000"], missing_glyph="♪"
+        )
+        run()
+        assert "Т" in state["probe_document"]
+        assert "♪" not in state["probe_document"] and "№" not in state["probe_document"]
+
+    def test_the_clip_log_counts_only_cues_that_draw(self, tmp_path, monkeypatch, capsys):
+        # build_ass_document skips a blank cue, so counting one would report a
+        # subtitle on screen that never appears. parse_srt drops blank blocks
+        # from a file, so the blank cue is injected past it.
+        cues = [
+            {"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "Перше"},
+            {"idx": 2, "start_ms": 3000, "end_ms": 4000, "text": "Третє"},
+            {"idx": 3, "start_ms": 3500, "end_ms": 3800, "text": "   "},
+        ]
+        run, _ = self._harness(tmp_path, monkeypatch, extra_args=["--clip=2000-5000"])
+        monkeypatch.setattr(burn_subtitles, "parse_srt", lambda path: [dict(cue) for cue in cues])
+        run()
+        assert "[burn] clip 2000-5000 ms: 1 of 3 cues on screen" in capsys.readouterr().out
+
+    def test_a_backslash_outside_the_clip_does_not_block_it(self, tmp_path, monkeypatch):
+        # The refusal protects the frame, and this cue never reaches one.
+        srt_text = self.CLIP_SRT.replace("Перше ♪", r"Перше \N ♪")
+        _, commands, _ = self._invoke(tmp_path, monkeypatch, srt_text=srt_text, extra_args=["--clip=2000-5000"])
+        assert len(commands) == 2
+
+    def test_a_backslash_inside_the_clip_is_refused_by_name(self, tmp_path, monkeypatch):
+        # The clip's cue count escapes every cue, and escaping raises on a
+        # backslash without naming the cue — so the refusal has to come first.
+        srt_text = self.CLIP_SRT.replace("Третє", r"Третє \N")
+        run, state = self._harness(tmp_path, monkeypatch, srt_text=srt_text, extra_args=["--clip=2000-5000"])
+        with pytest.raises(SystemExit, match="cue 3"):
+            run()
+        assert state["commands"] == []
+
+    def test_an_invalid_clip_is_refused_before_anything_runs(self, tmp_path, monkeypatch):
+        run, state = self._harness(tmp_path, monkeypatch, extra_args=["--clip=3000-1000"])
+        with pytest.raises(SystemExit, match="before"):
+            run()
+        assert state["commands"] == []
+
+    def test_an_empty_clip_renders_the_whole_video(self, tmp_path, monkeypatch):
+        # The workflow input's default is "", and the workflow passes it through.
+        _, commands, _ = self._invoke(tmp_path, monkeypatch, extra_args=["--clip="])
+        encode = self._encode_command(commands)
+        assert "-ss" not in encode and "-t" not in encode
+        assert encode[encode.index("-c:a") + 1] == "copy"
 
     def test_a_clean_encode_still_surfaces_ffmpegs_complaints(self, tmp_path, monkeypatch, capsys):
         # ffmpeg can truncate on a damaged source and still exit 0. Its stderr

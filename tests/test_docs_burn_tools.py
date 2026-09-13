@@ -2,9 +2,9 @@
 
 CLAUDE.md and ARCHITECTURE.md are what a fresh session reads before touching
 anything, so a tool that is missing from both is a tool that will be rewritten
-rather than reused. The burn feature added two modules and a top-level
-directory; this pins that all three are described, and that the usage block
-carries the one flag the workflow actually depends on.
+rather than reused. The burn feature added its own modules and a top-level
+directory; this pins that each is described, and that the docs explain the
+progress channel the workflow actually depends on.
 """
 
 from pathlib import Path
@@ -56,10 +56,10 @@ def test_architecture_documents_the_progress_file_mechanism():
     assert "render_gate" in section
 
 
-def test_architecture_lists_both_new_tools():
+def test_architecture_lists_the_burn_tools():
     tree = _read("ARCHITECTURE.md")
     tree = tree[tree.index("├── tools/") : tree.index("├── site/")]
-    for module in ("burn_subtitles.py", "render_gate.py"):
+    for module in ("burn_subtitles.py", "render_gate.py", "burn_clip.py"):
         assert module in tree, f"the per-file tools/ tree omits {module}"
 
 

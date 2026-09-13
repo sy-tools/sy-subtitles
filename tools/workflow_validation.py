@@ -9,6 +9,8 @@ from __future__ import annotations
 import re
 import sys
 
+from tools.burn_clip import ClipError, parse_clip
+
 TALK_ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_[A-Za-z0-9_.-]{1,80}$")
 # First char alphanumeric/underscore: rejects dot-only values (".", "..")
 # and option-like values ("-rf", "--help") that defeat path safety.
@@ -19,6 +21,16 @@ VIMEO_URL_RE = re.compile(r"^https://(?:www\.)?(?:vimeo\.com|player\.vimeo\.com/
 # can never be read as an option by whatever consumes it. Everything git itself
 # forbids in a ref (space, ~, ^, :, ?, *, [, \, @{) is outside the class.
 GIT_REF_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}$")
+# [0-9], not \d, which matches every Unicode digit. Four digits at most: the
+# band tops out at 1000, and a bounded pattern never feeds int() a huge string.
+SUBS_SCALE_RE = re.compile(r"[1-9][0-9]{0,3}")
+SUBS_SCALE_MIN = 10
+SUBS_SCALE_MAX = 1000
+# What makeRequestId in site/js/burn_video.js produces: "req-", a millisecond
+# stamp, "-", a 16-bit noise, both in lowercase base36. Eleven characters is the
+# widest stamp a safe integer spells; four is 0xffff ("1ekf"). The SPA's run-name
+# parser holds the same pattern (BURN_RUN_REQUEST_RE), pinned by a test.
+REQUEST_ID_RE = re.compile(r"req-[a-z0-9]{1,11}-[a-z0-9]{1,4}")
 
 
 class InvalidWorkflowInput(ValueError):
@@ -47,6 +59,50 @@ def validate_git_ref(value: str) -> str:
     """
     if not GIT_REF_RE.fullmatch(value) or ".." in value or "//" in value or value.endswith("/"):
         raise InvalidWorkflowInput(f"invalid git ref: {value!r}")
+    return value
+
+
+def validate_subs_scale(value: str) -> str:
+    """Validate the subtitle size, in whole percent, a burn was requested at.
+
+    It changes nothing in the render — sizing comes from the measured ratios —
+    and exists to be recorded in the run name, where the SPA reads it back.
+    Hence strict: a value that parses loosely would be listed as something else.
+    """
+    if not SUBS_SCALE_RE.fullmatch(value) or not SUBS_SCALE_MIN <= int(value) <= SUBS_SCALE_MAX:
+        raise InvalidWorkflowInput(
+            f"subs_scale must be a whole percent from {SUBS_SCALE_MIN} to {SUBS_SCALE_MAX}; got {value!r}"
+        )
+    return value
+
+
+def validate_request_id(value: str) -> str:
+    """Validate the token a burn's caller finds its run by.
+
+    It is the last field of the run name, and the SPA lists created videos by
+    reading those fields from the right. Unchecked, a request_id such as
+    "1993-09-19_X/Talk · SomeoneElse · 150% · 0-5000 · req-x-y" would list the
+    run as another talk, author, scale and clip; refused here, the run fails
+    and never reaches that list, which reads successful runs only.
+    """
+    if not REQUEST_ID_RE.fullmatch(value):
+        raise InvalidWorkflowInput(f"invalid request_id: {value!r}")
+    return value
+
+
+def validate_clip(value: str) -> str:
+    """Validate the fragment a burn renders; empty means the whole video.
+
+    The grammar is tools/burn_clip.py's, not a copy of it: the burner parses the
+    same string, and a guard that disagreed would pass a clip the render then
+    refuses after the whole download.
+    """
+    if value == "":
+        return value
+    try:
+        parse_clip(value)
+    except ClipError as e:
+        raise InvalidWorkflowInput(str(e)) from None
     return value
 
 

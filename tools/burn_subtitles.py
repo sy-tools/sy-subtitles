@@ -22,6 +22,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from .burn_clip import ClipError, parse_clip, rebase_cues, seconds_text
 from .srt_utils import parse_srt
 
 # Vendored rather than apt-installed: a silent substitution would re-wrap the
@@ -340,14 +341,18 @@ def build_ass_document(
     return "\n".join(lines) + "\n"
 
 
-def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None):
-    """ffmpeg argv. Audio is copied, never re-encoded.
+def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None, clip=None):
+    """ffmpeg argv. Audio is copied for the whole video, re-encoded for a clip.
 
     `progress_file` turns on ffmpeg's own machine-readable `-progress` channel.
     The workflow points it at a file the render-gate steps poll, which is how the
     SPA learns the true encode percentage — see tools/render_gate.py for why that
     detour exists. `-nostats` rides along so the periodic human status line stops
     flooding the job log now that the same numbers go to the file.
+
+    `clip` is a (start_ms, end_ms) pair from tools.burn_clip.parse_clip, and the
+    ASS document must already be re-based onto it. An end past the source is
+    left to ffmpeg, which simply stops at EOF.
     """
     cmd = ["ffmpeg", "-nostdin", "-y"]
     if progress_file:
@@ -355,6 +360,13 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None)
         # other globals and, crucially, ahead of the output path: after it
         # ffmpeg would parse them as options of a second output file.
         cmd += ["-progress", progress_file, "-nostats"]
+    if clip:
+        start_ms, end_ms = clip
+        # Input options, before -i. ffmpeg then seeks rather than decoding and
+        # discarding everything up to START — most of the encode, for a clip
+        # late in a two-hour talk — and the frames reach the ass filter with
+        # their clock reset to zero, the timeline the cues were re-based onto.
+        cmd += ["-ss", seconds_text(start_ms), "-t", seconds_text(end_ms - start_ms)]
     cmd += [
         "-i",
         video,
@@ -368,12 +380,12 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None)
         "20",
         "-pix_fmt",
         "yuv420p",
-        "-c:a",
-        "copy",
-        "-movflags",
-        "+faststart",
-        output,
     ]
+    # A copied audio stream can only start at one of the source's packets, not
+    # at an input seek point, so a clip's sound would open out of step with its
+    # picture. The whole video has no seek point and keeps its audio untouched.
+    cmd += ["-c:a", "aac", "-b:a", "192k"] if clip else ["-c:a", "copy"]
+    cmd += ["-movflags", "+faststart", output]
     return cmd
 
 
@@ -612,13 +624,35 @@ def main(argv=None):
         "--progress-file",
         help="write ffmpeg's machine-readable -progress stream here (polled by tools.render_gate)",
     )
+    parser.add_argument(
+        "--clip",
+        default="",
+        help=(
+            "render only START_MS-END_MS of the video; empty renders all of it. "
+            "Pass it as --clip=VALUE, or a value such as -5-3000 is read as an option"
+        ),
+    )
     args = parser.parse_args(argv)
+
+    clip = None
+    if args.clip:
+        try:
+            clip = parse_clip(args.clip)
+        except ClipError as e:
+            raise SystemExit(str(e)) from None
 
     width, height = probe_dimensions(args.video)
     font_size = font_size_for(args.font_ratio, height)
     # The measurer takes CSS pixels, not the ASS FontSize — see css_font_px.
     measure = text_measurer(args.font_file, css_font_px(args.font_ratio, height))
     cues = parse_srt(args.srt)
+    total = len(cues)
+    if clip:
+        # First, so everything below sees only what this fragment draws, on its
+        # own clock: band bridging runs on the cues as they will play, and the
+        # backslash refusal and the font probe judge the frames being made —
+        # not a cue from elsewhere in the talk that never reaches one.
+        cues = rebase_cues(cues, *clip)
     # Refused here, before anything runs, so the message can name the cue — the
     # ValueError escape_ass_text would raise later names only the text, and the
     # reviewer is left grepping four hundred cues for it.
@@ -629,6 +663,12 @@ def main(argv=None):
                 "ASS reads \\N as a line break the layout never counted; "
                 "fix the subtitle text."
             )
+    if clip:
+        # Counted by the test build_ass_document draws by: a cue whose text
+        # escapes to nothing puts nothing on screen. Only after the backslash
+        # refusal, the one input escape_ass_text raises on.
+        drawn = sum(1 for cue in cues if escape_ass_text(cue["text"]))
+        print(f"[burn] clip {clip[0]}-{clip[1]} ms: {drawn} of {total} cues on screen")
     doc = build_ass_document(
         cues,
         width,
@@ -652,7 +692,7 @@ def main(argv=None):
     # one cue to be discovered twenty minutes later.
     verify_font_selection(args.font_name, fonts_dir, args.font_file, probe_text_for(cues))
 
-    cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir, args.progress_file)
+    cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir, args.progress_file, clip)
     print("[burn] " + " ".join(cmd))
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:

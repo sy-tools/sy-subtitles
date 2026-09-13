@@ -70,6 +70,7 @@ sy-subtitles/
 │   ├── whisper_run.py              # Whisper speech detection wrapper
 │   ├── burn_subtitles.py           # SRT → ASS → ffmpeg+libass burned-in video
 │   ├── render_gate.py              # Blocks a burn gate step until the encode passes N%
+│   ├── burn_clip.py                # A burn's clip: the one parser, cue re-basing, rendered span
 │   ├── build_map.py / build_srt.py # Subtitle builder (prepare → LLM → assemble)
 │   ├── builder_data.py             # Whisper / EN-SRT timing query interface
 │   ├── validate_subtitles.py       # SRT validation (text, CPS, overlaps, gaps)
@@ -214,12 +215,34 @@ the build/sync stack without burning Claude calls.
 
 ### burn-subtitles.yml
 `workflow_dispatch` from the preview SPA: downloads the video, burns
-`final/uk.srt` into the picture with ffmpeg+libass reproducing the fullscreen
-subtitle look, and uploads the MP4 as a 7-day artifact. Sizing arrives as
-ratios measured in the browser (see `tools/burn_subtitles.py`). `run-name` is
-the talk's human title, so a run is found by eye in the Actions list; the
-caller's `request_id` rides along at the end because `workflow_dispatch`
-returns no run id, and that is how the SPA finds its own run.
+`final/uk.srt` into the picture — the whole video or a clip of it — with
+ffmpeg+libass reproducing the fullscreen subtitle look, and uploads the MP4 as a
+7-day artifact. Sizing arrives as ratios measured in the browser (see
+`tools/burn_subtitles.py`).
+
+**The run name is the record of a render.** The REST API does not return a
+run's `workflow_dispatch` inputs, and the SPA lists a talk's rendered, unexpired
+videos with a single request for this workflow's recent successful runs. So
+whatever that list shows is written into `run-name`: the human label first, so
+a run is found by eye in the Actions list; then talk/video, the actor who
+rendered it, the subtitle scale and the clip; and the caller's `request_id`
+last, because `workflow_dispatch` returns no run id and matching that token is
+how the SPA finds the run it just started. The segments are read from the
+right, since the label is free text and may contain the separator itself.
+`subs_scale` changes nothing in the picture; it is recorded only to be listed.
+
+**A clip is cut by the render, not by the download.** The whole video is still
+downloaded. ffmpeg seeks on the input side, so the output clock starts at zero,
+and the cues are re-based onto that clock before the ASS document is built and
+before the font probe, so both see only what the fragment draws. The gates
+measure the span actually rendered — END clamped to the downloaded file — not
+the source, or a clip would never near 100% and `Finish render` would fail it
+as truncated; for the same reason the final verdict pairs its proportional
+floor with a small absolute slack, since one frame of a short clip outweighs
+the floor. Audio is re-encoded only for a clip: a copied stream can start only
+at one of the source's packets, not at the seek point. Output and artifact
+names do not depend on the clip. `tools/burn_clip.py` is the one parser of the
+`clip` input, shared by the input guard, the burner and the span computation.
 
 **Two refs, on purpose.** The workflow file and `tools/` come from the ref the
 dispatch names — always the deployed SPA's own version. The subtitles come from
