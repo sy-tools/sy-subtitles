@@ -1,9 +1,12 @@
 import pytest
 
+from tools.burn_clip import ClipError, parse_clip
 from tools.vimeo_codec import encode_video_ref
 from tools.workflow_validation import (
     InvalidWorkflowInput,
+    validate_clip,
     validate_git_ref,
+    validate_subs_scale,
     validate_talk_id,
     validate_video_ref,
     validate_video_slug,
@@ -223,3 +226,110 @@ def test_cli_rejects_bad_video_ref() -> None:
 
     with pytest.raises(SystemExit):
         main(["--video-ref", "not-a-ref"])
+
+
+@pytest.mark.parametrize("value", ["10", "55", "100", "250", "1000"])
+def test_subs_scale_accepts_a_whole_percent_in_the_band(value: str) -> None:
+    assert validate_subs_scale(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "9",
+        "1001",
+        "0",
+        "010",
+        "+100",
+        "-5",
+        "100%",
+        "100.0",
+        "1e2",
+        " 100",
+        "100\n",
+        "١٠٠",  # Arabic-Indic digits: \d and int() accept them
+    ],
+)
+def test_subs_scale_rejects_the_rest(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_subs_scale(value)
+
+
+def test_an_empty_clip_means_the_whole_video() -> None:
+    # The input's default. burn_clip.parse_clip refuses "" on purpose — to it
+    # there is no such clip — so this is the one value where the two differ.
+    assert validate_clip("") == ""
+
+
+@pytest.mark.parametrize("value", ["0-1000", "2000-5000", "7200000-7260000"])
+def test_clip_accepts_valid(value: str) -> None:
+    assert validate_clip(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "0-1000",
+        "1000-2000",
+        "1000-1999",
+        "3000-1000",
+        "-5-3000",
+        "01000-3000",
+        "1000-3000\n",
+        " ",
+        "1.5-3000",
+        "١٠٠٠-٣٠٠٠",
+    ],
+)
+def test_the_clip_guard_agrees_with_the_burner(value: str) -> None:
+    """The guard must not pass a clip the render then refuses, nor the reverse.
+
+    A disagreement fails the job after the whole install and download instead of
+    in Validate inputs — or rejects a clip the burner would have rendered.
+    """
+    try:
+        parse_clip(value)
+        burner_accepts = True
+    except ClipError:
+        burner_accepts = False
+    try:
+        validate_clip(value)
+        guard_accepts = True
+    except InvalidWorkflowInput:
+        guard_accepts = False
+    assert guard_accepts == burner_accepts
+
+
+def test_the_clip_guard_says_what_is_wrong() -> None:
+    with pytest.raises(InvalidWorkflowInput, match="before"):
+        validate_clip("3000-1000")
+
+
+def test_cli_accepts_the_values_a_default_dispatch_sends() -> None:
+    from tools.workflow_validation_cli import main
+
+    main(["--subs-scale=100", "--clip="])  # must not raise / exit
+
+
+@pytest.mark.parametrize("argv", [["--subs-scale=5"], ["--subs-scale=-5"], ["--clip=3000-1000"]])
+def test_cli_rejects_a_bad_scale_or_clip_legibly(argv: list[str], capsys: pytest.CaptureFixture[str]) -> None:
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(argv)
+    assert excinfo.value.code == 1
+    assert capsys.readouterr().err.startswith("::error::")
+
+
+def test_cli_reads_a_dash_leading_clip_as_a_value_in_the_equals_form(capsys: pytest.CaptureFixture[str]) -> None:
+    # As a separate word, "-5-3000" is an option to argparse (Python 3.12, the
+    # runner's): a usage error with exit 2 instead of a legible annotation. The
+    # workflow passes --clip="$CLIP" for exactly this reason.
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--clip=-5-3000"])
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("::error::") and "-5-3000" in err
