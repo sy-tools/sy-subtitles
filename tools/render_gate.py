@@ -46,12 +46,19 @@ EXIT_TRUNCATED = 4
 # not rounding, it is a truncated video handed over as a finished one.
 COMPLETE_FRACTION_FLOOR = 0.98
 
-# The floor's absolute counterpart, for renders short enough that one frame
-# outweighs 2%. out_time is the start of the last frame, so a 2 s clip at 24 fps
-# ends at 1.958 s, 97.9%, with nothing missing, and a fragment render exists to
-# be that short. Either condition passes. Half a second only decides renders
-# under 25 s, where 2% is less than it; above that the floor is the looser test.
-COMPLETE_SLACK_SECONDS = 0.5
+# The floor's absolute counterpart, for renders short enough that their last
+# frames outweigh 2%; either condition passes. A complete render's final
+# out_time still falls short of its span, by an amount the ffmpeg build sets:
+#   * the runner (ubuntu-24.04, ffmpeg 6.1.1, run 34774278171) reported 14.99 s
+#     for a 15.000 s clip with audio: out_time there is the latest packet
+#     across streams, so the audio brings it within one AAC frame (~21 ms);
+#   * ffmpeg 8.1, measured locally, stopped two video frames short with or
+#     without audio: 83 ms at 24 fps, 400 ms at 5 fps.
+# 0.2 s covers the first at any frame rate and the second above 10 fps, and it
+# refuses what 0.5 s let through: a 1 s clip that exited 0 with half its frames
+# missing. From 10 s up the 98% floor is the looser test (2% >= 0.2 s), so only
+# shorter renders are ever decided here.
+COMPLETE_SLACK_SECONDS = 0.2
 
 # How much of the detached render's log to echo when a gate fails.
 LOG_TAIL_CHARS = 4000
