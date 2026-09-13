@@ -46,6 +46,13 @@ EXIT_TRUNCATED = 4
 # not rounding, it is a truncated video handed over as a finished one.
 COMPLETE_FRACTION_FLOOR = 0.98
 
+# The floor's absolute counterpart, for renders short enough that one frame
+# outweighs 2%. out_time is the start of the last frame, so a 2 s clip at 24 fps
+# ends at 1.958 s, 97.9%, with nothing missing, and a fragment render exists to
+# be that short. Either condition passes. Half a second only decides renders
+# under 25 s, where 2% is less than it; above that the floor is the looser test.
+COMPLETE_SLACK_SECONDS = 0.5
+
 # How much of the detached render's log to echo when a gate fails.
 LOG_TAIL_CHARS = 4000
 
@@ -122,6 +129,17 @@ def progress_fraction(text, total_seconds):
     return min(1.0, out_time_us / 1_000_000.0 / total_seconds)
 
 
+def encoded_completely(fraction, total_seconds):
+    """True when a render that exited 0 left nothing a viewer would miss.
+
+    No progress at all is never complete: a gate must not vouch for what it
+    cannot see, and a total under the slack would otherwise pass anything.
+    """
+    if fraction is None:
+        return False
+    return fraction >= COMPLETE_FRACTION_FLOOR or total_seconds * (1.0 - fraction) <= COMPLETE_SLACK_SECONDS
+
+
 def wait_for(
     threshold,
     read_progress,
@@ -181,7 +199,7 @@ def wait_for(
             # green job. Both operands are here: the declared duration and the
             # last out_time. No progress at all is the same verdict — a gate
             # must not vouch for what it cannot see.
-            if threshold is None and (fraction is None or fraction < COMPLETE_FRACTION_FLOOR):
+            if threshold is None and not encoded_completely(fraction, total_seconds):
                 return GateOutcome("truncated", exit_code=exit_code, fraction=fraction)
             # Zero: the render is over and this gate's threshold was simply
             # never observed. Release it rather than hang.
@@ -225,27 +243,31 @@ def _read_exit_code(path):
 
 
 def read_duration_seconds(path):
-    """Source duration in seconds, or raise SystemExit.
+    """Rendered duration in seconds — the source's, or a clip's span — or raise SystemExit.
 
     Deliberately fatal: without a duration there is no percentage, and a gate
     that quietly opened anyway would be a gate that lies about the render.
     """
     raw = _read_text(path).strip()
     if not raw:
-        raise SystemExit(f"render gate: no source duration in {path!r}; cannot compute a percentage")
+        raise SystemExit(f"render gate: no render duration in {path!r}; cannot compute a percentage")
     try:
         seconds = float(raw)
     except ValueError:
-        raise SystemExit(f"render gate: source duration {raw!r} in {path!r} is not a number") from None
+        raise SystemExit(f"render gate: render duration {raw!r} in {path!r} is not a number") from None
     if seconds <= 0:
-        raise SystemExit(f"render gate: source duration {seconds} in {path!r} is not positive")
+        raise SystemExit(f"render gate: render duration {seconds} in {path!r} is not positive")
     return seconds
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Block until a detached ffmpeg render passes a threshold.")
     parser.add_argument("--progress-file", required=True, help="ffmpeg's -progress output")
-    parser.add_argument("--duration-file", required=True, help="file holding the source duration in seconds")
+    parser.add_argument(
+        "--duration-file",
+        required=True,
+        help="file holding the rendered duration in seconds: the source's, or a clip's span",
+    )
     parser.add_argument("--exit-file", required=True, help="written by the launcher when the render exits")
     parser.add_argument("--log-file", help="the detached render's combined output; tailed on failure")
     parser.add_argument("--percent", type=float, default=0.0, help="threshold; 0 returns on the first sample")
@@ -281,7 +303,7 @@ def main(argv=None):
         print(f"::error::the render exited with code {outcome.exit_code}")
         code = outcome.exit_code or EXIT_SETUP_ERROR
     elif outcome.status == "truncated":
-        encoded = "no progress at all" if outcome.fraction is None else f"only {outcome.fraction:.0%} of the source"
+        encoded = "no progress at all" if outcome.fraction is None else f"only {outcome.fraction:.0%} of its duration"
         print(f"::error::the render exited cleanly having encoded {encoded} — the video is truncated")
         code = EXIT_TRUNCATED
     else:
