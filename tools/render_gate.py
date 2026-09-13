@@ -54,7 +54,10 @@ COMPLETE_FRACTION_FLOOR = 0.98
 #     across streams, so the audio brings it within one AAC frame (~21 ms);
 #   * ffmpeg 8.1, measured locally, stopped two video frames short with or
 #     without audio: 83 ms at 24 fps, 400 ms at 5 fps.
-# 0.2 s covers the first at any frame rate and the second above 10 fps, and it
+# 0.2 s covers the first with audio at any frame rate and the second above
+# 10 fps. A video-only source is shorter by whole frames on either build (on 6.1
+# three, from the encoder's delay: 200 ms at 15 fps), so below ~15 fps without
+# audio a complete short render can read as cut; talks carry audio. It
 # refuses what 0.5 s let through: a 1 s clip that exited 0 with half its frames
 # missing. From 10 s up the 98% floor is the looser test (2% >= 0.2 s), so only
 # shorter renders are ever decided here.

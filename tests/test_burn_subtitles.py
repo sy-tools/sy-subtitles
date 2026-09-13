@@ -1135,6 +1135,15 @@ class TestMain:
         _, commands, _ = self._invoke(tmp_path, monkeypatch, srt_text=srt_text, extra_args=["--clip=2000-5000"])
         assert len(commands) == 2
 
+    def test_a_backslash_inside_the_clip_is_refused_by_name(self, tmp_path, monkeypatch):
+        # The clip's cue count escapes every cue, and escaping raises on a
+        # backslash without naming the cue — so the refusal has to come first.
+        srt_text = self.CLIP_SRT.replace("Третє", r"Третє \N")
+        run, state = self._harness(tmp_path, monkeypatch, srt_text=srt_text, extra_args=["--clip=2000-5000"])
+        with pytest.raises(SystemExit, match="cue 3"):
+            run()
+        assert state["commands"] == []
+
     def test_an_invalid_clip_is_refused_before_anything_runs(self, tmp_path, monkeypatch):
         run, state = self._harness(tmp_path, monkeypatch, extra_args=["--clip=3000-1000"])
         with pytest.raises(SystemExit, match="before"):
