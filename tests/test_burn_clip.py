@@ -8,7 +8,7 @@ what keeps those three from ever disagreeing about which clips exist.
 import pytest
 
 from tools import burn_clip
-from tools.burn_clip import CLIP_MIN_MS, ClipError, parse_clip, rebase_cues, rendered_span_seconds
+from tools.burn_clip import CLIP_MAX_DIGITS, CLIP_MIN_MS, ClipError, parse_clip, rebase_cues, rendered_span_seconds
 
 
 class TestParseClip:
@@ -19,6 +19,7 @@ class TestParseClip:
             ("2000-5000", (2000, 5000)),
             ("1000-2000", (1000, 2000)),  # exactly the shortest span
             ("7200000-7260000", (7200000, 7260000)),  # two hours into a talk
+            ("0-999999999", (0, 999999999)),  # nine digits, the longest bound
         ],
     )
     def test_accepts_two_whole_millisecond_counts(self, value, expected):
@@ -66,11 +67,18 @@ class TestParseClip:
         with pytest.raises(ClipError, match=f"{CLIP_MIN_MS} ms"):
             parse_clip("1000-1999")
 
-    def test_a_count_too_long_to_convert_is_refused_in_our_words(self):
-        # Python refuses to turn more than 4300 digits into an int and raises a
-        # bare ValueError about its own limit; the caller must get a ClipError.
-        with pytest.raises(ClipError):
-            parse_clip("1" * 5000 + "-" + "2" * 5000)
+    @pytest.mark.parametrize("value", ["0-1000000000", "1000000000-1000001000", "0-9999999999999999"])
+    def test_a_bound_past_nine_digits_is_refused_by_name(self, value):
+        # 0-9999999999999999 used to pass the guard, be clamped for the gates,
+        # and then kill ffmpeg after the whole download: "Invalid duration for
+        # option t ... Result too large". The message must say what the limit is.
+        with pytest.raises(ClipError, match="9 digits"):
+            parse_clip(value)
+
+    def test_a_bound_is_at_most_nine_digits(self):
+        # ~277 hours, and the cap the SPA's run-title parser applies, so the
+        # two sides accept the same clips. A literal, like CLIP_MIN_MS.
+        assert CLIP_MAX_DIGITS == 9
 
     def test_the_minimum_is_one_second(self):
         # A literal, not a recomputation: the SPA offers clips against the same

@@ -1,6 +1,5 @@
 import pytest
 
-from tools.burn_clip import ClipError, parse_clip
 from tools.vimeo_codec import encode_video_ref
 from tools.workflow_validation import (
     InvalidWorkflowInput,
@@ -262,7 +261,7 @@ def test_an_empty_clip_means_the_whole_video() -> None:
     assert validate_clip("") == ""
 
 
-@pytest.mark.parametrize("value", ["0-1000", "2000-5000", "7200000-7260000"])
+@pytest.mark.parametrize("value", ["0-1000", "1000-2000", "2000-5000", "7200000-7260000", "0-999999999"])
 def test_clip_accepts_valid(value: str) -> None:
     assert validate_clip(value) == value
 
@@ -270,35 +269,22 @@ def test_clip_accepts_valid(value: str) -> None:
 @pytest.mark.parametrize(
     "value",
     [
-        "0-1000",
-        "1000-2000",
-        "1000-1999",
-        "3000-1000",
+        " ",
+        "1000",
         "-5-3000",
         "01000-3000",
         "1000-3000\n",
-        " ",
         "1.5-3000",
-        "١٠٠٠-٣٠٠٠",
+        "3000-1000",
+        "1000-1999",  # under the one-second minimum
+        "١٠٠٠-٣٠٠٠",  # Arabic-Indic digits
+        "0-1000000000",  # ten digits
+        "0-9999999999999999",  # passed once, then killed ffmpeg after the download
     ],
 )
-def test_the_clip_guard_agrees_with_the_burner(value: str) -> None:
-    """The guard must not pass a clip the render then refuses, nor the reverse.
-
-    A disagreement fails the job after the whole install and download instead of
-    in Validate inputs — or rejects a clip the burner would have rendered.
-    """
-    try:
-        parse_clip(value)
-        burner_accepts = True
-    except ClipError:
-        burner_accepts = False
-    try:
+def test_clip_rejects_the_rest(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
         validate_clip(value)
-        guard_accepts = True
-    except InvalidWorkflowInput:
-        guard_accepts = False
-    assert guard_accepts == burner_accepts
 
 
 def test_the_clip_guard_says_what_is_wrong() -> None:
@@ -320,6 +306,18 @@ def test_cli_rejects_a_bad_scale_or_clip_legibly(argv: list[str], capsys: pytest
         main(argv)
     assert excinfo.value.code == 1
     assert capsys.readouterr().err.startswith("::error::")
+
+
+def test_cli_refuses_a_clip_bound_past_nine_digits_by_name(capsys: pytest.CaptureFixture[str]) -> None:
+    # The review's example: accepted by an unbounded grammar, clamped for the
+    # gates, and then fatal to ffmpeg's -t parser after the whole download.
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--clip=0-9999999999999999"])
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("::error::") and "9 digits" in err
 
 
 def test_cli_reads_a_dash_leading_clip_as_a_value_in_the_equals_form(capsys: pytest.CaptureFixture[str]) -> None:

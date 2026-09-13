@@ -18,10 +18,22 @@ import sys
 # bound, which is why it is one named constant rather than a literal per site.
 CLIP_MIN_MS = 1000
 
+# Nine digits per bound: 999999999 ms is ~277 h, far past any talk, and the cap
+# the SPA's run-title parser applies, so both sides accept the same clips.
+# Unbounded, 0-9999999999999999 passed the guard, was clamped for the gates, and
+# then killed ffmpeg after the whole download. Measured on ffmpeg 8.1:
+# -t 9999999999999.999 fails "Invalid duration for option t ... Result too
+# large", while -t 999999.999 is accepted and simply stops at EOF.
+CLIP_MAX_DIGITS = 9
+
 # [0-9], never \d: in a str pattern \d matches every Unicode decimal digit, and
 # int() would then happily convert Arabic-Indic numerals. fullmatch, never $:
 # $ also matches before a trailing newline.
-_CLIP_RE = re.compile(r"(0|[1-9][0-9]*)-(0|[1-9][0-9]*)")
+_BOUND = rf"(0|[1-9][0-9]{{0,{CLIP_MAX_DIGITS - 1}}})"
+_CLIP_RE = re.compile(f"{_BOUND}-{_BOUND}")
+# The same shape with no length limit, only so that an over-long bound is
+# refused by name rather than as "not a clip".
+_CLIP_SHAPE_RE = re.compile(r"(0|[1-9][0-9]*)-(0|[1-9][0-9]*)")
 
 
 class ClipError(ValueError):
@@ -36,18 +48,17 @@ def _seconds(ms):
 def parse_clip(value):
     """``"START_MS-END_MS"`` -> ``(start_ms, end_ms)``, or raise ClipError.
 
-    Two non-negative decimal integers with no sign and no leading zeros (a lone
-    "0" excepted), START before END, at least CLIP_MIN_MS apart. An empty value
-    is refused here: "render the whole video" is the caller's branch, not a clip.
+    Two non-negative decimal integers of at most CLIP_MAX_DIGITS digits, with no
+    sign and no leading zeros (a lone "0" excepted), START before END, at least
+    CLIP_MIN_MS apart. An empty value is refused here: "render the whole video"
+    is the caller's branch, not a clip.
     """
     match = _CLIP_RE.fullmatch(value)
     if not match:
+        if _CLIP_SHAPE_RE.fullmatch(value):
+            raise ClipError(f"clip bounds are at most {CLIP_MAX_DIGITS} digits of milliseconds; got {value!r}")
         raise ClipError(f"clip must be START_MS-END_MS in whole milliseconds, e.g. 60000-90000; got {value!r}")
-    try:
-        start_ms, end_ms = int(match.group(1)), int(match.group(2))
-    except ValueError:
-        # Past 4300 digits Python refuses the conversion in its own words.
-        raise ClipError(f"clip {value!r} is not a usable millisecond count") from None
+    start_ms, end_ms = int(match.group(1)), int(match.group(2))
     if start_ms >= end_ms:
         raise ClipError(f"clip {value!r} must start before it ends")
     if end_ms - start_ms < CLIP_MIN_MS:
