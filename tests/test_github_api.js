@@ -717,3 +717,95 @@ describe('listRunArtifacts', () => {
     assert.strictEqual(capture.url, API + '/actions/runs/42/artifacts');
   });
 });
+
+// ---------------------------------------------------------------------------
+// The already-created videos: every successful burn of the retention week, by
+// every author and for every talk, read from the runs list alone.
+// ---------------------------------------------------------------------------
+const { listBurnRuns } = require('../site/js/github_api');
+
+describe('listBurnRuns', () => {
+  const SINCE = '2026-09-06T12:00:00Z';
+  // Spelled out rather than rebuilt with encodeURIComponent, so the test cannot
+  // agree with the code by construction.
+  const FIRST = API + '/actions/workflows/burn-subtitles.yml/runs'
+    + '?status=success&created=%3E%3D2026-09-06T12%3A00%3A00Z&per_page=100';
+
+  // Serves `pages` (1-based, from the page= parameter) under one total_count
+  // and records every request.
+  function pagedRuns(pages, totalCount, seen) {
+    return async (url, init) => {
+      seen.push({ url, init: init || {} });
+      const m = /[?&]page=(\d+)/.exec(url);
+      const page = m ? Number(m[1]) : 1;
+      return new Response(JSON.stringify({
+        total_count: totalCount, workflow_runs: pages[page - 1] || [],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    };
+  }
+  const runs = (from, n) => Array.from({ length: n }, (_, i) => ({ id: from + i }));
+
+  it('asks for the week of successful runs by every author in one request', async () => {
+    const seen = [];
+    const got = await listBurnRuns(API, 'gho_x', 'burn-subtitles.yml', SINCE,
+      pagedRuns([[{ id: 7 }]], 1, seen));
+    assert.deepStrictEqual(got, [{ id: 7 }]);
+    assert.strictEqual(seen.length, 1);
+    assert.strictEqual(seen[0].url, FIRST);
+    assert.strictEqual(seen[0].init.headers.Authorization, 'Bearer gho_x');
+  });
+
+  it('returns [] when the payload has no runs key', async () => {
+    const seen = [];
+    const f = async (url) => {
+      seen.push(url);
+      return new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+    };
+    assert.deepStrictEqual(await listBurnRuns(API, 'gho_x', 'w.yml', SINCE, f), []);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('follows the next page while total_count says more runs exist', async () => {
+    // The query spans every talk and every author, so a busy week passes a
+    // hundred renders — and a video past the hundredth must not silently vanish.
+    const seen = [];
+    const got = await listBurnRuns(API, 'gho_x', 'burn-subtitles.yml', SINCE,
+      pagedRuns([runs(1, 100), runs(101, 50)], 150, seen));
+    assert.deepStrictEqual(got.map((r) => r.id), runs(1, 150).map((r) => r.id));
+    assert.deepStrictEqual(seen.map((s) => s.url), [FIRST, FIRST + '&page=2']);
+  });
+
+  it('stops at a short page, whatever total_count claims', async () => {
+    const seen = [];
+    const got = await listBurnRuns(API, 'gho_x', 'burn-subtitles.yml', SINCE,
+      pagedRuns([runs(1, 100), runs(101, 30)], 500, seen));
+    assert.strictEqual(got.length, 130);
+    assert.strictEqual(seen.length, 2);
+  });
+
+  it('asks for no empty page once total_count is reached', async () => {
+    const seen = [];
+    await listBurnRuns(API, 'gho_x', 'burn-subtitles.yml', SINCE,
+      pagedRuns([runs(1, 100)], 100, seen));
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('gives up after ten pages', async () => {
+    const seen = [];
+    const full = Array.from({ length: 20 }, (_, p) => runs(p * 100 + 1, 100));
+    const got = await listBurnRuns(API, 'gho_x', 'burn-subtitles.yml', SINCE,
+      pagedRuns(full, 5000, seen));
+    assert.strictEqual(seen.length, 10);
+    assert.strictEqual(got.length, 1000);
+    assert.strictEqual(seen[9].url, FIRST + '&page=10');
+  });
+
+  it('rejects when a later page fails, rather than listing part of the week', async () => {
+    const f = async (url) => (/&page=2/.test(url)
+      ? new Response(JSON.stringify({ message: 'API rate limit exceeded' }), { status: 403 })
+      : new Response(JSON.stringify({ total_count: 150, workflow_runs: runs(1, 100) }),
+                     { status: 200 }));
+    await assert.rejects(listBurnRuns(API, 'gho_x', 'burn-subtitles.yml', SINCE, f),
+      (e) => e.status === 403);
+  });
+});

@@ -11,7 +11,11 @@ import sys
 
 from tools.burn_clip import ClipError, parse_clip
 
-TALK_ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_[A-Za-z0-9_.-]{1,80}$")
+# [0-9], not \d, for the same reason SUBS_SCALE_RE gives below — and here it is
+# also a contract: the SPA reads this id back out of the run name with the same
+# pattern, and a browser's \d is ASCII. Under \d this accepted a date written in
+# Arabic-Indic digits, which would render a video the SPA could never list.
+TALK_ID_RE = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Za-z0-9_.-]{1,80}$")
 # First char alphanumeric/underscore: rejects dot-only values (".", "..")
 # and option-like values ("-rf", "--help") that defeat path safety.
 VIDEO_SLUG_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$")

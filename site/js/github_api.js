@@ -430,6 +430,36 @@ function listRunArtifacts(api, token, runId, fetchImpl) {
     .then(function (r) { return (r && r.artifacts) || []; });
 }
 
+// The "already created videos": every successful burn since `sinceIso`, by every
+// author and for every talk — burnHistoryEntries narrows it to one talk + video.
+// The run name carries every field the list shows, so this list is the whole
+// discovery: no per-run jobs or artifacts lookup.
+//
+// One request in the normal case. Because the query spans every author and every
+// talk, a busy week can pass a hundred renders, and a video past the hundredth
+// must not silently vanish: while total_count says more exist and the last page
+// came back full, fetch the next. Ten pages is where the API itself stops — it
+// returns at most 1,000 results for a search filtered by `created` or `status`.
+function listBurnRuns(api, token, workflowFile, sinceIso, fetchImpl) {
+  var PER_PAGE = 100, MAX_PAGES = 10;
+  var first = api + '/actions/workflows/' + encodeURIComponent(workflowFile)
+    + '/runs?status=success&created=' + encodeURIComponent('>=' + sinceIso)
+    + '&per_page=' + PER_PAGE;
+  function fetchPage(page, acc) {
+    var url = page === 1 ? first : first + '&page=' + page;
+    return ghJson(url, token, null, fetchImpl).then(function (r) {
+      var rows = (r && r.workflow_runs) || [];
+      acc = acc.concat(rows);
+      if (rows.length === PER_PAGE && Number(r.total_count) > acc.length
+          && page < MAX_PAGES) {
+        return fetchPage(page + 1, acc);
+      }
+      return acc;
+    });
+  }
+  return fetchPage(1, []);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     authHeaders: authHeaders,
@@ -466,5 +496,6 @@ if (typeof module !== 'undefined' && module.exports) {
     listWorkflowRuns: listWorkflowRuns,
     getRunJobs: getRunJobs,
     listRunArtifacts: listRunArtifacts,
+    listBurnRuns: listBurnRuns,
   };
 }

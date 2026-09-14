@@ -3536,7 +3536,7 @@ describe('burn video wiring', () => {
     // The export.* family is in scope alongside burn.*: the two used to be one
     // control's worth of keys under one prefix, and the retired btn.burn_* names
     // are only provably gone if this guard still looks for them.
-    const KEY = '(?:burn\\.[a-z_.]+|export\\.[a-z_.]+|btn\\.burn[a-z_]*)';
+    const KEY = '(?:burn\\.[a-z_.]+|export\\.[a-z_.]+|history\\.[a-z_.]+|clip\\.[a-z_.]+|btn\\.burn[a-z_]*)';
     const i18n = html.match(/var I18N\s*=\s*\{([\s\S]*?)\n\};/);
     assert.ok(i18n, 'I18N table not found');
     const uk = i18n[1].slice(i18n[1].indexOf('uk:'), i18n[1].indexOf('\n  en:'));
@@ -3557,7 +3557,7 @@ describe('burn video wiring', () => {
     const code = html.slice(0, at) + html.slice(at + i18n[0].length) + '\n' + modules;
     const found = new Set([
       ...[...code.matchAll(new RegExp("'(" + KEY + ")'", 'g'))].map((m) => m[1]),
-      ...[...code.matchAll(new RegExp('data-i18n="(' + KEY + ')"', 'g'))].map((m) => m[1])
+      ...[...code.matchAll(new RegExp('data-i18n(?:-[a-z-]+)?="(' + KEY + ')"', 'g'))].map((m) => m[1])
     ]);
     // 'burn.step.' is a computed prefix: the phase key is appended at runtime.
     // The four keys it can build come from the phase model itself, so a renamed
@@ -3569,9 +3569,11 @@ describe('burn video wiring', () => {
     // make every assertion below vacuous.
     for (const wanted of ['export.title', 'export.srt', 'export.srt_failed',
                           'export.video_make', 'export.video_working',
-                          'export.video_download',
+                          'export.video_full', 'export.video_clip',
+                          'export.clip_working', 'history.title', 'history.loading',
+                          'history.scale', 'clip.title', 'clip.bad_start', 'clip.past_end',
                           'burn.view_run', 'burn.queued', 'burn.step_of',
-                          'burn.elapsed', 'burn.estimate_soft', 'burn.done_in',
+                          'burn.elapsed', 'burn.estimate_soft',
                           'burn.wait_for_sync', 'burn.wrong_lang',
                           'burn.step.render']) {
       assert.ok(keys.includes(wanted), 'i18n key not harvested: ' + wanted);
@@ -3835,31 +3837,127 @@ describe('burn video wiring', () => {
       'the video-picker button must keep the 44px touch metrics');
   });
 
-  it('lets the transfer tint win over the finished render\'s green', () => {
-    // Same specificity, so only source order decides. Written the other way
-    // round the transfer bar would be green — the colour of "already done" —
-    // while a few hundred megabytes were still moving.
-    const done = css.indexOf('.export-item-group--done .burn-seg__fill');
-    const transfer = css.indexOf('.export-item-group--transfer .burn-seg__fill');
-    assert.ok(transfer > -1, 'the transfer tint must exist');
-    assert.ok(transfer > done,
-      'the transfer rule must come after the done rule, or it never applies');
+  it('hides every new surface of the control through its own [hidden] rule', () => {
+    // Each carries an author display, which outranks the UA's
+    // [hidden]{display:none}: without its own rule a closed flyout, a finished
+    // spinner or a closed panel would stay on screen.
+    for (const sel of ['.export-submenu', '.export-history', '.export-history__list',
+                       '.export-history__new', '.spinner', '.float-panel']) {
+      assert.ok(css.includes(sel + '[hidden] { display: none; }'),
+        sel + ' needs its own [hidden] rule');
+    }
+    assert.ok(!/export-item-group--(done|transfer|expired)/.test(css),
+      'the item no longer wears a finished, transferring or expired face — their tints must go');
+  });
+
+  it('sizes the heading spinner off the line it sits in, and never taller', () => {
+    // The whole point of moving it into the heading is that the line's height
+    // is the same with and without it. A pixel size would be a bet against the
+    // font scale; a reserved height would be a bet against a translation. Both
+    // lose, so the ring is measured in `em` of the line it shares.
+    const rule = css.match(/\.export-history__title \.spinner \{[^}]*\}/);
+    assert.ok(rule, 'the spinner needs a rule for the heading it now lives in');
+    assert.match(rule[0], /display: inline-block/,
+      'a block would take the whole line; the ring sits in the flow of the text');
+    assert.match(rule[0], /width: [\d.]+em/, 'sized in em, not pixels: ' + rule[0]);
+    assert.match(rule[0], /height: [\d.]+em/, 'sized in em, not pixels: ' + rule[0]);
+    assert.match(rule[0], /vertical-align:/,
+      'the ring has to be pinned inside the line box, or it grows it');
+    const title = css.match(/\.export-history__title \{[^}]*\}/);
+    assert.ok(title && !/height:/.test(title[0]),
+      'no reserved height on the heading — a taller translation would outgrow it');
+  });
+
+  it('tints the whole created-video row, not only its button', () => {
+    // The note, the bar and the error line are siblings of the button inside
+    // the <li>. With the tint on the button they stayed on the menu ground and
+    // read as unrelated text — the reviewer's words: "it is not clear the note
+    // belongs to the video above it".
+    const tint = css.match(/\.export-history__row:hover,\s*\.export-history__row:focus-within \{[^}]*\}/);
+    assert.ok(tint, 'the row itself must carry the hover/focus tint');
+    assert.match(tint[0], /background: var\(--bg3\)/,
+      'the same token every other export item is highlighted with');
+    // Two tints stack into a darker strip behind the button alone — exactly the
+    // seam the move was meant to remove.
+    assert.match(css, /\.export-history__item:hover:not\(:disabled\) \{\s*background: none;/,
+      'the button inside a list row must not paint a second tint on top');
+    // A row that refuses a click must not promise one.
+    assert.match(css, /\.export-history__row--busy:hover \{\s*background: none;/,
+      'a row mid-transfer must not light up under the pointer');
+    const busyAt = css.indexOf('.export-history__row--busy:hover');
+    assert.ok(busyAt > css.indexOf('.export-history__row:hover'),
+      'the busy reset has the same specificity as the tint, so it has to come after it');
+  });
+
+  it('closes the row\'s box under the note instead of cropping it', () => {
+    // The tint makes the row's box visible, and the box was open at the bottom:
+    // 6px above the first line from the button's own padding, 0px below the
+    // note. Against --bg3 that reads as a clipped block, not as the container
+    // the note belongs to.
+    const rule = css.match(/\.export-history__row--continued \{[^}]*\}/);
+    assert.ok(rule, 'a row with something under the button needs its box closed');
+    assert.match(rule[0], /padding-bottom: var\(--space-2\)/,
+      'the same 6px the button\'s padding opens the box with: ' + rule[0]);
+    // Correct spacing is correct whether or not a pointer is on the row: a
+    // hover-only padding would make the row jump under the pointer, which is
+    // the defect the spinner change exists to remove.
+    assert.ok(!/:hover|:focus/.test(rule[0]),
+      'the padding must not be hover-conditional: ' + rule[0]);
+    const base = css.match(/\.export-history__row \{[^}]*\}/);
+    assert.ok(base && !/padding/.test(base[0]),
+      'a row with nothing under the button keeps exactly the geometry it has');
   });
 
   it('documents the disabled row, which is its own visual state', () => {
     // `.export-item:disabled` is deliberately NOT the faded treatment a dead
-    // .btn earns — the row is a status line as often as a control. Three of the
-    // five faces are disabled, so an undocumented one is the rule most likely
-    // to be "cleaned up" by someone reading only the button styles.
+    // .btn earns — the row is a status line as often as a control. The working
+    // and wrong-language faces are disabled, and so is a row mid-download, so an
+    // undocumented one is the rule most likely to be "cleaned up" by someone
+    // reading only the button styles.
     assert.match(styleguide, /class="export-item"[^>]*\sdisabled/,
       'the catalog must render a disabled row, not only enabled ones');
   });
 
   it('documents the transfer state in the styleguide too', () => {
     // The catalog is the contract: a state that only exists mid-download is the
-    // easiest one to never look at again.
-    assert.ok(styleguide.includes('export-item-group--transfer'),
-      'the transfer state must have a live example, like every other state');
+    // easiest one to never look at again. A transfer now lives on a row of the
+    // created-videos list, so that is where its example has to be.
+    assert.ok(styleguide.includes('export-history__row'),
+      'the list of created videos must have a live example');
+    assert.match(styleguide, /transfer: \{ loaded: \d+, total: \d+ \}/,
+      'and one of its rows must be mid-download, track and counter included');
+    assert.ok(styleguide.includes('class="spinner"'),
+      'the wait before the list arrives is a state as well');
+  });
+
+  it('shows the spinner where it really goes — in the heading line', () => {
+    // The catalog is the contract, and this arrangement IS the feature: a
+    // spinner that appears and disappears without moving anything under it. A
+    // card that draws it as a block of its own teaches the layout jump back.
+    const at = styleguide.indexOf('export-history__title');
+    assert.ok(at > -1, 'the created-videos card must draw the section heading');
+    const card = styleguide.slice(at, at + 400);
+    assert.match(card, /export-history__title[\s\S]*class="spinner"[\s\S]*<\/p>/,
+      'the catalog must draw the spinner inside the heading <p>: ' + card);
+  });
+
+  it('shows a row whose note the row tint has to cover', () => {
+    // Hovering the catalog runs the real rule, so the example only has to BE a
+    // row that carries a note. Without one, the thing being documented — a
+    // highlight that covers the note belonging to that video — cannot be seen
+    // at all.
+    assert.match(styleguide, /downloaded: true/,
+      'one catalog row must be a landed download, note and all');
+    // On the <li>'s own class list, not merely somewhere in the page: both
+    // names appear in the prose above the cards, so a grep over the whole file
+    // would pass over a catalog that renders neither.
+    const li = styleguide.match(/'<li class="export-history__row'[\s\S]*?\+ '">'/);
+    assert.ok(li, 'the catalog must build the row\'s <li> class list');
+    assert.ok(li[0].includes('export-history__row--busy'),
+      'the row mid-transfer must wear the class that keeps the tint off it: ' + li[0]);
+    // Without this the catalog would draw the cropped box the app no longer has.
+    assert.ok(li[0].includes('export-history__row--continued'),
+      'a catalog row with something under the button must close its box: ' + li[0]);
   });
 
   it('documents the video item in the styleguide, rendered by the real CSS', () => {
@@ -3941,12 +4039,13 @@ describe('burn video wiring', () => {
   });
 
   it('exposes exactly the entry points the markup calls on SPA', () => {
-    // Harvested from the markup rather than listed by hand: an onclick naming a
+    // Harvested from the markup rather than listed by hand: a handler naming a
     // function nobody defined is a dead control that no other test can see.
-    const called = [...EXPORT_POP.matchAll(/onclick="SPA\.(\w+)\(/g)].map((m) => m[1]);
+    const called = [...EXPORT_POP.matchAll(/on[a-z]+="SPA\.(\w+)\(/g)].map((m) => m[1]);
     assert.deepStrictEqual([...new Set(called)].sort(),
-      ['downloadSrt', 'toggleExportMenu', 'videoItemAction'],
-      'the control is one toggle and two menu items — nothing else');
+      ['burnFullVideo', 'burnMakeHover', 'downloadSrt', 'openClipPanel',
+       'toggleExportMenu', 'videoItemAction'],
+      'the control is one toggle, two items and the two choices under the video item');
     for (const fn of called) {
       assert.ok(new RegExp('SPA\\.' + fn + '\\s*=').test(html),
         'SPA.' + fn + ' must exist — the markup calls it inline');
@@ -3961,6 +4060,123 @@ describe('burn video wiring', () => {
       'the menu must not carry its own Hide button');
     assert.ok(!/'burn\.hide'/.test(html),
       'burn.hide is no longer used — a key with no caller rots');
+  });
+
+  it('loads the fragment helpers as plain script tags, and precaches them', () => {
+    for (const mod of ['js/clip_time.js', 'js/float_panel.js']) {
+      assert.ok(html.includes('<script src="' + mod + '"></script>'),
+        'index.html must load ' + mod + ' — single source, no inline copy');
+      assert.ok(sw.includes("'" + mod + "'"), 'the SW must precache ' + mod);
+    }
+  });
+
+  it('hangs the two choices off the video item as a menu', () => {
+    const item = EXPORT_POP.match(/<button[^>]*id="btn-burn-video"[^>]*>/);
+    assert.ok(item, 'the video item must exist');
+    for (const attr of ['aria-haspopup="menu"', 'aria-expanded="false"',
+                        'aria-controls="burn-make-menu"']) {
+      assert.ok(item[0].includes(attr), 'the item must carry ' + attr);
+    }
+    const choices = EXPORT_POP.match(/<div[^>]*id="burn-make-menu"[^>]*>/);
+    assert.ok(choices && choices[0].includes('role="menu"') && / hidden>/.test(choices[0]),
+      'the choices ship as a closed role="menu"');
+    assert.strictEqual((EXPORT_POP.match(/role="menuitem"/g) || []).length, 2,
+      'two choices: the whole video and a fragment');
+  });
+
+  it('gates the list of created videos like the render, and ships it closed', () => {
+    const section = EXPORT_POP.match(/<div[^>]*id="export-history"[^>]*>/);
+    assert.ok(section && section[0].includes('data-gh-only'),
+      'listing and downloading need the API — the section belongs to sessions that can use it');
+    const spinner = EXPORT_POP.match(/<[a-z]+[^>]*id="burn-history-spinner"[^>]*>/);
+    assert.ok(spinner && spinner[0].includes('role="status"'),
+      'the spinner is a status, so assistive tech is told about the wait too');
+    assert.ok(spinner[0].includes('data-i18n-aria-label="history.loading"'),
+      'and its name is translated by translatePage(), not frozen at first paint');
+    for (const id of ['burn-history-spinner', 'burn-history-note', 'burn-history-list']) {
+      const tag = EXPORT_POP.match(new RegExp('<[a-z]+[^>]*id="' + id + '"[^>]*>'));
+      assert.ok(tag && / hidden>/.test(tag[0]), '#' + id + ' must ship hidden');
+    }
+  });
+
+  it('spins inside the heading, so the list below it never jumps', () => {
+    // The spinner used to be a block of its own between the heading and the
+    // rows: it appeared, pushed everything under it down, and vanished again —
+    // a menu that shifts under the pointer while one request is out. Now it
+    // sits in the heading line, after the text, and the layout stays put.
+    const title = EXPORT_POP.match(/<p class="export-history__title"[\s\S]*?<\/p>/);
+    assert.ok(title, 'the heading of the created-videos section is not in the markup');
+    assert.ok(/id="burn-history-spinner"/.test(title[0]),
+      'the spinner belongs inside the heading line, not beside it: ' + title[0]);
+    // translatePage() writes textContent on every [data-i18n] element, which
+    // would delete a spinner nested inside one. So the heading's TEXT gets its
+    // own element and the spinner is its sibling.
+    assert.ok(!/<p class="export-history__title"[^>]*\sdata-i18n=/.test(title[0]),
+      'a data-i18n on the <p> itself would wipe the spinner on every translate');
+    const text = title[0].match(/<span[^>]*data-i18n="history\.title"[^>]*>/);
+    assert.ok(text, 'the heading text needs its own [data-i18n] element');
+    assert.ok(!/data-i18n=/.test(title[0].match(/id="burn-history-spinner"[^>]*>/)[0]),
+      'and the spinner itself must carry no data-i18n to be written over');
+    // A literal space between them, the way the reviewer described it: text,
+    // space, spinner.
+    assert.match(title[0].replace(/\s+/g, ' '),
+      /<\/span> <(?:span|div)[^>]*id="burn-history-spinner"/,
+      'text, then a space, then the spinner');
+  });
+
+  it('makes the fragment panel a labelled dialog that does not block the page', () => {
+    const at = html.indexOf('<section id="clip-panel"');
+    assert.ok(at > -1, 'the fragment panel markup must exist');
+    const panel = html.slice(at, html.indexOf('</section>', at));
+    const open = panel.match(/<section[^>]*>/)[0];
+    assert.ok(open.includes('role="dialog"') && open.includes('aria-labelledby="clip-panel-title"'),
+      'a labelled dialog');
+    assert.ok(!open.includes('aria-modal="true"'),
+      'not modal: the reviewer seeks the player under it to find the boundaries');
+    assert.ok(/ hidden>/.test(open), 'and it ships closed');
+    for (const id of ['clip-start', 'clip-end']) {
+      assert.ok(panel.includes('for="' + id + '"'), '#' + id + ' needs a label');
+    }
+    const called = [...panel.matchAll(/on[a-z]+="SPA\.(\w+)\(/g)].map((m) => m[1]);
+    assert.deepStrictEqual([...new Set(called)].sort(),
+      ['clipPanelDragStart', 'closeClipPanel', 'createClip', 'onClipInput', 'setClipFromPlayer']);
+    for (const fn of called) {
+      assert.ok(new RegExp('SPA\\.' + fn + '\\s*=').test(html),
+        'SPA.' + fn + ' must exist — the markup calls it inline');
+    }
+  });
+
+  it('asks for no keypad the fragment boundary cannot be typed on', () => {
+    // A boundary is "12:34.500": a colon, and on a Ukrainian keyboard a comma
+    // for the fraction. inputmode="decimal" gives a phone a numeric keypad with
+    // neither, so the one field whose format needs them could not be filled in
+    // at all. The full keyboard is the only one that can type this.
+    const at = html.indexOf('<section id="clip-panel"');
+    const panel = html.slice(at, html.indexOf('</section>', at));
+    assert.ok(!panel.includes('inputmode='),
+      'no inputmode on the boundary fields — a keypad without ":" cannot type one');
+  });
+
+  it('leaves the keys pressed inside the fragment panel to its own controls', () => {
+    // Space on "set the player's current time" must press that button, not
+    // toggle playback under it — the same reason the preferences panel is exempt.
+    assert.ok(html.includes("closest('.prefs, .float-panel, .export-pop')"),
+      'the preview shortcuts must stand aside inside the fragment panel and the ' +
+      'download menu, or Space on a choice or a row plays the video instead');
+  });
+
+  it('takes the fragment panel away with the other controls in fullscreen', () => {
+    assert.match(css, /#view-preview\.fs-mode \.float-panel \{ display: none; \}/);
+  });
+
+  it('opens the choices on hover exactly where the stylesheet flies them out', () => {
+    // The two queries are complements: the driver opens on hover only where the
+    // stylesheet does not unfold the choices inline. Change one alone and a
+    // passing pointer shoves an inline list about, or a flyout never opens.
+    assert.ok(html.includes("window.matchMedia('(hover: hover) and (min-width: 641px)')"),
+      'the hover query in the driver moved');
+    assert.ok(css.includes('@media (max-width: 640px), (hover: none) {'),
+      'the inline-choices query in the stylesheet moved');
   });
 });
 
@@ -3978,9 +4194,9 @@ describe('burn video driver behaviour', () => {
   const fs = require('fs');
   const html = fs.readFileSync('site/index.html', 'utf8');
 
-  function makeEl(id) {
+  function makeEl(id, doc) {
     const el = {
-      id: id, hidden: false, disabled: false, href: '', className: '',
+      id: id, disabled: false, href: '', className: '',
       style: {}, attrs: {}, children: [], writes: 0, htmlWrites: 0,
       // The flat element map has no tree, so a descendant a selector reaches
       // has to be registered here by the harness that owns it.
@@ -3990,8 +4206,38 @@ describe('burn video driver behaviour', () => {
       appendChild: function (c) { this.children.push(c); return c; },
       querySelector: function (sel) { return this.byCss[sel] || null; },
       clicks: 0,
-      click: function () { this.clicks++; }
+      click: function () { this.clicks++; },
+      // The form and layout surface the fragment panel reads and writes.
+      value: '',
+      offsetWidth: 0,
+      offsetHeight: 0,
+      focused: false,
+      // Focus is a document-wide fact, not a per-element flag: a surface about
+      // to hide itself asks whether the focus it is dropping was its own.
+      focus: function () {
+        this.focused = true;
+        if (doc) doc.activeElement = this;
+      },
+      // Same missing tree as byCss above: a container names the elements it
+      // holds, and contains() answers from that list.
+      owns: [],
+      contains: function (node) { return node === this || this.owns.indexOf(node) > -1; },
+      getBoundingClientRect: function () { return { left: 0, top: 0, bottom: 0 }; }
     };
+    // Hiding is where the browser moves focus on its own: a section that holds
+    // the focused element drops it to <body> the moment it goes hidden. A plain
+    // flag models the hiding but not that, and then a surface that asks whether
+    // the focus was its own AFTER hiding itself reads the same as one that asks
+    // before — the whole ordering closeClipPanel turns on.
+    let hidden = false;
+    Object.defineProperty(el, 'hidden', {
+      get: function () { return hidden; },
+      set: function (v) {
+        hidden = !!v;
+        if (hidden && doc && doc.activeElement && el.contains(doc.activeElement)) doc.activeElement = null;
+      },
+      enumerable: true, configurable: true
+    });
     // textContent counts its writes: #burn-step is the item's live region, so
     // "written only when the text actually changes" is a behaviour, not a
     // detail — a re-write makes a screen reader announce it again.
@@ -4028,8 +4274,14 @@ describe('burn video driver behaviour', () => {
   // a bare label, so the track, the run link and the error line all ship closed.
   const EL_IDS = ['btn-export', 'export-menu', 'export-video', 'btn-burn-video',
                   'burn-item-label', 'burn-track', 'burn-step', 'burn-elapsed',
-                  'burn-eta', 'burn-run-link', 'burn-error', 'view-preview'];
-  const HIDDEN_IDS = ['export-menu', 'burn-track', 'burn-run-link', 'burn-error'];
+                  'burn-eta', 'burn-run-link', 'burn-error', 'view-preview',
+                  'burn-make', 'burn-make-menu', 'btn-burn-full', 'btn-burn-clip',
+                  'export-history', 'burn-history-spinner', 'burn-history-note',
+                  'burn-history-list', 'clip-panel', 'clip-start', 'clip-end',
+                  'clip-problem', 'btn-clip-create', 'prefs-menu', 'freshness-bar'];
+  const HIDDEN_IDS = ['export-menu', 'burn-track', 'burn-run-link', 'burn-error',
+                      'burn-make-menu', 'burn-history-spinner', 'burn-history-note',
+                      'burn-history-list', 'clip-panel', 'clip-problem'];
 
   const NO_PROGRESS = { fraction: 0, label: '', done: false, failed: false,
                         failedStep: '', renderFraction: null, renderStartedMs: null,
@@ -4042,18 +4294,40 @@ describe('burn video driver behaviour', () => {
   const PHASE_MODEL = require('../site/js/burn_video');
   const ZIP_READER = require('../site/js/burn_artifact');
   // Same reasoning for the menu model (tests/test_export_menu.js): videoItemState
-  // decides which of the four faces the item wears, and a stub would let it show
-  // "Download" over a run that never happened and still pass.
+  // decides which of the three faces the item wears, and a stub would let it
+  // offer a second render over a run in flight and still pass.
   const MENU_MODEL = require('../site/js/export_menu');
+  // And for the fragment helpers (tests/test_clip_time.js,
+  // tests/test_float_panel.js): the panel's times and position come from the
+  // real parsing, formatting and clamping.
+  const CLIP_TIME = require('../site/js/clip_time');
+  const PANEL = require('../site/js/float_panel');
 
   function makeHarness(over) {
     const els = {};
-    EL_IDS.forEach(function (id) { els[id] = makeEl(id); });
+    // Built before the elements: every one of them focuses through it, so the
+    // harness has one activeElement the way a page does.
+    const doc = {
+      activeElement: null,
+      getElementById: function (id) { return els[id] || null; },
+      querySelector: function () { return null; },
+      documentElement: {},
+      createElement: function (tag) {
+        const el = makeEl('created', doc);
+        el.tagName = String(tag || '').toUpperCase();
+        env.created.push(el);
+        return el;
+      }
+    };
+    EL_IDS.forEach(function (id) { els[id] = makeEl(id, doc); });
     HIDDEN_IDS.forEach(function (id) { els[id].hidden = true; });
     els['export-video'].className = 'export-item-group';   // as the markup ships it
+    // What the fragment panel's <section> holds, for contains().
+    els['clip-panel'].owns = [els['clip-start'], els['clip-end'],
+                              els['clip-problem'], els['btn-clip-create']];
     // The status line has no id in the markup — it is reached from the group by
     // class, so the harness has to hang it there for querySelector to find.
-    const meta = makeEl('export-item__meta');
+    const meta = makeEl('export-item__meta', doc);
     els['export-video'].byCss['.export-item__meta'] = meta;
     const store = {};
     const env = {
@@ -4072,16 +4346,8 @@ describe('burn video driver behaviour', () => {
       // could never show.
       confirms: [],
       confirmAnswer: true,
-      document: {
-        getElementById: function (id) { return els[id] || null; },
-        documentElement: {},
-        createElement: function () {
-          const el = makeEl('created');
-          env.created.push(el);
-          return el;
-        }
-      },
-      window: { screen: { width: 1280, height: 720 } },
+      document: doc,
+      window: { screen: { width: 1280, height: 720 }, innerWidth: 1280, innerHeight: 720 },
       localStorage: {
         getItem: function (k) { return k in store ? store[k] : null; },
         setItem: function (k, v) { store[k] = String(v); },
@@ -4137,6 +4403,27 @@ describe('burn video driver behaviour', () => {
       exportIconSvg: MENU_MODEL.exportIconSvg,
       exportSrtPath: MENU_MODEL.exportSrtPath,
       exportSrtName: MENU_MODEL.exportSrtName,
+      burnedVideoName: MENU_MODEL.burnedVideoName,
+      historyRowState: MENU_MODEL.historyRowState,
+      historyWhen: MENU_MODEL.historyWhen,
+      // Discovery is stubbed at the network edge only: parsing, filtering and
+      // ordering are the REAL burnHistoryEntries(), so a list the driver draws
+      // from a title the parser would reject cannot pass here.
+      historyRuns: [],
+      historyCalls: [],
+      listBurnRuns: function (api, tok, workflow, since) {
+        env.historyCalls.push({ api: api, workflow: workflow, since: since });
+        return Promise.resolve(env.historyRuns);
+      },
+      burnHistorySince: PHASE_MODEL.burnHistorySince,
+      burnHistoryEntries: PHASE_MODEL.burnHistoryEntries,
+      burnClipProblem: PHASE_MODEL.burnClipProblem,
+      formatClipTime: CLIP_TIME.formatClipTime,
+      parseClipTime: CLIP_TIME.parseClipTime,
+      clampPanelPosition: PANEL.clampPanelPosition,
+      defaultPanelPosition: PANEL.defaultPanelPosition,
+      panelClearOf: PANEL.panelClearOf,
+      currentLang: 'en',
       burnStateKey: function (a, b) { return 'burn:' + a + ':' + b; },
       listRunArtifacts: function () { return Promise.resolve([]); },
       ghWriteUser: function () { return true; },
@@ -4172,15 +4459,22 @@ describe('burn video driver behaviour', () => {
       'videoItemState', 'downloadFraction', 'megabytes',
       'exportIconSvg', 'exportSrtPath', 'exportSrtName',
       'listRunArtifacts', 'ghWriteUser', 'showToast', 'fetch', 'setTimeout', 'clearTimeout',
-      'findEocd', 'readCentralDirectory', 'pickMp4Entry', 'localDataOffset'];
+      'findEocd', 'readCentralDirectory', 'pickMp4Entry', 'localDataOffset',
+      'listBurnRuns', 'burnHistorySince', 'burnHistoryEntries', 'burnClipProblem',
+      'historyRowState', 'historyWhen', 'burnedVideoName', 'formatClipTime',
+      'parseClipTime', 'clampPanelPosition', 'defaultPanelPosition', 'panelClearOf', 'currentLang'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
       'showBurnError', 'resumeBurnWatch', 'saveMp4', 'downloadBurned', 'downloadSrt',
       'openExportMenu', 'closeExportMenu', 'toggleExportMenu', 'videoItemAction',
       'retranslateBurnPanel', 'updateExportUi', 'extractBurnedMp4',
       'burnElapsedMinutes', 'onBurnKeydown', 'onBurnDocumentClick',
-      'advanceBurnDownload'];
+      'advanceBurnDownload', 'refreshBurnHistory', 'syncBurnFollowing',
+      'armBurnFollowing', 'burnFullVideo', 'burnMakeHover',
+      'openClipPanel', 'closeClipPanel', 'setClipFromPlayer', 'onClipInput',
+      'createClip', 'moveClipPanel', 'clipPanelDragStart'];
     const tail = '\nreturn {' + exported.map(function (n) { return n + ': ' + n; }).join(', ') +
-      ', getWatch: function () { return burnWatch; } };';
+      ', getWatch: function () { return burnWatch; }' +
+      ', getHistory: function () { return burnHistory; } };';
     env.api = new Function(names.join(','), html.slice(start, end) + tail)
       .apply(null, names.map(function (n) { return env[n]; }));
     return env;
@@ -4198,6 +4492,79 @@ describe('burn video driver behaviour', () => {
   function savedWatch(runId) {
     return JSON.stringify({ requestId: 'old', runId: runId, runUrl: '',
                             startedAt: Date.now(), talkId: 't', videoSlug: 'v' });
+  }
+
+  // ---- the videos already created: helpers ----
+  //
+  // A realistic talk and video. The run-name parser checks ids the way the
+  // workflow validates them, so the 't'/'v' the render tests get by with would
+  // never parse into a row.
+  const TALK = '1993-09-19_Ganesha-Puja';
+  const SLUG = 'Talk';
+
+  // A successful burn-subtitles.yml run as the runs API returns it, its title
+  // built the way the workflow's run-name builds it.
+  function burnRun(id, over) {
+    const o = Object.assign({ talk: TALK, slug: SLUG, actor: 'me', scale: 100,
+                              clip: 'full', ageMs: 3600000, conclusion: 'success',
+                              request: 'req-' + id.toString(36) + '-a' }, over || {});
+    return {
+      id: id,
+      conclusion: o.conclusion,
+      created_at: new Date(Date.now() - o.ageMs).toISOString(),
+      html_url: 'https://github.com/o/r/actions/runs/' + id,
+      display_title: ['Ganesha Puja — Talk', o.talk + '/' + o.slug, o.actor,
+                      o.scale + '%', o.clip, o.request].join(' · ')
+    };
+  }
+
+  function historyHarness(runs, over) {
+    const env = makeHarness(Object.assign({
+      ghWriteUser: function () { return { login: 'me' }; },
+      previewState: { talkId: TALK, videoSlug: SLUG, player: null, subtitles: [],
+                      srtLang: 'uk', edits: {} }
+    }, over || {}));
+    env.historyRuns = runs;
+    return env;
+  }
+
+  // Opens the menu and lets its one discovery request land.
+  async function listed(env) {
+    env.api.openExportMenu();
+    await settle();
+  }
+
+  function rows(env) { return env.els['burn-history-list'].children; }
+
+  function findByClass(el, cls) {
+    if (!el || typeof el !== 'object') return null;
+    if (String(el.className || '').split(/\s+/).indexOf(cls) > -1) return el;
+    for (const child of el.children || []) {
+      const hit = findByClass(child, cls);
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  // One part of the row for a run, looked up afresh each time: the list is
+  // rebuilt on every look, so a node held across a reopen is a detached one.
+  function rowPart(env, runId, cls) {
+    const row = rows(env).find(function (li) { return li.attrs['data-run'] === String(runId); });
+    assert.ok(row, 'no row on screen for run ' + runId);
+    return findByClass(row, cls);
+  }
+
+  // A stand-in for the Vimeo player: the two reads the fragment panel makes.
+  function fakePlayer(durationSec, nowSec) {
+    const player = {
+      now: nowSec || 0,
+      getDuration: function () { return Promise.resolve(durationSec); },
+      getCurrentTime: function () { return Promise.resolve(player.now); },
+      // Read by the render's own geometry once a fragment is dispatched.
+      getVideoWidth: function () { return Promise.resolve(1280); },
+      getVideoHeight: function () { return Promise.resolve(720); }
+    };
+    return player;
   }
 
   it('dispatches only one run while a render is already being followed', async () => {
@@ -4221,26 +4588,6 @@ describe('burn video driver behaviour', () => {
     return { previewState: Object.assign({ talkId: 't', videoSlug: 'v', player: null,
                                            subtitles: [], srtLang: 'uk', edits: {} }, over) };
   }
-
-  it('measures a finished run to when it finished, not to now', () => {
-    // Regression: the panel said "done in 17 min" for a run that took 84
-    // seconds, because a finished run was still measured against Date.now().
-    const env = makeHarness();
-    const started = Date.now() - 17 * 60000;
-    env.api.renderBurnProgress({
-      fraction: 1, label: '', done: true, failed: false, failedStep: '',
-      unknownStep: '', renderFraction: 1, renderStartedMs: started,
-      startedMs: started, finishedMs: started + 84 * 1000,
-    });
-    // 84 s floors to 1 minute; the wall clock would have said 17.
-    assert.match(env.els['burn-eta'].textContent, /^T:burn\.done_in$/);
-    // The t() stub drops the {min} placeholder, so the rendered string is the
-    // same either way — assert the NUMBER, which is what actually regressed.
-    const shown = env.api.burnElapsedMinutes({
-      done: true, failed: false, startedMs: started, finishedMs: started + 84 * 1000,
-    });
-    assert.strictEqual(shown, 1, 'a finished run must not grow with the wall clock');
-  });
 
   // Tidying the menu away used to be a one-way door: the panel vanished, the
   // render button went live again, and the only way back to a run in flight was
@@ -4283,21 +4630,23 @@ describe('burn video driver behaviour', () => {
   });
 
   it('does not resume polling a run that already reached a terminal state', async () => {
-    // A finished item is a result, not a progress report: re-arming the loop
-    // over it would poll a run that can no longer change, every 5 seconds, for
-    // as long as the menu stays open.
+    // A finished run is handed to the list and dropped from the item, so there
+    // is nothing left to follow: re-arming the loop over it would poll a run
+    // that can no longer change, every 5 seconds, for as long as the menu stays
+    // open.
     const env = makeHarness();
     env.api.openExportMenu();
     await env.api.startBurn('t', 'v');
     await settle();
-    env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
+    env.api.onBurnFinished();
     env.api.closeExportMenu();
 
     env.api.openExportMenu();
     await settle();
     assert.strictEqual(armedTimers(env), 0, 'a finished run must not be polled again');
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'and it still offers the file it produced');
+    assert.strictEqual(env.api.getWatch(), null, 'the watch went with the run');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'the item offers the next render, whole or a fragment');
   });
 
   // A surface that floats over the page is expected to close on Escape: a menu
@@ -4343,9 +4692,10 @@ describe('burn video driver behaviour', () => {
     const asked = [];
     env.api.onBurnDocumentClick({ target: { closest: function (sel) { asked.push(sel); return null; } } });
 
-    assert.deepStrictEqual(asked, ['.export-pop'],
+    assert.deepStrictEqual(asked, ['.export-pop, .float-panel'],
       'inside-ness is decided against the anchor, not the menu alone — the ' +
-      'download button is inside the anchor and is the toggle');
+      'download button is inside the anchor and is the toggle — and against the ' +
+      'fragment panel, whose create button opens this menu from inside its click');
     assert.strictEqual(env.els['export-menu'].hidden, true, 'the menu closes');
     assert.ok(env.api.getWatch(), 'the run goes on — the button is the way back to it');
   });
@@ -4379,18 +4729,24 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['btn-export'].getAttribute('aria-expanded'), 'true');
   });
 
-  it('names the result, not the progress, once the run has finished', async () => {
+  it('hands the finished video to the list instead of wearing it', async () => {
+    // The item used to become "Download" once its run finished — and stayed so
+    // for as long as the subtitles did not change, which is exactly when a
+    // reviewer wants a fragment of those same subtitles. The finished video now
+    // lives in the list, and the item goes back to offering a render.
     const env = makeHarness();
     env.api.openExportMenu();
     await env.api.startBurn('t', 'v');
     assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working',
       'precondition: the item was the progress readout');
-    env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'a finished run offers the RESULT — the item itself becomes the download');
-    assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'),
-      'export.video_download',
+    const looks = env.historyCalls.length;
+    env.api.onBurnFinished();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
+    assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'), 'export.video_make',
       'the key travels with the text, or a language toggle reverts the face');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+    assert.strictEqual(env.historyCalls.length, looks + 1,
+      'the list looks again, so the new video appears where downloads happen');
   });
 
   it('offers a render when nothing has been started', () => {
@@ -4404,29 +4760,26 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.meta.hidden, true, 'no status line before a run');
   });
 
-  it('asks the same question the label answered when the item is pressed', async () => {
-    // One item, two errands. The click must not decide again from scratch: it
-    // reads the face videoItemState() picked, or a press on "Download" could
-    // start a 25-minute render instead of handing over the finished file.
-    const listed = [];
-    const env = makeHarness({
-      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
-      listRunArtifacts: function (api, token, runId) {
-        listed.push(runId);
-        return Promise.resolve([{ id: 9, size_in_bytes: 100 }]);
-      }
-    });
+  it('opens its two choices when pressed, and dispatches nothing itself', async () => {
+    // One item, two errands — the whole video or a fragment. A press must not
+    // start a 25-minute render on its own: it opens the choices, and only from
+    // the face that offers to build.
+    const env = makeHarness();
+    await env.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(env.dispatched, 0, 'a press on the item is not a dispatch');
+    assert.strictEqual(env.els['burn-make-menu'].hidden, false, 'the choices are open');
+    assert.strictEqual(env.els['btn-burn-video'].getAttribute('aria-expanded'), 'true');
 
-    await env.api.videoItemAction();
+    await env.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true, 'a second press closes them');
+    assert.strictEqual(env.els['btn-burn-video'].getAttribute('aria-expanded'), 'false');
+
+    await env.api.burnFullVideo();
     await settle();
-    assert.strictEqual(env.dispatched, 1, 'the start face means "build it"');
-    assert.deepStrictEqual(listed, [], 'and asks for no artifact — there is none yet');
-
-    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    await env.api.videoItemAction();
-    assert.strictEqual(env.dispatched, 1, 'the download face must not start a second run');
-    assert.deepStrictEqual(listed, [5],
-      'it goes to the artifact of the run it followed, by that run id');
+    assert.strictEqual(env.dispatched, 1, 'the first choice renders the whole video');
+    await env.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true,
+      'a press on "please wait" opens nothing');
   });
 
   it('writes the download glyph once, not on every poll', () => {
@@ -4688,49 +5041,28 @@ describe('burn video driver behaviour', () => {
 
   // ---- a finished video is only an answer while it still matches the screen ----
 
-  it('offers a render again once the subtitles move on from the one it built', async () => {
-    // The file is "this video with THESE subtitles" only for as long as the
-    // subtitles are these. Edit a block afterwards and the rendered video no
-    // longer matches the preview, so the item must stop handing it over as
-    // though it did — a wrong file is worse than a wait.
-    const env = makeHarness();
+  it('clears the finished render out from under the offer to build', async () => {
+    // Everything under the item belongs to the run it follows. Once that run
+    // has gone to the list, a track and a run link left under "Create the video
+    // with subtitles" would say the opposite of the label above them.
+    const env = makeHarness(Object.assign(previewing({ edits: {} }), {
+      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; }
+    }));
     await env.api.startBurn('t', 'v');
-    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'precondition: the run finished and the item became the download');
-
-    env.previewState.edits = { uk: { 3: 'a later correction' } };
-    env.api.updateExportUi();
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
-      'the subtitles moved on — offer to build the ones now on screen');
-  });
-
-  it('clears the disowned render out from under the offer to rebuild', async () => {
-    // An item offering to build carried the PREVIOUS render's readout beneath
-    // it: a full green track, "done in N min", and a link to the run — under
-    // the words "Create the video with subtitles". Every one of those belongs
-    // to a video the item has just stopped offering, so together they said the
-    // opposite of the label directly above them.
-    const env = makeHarness(previewing({ edits: {} }));
-    await env.api.startBurn('t', 'v');
-    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'precondition: the finished video is on offer');
+    await settle();
+    env.api.renderBurnProgress({ fraction: 0.9, label: 'Render 80%', done: false,
+      failed: false, failedStep: '', unknownStep: '', startedMs: Date.now() - MIN_MS });
     assert.strictEqual(env.els['burn-track'].hidden, false, 'precondition: its track shows');
+    assert.strictEqual(env.els['burn-run-link'].hidden, false, 'precondition: linked');
 
-    // The subtitles move on, so the finished video is no longer this video.
-    env.previewState.edits.uk = { 3: 'edited after the render' };
-    env.api.updateExportUi();
+    env.api.onBurnFinished();
 
     assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
     assert.strictEqual(env.els['burn-track'].hidden, true,
-      'the finished track belongs to the render we stopped offering');
-    assert.strictEqual(env.meta.hidden, true,
-      '"done in N min" is about that same render');
+      'the track belongs to the render the item no longer follows');
+    assert.strictEqual(env.meta.hidden, true, 'and so do its times');
     assert.strictEqual(env.els['burn-run-link'].hidden, true,
-      'and so is the link to the run that produced it');
-    assert.ok(!/export-item-group--done/.test(env.els['export-video'].className),
-      'the green tint has to go with them');
+      'and the link to the run that produced it');
   });
 
   it('shows nothing under the offer, even from a run never marked finished', async () => {
@@ -4782,25 +5114,6 @@ describe('burn video driver behaviour', () => {
     // disown sweep must not take it — the error line is not a disowned result.
     assert.strictEqual(env.els['burn-run-link'].hidden, false,
       'a failure keeps its run link — it explains the offer above it');
-  });
-
-  it('will not vouch for a run recorded before signatures existed', async () => {
-    // Watches persisted by an older build carry no signature, so there is
-    // nothing to compare the current subtitles against — we cannot know what
-    // that video was built from. Offering it as "the video with subtitles"
-    // claims a match we cannot prove, and because an unsigned watch can never
-    // BECOME stale, that claim would also be permanent: the item would sit on
-    // its download face forever and there would be no way left to build again.
-    const env = makeHarness(previewing({ edits: { uk: { 3: 'edited' } } }));
-    env.localStorage.setItem('burn:t:v', savedWatch(7));   // no editsSig field
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
-      'an unprovable run offers a rebuild, not a download');
-    // The run itself is not thrown away — the link to it survives, so the
-    // artifact is still reachable from the run page.
-    assert.ok(env.api.getWatch(), 'the recorded run is kept, only not vouched for');
   });
 
   it('dispatches nothing while a language other than Ukrainian is previewed', async () => {
@@ -4940,10 +5253,11 @@ describe('burn video driver behaviour', () => {
     env.api.resumeBurnWatch('t', 'v');
     await settle();
     assert.ok(env.api.getWatch(), 'precondition: a watch is being followed');
-    // Closing the menu no longer opens a path to a second dispatch — the button
-    // only reopens it. A NEW render is legitimate once the old one is terminal,
-    // which is the path this guard has to hold on.
-    env.api.onBurnFinished({ startedMs: Date.now() - 60000, finishedMs: Date.now() });
+    // A NEW render is legitimate once the old one is terminal. A failure keeps
+    // its watch (the run link explains the error), which is the path this guard
+    // has to hold on.
+    env.api.showBurnError('boom');
+    assert.ok(env.api.getWatch(), 'precondition: the failed run is still recorded');
     env.api.startBurn();
     assert.strictEqual(env.api.getWatch(), null,
       'startBurn must drop the old watch before awaiting, so an in-flight poll ' +
@@ -5123,7 +5437,7 @@ describe('burn video driver behaviour', () => {
 
   it('moves the label i18n key with the label text', async () => {
     // translatePage() repaints every [data-i18n] element on a language toggle,
-    // so a stale key would revert a finished run's label to "Create the video".
+    // so a stale key would revert the label to the face it no longer wears.
     const env = makeHarness();
     env.api.startBurn();
     await settle();
@@ -5131,15 +5445,10 @@ describe('burn video driver behaviour', () => {
       'export.video_working');
     assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working');
 
-    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'),
-      'export.video_download');
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download');
-
-    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS,
-      { fraction: 0.1, label: 'Download video' }));
+    env.api.onBurnFinished();
     assert.strictEqual(env.els['burn-item-label'].getAttribute('data-i18n'),
       'export.video_make');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
   });
 
   it('stops claiming a render is in flight when no job step ever ran', () => {
@@ -5174,19 +5483,6 @@ describe('burn video driver behaviour', () => {
 
   // ---- a UI-language switch must reach the composed status line ----
 
-  it('redraws the finished status line when the UI language changes', () => {
-    // "done in 21 min" is composed at render time, so no data-i18n attribute can
-    // repaint it: translatePage() has to redraw the panel from its last payload.
-    const env = makeHarness();
-    env.api.onBurnFinished({ startedMs: Date.now() - 21 * MIN_MS,
-                             finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in');
-    env.els['burn-eta'].textContent = 'STALE';
-    env.api.retranslateBurnPanel();
-    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in',
-      'the duration line must follow the interface language');
-  });
-
   it('does not turn an error report back into a progress report', () => {
     // Repainting a non-terminal payload would resurrect the phase line that
     // showBurnError deliberately took down.
@@ -5199,92 +5495,11 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['burn-elapsed'].textContent, '');
   });
 
-  it('leaves an expired item frozen across a language switch', async () => {
-    // Its track is muted and its times are gone on purpose; a repaint would put
-    // both back and offer a download that cannot work.
-    const env = makeHarness({
-      listRunArtifacts: function () { return Promise.resolve([{ id: 9, expired: true }]); }
-    });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
-                                 startedMs: Date.now() - 21 * MIN_MS,
-                                 finishedMs: Date.now() });
-    await env.api.downloadBurned();
-    env.api.retranslateBurnPanel();
-    assert.match(env.els['export-video'].className, /export-item-group--expired/);
-    assert.strictEqual(env.els['burn-eta'].textContent, '');
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
-      'the item must not go back to offering a file that no longer exists');
-  });
-
   it('does not touch an item that was never drawn', () => {
     const env = makeHarness();
     env.api.retranslateBurnPanel();
     assert.strictEqual(env.els['burn-track'].children.length, 0,
       'no payload yet means nothing to redraw');
-  });
-
-  it('keeps the duration a finished run earned when the download fails', () => {
-    // The exception that preserves the finished title must preserve the fact
-    // beneath it too: the render really did take 5 minutes.
-    const env = makeHarness();
-    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS,
-                             finishedMs: Date.now() });
-    env.api.showBurnError('no mp4 inside the archive');
-    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in',
-      'preserve the title and the duration together, or neither');
-  });
-
-  it('keeps offering the finished video when only the download failed', () => {
-    const env = makeHarness();
-    env.api.onBurnFinished({ startedMs: Date.now() - 5 * MIN_MS,
-                             finishedMs: Date.now() });
-    env.api.showBurnError('no mp4 inside the archive');
-    assert.match(env.els['export-video'].className, /export-item-group--done/,
-      'the render did succeed — it was the download that failed');
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'the file is still there: taking the download away would strand the user');
-  });
-
-  it('greens the whole track on a finished run and says how long it took', () => {
-    const env = makeHarness();
-    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
-                                 startedMs: Date.now() - 21 * MIN_MS,
-                                 finishedMs: Date.now() });
-    assert.strictEqual(env.els['export-video'].className,
-      'export-item-group export-item-group--done');
-    assert.deepStrictEqual(widths(env), ['100%', '100%', '100%', '100%']);
-    assert.ok(classes(env).every(function (c) { return /burn-seg--done/.test(c); }));
-    assert.strictEqual(env.els['burn-track'].getAttribute('aria-valuenow'), '100');
-    assert.strictEqual(env.els['burn-eta'].textContent, 'T:burn.done_in');
-  });
-
-  it('carries the run start into the finished item', async () => {
-    // The "done in 21 min" line has to come from the API's own start instant —
-    // the finished payload the driver synthesises must not lose it.
-    const start = Date.now() - 21 * MIN_MS;
-    const env = makeHarness({
-      matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; },
-      computeProgress: function () {
-        return Object.assign({}, NO_PROGRESS,
-          { fraction: 1, done: true, startedMs: start, finishedMs: Date.now() });
-      },
-      t: function (k) { return k === 'burn.done_in' ? '{min} min' : k; }
-    });
-    env.api.startBurn();
-    await settle();
-    assert.strictEqual(env.els['burn-eta'].textContent, '21 min',
-      'onBurnFinished must be told when the run started rather than guess');
-  });
-
-  it('drops the finished tint when the next render starts', () => {
-    const env = makeHarness();
-    env.api.renderBurnProgress({ fraction: 1, label: '', done: true });
-    env.api.renderBurnProgress(Object.assign({}, NO_PROGRESS));
-    assert.strictEqual(env.els['export-video'].className, 'export-item-group',
-      'a fresh run must not inherit the previous run\'s green');
   });
 
   // ---- the failure message speaks in phases too ----
@@ -5350,27 +5565,6 @@ describe('burn video driver behaviour', () => {
     env.api.renderBurnProgress({ fraction: 0, label: '', done: false,
                                  failed: true, failedStep: '' });
     assert.ok(classes(env).every(function (c) { return !/burn-seg--failed/.test(c); }));
-  });
-
-  it('mutes the track and drops the times when the artifact has expired', async () => {
-    const env = makeHarness({
-      listRunArtifacts: function () { return Promise.resolve([{ id: 9, expired: true }]); }
-    });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
-                                 startedMs: Date.now() - 21 * MIN_MS,
-                                 finishedMs: Date.now() });
-    await env.api.downloadBurned();
-    assert.match(env.els['export-video'].className, /export-item-group--expired/,
-      'nothing here can be downloaded any more — the track must stop looking ready');
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
-      'a download that can only fail is worse than none — offer the render again');
-    assert.strictEqual(env.els['burn-eta'].textContent, '',
-      'no time claims survive an expired artifact');
-    assert.strictEqual(env.els['burn-error'].textContent, 'T:burn.expired',
-      'the render did not fail — its file expired, which only this line can say');
   });
 
   // The remaining time is now extrapolated from the rate the render is actually
@@ -5442,17 +5636,15 @@ describe('burn video driver behaviour', () => {
   });
 
   it('refuses an artifact too large to hold in memory instead of killing the tab', async () => {
-    const env = makeHarness({
+    const env = historyHarness([burnRun(7)], {
       listRunArtifacts: function () {
         return Promise.resolve([{ id: 9, size_in_bytes: 2469606195 }]);
       },
       t: function (k) { return k === 'burn.too_large' ? 'too big: {size} GB' : 'T:' + k; }
     });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-error'].textContent, 'too big: 2.3 GB',
+    await listed(env);
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, 'too big: 2.3 GB',
       'say the size honestly rather than attempting an allocation that will fail');
     assert.strictEqual(env.fetches, 0,
       'the point is to not start a download that cannot finish');
@@ -5461,15 +5653,13 @@ describe('burn video driver behaviour', () => {
   it('downloads an artifact that comfortably fits', async () => {
     // The guard must not become a ceiling on ordinary renders: the verified
     // real run produced 29 MB.
-    const env = makeHarness({
+    const env = historyHarness([burnRun(7)], {
       listRunArtifacts: function () {
         return Promise.resolve([{ id: 9, size_in_bytes: 28978456 }]);
       }
     });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    await env.api.downloadBurned();
+    await listed(env);
+    await env.api.downloadBurned(7);
     assert.strictEqual(env.fetches, 1, 'a normal-sized artifact must still be fetched');
   });
 
@@ -5669,11 +5859,11 @@ describe('burn video driver behaviour', () => {
              saved: function () { return Buffer.concat(chunks); } };
   }
 
-  function savingHarness(zip, over, serverOver) {
+  function savingHarness(zip, over, serverOver, runs) {
     const server = rangeServer(zip, serverOver);
     const sink = makeSink();
     const picked = {};
-    const env = makeHarness(Object.assign({
+    const env = historyHarness(runs || [burnRun(7)], Object.assign({
       fetch: server.fetch,
       window: {
         screen: { width: 1280, height: 720 },
@@ -5688,8 +5878,8 @@ describe('burn video driver behaviour', () => {
         return Promise.resolve([{ id: 9, size_in_bytes: zip.length }]);
       }
     }, over || {}));
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
+    // A download starts from a row, and a row exists once the list has loaded.
+    env.api.openExportMenu();
     env.server = server;
     env.sink = sink;
     env.picked = picked;
@@ -5702,75 +5892,199 @@ describe('burn video driver behaviour', () => {
   // it: a few hundred megabytes moving from the artifact to disk, written
   // through the save dialog's file handle — no downloads entry, no shelf, no
   // progress of its own. The reviewer's words: "не зрозуміло що йде
-  // завантаження, коли і чи воно завершилось".
-  function watchWrites(env) {
+  // завантаження, коли і чи воно завершилось". The row being downloaded is
+  // where that shows.
+  function watchWrites(env, runId) {
     const seen = [];
     const write = env.sink.stream.write;
     env.sink.stream.write = function (c) {
       seen.push({
-        label: env.els['burn-item-label'].textContent,
-        disabled: env.els['btn-burn-video'].disabled,
-        value: env.els['burn-track'].attrs['aria-valuenow'],
-        meta: env.els['burn-step'].textContent,
-        cls: env.els['export-video'].className
+        disabled: rowPart(env, runId, 'export-history__item').disabled,
+        value: rowPart(env, runId, 'burn-track').attrs['aria-valuenow'],
+        meta: rowPart(env, runId, 'export-item__meta').textContent
       });
       return write.call(env.sink.stream, c);
     };
     return seen;
   }
 
-  // The face the item wears once the transfer ends is whatever the RUN says, so
-  // these use a finished run whose signature still matches the screen — without
-  // both, the item is demoted to "create" and the test proves nothing about the
-  // transfer handing the item back.
-  const FINISHED = { computeProgress: function () {
-    return Object.assign({}, NO_PROGRESS, { done: true, fraction: 1 }); } };
-
-  function downloadableHarness(zip, over) {
-    const env = savingHarness(zip, Object.assign({}, FINISHED, over || {}));
-    env.localStorage.setItem('burn:t:v', JSON.stringify({
-      requestId: 'old', runId: 7, runUrl: '', startedAt: Date.now(),
-      talkId: 't', videoSlug: 'v', editsSig: ''   // '' = no edits, and comparable
-    }));
-    env.api.resumeBurnWatch('t', 'v');
-    return env;
-  }
-
   it('reports the transfer while it runs, and stops when it ends', async () => {
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
-    const env = downloadableHarness(zip.bytes);
+    const env = savingHarness(zip.bytes);
     await settle();
-    const seen = watchWrites(env);
+    const seen = watchWrites(env, 7);
 
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
 
     assert.ok(seen.length, 'the transfer must have written something to watch');
-    assert.strictEqual(seen[0].label, 'T:export.video_downloading',
-      'the item is the readout: it must say the file is coming down');
     assert.strictEqual(seen[0].disabled, true,
-      'a second click must not start a second transfer');
-    assert.ok(seen[0].meta, 'the byte counter is the only sign of movement');
-    // Not straight back to "Download the video with subtitles": that reads as
-    // if nothing happened. The landed file gets said out loud.
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_downloaded',
-      'the item must say the file has landed');
-    assert.strictEqual(env.els['btn-burn-video'].disabled, true,
-      'a statement, not a button — reopening the menu re-arms the download');
+      'a second click on the row must not start a second transfer');
+    assert.strictEqual(seen[0].meta, 'T:burn.downloaded',
+      'the byte counter under the row is the only sign of movement');
+    // Not straight back to a plain row: that reads as if nothing happened. The
+    // landed file gets said out loud.
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
+      'T:export.video_downloaded', 'the row must say the file has landed');
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').disabled, false,
+      'the landed claim is a note beside a live row — the video can be had again');
   });
 
-  it('re-arms the download when the menu is closed and reopened', async () => {
+  it('clears the landed claim when the menu is closed and reopened', async () => {
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
-    const env = downloadableHarness(zip.bytes);
+    const env = savingHarness(zip.bytes);
     await settle();
-    env.api.openExportMenu();   // a download always starts from the open menu
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_downloaded',
-      'precondition: the item says the file has landed');
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
+      'T:export.video_downloaded', 'precondition: the row says the file has landed');
     env.api.closeExportMenu();
-    env.api.openExportMenu();
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'a fresh look at the menu offers the download again');
-    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+    await listed(env);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').hidden, true,
+      'the claim belongs to one visit to the menu, not to the row for ever');
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').disabled, false);
+  });
+
+  // ---- a landed video can be had again ----
+  //
+  // The reviewer's words: after a download "Video with subtitles downloaded"
+  // appears and there is no way to download it again. A note is a note: saving
+  // to the wrong folder, or wanting a second copy, must not cost a trip out of
+  // the menu and back.
+
+  // A press on the row, gated the way a browser gates one: a disabled button
+  // never receives the click at all, so the gate below is what makes this a
+  // press rather than a call. The transfer itself is awaited through the driver
+  // because the row's onclick has nobody to hand its promise to.
+  function pressRow(env, runId) {
+    assert.strictEqual(rowPart(env, runId, 'export-history__item').disabled, false,
+      'run ' + runId + ' cannot be pressed: a browser delivers no click to a disabled button');
+    return env.api.downloadBurned(runId);
+  }
+
+  // A fresh file handle per save, as a browser gives: the harness's default
+  // sink is one stream, and a second transfer through a closed one would fail
+  // for a reason that has nothing to do with the row.
+  function perSavePicker(sinks) {
+    return {
+      screen: { width: 1280, height: 720 },
+      showSaveFilePicker: function () {
+        const sink = makeSink();
+        sinks.push(sink);
+        return Promise.resolve({
+          createWritable: function () { return Promise.resolve(sink.stream); }
+        });
+      }
+    };
+  }
+
+  it('hands the video over again when a landed row is pressed', async () => {
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const sinks = [];
+    const env = savingHarness(zip.bytes, { window: perSavePicker(sinks) });
+    await settle();
+    await pressRow(env, 7);
+    assert.strictEqual(sinks.length, 1, 'precondition: the first press saved a file');
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
+      'T:export.video_downloaded', 'precondition: the row says the file landed');
+
+    await pressRow(env, 7);
+    assert.strictEqual(sinks.length, 2,
+      'a landed row must still hand the video over on a second press');
+    assert.ok(sinks[1].saved().length > 0,
+      'and the second save must carry the file, not an empty handle');
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, '',
+      'asking for the same video twice is not a failure');
+  });
+
+  it('explains what pressing a row does, except while its bytes are moving', async () => {
+    // The tooltip is the row's only sentence — the label is a date. It went
+    // missing the moment the row said anything about itself, so a row carrying
+    // "downloaded" was both unpressable and unexplained.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').title,
+      'T:history.download', 'a fresh row says what a press will do');
+    const seen = [];
+    const write = env.sink.stream.write;
+    env.sink.stream.write = function (c) {
+      seen.push(rowPart(env, 7, 'export-history__item').title);
+      return write.call(env.sink.stream, c);
+    };
+    await env.api.downloadBurned(7);
+    assert.ok(seen.length, 'the transfer must have written something to watch');
+    assert.strictEqual(seen[0], '',
+      'no tooltip over a row whose press would be refused');
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').title,
+      'T:history.download', 'and it comes back with the offer');
+  });
+
+  it('marks the row the pointer must not light up while it transfers', async () => {
+    // The hover tint lives on the row now, so that it covers the note and the
+    // bar that belong to it. A row mid-transfer refuses a click, and a tint
+    // under the pointer would promise one — so the row says it is busy, in a
+    // class the stylesheet keys the tint off.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    assert.strictEqual(rowPart(env, 7, 'export-history__row--busy'), null,
+      'a row offering a download is a row that lights up');
+    const seen = [];
+    const write = env.sink.stream.write;
+    env.sink.stream.write = function (c) {
+      seen.push(!!rowPart(env, 7, 'export-history__row--busy'));
+      return write.call(env.sink.stream, c);
+    };
+    await env.api.downloadBurned(7);
+    assert.ok(seen.length, 'the transfer must have written something to watch');
+    assert.strictEqual(seen[0], true, 'a transferring row must be marked busy');
+    assert.strictEqual(rowPart(env, 7, 'export-history__row--busy'), null,
+      'and unmarked once the bytes stop — the landed row is pressable');
+    assert.ok(rowPart(env, 7, 'export-history__row'),
+      'the mark is added and removed beside the base class, never instead of it');
+  });
+
+  it('closes the row\'s box around whatever is showing beneath the button', async () => {
+    // The tint is the row's now, which makes the row's BOX visible — and a box
+    // that stops at the note's last pixel reads as cropped rather than as the
+    // thing the note belongs to, which is the whole point of moving the tint.
+    // Measured: 6px above the first line (the button's own padding), 0px below
+    // the note. So a row with anything under the button says so, and the
+    // stylesheet closes it with that same 6px.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    assert.strictEqual(rowPart(env, 7, 'export-history__row--continued'), null,
+      'a bare row has nothing under the button and keeps the geometry it had');
+    const seen = [];
+    const write = env.sink.stream.write;
+    env.sink.stream.write = function (c) {
+      seen.push(!!rowPart(env, 7, 'export-history__row--continued'));
+      return write.call(env.sink.stream, c);
+    };
+    await env.api.downloadBurned(7);
+    assert.ok(seen.length, 'the transfer must have written something to watch');
+    assert.strictEqual(seen[0], true,
+      'the transfer bar and its byte counter sit under the button');
+    assert.ok(rowPart(env, 7, 'export-history__row--continued'),
+      'and so does the landed note that replaces them');
+    env.api.closeExportMenu();
+    await listed(env);
+    assert.strictEqual(rowPart(env, 7, 'export-history__row--continued'), null,
+      'a fresh look has no claim left to close the box around');
+  });
+
+  it('closes the row\'s box around a failure too', async () => {
+    // The error line is a continuation like any other — it appears under the
+    // button, and a box cropped at a red sentence reads worst of all.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    env.sink.stream.write = function () { return Promise.reject(new Error('disk full')); };
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').hidden, false,
+      'precondition: the error line is on screen');
+    assert.ok(rowPart(env, 7, 'export-history__row--continued'),
+      'a row carrying an error has its box closed around it');
   });
 
   it('does not claim a download the save dialog cancelled', async () => {
@@ -5779,30 +6093,31 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
     const abort = new Error('cancelled');
     abort.name = 'AbortError';
-    const env = downloadableHarness(zip.bytes, {
+    const env = savingHarness(zip.bytes, {
       window: {
         screen: { width: 1280, height: 720 },
         showSaveFilePicker: function () { return Promise.reject(abort); }
       }
     });
     await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'no file landed, so the item still offers the download');
-    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').hidden, true,
+      'no file landed, so the row claims nothing');
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').disabled, false,
+      'and still offers the download');
   });
 
   it('the buffered fallback reports the same byte counter as the streaming path', async () => {
     // Firefox has no save-file dialog, so the whole artifact buffers through
-    // memory — and for the minutes a slow artifact host takes, the item was the
-    // only possible sign of life and it never moved. The reviewer's words:
+    // memory — and for the minutes a slow artifact host takes, the readout was
+    // the only possible sign of life and it never moved. The reviewer's words:
     // «змінюється напис на завантажується але самого завантаження не
     // відбувається» — the transfer WAS running, silently.
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
     const half = Math.floor(zip.bytes.length / 2);
     const seen = [];
     let sent = 0;
-    const env = makeHarness(Object.assign({}, FINISHED, {
+    const env = historyHarness([burnRun(7)], {
       window: { screen: { width: 1280, height: 720 } },   // no showSaveFilePicker
       listRunArtifacts: function () {
         return Promise.resolve([{ id: 9, size_in_bytes: zip.bytes.length }]);
@@ -5829,8 +6144,8 @@ describe('burn video driver behaviour', () => {
               sent = 2;
               // Between the chunks: chunk 1 must already be on the counter.
               seen.push({
-                meta: env.els['burn-step'].textContent,
-                value: env.els['burn-track'].attrs['aria-valuenow']
+                meta: rowPart(env, 7, 'export-item__meta').textContent,
+                value: rowPart(env, 7, 'burn-track').attrs['aria-valuenow']
               });
               return Promise.resolve({
                 value: new Uint8Array(zip.bytes.subarray(half)), done: false });
@@ -5839,14 +6154,10 @@ describe('burn video driver behaviour', () => {
           } }; } }
         });
       }
-    }));
-    env.localStorage.setItem('burn:t:v', JSON.stringify({
-      requestId: 'old', runId: 7, runUrl: '', startedAt: Date.now(),
-      talkId: 't', videoSlug: 'v', editsSig: '' }));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-error'].textContent || '', '',
+    });
+    await listed(env);
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, '',
       'the transfer must not fail');
     assert.ok(seen.length,
       'the body must be read chunk by chunk — a silent arrayBuffer() gulp shows nothing');
@@ -5854,7 +6165,7 @@ describe('burn video driver behaviour', () => {
       'the byte counter is the only sign of movement Firefox gets');
     assert.ok(Number(seen[0].value) >= 40 && Number(seen[0].value) <= 60,
       'and it must stand at the first chunk, got: ' + seen[0].value);
-    assert.ok(env.created.length,
+    assert.ok(env.created.some(function (el) { return el.clicks === 1 && el.download; }),
       'the finished file still lands through the anchor download');
   });
 
@@ -5867,7 +6178,7 @@ describe('burn video driver behaviour', () => {
     const half = Math.floor(zip.bytes.length / 2);
     const seen = [];
     let sent = 0;
-    const env = makeHarness(Object.assign({}, FINISHED, {
+    const env = historyHarness([burnRun(7)], {
       window: { screen: { width: 1280, height: 720 } },
       listRunArtifacts: function () {
         return Promise.resolve([{ id: 9, size_in_bytes: zip.bytes.length }]);
@@ -5884,7 +6195,7 @@ describe('burn video driver behaviour', () => {
             }
             if (sent === 1) {
               sent = 2;
-              seen.push({ value: env.els['burn-track'].attrs['aria-valuenow'] });
+              seen.push({ value: rowPart(env, 7, 'burn-track').attrs['aria-valuenow'] });
               return Promise.resolve({
                 value: new Uint8Array(zip.bytes.subarray(half)), done: false });
             }
@@ -5892,13 +6203,9 @@ describe('burn video driver behaviour', () => {
           } }; } }
         });
       }
-    }));
-    env.localStorage.setItem('burn:t:v', JSON.stringify({
-      requestId: 'old', runId: 7, runUrl: '', startedAt: Date.now(),
-      talkId: 't', videoSlug: 'v', editsSig: '' }));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    await env.api.downloadBurned();
+    });
+    await listed(env);
+    await env.api.downloadBurned(7);
     assert.ok(seen.length, 'the second chunk must have been asked for');
     assert.ok(Number(seen[0].value) >= 40 && Number(seen[0].value) <= 60,
       'size_in_bytes must carry the percentage, got: ' + seen[0].value);
@@ -5944,30 +6251,30 @@ describe('burn video driver behaviour', () => {
   // readout and left a foreign error under it.
   it('does not report a departed transfer\'s failure on the video now shown', async () => {
     let fail;
-    const env = makeHarness({
+    const env = historyHarness([burnRun(7)], {
       listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
       fetch: function () { return new Promise(function (_, reject) { fail = reject; }); }
     });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    env.api.downloadBurned();                       // A's transfer, still running
+    await listed(env);
+    env.api.downloadBurned(7);                      // the transfer, still running
     await settle();
 
-    // Move to a video with a render in flight, and follow it.
-    env.previewState.videoSlug = 'v2';
-    env.localStorage.setItem('burn:t:v2', savedWatch(8));
-    env.api.resumeBurnWatch('t', 'v2');
-    env.api.openExportMenu();
-    await settle();
-    const followedBefore = env.timers.filter(Boolean).length;
+    // Move to another video with a render in flight, and follow it.
+    env.previewState.videoSlug = 'Other';
+    env.historyRuns = [burnRun(8, { slug: 'Other' })];
+    env.localStorage.setItem('burn:' + TALK + ':Other', savedWatch(8));
+    env.api.resumeBurnWatch(TALK, 'Other');
+    await listed(env);
+    const followedBefore = armedTimers(env);
 
-    fail(new Error('network died'));                // A's transfer dies
+    fail(new Error('network died'));                // the first video's transfer dies
     await settle();
 
     assert.strictEqual(env.els['burn-error'].textContent, '',
-      'the other video\'s download error must not be written here');
-    assert.strictEqual(env.timers.filter(Boolean).length, followedBefore,
+      'the other video\'s download error must not be written on this item');
+    assert.strictEqual(rowPart(env, 8, 'burn-panel__error').textContent, '',
+      'nor on this video\'s own row');
+    assert.strictEqual(armedTimers(env), followedBefore,
       'and it must not stop the render this video is following');
   });
 
@@ -5978,48 +6285,20 @@ describe('burn video driver behaviour', () => {
     // Counted here: the harness's own env.fetches is not incremented by an
     // overridden fetch, so asserting on it would pass without proving anything.
     let started = 0;
-    const env = makeHarness({
+    const env = historyHarness([burnRun(7), burnRun(8, { ageMs: 7200000 })], {
       listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
       fetch: function () { started++; return new Promise(function () {}); }
     });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    env.api.downloadBurned();
+    await listed(env);
+    env.api.downloadBurned(7);
     await settle();
     assert.strictEqual(started, 1, 'setup: the first transfer must be running');
 
-    env.previewState.videoSlug = 'v2';
-    env.localStorage.setItem('burn:t:v2', savedWatch(8));
-    env.api.resumeBurnWatch('t', 'v2');
-    env.api.downloadBurned();
+    env.api.downloadBurned(8);
     await settle();
-
     assert.strictEqual(started, 1,
       'a second transfer must not be started over the first');
-  });
-
-  it('keeps an expired artifact expired when the menu is reopened', async () => {
-    // renderBurnProgress ends in setVideoItemTint(), which REPLACES the class
-    // list — so replaying the finished payload on reopen stamped --done over
-    // --expired, and the item went back to offering a download that is gone.
-    const env = makeHarness({
-      listRunArtifacts: function () { return Promise.resolve([{ id: 9, expired: true }]); }
-    });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    env.api.renderBurnProgress({ fraction: 1, label: '', done: true,
-                                 startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    await env.api.downloadBurned();
-    assert.match(env.els['export-video'].className, /--expired/, 'setup: must be expired');
-
-    env.api.closeExportMenu();
-    env.api.openExportMenu();
-
-    assert.match(env.els['export-video'].className, /--expired/,
-      'reopening must not resurrect a download whose artifact is gone');
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
-      'and the item must keep offering a rebuild, not a dead download');
+    assert.ok(env.toasts.indexOf('T:burn.one_at_a_time') > -1, 'and the reviewer is told why');
   });
 
   it('does not re-follow a run that already failed', async () => {
@@ -6089,99 +6368,87 @@ describe('burn video driver behaviour', () => {
       'a dialog stranded on another video must not disable rendering everywhere');
   });
 
-  // ---- a transfer belongs to ONE video, and to nothing else ----
+  // ---- a transfer belongs to ONE row, and to nothing else ----
   //
-  // Two independent reviews landed on the same defect: burnDownload was a bare
-  // global, and resumeBurnWatch() — which runs on every preview entry — reset
-  // the watch, the result, the tint, the link and the error line, but not this.
-  // So a transfer started on one video painted its face onto the next one, and
-  // `downloading` outranks every other face in videoItemState: a video that had
-  // never been rendered showed a disabled "Downloading, please wait" for as long
-  // as the other video's bytes kept moving.
+  // Two independent reviews once landed on the same defect: the transfer slot
+  // was a bare global, so a transfer started on one video painted its face onto
+  // the next one — a video that had never been rendered showed a disabled
+  // "Downloading, please wait" for as long as the other video's bytes kept
+  // moving. The slot now carries its run id, and only that run's row shows it.
   function pendingTransfer(over) {
     // No size on the artifact, so the buffered path takes it: one fetch, which
     // never resolves — a real multi-minute transfer, held still.
-    const env = makeHarness(Object.assign({
+    return historyHarness([burnRun(7)], Object.assign({
       listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
       fetch: function () { return new Promise(function () {}); }
     }, over || {}));
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    return env;
   }
 
   it('does not carry a transfer onto a video that never started one', async () => {
     const env = pendingTransfer();
+    await listed(env);
+    env.api.downloadBurned(7);          // deliberately not awaited: still running
     await settle();
-    env.api.downloadBurned();          // deliberately not awaited: still running
-    await settle();
-    assert.strictEqual(env.els['burn-item-label'].textContent,
-      'T:export.video_downloading', 'the transfer must be showing on its own video');
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
+      'T:export.video_downloading', 'the transfer must be showing on its own row');
 
     // Navigate to another video of the same talk, exactly as showPreview does.
-    env.previewState.videoSlug = 'v2';
-    env.api.resumeBurnWatch('t', 'v2');
+    env.previewState.videoSlug = 'Other';
+    env.historyRuns = [burnRun(8, { slug: 'Other' })];
+    env.api.resumeBurnWatch(TALK, 'Other');
+    await listed(env);
 
-    assert.notStrictEqual(env.els['burn-item-label'].textContent,
-      'T:export.video_downloading',
-      'v2 never started a transfer — it must not wear one');
-    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
-      'and it must not be disabled by another video\'s transfer');
+    assert.strictEqual(rowPart(env, 8, 'export-item__meta').hidden, true,
+      'the other video never started a transfer — none of its rows may wear one');
+    assert.strictEqual(rowPart(env, 8, 'export-history__item').disabled, false,
+      'and none may be disabled by another video\'s transfer');
+    assert.strictEqual(env.els['btn-burn-video'].disabled, false, 'nor may the item');
   });
 
   it('shows the transfer again on returning to the video it belongs to', async () => {
     // The other half of the same fact: the bytes really are still moving, so
-    // coming back must show that, not a bare offer to build.
+    // coming back must show that on the row, not a bare offer to download.
     const env = pendingTransfer();
+    await listed(env);
+    env.api.downloadBurned(7);
     await settle();
-    env.api.downloadBurned();
-    await settle();
-    env.previewState.videoSlug = 'v2';
-    env.api.resumeBurnWatch('t', 'v2');
-    env.previewState.videoSlug = 'v';
-    env.api.resumeBurnWatch('t', 'v');
-    assert.strictEqual(env.els['burn-item-label'].textContent,
+    env.previewState.videoSlug = 'Other';
+    env.historyRuns = [];
+    env.api.resumeBurnWatch(TALK, 'Other');
+    await listed(env);
+    env.previewState.videoSlug = SLUG;
+    env.historyRuns = [burnRun(7)];
+    env.api.resumeBurnWatch(TALK, SLUG);
+    await listed(env);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
       'T:export.video_downloading');
-  });
-
-  it('does not paint the transfer green, which would read as finished', async () => {
-    // The group still carries --done from the render that produced the file, and
-    // that rule greens the fill. A green bar creeping across while bytes are
-    // still moving says the opposite of the label above it.
-    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
-    const env = downloadableHarness(zip.bytes);
-    await settle();
-    const seen = watchWrites(env);
-
-    await env.api.downloadBurned();
-
-    assert.match(seen[0].cls, /export-item-group--transfer/,
-      'the transfer needs its own tint over the finished render\'s green');
-    assert.ok(!/export-item-group--transfer/.test(env.els['export-video'].className),
-      'and it must come off, or the finished bar stays blue for good');
-    assert.match(env.els['export-video'].className, /export-item-group--done/,
-      'the render is still finished — that tint is not the transfer\'s to drop');
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').disabled, true);
   });
 
   it('shows no bar at all when there is no length to count against', async () => {
     // The buffered path (no save dialog, or an artifact of unknown size) reads
-    // the whole archive with arrayBuffer() and reports nothing on the way. An
-    // empty bar sitting at zero for ten minutes reads as broken; the label
-    // saying the transfer is running is the honest half.
-    const env = makeHarness({
+    // the whole archive and cannot place a bar until a length is known. An
+    // empty bar sitting at zero for ten minutes reads as broken; the line saying
+    // the transfer is running is the honest half.
+    const seen = [];
+    const env = historyHarness([burnRun(7)], {
       listRunArtifacts: function () { return Promise.resolve([{ id: 9 }]); },
       fetch: function () {
-        assert.strictEqual(env.els['burn-item-label'].textContent,
-          'T:export.video_downloading', 'the label must still report it');
-        assert.strictEqual(env.els['burn-track'].hidden, true,
-          'a bar with no position to show must not be shown');
+        // RECORDED here, asserted below. downloadBurned()'s .catch() swallows
+        // whatever this stub throws and paints it onto the row, so an assertion
+        // made inside it is reported as a failed transfer — and the test passed
+        // whatever the row actually looked like.
+        seen.push({ meta: rowPart(env, 7, 'export-item__meta').textContent,
+                    track: rowPart(env, 7, 'burn-track').hidden });
         return Promise.reject(new Error('stop here'));
       }
     });
-    env.localStorage.setItem('burn:t:v', savedWatch(7));
-    env.api.resumeBurnWatch('t', 'v');
-    await settle();
-    await env.api.downloadBurned();
+    await listed(env);
+    await env.api.downloadBurned(7);
+    assert.deepStrictEqual(seen, [{ meta: 'T:export.video_downloading', track: true }],
+      'the line under the row reports the transfer, and no bar is drawn for it');
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, 'stop here',
+      'and what came back is the stub\'s own failure, not a swallowed assertion');
   });
 
   it('announces the save on the buffered path too', async () => {
@@ -6203,28 +6470,6 @@ describe('burn video driver behaviour', () => {
       'got ' + JSON.stringify(env.toasts));
   });
 
-  it('gives the render its own bar back after a transfer fails part-way', async () => {
-    // The transfer rebuilds #burn-track as ONE span. Nothing repainted the four
-    // phase segments afterwards, so a transfer that died at 40% left a 40% bar
-    // under a finished render — reading as a render that stalled.
-    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
-    const env = downloadableHarness(zip.bytes);
-    await settle();
-    let wrote = 0;
-    env.sink.stream.write = function () {
-      return ++wrote > 1 ? Promise.reject(new Error('disk full')) : Promise.resolve();
-    };
-
-    await env.api.downloadBurned();
-
-    assert.ok(env.els['burn-error'].textContent, 'the failure must be reported');
-    assert.strictEqual(env.els['burn-track'].children.length, 4,
-      'the four phase segments must be back: got '
-        + env.els['burn-track'].children.length);
-    assert.strictEqual(env.els['burn-track'].getAttribute('aria-valuenow'), '100',
-      'and they must show the render, which did finish');
-  });
-
   it('shows the bar the moment the length becomes known, not a percent later', async () => {
     // The percent gate compared the OLD loaded against the NEW total, so
     // 0-of-unknown and 0-of-known both floored to 0 and nothing repainted: the
@@ -6233,27 +6478,26 @@ describe('burn video driver behaviour', () => {
     // harness's chunks are file halves: at 50% a chunk even the broken gate
     // repainted, so an end-to-end run here proves nothing.
     const env = pendingTransfer();
+    await listed(env);
+    env.api.downloadBurned(7);                 // slot is {loaded: 0, total: 0}
     await settle();
-    env.api.downloadBurned();                 // slot is {loaded: 0, total: 0}
-    await settle();
-    assert.strictEqual(env.els['burn-step'].textContent, '',
-      'setup: no counter while the length is unknown');
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
+      'T:export.video_downloading', 'setup: no counter while the length is unknown');
 
     env.api.advanceBurnDownload(100, 1000000);   // 0.01% — under any percent
 
-    assert.strictEqual(env.els['burn-step'].textContent, 'T:burn.downloaded',
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent, 'T:burn.downloaded',
       'the first chunk carries the length — the counter must appear on it');
-    assert.strictEqual(env.els['burn-track'].hidden, false,
-      'and the bar with it');
+    assert.strictEqual(rowPart(env, 7, 'burn-track').hidden, false, 'and the bar with it');
   });
 
   it('counts the bytes onto the bar as they land', async () => {
     const zip = skewedZip(Buffer.alloc(60000, 7), 11);
     const env = savingHarness(zip.bytes);
     await settle();
-    const seen = watchWrites(env);
+    const seen = watchWrites(env, 7);
 
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
 
     const values = seen.map(function (s) { return Number(s.value); });
     assert.ok(values.length > 1, 'need more than one chunk to see movement');
@@ -6264,24 +6508,24 @@ describe('burn video driver behaviour', () => {
     }
   });
 
-  it('hands the item back when the save dialog is dismissed', async () => {
+  it('hands the row back when the save dialog is dismissed', async () => {
     // Nothing transfers, so nothing may be left claiming it does.
     const abort = new Error('user cancelled');
     abort.name = 'AbortError';
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
-    const env = downloadableHarness(zip.bytes, {
+    const env = savingHarness(zip.bytes, {
       window: {
         screen: { width: 1280, height: 720 },
         showSaveFilePicker: function () { return Promise.reject(abort); }
       }
     });
     await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download');
-    assert.strictEqual(env.els['btn-burn-video'].disabled, false);
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').hidden, true);
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').disabled, false);
   });
 
-  it('hands the item back when the transfer fails', async () => {
+  it('hands the row back when the transfer fails', async () => {
     // A stuck "downloading, please wait" over a dead transfer is the worst of
     // both: no file, and no way to ask for one again.
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
@@ -6289,10 +6533,111 @@ describe('burn video driver behaviour', () => {
     await settle();
     // The write itself fails — a revoked handle, a full disk.
     env.sink.stream.write = function () { return Promise.reject(new Error('disk full')); };
-    await env.api.downloadBurned();
-    assert.ok(env.els['burn-error'].textContent, 'the failure must be reported');
-    assert.strictEqual(env.els['btn-burn-video'].disabled, false,
-      'the item must be pressable again');
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, 'disk full',
+      'the failure must be reported on the row it happened to');
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').disabled, false,
+      'the row must be pressable again');
+    assert.strictEqual(env.els['burn-error'].hidden, true,
+      'the render readout reports renders, not downloads');
+  });
+
+  it('shows the row\'s error instead of only writing it', async () => {
+    // The line ships hidden, so a message written into it and left hidden is a
+    // failure nobody sees — and a row that simply stopped doing anything.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    env.sink.stream.write = function () { return Promise.reject(new Error('disk full')); };
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').hidden, false,
+      'the error the row carries has to be on screen to be an error');
+  });
+
+  it('shows the "downloaded" line instead of only writing it', async () => {
+    // Same line, same hidden-by-default: the one sign a few hundred megabytes
+    // reached the disk is worth nothing while it is not displayed.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').hidden, false,
+      'the claim that the file landed has to be unhidden to be read');
+  });
+
+  it('widens the fill with the transfer, not only the value it publishes', async () => {
+    // aria-valuenow is what a screen reader reads; the width is the bar a
+    // sighted reviewer watches. A fill left at 0% leaves them looking at an
+    // empty track for the whole transfer, with the published value none the
+    // wiser.
+    const zip = skewedZip(Buffer.alloc(60000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    await env.api.downloadBurned(7);
+    const width = parseFloat(rowPart(env, 7, 'burn-seg__fill').style.width);
+    assert.ok(width > 0, 'the fill must have widened with the bytes: got ' + width);
+  });
+
+  it('retires a row\'s error when the menu is closed', async () => {
+    // Closing the menu is what retires every claim a row makes. An error left
+    // behind would be waiting under the row on the next open, describing a
+    // transfer the reviewer has long since dealt with.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    env.sink.stream.write = function () { return Promise.reject(new Error('disk full')); };
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, 'disk full',
+      'precondition: the row is carrying the failure');
+    env.api.closeExportMenu();
+    await listed(env);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, '',
+      'a fresh look at the menu is a fresh row');
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').hidden, true,
+      'and a row carrying no error shows no error line — an empty alert under '
+      + 'every row is an announcement of nothing');
+  });
+
+  it('a second attempt clears the first one\'s error on the row', async () => {
+    // Closing the menu is not the only way back: the row is pressable again the
+    // moment a transfer dies, and the reviewer's obvious next move is to press
+    // it. The message from the attempt before must not sit under a transfer that
+    // is running, nor under one that then succeeds.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    let fail = true;
+    const write = env.sink.stream.write;
+    env.sink.stream.write = function (chunk) {
+      return fail ? Promise.reject(new Error('disk full'))
+                  : write.call(env.sink.stream, chunk);
+    };
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, 'disk full',
+      'precondition: the first attempt failed on the row');
+
+    fail = false;                        // the disk has room now
+    await env.api.downloadBurned(7);
+
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, '',
+      'the row must not go on reporting a failure the retry undid');
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').hidden, true);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
+      'T:export.video_downloaded', 'and it says the file landed the second time');
+  });
+
+  it('records the landed file on the no-picker path too', async () => {
+    // Safari and Firefox save to the Downloads folder without asking. The file
+    // still arrived, so the row has to stop offering the download as if the
+    // click had done nothing — the same statement the streaming path makes.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes, {
+      window: { screen: { width: 1280, height: 720 } }   // no save dialog at all
+    });
+    await settle();
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'export-item__meta').textContent,
+      'T:export.video_downloaded', 'the row must record the file it just saved');
   });
 
   it('says the video was saved, since nothing else will', async () => {
@@ -6305,7 +6650,7 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
     const env = savingHarness(zip.bytes);
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
 
     assert.ok(env.toasts.some(function (m) { return m.indexOf('T:burn.saved') === 0; }),
       'a finished stream must announce itself: got ' + JSON.stringify(env.toasts));
@@ -6324,7 +6669,7 @@ describe('burn video driver behaviour', () => {
       }
     });
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
 
     assert.ok(!env.toasts.some(function (m) { return m.indexOf('T:burn.saved') === 0; }),
       'a cancelled save must not claim a file was written');
@@ -6338,8 +6683,8 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
     const env = savingHarness(zip.bytes);
     await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-error'].textContent, '', 'nothing may have failed');
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, '', 'nothing may have failed');
     assert.strictEqual(env.server.ranges.length, 3,
       'tail, local header, data — three small requests, no fourth');
     assert.ok(env.server.served < zip.bytes.length + 6000,
@@ -6354,7 +6699,7 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(Buffer.alloc(20000, 7), 11);
     const env = savingHarness(zip.bytes);
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.strictEqual(env.server.ranges[0],
       'bytes=' + (zip.bytes.length - 4096) + '-' + (zip.bytes.length - 1));
     assert.ok(env.server.ranges.every(function (r) { return /^bytes=\d+-\d+$/.test(r); }),
@@ -6370,20 +6715,20 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(payload, 11);
     const env = savingHarness(zip.bytes);
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.strictEqual(env.server.ranges.length, 3,
       'precondition: this came down the streaming path');
     assert.deepStrictEqual(env.sink.saved(), payload,
       'the saved file must be the entry data exactly');
-    assert.strictEqual(env.picked.suggestedName, ZIP_NAME,
-      'the save dialog must suggest the name from the archive');
+    assert.strictEqual(env.picked.suggestedName, MENU_MODEL.burnedVideoName(TALK, SLUG, null),
+      'the save dialog must suggest the video\'s own name, not the archive entry\'s');
   });
 
   it('asks for the data range the local header points at, and no more', async () => {
     const zip = skewedZip(Buffer.alloc(20000, 3), 11);
     const env = savingHarness(zip.bytes);
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.strictEqual(env.server.ranges[2],
       'bytes=' + zip.dataAt + '-' + (zip.dataAt + 20000 - 1));
   });
@@ -6393,7 +6738,7 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(payload, 4);
     const env = savingHarness(zip.bytes, null, { pipeTo: false });
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.strictEqual(env.server.ranges.length, 3,
       'precondition: this came down the streaming path');
     assert.deepStrictEqual(env.sink.saved(), payload);
@@ -6405,7 +6750,7 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(payload, 6, 8192);
     const env = savingHarness(zip.bytes);
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.deepStrictEqual(env.sink.saved(), payload, 'the retry must succeed');
     assert.strictEqual(env.server.ranges.filter(function (r) {
       return r === 'bytes=' + (zip.bytes.length - 4096) + '-' + (zip.bytes.length - 1);
@@ -6426,7 +6771,7 @@ describe('burn video driver behaviour', () => {
       }
     });
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.deepStrictEqual(env.sink.saved(), payload);
     assert.strictEqual(env.server.ranges.length, 4,
       'the 416, then the corrected tail, the local header and the data');
@@ -6445,8 +6790,8 @@ describe('burn video driver behaviour', () => {
       }
     });
     await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-error'].textContent, '',
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, '',
       'a 2.3 GB video is exactly what streaming is for');
     assert.deepStrictEqual(env.sink.saved(), payload);
   });
@@ -6458,7 +6803,7 @@ describe('burn video driver behaviour', () => {
     const zip = skewedZip(payload, 5);
     const env = savingHarness(zip.bytes, null, { ignoreRange: true });
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.deepStrictEqual(env.sink.saved(), payload,
       'the fallback must still produce the mp4, not the archive around it');
     assert.ok(env.server.cancels >= 1,
@@ -6481,10 +6826,10 @@ describe('burn video driver behaviour', () => {
       }
     });
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.strictEqual(whole.cancels, 1,
       'the whole-artifact body must be cancelled, not left transferring');
-    assert.strictEqual(env.els['burn-error'].textContent, 'T:burn.range_ignored',
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, 'T:burn.range_ignored',
       'the error must describe the ignored range, not report "(HTTP 200)"');
     assert.strictEqual(env.sink.chunks.length, 0,
       'nothing may reach the file when the response is not the slice');
@@ -6514,8 +6859,8 @@ describe('burn video driver behaviour', () => {
       }
     });
     await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-error'].textContent, abort.message,
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, abort.message,
       'an abort mid-transfer leaves a truncated file — it is a failure');
   });
 
@@ -6532,7 +6877,7 @@ describe('burn video driver behaviour', () => {
     new DataView(zip.bytes.buffer).setUint16(cdAt + 10, 8, true);
     const env = savingHarness(zip.bytes);
     await settle();
-    await env.api.downloadBurned();
+    await env.api.downloadBurned(7);
     assert.ok(env.server.ranges.includes(''),
       'the entry cannot be streamed, so it must go down the buffered path ' +
       'that decompresses it');
@@ -6551,8 +6896,8 @@ describe('burn video driver behaviour', () => {
       }
     });
     await settle();
-    await env.api.downloadBurned();
-    assert.strictEqual(env.els['burn-error'].textContent, '',
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, '',
       'a deliberate cancel is not a failure');
     assert.strictEqual(env.server.ranges.length, 2,
       'the video must not be fetched for a save the user called off');
@@ -6682,26 +7027,6 @@ describe('burn video driver behaviour', () => {
       .apply(null, names.map(function (n) { return stubs[n]; }));
   }
 
-  it('takes a finished render stale the moment an edit lands, and back when it is undone', async () => {
-    const env = makeHarness();
-    env.previewState.mode = 'edit';
-    const funnel = makeEditsFunnel(env);
-    await env.api.startBurn('t', 'v');   // records editsSig for zero edits
-    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'precondition: the run finished and the item became the download');
-
-    env.previewState.edits = { uk: { 3: 'a later correction' } };   // what SPA.onEditInput does
-    funnel.updateClearBtn();                                        // ...and the funnel it ends in
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
-      'the subtitles moved on — the finished video no longer matches the screen');
-
-    env.previewState.edits = { uk: {} };   // the edit is undone
-    funnel.updateClearBtn();
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'the subtitles match the run again — the file is a valid answer once more');
-  });
-
   it('routes every edit path through the funnel that repaints the export item', () => {
     // Source-level guard, deliberately: these handlers move the live caret and
     // selection, open the confirm dialog and drive the player, so they cannot
@@ -6765,6 +7090,41 @@ describe('burn video driver behaviour', () => {
       .apply(null, names.map(function (n) { return stubs[n]; }));
   }
 
+  // checkWriteAccess() is where a session learns it may write again — the only
+  // moment that happens without a reload. Sliced like the auth funnel above, so
+  // these tests drive the branch that ships rather than a copy of it.
+  // `getRepoPermissions` is the one stub each test overrides: it is what the
+  // probe reads, and flipping it is how write access is taken and given back.
+  function makeWriteProbe(env, over) {
+    const s = html.indexOf('function checkWriteAccess()');
+    const e = html.indexOf('var WRITE_RECHECK_MS');
+    assert.ok(s > -1 && e > s, 'checkWriteAccess block not found in index.html');
+    let noWrite = false;   // the stored flag, as save/clearNoWrite keep it
+    const names = ['document', 'API', 'getAuthToken', 'getRepoPermissions', 'hasNoWrite',
+      'clearNoWrite', 'saveNoWrite', 'clearAuth', 'updateAuthUI', 'showToast', 't',
+      'syncBurnFollowing', 'refreshBurnHistory'];
+    const stubs = Object.assign({
+      document: env.document,
+      API: env.API,
+      getAuthToken: env.getAuthToken,
+      getRepoPermissions: function () { return Promise.resolve({ push: true }); },
+      hasNoWrite: function () { return noWrite; },
+      clearNoWrite: function () { noWrite = false; },
+      saveNoWrite: function () { noWrite = true; },
+      clearAuth: function () {},
+      // The funnel itself is covered above; what matters here is the one thing
+      // it does for the export control — and that it is NOT enough on its own.
+      updateAuthUI: env.api.updateExportUi,
+      showToast: env.showToast,
+      t: env.t,
+      syncBurnFollowing: env.api.syncBurnFollowing,
+      refreshBurnHistory: env.api.refreshBurnHistory
+    }, over || {});
+    return new Function(names.join(','),
+      html.slice(s, e) + '\nreturn { checkWriteAccess: checkWriteAccess };')
+      .apply(null, names.map(function (n) { return stubs[n]; }));
+  }
+
   it('repaints the export control on a write-access flip, without help from the engine hooks', () => {
     let write = true;
     const user = function () { return write ? { login: 'me', avatar_url: 'a' } : null; };
@@ -6785,30 +7145,36 @@ describe('burn video driver behaviour', () => {
       'write regained — the item comes back without a reload');
   });
 
-  it('drops the previous video\'s finished face when a video without a run is entered', async () => {
-    // showPreview() calls resumeBurnWatch() on every entry. When the new video
-    // has no recorded run, the reset must actually reach the screen: the item
-    // kept video A\'s "Download" label, track, and run link over video B.
-    const env = makeHarness({
+  it('drops the previous video\'s rows and readout when another video is entered', async () => {
+    // showPreview() calls resumeBurnWatch() on every entry. The reset must reach
+    // the screen: video A's rows and its run link must not sit under video B,
+    // and an answer still out for A must not fill B's list when it lands.
+    const answers = [];
+    const env = historyHarness([], {
+      listBurnRuns: function () { return new Promise(function (r) { answers.push(r); }); },
       matchRun: function () { return { id: 5, html_url: 'https://x/actions/runs/5' }; }
     });
-    await env.api.startBurn('t', 'v');
+    env.api.openExportMenu();
+    answers.shift()([burnRun(7)]);
     await settle();
-    env.api.onBurnFinished({ startedMs: Date.now() - MIN_MS, finishedMs: Date.now() });
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_download',
-      'precondition: video v finished and offers its file');
-    assert.strictEqual(env.els['burn-run-link'].hidden, false,
-      'precondition: the run link is on screen');
+    assert.strictEqual(rows(env).length, 1, 'precondition: video A lists its render');
+    await env.api.startBurn();
+    await settle();
+    assert.strictEqual(env.els['burn-run-link'].hidden, false, 'precondition: linked');
+    env.api.closeExportMenu();
+    env.api.openExportMenu();                   // a second look for A, still out
 
-    env.previewState.videoSlug = 'v2';
-    env.api.resumeBurnWatch('t', 'v2');   // nothing recorded for v2
+    env.previewState.videoSlug = 'Other';
+    env.api.resumeBurnWatch(TALK, 'Other');    // nothing recorded for Other
+    answers.shift()([burnRun(7)]);              // A's late answer lands
     await settle();
-    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
-      'video v2 never rendered — it must not wear v\'s download face');
-    assert.strictEqual(env.els['burn-track'].hidden, true,
-      'nor show v\'s finished track');
-    assert.strictEqual(env.els['burn-run-link'].hidden, true,
-      'nor link to v\'s run');
+
+    assert.strictEqual(env.els['burn-history-list'].hidden, true,
+      'A\'s answer must not fill the list of the video now on screen');
+    assert.strictEqual(rows(env).length, 0);
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make');
+    assert.strictEqual(env.els['burn-track'].hidden, true, 'nor may A\'s track show');
+    assert.strictEqual(env.els['burn-run-link'].hidden, true, 'nor a link to A\'s run');
   });
 
   it('drops the previous video\'s error when another video is entered', async () => {
@@ -6822,5 +7188,1326 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['burn-error'].hidden, true,
       'v\'s failure is not v2\'s — the error line must not survive the switch');
     assert.strictEqual(env.els['burn-error'].textContent, '');
+  });
+
+  // ---- the videos already created ----
+
+  it('looks for the created videos on every open, and shows the wait', async () => {
+    const env = historyHarness([burnRun(7)]);
+    env.api.openExportMenu();
+    assert.strictEqual(env.els['burn-history-spinner'].hidden, false,
+      'the spinner stands in for the list while the request is out');
+    assert.strictEqual(env.els['burn-history-list'].hidden, true);
+    assert.strictEqual(env.historyCalls.length, 1, 'one request is the whole discovery');
+    assert.strictEqual(env.historyCalls[0].workflow, 'burn-subtitles.yml');
+    assert.match(env.historyCalls[0].since, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/,
+      'the look is bounded by the artifact retention');
+    await settle();
+    assert.strictEqual(env.els['burn-history-spinner'].hidden, true);
+    assert.strictEqual(env.els['burn-history-list'].hidden, false);
+    assert.strictEqual(rows(env).length, 1);
+
+    env.api.closeExportMenu();
+    env.api.openExportMenu();
+    assert.strictEqual(env.historyCalls.length, 2,
+      'a fresh look on every open: a render may have finished since, anywhere');
+  });
+
+  it('lists this video\'s renders newest first, naming only other people\'s', async () => {
+    const env = historyHarness([
+      burnRun(5, { ageMs: 5 * 3600000 }),
+      burnRun(9, { actor: 'reviewer-2', ageMs: 3600000, scale: 150, clip: '600000-930500' }),
+      burnRun(6, { slug: 'Other' })
+    ], { t: function (k) { return k === 'history.scale' ? '{n}%' : 'T:' + k; } });
+    await listed(env);
+    assert.deepStrictEqual(rows(env).map(function (li) { return li.attrs['data-run']; }),
+      ['9', '5'], 'this video only, newest first');
+    assert.match(rowPart(env, 9, 'export-item__label').textContent, / · reviewer-2$/,
+      'someone else\'s render says whose it is');
+    assert.ok(!/ · /.test(rowPart(env, 5, 'export-item__label').textContent),
+      'the reviewer\'s own does not: the room is better spent on the rest');
+    assert.strictEqual(rowPart(env, 9, 'export-history__detail').textContent,
+      '150% · 10:00–15:30.500', 'the size it was made at, and the span of a fragment');
+    assert.strictEqual(rowPart(env, 5, 'export-history__detail').textContent,
+      '100% · T:history.full', 'a whole video says so');
+  });
+
+  it('says so when nothing has been created yet', async () => {
+    const env = historyHarness([]);
+    await listed(env);
+    assert.strictEqual(env.els['burn-history-note'].hidden, false);
+    assert.strictEqual(env.els['burn-history-note'].textContent, 'T:history.empty');
+    assert.strictEqual(env.els['burn-history-list'].hidden, true);
+  });
+
+  it('says the list could not be loaded, naming a missing permission', async () => {
+    const denied = Object.assign(new Error('nope'), { status: 403 });
+    for (const [error, said] of [[denied, 'T:burn.no_actions_permission'],
+                                 [new Error('offline'), 'T:history.failed']]) {
+      const env = historyHarness([], {
+        listBurnRuns: function () { return Promise.reject(error); }
+      });
+      await listed(env);
+      assert.strictEqual(env.els['burn-history-spinner'].hidden, true, 'the wait is over');
+      assert.strictEqual(env.els['burn-history-note'].textContent, said);
+      assert.strictEqual(env.els['burn-history-list'].hidden, true);
+    }
+  });
+
+  it('drops an answer for a look that has been superseded', async () => {
+    // Two looks race when the menu is closed and reopened quickly; the older
+    // answer must not overwrite the newer one by landing last.
+    const answers = [];
+    const env = historyHarness([], {
+      listBurnRuns: function () { return new Promise(function (r) { answers.push(r); }); }
+    });
+    env.api.openExportMenu();
+    env.api.closeExportMenu();
+    env.api.openExportMenu();
+    answers[1]([burnRun(8)]);
+    await settle();
+    answers[0]([burnRun(7)]);
+    await settle();
+    assert.deepStrictEqual(rows(env).map(function (li) { return li.attrs['data-run']; }), ['8'],
+      'the list is the newest look\'s answer');
+  });
+
+  it('drops a failed look that has been superseded', async () => {
+    // The successful branch checks the sequence; the failing one did not, so a
+    // refusal for the video just left painted its note over the list of the
+    // video now on screen — and the rows it names belong to neither.
+    let refuse;
+    const env = historyHarness([], {
+      listBurnRuns: function () { return new Promise(function (_, reject) { refuse = reject; }); }
+    });
+    const look = env.api.refreshBurnHistory();
+    env.api.resumeBurnWatch(TALK, 'Other');        // a new video, a new sequence
+    refuse(Object.assign(new Error('nope'), { status: 403 }));
+    await look;
+    assert.strictEqual(env.els['burn-history-note'].hidden, true,
+      'an answer for a look that has been superseded may write nothing');
+  });
+
+  it('asks nothing of a session that cannot use the API', async () => {
+    const env = historyHarness([burnRun(7)], { ghWriteUser: function () { return null; } });
+    await listed(env);
+    assert.strictEqual(env.historyCalls.length, 0);
+    assert.strictEqual(env.els['burn-history-spinner'].hidden, true);
+  });
+
+  it('marks the render that just finished as the new one in the list', async () => {
+    let done = false;
+    const env = historyHarness([], {
+      makeRequestId: function () { return 'req-b-a'; },
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      }
+    });
+    await listed(env);
+    await env.api.burnFullVideo();
+    await settle();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working');
+    assert.ok(env.localStorage.getItem('burn:' + TALK + ':' + SLUG), 'precondition: recorded');
+
+    done = true;
+    env.historyRuns = [burnRun(11, { request: 'req-b-a' }), burnRun(4, { ageMs: 86400000 })];
+    env.timers.filter(Boolean).pop()();   // the next poll tick
+    await settle();
+
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_make',
+      'the item offers the next render');
+    assert.strictEqual(rowPart(env, 11, 'export-history__new').hidden, false,
+      'the video it just made is marked where the reviewer will look for it');
+    assert.strictEqual(rowPart(env, 4, 'export-history__new').hidden, true);
+    assert.strictEqual(env.localStorage.getItem('burn:' + TALK + ':' + SLUG), null,
+      'a finished run is not resumed on the next visit — the list has it');
+  });
+
+  it('saves a render under the video\'s name, and a fragment under its span', async () => {
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes, null, null, [burnRun(7, { clip: '600000-930500' })]);
+    await settle();
+    await env.api.downloadBurned(7);
+    assert.strictEqual(env.picked.suggestedName,
+      TALK + '__' + SLUG + '__uk__00-10-00_00-15-30-500.mp4',
+      'fragments of one video share a folder — the span, to the millisecond, ' +
+      'keeps them apart');
+  });
+
+  it('says an expired artifact on its own row, and nowhere else', async () => {
+    const env = historyHarness([burnRun(7)], {
+      listRunArtifacts: function () { return Promise.resolve([{ id: 9, expired: true }]); }
+    });
+    await listed(env);
+    await env.api.downloadBurned(7);
+    assert.strictEqual(rowPart(env, 7, 'burn-panel__error').textContent, 'T:burn.expired');
+    assert.strictEqual(rowPart(env, 7, 'export-history__item').disabled, false);
+    assert.strictEqual(env.els['burn-error'].hidden, true,
+      'the render readout reports renders, not downloads');
+  });
+
+  // ---- the two choices ----
+
+  it('renders the whole video from the first choice, with no span', async () => {
+    const env = makeHarness();
+    await env.api.videoItemAction({ detail: 1 });
+    await env.api.burnFullVideo();
+    await settle();
+    assert.strictEqual(env.dispatched, 1);
+    assert.strictEqual(env.dispatchedInputs.clip, '', 'the whole video carries no clip');
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true, 'the choices close behind it');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working');
+  });
+
+  it('records the subtitle size set in the preview with the run', async () => {
+    const env = makeHarness({
+      getComputedStyle: function () { return { getPropertyValue: function () { return '1.5'; } }; }
+    });
+    await env.api.burnFullVideo();
+    await settle();
+    assert.strictEqual(env.dispatchedInputs.subs_scale, '150',
+      'the list shows it, and the run name is the only place it can live');
+  });
+
+  it('opens no choices over a refused or busy item', async () => {
+    const wrong = makeHarness(previewing({ srtLang: 'en' }));
+    await wrong.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(wrong.els['burn-make-menu'].hidden, true, 'refused for its language');
+
+    const busy = makeHarness();
+    busy.api.startBurn();
+    await settle();
+    await busy.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(busy.els['burn-make-menu'].hidden, true, 'a render is in flight');
+  });
+
+  it('closes open choices when the item stops being able to act on them', async () => {
+    const env = makeHarness();
+    await env.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(env.els['burn-make-menu'].hidden, false, 'precondition: open');
+    env.previewState.srtLang = 'en';
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true);
+  });
+
+  it('opens on hover for a mouse, and lingers a moment after it leaves', () => {
+    const env = makeHarness();
+    env.window.matchMedia = function () { return { matches: true }; };
+    env.api.burnMakeHover({ pointerType: 'touch' }, true);
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true,
+      'touch has no hover: the tap decides');
+    env.api.burnMakeHover({ pointerType: 'mouse' }, true);
+    assert.strictEqual(env.els['burn-make-menu'].hidden, false, 'a mouse opens it by hovering');
+    env.api.burnMakeHover({ pointerType: 'mouse' }, false);
+    assert.strictEqual(env.els['burn-make-menu'].hidden, false,
+      'crossing the gap to the flyout must not close it');
+    assert.strictEqual(armedTimers(env), 1, 'a grace timer is armed instead');
+    env.api.burnMakeHover({ pointerType: 'mouse' }, true);
+    assert.strictEqual(armedTimers(env), 0, 'coming back cancels it');
+    env.api.burnMakeHover({ pointerType: 'mouse' }, false);
+    env.timers.filter(Boolean)[0]();
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true,
+      'and it closes once the grace is up');
+  });
+
+  it('pins hover-opened choices once the item is pressed', async () => {
+    const env = makeHarness();
+    env.window.matchMedia = function () { return { matches: true }; };
+    env.api.burnMakeHover({ pointerType: 'mouse' }, true);
+    await env.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(env.els['burn-make-menu'].hidden, false,
+      'a press over hover-opened choices keeps them — closing under the pointer undoes the hover');
+    env.api.burnMakeHover({ pointerType: 'mouse' }, false);
+    assert.strictEqual(armedTimers(env), 0, 'pinned choices ignore the pointer leaving');
+    assert.strictEqual(env.els['burn-make-menu'].hidden, false);
+  });
+
+  it('never opens on hover where the choices unfold under the item', () => {
+    const env = makeHarness();
+    env.window.matchMedia = function () { return { matches: false }; };
+    env.api.burnMakeHover({ pointerType: 'mouse' }, true);
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true,
+      'on a narrow screen a passing pointer would shove the list about');
+  });
+
+  it('closes the choices first on Escape, then the menu', async () => {
+    const env = makeHarness();
+    env.api.openExportMenu();
+    await env.api.videoItemAction({ detail: 1 });
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true, 'one Escape, one surface');
+    assert.strictEqual(env.els['export-menu'].hidden, false, 'the menu stays');
+    assert.ok(env.els['btn-burn-video'].focused, 'focus returns to the item the choices came from');
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['export-menu'].hidden, true);
+  });
+
+  it('moves focus into the choices when the keyboard opened them', async () => {
+    const env = makeHarness();
+    await env.api.videoItemAction({ detail: 0 });
+    assert.ok(env.els['btn-burn-full'].focused,
+      'Enter on the item must land on the first choice, or the choices are out of reach');
+    const mouse = makeHarness();
+    await mouse.api.videoItemAction({ detail: 1 });
+    assert.ok(!mouse.els['btn-burn-full'].focused, 'a pointer press leaves focus where it is');
+  });
+
+  it('closes the choices with the menu', async () => {
+    const env = makeHarness();
+    env.api.openExportMenu();
+    await env.api.videoItemAction({ detail: 1 });
+    env.api.closeExportMenu();
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true);
+    assert.strictEqual(env.els['btn-burn-video'].getAttribute('aria-expanded'), 'false');
+  });
+
+  // ---- the fragment panel ----
+
+  it('opens the fragment panel from the second choice, over a closed menu', async () => {
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(5025.12);
+    env.api.openExportMenu();
+    await env.api.videoItemAction({ detail: 1 });
+    await env.api.openClipPanel();
+    assert.strictEqual(env.els['clip-panel'].hidden, false);
+    assert.strictEqual(env.els['export-menu'].hidden, true,
+      'the panel is where the work happens now');
+    assert.strictEqual(env.els['burn-make-menu'].hidden, true);
+    assert.strictEqual(env.els['clip-start'].value, '00:00', 'from the beginning…');
+    assert.strictEqual(env.els['clip-end'].value, '1:23:45.120',
+      '…to the whole length the player reports');
+    assert.ok(env.els['clip-start'].focused, 'focus lands in the first field');
+  });
+
+  it('gives focus back to the download button when the panel holding it closes', async () => {
+    // Hiding the <section> the focus sits in drops focus to <body>, and the
+    // next Tab restarts at the top of the document. The choices' Escape already
+    // hands focus back to the item it came from; this exit is no different.
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(600);
+    await env.api.openClipPanel();
+    assert.strictEqual(env.document.activeElement, env.els['clip-start'],
+      'precondition: the focus being dropped is the panel\'s own');
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['clip-panel'].hidden, true);
+    assert.strictEqual(env.document.activeElement, env.els['btn-export'],
+      'focus returns to the button the panel was reached through');
+  });
+
+  it('never takes focus away from work outside the panel it closes', async () => {
+    // closeClipPanel() is also how navigation, a sign-out and a lost write
+    // access take the panel down. Focus is then on whatever the reviewer is
+    // doing, and pulling it to the download button would be theft — the very
+    // reason the return above is asked for rather than done unconditionally.
+    let write = true;
+    const env = makeHarness({ ghWriteUser: function () { return write; } });
+    await env.api.openClipPanel();
+    env.els['btn-burn-video'].focus();     // stands for anywhere else on the page
+    write = false;
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['clip-panel'].hidden, true);
+    assert.strictEqual(env.document.activeElement, env.els['btn-burn-video'],
+      'focus stays where the reviewer left it');
+  });
+
+  it('reads a boundary off the player to the millisecond', async () => {
+    const env = makeHarness();
+    const player = fakePlayer(600, 65.4996);
+    env.previewState.player = player;
+    await env.api.openClipPanel();
+    await env.api.setClipFromPlayer('start');
+    assert.strictEqual(env.els['clip-start'].value, '01:05.500');
+    player.now = 125.0004;
+    await env.api.setClipFromPlayer('end');
+    assert.strictEqual(env.els['clip-end'].value, '02:05.000',
+      'a boundary read off the player always shows its milliseconds');
+    assert.strictEqual(env.els['btn-clip-create'].disabled, false);
+  });
+
+  it('says the player is not ready rather than doing nothing', async () => {
+    const env = makeHarness();
+    await env.api.openClipPanel();
+    await env.api.setClipFromPlayer('start');
+    assert.strictEqual(env.els['clip-problem'].textContent, 'T:clip.no_player');
+  });
+
+  it('refuses a fragment it cannot build, and says why', async () => {
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(60);
+    await env.api.openClipPanel();
+    const cases = [
+      ['00:30', '00:10', 'T:clip.order'],
+      ['00:10', '00:10.500', 'T:clip.too_short'],
+      ['00:10', '01:30', 'T:clip.past_end'],
+      ['ten', '00:20', 'T:clip.bad_start']
+    ];
+    for (const [start, end, said] of cases) {
+      env.els['clip-start'].value = start;
+      env.els['clip-end'].value = end;
+      env.api.onClipInput();
+      assert.strictEqual(env.els['clip-problem'].textContent, said, start + '–' + end);
+      assert.strictEqual(env.els['clip-problem'].hidden, false);
+      assert.strictEqual(env.els['btn-clip-create'].disabled, true);
+      await env.api.createClip();
+      assert.strictEqual(env.dispatched, 0, 'nothing is dispatched for ' + start + '–' + end);
+    }
+  });
+
+  it('stays quiet about a field that is simply empty', async () => {
+    const env = makeHarness();   // no player: the end is never filled in
+    await env.api.openClipPanel();
+    assert.strictEqual(env.els['clip-end'].value, '');
+    assert.strictEqual(env.els['btn-clip-create'].disabled, true,
+      'there is nothing to create yet');
+    assert.strictEqual(env.els['clip-problem'].hidden, true,
+      'an unfilled field is not a mistake to announce');
+  });
+
+  it('creates the fragment: its span, the panel away, the menu on the readout', async () => {
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(120);
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:10.5';
+    env.els['clip-end'].value = '00:40';
+    env.api.onClipInput();
+    await env.api.createClip();
+    await settle();
+    assert.strictEqual(env.dispatched, 1);
+    assert.strictEqual(env.dispatchedInputs.clip, '10500-40000');
+    assert.strictEqual(env.els['clip-panel'].hidden, true);
+    assert.strictEqual(env.els['export-menu'].hidden, false,
+      'the render reports itself in the menu, so the menu opens on it');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.clip_working',
+      'and it says a fragment is being built, not the whole video');
+  });
+
+  it('says a fragment is being built after a reload too', async () => {
+    const env = makeHarness();
+    env.localStorage.setItem('burn:t:v', JSON.stringify({
+      requestId: 'old', runId: 7, runUrl: '', startedAt: Date.now(),
+      talkId: 't', videoSlug: 'v', clip: { startMs: 0, endMs: 5000 } }));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.clip_working');
+  });
+
+  it('refuses a second render from the panel while one is followed', async () => {
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(120);
+    env.api.startBurn();
+    await settle();
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:10';
+    env.els['clip-end'].value = '00:40';
+    env.api.onClipInput();
+    assert.strictEqual(env.els['clip-problem'].textContent, 'T:clip.busy');
+    assert.strictEqual(env.els['btn-clip-create'].disabled, true);
+    await env.api.createClip();
+    assert.strictEqual(env.dispatched, 1, 'still only the render already in flight');
+  });
+
+  it('asks the pending-edits question for a fragment with the fragment\'s own button', async () => {
+    const env = makeHarness(previewing({ edits: { uk: { 3: 'a' } } }));
+    env.previewState.player = fakePlayer(120);
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:10';
+    env.els['clip-end'].value = '00:40';
+    await env.api.createClip();
+    await settle();
+    assert.strictEqual(env.confirms.length, 1);
+    assert.strictEqual(env.confirms[0].confirmLabel, 'T:clip.create');
+    assert.strictEqual(env.dispatchedInputs.clip, '10000-40000');
+  });
+
+  it('closes the panel on Escape once nothing above it is open', async () => {
+    const env = makeHarness();
+    await env.api.openClipPanel();
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['clip-panel'].hidden, true);
+  });
+
+  it('leaves Escape to fullscreen even with the panel open', async () => {
+    const env = makeHarness();
+    await env.api.openClipPanel();
+    env.els['view-preview'].className = 'view fs-mode';
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['clip-panel'].hidden, false,
+      'the panel is not on screen in fullscreen; the key belongs to leaving it');
+  });
+
+  it('leaves an Escape that something else has already acted on', async () => {
+    // SPA.confirm listens in the CAPTURE phase and calls preventDefault without
+    // stopping propagation, so its Escape reaches this handler afterwards. One
+    // key press cancelled the pending-edits dialog AND took the panel down with
+    // it — the panel the dialog was asked about.
+    const env = makeHarness();
+    await env.api.openClipPanel();
+    env.api.onBurnKeydown({ key: 'Escape', defaultPrevented: true });
+    assert.strictEqual(env.els['clip-panel'].hidden, false,
+      'the key was already spent — one Escape closes one surface');
+  });
+
+  it('leaves Escape to the preferences menu while that is the open one', async () => {
+    // The prefs menu listens AFTER this handler, so its Escape cannot be seen as
+    // handled: without a look at it, one press closed the gear menu and the
+    // fragment panel underneath it, which the reviewer never asked to lose.
+    const env = makeHarness();
+    await env.api.openClipPanel();
+    env.els['prefs-menu'].className = 'prefs-menu open';
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['clip-panel'].hidden, false,
+      'the gear menu is the topmost surface — it is the one that closes');
+  });
+
+  it('closes the menu first when the panel is open under it', async () => {
+    // One Escape closes one surface, the topmost. The panel is deliberately not
+    // modal, so it can sit under an open menu — and taking both down on one
+    // press loses work the reviewer never asked to lose.
+    const env = makeHarness();
+    await env.api.openClipPanel();
+    env.api.openExportMenu();
+    env.api.onBurnKeydown({ key: 'Escape' });
+    assert.strictEqual(env.els['export-menu'].hidden, true, 'the menu is the topmost');
+    assert.strictEqual(env.els['clip-panel'].hidden, false,
+      'and the panel under it stays — a second Escape is what closes that');
+  });
+
+  it('lets go of the window when the panel is closed mid-drag', async () => {
+    // Closing while the head is held left pointermove/up/cancel on the window
+    // for the life of the page, moving a panel that is not there any more.
+    const env = makeHarness();
+    const listeners = {};
+    env.window.addEventListener = function (type, fn) {
+      (listeners[type] = listeners[type] || []).push(fn);
+    };
+    env.window.removeEventListener = function (type, fn) {
+      listeners[type] = (listeners[type] || []).filter(function (f) { return f !== fn; });
+    };
+    const held = function () {
+      return Object.keys(listeners).reduce(function (n, k) { return n + listeners[k].length; }, 0);
+    };
+    await env.api.openClipPanel();
+    env.api.clipPanelDragStart({
+      button: 0, pointerId: 3, clientX: 10, clientY: 10,
+      currentTarget: { setPointerCapture: function () {}, releasePointerCapture: function () {} },
+      target: { closest: function () { return null; } },
+      preventDefault: function () {}
+    });
+    assert.strictEqual(held(), 3, 'precondition: the head is held');
+    env.api.closeClipPanel();
+    assert.strictEqual(held(), 0, 'closing has to release everything the drag took');
+  });
+
+  it('carries the render\'s own refusals into the panel, not just the times', async () => {
+    // None of these three is about the boundaries, and no change of them would
+    // lift one. Without each, the panel offers a Create that startBurn refuses
+    // in silence — after the panel has already closed on the reviewer's press.
+    async function problemWith(over, before) {
+      const env = makeHarness(over);
+      env.previewState.player = fakePlayer(120);
+      if (before) before(env);
+      await env.api.openClipPanel();
+      env.els['clip-start'].value = '00:10';
+      env.els['clip-end'].value = '00:40';
+      env.api.onClipInput();
+      return env.els['clip-problem'].textContent;
+    }
+    assert.strictEqual(await problemWith({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk', edits: { uk: { 3: 'a' } } },
+      editSync: { talkId: 't', getInfo: function () { return { status: 'pending', branch: 'b' }; } }
+    }), 'T:burn.wait_for_sync',
+    'edits that have reached no branch would be burned as the published text');
+
+    assert.strictEqual(await problemWith({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'en', edits: {} }
+    }), 'T:burn.wrong_lang',
+    'the workflow burns final/uk.srt whatever language is on screen');
+
+    assert.strictEqual(await problemWith({
+      previewState: { talkId: 't', videoSlug: 'v', srtLang: 'uk', edits: { uk: { 3: 'a' } } },
+      SPA: { confirm: function () { return new Promise(function () {}); } }
+    }, function (env) { env.api.startBurn(); }), 'T:clip.busy',
+    'a pending-edits dialog still open is a render already under way');
+  });
+
+  it('creates nothing for a video the panel no longer belongs to', async () => {
+    // The panel is not modal and the router does not tear it down, so it can be
+    // left open while the reviewer moves on. Creating then would render a
+    // fragment of the new video from the old one's boundaries.
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(120);
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:10';
+    env.els['clip-end'].value = '00:40';
+    env.api.onClipInput();
+    assert.strictEqual(env.els['btn-clip-create'].disabled, false, 'precondition: a good span');
+    env.previewState.videoSlug = 'Other';        // the preview moved on under it
+    const before = env.dispatched;
+    await env.api.createClip();
+    assert.strictEqual(env.dispatched, before,
+      'a fragment may only be dispatched for the video its boundaries were read off');
+  });
+
+  it('does not fill a boundary into a panel that has since been left', async () => {
+    // getDuration() is a round trip to the player. Its answer can land after the
+    // panel was closed, or reopened on another video, and writing the old
+    // video's length into the end field would be a boundary nobody chose.
+    let report;
+    const env = makeHarness();
+    env.previewState.player = {
+      getDuration: function () { return new Promise(function (r) { report = r; }); }
+    };
+    const opening = env.api.openClipPanel();
+    env.api.closeClipPanel();
+    report(120);
+    await opening;
+    assert.strictEqual(env.els['clip-end'].value, '',
+      'the length arrived for a panel nobody is looking at any more');
+  });
+
+  it('closes the panel when another video is entered, and starts afresh there', async () => {
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(120);
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:42';
+    env.previewState.videoSlug = 'v2';
+    env.api.resumeBurnWatch('t', 'v2');
+    assert.strictEqual(env.els['clip-panel'].hidden, true,
+      'its times were read off the video being left');
+    await env.api.openClipPanel();
+    assert.strictEqual(env.els['clip-start'].value, '00:00',
+      'the new video starts from its own beginning');
+  });
+
+  it('keeps what was set when reopened on the same video', async () => {
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(120);
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:42';
+    env.els['clip-end'].value = '01:00';
+    env.api.closeClipPanel();
+    await env.api.openClipPanel();
+    assert.strictEqual(env.els['clip-start'].value, '00:42');
+    assert.strictEqual(env.els['clip-end'].value, '01:00', 'not overwritten by the whole length');
+  });
+
+  it('never lets the panel be dragged off the screen', async () => {
+    const env = makeHarness();
+    env.window.innerWidth = 800;
+    env.window.innerHeight = 600;
+    env.els['clip-panel'].offsetWidth = 400;
+    env.els['clip-panel'].offsetHeight = 300;
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(-500, 99999);
+    assert.strictEqual(env.els['clip-panel'].style.left, '12px', 'its head stays within reach');
+    assert.strictEqual(env.els['clip-panel'].style.top, '288px');
+    assert.strictEqual(env.els['clip-panel'].style.right, 'auto');
+  });
+
+  it('never lets the panel be dragged under the freshness bar', async () => {
+    // The bar is fixed across the top of the page in a layer above the preview,
+    // so a panel taken to the margin keeps its head — and the only close button
+    // there is — hidden behind it: the panel can then be neither moved back nor
+    // dismissed with the pointer.
+    const env = makeHarness();
+    env.window.innerWidth = 1200;
+    env.window.innerHeight = 800;
+    env.els['freshness-bar'].getBoundingClientRect = function () {
+      return { left: 0, top: 0, right: 1200, bottom: 29, width: 1200, height: 29 };
+    };
+    const panel = env.els['clip-panel'];
+    panel.offsetWidth = 420;
+    panel.offsetHeight = 190;
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(400, -100);
+    assert.strictEqual(panel.style.top, (29 + 12) + 'px',
+      'the panel stops below the bar, not under it');
+    assert.strictEqual(panel.style.left, '400px', 'and the other axis is untouched');
+  });
+
+  it('closes the panel when the session loses write access', async () => {
+    let write = true;
+    const env = makeHarness({ ghWriteUser: function () { return write; } });
+    await env.api.openClipPanel();
+    write = false;
+    env.api.updateExportUi();
+    assert.strictEqual(env.els['clip-panel'].hidden, true);
+  });
+
+  it('stops following a run when the session loses write access', async () => {
+    // The menu is not signed-in-only — the subtitle download works without an
+    // account — so a sign-out leaves it open, and nothing closed it or stopped
+    // the poll. The loop went on asking for the run every five seconds with a
+    // token it no longer has, until a 401 happened to kill it.
+    let write = true;
+    const env = makeHarness({
+      ghWriteUser: function () { return write; },
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS, { fraction: 0.3, label: 'Render 20%' });
+      }
+    });
+    env.api.openExportMenu();
+    await env.api.burnFullVideo();
+    await settle();
+    assert.strictEqual(armedTimers(env), 1, 'precondition: the run is being followed');
+
+    write = false;
+    env.api.updateExportUi();
+
+    assert.strictEqual(env.els['export-menu'].hidden, false,
+      'the menu stays open: the subtitle download does not need an account');
+    assert.strictEqual(armedTimers(env), 0,
+      'but there is nothing signed in to poll with, so the loop stops');
+  });
+
+  it('picks a run back up when write access is granted again with the menu open', async () => {
+    // The stop half above has a start half, and a paint cannot carry it: on
+    // every paint a re-arm tears the follow down in the dispatch window (where
+    // burnWatch is still null) and re-arms inside showBurnError()'s own window.
+    // So the transition itself re-arms, once, where write access is granted.
+    //
+    // Left unfollowed with the menu still open, burnFollowing stays false, the
+    // item falls back to its "create the video" face, and the next click
+    // dispatches a SECOND run over the first — the exact harm startBurn()'s
+    // one-at-a-time guard exists to prevent.
+    let write = true;
+    const env = makeHarness({
+      ghWriteUser: function () { return write; },
+      matchRun: function () { return { id: 12, html_url: 'https://x/actions/runs/12' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS, { fraction: 0.3, label: 'Render 20%' });
+      }
+    });
+    const probe = makeWriteProbe(env, {
+      getRepoPermissions: function () { return Promise.resolve({ push: write }); }
+    });
+    env.api.openExportMenu();
+    await env.api.burnFullVideo();
+    await settle();
+    assert.strictEqual(armedTimers(env), 1, 'precondition: the run is being followed');
+
+    write = false;
+    await probe.checkWriteAccess();
+    await settle();
+    assert.strictEqual(armedTimers(env), 0, 'precondition: the loop stopped with the access');
+
+    write = true;
+    await probe.checkWriteAccess();
+    await settle();
+    assert.strictEqual(armedTimers(env), 1,
+      'write is back and the menu is still open — the run must be followed again');
+    assert.strictEqual(env.els['burn-item-label'].textContent, 'T:export.video_working',
+      'and the item must not offer a second render over the run it is following');
+  });
+
+  it('looks at the list of created videos again when write access is granted', async () => {
+    // The section is signed-in-only, so regaining write access reveals it — and
+    // what it reveals is whatever the last look left there, which for a session
+    // that has been read-only is an empty list with no note to explain it. The
+    // transition has to look again, and only while the menu is open: the look
+    // is an API call, and nothing is on screen to spend it on otherwise.
+    let write = { login: 'me' };
+    const env = historyHarness([burnRun(7)], { ghWriteUser: function () { return write; } });
+    const probe = makeWriteProbe(env, {
+      getRepoPermissions: function () { return Promise.resolve({ push: !!write }); }
+    });
+    await listed(env);
+    assert.strictEqual(rows(env).length, 1, 'precondition: one video listed');
+
+    write = null;
+    await probe.checkWriteAccess();
+    await settle();
+    // A render that finished in another tab while this session could not look.
+    env.historyRuns = [burnRun(7), burnRun(8)];
+
+    write = { login: 'me' };
+    await probe.checkWriteAccess();
+    await settle();
+    assert.strictEqual(rows(env).length, 2,
+      'the revealed section must be looked at afresh, not left as it was found');
+  });
+
+  // ---- review round 1 ----
+
+  it('keeps looking for the video that just finished until the list has it', async () => {
+    // A run is marked successful a moment after its job completes (measured: up
+    // to a second), and the runs search can lag behind that. A look made the
+    // instant the job is done regularly misses the video the item has just
+    // handed over, which then seems to have vanished.
+    let done = false;
+    let looks = 0;
+    const env = historyHarness([], {
+      makeRequestId: function () { return 'req-b-a'; },
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      },
+      listBurnRuns: function () {
+        looks++;
+        return Promise.resolve(looks >= 3 ? [burnRun(11, { request: 'req-b-a' })] : []);
+      }
+    });
+    await listed(env);                           // look 1, before the render
+    await env.api.burnFullVideo();
+    await settle();
+    done = true;
+    env.timers.filter(Boolean).pop()();          // the poll tick that sees the job done
+    await settle();                              // look 2: the run is not listed yet
+    assert.strictEqual(rows(env).length, 0, 'precondition: the list lags the job');
+    assert.strictEqual(env.els['burn-history-spinner'].hidden, false,
+      'the list is still being looked for, not declared empty');
+    assert.strictEqual(env.els['burn-history-note'].hidden, true);
+    env.timers.filter(Boolean).pop()();          // the scheduled second look
+    await settle();                              // look 3: there it is
+    assert.strictEqual(looks, 3);
+    assert.strictEqual(rowPart(env, 11, 'export-history__new').hidden, false,
+      'the video it just made appears, marked new');
+    assert.strictEqual(env.els['burn-history-spinner'].hidden, true);
+  });
+
+  it('keeps the rows on screen while it looks again for the one just finished', async () => {
+    // That look is retried for about twelve seconds. It used to blank the whole
+    // list for all of it — including the readout of a transfer running on one of
+    // those rows, which then had nowhere to report from and read as a click that
+    // had done nothing.
+    let done = false;
+    let looks = 0;
+    const env = historyHarness([burnRun(7)], {
+      makeRequestId: function () { return 'req-b-a'; },
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      },
+      listBurnRuns: function () { looks++; return Promise.resolve(env.historyRuns); }
+    });
+    await listed(env);                        // a video made earlier is on screen
+    assert.strictEqual(rows(env).length, 1, 'precondition: one row is listed');
+    await env.api.burnFullVideo();
+    await settle();
+    done = true;
+    env.timers.filter(Boolean).pop()();       // the poll tick that sees the job done
+    await settle();                           // the look that misses the new run
+
+    assert.ok(looks >= 2, 'the look after the render really did happen');
+    assert.strictEqual(rows(env).length, 1,
+      'the rows already on screen stay while the new one is looked for');
+    assert.strictEqual(env.els['burn-history-list'].hidden, false);
+    assert.strictEqual(env.els['burn-history-spinner'].hidden, false,
+      'the spinner joins them rather than standing in for them');
+  });
+
+  it('keeps the row a running transfer lives on when the look fails', async () => {
+    // Same rule as the retry above, for the other way a look can end. A failed
+    // look used to drop every row — including the one a transfer was reporting
+    // from — so the transfer ran on invisibly and, if it then died, had nowhere
+    // to say so. The 403 arm never recovers, so the rows never came back.
+    const RUNS = [burnRun(7)];
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    let fail = false;
+    const seen = [];
+    const env = savingHarness(zip.bytes, {
+      listBurnRuns: function () {
+        return fail ? Promise.reject(new Error('gone')) : Promise.resolve(RUNS);
+      }
+    }, null, RUNS);
+    await settle();
+    assert.strictEqual(rows(env).length, 1, 'precondition: one row is listed');
+
+    // Mid-transfer — the first chunk is on its way to disk — the list is looked
+    // at again and the look fails.
+    const write = env.sink.stream.write;
+    env.sink.stream.write = function (chunk) {
+      if (seen.length) return write.call(env.sink.stream, chunk);
+      fail = true;
+      return env.api.refreshBurnHistory().then(function () {
+        const row = rows(env).find(function (li) { return li.attrs['data-run'] === '7'; });
+        const meta = row ? findByClass(row, 'export-item__meta') : null;
+        seen.push({ rows: rows(env).length,
+                    listHidden: env.els['burn-history-list'].hidden,
+                    note: env.els['burn-history-note'].textContent,
+                    metaHidden: meta ? meta.hidden : null });
+        return write.call(env.sink.stream, chunk);
+      });
+    };
+
+    await env.api.downloadBurned(7);
+
+    assert.ok(seen.length, 'precondition: the transfer wrote while the look was out');
+    assert.strictEqual(seen[0].rows, 1,
+      'the row the running transfer reports from has to survive a failed look');
+    assert.strictEqual(seen[0].listHidden, false);
+    assert.strictEqual(seen[0].metaHidden, false,
+      'and it keeps its byte counter: a transfer with no readout reads as a dead click');
+    assert.strictEqual(seen[0].note, 'T:history.failed',
+      'the look that failed still says so, above the rows it could not refresh');
+  });
+
+  it('stops looking for a finished video after a few tries', async () => {
+    let done = false;
+    let looks = 0;
+    const env = historyHarness([], {
+      makeRequestId: function () { return 'req-b-a'; },
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      },
+      listBurnRuns: function () { looks++; return Promise.resolve([]); }
+    });
+    await listed(env);
+    await env.api.burnFullVideo();
+    await settle();
+    done = true;
+    env.timers.filter(Boolean).pop()();
+    await settle();
+    let fired = 0;
+    for (let i = 0; i < 20; i++) {
+      const pending = env.timers.map(function (fn, at) { return [fn, at]; }).filter(function (p) { return p[0]; });
+      if (!pending.length) break;
+      const [fn, at] = pending[pending.length - 1];
+      env.timers[at] = null;
+      fn();
+      fired++;
+      await settle();
+    }
+    assert.ok(fired < 20, 'the looks must come to an end');
+    assert.ok(looks <= 7, 'a handful of looks, not a loop: ' + looks);
+    assert.strictEqual(env.els['burn-history-spinner'].hidden, true, 'the wait ends');
+    assert.strictEqual(env.els['burn-history-note'].textContent, 'T:history.empty',
+      'and the list says what it found');
+  });
+
+  it('does not keep looking once the menu is closed', async () => {
+    let done = false;
+    let looks = 0;
+    const env = historyHarness([], {
+      makeRequestId: function () { return 'req-b-a'; },
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      },
+      listBurnRuns: function () { looks++; return Promise.resolve([]); }
+    });
+    await listed(env);
+    await env.api.burnFullVideo();
+    await settle();
+    done = true;
+    env.timers.filter(Boolean).pop()();
+    await settle();
+    env.api.closeExportMenu();
+    const before = looks;
+    env.timers.filter(Boolean).forEach(function (fn) { fn(); });
+    await settle();
+    assert.strictEqual(looks, before, 'nothing is on screen to fill');
+  });
+
+  it('retires the "new" mark once the menu has been closed', async () => {
+    let done = false;
+    const env = historyHarness([], {
+      makeRequestId: function () { return 'req-b-a'; },
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      }
+    });
+    await listed(env);
+    await env.api.burnFullVideo();
+    await settle();
+    done = true;
+    env.historyRuns = [burnRun(11, { request: 'req-b-a' })];
+    env.timers.filter(Boolean).pop()();
+    await settle();
+    assert.strictEqual(rowPart(env, 11, 'export-history__new').hidden, false, 'precondition: new');
+    env.api.closeExportMenu();
+    await listed(env);
+    assert.strictEqual(rowPart(env, 11, 'export-history__new').hidden, true,
+      'the reviewer has seen it: on the next look it is one video among the rest');
+  });
+
+  it('does not start a second poll loop when the menu opens over a resumed run', async () => {
+    // A run resumed on page load is already polled on its 5 s timer. Opening the
+    // menu started a second chain beside it, and the two interleaved at twice
+    // the API rate for as long as the menu stayed open.
+    const env = makeHarness();
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    assert.strictEqual(armedTimers(env), 1, 'precondition: the resumed run is followed');
+    env.api.openExportMenu();
+    await settle();
+    assert.strictEqual(armedTimers(env), 1,
+      'opening the menu picks up the same loop, not a second one');
+  });
+
+  it('follows a resumed run with neither surface open, through the start half alone', async () => {
+    // "Followed exactly while someone is looking" is syncBurnFollowing()'s own
+    // rule, not a property of the app: a run recorded before a reload is picked
+    // back up with the menu AND the panel closed, because startBurn()'s "one
+    // render at a time" guard reads burnFollowing — a render nothing follows
+    // would let a second one be dispatched over it from the first click.
+    //
+    // So the two halves are separate functions. Arming is armBurnFollowing();
+    // the synchronising one would END this follow, which is exactly what the
+    // middle of this test pins: it is the sharp edge a future caller has to
+    // know about, and the reason the surface-close paths return early when
+    // there was nothing open to close.
+    const env = makeHarness();
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    assert.strictEqual(env.els['export-menu'].hidden, true, 'nothing is on screen');
+    assert.strictEqual(env.els['clip-panel'].hidden, true);
+    assert.strictEqual(armedTimers(env), 1, 'and the run is followed all the same');
+
+    env.api.syncBurnFollowing();
+    assert.strictEqual(armedTimers(env), 0,
+      'the synchronising half sees no surface and stops the follow');
+
+    env.api.armBurnFollowing();
+    await settle();
+    assert.strictEqual(armedTimers(env), 1,
+      'the start half arms the same run again with nothing open');
+  });
+
+  it('counts a render still running behind a closed menu as busy', async () => {
+    // Closing the menu stops following the run, not the run. A fragment created
+    // from the panel in that window was refused silently inside startBurn —
+    // after the panel had already closed on the reviewer's request.
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(120);
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.openExportMenu();
+    env.api.closeExportMenu();
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:10';
+    env.els['clip-end'].value = '00:40';
+    env.api.onClipInput();
+    assert.strictEqual(env.els['clip-problem'].textContent, 'T:clip.busy');
+    assert.strictEqual(env.els['btn-clip-create'].disabled, true);
+    const before = env.dispatched;
+    await env.api.createClip();
+    assert.strictEqual(env.dispatched, before, 'nothing is dispatched over the running render');
+    assert.strictEqual(env.els['clip-panel'].hidden, false, 'and the panel stays, saying why');
+  });
+
+  it('clears the busy line once a render running behind a closed menu finishes', async () => {
+    // The panel is the second surface that shows a run: it refuses to build a
+    // fragment while one is in flight. Opening it closes the menu, and the menu
+    // used to be the only thing keeping the poll alive — so nothing ever noticed
+    // the render ending, and clip.busy, with the dead Create button under it,
+    // outlived the render that put it there.
+    let done = false;
+    const env = makeHarness({
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      }
+    });
+    env.previewState.player = fakePlayer(120);
+    env.api.openExportMenu();
+    await env.api.burnFullVideo();
+    await settle();
+    await env.api.openClipPanel();          // the menu closes under it
+    await settle();
+    env.els['clip-start'].value = '00:10';
+    env.els['clip-end'].value = '00:40';
+    env.api.onClipInput();
+    assert.strictEqual(env.els['clip-problem'].textContent, 'T:clip.busy',
+      'precondition: the render in flight is what the panel is waiting on');
+    assert.strictEqual(armedTimers(env), 1,
+      'the panel still shows the run, so the run must still be polled');
+
+    done = true;
+    env.timers.filter(Boolean).pop()();
+    await settle();
+
+    assert.strictEqual(env.els['clip-problem'].textContent, '',
+      'the render ended — the panel must stop refusing');
+    assert.strictEqual(env.els['btn-clip-create'].disabled, false,
+      'and hand the fragment back to the reviewer');
+  });
+
+  it('stops following when the panel is closed and no menu is open', async () => {
+    // The panel took the poll over from the menu it replaced. Closing it is then
+    // the LAST surface going, and there is nothing left on screen for a poll to
+    // write into — the loop would otherwise go on costing an API call every five
+    // seconds, over a run nobody is looking at, for as long as the tab lives.
+    let done = false;
+    const env = makeHarness({
+      matchRun: function () { return { id: 11, html_url: 'https://x/actions/runs/11' }; },
+      computeProgress: function () {
+        return Object.assign({}, NO_PROGRESS,
+          done ? { done: true, fraction: 1 } : { fraction: 0.3, label: 'Render 20%' });
+      }
+    });
+    env.previewState.player = fakePlayer(120);
+    env.api.openExportMenu();
+    await env.api.burnFullVideo();
+    await settle();
+    await env.api.openClipPanel();          // the menu closes under it
+    await settle();
+    assert.strictEqual(env.els['export-menu'].hidden, true,
+      'precondition: the panel is the only surface showing the run');
+    assert.strictEqual(armedTimers(env), 1,
+      'precondition: and it is what keeps the run polled');
+
+    env.api.closeClipPanel();
+
+    assert.strictEqual(armedTimers(env), 0,
+      'the last surface has gone, so the run stops being followed');
+  });
+
+  it('lets a failed render stop counting as busy in the panel', async () => {
+    const env = makeHarness();
+    env.previewState.player = fakePlayer(120);
+    env.localStorage.setItem('burn:t:v', savedWatch(7));
+    env.api.resumeBurnWatch('t', 'v');
+    await settle();
+    env.api.showBurnError('boom');
+    await env.api.openClipPanel();
+    env.els['clip-start'].value = '00:10';
+    env.els['clip-end'].value = '00:40';
+    env.api.onClipInput();
+    assert.strictEqual(env.els['btn-clip-create'].disabled, false,
+      'a failed run is recorded, but it is not running');
+  });
+
+  it('moves the panel out from over the menu when the menu opens under it', async () => {
+    // The menu lives in the sticky header's stacking context, below the panel's
+    // layer: a panel over the menu's corner hides the menu outright, and a
+    // second press on the button only closes what could not be seen.
+    const env = makeHarness();
+    env.window.innerWidth = 1200;
+    env.window.innerHeight = 800;
+    const panel = env.els['clip-panel'];
+    panel.offsetWidth = 420;
+    panel.offsetHeight = 190;
+    panel.getBoundingClientRect = function () {
+      const left = parseInt(panel.style.left, 10);
+      const top = parseInt(panel.style.top, 10);
+      return { left: left, top: top, right: left + 420, bottom: top + 190, width: 420, height: 190 };
+    };
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(768, 109);            // right under the download button
+    env.els['export-menu'].getBoundingClientRect = function () {
+      return { left: 860, top: 88, right: 1180, bottom: 330, width: 320, height: 242 };
+    };
+    env.api.openExportMenu();
+    assert.strictEqual(panel.style.left, (860 - 420 - 12) + 'px',
+      'the panel steps aside to the left of the menu');
+    assert.strictEqual(panel.style.top, '109px');
+  });
+
+  it('moves the panel out from under the choices as well', async () => {
+    const env = makeHarness();
+    env.window.innerWidth = 1200;
+    env.window.innerHeight = 800;
+    const panel = env.els['clip-panel'];
+    panel.offsetWidth = 420;
+    panel.offsetHeight = 190;
+    panel.getBoundingClientRect = function () {
+      const left = parseInt(panel.style.left, 10);
+      const top = parseInt(panel.style.top, 10);
+      return { left: left, top: top, right: left + 420, bottom: top + 190, width: 420, height: 190 };
+    };
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(430, 109);            // clear of the menu, over the flyout
+    env.els['export-menu'].getBoundingClientRect = function () {
+      return { left: 860, top: 88, right: 1180, bottom: 330, width: 320, height: 242 };
+    };
+    env.els['burn-make-menu'].getBoundingClientRect = function () {
+      return { left: 636, top: 118, right: 856, bottom: 190, width: 220, height: 72 };
+    };
+    env.api.openExportMenu();
+    assert.strictEqual(panel.style.left, '430px', 'precondition: the menu alone is clear');
+    await env.api.videoItemAction({ detail: 1 });
+    assert.strictEqual(panel.style.left, (636 - 420 - 12) + 'px',
+      'the flyout is part of what the panel must not cover');
+  });
+
+  it('moves the panel again when the arriving rows make the menu taller', async () => {
+    // clearClipPanelOfMenu() runs as the menu opens — and the list of created
+    // videos is still empty then. The rows land a round-trip later and push the
+    // menu's bottom edge down past the panel that had just stepped below it, so
+    // the panel ends up over the very rows it had made room for.
+    const env = historyHarness([burnRun(7)]);
+    env.window.innerWidth = 400;      // no room beside the menu: below is the only way
+    env.window.innerHeight = 768;
+    const panel = env.els['clip-panel'];
+    panel.offsetWidth = 376;
+    panel.offsetHeight = 190;
+    panel.getBoundingClientRect = function () {
+      const left = parseInt(panel.style.left, 10) || 0;
+      const top = parseInt(panel.style.top, 10) || 0;
+      return { left: left, top: top, right: left + 376, bottom: top + 190,
+               width: 376, height: 190 };
+    };
+    // The menu is exactly as tall as the rows it has been given.
+    env.els['export-menu'].getBoundingClientRect = function () {
+      const shown = env.els['burn-history-list'].children.length * 156;
+      return { left: 12, top: 60, right: 388, bottom: 250 + shown,
+               width: 376, height: 190 + shown };
+    };
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(12, 100);
+    env.api.openExportMenu();
+    assert.strictEqual(panel.style.top, '262px',
+      'precondition: the panel stepped below the still-empty menu');
+
+    await settle();                   // the rows land and the menu grows
+
+    assert.strictEqual(panel.style.top, (250 + 156 + 12) + 'px',
+      'the taller menu has to push the panel down again, or it covers the rows');
+  });
+
+  // A panel placed against a menu of one height is misplaced against any other,
+  // and the menu changes height in three ways. The rows arriving is one (above);
+  // these are the other two. Each is driven through the one call that grows the
+  // menu, so it can only be the placement call on THAT path that saves it.
+
+  it('moves the panel again when the render puts its progress parts on screen', async () => {
+    // Starting a render unhides the item's track and status line beneath the
+    // label — a bare offer becomes a progress report, and the menu grows by the
+    // height of it while the panel still sits where the short menu left room.
+    const env = historyHarness([]);
+    env.window.innerWidth = 400;      // no room beside the menu: below is the only way
+    env.window.innerHeight = 768;
+    const panel = env.els['clip-panel'];
+    panel.offsetWidth = 376;
+    panel.offsetHeight = 190;
+    panel.getBoundingClientRect = function () {
+      const left = parseInt(panel.style.left, 10) || 0;
+      const top = parseInt(panel.style.top, 10) || 0;
+      return { left: left, top: top, right: left + 376, bottom: top + 190,
+               width: 376, height: 190 };
+    };
+    // The menu is as tall as whatever the item shows under its label.
+    env.els['export-menu'].getBoundingClientRect = function () {
+      const grown = env.els['burn-track'].hidden ? 0 : 60;
+      return { left: 12, top: 60, right: 388, bottom: 250 + grown,
+               width: 376, height: 190 + grown };
+    };
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(12, 100);
+    env.api.openExportMenu();
+    await settle();                   // the empty list lands and settles
+    assert.strictEqual(panel.style.top, '262px',
+      'precondition: the panel stepped below the menu of a bare offer');
+
+    const started = env.api.burnFullVideo();
+    // Read before anything else on that path can run: at this instant only the
+    // item has been redrawn, so nothing but its own placement call can be why
+    // the panel moved.
+    assert.strictEqual(env.els['burn-track'].hidden, false,
+      'precondition: the render put its progress parts on screen');
+    assert.strictEqual(panel.style.top, (250 + 60 + 12) + 'px',
+      'the item grew under the panel, so the panel has to step down again');
+    await started;
+    await settle();
+  });
+
+  it('moves the panel again when a transfer puts its readout on a row', async () => {
+    // A download adds a track, a byte counter and an error line UNDER the row it
+    // runs on — measured at 262px -> 322px on the real menu. The panel was placed
+    // against the menu without them.
+    const zip = skewedZip(Buffer.alloc(20000, 7), 11);
+    const env = savingHarness(zip.bytes);
+    await settle();
+    env.window.innerWidth = 400;
+    env.window.innerHeight = 768;
+    const panel = env.els['clip-panel'];
+    panel.offsetWidth = 376;
+    panel.offsetHeight = 190;
+    panel.getBoundingClientRect = function () {
+      const left = parseInt(panel.style.left, 10) || 0;
+      const top = parseInt(panel.style.top, 10) || 0;
+      return { left: left, top: top, right: left + 376, bottom: top + 190,
+               width: 376, height: 190 };
+    };
+    // The row's own readout is what the menu grows by here.
+    const rowMeta = function () {
+      const row = rows(env).find(function (li) { return li.attrs['data-run'] === '7'; });
+      return row ? findByClass(row, 'export-item__meta') : null;
+    };
+    env.els['export-menu'].getBoundingClientRect = function () {
+      const meta = rowMeta();
+      const grown = (meta && !meta.hidden) ? 60 : 0;
+      return { left: 12, top: 60, right: 388, bottom: 250 + grown,
+               width: 376, height: 190 + grown };
+    };
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(12, 100);
+    env.api.openExportMenu();
+    await settle();
+    assert.strictEqual(panel.style.top, '262px',
+      'precondition: the panel stepped below the menu of quiet rows');
+
+    const transfer = env.api.downloadBurned(7);
+    // Same reading point: the row has just been repainted and nothing else on
+    // the transfer's path has run yet.
+    assert.ok(rowMeta() && !rowMeta().hidden,
+      'precondition: the transfer put its readout under the row');
+    assert.strictEqual(panel.style.top, (250 + 60 + 12) + 'px',
+      'the row grew under the panel, so the panel has to step down again');
+    await transfer;
+  });
+
+  it('drags the panel by its head, and lets go of the window when released', async () => {
+    const env = makeHarness();
+    const listeners = {};
+    env.window.addEventListener = function (type, fn) {
+      (listeners[type] = listeners[type] || []).push(fn);
+    };
+    env.window.removeEventListener = function (type, fn) {
+      listeners[type] = (listeners[type] || []).filter(function (f) { return f !== fn; });
+    };
+    const held = function () {
+      return Object.keys(listeners).reduce(function (n, k) { return n + listeners[k].length; }, 0);
+    };
+    env.window.innerWidth = 1200;
+    env.window.innerHeight = 800;
+    const panel = env.els['clip-panel'];
+    panel.offsetWidth = 400;
+    panel.offsetHeight = 200;
+    await env.api.openClipPanel();
+    env.api.moveClipPanel(500, 100);
+    panel.getBoundingClientRect = function () { return { left: 500, top: 100 }; };
+    const captured = [];
+    const head = {
+      setPointerCapture: function (id) { captured.push(id); },
+      releasePointerCapture: function (id) { captured.push(-id); }
+    };
+    const onHead = { closest: function () { return null; } };
+
+    env.api.clipPanelDragStart({ button: 2, pointerId: 1, clientX: 520, clientY: 110,
+                                 currentTarget: head, target: onHead });
+    assert.strictEqual(held(), 0, 'only the primary button drags');
+
+    env.api.clipPanelDragStart({ button: 0, pointerId: 2, clientX: 880, clientY: 110,
+      currentTarget: head, target: { closest: function (sel) { return sel === 'button' ? {} : null; } } });
+    assert.strictEqual(held(), 0, 'the close button on the head is not a handle');
+
+    env.api.clipPanelDragStart({ button: 0, pointerId: 3, clientX: 520, clientY: 110,
+                                 currentTarget: head, target: onHead, preventDefault: function () {} });
+    assert.strictEqual(held(), 3, 'move, up and cancel are listened for while the head is held');
+    assert.deepStrictEqual(captured, [3], 'the pointer is captured, so a fast drag cannot outrun it');
+    listeners.pointermove[0]({ pointerId: 3, clientX: 320, clientY: 310 });
+    assert.strictEqual(panel.style.left, '300px');
+    assert.strictEqual(panel.style.top, '300px');
+    listeners.pointermove[0]({ pointerId: 9, clientX: 0, clientY: 0 });
+    assert.strictEqual(panel.style.left, '300px', 'another pointer does not move it');
+    listeners.pointerup[0]({ pointerId: 3 });
+    assert.strictEqual(held(), 0, 'releasing lets go of every window listener');
+    assert.deepStrictEqual(captured, [3, -3]);
   });
 });

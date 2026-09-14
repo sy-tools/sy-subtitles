@@ -64,6 +64,11 @@ RUN_NAME_SEGMENTS = [
     "${{ inputs.request_id }}",
 ]
 
+# "1993" in Arabic-Indic digits. Python's \d matches these, a browser's does not
+# — so this is the one string that tells the two apart, and the run-name patterns
+# are compared against it precisely because neither side may accept it.
+ARABIC_INDIC_1993 = "١٩٩٣"
+
 
 def _raw():
     with open(WORKFLOW, encoding="utf-8") as f:
@@ -346,6 +351,139 @@ class TestValidation:
             source = f.read()
         js = {name: float(value) for name, value in re.findall(r"var (FONT_RATIO_(?:MIN|MAX)) = ([0-9.]+);", source)}
         assert js == {"FONT_RATIO_MIN": low, "FONT_RATIO_MAX": high}
+
+
+class TestSpaContract:
+    """What the preview SPA shares with this workflow beyond the step names.
+
+    Each number lives in two languages, so it is read out of the JS source here:
+    a change made on one side alone fails in CI, not in a render the reviewer
+    waited minutes for — or, for the list of created videos, in a list that
+    quietly shows nothing.
+    """
+
+    @staticmethod
+    def _js(name):
+        with open("site/js/burn_video.js", encoding="utf-8") as f:
+            match = re.search(rf"^var {name} = (.+);$", f.read(), re.M)
+        assert match, f"{name} is no longer declared in site/js/burn_video.js"
+        return match.group(1)
+
+    def test_the_shortest_clip_is_the_same_number_in_the_spa(self):
+        # The panel refuses what the guard would refuse, so a fragment the
+        # reviewer was allowed to ask for is never rejected in Validate inputs.
+        from tools import burn_clip
+
+        assert int(self._js("BURN_CLIP_MIN_MS")) == burn_clip.CLIP_MIN_MS
+
+    def test_the_longest_clip_number_is_the_same_in_the_spa(self):
+        # Nine digits of milliseconds on both sides: a longer span would pass
+        # the panel, then be refused in Validate inputs after the wait — or be
+        # rendered and never read back by the list's run-title parser.
+        from tools import burn_clip
+
+        longest = int(self._js("BURN_CLIP_MAX_MS"))
+        assert burn_clip.parse_clip(f"0-{longest}") == (0, longest)
+        with pytest.raises(burn_clip.ClipError):
+            burn_clip.parse_clip(f"0-{longest + 1}")
+
+    def test_the_spa_lists_no_further_back_than_an_artifact_lives(self):
+        # Listed past the retention, a row would offer a download whose artifact
+        # is already gone.
+        import math
+
+        days = _step("Upload result")["with"]["retention-days"]
+        factors = [int(part) for part in self._js("BURN_RETENTION_MS").split("*")]
+        assert math.prod(factors) == days * 24 * 60 * 60 * 1000
+
+    def test_the_spa_splits_titles_on_the_separator_the_run_name_writes(self):
+        # tests/test_burn_video.js renders this run-name and parses it back; this
+        # half pins the separator itself, so neither side can drift alone.
+        import ast
+
+        separator = ast.literal_eval(self._js("BURN_TITLE_SEP"))
+        assert _doc()["run-name"].split(separator) == RUN_NAME_SEGMENTS
+
+    @staticmethod
+    def _js_regex(name):
+        """One of the SPA's run-name field patterns, as a Python regex.
+
+        The two sides spell the same grammar in two syntaxes, so they are
+        compared by the strings they ACCEPT rather than character for character:
+        a reformatting is not a drift, and a widened character class is.
+
+        re.ASCII because the pattern has to be read the way the BROWSER reads it,
+        not the way Python would: JavaScript's \\d is ASCII, Python's matches
+        every Unicode digit. Without the flag this helper modelled a wider
+        pattern than the one that ships, and would have called a browser-only
+        rejection an agreement.
+        """
+        literal = TestSpaContract._js(name)
+        assert literal.startswith("/^") and literal.endswith("$/"), literal
+        return re.compile(literal[1:-1], re.ASCII)
+
+    def test_the_spa_reads_back_every_request_id_the_workflow_lets_through(self):
+        # The token is the run name's last field, and the list of created videos
+        # finds a run by it. A request_id the workflow accepts but the SPA cannot
+        # parse is a video that renders and is then never listed — so every value
+        # that gets past Validate inputs has to come back out of the run name.
+        from tools.workflow_validation import REQUEST_ID_RE
+
+        spa = self._js_regex("BURN_RUN_REQUEST_RE")
+        # The corners of the workflow's own grammar: the shortest, the widest
+        # stamp a safe integer spells, and the widest 16-bit noise.
+        for value in ["req-0-0", "req-" + "z" * 11 + "-1ekf", "req-mf3k9d2-1a"]:
+            assert REQUEST_ID_RE.fullmatch(value), f"{value} is the workflow's own shape"
+            assert spa.fullmatch(value), f"the SPA cannot read back {value}"
+        # And the shapes neither side may take: an id carrying separators or
+        # uppercase would let a run name claim another talk, author or size.
+        for value in ["req-abc", "req--1", "req-ABC-1", "req-abc-1-x", "xreq-abc-1", "req-abc-1 "]:
+            assert not REQUEST_ID_RE.fullmatch(value), value
+            assert not spa.fullmatch(value), value
+
+    def test_the_subtitle_size_band_is_the_same_number_in_the_spa(self):
+        # The SPA clamps the measured size into this band before dispatching and
+        # refuses to list a run outside it. A band only one side knows either
+        # fails the run in Validate inputs, or drops a rendered video from the
+        # list for a size the SPA itself asked for.
+        from tools import workflow_validation as wv
+
+        assert int(self._js("BURN_SCALE_PCT_MIN")) == wv.SUBS_SCALE_MIN
+        assert int(self._js("BURN_SCALE_PCT_MAX")) == wv.SUBS_SCALE_MAX
+
+    def test_the_spa_reads_back_exactly_the_talks_and_slugs_the_workflow_accepts(self):
+        # The run name's second field is talk_id/video_slug, and it is what scopes
+        # a listed video to the one on screen. The SPA's pattern for it is the two
+        # workflow guards written as one, so a talk the workflow renders and the
+        # SPA cannot place would simply be missing from the list.
+        from tools.workflow_validation import TALK_ID_RE, VIDEO_SLUG_RE
+
+        place = self._js_regex("BURN_RUN_PLACE_RE")
+        for talk, slug in [
+            ("1993-09-19_Ganesha-Puja", "Talk"),
+            ("2000-07-23_Guru-Puja-Shraddha", "Talk_2.part-1"),
+            ("1979-09-27_" + "x" * 80, "_" + "y" * 63),
+        ]:
+            assert TALK_ID_RE.fullmatch(talk) and VIDEO_SLUG_RE.fullmatch(slug)
+            found = place.fullmatch(f"{talk}/{slug}")
+            assert found, f"the SPA cannot place {talk}/{slug}"
+            assert found.group(1) == talk and found.group(2) == slug
+        for talk, slug in [
+            ("1993-9-19_Ganesha", "Talk"),  # an unpadded date
+            ("1993-09-19_" + "x" * 81, "Talk"),  # one character past the talk id
+            ("1993-09-19_Ganesha", "-rf"),  # an option-shaped slug
+            ("1993-09-19_Ganesha", "."),  # a dot-only slug
+            ("1993-09-19_Ganesha", "y" * 65),  # one character past the slug
+            # Digits only a Unicode-aware \d calls digits. The browser's \d is
+            # ASCII, so the SPA cannot place these; the workflow must not let one
+            # render either, or the video renders and is never listed. Without a
+            # sample here the whole dimension went untried, and the test read
+            # these patterns under Python's rule rather than the browser's.
+            (ARABIC_INDIC_1993 + "-09-19_Ganesha", "Talk"),
+            ("1993-" + ARABIC_INDIC_1993[:2] + "-19_Ganesha", "Talk"),
+        ]:
+            assert not (TALK_ID_RE.fullmatch(talk) and VIDEO_SLUG_RE.fullmatch(slug))
+            assert not place.fullmatch(f"{talk}/{slug}"), f"{talk}/{slug} must not place"
 
 
 class TestDownload:
