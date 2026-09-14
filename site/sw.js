@@ -60,7 +60,9 @@ var SHELL_ASSETS = [
   'js/burn_video.js',
   'js/burn_artifact.js',
   'js/export_menu.js',
-  'js/pending_action.js'
+  'js/pending_action.js',
+  'js/clip_time.js',
+  'js/float_panel.js'
 ];
 
 // Scripts that load inside the typo-hints Worker rather than through a <script>

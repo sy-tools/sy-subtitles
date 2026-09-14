@@ -290,6 +290,33 @@ Data sources (zero backend):
 - `review-status.json` → review badges (static file, no API cost)
 - `localStorage` → markers, edits, preferences, cache
 
+### Burned videos in the preview
+
+The download menu's video item renders; it never downloads. A click opens two
+choices — the whole video, or a fragment chosen in a floating panel — and while a
+run is followed the item is its progress readout. A finished render is not one
+of its faces: that face used to hide the offer to build for as long as the
+subtitles stayed the same, which is exactly when a reviewer wants a fragment of
+them. The finished video joins the **list of created videos** under the item
+instead, and every download starts from a row of it.
+
+That list is one request for `burn-subtitles.yml`'s successful runs within the
+artifact retention, parsed back out of each run's name
+(`parseBurnRunTitle` in `site/js/burn_video.js`): the run name is the only place
+a render's talk, author, subtitle scale and span survive, because the API does
+not return dispatch inputs. It shows every author's renders of the video on
+screen and names the author only when it is someone else. The SPA and the
+workflow pin the shared shape against each other from both languages
+(`tests/test_burn_video.js` parses the YAML's run-name back;
+`tests/test_burn_workflow.py` pins the separator, the shortest clip and the
+retention).
+
+The fragment panel is deliberately **not modal**: the reviewer finds the
+boundaries by playing and seeking the player underneath it, and its buttons read
+the player's position at millisecond precision. It refuses what the workflow
+would refuse — a render already in flight, edits still syncing, the wrong
+language, an impossible span — before anything is dispatched.
+
 ### Typo hints
 
 A preference (the gear menu) underlines words that neither a general Ukrainian
