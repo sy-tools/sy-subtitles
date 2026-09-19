@@ -19,7 +19,6 @@ from .srt_utils import (
     format_stats,
     load_whisper_json,
     parse_srt,
-    readable_floor_ms,
     write_srt,
 )
 
@@ -720,7 +719,7 @@ def merge_sparse_blocks(blocks, config, word_intervals=None):
             if cps >= config.sparse_cps_threshold:
                 continue
             # Cap at reading time × 1.5 (give some margin for Phase 7)
-            reading_dur = max(config.min_duration_ms, int((chars / config.target_cps) * 1000))
+            reading_dur = _readable_floor_ms(chars, config.target_cps, config)
             max_dur = int(reading_dur * 1.5)
             if dur > max_dur:
                 new_end = b["start_ms"] + max_dur
@@ -798,48 +797,14 @@ def merge_short_blocks(blocks, config, word_intervals=None):
     return blocks, total_merged
 
 
-def _spare_ms(block, config):
-    """How much time a block can give up and still be readable."""
-    chars = len(block["text"].replace("\n", ""))
-    duration = block["end_ms"] - block["start_ms"]
-    return max(0, duration - readable_floor_ms(chars, config.hard_max_cps, config))
+def _readable_floor_ms(chars, cps, config):
+    """Shortest a block of ``chars`` may be left when levelled at ``cps``.
 
-
-def reclaim_min_duration(blocks, config):
-    """Bring blocks under min duration up to it, at a neighbour's expense.
-
-    The later minimum-duration pass can only push a block's END forward, which
-    the overlap fix undoes whenever the next block already starts at the
-    minimum gap — the normal case, since the CPS phases have by then grown both
-    neighbours into the silence around it. So a one-second interjection stays
-    on screen under the minimum however much silence sits next to it.
-
-    Moving the SHARED boundary instead leaves every gap exactly as it was. A
-    donor gives only what keeps it above its own floors, and a need that cannot
-    be met in full changes nothing: a partial borrow moves boundaries off the
-    speech for a block that stays unreadable anyway.
-
-    Returns (blocks, count of blocks brought up to the minimum).
+    Reading time is only one of the two floors: a block under the minimum
+    duration flashes past unread however comfortable its CPS looks, and three
+    characters read at target CPS come to 200ms.
     """
-    reclaimed = 0
-    for i, b in enumerate(blocks):
-        need = config.min_duration_ms - (b["end_ms"] - b["start_ms"])
-        if need <= 0:
-            continue
-        nxt = blocks[i + 1] if i + 1 < len(blocks) else None
-        prv = blocks[i - 1] if i > 0 else None
-        from_next = min(need, _spare_ms(nxt, config)) if nxt else 0
-        from_prev = min(need - from_next, _spare_ms(prv, config)) if prv else 0
-        if from_next + from_prev < need:
-            continue
-        if from_next:
-            nxt["start_ms"] += from_next
-            b["end_ms"] += from_next
-        if from_prev:
-            prv["end_ms"] -= from_prev
-            b["start_ms"] -= from_prev
-        reclaimed += 1
-    return blocks, reclaimed
+    return max(config.min_duration_ms, int(chars / cps * 1000))
 
 
 def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
@@ -876,7 +841,7 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
                 if nb_cps < level_cps:
-                    nb_min_dur = readable_floor_ms(nb_chars, level_cps, config)
+                    nb_min_dur = _readable_floor_ms(nb_chars, level_cps, config)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
                     give = min(extra_needed, nb_can_give)
                     if give > 30:
@@ -898,7 +863,7 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
                 if nb_cps < level_cps:
-                    nb_min_dur = readable_floor_ms(nb_chars, level_cps, config)
+                    nb_min_dur = _readable_floor_ms(nb_chars, level_cps, config)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
                     give = min(extra_needed, nb_can_give)
                     if give > 30:
@@ -1077,13 +1042,6 @@ def optimize_readability(blocks, whisper_segments, config, report):
             break
         report.append(f"  Phase 6 - CPS extensions (pass {pass_num + 2}): {ext}")
 
-    # Phase 6b: reclaim minimum duration. Must stay ahead of every phase that
-    # reacts to a moved boundary (the cascade above all), or its changes first
-    # surface on the NEXT run — the issue #739 non-idempotency class.
-    blocks, reclaimed = reclaim_min_duration(blocks, config)
-    if reclaimed:
-        report.append(f"  Phase 6b - Short blocks given their minimum: {reclaimed}")
-
     # Phase 7: Cascade redistribution
     blocks = cascade_redistribute(blocks, config, report)
 
@@ -1136,7 +1094,7 @@ def optimize_readability(blocks, whisper_segments, config, report):
                     best_overlap = overlap
                     speech_end = int(we)
             # Trim to speech_end + margin, at least reading time
-            reading_dur = max(config.min_duration_ms, int((chars / config.target_cps) * 1000))
+            reading_dur = _readable_floor_ms(chars, config.target_cps, config)
             new_end = max(b["start_ms"] + reading_dur, int(speech_end + 500))
             if i + 1 < len(blocks):
                 new_end = min(new_end, blocks[i + 1]["start_ms"] - config.min_gap_ms)
