@@ -19,6 +19,7 @@ from .srt_utils import (
     format_stats,
     load_whisper_json,
     parse_srt,
+    readable_floor_ms,
     write_srt,
 )
 
@@ -797,6 +798,50 @@ def merge_short_blocks(blocks, config, word_intervals=None):
     return blocks, total_merged
 
 
+def _spare_ms(block, config):
+    """How much time a block can give up and still be readable."""
+    chars = len(block["text"].replace("\n", ""))
+    duration = block["end_ms"] - block["start_ms"]
+    return max(0, duration - readable_floor_ms(chars, config.hard_max_cps, config))
+
+
+def reclaim_min_duration(blocks, config):
+    """Bring blocks under min duration up to it, at a neighbour's expense.
+
+    The later minimum-duration pass can only push a block's END forward, which
+    the overlap fix undoes whenever the next block already starts at the
+    minimum gap — the normal case, since the CPS phases have by then grown both
+    neighbours into the silence around it. So a one-second interjection stays
+    on screen under the minimum however much silence sits next to it.
+
+    Moving the SHARED boundary instead leaves every gap exactly as it was. A
+    donor gives only what keeps it above its own floors, and a need that cannot
+    be met in full changes nothing: a partial borrow moves boundaries off the
+    speech for a block that stays unreadable anyway.
+
+    Returns (blocks, count of blocks brought up to the minimum).
+    """
+    reclaimed = 0
+    for i, b in enumerate(blocks):
+        need = config.min_duration_ms - (b["end_ms"] - b["start_ms"])
+        if need <= 0:
+            continue
+        nxt = blocks[i + 1] if i + 1 < len(blocks) else None
+        prv = blocks[i - 1] if i > 0 else None
+        from_next = min(need, _spare_ms(nxt, config)) if nxt else 0
+        from_prev = min(need - from_next, _spare_ms(prv, config)) if prv else 0
+        if from_next + from_prev < need:
+            continue
+        if from_next:
+            nxt["start_ms"] += from_next
+            b["end_ms"] += from_next
+        if from_prev:
+            prv["end_ms"] -= from_prev
+            b["start_ms"] -= from_prev
+        reclaimed += 1
+    return blocks, reclaimed
+
+
 def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
     """One redistribution pass: blocks with CPS above ``recipient_min_cps``
     receive time (aiming at ``level_cps``) from neighbors whose CPS stays
@@ -831,7 +876,7 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
                 if nb_cps < level_cps:
-                    nb_min_dur = int((nb_chars / level_cps) * 1000)
+                    nb_min_dur = readable_floor_ms(nb_chars, level_cps, config)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
                     give = min(extra_needed, nb_can_give)
                     if give > 30:
@@ -853,7 +898,7 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
                 if nb_cps < level_cps:
-                    nb_min_dur = int((nb_chars / level_cps) * 1000)
+                    nb_min_dur = readable_floor_ms(nb_chars, level_cps, config)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
                     give = min(extra_needed, nb_can_give)
                     if give > 30:
@@ -1031,6 +1076,13 @@ def optimize_readability(blocks, whisper_segments, config, report):
         if ext == 0:
             break
         report.append(f"  Phase 6 - CPS extensions (pass {pass_num + 2}): {ext}")
+
+    # Phase 6b: reclaim minimum duration. Must stay ahead of every phase that
+    # reacts to a moved boundary (the cascade above all), or its changes first
+    # surface on the NEXT run — the issue #739 non-idempotency class.
+    blocks, reclaimed = reclaim_min_duration(blocks, config)
+    if reclaimed:
+        report.append(f"  Phase 6b - Short blocks given their minimum: {reclaimed}")
 
     # Phase 7: Cascade redistribution
     blocks = cascade_redistribute(blocks, config, report)

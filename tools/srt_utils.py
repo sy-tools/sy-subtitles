@@ -80,6 +80,18 @@ def load_whisper_json(filepath):
     return data["segments"]
 
 
+def readable_floor_ms(chars, cps, config):
+    """Shortest a block of ``chars`` may be left when levelled at ``cps``.
+
+    Reading time is only one of the two floors: a block under the minimum
+    duration flashes past unread however comfortable its CPS looks, and three
+    characters read at target CPS come to 200ms. Every phase that decides how
+    short a block may get reads this one rule — two copies of it drift, and the
+    copy that forgets the minimum is the one that ships unreadable subtitles.
+    """
+    return max(config.min_duration_ms, int(chars / cps * 1000))
+
+
 def calc_stats(blocks, config=None):
     """Calculate statistics for a set of SRT blocks."""
     if config is None:
