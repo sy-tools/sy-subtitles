@@ -83,6 +83,57 @@ def test_apply_padding_respects_max_duration():
     assert result[0]["end_ms"] - result[0]["start_ms"] <= 21000
 
 
+def test_apply_padding_leaves_a_readable_last_block_alone():
+    # The last block has no next block to bound its padding, so it used to get
+    # a flat +2000ms. A block already below target CPS reads fine as it is, and
+    # the blind extension pushes the SRT past the end of known speech — which
+    # is exactly what the time-range check fails on.
+    blocks = [
+        _make_block(1, 0, 2000, "A"),
+        _make_block(2, 10_000, 13_540, "x" * 30),  # 8.5 CPS against a 15 target
+    ]
+    config = OptimizeConfig(target_cps=15.0)
+    result = apply_padding(blocks, config)
+    assert result[-1]["end_ms"] == 13_540
+
+
+def test_apply_padding_extends_a_dense_last_block_to_reading_time():
+    # 20 chars in 500ms is 40 CPS; reading them at the 15 CPS target needs
+    # 1333ms, which is less than the +2000ms allowance — so reading time, not
+    # the allowance, decides where the block ends.
+    blocks = [
+        _make_block(1, 0, 2000, "A"),
+        _make_block(2, 10_000, 10_500, "x" * 20),
+    ]
+    config = OptimizeConfig(target_cps=15.0)
+    result = apply_padding(blocks, config)
+    assert result[-1]["end_ms"] == 11_333
+
+
+def test_apply_padding_caps_last_block_growth_at_the_allowance():
+    # 60 chars in 1000ms needs 4000ms at the target; the +2000ms allowance wins.
+    blocks = [
+        _make_block(1, 0, 2000, "A"),
+        _make_block(2, 10_000, 11_000, "x" * 60),
+    ]
+    config = OptimizeConfig(target_cps=15.0)
+    result = apply_padding(blocks, config)
+    assert result[-1]["end_ms"] == 13_000
+
+
+def test_apply_padding_gives_a_short_last_block_its_minimum_duration():
+    # 12 chars read at the target take 800ms, and a block on screen for 800ms
+    # flashes past unread however comfortable its CPS looks. Reading time is
+    # only one of the two floors the last block has to clear.
+    blocks = [
+        _make_block(1, 0, 2000, "A"),
+        _make_block(2, 10_000, 10_600, "x" * 12),
+    ]
+    config = OptimizeConfig(target_cps=15.0, min_duration_ms=1200)
+    result = apply_padding(blocks, config)
+    assert result[-1]["end_ms"] == 11_200
+
+
 # ---------------------------------------------------------------------------
 # enforce_duration
 # ---------------------------------------------------------------------------
