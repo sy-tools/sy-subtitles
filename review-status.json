@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-08T04:53:03.793872+00:00",
+  "updated_at": "2026-09-21T21:18:13.742969+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -607,6 +607,12 @@
       "reviewer": "SlavaSubotskiy",
       "issue_number": 1066,
       "updated_at": "2026-09-08T04:53:02Z"
+    },
+    "1984-10-05_11th-Day-of-Navaratri-Put-me-in-your-Heart": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1104,
+      "updated_at": "2026-09-21T21:17:58Z"
     }
   }
 }
