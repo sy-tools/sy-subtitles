@@ -12,6 +12,7 @@ from tools.optimize_srt import (
     enforce_drift_cap,
     find_best_split_point,
     find_block_split_point,
+    fix_overlaps,
     main,
     merge_short_blocks,
     merge_sparse_blocks,
@@ -518,6 +519,18 @@ def test_enforce_drift_cap_will_not_shorten_a_block_past_the_hard_cps_ceiling():
 
     b = early_block_that_the_budget_would_turn_dense
     assert 60 / ((b["end_ms"] - b["start_ms"]) / 1000) <= config.hard_max_cps
+
+
+def test_enforce_drift_cap_will_not_crush_the_previous_block_to_pull_a_late_one_back():
+    config = OptimizeConfig(max_drift_ms=1000)
+    fifty_chars_readable_at_3s = {"idx": 1, "start_ms": 0, "end_ms": 3000, "text": "x" * 50, "anchor_ms": 0}
+    started_2500ms_late = {"idx": 2, "start_ms": 3080, "end_ms": 6000, "text": "x" * 20, "anchor_ms": 580}
+    blocks = [fifty_chars_readable_at_3s, started_2500ms_late]
+
+    enforce_drift_cap(blocks, config)
+    fix_overlaps(blocks, config)
+
+    assert 50 / ((blocks[0]["end_ms"] - blocks[0]["start_ms"]) / 1000) <= config.hard_max_cps
 
 
 def test_cascade_rescue_leaves_the_drift_budget_to_clear_the_hard_ceiling():

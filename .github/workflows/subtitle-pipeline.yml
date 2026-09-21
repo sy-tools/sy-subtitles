@@ -865,13 +865,14 @@ jobs:
           else
             echo "::warning::${WHISPER} missing — optimizer runs without speech timings"
           fi
-          # Without a budget the phases that borrow time from neighbours walk a
-          # block metres away from the speech it translates — measured at +5.7s
-          # late and -6.6s early on 1978-10-02 Knots, for CPS the same run could
-          # have had for free. 2s is the tightest budget that still leaves no
-          # block above the hard CPS ceiling; below it, dense passages have no
-          # donor left to rescue them. The cap needs the anchors the builder
-          # wrote, and yields to the ceiling where the two disagree.
+          # Without a budget the phases that borrow reading time from neighbours
+          # carry blocks seconds away from the speech they translate. 2s is where
+          # tightening stops paying across the corpus: 1.5s and 1s buy no better
+          # sync and start adding blocks above the hard CPS ceiling. The budget
+          # needs the builder's anchors, and gives way to that ceiling in dense
+          # passages rather than make a block unreadable. Its cost is comfort,
+          # not readability: more blocks sit between the 15 CPS target and the
+          # ceiling.
           python -m tools.optimize_srt \
             --srt "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \
             --output "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \

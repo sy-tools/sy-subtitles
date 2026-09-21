@@ -286,13 +286,16 @@ def enforce_drift_cap(blocks, config):
     A subtitle running ahead of the speech gives the line away before it is
     said; one lagging behind leaves the speaker unsubtitled. Either is a worse
     trade than the reading time the drift bought, so a block that left its
-    budget returns to the edge of it — and stays readable, since pushing a
-    start forward shortens the block.
+    budget returns to the edge of it — but never at the cost of a block nobody
+    can read. Pushing a start forward shortens this block; pulling one back
+    shortens the previous block, which the next overlap fix trims to make room.
+    Either move stops where the block it shortens would pass the hard ceiling,
+    so in a dense passage the budget gives way rather than the reading time.
     """
     if not config.max_drift_ms:
         return 0
     moved = 0
-    for b in blocks:
+    for i, b in enumerate(blocks):
         anchor = b.get("anchor_ms")
         if anchor is None:
             continue
@@ -300,6 +303,10 @@ def enforce_drift_cap(blocks, config):
         if start > b["start_ms"]:
             floor = _readable_floor_ms(len(b["text"].replace("\n", "")), config.hard_max_cps, config)
             start = max(b["start_ms"], min(start, b["end_ms"] - floor))
+        elif start < b["start_ms"] and i > 0:
+            prev = blocks[i - 1]
+            prev_floor = _readable_floor_ms(len(prev["text"].replace("\n", "")), config.hard_max_cps, config)
+            start = min(b["start_ms"], max(start, prev["start_ms"] + prev_floor + config.min_gap_ms))
         if start == b["start_ms"]:
             continue
         b["start_ms"] = start
