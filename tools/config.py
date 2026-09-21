@@ -18,3 +18,6 @@ class OptimizeConfig:
     sparse_cps_threshold: float = 2.0
     skip_duration_split: bool = False
     skip_cps_split: bool = False
+    # None leaves timing free; a budget in ms holds every block's start
+    # within that much of the anchor its builder gave it.
+    max_drift_ms: int | None = None

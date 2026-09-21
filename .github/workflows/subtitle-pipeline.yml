@@ -865,10 +865,20 @@ jobs:
           else
             echo "::warning::${WHISPER} missing — optimizer runs without speech timings"
           fi
+          # Without a budget the phases that borrow reading time from neighbours
+          # carry blocks seconds away from the speech they translate. 2s is where
+          # tightening stops paying across the corpus: 1.5s and 1s buy no better
+          # sync and start adding blocks above the hard CPS ceiling. The budget
+          # needs the builder's anchors, and gives way to that ceiling in dense
+          # passages rather than make a block unreadable. Its cost is comfort,
+          # not readability: more blocks sit between the 15 CPS target and the
+          # ceiling.
           python -m tools.optimize_srt \
             --srt "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \
             --output "talks/${TALK_ID}/${VIDEO_SLUG}/final/uk.srt" \
             ${WHISPER_FLAG} \
+            --anchors "talks/${TALK_ID}/${VIDEO_SLUG}/work/timecodes.txt" \
+            --max-drift-ms 2000 \
             --skip-duration-split \
             --skip-cps-split
 

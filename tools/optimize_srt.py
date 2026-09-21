@@ -19,7 +19,7 @@ from .srt_utils import (
     format_stats,
     load_whisper_json,
     parse_srt,
-    readable_floor_ms,
+    time_to_ms,
     write_srt,
 )
 
@@ -244,6 +244,76 @@ def fix_structural(blocks, config, report):
 # ---------------------------------------------------------------------------
 
 
+_UNBOUNDED_MS = 10**9
+_TIMECODE_RE = re.compile(r"#\d+\s*\|\s*(\S+)\s*\|")
+
+
+def read_timecode_starts(path):
+    """The start of every entry of a timecodes.txt, in file order."""
+    with open(path, encoding="utf-8") as f:
+        return [time_to_ms(m.group(1)) for m in (_TIMECODE_RE.match(line) for line in f) if m]
+
+
+def _earliest_allowed_start(block, config):
+    """The earliest this block may start without leaving its drift budget."""
+    anchor = block.get("anchor_ms")
+    if not config.max_drift_ms or anchor is None:
+        return 0
+    return anchor - config.max_drift_ms
+
+
+def _shift_room_ms(moving, config, sign):
+    """How far these blocks may travel together before one leaves its budget.
+
+    ``sign`` is -1 for a chain pulled earlier, +1 for one pushed later. A block
+    with no anchor does not constrain the move: the tail of a split starts
+    somewhere the builder never named, so there is nothing to measure it
+    against.
+    """
+    if not config.max_drift_ms:
+        return _UNBOUNDED_MS
+    room = _UNBOUNDED_MS
+    for b in moving:
+        anchor = b.get("anchor_ms")
+        if anchor is not None:
+            room = min(room, max(0, sign * (anchor + sign * config.max_drift_ms - b["start_ms"])))
+    return room
+
+
+def enforce_drift_cap(blocks, config):
+    """Pull block starts back inside the budget allowed around their anchor.
+
+    A subtitle running ahead of the speech gives the line away before it is
+    said; one lagging behind leaves the speaker unsubtitled. Either is a worse
+    trade than the reading time the drift bought, so a block that left its
+    budget returns to the edge of it — but never at the cost of a block nobody
+    can read. Pushing a start forward shortens this block; pulling one back
+    shortens the previous block, which the next overlap fix trims to make room.
+    Either move stops where the block it shortens would pass the hard ceiling,
+    so in a dense passage the budget gives way rather than the reading time.
+    """
+    if not config.max_drift_ms:
+        return 0
+    moved = 0
+    for i, b in enumerate(blocks):
+        anchor = b.get("anchor_ms")
+        if anchor is None:
+            continue
+        start = min(max(b["start_ms"], anchor - config.max_drift_ms), anchor + config.max_drift_ms)
+        if start > b["start_ms"]:
+            floor = _readable_floor_ms(len(b["text"].replace("\n", "")), config.hard_max_cps, config)
+            start = max(b["start_ms"], min(start, b["end_ms"] - floor))
+        elif start < b["start_ms"] and i > 0:
+            prev = blocks[i - 1]
+            prev_floor = _readable_floor_ms(len(prev["text"].replace("\n", "")), config.hard_max_cps, config)
+            start = min(b["start_ms"], max(start, prev["start_ms"] + prev_floor + config.min_gap_ms))
+        if start == b["start_ms"]:
+            continue
+        b["start_ms"] = start
+        moved += 1
+    return moved
+
+
 def fix_overlaps(blocks, config):
     """Ensure min gap between blocks."""
     for i in range(1, len(blocks)):
@@ -273,6 +343,7 @@ def extend_cps(blocks, config):
 
             max_end = blocks[i + 1]["start_ms"] - config.min_gap_ms if i + 1 < len(blocks) else b["end_ms"] + 60000
             min_start = blocks[i - 1]["end_ms"] + config.min_gap_ms if i > 0 else 0
+            min_start = max(min_start, _earliest_allowed_start(b, config))
 
             if needed_duration_ms > current_duration:
                 extra_needed = needed_duration_ms - current_duration
@@ -505,6 +576,8 @@ def split_blocks_by_size(blocks, config):
                     "end_ms": b["end_ms"],
                     "text": join_to_single_line(text2),
                 }
+                if b.get("anchor_ms") is not None:
+                    block1["anchor_ms"] = b["anchor_ms"]
                 if words1:
                     block1["_words"] = words1
                 if words2:
@@ -550,6 +623,8 @@ def split_blocks_by_cps(blocks, config):
                     "end_ms": b["end_ms"],
                     "text": join_to_single_line(text2),
                 }
+                if b.get("anchor_ms") is not None:
+                    block1["anchor_ms"] = b["anchor_ms"]
                 if words1:
                     block1["_words"] = words1
                 if words2:
@@ -720,7 +795,7 @@ def merge_sparse_blocks(blocks, config, word_intervals=None):
             if cps >= config.sparse_cps_threshold:
                 continue
             # Cap at reading time × 1.5 (give some margin for Phase 7)
-            reading_dur = max(config.min_duration_ms, int((chars / config.target_cps) * 1000))
+            reading_dur = _readable_floor_ms(chars, config.target_cps, config)
             max_dur = int(reading_dur * 1.5)
             if dur > max_dur:
                 new_end = b["start_ms"] + max_dur
@@ -798,51 +873,17 @@ def merge_short_blocks(blocks, config, word_intervals=None):
     return blocks, total_merged
 
 
-def _spare_ms(block, config):
-    """How much time a block can give up and still be readable."""
-    chars = len(block["text"].replace("\n", ""))
-    duration = block["end_ms"] - block["start_ms"]
-    return max(0, duration - readable_floor_ms(chars, config.hard_max_cps, config))
+def _readable_floor_ms(chars, cps, config):
+    """Shortest a block of ``chars`` may be left when levelled at ``cps``.
 
-
-def reclaim_min_duration(blocks, config):
-    """Bring blocks under min duration up to it, at a neighbour's expense.
-
-    The later minimum-duration pass can only push a block's END forward, which
-    the overlap fix undoes whenever the next block already starts at the
-    minimum gap — the normal case, since the CPS phases have by then grown both
-    neighbours into the silence around it. So a one-second interjection stays
-    on screen under the minimum however much silence sits next to it.
-
-    Moving the SHARED boundary instead leaves every gap exactly as it was. A
-    donor gives only what keeps it above its own floors, and a need that cannot
-    be met in full changes nothing: a partial borrow moves boundaries off the
-    speech for a block that stays unreadable anyway.
-
-    Returns (blocks, count of blocks brought up to the minimum).
+    Reading time is only one of the two floors: a block under the minimum
+    duration flashes past unread however comfortable its CPS looks, and three
+    characters read at target CPS come to 200ms.
     """
-    reclaimed = 0
-    for i, b in enumerate(blocks):
-        need = config.min_duration_ms - (b["end_ms"] - b["start_ms"])
-        if need <= 0:
-            continue
-        nxt = blocks[i + 1] if i + 1 < len(blocks) else None
-        prv = blocks[i - 1] if i > 0 else None
-        from_next = min(need, _spare_ms(nxt, config)) if nxt else 0
-        from_prev = min(need - from_next, _spare_ms(prv, config)) if prv else 0
-        if from_next + from_prev < need:
-            continue
-        if from_next:
-            nxt["start_ms"] += from_next
-            b["end_ms"] += from_next
-        if from_prev:
-            prv["end_ms"] -= from_prev
-            b["start_ms"] -= from_prev
-        reclaimed += 1
-    return blocks, reclaimed
+    return max(config.min_duration_ms, int(chars / cps * 1000))
 
 
-def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
+def _cascade_pass(blocks, config, recipient_min_cps, level_cps, honour_drift_budget=True):
     """One redistribution pass: blocks with CPS above ``recipient_min_cps``
     receive time (aiming at ``level_cps``) from neighbors whose CPS stays
     below ``level_cps`` after donating. Returns (blocks, count)."""
@@ -876,9 +917,12 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
                 if nb_cps < level_cps:
-                    nb_min_dur = readable_floor_ms(nb_chars, level_cps, config)
+                    nb_min_dur = _readable_floor_ms(nb_chars, level_cps, config)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
-                    give = min(extra_needed, nb_can_give)
+                    room = _UNBOUNDED_MS
+                    if honour_drift_budget:
+                        room = _shift_room_ms(blocks[i - dist + 1 : i + 1], config, -1)
+                    give = min(extra_needed, nb_can_give, room)
                     if give > 30:
                         nb["end_ms"] -= give
                         for j in range(i - dist + 1, i):
@@ -898,9 +942,12 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps):
                 nb_cps = nb_chars / (nb_dur / 1000.0) if nb_dur > 0 else 999
 
                 if nb_cps < level_cps:
-                    nb_min_dur = readable_floor_ms(nb_chars, level_cps, config)
+                    nb_min_dur = _readable_floor_ms(nb_chars, level_cps, config)
                     nb_can_give = max(0, nb_dur - nb_min_dur - config.min_gap_ms)
-                    give = min(extra_needed, nb_can_give)
+                    room = _UNBOUNDED_MS
+                    if honour_drift_budget:
+                        room = _shift_room_ms(blocks[i + 1 : i + dist + 1], config, 1)
+                    give = min(extra_needed, nb_can_give, room)
                     if give > 30:
                         nb["start_ms"] += give
                         for j in range(i + 1, i + dist):
@@ -929,13 +976,16 @@ def cascade_redistribute(blocks, config, report):
        Re-run the pass for those violators only, leveling recipient and
        donors to just below the hard ceiling (5% margin keeps int-truncated
        durations safely under the validator's strict ``> hard_max`` check).
+       This tier ignores any drift budget: a block nobody can read is a worse
+       fault than one that sits further from its anchor than we would like,
+       and tier 1 has already spent whatever room the budget allowed.
     """
     blocks, redistributed = _cascade_pass(blocks, config, config.target_cps, config.target_cps)
 
     rescue_level = config.hard_max_cps * 0.95
     rescued = 0
     if rescue_level > config.target_cps:
-        blocks, rescued = _cascade_pass(blocks, config, config.hard_max_cps, rescue_level)
+        blocks, rescued = _cascade_pass(blocks, config, config.hard_max_cps, rescue_level, honour_drift_budget=False)
 
     if redistributed:
         report.append(f"  Phase 7 - Cascade time redistribution: {redistributed}")
@@ -975,7 +1025,7 @@ def absorb_large_gaps(blocks, config, report):
                 gap = blocks[j]["start_ms"] - blocks[j - 1]["end_ms"]
                 if gap > 200:
                     can_use = gap - config.min_gap_ms
-                    give = min(extra_needed, can_use)
+                    give = min(extra_needed, can_use, _shift_room_ms(blocks[i + 1 : j], config, 1))
                     if give > 30:
                         for k in range(i + 1, j):
                             blocks[k]["start_ms"] += give
@@ -992,7 +1042,7 @@ def absorb_large_gaps(blocks, config, report):
                 gap = blocks[j + 1]["start_ms"] - blocks[j]["end_ms"]
                 if gap > 200:
                     can_use = gap - config.min_gap_ms
-                    give = min(extra_needed, can_use)
+                    give = min(extra_needed, can_use, _shift_room_ms(blocks[j + 1 : i + 1], config, -1))
                     if give > 30:
                         for k in range(j + 1, i):
                             blocks[k]["start_ms"] -= give
@@ -1022,6 +1072,11 @@ def optimize_readability(blocks, whisper_segments, config, report):
     # Word timestamps let the merge phases tell "timecodes touch" apart from
     # "speech is continuous" — see _speech_gap_ms.
     word_intervals = _whisper_word_intervals(whisper_segments)
+
+    entry_capped = enforce_drift_cap(blocks, config)
+    if entry_capped:
+        blocks = fix_overlaps(blocks, config)
+        report.append(f"  Phase 0a - Input blocks pulled inside the drift budget: {entry_capped}")
 
     # Phase 0: Merge ultra-sparse blocks (single words on long segments)
     blocks, sparse_merged = merge_sparse_blocks(blocks, config, word_intervals)
@@ -1077,13 +1132,6 @@ def optimize_readability(blocks, whisper_segments, config, report):
             break
         report.append(f"  Phase 6 - CPS extensions (pass {pass_num + 2}): {ext}")
 
-    # Phase 6b: reclaim minimum duration. Must stay ahead of every phase that
-    # reacts to a moved boundary (the cascade above all), or its changes first
-    # surface on the NEXT run — the issue #739 non-idempotency class.
-    blocks, reclaimed = reclaim_min_duration(blocks, config)
-    if reclaimed:
-        report.append(f"  Phase 6b - Short blocks given their minimum: {reclaimed}")
-
     # Phase 7: Cascade redistribution
     blocks = cascade_redistribute(blocks, config, report)
 
@@ -1136,7 +1184,7 @@ def optimize_readability(blocks, whisper_segments, config, report):
                     best_overlap = overlap
                     speech_end = int(we)
             # Trim to speech_end + margin, at least reading time
-            reading_dur = max(config.min_duration_ms, int((chars / config.target_cps) * 1000))
+            reading_dur = _readable_floor_ms(chars, config.target_cps, config)
             new_end = max(b["start_ms"] + reading_dur, int(speech_end + 500))
             if i + 1 < len(blocks):
                 new_end = min(new_end, blocks[i + 1]["start_ms"] - config.min_gap_ms)
@@ -1145,6 +1193,12 @@ def optimize_readability(blocks, whisper_segments, config, report):
                 trimmed += 1
         if trimmed:
             report.append(f"  Phase 8b - Trimmed oversized low-text blocks: {trimmed}")
+
+    capped = enforce_drift_cap(blocks, config)
+    if capped:
+        blocks = fix_overlaps(blocks, config)
+        extend_cps(blocks, config)
+        report.append(f"  Phase 9 - Blocks pulled back inside the drift budget: {capped}")
 
     # Phase 10: Final overlap fix
     blocks = fix_overlaps(blocks, config)
@@ -1314,7 +1368,25 @@ def build_blocks_from_uk_whisper(uk_json_path):
 # ---------------------------------------------------------------------------
 
 
-def optimize(srt_path, json_path, output_path, report_path=None, config=None, uk_json_path=None):
+def tag_anchors(blocks, anchors_path):
+    """Give each block the start its builder assigned, and say so in the report.
+
+    assemble writes one SRT block per timecode, so position carries the pairing.
+    Anything else — an SRT already optimized once, a hand-edited cut — has no
+    reliable pairing, and capping against a guessed anchor would drag subtitles
+    onto the wrong speech. So either the count matches or no block is tagged,
+    and the report says which, rather than letting an uncapped run read like a
+    capped one.
+    """
+    anchors = read_timecode_starts(anchors_path)
+    if len(anchors) != len(blocks):
+        return f"  Anchors: NOT APPLIED — {anchors_path} has {len(anchors)} entries for {len(blocks)} blocks"
+    for b, a in zip(blocks, anchors, strict=True):
+        b["anchor_ms"] = a
+    return f"  Anchors: {len(anchors)} from {anchors_path}"
+
+
+def optimize(srt_path, json_path, output_path, report_path=None, config=None, uk_json_path=None, anchors_path=None):
     """Run the full optimization pipeline.
 
     Returns the report as a list of lines.
@@ -1334,6 +1406,8 @@ def optimize(srt_path, json_path, output_path, report_path=None, config=None, uk
         report.append(f"  Source: uk_whisper.json ({len(blocks)} blocks)")
     else:
         blocks = parse_srt(srt_path)
+    if anchors_path:
+        report.append(tag_anchors(blocks, anchors_path))
     whisper_segments = load_whisper_json(json_path) if json_path else []
     original_blocks = copy.deepcopy(blocks)
 
@@ -1388,6 +1462,13 @@ def build_parser():
     parser.add_argument("--fps", type=int, default=24)
     parser.add_argument("--skip-duration-split", action="store_true", help="Skip Phase 1b (duration splits)")
     parser.add_argument("--skip-cps-split", action="store_true", help="Skip Phase 4 (CPS splits)")
+    parser.add_argument("--anchors", default=None, help="timecodes.txt the SRT was assembled from")
+    parser.add_argument(
+        "--max-drift-ms",
+        type=int,
+        default=None,
+        help="Hold every block start within this many ms of its anchor (needs --anchors)",
+    )
     return parser
 
 
@@ -1407,9 +1488,14 @@ def main():
         fps=args.fps,
         skip_duration_split=args.skip_duration_split,
         skip_cps_split=args.skip_cps_split,
+        max_drift_ms=args.max_drift_ms,
     )
+    if args.max_drift_ms and not args.anchors:
+        parser.error("--max-drift-ms needs --anchors to measure drift against")
 
-    report = optimize(args.srt, args.json, args.output, args.report, config, uk_json_path=args.uk_json)
+    report = optimize(
+        args.srt, args.json, args.output, args.report, config, uk_json_path=args.uk_json, anchors_path=args.anchors
+    )
     for line in report:
         print(line)
 

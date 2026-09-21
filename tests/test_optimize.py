@@ -9,15 +9,18 @@ from tools.config import OptimizeConfig
 from tools.optimize_srt import (
     build_blocks_from_uk_whisper,
     cascade_redistribute,
+    enforce_drift_cap,
     find_best_split_point,
     find_block_split_point,
+    fix_overlaps,
     main,
     merge_short_blocks,
     merge_sparse_blocks,
     optimize,
-    reclaim_min_duration,
+    optimize_readability,
     split_blocks_by_duration,
     split_blocks_by_size,
+    tag_anchors,
 )
 from tools.srt_utils import parse_srt
 
@@ -139,69 +142,6 @@ def test_merge_short_blocks_keeps_long():
     result, merged = merge_short_blocks(blocks, config)
     assert merged == 0
     assert len(result) == 2
-
-
-# --- cascade_redistribute ---
-
-
-def test_cascade_never_shrinks_a_donor_below_min_duration():
-    # Reading time alone puts a three-character block's floor at 200ms, so it
-    # cannot be the whole floor.
-    config = OptimizeConfig()
-    recipient_at_30_cps = {"idx": 1, "start_ms": 0, "end_ms": 2000, "text": "x" * 60}
-    donor_at_2_cps = {"idx": 2, "start_ms": 2080, "end_ms": 3600, "text": "xxx"}
-
-    result = cascade_redistribute([recipient_at_30_cps, donor_at_2_cps], config, [])
-
-    for b in result:
-        assert b["end_ms"] - b["start_ms"] >= config.min_duration_ms, (
-            f"block #{b['idx']} left at {b['end_ms'] - b['start_ms']}ms"
-        )
-
-
-# --- reclaim_min_duration ---
-
-
-def test_reclaim_min_duration_borrows_from_a_neighbour():
-    config = OptimizeConfig()
-    donor_at_target_cps = {"idx": 1, "start_ms": 0, "end_ms": 3000, "text": "x" * 45}
-    boxed_in_at_1080ms = {"idx": 2, "start_ms": 3080, "end_ms": 4160, "text": "x" * 15}
-    donor_at_target_cps_2 = {"idx": 3, "start_ms": 4240, "end_ms": 7240, "text": "x" * 45}
-
-    result, reclaimed = reclaim_min_duration([donor_at_target_cps, boxed_in_at_1080ms, donor_at_target_cps_2], config)
-
-    assert reclaimed == 1
-    assert result[1]["end_ms"] - result[1]["start_ms"] >= config.min_duration_ms
-    assert result[1]["start_ms"] - result[0]["end_ms"] == config.min_gap_ms
-    assert result[2]["start_ms"] - result[1]["end_ms"] == config.min_gap_ms
-    for b in result:
-        assert len(b["text"]) / ((b["end_ms"] - b["start_ms"]) / 1000) <= config.hard_max_cps
-
-
-def test_reclaim_min_duration_leaves_donors_at_the_cps_ceiling_alone():
-    config = OptimizeConfig()
-    donor_at_hard_max = {"idx": 1, "start_ms": 0, "end_ms": 2250, "text": "x" * 45}
-    boxed_in_at_1080ms = {"idx": 2, "start_ms": 2330, "end_ms": 3410, "text": "x" * 15}
-    donor_at_hard_max_2 = {"idx": 3, "start_ms": 3490, "end_ms": 5740, "text": "x" * 45}
-
-    result, reclaimed = reclaim_min_duration([donor_at_hard_max, boxed_in_at_1080ms, donor_at_hard_max_2], config)
-
-    assert reclaimed == 0
-    assert result[1]["end_ms"] - result[1]["start_ms"] == 1080
-
-
-def test_reclaim_min_duration_is_all_or_nothing():
-    # Borrowing part of the need moves boundaries off the speech for a block
-    # that stays unreadable anyway.
-    config = OptimizeConfig()
-    donor_with_50ms_to_spare = {"idx": 1, "start_ms": 0, "end_ms": 1250, "text": "x"}
-    boxed_in_needing_320ms = {"idx": 2, "start_ms": 1330, "end_ms": 2210, "text": "x" * 8}
-
-    result, reclaimed = reclaim_min_duration([donor_with_50ms_to_spare, boxed_in_needing_320ms], config)
-
-    assert reclaimed == 0
-    assert result[0]["end_ms"] == 1250
-    assert result[1]["start_ms"] == 1330
 
 
 # --- build_blocks_from_uk_whisper ---
@@ -493,6 +433,155 @@ def test_cascade_redistribute_leaves_soft_blocks_untouched():
     before = [(b["start_ms"], b["end_ms"]) for b in blocks]
     result = cascade_redistribute(blocks, config, [])
     assert [(b["start_ms"], b["end_ms"]) for b in result] == before
+
+
+def test_cascade_redistribute_keeps_a_following_donor_at_min_duration():
+    config = OptimizeConfig()
+    recipient_at_30_cps = {"idx": 1, "start_ms": 0, "end_ms": 2000, "text": "x" * 60}
+    three_char_donor_at_1520ms = {"idx": 2, "start_ms": 2080, "end_ms": 3600, "text": "xxx"}
+
+    result = cascade_redistribute([recipient_at_30_cps, three_char_donor_at_1520ms], config, [])
+
+    assert result[1]["end_ms"] - result[1]["start_ms"] >= config.min_duration_ms
+
+
+def test_cascade_redistribute_keeps_a_preceding_donor_at_min_duration():
+    config = OptimizeConfig()
+    three_char_donor_at_1520ms = {"idx": 1, "start_ms": 0, "end_ms": 1520, "text": "xxx"}
+    recipient_at_30_cps = {"idx": 2, "start_ms": 1600, "end_ms": 3600, "text": "x" * 60}
+
+    result = cascade_redistribute([three_char_donor_at_1520ms, recipient_at_30_cps], config, [])
+
+    assert result[0]["end_ms"] - result[0]["start_ms"] >= config.min_duration_ms
+
+
+# --- enforce_drift_cap ---
+
+
+def test_enforce_drift_cap_is_off_unless_a_budget_is_configured():
+    config = OptimizeConfig()
+    eight_seconds_after_its_anchor = {"idx": 1, "start_ms": 8000, "end_ms": 10000, "text": "x" * 20, "anchor_ms": 0}
+
+    enforce_drift_cap([eight_seconds_after_its_anchor], config)
+
+    assert eight_seconds_after_its_anchor["start_ms"] == 8000
+
+
+def test_enforce_drift_cap_pulls_a_late_block_back_to_the_edge_of_its_window():
+    config = OptimizeConfig(max_drift_ms=1000)
+    started_2500ms_after_its_anchor = {"idx": 1, "start_ms": 2500, "end_ms": 5000, "text": "x" * 20, "anchor_ms": 0}
+
+    enforce_drift_cap([started_2500ms_after_its_anchor], config)
+
+    assert started_2500ms_after_its_anchor["start_ms"] == 1000
+    assert started_2500ms_after_its_anchor["end_ms"] == 5000
+
+
+def test_enforce_drift_cap_pushes_an_early_block_forward_to_the_edge_of_its_window():
+    config = OptimizeConfig(max_drift_ms=1000)
+    started_2500ms_before_its_anchor = {"idx": 1, "start_ms": 0, "end_ms": 6000, "text": "x" * 20, "anchor_ms": 2500}
+
+    enforce_drift_cap([started_2500ms_before_its_anchor], config)
+
+    assert started_2500ms_before_its_anchor["start_ms"] == 1500
+
+
+def test_enforce_drift_cap_keeps_a_block_it_pushed_forward_at_min_duration():
+    config = OptimizeConfig(max_drift_ms=1000)
+    early_block_with_little_room = {"idx": 1, "start_ms": 0, "end_ms": 2000, "text": "x" * 20, "anchor_ms": 2500}
+
+    enforce_drift_cap([early_block_with_little_room], config)
+
+    span = early_block_with_little_room["end_ms"] - early_block_with_little_room["start_ms"]
+    assert span >= config.min_duration_ms
+
+
+def test_enforce_drift_cap_leaves_a_block_that_carries_no_anchor():
+    config = OptimizeConfig(max_drift_ms=1000)
+    block_a_split_left_without_an_anchor = {"idx": 1, "start_ms": 9000, "end_ms": 11000, "text": "x" * 20}
+
+    enforce_drift_cap([block_a_split_left_without_an_anchor], config)
+
+    assert block_a_split_left_without_an_anchor["start_ms"] == 9000
+
+
+def test_enforce_drift_cap_will_not_shorten_a_block_past_the_hard_cps_ceiling():
+    config = OptimizeConfig(max_drift_ms=1000)
+    early_block_that_the_budget_would_turn_dense = {
+        "idx": 1,
+        "start_ms": 0,
+        "end_ms": 4000,
+        "text": "x" * 60,
+        "anchor_ms": 2500,
+    }
+
+    enforce_drift_cap([early_block_that_the_budget_would_turn_dense], config)
+
+    b = early_block_that_the_budget_would_turn_dense
+    assert 60 / ((b["end_ms"] - b["start_ms"]) / 1000) <= config.hard_max_cps
+
+
+def test_enforce_drift_cap_will_not_crush_the_previous_block_to_pull_a_late_one_back():
+    config = OptimizeConfig(max_drift_ms=1000)
+    fifty_chars_readable_at_3s = {"idx": 1, "start_ms": 0, "end_ms": 3000, "text": "x" * 50, "anchor_ms": 0}
+    started_2500ms_late = {"idx": 2, "start_ms": 3080, "end_ms": 6000, "text": "x" * 20, "anchor_ms": 580}
+    blocks = [fifty_chars_readable_at_3s, started_2500ms_late]
+
+    enforce_drift_cap(blocks, config)
+    fix_overlaps(blocks, config)
+
+    assert 50 / ((blocks[0]["end_ms"] - blocks[0]["start_ms"]) / 1000) <= config.hard_max_cps
+
+
+def test_cascade_rescue_leaves_the_drift_budget_to_clear_the_hard_ceiling():
+    config = OptimizeConfig(max_drift_ms=100)
+    stuck_at_30_cps = {"idx": 1, "start_ms": 0, "end_ms": 2000, "text": "x" * 60, "anchor_ms": 0}
+    donor_with_seconds_to_spare = {"idx": 2, "start_ms": 2080, "end_ms": 9000, "text": "xx", "anchor_ms": 2080}
+
+    result = cascade_redistribute([stuck_at_30_cps, donor_with_seconds_to_spare], config, [])
+
+    assert 60 / ((result[0]["end_ms"] - result[0]["start_ms"]) / 1000) <= config.hard_max_cps
+
+
+def test_tag_anchors_tags_nothing_when_the_counts_disagree(tmp_path):
+    timecodes = tmp_path / "timecodes.txt"
+    timecodes.write_text("#1 | 00:00:01,000 | 00:00:04,000\n", encoding="utf-8")
+    two_blocks_for_one_timecode = [
+        {"idx": 1, "start_ms": 1000, "end_ms": 4000, "text": "x"},
+        {"idx": 2, "start_ms": 5000, "end_ms": 8000, "text": "y"},
+    ]
+
+    line = tag_anchors(two_blocks_for_one_timecode, str(timecodes))
+
+    assert "NOT APPLIED" in line
+    assert all("anchor_ms" not in b for b in two_blocks_for_one_timecode)
+
+
+def test_main_rejects_a_drift_budget_without_anchors(monkeypatch, tmp_path):
+    src = tmp_path / "in.srt"
+    src.write_text("1\n00:00:01,000 --> 00:00:05,000\nHello world\n\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["optimize_srt", "--srt", str(src), "--output", str(tmp_path / "o.srt"), "--max-drift-ms", "2000"],
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    assert exc.value.code == 2
+
+
+def test_optimize_readability_holds_every_anchored_block_inside_the_budget():
+    config = OptimizeConfig(max_drift_ms=1000, skip_duration_split=True, skip_cps_split=True)
+    crowded = [
+        {"idx": i, "start_ms": i * 2000, "end_ms": i * 2000 + 1500, "text": "x" * 70, "anchor_ms": i * 2000}
+        for i in range(1, 12)
+    ]
+
+    result = optimize_readability(crowded, [], config, [])
+
+    assert all(abs(b["start_ms"] - b["anchor_ms"]) <= 1000 for b in result if "anchor_ms" in b)
 
 
 # --- CLI entry point ---

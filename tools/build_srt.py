@@ -10,15 +10,14 @@ This module has no CLI entry point — it's called from tools.build_map.
 import sys
 
 from .config import OptimizeConfig
-from .srt_utils import ms_to_time, readable_floor_ms, write_srt
+from .srt_utils import ms_to_time, write_srt
 
 
 def apply_padding(blocks, config=None):
     """Extend block end times into silence for readability.
 
     For each block, extend end to: min(next_start - gap, end + 5000ms, max_duration).
-    Last block: bounded by what makes it readable, not by a flat allowance —
-    see below.
+    Last block: extend up to +2000ms.
     """
     if config is None:
         config = OptimizeConfig()
@@ -44,18 +43,8 @@ def apply_padding(blocks, config=None):
             # Never shrink below original end
             b["end_ms"] = max(padded_end, original_end)
         else:
-            # No next block bounds the last one, so readability has to: a
-            # block already comfortable to read gains nothing from more screen
-            # time. A flat allowance here is blind to where speech ends and
-            # pushes the SRT past the timing source's last word, which fails
-            # the time-range check with no mapping bug behind it.
-            chars = len(b["text"].replace("\n", ""))
-            readable_end = b["start_ms"] + readable_floor_ms(chars, config.target_cps, config)
-            b["end_ms"] = min(
-                original_end + last_block_pad_ms,
-                max_end,
-                max(original_end, readable_end),
-            )
+            # Last block: modest extension, capped at max duration
+            b["end_ms"] = min(original_end + last_block_pad_ms, max_end)
 
         result.append(b)
 
