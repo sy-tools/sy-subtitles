@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1984-10-05_11th-Day-of-Navaratri-Put-me-in-your-Heart/Put-Me-In-Your-Heart/final/uk.srt
+  Transcript: talks/1984-10-05_11th-Day-of-Navaratri-Put-me-in-your-Heart/transcript_uk.txt
+  EN SRT: talks/1984-10-05_11th-Day-of-Navaratri-Put-me-in-your-Heart/Put-Me-In-Your-Heart/source/en.srt
+  SRT blocks: 555
+  EN SRT blocks: 546
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:21:48,400 — 01:11:56,441
+  SRT range:       00:21:48,400 — 01:11:41,614
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 555
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 555
+  CPS: avg=10.5, median=10.7, max=19.4
+  CPS > target: 22 (4.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #89: CPS=19.4 (80ch/4.1s) "Ви даєте комусь якусь роботу: «Добре, ти виконуй цю роботу –..."
+    #86: CPS=18.7 (33ch/1.8s) "Тобто Я намагаюся бути люб’язною."
+    #353: CPS=17.9 (74ch/4.1s) "Те, що Я кажу, – це людина, яка ні тут, ні там: увесь час от..."
+    #87: CPS=17.7 (40ch/2.3s) "Я кажу: «О, твої фотографії дуже гарні»."
+    #73: CPS=16.7 (20ch/1.2s) "Я зайнята тут зараз."
+    #81: CPS=16.6 (70ch/4.2s) "Хтось зробив хороші фотографії, тож Я сказала: «Це хороші фо..."
+    #84: CPS=16.6 (23ch/1.4s) "Він каже: «Аґія чиста»."
+    #83: CPS=15.5 (59ch/3.8s) "У цій країні нікого не можна хвалити – це найгірше для них."
+    #72: CPS=15.5 (67ch/4.3s) "що ви мусите побачити Мене, бо ви ніколи не знаходили часу з..."
+    #146: CPS=15.4 (40ch/2.6s) "Я рада, що є деякі приклади такого роду."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 555
+  EN SRT blocks: 546
+  Ratio UK/EN: 1.02 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.5 (target ≤15.0)
+  CPS > 15.0: 22 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
