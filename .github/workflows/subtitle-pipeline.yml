@@ -251,6 +251,8 @@ jobs:
     uses: ./.github/workflows/whisper.yml
     with:
       talk_id: ${{ matrix.talk_id }}
+    secrets:
+      BOT_APP_PRIVATE_KEY: ${{ secrets.BOT_APP_PRIVATE_KEY }}
 
   # Translate EN→UK and review with 2+1 process (per talk)
   translate-and-review:
@@ -1070,7 +1072,22 @@ jobs:
       (needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'failure' || needs.translate-and-review.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
+      # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
+      - name: Mint bot App token
+        id: bot-token
+        if: vars.BOT_APP_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: vars.BOT_APP_ID == ''
+        run: echo "::warning::vars.BOT_APP_ID is not set, so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
       - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.bot-token.outputs.token || github.token }}
 
       - name: Pull latest
         run: git pull --rebase
@@ -1176,7 +1193,7 @@ jobs:
 
       - name: Commit via PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
         run: |
           .github/scripts/bot-pr.sh \
             bot/pipeline \
@@ -1255,6 +1272,8 @@ jobs:
     # commit's always() and would skip this job even when commit succeeded.
     if: ${{ !cancelled() && needs.commit.result == 'success' }}
     uses: ./.github/workflows/sync-review-status.yml
+    secrets:
+      BOT_APP_PRIVATE_KEY: ${{ secrets.BOT_APP_PRIVATE_KEY }}
     permissions:
       contents: write
       issues: write

@@ -158,7 +158,10 @@ Triggered manually via `workflow_dispatch`. Full pipeline:
    review tracking Issue
 
 ### sync-subtitles.yml
-Triggered on PRs that modify `transcript_uk.txt` **or** `*/final/uk.srt`.
+Triggered on PRs that modify `transcript_uk.txt` **or** `*/final/uk.srt`,
+except `bot/*` branches: a pipeline build regenerates both sides together, so
+there is no reviewer edit to reconcile, and a sync pass would rewrite the
+transcript the build was made from.
 Its bot commit also carries a rebuilt `site/dict/words_uk.txt`: a reviewer's
 edit changes the corpus the wordlist is generated from, so the PR would
 otherwise ship text the typo hints underline.
@@ -195,6 +198,16 @@ or was skipped — so it is always reported and can be the single **required
 status check** on `main`. Requiring a lane directly would wedge any PR whose
 paths skip it, and requiring nothing at all is how a PR whose run never
 arrived merged untested (#1069).
+
+### Bot PRs (`.github/scripts/bot-pr.sh`)
+Pipeline, whisper and review-status results reach `main` as a PR with
+auto-merge, never a direct push, so they pass `gate` like any other change.
+They are opened with a token minted for the bot GitHub App
+(`vars.BOT_APP_ID` + `secrets.BOT_APP_PRIVATE_KEY`), not with `GITHUB_TOKEN`:
+GitHub holds every run on a PR that `github-actions[bot]` opened until a person
+approves it, no repository setting lifts that, and a held run never reports
+`gate` — the PR then waits forever. Without the App configured the jobs fall
+back to `GITHUB_TOKEN` and warn that the PR needs that approval.
 
 ### deploy-pages.yml
 Deploys `site/` to GitHub Pages on changes under `site/`.

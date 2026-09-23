@@ -23,6 +23,9 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      BOT_APP_PRIVATE_KEY:
+        required: false
 
 permissions:
   contents: write
@@ -233,7 +236,22 @@ jobs:
     if: needs.discover.outputs.has_jobs == 'true' && !cancelled()
     runs-on: ubuntu-latest
     steps:
+      # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
+      - name: Mint bot App token
+        id: bot-token
+        if: vars.BOT_APP_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: vars.BOT_APP_ID == ''
+        run: echo "::warning::vars.BOT_APP_ID is not set, so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
       - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.bot-token.outputs.token || github.token }}
 
       - name: Download all whisper artifacts
         uses: actions/download-artifact@v8
@@ -292,6 +310,6 @@ jobs:
 
       - name: Commit via PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
         run: |
           .github/scripts/bot-pr.sh bot/whisper "Add Whisper data" "talks/*/*/source/whisper.json"

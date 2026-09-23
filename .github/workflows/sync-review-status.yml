@@ -5,6 +5,9 @@ on:
     types: [labeled, unlabeled, assigned, unassigned, closed, reopened]
   workflow_dispatch:
   workflow_call:
+    secrets:
+      BOT_APP_PRIVATE_KEY:
+        required: false
 
 permissions:
   contents: write
@@ -32,6 +35,19 @@ jobs:
       contains(join(github.event.issue.labels.*.name, ','), 'review:') ||
       startsWith(github.event.label.name, 'review:')
     steps:
+      # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
+      - name: Mint bot App token
+        id: bot-token
+        if: vars.BOT_APP_ID != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: vars.BOT_APP_ID == ''
+        run: echo "::warning::vars.BOT_APP_ID is not set, so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
       # Always branch off the live main tip, not the inherited SHA. When this
       # workflow runs via `workflow_call` from subtitle-pipeline.yml, the default
       # checkout uses the caller's `github.sha` — the pipeline's dispatch SHA,
@@ -45,6 +61,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: main
+          token: ${{ steps.bot-token.outputs.token || github.token }}
 
       - name: Auto-update labels on assign/unassign/close/reopen
         if: >
@@ -79,5 +96,5 @@ jobs:
 
       - name: Commit via PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
         run: .github/scripts/bot-pr.sh bot/review-status "Update review status" review-status.json
