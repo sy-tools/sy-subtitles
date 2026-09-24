@@ -27,8 +27,12 @@ def test_a_browser_test_gets_the_e2e_deadline():
     conftest.pytest_collection_modifyitems(None, [item])
     deadline = item.get_closest_marker("timeout")
     assert deadline.args == (conftest.E2E_TEST_TIMEOUT_S,)
-    # The default SIGALRM method never interrupts a test blocked in Playwright.
-    assert deadline.kwargs == {"method": "thread"}
+
+
+def test_every_deadline_ends_the_test_by_the_thread_method(pytestconfig):
+    """The default SIGALRM never interrupts a test blocked in Playwright, and a
+    test carrying its own @pytest.mark.timeout gets the method from here too."""
+    assert pytestconfig.getini("timeout_method") == "thread"
 
 
 def test_a_test_with_its_own_deadline_keeps_it():
