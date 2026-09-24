@@ -138,3 +138,14 @@ def test_pull_request_runs_supersede_rather_than_stack() -> None:
     assert re.search(r"pull_request\.number", str(concurrency["group"])), (
         "the group must be per-PR, or one PR's push cancels another's run"
     )
+
+
+def test_every_test_lane_has_a_deadline() -> None:
+    """A hung test holds a runner for GitHub's default 360 minutes, and the PR
+    waits on `gate` for all of it. A real-Vimeo await that never settled did
+    exactly that to an e2e shard."""
+    jobs = _load()["jobs"]
+    lanes = {name: job for name, job in jobs.items() if name.startswith("test-")}
+    assert lanes, "no test lanes found"
+    for name, job in lanes.items():
+        assert 0 < job.get("timeout-minutes", 0) <= 30, f"{name} needs a timeout-minutes of at most 30"
