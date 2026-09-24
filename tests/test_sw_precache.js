@@ -95,13 +95,13 @@ describe('SW shell precache', () => {
   it('preloads the fonts the stylesheets load', () => {
     // Otherwise the face is first fetched when fullscreen first needs it, and
     // the cue on screen is laid out in the fallback until it lands.
-    const html = fs.readFileSync('site/index.html', 'utf8');
+    const links = fs.readFileSync('site/index.html', 'utf8').match(/<link\b[^>]*>/g) || [];
     for (const font of cssFonts()) {
-      const tag = html.match(new RegExp('<link\\b[^>]*\\bhref="' + font.replace(/[.]/g, '\\.') + '"[^>]*>'));
+      const tag = links.find((link) => link.includes(`href="${font}"`));
       assert.ok(tag, `index.html must <link rel="preload"> '${font}'`);
-      assert.match(tag[0], /rel="preload"/);
-      assert.match(tag[0], /as="font"/);
-      assert.match(tag[0], /\bcrossorigin\b/);
+      assert.match(tag, /rel="preload"/);
+      assert.match(tag, /as="font"/);
+      assert.match(tag, /\bcrossorigin\b/);
     }
   });
 
