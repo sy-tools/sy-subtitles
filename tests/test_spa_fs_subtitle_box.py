@@ -298,6 +298,22 @@ def _browser_lines(page, vw, vh, aspect, texts, scale=None):
     )
 
 
+# Chromium places glyphs on a 1/64 px grid, so a line's width drifts from the
+# design width by up to ~1/128 px a glyph — half a pixel over a long line. A
+# cue whose deciding line lands that close to the wrap limit can break either
+# way, and which way differs by platform (it did between macOS and Linux).
+TIE_PX = 0.5
+
+
+def _tie_slack(burned, shown, measure, limit):
+    """How far the line the two disagree on is from the wrap limit."""
+    i = next(i for i, (b, s) in enumerate(zip(burned, shown, strict=False)) if b != s)
+    longer = max(burned[i], shown[i], key=len)
+    followed = " ".join(burned[:i] + [longer]) != " ".join(burned)
+    width = measure(longer + " ") - measure(" ") if followed else measure(longer)
+    return limit - width
+
+
 @pytest.mark.parametrize(
     ("vw", "vh", "aspect", "ar"),
     [
@@ -319,7 +335,12 @@ def test_fullscreen_breaks_lines_where_the_burn_does(page, vw, vh, aspect, ar, s
     measure = text_measurer(DEFAULT_FONT_FILE, css_font_px(ratio, height))
     burned = [wrap_text(t, measure, wrap_width_for(width)) for t in CUES]
     shown = _browser_lines(page, vw, vh, aspect, CUES, scale)
-    mismatched = [(b, s) for b, s in zip(burned, shown, strict=True) if b != s]
+    limit = wrap_width_for(width) * WRAP_SAFETY
+    mismatched = [
+        (b, s, round(_tie_slack(b, s, measure, limit), 3))
+        for b, s in zip(burned, shown, strict=True)
+        if b != s and abs(_tie_slack(b, s, measure, limit)) >= TIE_PX
+    ]
     assert not mismatched, f"{len(mismatched)} of {len(CUES)} cues break differently: {mismatched[:3]}"
 
 
