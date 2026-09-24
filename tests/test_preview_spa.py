@@ -1074,6 +1074,35 @@ class TestFullscreenMode:
         }""")
         assert kept == "640 / 480"
 
+    @pytest.mark.parametrize("player", ["size-rejected", "size-unknown", "no-player"])
+    def test_a_video_whose_shape_never_arrives_falls_back_to_16_9_as_the_burn_does(self, server, page, player):
+        """burnGeometry dispatches a video of unknown size as 16:9, so the
+        preview must not keep drawing the previous video's shape instead."""
+        self._goto_preview(server, page)
+        left = page.evaluate(
+            """async (kind) => {
+            const players = {
+                'size-rejected': {getVideoWidth: () => Promise.reject(new Error('gone')),
+                                  getVideoHeight: () => Promise.resolve(480)},
+                'size-unknown': {getVideoWidth: () => Promise.resolve(0), getVideoHeight: () => Promise.resolve(0)},
+                'no-player': null,
+            };
+            const vp = document.getElementById('view-preview');
+            vp.style.setProperty('--preview-aspect', '640 / 480');
+            setPreviewAspect(players[kind], () => true);
+            await new Promise(r => setTimeout(r, 50));
+            return vp.style.getPropertyValue('--preview-aspect');
+        }""",
+            player,
+        )
+        assert left == ""
+
+    def test_the_subtitle_face_loads_with_the_preview(self, server, page):
+        """Loaded when the preview opens, not when fullscreen first lays a cue
+        out in it — else that cue is drawn in the fallback first."""
+        self._goto_preview(server, page)
+        page.wait_for_function("document.fonts.check('16px \"SY Subtitle Serif\"')", timeout=5000)
+
     def test_fs_mode_subtitle_still_syncs(self, server, page):
         """Subtitles should still update in fullscreen mode."""
         self._goto_preview(server, page)

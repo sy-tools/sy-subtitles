@@ -1,8 +1,8 @@
 """The burn's geometry, read from the one copy the SPA also loads.
 
 `site/js/burn_geometry.js` holds the object as JSON; see its header for what
-each number means. Stdlib only: the workflow's input guard imports this before
-setup-python has installed anything.
+each number means. Stdlib only, so any step of the burn workflow can import it
+whatever it has installed.
 """
 
 import json

@@ -57,7 +57,7 @@ def test_the_burner_reads_its_numbers_from_the_file(name, key):
 
 
 def test_the_loader_is_stdlib_only():
-    """The workflow's input guard imports it before setup-python has run."""
+    """Any step of the burn workflow can import it, whatever it has installed."""
     with open("tools/burn_geometry.py", encoding="utf-8") as f:
         imports = re.findall(r"^(?:import|from) (\S+)", f.read(), re.M)
     assert set(imports) <= {"json", "re", "pathlib", "__future__"}, imports

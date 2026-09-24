@@ -120,7 +120,13 @@ def test_spa_boots_renders_and_is_styled_without_errors(smoke_server, smoke_page
     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
     assert bg not in _UNSTYLED_BG, f"<body> is unstyled — app CSS did not apply (bg={bg!r})"
 
-    # 3. Nothing threw uncaught while booting.
+    # 3. The burn's geometry reached the stylesheet: the fullscreen band reads
+    #    it from --fs-* with no fallback, and a page that never wrote them would
+    #    draw a band the burn does not reproduce.
+    ratio = page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--fs-font-w-ratio')")
+    assert ratio.strip(), "the --fs-* burn geometry was never written onto :root"
+
+    # 4. Nothing threw uncaught while booting.
     assert not page_errors, "uncaught JS error(s) during boot:\n  " + "\n  ".join(page_errors)
 
 

@@ -92,19 +92,6 @@ describe('SW shell precache', () => {
     for (const font of fonts) assert.ok(assets.includes(font), `SHELL_ASSETS must precache '${font}'`);
   });
 
-  it('preloads the fonts the stylesheets load', () => {
-    // Otherwise the face is first fetched when fullscreen first needs it, and
-    // the cue on screen is laid out in the fallback until it lands.
-    const links = fs.readFileSync('site/index.html', 'utf8').match(/<link\b[^>]*>/g) || [];
-    for (const font of cssFonts()) {
-      const tag = links.find((link) => link.includes(`href="${font}"`));
-      assert.ok(tag, `index.html must <link rel="preload"> '${font}'`);
-      assert.match(tag, /rel="preload"/);
-      assert.match(tag, /as="font"/);
-      assert.match(tag, /\bcrossorigin\b/);
-    }
-  });
-
   it('precaches the scripts the typo worker imports', () => {
     // These load inside a Worker, so no <script src> tag names them and the
     // shell lockstep above cannot. Left uncached, switching the hints on while

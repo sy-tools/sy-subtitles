@@ -9,7 +9,9 @@
 //                   video HEIGHT; the workflow refuses a ratio outside it
 //   padTopPx/padBotPx over / under the text on a refHeight-tall video
 //   sideInsetRatio  each side's inset, as a fraction of the width
-//   wrapSafety      headroom the burner keeps inside the insets when it wraps
+//   wrapSafety      headroom the burner keeps inside the insets when it wraps,
+//                   so a line libass advances a hair wider than it was measured
+//                   stays inside the margin; the preview pads by the same amount
 //   lineAdvance     libass steps one ASS FontSize per line: PT Serif's
 //                   (usWinAscent + usWinDescent) / unitsPerEm, in em — pinned to
 //                   the TTF's metrics by tests/test_burn_subtitles.py

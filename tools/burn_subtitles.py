@@ -49,11 +49,6 @@ DEFAULT_FONT_NAME = "PT Serif"
 # libass's FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the arithmetic value —
 # a face whose two metric sets disagree would not, and its rendered glyph height
 # would have to be confirmed on a real frame.
-#
-# FONT_RATIO_MIN/MAX guard against a pathological measurement arriving from the
-# browser. WRAP_SAFETY: rendering measures glyph advances slightly differently
-# from our layout maths, and the headroom keeps a line from spilling a hair past
-# the margin — the preview pads its sides by the same amount, so it wraps there too.
 
 _WS_RUN = re.compile(r"\s+")
 

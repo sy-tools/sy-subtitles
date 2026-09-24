@@ -8,7 +8,7 @@ var BURN_WORKFLOW = 'burn-subtitles.yml';
 
 // The burn's geometry (js/burn_geometry.js): require()d in Node, a global set
 // by its own <script src> in the browser.
-var BURN_GEOMETRY_ = (
+var _burnGeometry = (
   typeof require !== 'undefined' && typeof module !== 'undefined'
     ? require('./burn_geometry')
     : BURN_GEOMETRY
@@ -301,9 +301,9 @@ function burnClipProblem(startMs, endMs, durationMs) {
 // Fullscreen draws the subtitle band on the displayed video's own box — not
 // on the screen — and sizes it in fractions of that box, so the burn can use
 // the very same fractions on the real frame.
-var FS_FONT_WIDTH_RATIO = BURN_GEOMETRY_.fontWidthRatio;
-var FS_PADTOP_RATIO = BURN_GEOMETRY_.padTopPx / BURN_GEOMETRY_.refHeight;
-var FS_PADBOT_RATIO = BURN_GEOMETRY_.padBotPx / BURN_GEOMETRY_.refHeight;
+var FS_FONT_WIDTH_RATIO = _burnGeometry.fontWidthRatio;
+var FS_PADTOP_RATIO = _burnGeometry.padTopPx / _burnGeometry.refHeight;
+var FS_PADBOT_RATIO = _burnGeometry.padBotPx / _burnGeometry.refHeight;
 
 // The band the workflow's "Validate inputs" step accepts for font_ratio
 // (.github/workflows/burn-subtitles.yml). The subtitle resize handle allows
@@ -314,8 +314,8 @@ var FS_PADBOT_RATIO = BURN_GEOMETRY_.padBotPx / BURN_GEOMETRY_.refHeight;
 // The clamp is silent, which is acceptable only because it is exactly what
 // tools/burn_subtitles.py already does to the same value (in css_font_px): the
 // burned output is identical whether the ratio is clamped here or there.
-var FONT_RATIO_MIN = BURN_GEOMETRY_.fontRatioMin;
-var FONT_RATIO_MAX = BURN_GEOMETRY_.fontRatioMax;
+var FONT_RATIO_MIN = _burnGeometry.fontRatioMin;
+var FONT_RATIO_MAX = _burnGeometry.fontRatioMax;
 
 function clampNum(min, value, max) {
   return Math.max(min, Math.min(max, value));
@@ -337,11 +337,12 @@ function measureBurnRatios(geometry) {
 }
 
 // The fullscreen band's CSS (components.css) draws with these properties and
-// has no fallback for them, so a page that never wrote them fails its boot
-// smoke rather than drawing a band the burn does not reproduce. The side pad is
-// the burner's wrap limit: its insets, then its wrapSafety headroom inside them.
+// has no fallback for them: a page that never wrote them fails the boot smoke
+// (tests/test_spa_boot_smoke.py) rather than drawing a band the burn does not
+// reproduce. The side pad is the burner's wrap limit: its insets, then its
+// wrapSafety headroom inside them.
 function applyBurnGeometry(style) {
-  var g = BURN_GEOMETRY_;
+  var g = _burnGeometry;
   var props = {
     '--fs-font-w-ratio': g.fontWidthRatio,
     '--fs-font-min': g.fontRatioMin,
@@ -757,6 +758,12 @@ function computeProgress(job, nowMs) {
   // `done` is what gates the download, and it comes from the job alone.
   result.fraction = Math.min(fraction, 1);
   return result;
+}
+
+// In the page, as soon as this module loads — before any view renders, and
+// with nothing else in the way that could throw first.
+if (typeof document !== 'undefined' && document.documentElement) {
+  applyBurnGeometry(document.documentElement.style);
 }
 
 if (typeof module !== 'undefined' && module.exports) {

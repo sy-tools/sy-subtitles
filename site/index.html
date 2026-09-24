@@ -47,16 +47,12 @@
 <script src="js/clip_time.js"></script>
 <script src="js/float_panel.js"></script>
 <script src="js/pending_action.js"></script>
-<!-- The subtitle face: fetched with the page, not when fullscreen first asks for
-     it, so the first cue there is not laid out in the fallback. -->
-<link rel="preload" href="fonts/PT_Serif-Web-Regular.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
 <body>
 
 <script>
-applyBurnGeometry(document.documentElement.style);
 (function(){
   // --- Adaptive player aspect ratio (sync player) ---
   // The sync player's iframe gets its intrinsic video dimensions read from
@@ -3334,6 +3330,13 @@ function showPreview(talkId, videoSlug) {
   // re-runs route()) must NOT tear down the Vimeo player — that would reset
   // playback. Detect it and keep the live player + position; only the lighter
   // marker/edit state below is refreshed.
+  // Only the fullscreen band draws in the subtitle face, so nothing else makes
+  // the browser fetch it: load it with the preview, not when fullscreen first
+  // lays a cue out in the fallback.
+  if (document.fonts) {
+    var subtitleFace = getComputedStyle(document.documentElement).getPropertyValue('--f-subtitle');
+    document.fonts.load('1em ' + subtitleFace).catch(function() {});
+  }
   var embedUrl = video ? vimeoEmbed(video.vimeo_url) : '';
   var oldIframe = document.getElementById('vimeo-player');
   var sameVideo = canReusePreviewPlayer(previewState, talkId, videoSlug, !!oldIframe);
@@ -3620,35 +3623,41 @@ function showPreview(talkId, videoSlug) {
         }
       }).catch(function(err) {
         console.warn('[SPA] Vimeo player error:', err);
+        setPreviewAspect(null, stillOnSameVideo);
       });
     } catch(e) {
       console.warn('[SPA] Vimeo Player init error:', e);
     }
   } else {
     console.warn('[SPA] No embed URL — video info not available');
-    // A video with no player to ask: the previous one's shape is not its own.
-    // (A re-entry into the same video lands here too, and keeps its shape.)
-    if (!embedUrl && viewEl) viewEl.style.removeProperty('--preview-aspect');
+    // A re-entry into the same video lands here too, and keeps its shape.
+    if (!embedUrl) setPreviewAspect(null);
   }
 }
 
 // The video's shape, on #view-preview: the embedded .video-wrap boxes the
 // player in it, and fullscreen draws the subtitle band on the displayed
 // video's box from it (components.css) — the box the burn's ratios describe.
-// Best-effort, and replaced only once the new shape is known: the previous
-// video's shape is a better guess meanwhile than the 16:9 fallback, which would
-// snap a 4:3 player to 16:9 and back on every switch.
+// Replaced only once the new shape is known: the previous video's shape is a
+// better guess meanwhile than the fallback, which would snap a 4:3 player to
+// 16:9 and back on every switch. When the shape cannot be had (no player, or
+// it will not say) the fallback is 16:9 — what burnGeometry dispatches then.
 function setPreviewAspect(player, stillCurrent) {
   var view = document.getElementById('view-preview');
   if (!view) return;
+  var current = stillCurrent || function() { return true; };
+  function unknown() {
+    if (current()) view.style.removeProperty('--preview-aspect');
+  }
+  if (!player) { unknown(); return; }
   try {
     Promise.all([player.getVideoWidth(), player.getVideoHeight()]).then(function(wh) {
-      if (stillCurrent() && wh[0] > 0 && wh[1] > 0) {
-        view.style.setProperty('--preview-aspect', wh[0] + ' / ' + wh[1]);
-      }
-    }).catch(function() {});
+      if (!(wh[0] > 0 && wh[1] > 0)) { unknown(); return; }
+      if (current()) view.style.setProperty('--preview-aspect', wh[0] + ' / ' + wh[1]);
+    }, unknown);
   } catch (e) {
     console.warn('[SPA] video size unavailable:', e);
+    unknown();
   }
 }
 

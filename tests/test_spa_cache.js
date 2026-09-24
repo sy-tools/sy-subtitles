@@ -1102,6 +1102,17 @@ describe('Theme: CSS variable completeness', () => {
   var css = fs.readFileSync('site/css/tokens.css', 'utf8');
   var components = fs.readFileSync('site/css/components.css', 'utf8');
 
+  it('the resize handle\'s embedded rule never reaches the fullscreen band', () => {
+    // It ties the fullscreen rule's specificity, so without the exclusion its
+    // padding and font win or lose on source order alone — it once turned the
+    // band's side inset into 24px after the first drag of the handle.
+    var selectors = components.match(/[^{}]*\[data-subs-tuned="1"\][^{}]*#subtitle-overlay[^{}]*\{/g) || [];
+    assert.ok(selectors.length > 0, 'expected a [data-subs-tuned] #subtitle-overlay rule');
+    for (var sel of selectors) {
+      assert.ok(sel.includes(':not(.fs-mode)'), 'must exclude fullscreen: ' + sel.trim());
+    }
+  });
+
   it('light palette (warm paper) is the :root default', () => {
     assert.ok(/--bg:\s*#FAF6EE/.test(css), 'light --bg (#FAF6EE) missing');
     assert.ok(/--fg:\s*#221E18/.test(css), 'light --fg (#221E18) missing');

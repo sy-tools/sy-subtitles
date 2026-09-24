@@ -924,7 +924,7 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   bottom: calc((100cqh - var(--fs-video-h)) / 2);
   width: var(--fs-video-w);
   /* The burn's own face and line advance: libass steps one ASS FontSize per
-     line, which for PT Serif is 1.325 em. */
+     line, the geometry's lineAdvance in em. */
   font-family: var(--f-subtitle);
   line-height: var(--fs-line-advance);
   /* ...and nothing the page's own type adds on top: body's tracking and its
@@ -933,11 +933,12 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   letter-spacing: normal;
   font-feature-settings: normal;
   text-rendering: geometricPrecision;
-  /* A fraction of the video width (x the resize handle's scale once it has
-     been dragged), held inside the burn's band of the video height. */
+  /* A fraction of the video width, held inside the burn's band of the video
+     height. The resize handle's --preview-subs-scale (written by applySubsPx,
+     removed on reset) scales it here as burnGeometry scales the burn. */
   font-size: clamp(
     calc(var(--fs-video-h) * var(--fs-font-min)),
-    calc(var(--fs-video-w) * var(--fs-font-w-ratio) * var(--fs-subs-scale, 1)),
+    calc(var(--fs-video-w) * var(--fs-font-w-ratio) * var(--preview-subs-scale, 1)),
     calc(var(--fs-video-h) * var(--fs-font-max))
   );
   /* The sides pad out to the burn's wrap limit, so a line breaks here exactly
@@ -977,12 +978,6 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
    only places a line may break — the burner's text.split() — never after a
    hyphen or a dash inside a word. */
 #view-preview.fs-mode #subtitle-overlay .fs-word { white-space: nowrap; }
-/* Fullscreen follows the embedded resize handle once it has been dragged:
-   --preview-subs-scale is a unitless number JS writes in applySubsPx. */
-#view-preview.fs-mode[data-subs-tuned="1"] #subtitle-overlay {
-  --fs-subs-scale: var(--preview-subs-scale, 1);
-}
-
 /* Focus ring — warm */
 button:focus-visible, a:focus-visible,
 input:focus-visible, select:focus-visible, textarea:focus-visible,

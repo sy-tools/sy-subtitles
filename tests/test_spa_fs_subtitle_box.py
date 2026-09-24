@@ -236,10 +236,8 @@ def test_the_1080p_baseline_keeps_its_approved_pixels(page):
 
 def test_tuned_subtitles_scale_with_the_handle_and_keep_the_side_inset(page):
     """Once the handle has been dragged, the embedded `[data-subs-tuned]` rule
-    (`padding: 16px 24px`) ties the fullscreen rule's specificity; whichever
-    sits later wins, so the side inset must survive it — the fullscreen
-    `[data-subs-tuned]` rule re-asserts it, whatever the source order. The
-    scale must reach the font exactly as it reaches the burn."""
+    (`padding: 16px 24px`) must not reach fullscreen — it once turned the side
+    inset into 24px — and the scale must reach the font as it reaches the burn."""
     m = _measure(page, 1280, 800, "16 / 9", tuned=True, scale=1.5)
     _assert_matches_burn(m, _box(1280, 800, 16 / 9))
     assert m["font"] == pytest.approx(0.04 * 1280 * 1.5, abs=0.6)
