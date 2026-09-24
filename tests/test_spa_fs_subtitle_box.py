@@ -40,6 +40,7 @@ from tools.burn_subtitles import (
     wrap_text,
     wrap_width_for,
 )
+from tools.serve_auth_local import SpaHTTPServer
 
 pytestmark = pytest.mark.e2e
 
@@ -54,13 +55,6 @@ CUES = sorted(
     key=len,
     reverse=True,
 )
-
-
-class _Server(http.server.ThreadingHTTPServer):
-    # The page fetches ~40 scripts at once. http.server's backlog of 5 overflows,
-    # macOS resets the excess connections, and a module silently fails to load.
-    request_queue_size = 128
-    daemon_threads = True
 
 
 @pytest.fixture
@@ -90,7 +84,7 @@ def served_site():
                 return
             super().do_GET()
 
-    httpd = _Server(("127.0.0.1", 0), Handler)
+    httpd = SpaHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{port}/index.html"
