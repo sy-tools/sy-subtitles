@@ -478,6 +478,51 @@ class TestPreviewView:
         assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
         assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
 
+    def test_overlay_fullscreen_repins_when_the_subtitle_face_lands(self, server, page):
+        # The subtitle face is a web font. A cue pinned while the fallback was
+        # drawing (a cold cache, entering fullscreen early) re-flows when the
+        # face lands, and the pin must follow — else the band clips a line or
+        # hangs a line too tall until the next cue.
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        page.wait_for_timeout(1000)
+        # A fallback half again as wide as the face, from the same file: two
+        # lines where the face fits one, on any platform.
+        page.evaluate("""async () => {
+            const wide = new FontFace('Wide Fallback', 'url(fonts/PT_Serif-Web-Regular.ttf)', {sizeAdjust: '150%'});
+            document.fonts.add(wide);
+            await wide.load();
+            const vp = document.getElementById('view-preview');
+            vp.classList.add('fs-mode');
+            vp.style.setProperty('--preview-aspect', '16 / 9');
+            vp.style.setProperty('--f-subtitle', "'Late Subtitle Face', 'Wide Fallback'");
+            const ov = document.getElementById('subtitle-overlay');
+            ov.style.width = '415px';
+            ov.style.padding = '0';
+        }""")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.wait_for_timeout(300)
+        in_fallback = page.evaluate("parseFloat(document.getElementById('subtitle-overlay').style.height)")
+        page.evaluate("""async () => {
+            const face = new FontFace('Late Subtitle Face', 'url(fonts/PT_Serif-Web-Regular.ttf)');
+            document.fonts.add(face);
+            await face.load();
+        }""")
+        page.wait_for_timeout(300)
+        got = page.evaluate("""() => {
+            const ov = document.getElementById('subtitle-overlay');
+            const pinned = parseFloat(ov.style.getPropertyValue('height'));
+            ov.style.removeProperty('height');
+            return {pinned, natural: ov.offsetHeight, text: ov.textContent};
+        }""")
+        assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
+        assert got["natural"] < in_fallback, ("the face must re-flow the cue onto fewer lines", in_fallback, got)
+        assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
+
     def test_overlay_embedded_does_not_pin_height(self, server, page):
         # Embedded keeps the default sizing (const + auto-expand, or the user's
         # resized height): no explicit height pinned for a shown subtitle.
@@ -1014,6 +1059,20 @@ class TestFullscreenMode:
         })""")
         assert got["aspect"] == "640 / 480"
         assert got["width"] == pytest.approx(720 * 4 / 3, abs=1)
+
+    def test_switching_videos_never_falls_back_to_16_9_in_between(self, server, page):
+        """The embedded player is boxed in --preview-aspect too: dropping it
+        while the next video's shape is still on its way snaps a 4:3 player to
+        16:9 and back on every switch."""
+        self._goto_preview(server, page)
+        kept = page.evaluate("""() => {
+            const vp = document.getElementById('view-preview');
+            vp.style.setProperty('--preview-aspect', '640 / 480');
+            const pending = new Promise(() => {});
+            setPreviewAspect({getVideoWidth: () => pending, getVideoHeight: () => pending}, () => true);
+            return vp.style.getPropertyValue('--preview-aspect');
+        }""")
+        assert kept == "640 / 480"
 
     def test_fs_mode_subtitle_still_syncs(self, server, page):
         """Subtitles should still update in fullscreen mode."""

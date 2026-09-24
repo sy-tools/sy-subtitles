@@ -40,18 +40,23 @@
 <script src="js/marker_sync.js"></script>
 <script src="js/sync_status_view.js"></script>
 <script src="js/my_work.js"></script>
+<script src="js/burn_geometry.js"></script>
 <script src="js/burn_video.js"></script>
 <script src="js/burn_artifact.js"></script>
 <script src="js/export_menu.js"></script>
 <script src="js/clip_time.js"></script>
 <script src="js/float_panel.js"></script>
 <script src="js/pending_action.js"></script>
+<!-- The subtitle face: fetched with the page, not when fullscreen first asks for
+     it, so the first cue there is not laid out in the fallback. -->
+<link rel="preload" href="fonts/PT_Serif-Web-Regular.ttf" as="font" type="font/ttf" crossorigin>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/components.css">
 </head>
 <body>
 
 <script>
+applyBurnGeometry(document.documentElement.style);
 (function(){
   // --- Adaptive player aspect ratio (sync player) ---
   // The sync player's iframe gets its intrinsic video dimensions read from
@@ -3294,6 +3299,11 @@ function renderPipelineDAG(tk, stages, st) {
 // PREVIEW VIEW
 // ============================================================
 var previewState = {};
+// Bumped whenever a web font finishes loading. The fullscreen band's text is
+// laid out in the subtitle face, which may land after a cue was already pinned
+// in the fallback — the render loop re-pins when this moves.
+var fontsLanded = 0;
+if (document.fonts) document.fonts.addEventListener('loadingdone', function() { fontsLanded++; });
 
 function showPreview(talkId, videoSlug) {
   document.getElementById('view-preview').classList.add('active');
@@ -3480,12 +3490,12 @@ function showPreview(talkId, videoSlug) {
     var fs = !!(viewEl && viewEl.classList.contains('fs-mode'));
     var modeChanged = fs !== previewState.lastFsMode;
     previewState.lastFsMode = fs;
-    // ...and whenever the displayed video's box changes in fullscreen — a
-    // resize (a phone rotated) or the video's aspect landing after the cues
-    // are already showing: the text there is sized from that box, so the
-    // pinned height goes stale with it. (An inline-style read: no layout.)
+    // ...and whenever the fullscreen text is laid out anew under a cue still
+    // showing: a resize (a phone rotated), the video's aspect landing, or the
+    // subtitle face arriving after the fallback drew it. The pinned height
+    // goes stale with any of them. (An inline-style read: no layout.)
     var box = fs ? window.innerWidth + 'x' + window.innerHeight + '@'
-      + viewEl.style.getPropertyValue('--preview-aspect') : '';
+      + viewEl.style.getPropertyValue('--preview-aspect') + '#' + fontsLanded : '';
     var boxChanged = box !== previewState.lastFsBox;
     previewState.lastFsBox = box;
     if (text !== previewState.lastText || modeChanged || boxChanged) {
@@ -3616,18 +3626,21 @@ function showPreview(talkId, videoSlug) {
     }
   } else {
     console.warn('[SPA] No embed URL — video info not available');
+    // A video with no player to ask: the previous one's shape is not its own.
+    // (A re-entry into the same video lands here too, and keeps its shape.)
+    if (!embedUrl && viewEl) viewEl.style.removeProperty('--preview-aspect');
   }
 }
 
 // The video's shape, on #view-preview: the embedded .video-wrap boxes the
 // player in it, and fullscreen draws the subtitle band on the displayed
 // video's box from it (components.css) — the box the burn's ratios describe.
-// Best-effort: until it lands (or if the player cannot say) both fall back
-// to 16:9.
+// Best-effort, and replaced only once the new shape is known: the previous
+// video's shape is a better guess meanwhile than the 16:9 fallback, which would
+// snap a 4:3 player to 16:9 and back on every switch.
 function setPreviewAspect(player, stillCurrent) {
   var view = document.getElementById('view-preview');
   if (!view) return;
-  view.style.removeProperty('--preview-aspect');
   try {
     Promise.all([player.getVideoWidth(), player.getVideoHeight()]).then(function(wh) {
       if (stillCurrent() && wh[0] > 0 && wh[1] > 0) {

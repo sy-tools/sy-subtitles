@@ -1135,6 +1135,8 @@ describe('Theme: CSS variable completeness', () => {
     (src.match(/--[\w-]+\s*:/g) || []).forEach(m => {
       varDefs.add(m.replace(/\s*:/, ''));
     });
+    // The fullscreen band's geometry is written by JS at boot, not in a sheet.
+    require('../site/js/burn_video').applyBurnGeometry({ setProperty: (name) => varDefs.add(name) });
     var missing = [...varUsages].filter(v => !varDefs.has(v));
     assert.strictEqual(missing.length, 0, 'Undefined CSS vars: ' + missing.join(', '));
   });

@@ -107,13 +107,9 @@ def _shown_lines(page, width, height, text, scale):  # noqa: F811 — the fixtur
     shot = Image.open(
         io.BytesIO(page.screenshot(clip={"x": box["x"], "y": box["y"], "width": box["w"], "height": box["h"]}))
     )
-    gray = shot.convert("L")
-    mask = [bytearray(width) for _ in range(height)]
-    for y in range(gray.height):
-        row = mask[box["y"] + y]
-        for x in range(gray.width):
-            row[box["x"] + x] = gray.getpixel((x, y))
-    return libass_frame.line_boxes(mask, threshold=INK_THRESHOLD)
+    frame = Image.new("L", (width, height))
+    frame.paste(shot.convert("L"), (box["x"], box["y"]))
+    return libass_frame.line_boxes(frame, threshold=INK_THRESHOLD)
 
 
 def test_libass_is_installed_where_it_is_required():

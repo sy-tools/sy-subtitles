@@ -7,9 +7,8 @@ lacks libass.
 Sizing is driven by dimensionless ratios of the video frame, never by pixels:
 fullscreen draws its subtitle band on the displayed video's own box, in
 fractions of that box, so the same fractions reproduce it on the real frame
-whatever screen the render was started from.
-
-See docs/superpowers/specs/2026-07-30-burned-in-subtitle-video-design.md.
+whatever screen the render was started from. The numbers themselves live in
+site/js/burn_geometry.js, shared with the preview (tools/burn_geometry.py).
 """
 
 import argparse
@@ -23,6 +22,8 @@ import tempfile
 from pathlib import Path
 
 from .burn_clip import ClipError, parse_clip, rebase_cues, seconds_text
+from .burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN, SIDE_INSET_RATIO, WRAP_SAFETY
+from .burn_geometry import LINE_ADVANCE as PT_SERIF_WIN_FACTOR
 from .srt_utils import parse_srt
 
 # Vendored rather than apt-installed: a silent substitution would re-wrap the
@@ -41,26 +42,18 @@ from .srt_utils import parse_srt
 DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "site" / "fonts" / "PT_Serif-Web-Regular.ttf")
 DEFAULT_FONT_NAME = "PT Serif"
 
-# Fullscreen's horizontal insets, as a fraction of the video width — the
-# preview draws its band on the video's box, so this is also the wrap width it
-# showed (tests/test_spa_fs_subtitle_box.py holds the CSS to this value).
-SIDE_INSET_RATIO = 0.07
-
 # ASS FontSize is mapped onto the font's Win cell height, not CSS pixels:
 #   FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm
-# PT Serif: (1039 + 286) / 1000. Its hhea and Win metrics agree exactly (both
-# 1325/1000), so libass's FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the
-# arithmetic value — a face whose two metric sets disagree would not, and its
-# rendered glyph height would have to be confirmed on a real frame.
-PT_SERIF_WIN_FACTOR = 1.325
-
-# Guards against a pathological measurement arriving from the browser.
-FONT_RATIO_MIN = 0.02
-FONT_RATIO_MAX = 0.12
-
-# Rendering measures glyph advances slightly differently from our layout maths;
-# 2% of headroom keeps a line from spilling a hair past the margin.
-WRAP_SAFETY = 0.98
+# PT Serif: (1039 + 286) / 1000 = PT_SERIF_WIN_FACTOR (burn_geometry's
+# lineAdvance). Its hhea and Win metrics agree exactly (both 1325/1000), so
+# libass's FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the arithmetic value —
+# a face whose two metric sets disagree would not, and its rendered glyph height
+# would have to be confirmed on a real frame.
+#
+# FONT_RATIO_MIN/MAX guard against a pathological measurement arriving from the
+# browser. WRAP_SAFETY: rendering measures glyph advances slightly differently
+# from our layout maths, and the headroom keeps a line from spilling a hair past
+# the margin — the preview pads its sides by the same amount, so it wraps there too.
 
 _WS_RUN = re.compile(r"\s+")
 
@@ -176,11 +169,22 @@ MEASURE_PX = 1000
 
 
 def text_measurer(font_file, font_px):
-    """Width measurer backed by the very TTF libass will render with."""
-    # Imported lazily so the pure-logic helpers stay usable without Pillow.
-    from PIL import ImageFont
+    """Width measurer backed by the very TTF libass will render with.
 
-    font = ImageFont.truetype(font_file, MEASURE_PX)
+    Shaped with HarfBuzz (Pillow's RAQM layout), as the browser and libass
+    shape: kerning and ligatures in. Pillow drops to its BASIC layout with no
+    more than a warning when libraqm or libfribidi is missing, and every line
+    would then be measured up to a few percent wide — so that is refused.
+    """
+    # Imported lazily so the pure-logic helpers stay usable without Pillow.
+    from PIL import ImageFont, features
+
+    if not features.check("raqm"):
+        raise RuntimeError(
+            "Pillow has no RAQM layout (libraqm/libfribidi missing): it would measure "
+            "without kerning and wrap cues where the preview does not"
+        )
+    font = ImageFont.truetype(font_file, MEASURE_PX, layout_engine=ImageFont.Layout.RAQM)
     scale = font_px / MEASURE_PX
     return lambda text: font.getlength(text) * scale
 

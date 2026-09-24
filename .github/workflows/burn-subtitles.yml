@@ -177,13 +177,16 @@ jobs:
           python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
           # The ratios are measured in the browser. Reject nonsense here, with a
           # legible message, rather than deep inside ffmpeg. The font_ratio
-          # bounds mirror the clamp in tools/burn_subtitles.py.
+          # band is the one the browser and the burner clamp to
+          # (site/js/burn_geometry.js); the loader is stdlib-only.
           python3 - <<'PY'
           import os
           import sys
 
+          from tools.burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN
+
           BOUNDS = {
-              "FONT_RATIO": (0.02, 0.12),
+              "FONT_RATIO": (FONT_RATIO_MIN, FONT_RATIO_MAX),
               "PADTOP_RATIO": (0.0, 0.5),
               "PADBOT_RATIO": (0.0, 0.5),
           }

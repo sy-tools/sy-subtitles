@@ -13,6 +13,8 @@ machine (Homebrew `libass`, Debian/Ubuntu `libass9`).
 import ctypes
 import ctypes.util
 
+from PIL import Image, ImageChops
+
 # The text fill: white, fully opaque (RGBA as libass packs it). The outline,
 # the shadow and the gradient band are all black, so this one colour isolates
 # the glyphs a viewer reads.
@@ -36,16 +38,29 @@ _AssImage._fields_ = [
     ("type", ctypes.c_int),
 ]
 
+# libass logs through a callback, to stderr by default: some ten lines per frame
+# that bury a failing test's own output. Kept at module level so ctypes does not
+# collect it while libass still holds it.
+_MessageCallback = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p)
+_SILENT = _MessageCallback(lambda level, fmt, args, data: None)
+
 _lib = None
 
 
 def _load():
     global _lib
     if _lib is None:
-        path = ctypes.util.find_library("ass")
-        if not path:
+        # find_library reads the ldconfig cache, which a slim container may lack.
+        for name in (ctypes.util.find_library("ass"), "libass.so.9"):
+            try:
+                lib = ctypes.CDLL(name) if name else None
+            except OSError:
+                lib = None
+            if lib:
+                break
+        else:
             return None
-        lib = ctypes.CDLL(path)
+        lib.ass_set_message_cb.argtypes = [ctypes.c_void_p, _MessageCallback, ctypes.c_void_p]
         lib.ass_library_init.restype = ctypes.c_void_p
         lib.ass_library_done.argtypes = [ctypes.c_void_p]
         lib.ass_set_fonts_dir.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
@@ -80,7 +95,7 @@ def available():
 
 
 def text_mask(ass_document, width, height, at_ms, fonts_dir):
-    """The text-fill coverage of one frame: rows of 0..255 alpha, height x width.
+    """The text-fill coverage of one frame, as a width x height "L" image.
 
     Fonts come from `fonts_dir` only as the burn's do (ffmpeg passes the same
     directory as `fontsdir`); the system provider stays on for glyph fallback,
@@ -88,44 +103,42 @@ def text_mask(ass_document, width, height, at_ms, fonts_dir):
     """
     lib = _load()
     library = lib.ass_library_init()
+    lib.ass_set_message_cb(library, _SILENT, None)
     lib.ass_set_fonts_dir(library, fonts_dir.encode())
     renderer = lib.ass_renderer_init(library)
     lib.ass_set_frame_size(renderer, width, height)
     lib.ass_set_fonts(renderer, None, b"sans-serif", ASS_FONTPROVIDER_AUTODETECT, None, 1)
     data = ass_document.encode("utf-8")
     track = lib.ass_read_memory(library, data, len(data), None)
-    mask = [bytearray(width) for _ in range(height)]
+    coverage = Image.new("L", (width, height))
     try:
         changed = ctypes.c_int(0)
         image = lib.ass_render_frame(renderer, track, at_ms, ctypes.byref(changed))
         while image:
             img = image.contents
-            if img.color >> 8 == TEXT_FILL_RGB:
-                for y in range(img.h):
-                    row = mask[img.dst_y + y]
-                    base = y * img.stride
-                    for x in range(img.w):
-                        a = img.bitmap[base + x]
-                        if a > row[img.dst_x + x]:
-                            row[img.dst_x + x] = a
+            if img.color >> 8 == TEXT_FILL_RGB and img.w and img.h:
+                raw = ctypes.string_at(img.bitmap, img.stride * img.h)
+                glyphs = Image.frombuffer("L", (img.w, img.h), raw, "raw", "L", img.stride, 1)
+                box = (img.dst_x, img.dst_y, img.dst_x + img.w, img.dst_y + img.h)
+                coverage.paste(ImageChops.lighter(coverage.crop(box), glyphs), box)
             image = img.next
     finally:
         lib.ass_free_track(track)
         lib.ass_renderer_done(renderer)
         lib.ass_library_done(library)
-    return mask
+    return coverage
 
 
-def line_boxes(mask, threshold=128):
-    """Ink boxes of the text lines in a coverage mask, top to bottom.
+def line_boxes(coverage, threshold=128):
+    """Ink boxes of the text lines in an "L" coverage image, top to bottom.
 
-    Rows with any pixel at or above `threshold` are ink; a run of ink rows is
-    one line (lines are separated by blank rows — the line advance exceeds the
+    Pixels at or above `threshold` are ink; a run of rows holding ink is one
+    line (lines are separated by blank rows — the line advance exceeds the
     glyph height). A run far shorter than a line is a mark floating above one
     (the breve of Й stands clear of its letter) and joins the line below it.
     Each box is (left, top, right, bottom), right/bottom exclusive.
     """
-    runs = _ink_runs(mask, threshold)
+    runs = _ink_runs(coverage.point(lambda v: 255 if v >= threshold else 0))
     if not runs:
         return []
     tallest = max(b - t for _, t, _, b in runs)
@@ -144,18 +157,16 @@ def line_boxes(mask, threshold=128):
     return boxes
 
 
-def _ink_runs(mask, threshold):
-    boxes = []
+def _ink_runs(ink):
+    width, height = ink.size
+    rows = [ink.crop((0, y, width, y + 1)).getbbox() is not None for y in range(height)] + [False]
+    runs = []
     top = None
-    left = right = None
-    for y, row in enumerate(mask + [bytearray(len(mask[0]) if mask else 0)]):
-        xs = [x for x, a in enumerate(row) if a >= threshold]
-        if xs:
-            if top is None:
-                top, left, right = y, xs[0], xs[-1] + 1
-            else:
-                left, right = min(left, xs[0]), max(right, xs[-1] + 1)
-        elif top is not None:
-            boxes.append((left, top, right, y))
+    for y, inked in enumerate(rows):
+        if inked and top is None:
+            top = y
+        elif not inked and top is not None:
+            left, _, right, _ = ink.crop((0, top, width, y)).getbbox()
+            runs.append((left, top, right, y))
             top = None
-    return boxes
+    return runs

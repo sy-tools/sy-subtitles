@@ -47,13 +47,20 @@ SITE = Path(__file__).parent.parent / "site"
 SUBTITLE_FAMILY = "SY Subtitle Serif"
 
 # Every cue of the talk the mismatch was first seen on (2000 Guru Puja) —
-# 503 real lines, hyphenated names and all.
-_SRT = Path(__file__).parent.parent / "talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja/final/uk.srt"
+# 503 real lines, hyphenated names and all. Frozen: a review of that talk's SRT
+# must not quietly change what this test measures.
 CUES = sorted(
-    {" ".join(b.split("\n")[2:]) for b in _SRT.read_text(encoding="utf-8-sig").strip().split("\n\n")},
+    (Path(__file__).parent / "fixtures/guru_puja_2000_cues.txt").read_text(encoding="utf-8").splitlines(),
     key=len,
     reverse=True,
 )
+
+
+class _Server(http.server.ThreadingHTTPServer):
+    # The page fetches ~40 scripts at once. http.server's backlog of 5 overflows,
+    # macOS resets the excess connections, and a module silently fails to load.
+    request_queue_size = 128
+    daemon_threads = True
 
 
 @pytest.fixture
@@ -83,7 +90,7 @@ def served_site():
                 return
             super().do_GET()
 
-    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    httpd = _Server(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{port}/index.html"

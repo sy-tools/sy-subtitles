@@ -797,8 +797,10 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
    support causes the rule below to fall back to the embedded font, which
    makes fs-mode look broken. Doing the math in JS avoids the foot-gun. */
 
-/* Only once a custom height is set do we enable the scaling behavior. */
-#view-preview[data-subs-tuned="1"] #subtitle-overlay {
+/* Only once a custom height is set do we enable the scaling behavior — in the
+   embedded player only: fullscreen has its own band (below), and this rule
+   would otherwise tie its specificity and win or lose on source order alone. */
+#view-preview:not(.fs-mode)[data-subs-tuned="1"] #subtitle-overlay {
   height: var(--preview-subs-h);
   overflow: hidden;
   /* Font sizing is constrained by BOTH block height AND block width.
@@ -902,11 +904,13 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
      .player-container and letterboxes the video inside it, so the video's box
      is the largest rectangle of its aspect (--preview-aspect, written by
      setPreviewAspect) that fits the container. Everything below is a fraction
-     of that box, which is exactly what the burn reproduces on the real frame
-     (measureBurnRatios in js/burn_video.js, SIDE_INSET_RATIO in
-     tools/burn_subtitles.py). Sized from the screen instead, a pillarboxed
-     talk wrapped wider here than in the burn, and a phone dispatched a render
-     with giant text. tests/test_spa_fs_subtitle_box.py holds all of it.
+     of that box, which is exactly what the burn reproduces on the real frame.
+     The fractions are the burn's own (js/burn_geometry.js, written onto :root
+     as --fs-* by applyBurnGeometry) and deliberately have no fallback here: a
+     copy in this file is a number the burn cannot see. Sized from the screen
+     instead, a pillarboxed talk wrapped wider here than in the burn, and a
+     phone dispatched a render with giant text.
+     tests/test_spa_fs_subtitle_box.py holds all of it.
 
      Container units, not vw/vh: in fullscreen .player-container is a size
      container, and — the overlay being absolute in it (it is position:
@@ -920,29 +924,27 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   bottom: calc((100cqh - var(--fs-video-h)) / 2);
   width: var(--fs-video-w);
   /* The burn's own face and line advance: libass steps one ASS FontSize per
-     line, which for PT Serif is PT_SERIF_WIN_FACTOR (1.325) em. */
+     line, which for PT Serif is 1.325 em. */
   font-family: var(--f-subtitle);
-  line-height: 1.325;
+  line-height: var(--fs-line-advance);
   /* ...and nothing the page's own type adds on top: body's tracking and its
      Inter feature flags would narrow every line by ~1% against the burn's
      measurement (Pillow, plain advances + kerning) and fit words it cannot. */
   letter-spacing: normal;
   font-feature-settings: normal;
   text-rendering: geometricPrecision;
-  /* 4% of the video width, held inside the burn's FONT_RATIO_MIN/MAX band of
-     its height. */
+  /* A fraction of the video width (x the resize handle's scale once it has
+     been dragged), held inside the burn's band of the video height. */
   font-size: clamp(
-    calc(var(--fs-video-h) * 0.02),
-    calc(var(--fs-video-w) * 0.04),
-    calc(var(--fs-video-h) * 0.12)
+    calc(var(--fs-video-h) * var(--fs-font-min)),
+    calc(var(--fs-video-w) * var(--fs-font-w-ratio) * var(--fs-subs-scale, 1)),
+    calc(var(--fs-video-h) * var(--fs-font-max))
   );
-  /* Over / under the text: 80px / 36px of a 1080px-tall video. Sides: the
-     burn's wrap limit — 7% insets, then its 2% WRAP_SAFETY headroom on the
-     width between them — so a line breaks here exactly where the burn breaks
-     it: (1 - 0.98 x 0.86) / 2 = 0.0786 of the width each side. */
-  --fs-side-pad: calc(var(--fs-video-w) * (1 - 0.98 * (1 - 2 * 0.07)) / 2);
-  padding: calc(var(--fs-video-h) * 80 / 1080) var(--fs-side-pad)
-           calc(var(--fs-video-h) * 36 / 1080);
+  /* The sides pad out to the burn's wrap limit, so a line breaks here exactly
+     where the burn breaks it. */
+  padding: calc(var(--fs-video-h) * var(--fs-padtop-ratio))
+           calc(var(--fs-video-w) * var(--fs-side-pad-ratio))
+           calc(var(--fs-video-h) * var(--fs-padbot-ratio));
   /* Deeper, longer gradient so the top of the text also sits on a dark
      enough backdrop — prior version faded to transparent too early and
      bright shots (sky, water) left the first line hard to read. */
@@ -975,26 +977,10 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
    only places a line may break — the burner's text.split() — never after a
    hyphen or a dash inside a word. */
 #view-preview.fs-mode #subtitle-overlay .fs-word { white-space: nowrap; }
-/* Fullscreen mirrors the embedded resize handle: --preview-subs-scale is
-   set by JS as a unitless number; if absent (no drag yet) the fallback 1
-   keeps the original baseline. */
+/* Fullscreen follows the embedded resize handle once it has been dragged:
+   --preview-subs-scale is a unitless number JS writes in applySubsPx. */
 #view-preview.fs-mode[data-subs-tuned="1"] #subtitle-overlay {
-  font-size: clamp(
-    calc(var(--fs-video-h) * 0.02),
-    calc(var(--fs-video-w) * 0.04 * var(--preview-subs-scale, 1)),
-    calc(var(--fs-video-h) * 0.12)
-  );
-  height: auto;
-  line-height: 1.325;
-  /* Re-assert the fullscreen side inset. `#view-preview[data-subs-tuned="1"]
-     #subtitle-overlay` (written for the embedded resized block) ties the
-     fs-mode rule's specificity, and its `padding: 16px 24px` shorthand wins
-     whenever it sits later in this file — as it once did, silently turning
-     the inset into 24px after the first drag of the handle. Today the fs-mode
-     rule sits later; this more specific rule keeps the inset whatever the
-     order. */
-  padding-left: var(--fs-side-pad);
-  padding-right: var(--fs-side-pad);
+  --fs-subs-scale: var(--preview-subs-scale, 1);
 }
 
 /* Focus ring — warm */

@@ -442,6 +442,26 @@ class TestWrapGeometry:
         big = ImageFont.truetype(DEFAULT_FONT_FILE, 1000).getlength(text)
         assert text_measurer(DEFAULT_FONT_FILE, 57.6)(text) == pytest.approx(big * 57.6 / 1000, abs=0.01)
 
+    def test_measures_with_the_shaping_the_browser_does(self):
+        # Kerning and ligatures come from HarfBuzz (Pillow's RAQM layout); the
+        # BASIC layout leaves them out and is 4.7% wider on this line.
+        from PIL import ImageFont
+
+        text = "office fifty affluent"
+        shaped = ImageFont.truetype(DEFAULT_FONT_FILE, 1000, layout_engine=ImageFont.Layout.RAQM).getlength(text)
+        plain = ImageFont.truetype(DEFAULT_FONT_FILE, 1000, layout_engine=ImageFont.Layout.BASIC).getlength(text)
+        assert shaped != plain
+        assert text_measurer(DEFAULT_FONT_FILE, 1000)(text) == pytest.approx(shaped)
+
+    def test_refuses_to_measure_without_shaping(self, monkeypatch):
+        # Pillow falls back to BASIC with only a warning when libraqm or
+        # libfribidi is missing, and the burn would silently wrap differently.
+        from PIL import features
+
+        monkeypatch.setattr(features, "check", lambda name: name != "raqm")
+        with pytest.raises(RuntimeError, match="RAQM"):
+            text_measurer(DEFAULT_FONT_FILE, 57.6)
+
 
 class TestCssFontPx:
     """The module carries two sizes; conflating them mis-wraps every cue.
@@ -613,10 +633,10 @@ class TestBandBridgesGaps:
 
 class TestBuildFfmpegCommand:
     def _cmd(self):
-        return build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "assets/fonts")
+        return build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "site/fonts")
 
     def test_burns_via_the_ass_filter_with_fontsdir(self):
-        assert "ass=subs.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
+        assert "ass=subs.ass:fontsdir=site/fonts" in " ".join(self._cmd())
 
     def test_copies_audio_untouched(self):
         cmd = self._cmd()
@@ -743,7 +763,7 @@ LIBASS_FALLBACK_STDERR = (
     "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (PT Serif, 400, 0) -> Georgia, 0, Georgia\n"
 )
 
-# The success case, captured the same way with --sub-fonts-dir=assets/fonts.
+# The success case, captured the same way with --sub-fonts-dir=site/fonts.
 LIBASS_SUCCESS_STDERR = (
     "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (PT Serif, 400, 0) -> PTSerif-Regular, 0, PTSerif-Regular\n"
 )
@@ -874,7 +894,7 @@ class TestFontSelectionError:
 
 class TestFontProbeCommand:
     def _cmd(self):
-        return build_font_probe_command("probe.ass", "assets/fonts")
+        return build_font_probe_command("probe.ass", "site/fonts")
 
     def test_pins_the_log_level_so_font_selection_is_visible(self):
         # The check reads ffmpeg's stderr; an inherited quieter level would turn
@@ -889,7 +909,7 @@ class TestFontProbeCommand:
         assert cmd[-1] == "-"
 
     def test_uses_the_same_ass_filter_and_fontsdir(self):
-        assert "ass=probe.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
+        assert "ass=probe.ass:fontsdir=site/fonts" in " ".join(self._cmd())
 
     def test_font_probe_command_never_carries_progress(self):
         """The pre-flight is a one-frame probe; progress from it would be noise."""

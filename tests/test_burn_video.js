@@ -581,13 +581,49 @@ const {
   FS_PADTOP_RATIO,
   FS_PADBOT_RATIO,
   measureBurnRatios,
+  applyBurnGeometry,
 } = require('../site/js/burn_video');
+const BURN_GEOMETRY = require('../site/js/burn_geometry');
 
 describe('fullscreen box constants', () => {
   it('keep the approved 1080p look: 4% of width, 80px over and 36px under', () => {
     assert.strictEqual(FS_FONT_WIDTH_RATIO, 0.04);
     assert.ok(Math.abs(FS_PADTOP_RATIO - 80 / 1080) < 1e-12);
     assert.ok(Math.abs(FS_PADBOT_RATIO - 36 / 1080) < 1e-12);
+  });
+
+  it('come from the one geometry file', () => {
+    assert.strictEqual(FS_FONT_WIDTH_RATIO, BURN_GEOMETRY.fontWidthRatio);
+    assert.strictEqual(FONT_RATIO_MIN, BURN_GEOMETRY.fontRatioMin);
+    assert.strictEqual(FONT_RATIO_MAX, BURN_GEOMETRY.fontRatioMax);
+    assert.strictEqual(FS_PADTOP_RATIO, BURN_GEOMETRY.padTopPx / BURN_GEOMETRY.refHeight);
+    assert.strictEqual(FS_PADBOT_RATIO, BURN_GEOMETRY.padBotPx / BURN_GEOMETRY.refHeight);
+  });
+});
+
+describe('applyBurnGeometry', () => {
+  function recordedStyle() {
+    const props = {};
+    return { props, setProperty: (name, value) => { props[name] = value; } };
+  }
+
+  it('hands the fullscreen band every number it draws with', () => {
+    const style = recordedStyle();
+    applyBurnGeometry(style);
+    assert.deepStrictEqual(Object.keys(style.props).sort(), [
+      '--fs-font-max', '--fs-font-min', '--fs-font-w-ratio', '--fs-line-advance',
+      '--fs-padbot-ratio', '--fs-padtop-ratio', '--fs-side-pad-ratio',
+    ]);
+    assert.strictEqual(style.props['--fs-font-w-ratio'], '0.04');
+    assert.strictEqual(style.props['--fs-line-advance'], String(BURN_GEOMETRY.lineAdvance));
+    assert.strictEqual(style.props['--fs-padtop-ratio'], String(80 / 1080));
+  });
+
+  it('pads the sides out to the burn\'s wrap limit: insets, then its safety headroom', () => {
+    const style = recordedStyle();
+    applyBurnGeometry(style);
+    const side = Number(style.props['--fs-side-pad-ratio']);
+    assert.ok(Math.abs((1 - 2 * side) - 0.98 * (1 - 2 * 0.07)) < 1e-12);
   });
 });
 
