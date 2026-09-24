@@ -193,8 +193,10 @@ def _assert_matches_burn(m, box):
         (844, 390, "16 / 9", 16 / 9),  # phone on its side
     ],
 )
-def test_fullscreen_overlay_is_the_burned_band(page, vw, vh, aspect, ar):
-    _assert_matches_burn(_measure(page, vw, vh, aspect), _box(vw, vh, ar))
+@pytest.mark.parametrize("scale", [None, 0.6, 1.5, 3])
+def test_fullscreen_overlay_is_the_burned_band(page, vw, vh, aspect, ar, scale):
+    m = _measure(page, vw, vh, aspect, tuned=scale is not None, scale=scale)
+    _assert_matches_burn(m, _box(vw, vh, ar))
 
 
 def test_the_band_follows_the_player_not_the_viewport(page):
@@ -257,17 +259,22 @@ def test_embedded_tuned_subtitles_keep_their_own_padding(page):
     assert embedded["right"] == pytest.approx(24.0, abs=0.5)
 
 
-def _browser_lines(page, vw, vh, aspect, texts):
+def _browser_lines(page, vw, vh, aspect, texts, scale=None):
     """Lay each text out in the fullscreen band and read back its lines."""
     page.set_viewport_size({"width": vw, "height": vh})
     return page.evaluate(
-        """async ({aspect, texts, family}) => {
+        """async ({aspect, texts, family, scale}) => {
             const vp = document.getElementById('view-preview');
             const ov = document.getElementById('subtitle-overlay');
             vp.classList.add('active', 'fs-mode');
             vp.style.setProperty('--preview-aspect', aspect);
-            vp.removeAttribute('data-subs-tuned');
-            document.documentElement.style.removeProperty('--preview-subs-scale');
+            if (scale === null) {
+                vp.removeAttribute('data-subs-tuned');
+                document.documentElement.style.removeProperty('--preview-subs-scale');
+            } else {
+                vp.setAttribute('data-subs-tuned', '1');
+                document.documentElement.style.setProperty('--preview-subs-scale', String(scale));
+            }
             ov.textContent = 'x';
             await document.fonts.load(getComputedStyle(ov).fontSize + ' "' + family + '"');
             const out = [];
@@ -286,7 +293,7 @@ def _browser_lines(page, vw, vh, aspect, texts):
             }
             return out;
         }""",
-        {"aspect": aspect, "texts": texts, "family": SUBTITLE_FAMILY},
+        {"aspect": aspect, "texts": texts, "family": SUBTITLE_FAMILY, "scale": scale},
     )
 
 
@@ -297,15 +304,20 @@ def _browser_lines(page, vw, vh, aspect, texts):
         (1920, 1080, "16 / 9", 16 / 9),
     ],
 )
-def test_fullscreen_breaks_lines_where_the_burn_does(page, vw, vh, aspect, ar):
+@pytest.mark.parametrize("scale", [None, 0.6, 1.5])
+def test_fullscreen_breaks_lines_where_the_burn_does(page, vw, vh, aspect, ar, scale):
     """The whole point: the burned video must show the lines the preview showed.
     Same file, same size, same wrap limit — so the browser's line breaks must be
     the burner's own `wrap_text`, measured by Pillow on the TTF libass renders."""
     box = _box(vw, vh, ar)
-    width, height = round(box["width"]), round(box["height"])
-    measure = text_measurer(DEFAULT_FONT_FILE, css_font_px(0.04 * ar, height))
+    width, height = box["width"], box["height"]
+    ratio = page.evaluate(
+        "(g) => measureBurnRatios(g).font_ratio",
+        {"videoWidth": width, "videoHeight": height, "subsScale": scale or 1},
+    )
+    measure = text_measurer(DEFAULT_FONT_FILE, css_font_px(ratio, height))
     burned = [wrap_text(t, measure, wrap_width_for(width)) for t in CUES]
-    shown = _browser_lines(page, vw, vh, aspect, CUES)
+    shown = _browser_lines(page, vw, vh, aspect, CUES, scale)
     mismatched = [(b, s) for b, s in zip(burned, shown, strict=True) if b != s]
     assert not mismatched, f"{len(mismatched)} of {len(CUES)} cues break differently: {mismatched[:3]}"
 

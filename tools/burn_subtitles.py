@@ -120,8 +120,12 @@ def css_font_px(font_ratio, height):
 
 
 def font_size_for(font_ratio, height, win_factor=PT_SERIF_WIN_FACTOR):
-    """ASS FontSize for a font-height-to-frame-height ratio."""
-    return round(css_font_px(font_ratio, height) * win_factor)
+    """ASS FontSize for a font-height-to-frame-height ratio.
+
+    Fractional: libass takes one, and a whole number drifts the text off the
+    size the preview draws — by 1.7% on a 640x480 frame at the handle's 0.6x.
+    """
+    return round(css_font_px(font_ratio, height) * win_factor, 2)
 
 
 def wrap_text(text, measure, max_width):
@@ -217,6 +221,9 @@ def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
             "WrapStyle: 2",
             # libass >= 0.15 defaults this to no, which would shrink border/shadow.
             "ScaledBorderAndShadow: yes",
+            # Off unless asked for; the preview kerns (browsers do by default),
+            # and unkerned every line ran 0.45% wider than the preview's.
+            "Kerning: yes",
             "YCbCr Matrix: None",
             "",
             "[V4+ Styles]",
@@ -271,7 +278,7 @@ def band_geometry(height, font_size, line_count, margin_v, padtop_px):
     wrapped unusually wide cannot place the band off-screen.
     """
     text_h = max(1, line_count) * font_size
-    band_h = min(height, padtop_px + text_h + margin_v)
+    band_h = min(height, round(padtop_px + text_h + margin_v))
     return height - band_h, band_h
 
 

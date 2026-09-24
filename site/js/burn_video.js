@@ -21,8 +21,8 @@ function burnRef(win) {
 }
 
 // The three ratios the workflow requires. Sizing travels as fractions of the
-// displayed video height, never pixels: fullscreen derives its font size from
-// viewport width, so pixels would make the output depend on the monitor.
+// video frame, never pixels: fullscreen draws the band on the displayed video's
+// box, so the same fractions reproduce it on the real frame at any resolution.
 var BURN_RATIO_KEYS = ['font_ratio', 'padtop_ratio', 'padbot_ratio'];
 
 // workflow_dispatch does not return a run id, so we stamp an opaque token into

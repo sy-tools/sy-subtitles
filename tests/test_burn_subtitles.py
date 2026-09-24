@@ -103,23 +103,28 @@ class TestSizingConstants:
 class TestFontSizeFor:
     def test_applies_win_metric_factor(self):
         # ASS FontSize is the font's Win cell height, not CSS pixels.
-        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * PT_SERIF_WIN_FACTOR)
+        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * PT_SERIF_WIN_FACTOR, 2)
 
     def test_pins_size_for_1080p(self):
-        # 0.0711 * 1080 * 1.325 = 101.7 -> 102. Independent of the constants,
-        # so a drift in any of them fails here.
-        assert font_size_for(0.0711, 1080) == 102
+        # 0.0711 * 1080 * 1.325 = 101.74. Independent of the constants, so a
+        # drift in any of them fails here.
+        assert font_size_for(0.0711, 1080) == 101.74
+
+    def test_is_not_rounded_to_a_whole_size(self):
+        # libass takes a fractional FontSize. Rounded, a 640x480 frame at the
+        # handle's 0.6x (15.36px, FontSize 20.35) drew its text at 20 — 1.7%
+        # narrower than the preview showed it.
+        assert font_size_for(0.032, 480) == 20.35
 
     def test_pins_clamped_sizes(self):
-        # 0.02 * 1000 * 1.325 = 26.5, which Python rounds to even -> 26.
-        assert font_size_for(0.001, 1000) == 26
-        assert font_size_for(0.9, 1000) == 159  # 0.12 * 1000 * 1.325
+        assert font_size_for(0.001, 1000) == 26.5  # 0.02 * 1000 * 1.325
+        assert font_size_for(0.9, 1000) == 159.0  # 0.12 * 1000 * 1.325
 
     def test_clamps_below_minimum(self):
-        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * PT_SERIF_WIN_FACTOR)
+        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * PT_SERIF_WIN_FACTOR, 2)
 
     def test_clamps_above_maximum(self):
-        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * PT_SERIF_WIN_FACTOR)
+        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * PT_SERIF_WIN_FACTOR, 2)
 
     def test_rejects_non_positive_height(self):
         with pytest.raises(ValueError):
@@ -153,6 +158,11 @@ class TestBuildAssHeader:
     def test_scaled_border_and_shadow_enabled_explicitly(self):
         # libass >= 0.15 defaults this to no.
         assert "ScaledBorderAndShadow: yes" in self._header()
+
+    def test_kerns_as_the_browser_does(self):
+        # libass leaves kerning off unless the script asks; the preview kerns,
+        # so without it every burned line ran 0.45% wider than the preview's.
+        assert "Kerning: yes" in self._header()
 
     def test_declares_default_and_band_styles(self):
         h = self._header()
@@ -264,6 +274,11 @@ class TestAssAlphaByte:
 
 
 class TestBandGeometry:
+    def test_a_fractional_font_size_still_gives_whole_pixel_edges(self):
+        # The strips are positioned with \\pos in whole pixels.
+        top, band_h = band_geometry(480, 20.35, 2, 16, 36)
+        assert (top, band_h) == (480 - 93, 93)  # 36 + 2 * 20.35 + 16 = 92.7
+
     def test_band_encloses_text_and_padding(self):
         top, height = band_geometry(
             height=1080,
@@ -441,7 +456,7 @@ class TestCssFontPx:
 
     def test_font_size_is_css_px_times_the_win_factor(self):
         for ratio, height in ((0.0711, 1080), (0.05, 480), (0.11, 2160)):
-            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * PT_SERIF_WIN_FACTOR)
+            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * PT_SERIF_WIN_FACTOR, 2)
 
     def test_shares_the_clamp_with_font_size_for(self):
         assert css_font_px(0.001, 1000) == pytest.approx(FONT_RATIO_MIN * 1000)

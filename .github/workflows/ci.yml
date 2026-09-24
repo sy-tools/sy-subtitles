@@ -198,9 +198,15 @@ jobs:
         # Headless runs use the chromium headless shell, so skip the full
         # chromium download (--only-shell roughly halves the payload).
       - run: playwright install chromium --only-shell --with-deps
+        # libass renders the burned frame test_burn_preview_fidelity.py holds
+        # against the preview (the package lists are fresh from --with-deps).
+      - run: sudo apt-get install -y --no-install-recommends libass9
         # strategy.job-total keeps --num-shards in lockstep with the matrix,
         # so growing/shrinking the shard list cannot silently drop tests.
+        # REQUIRE_LIBASS: a missing libass fails that test instead of skipping it.
       - run: pytest tests/ -n auto -m e2e --tb=short --shard-id=${{ matrix.shard }} --num-shards=${{ strategy.job-total }}
+        env:
+          REQUIRE_LIBASS: '1'
 
   test-js:
     needs: changes
