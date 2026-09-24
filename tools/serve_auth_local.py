@@ -24,11 +24,24 @@ import contextlib
 import functools
 import http.server
 import os
-import socketserver
 
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site")
 
 DEFAULT_EXCHANGE_URL = "http://localhost:8787/exchange"
+
+
+class SpaHTTPServer(http.server.ThreadingHTTPServer):
+    """The server the SPA is served from here and in the browser tests.
+
+    The page requests its ~40 scripts at once. http.server's defaults — one
+    thread, a listen backlog of 5 — reset the excess connections (macOS) or
+    leave them in SYN retransmits (Linux): a module silently fails to load, or
+    the load crawls.
+    """
+
+    allow_reuse_address = True
+    request_queue_size = 128
+    daemon_threads = True
 
 
 def injection(exchange_url, client_id, burn_ref=""):
@@ -133,8 +146,7 @@ def main(argv=None):
 
     Handler.script = injection(args.exchange_url, args.client_id, args.burn_ref)
     handler = functools.partial(Handler, directory=SITE_DIR)
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("127.0.0.1", args.port), handler) as httpd:
+    with SpaHTTPServer(("127.0.0.1", args.port), handler) as httpd:
         print(f"SPA        http://localhost:{args.port}/?repo=sy-tools/sy-subtitles")
         print(f"exchange   {args.exchange_url}")
         if args.burn_ref:
