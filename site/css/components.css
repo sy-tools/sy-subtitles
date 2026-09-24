@@ -794,8 +794,9 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
 /* Note: --preview-subs-scale is set by JS in applySubsPx() as a unitless
    number. Computing it from --preview-subs-h via calc(length/length) only
    works on Safari ≥ 16.4 / Firefox ≥ 89 — and a single browser without
-   support causes the rule below to fall back to the embedded font, which
-   makes fs-mode look broken. Doing the math in JS avoids the foot-gun. */
+   support leaves the fullscreen band's font-size, which multiplies by it,
+   invalid at computed-value time — it drops to the inherited size, and
+   fs-mode looks broken. Doing the math in JS avoids the foot-gun. */
 
 /* Only once a custom height is set do we enable the scaling behavior — in the
    embedded player only: fullscreen has its own band (below), and this rule

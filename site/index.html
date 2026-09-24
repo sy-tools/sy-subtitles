@@ -137,8 +137,8 @@
   let _lastSubsH = NaN, _lastSubsScale = NaN;
   function applySubsPx(v) {
     // Reject non-finite input: writing "NaNpx" silently re-creates the
-    // "tiny on fullscreen" bug because CSS drops the property and the
-    // fs-mode rule falls back to the embedded font.
+    // "tiny on fullscreen" bug: the fullscreen band's font-size multiplies
+    // by the scale, turns invalid, and drops to the inherited size.
     if (!Number.isFinite(v)) {
       console.warn('[preview] applySubsPx ignored non-finite value:', v);
       return;
@@ -3326,10 +3326,6 @@ function showPreview(talkId, videoSlug) {
   document.getElementById('p-title').textContent = (talk ? talk.title : talkId) + ' — ' + (video ? video.title : videoSlug);
   document.title = (video ? video.title : videoSlug) + ' – Preview';
 
-  // Re-entry for the already-loaded video (e.g. a manifest refresh that
-  // re-runs route()) must NOT tear down the Vimeo player — that would reset
-  // playback. Detect it and keep the live player + position; only the lighter
-  // marker/edit state below is refreshed.
   // Only the fullscreen band draws in the subtitle face, so nothing else makes
   // the browser fetch it: load it with the preview, not when fullscreen first
   // lays a cue out in the fallback.
@@ -3337,6 +3333,11 @@ function showPreview(talkId, videoSlug) {
     var subtitleFace = getComputedStyle(document.documentElement).getPropertyValue('--f-subtitle');
     document.fonts.load('1em ' + subtitleFace).catch(function() {});
   }
+
+  // Re-entry for the already-loaded video (e.g. a manifest refresh that
+  // re-runs route()) must NOT tear down the Vimeo player — that would reset
+  // playback. Detect it and keep the live player + position; only the lighter
+  // marker/edit state below is refreshed.
   var embedUrl = video ? vimeoEmbed(video.vimeo_url) : '';
   var oldIframe = document.getElementById('vimeo-player');
   var sameVideo = canReusePreviewPlayer(previewState, talkId, videoSlug, !!oldIframe);
@@ -3539,11 +3540,15 @@ function showPreview(talkId, videoSlug) {
     try {
       var player = new Vimeo.Player(iframe);
       previewState.player = player;
-      // Token guarding the rAF loop: a fresh entry for the same video (player
-      // rebuilt) installs a new token, so the prior loop sees the mismatch and
-      // stops. Navigating to a different video stops it via stillOnSameVideo().
+      // Token guarding everything this player settles later: a fresh entry for
+      // the same video (player rebuilt) installs a new token, so the prior
+      // player's loop stops and its late answers are dropped. Navigating to a
+      // different video does the same via stillOnSameVideo().
       var rafToken = {};
       previewState._rafToken = rafToken;
+      function isCurrentPlayer() {
+        return stillOnSameVideo() && previewState._rafToken === rafToken;
+      }
       // Reaching the end clears the saved position so the next visit starts
       // fresh. The overlay loop keeps polling after 'ended' and reports ~duration,
       // so we must (a) cancel the pending throttled write and (b) set _ended — both
@@ -3560,14 +3565,14 @@ function showPreview(talkId, videoSlug) {
       });
       var pollInFlight = false;
       function overlayLoop() {
-        if (!stillOnSameVideo() || previewState._rafToken !== rafToken) return;
+        if (!isCurrentPlayer()) return;
         // In-flight guard: at most one getCurrentTime() outstanding. It resolves
         // in well under a frame, so most frames still get a fresh position.
         if (!pollInFlight) {
           pollInFlight = true;
           player.getCurrentTime().then(function(sec) {
             pollInFlight = false;
-            if (stillOnSameVideo() && previewState._rafToken === rafToken) {
+            if (isCurrentPlayer()) {
               renderOverlayAt(sec);
               // Fullscreen end-freeze: pause on the last frame before 'ended'
               // can fire, so the Vimeo end screen never appears (js/end_freeze.js).
@@ -3597,9 +3602,7 @@ function showPreview(talkId, videoSlug) {
       }
       player.ready().then(function() {
         console.log('[SPA] Vimeo player ready');
-        setPreviewAspect(player, function() {
-          return stillOnSameVideo() && previewState._rafToken === rafToken;
-        });
+        setPreviewAspect(player, isCurrentPlayer);
         // Resume where the user left off on this video. Only fresh entries reach
         // here (sameVideo re-entry keeps the live player + position); trivial
         // near-start positions are skipped by shouldResumePreviewPos.
@@ -3616,17 +3619,18 @@ function showPreview(talkId, videoSlug) {
         // getDuration must degrade to no freeze, never to a dead overlay.
         try {
           player.getDuration().then(function(d) {
-            if (stillOnSameVideo() && previewState._rafToken === rafToken) previewState._duration = d;
+            if (isCurrentPlayer()) previewState._duration = d;
           }).catch(function() {});
         } catch (e) {
           console.warn('[SPA] end-freeze getDuration unavailable:', e);
         }
       }).catch(function(err) {
         console.warn('[SPA] Vimeo player error:', err);
-        setPreviewAspect(null, stillOnSameVideo);
+        setPreviewAspect(null, isCurrentPlayer);
       });
     } catch(e) {
       console.warn('[SPA] Vimeo Player init error:', e);
+      setPreviewAspect(null);
     }
   } else {
     console.warn('[SPA] No embed URL — video info not available');

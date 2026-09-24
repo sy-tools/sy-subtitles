@@ -304,12 +304,34 @@ TIE_PX = 0.5
 
 
 def _tie_slack(burned, shown, measure, limit):
-    """How far the line the two disagree on is from the wrap limit."""
+    """How far from the wrap limit is the line one side took and the other refused.
+
+    That is the side that broke first's line plus the next word, measured as
+    `wrap_text` measures a candidate.
+    """
     i = next(i for i, (b, s) in enumerate(zip(burned, shown, strict=False)) if b != s)
-    longer = max(burned[i], shown[i], key=len)
-    followed = " ".join(burned[:i] + [longer]) != " ".join(burned)
-    width = measure(longer + " ") - measure(" ") if followed else measure(longer)
+    rest = " ".join(burned[i:]).split()
+    taken = min(len(burned[i].split()), len(shown[i].split())) + 1
+    refused = " ".join(rest[:taken])
+    width = measure(refused + " ") - measure(" ") if taken < len(rest) else measure(refused)
     return limit - width
+
+
+def _per_char(text):
+    return float(len(text))
+
+
+@pytest.mark.parametrize(
+    ("burned", "shown", "slack"),
+    [
+        (["aaa bb ccc", "d"], ["aaa", "bb ccc d"], 4.0),  # the browser broke two words early
+        (["aaa", "bb ccc d"], ["aaa bb ccc", "d"], 4.0),  # the burner did
+        (["aaa bb", "ccc d"], ["aaa bb ccc", "d"], 0.0),  # "aaa bb ccc" sits on the limit
+        (["aaa bb cc", "d"], ["aaa bb", "cc d"], 1.0),
+    ],
+)
+def test_the_tie_is_judged_on_the_line_one_side_refused(burned, shown, slack):
+    assert _tie_slack(burned, shown, _per_char, 10) == slack
 
 
 @pytest.mark.parametrize(
@@ -334,11 +356,8 @@ def test_fullscreen_breaks_lines_where_the_burn_does(page, vw, vh, aspect, ar, s
     burned = [wrap_text(t, measure, wrap_width_for(width)) for t in CUES]
     shown = _browser_lines(page, vw, vh, aspect, CUES, scale)
     limit = wrap_width_for(width) * WRAP_SAFETY
-    mismatched = [
-        (b, s, round(_tie_slack(b, s, measure, limit), 3))
-        for b, s in zip(burned, shown, strict=True)
-        if b != s and abs(_tie_slack(b, s, measure, limit)) >= TIE_PX
-    ]
+    judged = [(b, s, _tie_slack(b, s, measure, limit)) for b, s in zip(burned, shown, strict=True) if b != s]
+    mismatched = [(b, s, round(slack, 3)) for b, s, slack in judged if abs(slack) >= TIE_PX]
     assert not mismatched, f"{len(mismatched)} of {len(CUES)} cues break differently: {mismatched[:3]}"
 
 

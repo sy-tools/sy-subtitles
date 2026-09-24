@@ -3,6 +3,7 @@
 window.Vimeo = {
   Player: class {
     constructor(element) {
+      if (window.__mockPlayerThrows) throw new Error('mock: the SDK could not build a player');
       this._currentTime = 0;
       this._duration = 3600;
       this._callbacks = {};
@@ -23,8 +24,17 @@ window.Vimeo = {
         document.body.appendChild(div);
       }
       window._vimeoPlayer = this;
+      (window.__mockPlayers = window.__mockPlayers || []).push(this);
     }
-    ready() { return Promise.resolve(); }
+    // A test fails the load with window.__mockReadyReject, or with
+    // window.__mockReadyHeld settles each player's ready() itself, via _settle.
+    ready() {
+      if (window.__mockReadyReject) return Promise.reject(new Error('mock: the player failed to load'));
+      if (!window.__mockReadyHeld) return Promise.resolve();
+      var self = this;
+      if (!self._held) self._held = new Promise(function(resolve, reject) { self._settle = {resolve: resolve, reject: reject}; });
+      return self._held;
+    }
     pause() {
       var wasPaused = this._paused !== false;
       this._paused = true;

@@ -1097,6 +1097,75 @@ class TestFullscreenMode:
         )
         assert left == ""
 
+    def _switch_video(self, page, slug):
+        """Navigate in-page, the way a reader moves between a talk's videos.
+
+        The mock swaps the player's iframe for #mock-player, and showPreview
+        builds the next player in place of that iframe, so it is put back first.
+        """
+        page.evaluate(
+            "document.getElementById('mock-player').replaceWith(Object.assign(document.createElement('iframe'), {id: 'vimeo-player'}))"
+        )
+        page.evaluate(f"location.hash = '#/preview/2001-01-01_Test-Talk/{slug}'")
+        page.wait_for_function(f"window.previewState && previewState.videoSlug === {slug!r}", timeout=10000)
+
+    def _aspect(self, page):
+        return page.evaluate("document.getElementById('view-preview').style.getPropertyValue('--preview-aspect')")
+
+    def _wait_aspect(self, page, want):
+        page.wait_for_function(
+            f"document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === {want!r}",
+            timeout=5000,
+        )
+
+    def test_moving_to_a_video_without_a_link_drops_the_previous_shape(self, server, page):
+        linkless = SAMPLE_META.replace("  video_ref: r1CRxJTlpYUFZF\n", "")
+        page.route(
+            "**/raw.githubusercontent.com/**/meta.yaml",
+            lambda route: route.fulfill(status=200, content_type="text/plain", body=linkless),
+        )
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        self._goto_preview(server, page)
+        self._wait_aspect(page, "640 / 480")
+
+        self._switch_video(page, "Test-Video-2")
+
+        self._wait_aspect(page, "")
+
+    def test_moving_to_a_video_whose_player_fails_drops_the_previous_shape(self, server, page):
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        self._goto_preview(server, page)
+        self._wait_aspect(page, "640 / 480")
+
+        page.evaluate("window.__mockReadyReject = true")
+        self._switch_video(page, "Test-Video-2")
+
+        self._wait_aspect(page, "")
+
+    def test_moving_to_a_video_whose_player_cannot_be_built_drops_the_previous_shape(self, server, page):
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        self._goto_preview(server, page)
+        self._wait_aspect(page, "640 / 480")
+
+        page.evaluate("window.__mockPlayerThrows = true")
+        self._switch_video(page, "Test-Video-2")
+
+        self._wait_aspect(page, "")
+
+    def test_a_late_failure_of_a_replaced_player_leaves_the_live_players_shape(self, server, page):
+        page.add_init_script("window.__mockVideoSize = [640, 480]; window.__mockReadyHeld = true;")
+        self._goto_preview(server, page)
+        self._switch_video(page, "Test-Video-2")
+        self._switch_video(page, "Test-Video")
+        page.wait_for_function("window.__mockPlayers.length === 3 && window.__mockPlayers[2]._settle")
+        page.evaluate("window.__mockPlayers[2]._settle.resolve()")
+        self._wait_aspect(page, "640 / 480")
+
+        page.evaluate("window.__mockPlayers[0]._settle.reject(new Error('late'))")
+        page.wait_for_timeout(200)
+
+        assert self._aspect(page) == "640 / 480"
+
     def test_the_subtitle_face_loads_with_the_preview(self, server, page):
         """Loaded when the preview opens, not when fullscreen first lays a cue
         out in it — else that cue is drawn in the fallback first."""

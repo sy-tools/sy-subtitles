@@ -1106,7 +1106,8 @@ describe('Theme: CSS variable completeness', () => {
     // It ties the fullscreen rule's specificity, so without the exclusion its
     // padding and font win or lose on source order alone — it once turned the
     // band's side inset into 24px after the first drag of the handle.
-    var selectors = components.match(/[^{}]*\[data-subs-tuned="1"\][^{}]*#subtitle-overlay[^{}]*\{/g) || [];
+    var rules = components.replace(/\/\*[\s\S]*?\*\//g, '');
+    var selectors = rules.match(/[^{}]*\[data-subs-tuned="1"\][^{}]*#subtitle-overlay[^{}]*\{/g) || [];
     assert.ok(selectors.length > 0, 'expected a [data-subs-tuned] #subtitle-overlay rule');
     for (var sel of selectors) {
       assert.ok(sel.includes(':not(.fs-mode)'), 'must exclude fullscreen: ' + sel.trim());
