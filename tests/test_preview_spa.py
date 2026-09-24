@@ -423,6 +423,35 @@ class TestPreviewView:
         h = page.evaluate("document.getElementById('subtitle-overlay').style.getPropertyValue('height')")
         assert h.endswith("px"), f"fullscreen should pin an explicit px height, got {h!r}"
 
+    def test_overlay_fullscreen_repins_when_the_video_box_changes(self, server, page):
+        # The fullscreen font and paddings are fractions of the displayed video,
+        # so rotating a phone (or resizing the window) resizes the text under a
+        # subtitle that is still showing. The pinned height must follow, not
+        # wait for the next subtitle — else the band is left sized for the old
+        # box (on a phone turned upright: a band the full height of the video).
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        # Let the player's async ready() (resume, duration) settle first, or it
+        # can move the time off the subtitle after we set it.
+        page.wait_for_timeout(1000)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.wait_for_timeout(300)
+        got = page.evaluate("""() => {
+            const ov = document.getElementById('subtitle-overlay');
+            const pinned = parseFloat(ov.style.getPropertyValue('height'));
+            ov.style.removeProperty('height');
+            const natural = ov.offsetHeight;
+            return {pinned, natural, text: ov.textContent};
+        }""")
+        assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
+        assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
+
     def test_overlay_embedded_does_not_pin_height(self, server, page):
         # Embedded keeps the default sizing (const + auto-expand, or the user's
         # resized height): no explicit height pinned for a shown subtitle.
@@ -942,6 +971,22 @@ class TestFullscreenMode:
             getComputedStyle(document.getElementById('subtitle-overlay')).position
         """)
         assert position == "fixed"
+
+    def test_fs_mode_overlay_takes_the_shape_of_the_playing_video(self, server, page):
+        """The fullscreen band is sized from the displayed video, so the video's
+        own aspect must reach the overlay — a 4:3 talk is pillarboxed, and a
+        band spanning the whole screen wraps wider than the burn will."""
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        self._enter_fs(page)
+        got = page.evaluate("""() => ({
+            aspect: getComputedStyle(document.getElementById('view-preview'))
+                .getPropertyValue('--preview-aspect').trim(),
+            width: document.getElementById('subtitle-overlay').getBoundingClientRect().width,
+        })""")
+        assert got["aspect"] == "640 / 480"
+        assert got["width"] == pytest.approx(720 * 4 / 3, abs=1)
 
     def test_fs_mode_subtitle_still_syncs(self, server, page):
         """Subtitles should still update in fullscreen mode."""
@@ -5146,13 +5191,13 @@ class TestSubtitleOverlaySize:
             f"Fullscreen font should grow with subs handle, got small={result['small']}px big={result['big']}px"
         )
 
-    # fs-mode no-drag baseline = clamp(28px, 4vw, 80px). On a 1600px
-    # viewport that's min(80, 64) = 64px; FLOOR_PX leaves ~12% rounding
-    # slack. TINY_PX catches regressions to the embedded base 32px font.
+    # fs-mode no-drag baseline = 4% of the displayed video's width. A 16:9
+    # video fills a 1600x900 viewport, so that's 64px; FLOOR_PX leaves ~12%
+    # rounding slack. TINY_PX catches regressions to the embedded base 32px font.
     FS_MODE_BASELINE_PX = 64
     FS_MODE_BASELINE_FLOOR_PX = 56
     FS_MODE_TINY_PX = 30
-    FS_MODE_FLOOR_PX = 20  # CSS hard floor: drag-down must stay readable.
+    FS_MODE_FLOOR_PX = 20  # drag-down must stay readable.
 
     # Single source of truth for the test-side mirror of applySubsPx — used
     # by every "set the handle to h, read the resulting font" probe so a
@@ -5248,17 +5293,17 @@ class TestSubtitleOverlaySize:
 
     def test_fs_mode_default_matches_baseline(self, server, page):
         """Entering fullscreen WITHOUT having dragged must give the
-        un-tuned baseline `clamp(28px, 4vw, 80px)` — not tiny
+        un-tuned baseline, 4% of the video width — not tiny
         (cascade-fallback bug) and not oversize."""
         self._goto_preview(server, page)
         font_px = self._read_fs_font_px_via_toggle(page, drag_to_h=None)
         assert font_px >= self.FS_MODE_BASELINE_FLOOR_PX, (
             f"fs-mode default font shrank to {font_px}px — expected ≈ "
-            f"{self.FS_MODE_BASELINE_PX}px (4vw on 1600 viewport)"
+            f"{self.FS_MODE_BASELINE_PX}px (4% of a 1600px-wide video)"
         )
-        # Ceiling for the baseline rule clamp(28, 4vw, 80) on a 1600px
-        # viewport is 80px; allow 10px slack for rounding/scrollbars.
-        assert font_px <= 90, f"fs-mode default {font_px}px exceeds the 80px ceiling of clamp(28, 4vw, 80)"
+        # Unscaled, nothing may push it past 4% of the width (64px here);
+        # allow slack for rounding/scrollbars.
+        assert font_px <= 70, f"fs-mode default {font_px}px exceeds 4% of the video width"
 
     def test_fs_mode_smaller_block_shrinks_proportionally(self, server, page):
         """A smaller embedded subtitle block (handle dragged UP — the handle
@@ -5459,18 +5504,20 @@ class TestSubtitleOverlaySize:
         scale_val = float(result["scale"])
         assert 0.5 <= scale_val <= 4, f"scale {scale_val} outside [0.5, 4]"
 
-    def test_fs_mode_22vh_cap_holds_on_short_viewport(self, server, page):
-        """The 22vh hard cap must pin the fs-mode font on a short viewport
-        even with the handle dragged to its largest position. Without the
-        cap, two-line subtitles get pushed off-screen."""
-        # Use a deliberately short viewport so 22vh < 4vw * scale_max.
+    def test_fs_mode_font_cap_holds_on_short_viewport(self, server, page):
+        """The burn's ceiling (FONT_RATIO_MAX of the video height) must pin
+        the fs-mode font even with the handle dragged to its largest
+        position — the preview must not grow past what the burn will draw,
+        and without a cap two-line subtitles get pushed off the frame."""
+        # A short viewport: the 16:9 video is 400px tall (711px wide), so
+        # 0.12 x 400 = 48px sits well under 4% of the width x the scale.
         page.set_viewport_size({"width": 1600, "height": 400})
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
         page.wait_for_selector("#preview-subs-resize", timeout=10000)
         font_px = self._read_fs_font_px_via_toggle(page, drag_to_h=720)
-        # 22vh on 400px viewport = 88px. Allow 1px rounding slack.
-        assert font_px <= 89, f"22vh cap not enforced: font {font_px}px > 88px on a 400px viewport"
+        # Allow 1px rounding slack.
+        assert font_px <= 49, f"font cap not enforced: font {font_px}px > 48px on a 400px-tall video"
 
 
 class TestRepoAutoDetect:

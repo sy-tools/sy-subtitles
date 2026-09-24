@@ -290,17 +290,20 @@ function burnClipProblem(startMs, endMs, durationMs) {
   return '';
 }
 
-// Mirrors the fullscreen CSS in components.css:
-//   font-size: clamp(20px, calc(clamp(28px, 4vw, 80px) * var(--preview-subs-scale, 1)), 22vh)
-//   padding-top: 80px; padding-bottom: 36px
-// Kept as named constants so a CSS change has one obvious counterpart here.
-var FS_FONT_MIN_PX = 28;
-var FS_FONT_MAX_PX = 80;
-var FS_FONT_VW = 0.04;
-var FS_FONT_FLOOR_PX = 20;
-var FS_FONT_VH_CAP = 0.22;
-var FS_PADTOP_PX = 80;
-var FS_PADBOT_PX = 36;
+// Fullscreen draws the subtitle band on the displayed video's own box — not
+// on the screen — and sizes it in fractions of that box, so the burn can use
+// the very same fractions on the real frame (components.css, the
+// `#view-preview.fs-mode #subtitle-overlay` rules, carries the CSS twin):
+//   font: 4% of the video width (x the handle's --preview-subs-scale)
+//   padding over / under the text: 80px / 36px of a 1080px-tall video
+// The side inset is the burner's SIDE_INSET_RATIO; nothing here needs it.
+// tests/test_spa_fs_subtitle_box.py holds the CSS to these numbers.
+//
+// Width, not height, for the font: the line then holds the same number of
+// characters on a 4:3 talk as on a 16:9 one.
+var FS_FONT_WIDTH_RATIO = 0.04;
+var FS_PADTOP_RATIO = 80 / 1080;
+var FS_PADBOT_RATIO = 36 / 1080;
 
 // The band the workflow's "Validate inputs" step accepts for font_ratio
 // (.github/workflows/burn-subtitles.yml). The subtitle resize handle allows
@@ -320,32 +323,18 @@ function clampNum(min, value, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function fullscreenFontPx(viewportWidth, viewportHeight, subsScale) {
-  var scale = (typeof subsScale === 'number' && isFinite(subsScale) && subsScale > 0)
-    ? subsScale : 1;
-  var base = clampNum(FS_FONT_MIN_PX, FS_FONT_VW * viewportWidth, FS_FONT_MAX_PX);
-  return clampNum(FS_FONT_FLOOR_PX, base * scale, FS_FONT_VH_CAP * viewportHeight);
-}
-
-// A <video>/iframe letterboxes: whichever axis binds first decides the height
-// the viewer actually sees, and that is what the ratios are relative to.
-function displayedVideoHeight(viewportWidth, viewportHeight, videoWidth, videoHeight) {
-  if (!(videoWidth > 0) || !(videoHeight > 0)) return viewportHeight;
-  var byWidth = viewportWidth * (videoHeight / videoWidth);
-  return Math.min(viewportHeight, byWidth);
-}
-
+// Nothing about the screen enters: the band is a fraction of the video, so a
+// phone and a desktop dispatch the same render. Only the video's aspect and the
+// handle's scale matter; 16:9 and 1x stand in for what is unknown.
 function measureBurnRatios(geometry) {
   var g = geometry || {};
-  var vw = g.viewportWidth > 0 ? g.viewportWidth : 1920;
-  var vh = g.viewportHeight > 0 ? g.viewportHeight : 1080;
-  var shown = displayedVideoHeight(vw, vh, g.videoWidth, g.videoHeight) || vh;
+  var aspect = (g.videoWidth > 0 && g.videoHeight > 0) ? g.videoWidth / g.videoHeight : 16 / 9;
+  var scale = (typeof g.subsScale === 'number' && isFinite(g.subsScale) && g.subsScale > 0)
+    ? g.subsScale : 1;
   return {
-    font_ratio: clampNum(FONT_RATIO_MIN,
-                         fullscreenFontPx(vw, vh, g.subsScale) / shown,
-                         FONT_RATIO_MAX),
-    padtop_ratio: FS_PADTOP_PX / shown,
-    padbot_ratio: FS_PADBOT_PX / shown,
+    font_ratio: clampNum(FONT_RATIO_MIN, FS_FONT_WIDTH_RATIO * aspect * scale, FONT_RATIO_MAX),
+    padtop_ratio: FS_PADTOP_RATIO,
+    padbot_ratio: FS_PADBOT_RATIO,
   };
 }
 
@@ -747,11 +736,9 @@ if (typeof module !== 'undefined' && module.exports) {
     burnClipProblem: burnClipProblem,
     FONT_RATIO_MIN: FONT_RATIO_MIN,
     FONT_RATIO_MAX: FONT_RATIO_MAX,
-    FS_FONT_MAX_PX: FS_FONT_MAX_PX,
-    FS_PADTOP_PX: FS_PADTOP_PX,
-    FS_PADBOT_PX: FS_PADBOT_PX,
-    fullscreenFontPx: fullscreenFontPx,
-    displayedVideoHeight: displayedVideoHeight,
+    FS_FONT_WIDTH_RATIO: FS_FONT_WIDTH_RATIO,
+    FS_PADTOP_RATIO: FS_PADTOP_RATIO,
+    FS_PADBOT_RATIO: FS_PADBOT_RATIO,
     measureBurnRatios: measureBurnRatios,
     BURN_STEP_WEIGHTS: BURN_STEP_WEIGHTS,
     BURN_RENDER_BLOCK: BURN_RENDER_BLOCK,

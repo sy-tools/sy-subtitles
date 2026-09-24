@@ -53,12 +53,12 @@
 
 <script>
 (function(){
-  // --- Adaptive player aspect ratio ---
-  // Every Vimeo iframe the app creates gets its intrinsic video dimensions
-  // read from the SDK once it's ready, and the enclosing mount/.video-wrap
-  // gets its --*-aspect CSS var set. Result: the player box matches the
-  // real video shape, so the letterbox pillars become our warm page color
-  // instead of Vimeo's default black inside the iframe.
+  // --- Adaptive player aspect ratio (sync player) ---
+  // The sync player's iframe gets its intrinsic video dimensions read from
+  // the SDK once it's ready, and its mount gets --sync-aspect set. Result:
+  // the player box matches the real video shape, so the letterbox pillars
+  // become our warm page color instead of Vimeo's default black inside the
+  // iframe. (The preview player does the same for itself: setPreviewAspect.)
   function adaptAspect(iframe, target, cssVar) {
     if (!iframe || !target || !window.Vimeo) return;
     try {
@@ -75,12 +75,9 @@
       mount.dataset.aspectBound = '1';
       adaptAspect(sync, mount, '--sync-aspect');
     }
-    const prev = document.getElementById('vimeo-player');
-    const wrap = prev && prev.closest('.video-wrap');
-    if (prev && wrap && prev.src && !wrap.dataset.aspectBound) {
-      wrap.dataset.aspectBound = '1';
-      adaptAspect(prev, wrap, '--preview-aspect');
-    }
+    // The preview player is not scanned here: its own setup writes
+    // --preview-aspect onto #view-preview (see setPreviewAspect), where the
+    // fullscreen subtitle band reads it too.
   }
   // Observe the DOM — the app creates/replaces iframes dynamically (video
   // switch, sync-player open). Fire the scan whenever anything changes.
@@ -91,7 +88,6 @@
     const f = e.target;
     if (f && f.tagName === 'IFRAME') {
       const m = f.closest('#sync-player-mount'); if (m) delete m.dataset.aspectBound;
-      const w = f.closest('.video-wrap');        if (w) delete w.dataset.aspectBound;
       scanPlayers();
     }
   }, true);
@@ -132,10 +128,9 @@
   function saveNum(k, v) { try { localStorage.setItem(k, String(v)); } catch(_){} }
 
   function applyPlayerVh(v) { document.documentElement.style.setProperty(CSS_PLAYER_H, v + 'vh'); }
-  // Scale bounds for fs-mode. Floor 0.5× / ceiling 4× of the viewport-based
-  // baseline keep fullscreen readable across the handle's full range
-  // without being clipped by the 22vh hard cap on tall screens. 120px is
-  // the embedded default → scale 1.0.
+  // Scale bounds for fs-mode: 0.5× to 4× of the video-width baseline (the
+  // font itself stops at the burn's FONT_RATIO_MAX of the video height, see
+  // components.css). 120px is the embedded default → scale 1.0.
   const PREVIEW_SUBS_SCALE_MIN = 0.5;
   const PREVIEW_SUBS_SCALE_MAX = 4;
   let _lastSubsH = NaN, _lastSubsScale = NaN;
@@ -3485,7 +3480,12 @@ function showPreview(talkId, videoSlug) {
     var fs = !!(viewEl && viewEl.classList.contains('fs-mode'));
     var modeChanged = fs !== previewState.lastFsMode;
     previewState.lastFsMode = fs;
-    if (text !== previewState.lastText || modeChanged) {
+    // ...and on a resize in fullscreen (a phone rotated): the text there is
+    // sized from the displayed video, so the pinned height goes stale with it.
+    var box = fs ? window.innerWidth + 'x' + window.innerHeight : '';
+    var boxChanged = box !== previewState.lastFsBox;
+    previewState.lastFsBox = box;
+    if (text !== previewState.lastText || modeChanged || boxChanged) {
       if (text === '') {
         // Entering a gap: pin the box to the height of the subtitle that is
         // still showing so the background holds through the 80ms pause instead
@@ -3579,6 +3579,9 @@ function showPreview(talkId, videoSlug) {
       }
       player.ready().then(function() {
         console.log('[SPA] Vimeo player ready');
+        setPreviewAspect(player, function() {
+          return stillOnSameVideo() && previewState._rafToken === rafToken;
+        });
         // Resume where the user left off on this video. Only fresh entries reach
         // here (sameVideo re-entry keeps the live player + position); trivial
         // near-start positions are skipped by shouldResumePreviewPos.
@@ -3608,6 +3611,26 @@ function showPreview(talkId, videoSlug) {
     }
   } else {
     console.warn('[SPA] No embed URL — video info not available');
+  }
+}
+
+// The video's shape, on #view-preview: the embedded .video-wrap boxes the
+// player in it, and fullscreen draws the subtitle band on the displayed
+// video's box from it (components.css) — the box the burn's ratios describe.
+// Best-effort: until it lands (or if the player cannot say) both fall back
+// to 16:9.
+function setPreviewAspect(player, stillCurrent) {
+  var view = document.getElementById('view-preview');
+  if (!view) return;
+  view.style.removeProperty('--preview-aspect');
+  try {
+    Promise.all([player.getVideoWidth(), player.getVideoHeight()]).then(function(wh) {
+      if (stillCurrent() && wh[0] > 0 && wh[1] > 0) {
+        view.style.setProperty('--preview-aspect', wh[0] + ' / ' + wh[1]);
+      }
+    }).catch(function() {});
+  } catch (e) {
+    console.warn('[SPA] video size unavailable:', e);
   }
 }
 
@@ -4961,11 +4984,8 @@ function burnGeometry() {
   var player = previewState && previewState.player;
   var scale = parseFloat(getComputedStyle(document.documentElement)
     .getPropertyValue('--preview-subs-scale')) || 1;
-  var base = {
-    viewportWidth: window.screen.width,
-    viewportHeight: window.screen.height,
-    subsScale: scale
-  };
+  // No screen size: the band is a fraction of the video (measureBurnRatios).
+  var base = { subsScale: scale };
   if (!player) {
     // 16:9 is the only sane default; a wrong aspect changes the ratio, not the
     // correctness of the render.

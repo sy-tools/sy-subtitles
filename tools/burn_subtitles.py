@@ -4,10 +4,10 @@ Converts an SRT into an ASS subtitle file and invokes ffmpeg with libass.
 Replaces the Pillow-PNG-per-subtitle workaround used when the local ffmpeg
 lacks libass.
 
-Sizing is driven by dimensionless ratios measured by the SPA against the
-displayed video, never by pixels: fullscreen derives its font size from the
-viewport width, so raw pixels would make the output depend on the monitor that
-happened to trigger the render.
+Sizing is driven by dimensionless ratios of the video frame, never by pixels:
+fullscreen draws its subtitle band on the displayed video's own box, in
+fractions of that box, so the same fractions reproduce it on the real frame
+whatever screen the render was started from.
 
 See docs/superpowers/specs/2026-07-30-burned-in-subtitle-video-design.md.
 """
@@ -39,8 +39,10 @@ from .srt_utils import parse_srt
 DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "assets" / "fonts" / "PT_Serif-Web-Regular.ttf")
 DEFAULT_FONT_NAME = "PT Serif"
 
-# Fullscreen's 10% horizontal insets.
-SIDE_INSET_RATIO = 0.10
+# Fullscreen's horizontal insets, as a fraction of the video width — the
+# preview draws its band on the video's box, so this is also the wrap width it
+# showed (tests/test_spa_fs_subtitle_box.py holds the CSS to this value).
+SIDE_INSET_RATIO = 0.07
 
 # ASS FontSize is mapped onto the font's Win cell height, not CSS pixels:
 #   FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm

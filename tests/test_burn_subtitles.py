@@ -364,9 +364,9 @@ class TestDefaults:
     def test_gradient_steps_default_is_64(self):
         assert DEFAULT_GRADIENT_STEPS == 64
 
-    def test_side_inset_ratio_is_ten_percent(self):
+    def test_side_inset_ratio_is_seven_percent(self):
         # Fullscreen's horizontal insets; also the wrap width the SPA showed.
-        assert SIDE_INSET_RATIO == 0.10
+        assert SIDE_INSET_RATIO == 0.07
 
     def test_font_defaults_point_at_the_vendored_pt_serif(self):
         assert DEFAULT_FONT_FILE.endswith(os.path.join("assets", "fonts", "PT_Serif-Web-Regular.ttf"))
@@ -451,7 +451,7 @@ class TestBuildAssDocument:
         assert r"\{речення\}" in _doc()
 
     def test_wraps_long_cues_itself(self):
-        # 200 chars at 10 units each = 2000 > the 1536 px wrap width.
+        # 200 chars at 10 units each = 2000 > the 1652 px wrap width.
         long_cue = [{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "аб " * 100}]
         text_line = next(ln for ln in _doc(long_cue).splitlines() if ln.startswith("Dialogue: 1,"))
         assert "\\N" in text_line
@@ -466,9 +466,9 @@ class TestBuildAssDocument:
 
         assert band_top(many) < band_top(one)
 
-    def test_side_margins_are_ten_percent_of_width(self):
+    def test_side_margins_are_seven_percent_of_width(self):
         line = next(ln for ln in _doc().splitlines() if ln.startswith("Style: Default,"))
-        assert line.split(",")[19] == "192"  # MarginL, 10% of 1920
+        assert line.split(",")[19] == "134"  # MarginL, 7% of 1920 = 134.4
 
     def test_skips_cues_with_no_text(self):
         doc = _doc([{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "   "}])

@@ -45,6 +45,9 @@ window.Vimeo = {
     }
     getCurrentTime() { return Promise.resolve(this._currentTime); }
     getDuration() { return Promise.resolve(this._duration); }
+    // Intrinsic size; a test picks another shape via window.__mockVideoSize.
+    getVideoWidth() { return Promise.resolve((window.__mockVideoSize || [1280, 720])[0]); }
+    getVideoHeight() { return Promise.resolve((window.__mockVideoSize || [1280, 720])[1]); }
     _fire(event, data) {
       var cbs = this._callbacks[event] || [];
       for (var i = 0; i < cbs.length; i++) cbs[i](data);
