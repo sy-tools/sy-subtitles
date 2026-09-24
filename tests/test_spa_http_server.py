@@ -16,7 +16,10 @@ from tools import serve_auth_local
 from tools.serve_auth_local import SpaHTTPServer
 
 TESTS = Path(__file__).parent
-BARE_SERVER = re.compile(r"(?:http\.server\.(?:Threading)?HTTPServer|socketserver\.TCPServer)\(")
+STAND = TESTS.parent / "tools" / "serve_auth_local.py"
+# A server constructed from the standard library directly, however imported —
+# but not a subclass's `class X(http.server.ThreadingHTTPServer):` line.
+BARE_SERVER = re.compile(r"(?<![\w])(?:(?:http\.server|socketserver)\.)?(?:Threading)?(?:HTTPServer|TCPServer)\(")
 
 
 def test_no_browser_test_serves_from_a_bare_server():
@@ -56,6 +59,23 @@ def test_the_local_stand_serves_from_it(monkeypatch):
     assert served == [("127.0.0.1", 8123)]
 
 
-@pytest.mark.parametrize("path", ["tools/serve_auth_local.py"])
-def test_the_stand_holds_no_bare_server_either(path):
-    assert not BARE_SERVER.search(Path(path).read_text(encoding="utf-8"))
+def test_the_stand_holds_no_bare_server_either():
+    assert not BARE_SERVER.search(STAND.read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "httpd = http.server.HTTPServer(addr, Handler)",
+        "httpd = HTTPServer(addr, Handler)",
+        "with socketserver.TCPServer(addr, handler) as httpd:",
+        "httpd = ThreadingHTTPServer(addr, Handler)",
+    ],
+)
+def test_the_guard_sees_a_bare_server_however_it_is_imported(line):
+    assert BARE_SERVER.search(line)
+
+
+def test_the_guard_lets_the_shared_server_through():
+    assert not BARE_SERVER.search("httpd = SpaHTTPServer(addr, Handler)")
+    assert not BARE_SERVER.search("class SpaHTTPServer(http.server.ThreadingHTTPServer):")

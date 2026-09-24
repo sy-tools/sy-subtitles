@@ -8,6 +8,20 @@ import pytest
 from tools.config import OptimizeConfig
 from tools.srt_utils import parse_srt
 
+# Seconds a browser test may run (tests/test_e2e_deadline.py says why); a test
+# that needs longer carries its own @pytest.mark.timeout. The "thread" method,
+# because the default SIGALRM never reaches a test blocked inside Playwright's
+# event loop: this one dumps the stacks and ends the process — under xdist
+# just the worker, so the test fails and the rest of the shard runs on.
+E2E_TEST_TIMEOUT_S = 120
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if item.get_closest_marker("e2e") and not item.get_closest_marker("timeout"):
+            item.add_marker(pytest.mark.timeout(E2E_TEST_TIMEOUT_S, method="thread"))
+
+
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
