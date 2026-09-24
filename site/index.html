@@ -3501,7 +3501,9 @@ function showPreview(talkId, videoSlug) {
         // Fullscreen: keep an explicit measured px height every subtitle so the
         // change is px→px and the CSS height transition eases it (interpolating
         // to/from `auto` is impossible). Measure natural height, then pin it.
-        overlayEl.textContent = text;
+        // Laid out from the burner's words, so lines break only where the
+        // burned video's will (fillFullscreenSubtitle, js/burn_video.js).
+        fillFullscreenSubtitle(overlayEl, text);
         overlayEl.style.removeProperty('height');
         overlayEl.style.setProperty('height', overlayEl.offsetHeight + 'px', 'important');
       } else {

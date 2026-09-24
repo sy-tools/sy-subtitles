@@ -340,6 +340,35 @@ function measureBurnRatios(geometry) {
   };
 }
 
+// The words tools/burn_subtitles.py wraps: `text.split()` — any whitespace run
+// is one gap and nothing else is. A browser also breaks after a hyphen, a dash
+// or a slash ("Нью-" / "Йорка"), which the burner never does, so fullscreen
+// lays the text out from these words (fillFullscreenSubtitle) and breaks only
+// where the burn can.
+function burnWords(text) {
+  return String(text == null ? '' : text).split(/\s+/).filter(Boolean);
+}
+
+// Fill the fullscreen band: each word in a no-break box, joined by plain
+// spaces — the only break opportunities left are the burner's. All of it in
+// one wrapper: the band is a flex container, and loose words would each become
+// a flex item that never wraps (one text node used to be one item).
+function fillFullscreenSubtitle(el, text) {
+  var doc = el.ownerDocument;
+  var words = burnWords(text);
+  var line = doc.createElement('span');
+  line.className = 'fs-text';
+  for (var i = 0; i < words.length; i++) {
+    if (i) line.appendChild(doc.createTextNode(' '));
+    var span = doc.createElement('span');
+    span.className = 'fs-word';
+    span.textContent = words[i];
+    line.appendChild(span);
+  }
+  el.textContent = '';
+  el.appendChild(line);
+}
+
 // Weights per workflow step. Names must match burn-subtitles.yml exactly —
 // tests/test_burn_workflow_steps.py pins the two files against each other.
 //
@@ -742,6 +771,8 @@ if (typeof module !== 'undefined' && module.exports) {
     FS_PADTOP_RATIO: FS_PADTOP_RATIO,
     FS_PADBOT_RATIO: FS_PADBOT_RATIO,
     measureBurnRatios: measureBurnRatios,
+    burnWords: burnWords,
+    fillFullscreenSubtitle: fillFullscreenSubtitle,
     BURN_STEP_WEIGHTS: BURN_STEP_WEIGHTS,
     BURN_RENDER_BLOCK: BURN_RENDER_BLOCK,
     burnPhases: burnPhases,

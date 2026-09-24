@@ -26,17 +26,19 @@ from .burn_clip import ClipError, parse_clip, rebase_cues, seconds_text
 from .srt_utils import parse_srt
 
 # Vendored rather than apt-installed: a silent substitution would re-wrap the
-# entire corpus. The typeface matches what the preview actually draws. The SPA
-# asks for `'Fraunces', Georgia, …`, but Fraunces ships no Cyrillic, so every
-# Ukrainian subtitle on screen is rendered by the fallback — Georgia. PT Serif
-# is the free face that lands closest to it: a serif of the same colour, and
-# 99.8% of Georgia's width over 400 sampled corpus lines, so line breaks match.
+# entire corpus. It lives under site/ because the fullscreen preview loads this
+# very file (tokens.css, `--f-subtitle`), so the preview and the burn draw the
+# same glyphs and break lines in the same places. The preview used to draw a
+# system Georgia (the SPA's serif stack, Fraunces having no Cyrillic) and PT
+# Serif stood in for it here — close, but a different face on every device, and
+# on real cues far enough off to re-wrap. Georgia itself cannot be served: its
+# licence forbids hosting it as a web font.
 # Source: Google Fonts PT Serif Web Regular v1.000W, OFL (LICENSE-PTSerif.txt).
 # Its Win metrics (upm 1000, ascent 1039, descent 286) are what make
 # PT_SERIF_WIN_FACTOR correct and are pinned by tests.
 # Absolute: the CLI is run from wherever the caller stands, and a relative
 # default would only resolve from the repo root.
-DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "assets" / "fonts" / "PT_Serif-Web-Regular.ttf")
+DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "site" / "fonts" / "PT_Serif-Web-Regular.ttf")
 DEFAULT_FONT_NAME = "PT Serif"
 
 # Fullscreen's horizontal insets, as a fraction of the video width — the
@@ -130,6 +132,13 @@ def wrap_text(text, measure, max_width):
 
     A word wider than the whole line is kept on a line of its own rather than
     dropped or split: overflowing by a few pixels beats losing the word.
+
+    A line is measured as the browser measures it: a browser shapes the text
+    before it breaks it, so a line's last glyph keeps its kern with the space
+    that follows (a comma and a space kern 2.3px tighter in PT Serif at 57.6px)
+    even when the line breaks on that space. The fullscreen preview fits such a
+    word; so must this, or the burn wraps a cue the preview showed on one line.
+    The rendered line then runs that kern past the limit — into WRAP_SAFETY.
     """
     limit = max_width * WRAP_SAFETY
     words = text.split()
@@ -137,11 +146,16 @@ def wrap_text(text, measure, max_width):
         # Callers count lines to size the band behind the text, so an empty
         # cue must still be one line, not zero.
         return [""]
+    space = measure(" ")
+
+    def width(line, followed):
+        return measure(line + " ") - space if followed else measure(line)
+
     lines = []
     current = ""
-    for word in words:
+    for i, word in enumerate(words):
         candidate = f"{current} {word}".strip()
-        if not current or measure(candidate) <= limit:
+        if not current or width(candidate, i < len(words) - 1) <= limit:
             current = candidate
         else:
             lines.append(current)
@@ -150,13 +164,31 @@ def wrap_text(text, measure, max_width):
     return lines
 
 
+# The size the measurer lays text out at before scaling to the real one. Large
+# enough that FreeType's hinting — which rounds every advance to a whole pixel
+# at small sizes — is noise; libass (no hinting) and the browser use the design
+# widths, and the preview's line breaks are held to this measurement.
+MEASURE_PX = 1000
+
+
 def text_measurer(font_file, font_px):
     """Width measurer backed by the very TTF libass will render with."""
     # Imported lazily so the pure-logic helpers stay usable without Pillow.
     from PIL import ImageFont
 
-    font = ImageFont.truetype(font_file, font_px)
-    return font.getlength
+    font = ImageFont.truetype(font_file, MEASURE_PX)
+    scale = font_px / MEASURE_PX
+    return lambda text: font.getlength(text) * scale
+
+
+def wrap_width_for(width):
+    """The width a line may fill: the frame minus the side insets, unrounded.
+
+    The ASS margins are whole pixels, but this must not be: the fullscreen
+    preview wraps at the exact fraction, and 0.4px of rounding was enough to
+    wrap a cue it showed on one line.
+    """
+    return width * (1 - 2 * SIDE_INSET_RATIO)
 
 
 def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
@@ -320,7 +352,7 @@ def build_ass_document(
     margin_h = round(SIDE_INSET_RATIO * width)
     margin_v = round(padbot_ratio * height)
     padtop_px = round(padtop_ratio * height)
-    wrap_width = width - 2 * margin_h
+    wrap_width = wrap_width_for(width)
 
     # Escape first: wrapping then measures the escaped form, so the one
     # backslash each escaped brace adds is counted although libass will not

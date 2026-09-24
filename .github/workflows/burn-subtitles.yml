@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      # The renderer: tools/, assets/fonts/, requirements.txt, at the ref this
+      # The renderer: tools/, site/fonts/, requirements.txt, at the ref this
       # run was dispatched against. Deliberately unpinned and unnamed.
       - uses: actions/checkout@v7
 
@@ -124,7 +124,7 @@ jobs:
           # extra. A bare `pip install yt-dlp` here would find the requirement
           # already satisfied and install the extra for nobody.
           pip install -r requirements.txt
-          # PT Serif stays vendored in assets/fonts/ and reaches libass through
+          # PT Serif stays vendored in site/fonts/ and reaches libass through
           # fontsdir; the pre-flight probe proves it stayed the PRIMARY face.
           # Noto is a GLYPH fallback only: twelve videos carry Sanskrit mantras
           # in Devanagari, which PT Serif does not cover — without a fallback

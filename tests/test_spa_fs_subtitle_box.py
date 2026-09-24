@@ -30,11 +30,30 @@ from pathlib import Path
 
 import pytest
 
-from tools.burn_subtitles import SIDE_INSET_RATIO
+from tools.burn_subtitles import (
+    DEFAULT_FONT_FILE,
+    PT_SERIF_WIN_FACTOR,
+    SIDE_INSET_RATIO,
+    WRAP_SAFETY,
+    css_font_px,
+    text_measurer,
+    wrap_text,
+    wrap_width_for,
+)
 
 pytestmark = pytest.mark.e2e
 
 SITE = Path(__file__).parent.parent / "site"
+SUBTITLE_FAMILY = "SY Subtitle Serif"
+
+# Every cue of the talk the mismatch was first seen on (2000 Guru Puja) —
+# 503 real lines, hyphenated names and all.
+_SRT = Path(__file__).parent.parent / "talks/2000-07-23_Guru-Puja-Shraddha/Guru-Puja/final/uk.srt"
+CUES = sorted(
+    {" ".join(b.split("\n")[2:]) for b in _SRT.read_text(encoding="utf-8-sig").strip().split("\n\n")},
+    key=len,
+    reverse=True,
+)
 
 
 @pytest.fixture
@@ -157,8 +176,11 @@ def _assert_matches_burn(m, box):
     assert m["font"] == approx(m["ratios"]["font_ratio"] * box["height"])
     assert m["top"] == approx(m["ratios"]["padtop_ratio"] * box["height"])
     assert m["bottom"] == approx(m["ratios"]["padbot_ratio"] * box["height"])
-    assert m["left"] == approx(SIDE_INSET_RATIO * box["width"])
-    assert m["right"] == approx(SIDE_INSET_RATIO * box["width"])
+    # The text box is the burn's wrap limit: the side insets, then its safety
+    # headroom — so a line breaks here exactly where the burn breaks it.
+    inset = (box["width"] - WRAP_SAFETY * box["width"] * (1 - 2 * SIDE_INSET_RATIO)) / 2
+    assert m["left"] == approx(inset)
+    assert m["right"] == approx(inset)
 
 
 @pytest.mark.parametrize(
@@ -201,12 +223,12 @@ def test_a_tiny_font_stops_at_the_burn_floor(page):
 def test_the_1080p_baseline_keeps_its_approved_pixels(page):
     """The box change must not move today's look on a 1080p screen: 76.8px
     text, 80px of gradient over it and 36px under it. Only the side insets
-    shrink, 10% -> 7%."""
+    shrink, 10% -> 7% (plus the burn's 2% wrap headroom)."""
     m = _measure(page, 1920, 1080, "16 / 9")
     assert m["font"] == pytest.approx(76.8, abs=0.1)
     assert m["top"] == pytest.approx(80.0, abs=0.1)
     assert m["bottom"] == pytest.approx(36.0, abs=0.1)
-    assert m["left"] == pytest.approx(0.07 * 1920, abs=0.1)
+    assert m["left"] == pytest.approx((1920 - 0.98 * 0.86 * 1920) / 2, abs=0.1)
 
 
 def test_tuned_subtitles_scale_with_the_handle_and_keep_the_side_inset(page):
@@ -233,3 +255,85 @@ def test_embedded_tuned_subtitles_keep_their_own_padding(page):
     embedded = _measure(page, 1280, 800, "16 / 9", fs_mode=False, tuned=True)
     assert embedded["left"] == pytest.approx(24.0, abs=0.5)
     assert embedded["right"] == pytest.approx(24.0, abs=0.5)
+
+
+def _browser_lines(page, vw, vh, aspect, texts):
+    """Lay each text out in the fullscreen band and read back its lines."""
+    page.set_viewport_size({"width": vw, "height": vh})
+    return page.evaluate(
+        """async ({aspect, texts, family}) => {
+            const vp = document.getElementById('view-preview');
+            const ov = document.getElementById('subtitle-overlay');
+            vp.classList.add('active', 'fs-mode');
+            vp.style.setProperty('--preview-aspect', aspect);
+            vp.removeAttribute('data-subs-tuned');
+            document.documentElement.style.removeProperty('--preview-subs-scale');
+            ov.textContent = 'x';
+            await document.fonts.load(getComputedStyle(ov).fontSize + ' "' + family + '"');
+            const out = [];
+            for (const text of texts) {
+                ov.style.removeProperty('height');
+                // The app's own fill (the render loop calls the same function).
+                fillFullscreenSubtitle(ov, text);
+                const lines = [];
+                let top = null;
+                for (const w of ov.querySelectorAll('.fs-word')) {
+                    const t = Math.round(w.getBoundingClientRect().top);
+                    if (top === null || Math.abs(t - top) > 2) { lines.push(w.textContent); top = t; }
+                    else lines[lines.length - 1] += ' ' + w.textContent;
+                }
+                out.push(lines);
+            }
+            return out;
+        }""",
+        {"aspect": aspect, "texts": texts, "family": SUBTITLE_FAMILY},
+    )
+
+
+@pytest.mark.parametrize(
+    ("vw", "vh", "aspect", "ar"),
+    [
+        (1440, 1080, "4 / 3", 4 / 3),  # the talk the mismatch was reported on
+        (1920, 1080, "16 / 9", 16 / 9),
+    ],
+)
+def test_fullscreen_breaks_lines_where_the_burn_does(page, vw, vh, aspect, ar):
+    """The whole point: the burned video must show the lines the preview showed.
+    Same file, same size, same wrap limit — so the browser's line breaks must be
+    the burner's own `wrap_text`, measured by Pillow on the TTF libass renders."""
+    box = _box(vw, vh, ar)
+    width, height = round(box["width"]), round(box["height"])
+    measure = text_measurer(DEFAULT_FONT_FILE, css_font_px(0.04 * ar, height))
+    burned = [wrap_text(t, measure, wrap_width_for(width)) for t in CUES]
+    shown = _browser_lines(page, vw, vh, aspect, CUES)
+    mismatched = [(b, s) for b, s in zip(burned, shown, strict=True) if b != s]
+    assert not mismatched, f"{len(mismatched)} of {len(CUES)} cues break differently: {mismatched[:3]}"
+
+
+def test_fullscreen_draws_the_burn_font_with_its_line_advance(page):
+    """PT Serif, from the very file libass renders with, advancing one ASS
+    FontSize per line — PT_SERIF_WIN_FACTOR em — as libass does (band_geometry).
+    Georgia, the old fallback, is ~6% narrower and re-wrapped cues."""
+    for tuned, scale in ((False, None), (True, 1.3)):
+        page.set_viewport_size({"width": 1280, "height": 720})
+        got = page.evaluate(
+            """async ({tuned, scale, family}) => {
+                const vp = document.getElementById('view-preview');
+                const ov = document.getElementById('subtitle-overlay');
+                vp.classList.add('active', 'fs-mode');
+                if (tuned) vp.setAttribute('data-subs-tuned', '1'); else vp.removeAttribute('data-subs-tuned');
+                if (scale) document.documentElement.style.setProperty('--preview-subs-scale', String(scale));
+                ov.textContent = 'Але коли ви на півдорозі';
+                const cs = getComputedStyle(ov);
+                await document.fonts.load(cs.fontSize + ' "' + family + '"');
+                return {
+                    family: cs.fontFamily,
+                    loaded: document.fonts.check(cs.fontSize + ' "' + family + '"'),
+                    ratio: parseFloat(cs.lineHeight) / parseFloat(cs.fontSize),
+                };
+            }""",
+            {"tuned": tuned, "scale": scale, "family": SUBTITLE_FAMILY},
+        )
+        assert got["family"].strip("'\" ").startswith(SUBTITLE_FAMILY), got
+        assert got["loaded"], "the subtitle face did not load"
+        assert got["ratio"] == pytest.approx(PT_SERIF_WIN_FACTOR, abs=0.002), (tuned, got)

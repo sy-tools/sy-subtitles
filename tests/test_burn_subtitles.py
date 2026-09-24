@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -38,6 +39,7 @@ from tools.burn_subtitles import (
     probe_text_for,
     text_measurer,
     wrap_text,
+    wrap_width_for,
 )
 
 
@@ -180,7 +182,22 @@ def fake_measure(text):
     return len(text) * 10
 
 
+def kerned_measure(text):
+    # 10 units a character, and a comma followed by a space kerns 3 units
+    # tighter — as PT Serif's comma/space pair really does (2.3px at 57.6px).
+    return 10 * len(text) - 3 * text.count(", ")
+
+
 class TestWrapText:
+    def test_a_line_carries_the_kern_into_the_space_after_it(self):
+        # A browser shapes before it breaks, so a comma that ends a line still
+        # carries its kern with the space that follows — and fits a word the
+        # bare line (80) would not. "aa bbbb, " is 87 - 10 for the space = 77.
+        assert wrap_text("aa bbbb, cc", kerned_measure, 78 / WRAP_SAFETY) == ["aa bbbb,", "cc"]
+
+    def test_the_last_word_has_no_space_to_kern_with(self):
+        assert wrap_text("aa bbbb,", kerned_measure, 78 / WRAP_SAFETY) == ["aa", "bbbb,"]
+
     def test_short_text_stays_one_line(self):
         assert wrap_text("abc def", fake_measure, 1000) == ["abc def"]
 
@@ -369,13 +386,46 @@ class TestDefaults:
         assert SIDE_INSET_RATIO == 0.07
 
     def test_font_defaults_point_at_the_vendored_pt_serif(self):
-        assert DEFAULT_FONT_FILE.endswith(os.path.join("assets", "fonts", "PT_Serif-Web-Regular.ttf"))
+        assert DEFAULT_FONT_FILE.endswith(os.path.join("site", "fonts", "PT_Serif-Web-Regular.ttf"))
+
+    def test_the_preview_loads_the_very_file_the_burn_renders_with(self):
+        # One file, not a copy: the fullscreen preview's @font-face must resolve
+        # to DEFAULT_FONT_FILE, or the two can drift apart again (Georgia vs PT
+        # Serif re-wrapped cues by ~6% of a line).
+        css_dir = Path(__file__).resolve().parents[1] / "site" / "css"
+        css = (css_dir / "tokens.css").read_text(encoding="utf-8")
+        face = re.search(r"@font-face\s*\{[^}]*font-family:\s*'SY Subtitle Serif'[^}]*\}", css)
+        assert face, "tokens.css declares no 'SY Subtitle Serif' face"
+        src = re.search(r"url\('([^']+)'\)", face.group(0)).group(1)
+        assert (css_dir / src).resolve() == Path(DEFAULT_FONT_FILE).resolve()
         assert DEFAULT_FONT_NAME == "PT Serif"
 
     def test_default_font_path_is_absolute(self):
         # `python -m tools.burn_subtitles` runs from wherever the caller stands;
         # a CWD-relative default fails inside Pillow anywhere but the repo root.
         assert os.path.isabs(DEFAULT_FONT_FILE)
+
+
+class TestWrapGeometry:
+    """The wrap limit and the measurer are what the preview is held to
+    (tests/test_spa_fs_subtitle_box.py compares line breaks cue by cue), so
+    neither may carry pixel rounding the browser does not do."""
+
+    def test_wrap_width_is_the_unrounded_inset(self):
+        # The ASS margins are whole pixels (round(100.8) = 101 on a 1440 frame),
+        # but the width a line may fill must not inherit that rounding: 0.4px
+        # was enough to wrap a cue the preview showed on one line.
+        assert wrap_width_for(1440) == pytest.approx(1440 * (1 - 2 * SIDE_INSET_RATIO))
+
+    def test_measures_unhinted_advances(self):
+        # FreeType hints the advances at small sizes, rounding every glyph to a
+        # whole pixel; libass (no hinting) and the browser do not. Measured at a
+        # large size and scaled, the width is the design width.
+        from PIL import ImageFont
+
+        text = "знає про свого чоловіка, що з ним не так, але"
+        big = ImageFont.truetype(DEFAULT_FONT_FILE, 1000).getlength(text)
+        assert text_measurer(DEFAULT_FONT_FILE, 57.6)(text) == pytest.approx(big * 57.6 / 1000, abs=0.01)
 
 
 class TestCssFontPx:

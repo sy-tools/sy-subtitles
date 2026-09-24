@@ -659,6 +659,62 @@ describe('measureBurnRatios', () => {
   });
 });
 
+const { burnWords, fillFullscreenSubtitle } = require('../site/js/burn_video');
+
+describe('burnWords', () => {
+  it('splits only where the burner splits: on whitespace', () => {
+    // tools/burn_subtitles.py wraps on text.split(); a hyphen, a dash or a
+    // slash is no break opportunity there, so it must not be one on screen.
+    assert.deepStrictEqual(burnWords('до Нью-Йорка, 1990–1995 і/або'),
+      ['до', 'Нью-Йорка,', '1990–1995', 'і/або']);
+  });
+
+  it('treats any whitespace run as one gap, as str.split() does', () => {
+    assert.deepStrictEqual(burnWords('  а\u00a0не\t\nтак  '), ['а', 'не', 'так']);
+  });
+
+  it('gives no words for blank text', () => {
+    assert.deepStrictEqual(burnWords('   '), []);
+    assert.deepStrictEqual(burnWords(''), []);
+  });
+});
+
+describe('fillFullscreenSubtitle', () => {
+  function fakeDoc() {
+    function node(tag) {
+      return {
+        tagName: tag, className: '', children: [], text: '',
+        appendChild(c) { this.children.push(c); return c; },
+        set textContent(v) { this.children = []; this.text = v; },
+        get textContent() {
+          return this.text + this.children.map((c) => c.textContent).join('');
+        },
+      };
+    }
+    return {
+      createElement: (tag) => node(tag),
+      createTextNode: (t) => ({ textContent: t }),
+      node,
+    };
+  }
+
+  it('wraps every word in a no-break box, joined by plain spaces, in one wrapper', () => {
+    const doc = fakeDoc();
+    const el = doc.node('div');
+    el.ownerDocument = doc;
+    el.textContent = 'old';
+    fillFullscreenSubtitle(el, 'до  Нью-Йорка,');
+    assert.strictEqual(el.textContent, 'до Нью-Йорка,');
+    // One child: the band is a flex container, and loose words would each be
+    // a flex item that never wraps.
+    assert.strictEqual(el.children.length, 1);
+    assert.strictEqual(el.children[0].className, 'fs-text');
+    const words = el.children[0].children.filter((c) => c.tagName === 'span');
+    assert.deepStrictEqual(words.map((w) => w.className), ['fs-word', 'fs-word']);
+    assert.deepStrictEqual(words.map((w) => w.textContent), ['до', 'Нью-Йорка,']);
+  });
+});
+
 const {
   BURN_STEP_WEIGHTS,
   BURN_RENDER_BLOCK,

@@ -221,10 +221,11 @@ that live nowhere else.
   disagree. Auth/cookie: `docs/amruta-auth.md`.
 - `whisper_run` — speech detection, word-level timestamps.
 - `burn_subtitles` — burn subtitles into a video (SRT → ASS → ffmpeg+libass).
-  Sizing comes from ratios the SPA measured against the *displayed* video, not
-  from pixels. The font is PT Serif because that is what the preview really
-  draws: its stack is `'Fraunces', Georgia, …` and Fraunces has no Cyrillic, so
-  Georgia wins — matching the preview means matching Georgia, not the stack.
+  Sizing is fractions of the video frame, the same fractions fullscreen draws
+  on the displayed video's box — never pixels, never the screen. The font is
+  one file, `site/fonts/`, which the fullscreen preview also loads: a system
+  font would differ per device, and Georgia (what the preview used to fall
+  back to) may not be served as a web font.
 - `text_export` — SRT → plain text.
 
 **Building and timing subtitles**
