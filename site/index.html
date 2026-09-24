@@ -3480,9 +3480,12 @@ function showPreview(talkId, videoSlug) {
     var fs = !!(viewEl && viewEl.classList.contains('fs-mode'));
     var modeChanged = fs !== previewState.lastFsMode;
     previewState.lastFsMode = fs;
-    // ...and on a resize in fullscreen (a phone rotated): the text there is
-    // sized from the displayed video, so the pinned height goes stale with it.
-    var box = fs ? window.innerWidth + 'x' + window.innerHeight : '';
+    // ...and whenever the displayed video's box changes in fullscreen — a
+    // resize (a phone rotated) or the video's aspect landing after the cues
+    // are already showing: the text there is sized from that box, so the
+    // pinned height goes stale with it. (An inline-style read: no layout.)
+    var box = fs ? window.innerWidth + 'x' + window.innerHeight + '@'
+      + viewEl.style.getPropertyValue('--preview-aspect') : '';
     var boxChanged = box !== previewState.lastFsBox;
     previewState.lastFsBox = box;
     if (text !== previewState.lastText || modeChanged || boxChanged) {

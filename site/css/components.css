@@ -503,7 +503,7 @@ body.sync-player-resizing, body.sync-player-resizing * {
 #view-preview.fs-mode .video-wrap { flex: 1; padding-bottom: 0; height: 100%; }
 #view-preview.fs-mode .video-wrap iframe,
 #view-preview.fs-mode .video-wrap > div { position: relative; width: 100%; height: 100%; }
-#view-preview.fs-mode #subtitle-overlay { position: fixed; z-index: 10000; min-height: 0; border-radius: 0; pointer-events: none; }
+#view-preview.fs-mode #subtitle-overlay { position: absolute; z-index: 10000; min-height: 0; border-radius: 0; pointer-events: none; }
 #view-preview.fs-mode .controls { display: none !important; }
 body {
   font-family: var(--f-sans);
@@ -909,8 +909,11 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
      with giant text. tests/test_spa_fs_subtitle_box.py holds all of it.
 
      Container units, not vw/vh: in fullscreen .player-container is a size
-     container, and — layout containment — also the box a fixed overlay is
-     positioned in, so left/bottom and the units below share one frame. */
+     container, and — the overlay being absolute in it (it is position:
+     relative) — also the box left/bottom are measured in, so position and
+     size share one frame. `fixed` would not: its offsets follow the viewport
+     whatever the container units say, and only coincide while the container
+     happens to fill the screen. */
   --fs-video-w: min(100cqw, 100cqh * (var(--preview-aspect, 16 / 9)));
   --fs-video-h: min(100cqh, 100cqw / (var(--preview-aspect, 16 / 9)));
   left: calc((100cqw - var(--fs-video-w)) / 2);
@@ -965,17 +968,14 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   );
   height: auto;
   line-height: 1.25;
-  /* Re-assert the fullscreen side inset. `#view-preview.fs-mode
-     #subtitle-overlay` gives fullscreen a 7% side inset, but
-     `#view-preview[data-subs-tuned="1"] #subtitle-overlay` (written for the
-     embedded resized block) has equal specificity, sits later, and its
-     `padding: 16px 24px` shorthand wins once the user has dragged the subtitle
-     handle. This rule is more specific than both, so re-asserting the inset here
-     restores it. Keep the 7% in sync with the fs-mode rule above and with
-     SIDE_INSET_RATIO in tools/burn_subtitles.py.
-
-     Selectors, not line numbers: the numbers this comment used to carry had
-     already drifted by nine lines. */
+  /* Re-assert the fullscreen side inset. `#view-preview[data-subs-tuned="1"]
+     #subtitle-overlay` (written for the embedded resized block) ties the
+     fs-mode rule's specificity, and its `padding: 16px 24px` shorthand wins
+     whenever it sits later in this file — as it once did, silently turning
+     the inset into 24px after the first drag of the handle. Today the fs-mode
+     rule sits later; this more specific rule keeps the inset whatever the
+     order. Keep the 7% in sync with the fs-mode rule above and with
+     SIDE_INSET_RATIO in tools/burn_subtitles.py. */
   padding-left: calc(var(--fs-video-w) * 0.07);
   padding-right: calc(var(--fs-video-w) * 0.07);
 }

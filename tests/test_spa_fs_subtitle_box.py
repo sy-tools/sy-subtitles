@@ -103,16 +103,19 @@ def _box(vw, vh, ar):
     return {"left": (vw - w) / 2, "top": (vh - h) / 2, "width": w, "height": h}
 
 
-def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None):
+def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None, inset=""):
     """Lay the preview out at vw x vh for a video of `aspect` ("W / H") and read
-    the overlay's box plus the ratios the burn would be dispatched with."""
+    the overlay's box plus the ratios the burn would be dispatched with.
+    `inset` (a CSS padding) pads the fullscreen view, pushing the player off
+    the viewport's edges — as any visible strip beside it would."""
     page.set_viewport_size({"width": vw, "height": vh})
     return page.evaluate(
-        """({fsMode, tuned, aspect, scale}) => {
+        """({fsMode, tuned, aspect, scale, inset}) => {
             const vp = document.getElementById('view-preview');
             const ov = document.getElementById('subtitle-overlay');
             vp.classList.add('active');
             vp.classList.toggle('fs-mode', fsMode);
+            vp.style.padding = inset;
             vp.style.setProperty('--preview-aspect', aspect);
             if (tuned) {
                 vp.setAttribute('data-subs-tuned', '1');
@@ -127,6 +130,7 @@ def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None):
             ov.textContent = 'Від матерії ви переходите, скажімо, до живих рослин,';
             const cs = getComputedStyle(ov);
             const r = ov.getBoundingClientRect();
+            const pc = document.querySelector('.player-container').getBoundingClientRect();
             const [w, h] = aspect.split('/').map(Number);
             return {
                 left: parseFloat(cs.paddingLeft),
@@ -135,10 +139,11 @@ def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None):
                 bottom: parseFloat(cs.paddingBottom),
                 font: parseFloat(cs.fontSize),
                 rect: {left: r.left, bottom: r.bottom, width: r.width},
+                player: {left: pc.left, top: pc.top, width: pc.width, height: pc.height},
                 ratios: measureBurnRatios({videoWidth: w, videoHeight: h, subsScale: scale || 1}),
             };
         }""",
-        {"fsMode": fs_mode, "tuned": tuned, "aspect": aspect, "scale": scale},
+        {"fsMode": fs_mode, "tuned": tuned, "aspect": aspect, "scale": scale, "inset": inset},
     )
 
 
@@ -170,6 +175,29 @@ def test_fullscreen_overlay_is_the_burned_band(page, vw, vh, aspect, ar):
     _assert_matches_burn(_measure(page, vw, vh, aspect), _box(vw, vh, ar))
 
 
+def test_the_band_follows_the_player_not_the_viewport(page):
+    """The video is letterboxed inside the player container, which in
+    fullscreen happens to fill the viewport. Push the container off the
+    viewport's edges and the band must move with the video — its size already comes from
+    the container, so its position must come from the same box."""
+    m = _measure(page, 1280, 800, "16 / 9", inset="60px 0 120px 200px")
+    p = m["player"]
+    assert (p["left"], p["top"]) == pytest.approx((200, 60), abs=0.6), "the inset must move the player"
+    box = _box(p["width"], p["height"], 16 / 9)
+    box["left"] += p["left"]
+    box["top"] += p["top"]
+    _assert_matches_burn(m, box)
+
+
+def test_a_tiny_font_stops_at_the_burn_floor(page):
+    """The other end of the band: a portrait video with the subtitles shrunk to
+    0.5x measures 0.0113 of its height, under FONT_RATIO_MIN. The preview must
+    stop at the floor the burn clamps to, as it stops at the ceiling."""
+    m = _measure(page, 1280, 800, "9 / 16", tuned=True, scale=0.5)
+    _assert_matches_burn(m, _box(1280, 800, 9 / 16))
+    assert m["ratios"]["font_ratio"] == pytest.approx(0.02)
+
+
 def test_the_1080p_baseline_keeps_its_approved_pixels(page):
     """The box change must not move today's look on a 1080p screen: 76.8px
     text, 80px of gradient over it and 36px under it. Only the side insets
@@ -183,9 +211,10 @@ def test_the_1080p_baseline_keeps_its_approved_pixels(page):
 
 def test_tuned_subtitles_scale_with_the_handle_and_keep_the_side_inset(page):
     """Once the handle has been dragged, the embedded `[data-subs-tuned]` rule
-    (`padding: 16px 24px`) ties the fullscreen rule's specificity and would win
-    on source order; the fullscreen `[data-subs-tuned]` rule must re-assert the
-    side inset. The scale must reach the font exactly as it reaches the burn."""
+    (`padding: 16px 24px`) ties the fullscreen rule's specificity; whichever
+    sits later wins, so the side inset must survive it — the fullscreen
+    `[data-subs-tuned]` rule re-asserts it, whatever the source order. The
+    scale must reach the font exactly as it reaches the burn."""
     m = _measure(page, 1280, 800, "16 / 9", tuned=True, scale=1.5)
     _assert_matches_burn(m, _box(1280, 800, 16 / 9))
     assert m["font"] == pytest.approx(0.04 * 1280 * 1.5, abs=0.6)

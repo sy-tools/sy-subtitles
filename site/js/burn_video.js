@@ -314,8 +314,10 @@ var FS_PADBOT_RATIO = 36 / 1080;
 // The clamp is silent, which is acceptable only because it is exactly what
 // tools/burn_subtitles.py already does to the same value (FONT_RATIO_MIN /
 // FONT_RATIO_MAX there, applied in ass_font_size): the burned output is
-// identical whether the ratio is clamped here or there. Keep all three in step —
-// tests/test_burn_workflow.py pins the numbers across the three files.
+// identical whether the ratio is clamped here or there. Keep all four in step —
+// tests/test_burn_workflow.py pins the numbers across the workflow, this file
+// and the burner; the fullscreen font clamp in components.css is the fourth,
+// held to the same band by tests/test_spa_fs_subtitle_box.py.
 var FONT_RATIO_MIN = 0.02;
 var FONT_RATIO_MAX = 0.12;
 

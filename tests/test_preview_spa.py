@@ -452,6 +452,32 @@ class TestPreviewView:
         assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
         assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
 
+    def test_overlay_fullscreen_repins_when_the_video_shape_lands(self, server, page):
+        # The video's aspect can arrive (or change) with the window untouched:
+        # fullscreen entered before player.ready() resolves shows the SRT's
+        # cues at the 16:9 fallback, then --preview-aspect lands. The text is
+        # sized from that box, so the pinned height must follow it too.
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        page.wait_for_timeout(1000)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.evaluate("document.getElementById('view-preview').style.setProperty('--preview-aspect', '4 / 3')")
+        page.wait_for_timeout(300)
+        got = page.evaluate("""() => {
+            const ov = document.getElementById('subtitle-overlay');
+            const pinned = parseFloat(ov.style.getPropertyValue('height'));
+            ov.style.removeProperty('height');
+            const natural = ov.offsetHeight;
+            return {pinned, natural, text: ov.textContent};
+        }""")
+        assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
+        assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
+
     def test_overlay_embedded_does_not_pin_height(self, server, page):
         # Embedded keeps the default sizing (const + auto-expand, or the user's
         # resized height): no explicit height pinned for a shown subtitle.
@@ -963,14 +989,15 @@ class TestFullscreenMode:
         """)
         assert display == "none"
 
-    def test_fs_mode_subtitle_overlay_fixed(self, server, page):
-        """In fullscreen, subtitle overlay should be position:fixed."""
+    def test_fs_mode_subtitle_overlay_sits_in_the_player(self, server, page):
+        """In fullscreen the overlay is positioned in the player container (the
+        box the video is letterboxed in), not in the viewport."""
         self._goto_preview(server, page)
         self._enter_fs(page)
         position = page.evaluate("""
             getComputedStyle(document.getElementById('subtitle-overlay')).position
         """)
-        assert position == "fixed"
+        assert position == "absolute"
 
     def test_fs_mode_overlay_takes_the_shape_of_the_playing_video(self, server, page):
         """The fullscreen band is sized from the displayed video, so the video's

@@ -665,12 +665,13 @@ describe('Fullscreen mode', () => {
     assert.ok(html.includes('fs-mode') && html.includes('btn-mark'), 'btn-mark should be hidden in fs-mode');
   });
 
-  it('subtitle overlay has fixed position in fs-mode', () => {
-    // Check CSS contains position: fixed for subtitle-overlay in fs-mode context.
+  it('subtitle overlay is positioned in the player container in fs-mode', () => {
+    // Absolute, not fixed: the band sits on the video, which is letterboxed in
+    // .player-container — the box its size is measured from (container units).
     // CSS is externalized; the fs-mode component rules live in components.css.
     var css = fs.readFileSync('site/css/components.css', 'utf8');
-    assert.ok(css.includes('fs-mode') && css.includes('#subtitle-overlay') && css.includes('position') && css.includes('fixed'),
-      'subtitle-overlay should be position:fixed in .fs-mode');
+    assert.match(css, /#view-preview\.fs-mode #subtitle-overlay \{ position: absolute;/,
+      'subtitle-overlay should be position:absolute in .fs-mode');
   });
 });
 
