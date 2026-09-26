@@ -3580,7 +3580,8 @@ function showPreview(talkId, videoSlug) {
       });
       // While Vimeo has the pointer the page is blind to it; a change the
       // player reports is the sign that a menu choice was made and closed.
-      ['play', 'pause', 'seeked', 'volumechange', 'texttrackchange', 'qualitychange',
+      // Not a volume change: the volume slider stays open while it is dragged.
+      ['play', 'pause', 'seeked', 'texttrackchange', 'qualitychange',
         'playbackratechange'].forEach(function(ev) {
         player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.playerEvent(); });
       });
@@ -3962,12 +3963,17 @@ var fsCursorIdle = (function() {
   if (!view || !shield || !mount) return null;
   var clickPlayer = null;
   var beforeClick = null;
-  // A click on the bare player leaves keyboard focus inside the iframe, where
-  // the SPA's shortcuts go dead. Whenever the shield takes over, take focus
-  // back too. The price: Vimeo's own Up/Down volume keys.
-  function reclaimFocus() {
+  // A click on the player leaves keyboard focus inside the iframe, where the
+  // SPA's shortcuts go dead — and where a Vimeo menu may still be open.
+  function playerHasFocus() {
     var focused = document.activeElement;
-    if (focused && focused.tagName === 'IFRAME' && view.contains(focused)) focused.blur();
+    return !!focused && focused.tagName === 'IFRAME' && view.contains(focused);
+  }
+  function reclaimFocus() {
+    if (playerHasFocus()) document.activeElement.blur();
+  }
+  function box() {
+    return videoBox(shield.getBoundingClientRect(), view.style.getPropertyValue('--preview-aspect'));
   }
   var idle = createCursorIdle({
     idleMs: FS_CURSOR_IDLE_MS,
@@ -3976,10 +3982,7 @@ var fsCursorIdle = (function() {
     now: function() { return Date.now(); },
     setTimer: function(fn, ms) { return setTimeout(fn, ms); },
     clearTimer: function(id) { clearTimeout(id); },
-    onChange: function(state) {
-      if (shield.dataset.state === 'vimeo' && state === 'visible') reclaimFocus();
-      shield.dataset.state = state;
-    },
+    onChange: function(state) { shield.dataset.state = state; },
     onVideoClick: function() {
       var player = previewState.player;
       if (!player) return;
@@ -4016,11 +4019,22 @@ var fsCursorIdle = (function() {
   shield.addEventListener('pointerleave', function(e) {
     if (e.relatedTarget && mount.contains(e.relatedTarget)) idle.leaveToPlayer();
   });
+  shield.addEventListener('pointerover', function(e) {
+    if (!e.relatedTarget || !mount.contains(e.relatedTarget)) return;
+    var barPx = parseFloat(getComputedStyle(shield).getPropertyValue('--fs-vimeo-bar-h')) || 0;
+    if (isHoleCrossing({ x: e.clientX, y: e.clientY, box: box(), barPx: barPx })) idle.leaveToPlayer();
+  });
   document.addEventListener('pointerdown', function(e) {
+    // The first press on the shield after using the player hands focus back
+    // to the page, and like a click beside an open menu, does nothing else.
+    if (e.target === shield && playerHasFocus()) {
+      reclaimFocus();
+      idle.wake();
+      return;
+    }
     var videoPress = e.target === shield && isVideoPress({
       onShield: true, pointerType: e.pointerType, button: e.button, ctrlKey: e.ctrlKey,
-      x: e.clientX, y: e.clientY,
-      box: videoBox(shield.getBoundingClientRect(), view.style.getPropertyValue('--preview-aspect')),
+      x: e.clientX, y: e.clientY, box: box(),
     });
     if (videoPress) idle.videoPress(); else idle.wake();
   });

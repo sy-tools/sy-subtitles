@@ -13,11 +13,15 @@
 // double click leaves fullscreen, as on the bare player.
 //
 // A hole in the shield over Vimeo's control bar lets the pointer reach the
-// player. Leaving the shield through it hands the pointer to Vimeo ('vimeo'):
+// player. Crossing its edge, either way, hands the pointer to Vimeo ('vimeo'):
 // the shield steps aside altogether, since Vimeo's menus (a long subtitle list
 // among them) open upwards over the video. The page is blind to the pointer
 // then, so the shield comes back when the player reports a change — a menu
-// choice — or when FS_VIMEO_MODE_MS pass without one.
+// choice, a button — or when FS_VIMEO_MODE_MS pass without one. Coming back,
+// it leaves keyboard focus where it is: taking it from the iframe would close
+// a menu still open there.
+//
+// In CSS the shield carries the bar's height as --fs-vimeo-bar-h.
 
 var FS_CURSOR_IDLE_MS = 3000;
 var FS_VIMEO_MODE_MS = 10000;
@@ -48,6 +52,16 @@ function isVideoPress(press) {
   return press.onShield && press.pointerType === 'mouse' && press.button === 0
     && !press.ctrlKey && press.x >= b.left && press.x < b.right
     && press.y >= b.top && press.y < b.bottom;
+}
+
+// Whether a pointer arriving on the shield from the player came up out of
+// the hole ({x, y, box: videoBox(), barPx}): it lands in the band one bar high
+// above the hole. Arriving anywhere else, the shield came back under a pointer
+// resting over the video, and keeps it.
+function isHoleCrossing(p) {
+  var b = p.box;
+  return p.x >= b.left && p.x < b.right
+    && p.y >= b.bottom - 2 * p.barPx && p.y < b.bottom;
 }
 
 // opts: {idleMs, vimeoMs, doublePressMs, now, setTimer, clearTimer,
@@ -129,7 +143,7 @@ function createCursorIdle(opts) {
         opts.onVideoClick();
       }
     },
-    // The pointer left the shield through the hole, onto the player.
+    // The pointer crossed the hole's edge, either way.
     leaveToPlayer: function() {
       if (!onShield()) return;
       lastPos = null;
@@ -155,6 +169,7 @@ if (typeof module !== 'undefined' && module.exports) {
     FS_MOVE_SLOP_PX: FS_MOVE_SLOP_PX,
     createCursorIdle: createCursorIdle,
     isVideoPress: isVideoPress,
+    isHoleCrossing: isHoleCrossing,
     videoBox: videoBox,
   };
 }

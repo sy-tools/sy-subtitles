@@ -5021,7 +5021,7 @@ class TestFullscreenCursorIdle:
 
     @pytest.mark.parametrize(
         "event",
-        ["play", "pause", "seeked", "volumechange", "texttrackchange", "qualitychange", "playbackratechange"],
+        ["play", "pause", "seeked", "texttrackchange", "qualitychange", "playbackratechange"],
     )
     def test_a_player_change_brings_the_shield_back(self, server, page, event):
         self._goto_preview(server, page)
@@ -5030,6 +5030,37 @@ class TestFullscreenCursorIdle:
         assert self._state(page) == "vimeo"
         page.evaluate(f"window._vimeoPlayer._fire('{event}', {{}})")
         assert self._state(page) == "visible"
+
+    def test_a_volume_change_keeps_vimeo_mode(self, server, page):
+        """Vimeo's volume slider stays open while it is dragged."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        page.evaluate("window._vimeoPlayer._fire('volumechange', {})")
+        assert self._state(page) == "vimeo"
+
+    def test_coming_up_out_of_the_hole_hands_the_pointer_to_vimeo(self, server, page):
+        """A menu opened from the bar after the shield came back sits above
+        the hole, under the shield: the pointer heading up to it must reach it."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        assert self._state(page) == "visible"
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h - 100)
+        assert self._state(page) == "vimeo"
+
+    def test_shield_back_under_a_pointer_resting_on_the_video_keeps_it(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h // 2)
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        page.mouse.move(w // 2 + 10, h // 2)
+        assert self._state(page) == "visible"
+        self._hide(page)
 
     def test_player_changes_do_not_reveal_a_hidden_cursor(self, server, page):
         self._playing_hidden(server, page)
@@ -5129,13 +5160,28 @@ class TestFullscreenCursorIdle:
         self._set_fs(page, True)
         assert page.evaluate("document.activeElement.id") != "focus-probe"
 
-    def test_shield_coming_back_takes_keyboard_focus_back_from_the_player(self, server, page):
+    def test_shield_coming_back_leaves_focus_in_the_player(self, server, page):
+        """Taking focus from the iframe would close a Vimeo menu still open."""
         self._goto_preview(server, page)
         self._set_fs(page, True)
         self._into_the_hole(page)
         self._focus_probe(page)
-        page.evaluate("window._vimeoPlayer._fire('texttrackchange', {})")
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        assert self._state(page) == "visible"
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
+
+    def test_first_press_after_using_the_player_only_takes_focus_back(self, server, page):
+        """Like a click beside an open menu: it closes the menu, nothing more."""
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        self._set_fs(page, True)
+        self._focus_probe(page)
+        page.mouse.click(300, 300)
+        page.clock.run_for(50)
+        assert self._paused(page) is False
         assert page.evaluate("document.activeElement.id") != "focus-probe"
+        page.mouse.click(300, 300)
+        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
 
     def test_leaving_fullscreen_puts_the_shield_away(self, server, page):
         self._playing_hidden(server, page)
@@ -5146,7 +5192,10 @@ class TestFullscreenCursorIdle:
         self._goto_preview(server, page)
         page.evaluate("SPA.toggleFullscreen()")
         assert self._state(page) == "visible"
+        # Toggling back before requestFullscreen settles races syncFsMode.
+        page.wait_for_function("!!document.fullscreenElement", timeout=2000)
         page.evaluate("SPA.toggleFullscreen()")
+        page.wait_for_function("!document.fullscreenElement", timeout=2000)
         assert self._state(page) == "off"
 
     _HOVER_STUB = """

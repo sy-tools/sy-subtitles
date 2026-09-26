@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  createCursorIdle, isVideoPress, videoBox,
+  createCursorIdle, isVideoPress, isHoleCrossing, videoBox,
   FS_CURSOR_IDLE_MS, FS_VIMEO_MODE_MS, FS_DOUBLE_PRESS_MS, FS_MOVE_SLOP_PX,
 } = require('../site/js/cursor_idle.js');
 
@@ -301,6 +301,27 @@ test('touch, pen, secondary buttons, ctrl-click and presses off the shield are n
   assert.strictEqual(isVideoPress(press({ pointerType: 'pen' })), false);
   assert.strictEqual(isVideoPress(press({ button: 2 })), false);
   assert.strictEqual(isVideoPress(press({ ctrlKey: true })), false);
+});
+
+// The hole is the bottom 64 px of the video box.
+function crossing(over) {
+  return Object.assign({ x: 700, y: 820, box: BOX, barPx: 64 }, over);
+}
+
+test('arriving on the shield just above the hole is a crossing out of it', () => {
+  // Vimeo's menus open upwards from the bar: a pointer coming up out of the
+  // hole is heading for one.
+  assert.strictEqual(isHoleCrossing(crossing()), true);
+  assert.strictEqual(isHoleCrossing(crossing({ y: 900 - 64 - 64 })), true);
+  assert.strictEqual(isHoleCrossing(crossing({ y: 899 })), true);
+});
+
+test('arriving on the shield far above the hole, or beside it, is no crossing', () => {
+  // The shield came back under a pointer that rested over the video.
+  assert.strictEqual(isHoleCrossing(crossing({ y: 900 - 64 - 65 })), false);
+  assert.strictEqual(isHoleCrossing(crossing({ y: 300 })), false);
+  assert.strictEqual(isHoleCrossing(crossing({ x: 99 })), false);
+  assert.strictEqual(isHoleCrossing(crossing({ x: 1300 })), false);
 });
 
 test('the video box is the largest box of its aspect centred in the player', () => {
