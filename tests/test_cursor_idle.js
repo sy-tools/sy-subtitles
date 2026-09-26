@@ -194,6 +194,22 @@ test('focus going into the player along with a player event keeps the shield', (
   assert.deepStrictEqual(changes, []);
 });
 
+test('a menu opened late in Vimeo mode gets the whole Vimeo spell', () => {
+  // The pointer reached the bar long before the click that opened a menu:
+  // the spell counts from that click, or the shield returns mid-choice.
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  idle.leaveToPlayer();
+  clock.advance(VIMEO - 2000);
+  const since = clock.now();
+  clock.advance(300);
+  idle.focusedIntoPlayer(since);
+  clock.advance(VIMEO - 1);
+  assert.deepStrictEqual(changes, ['vimeo']);
+  clock.advance(1);
+  assert.deepStrictEqual(changes, ['vimeo', 'visible']);
+});
+
 test('player events do not reveal a hidden cursor or restart the countdown', () => {
   // Space and the arrow keys drive the player too; only the mouse counts.
   const { clock, changes, idle } = setup();

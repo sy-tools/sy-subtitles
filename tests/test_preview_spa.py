@@ -4972,6 +4972,13 @@ class TestFullscreenCursorIdle:
         assert self._state(page) == "off"
         assert page.evaluate("getComputedStyle(document.getElementById('fs-idle-shield')).display") == "none"
 
+    def test_player_has_no_transcript_panel(self, server, page):
+        # Vimeo's Transcript button opens a panel over the video, where the
+        # shield is; a click on it there would play or pause instead.
+        self._goto_preview(server, page)
+        src = page.evaluate("window._vimeoPlayer._src")
+        assert "transcript=0" in src.split("?", 1)[1].split("&")
+
     def test_hole_over_the_control_bar_reaches_the_player(self, server, page):
         self._goto_preview(server, page)
         self._set_fs(page, True)
@@ -5054,6 +5061,19 @@ class TestFullscreenCursorIdle:
         assert self._state(page) == "visible"
         page.clock.run_for(100)
         assert self._state(page) == "vimeo"
+
+    def test_a_menu_opened_late_in_vimeo_mode_gets_the_whole_spell(self, server, page):
+        """The pointer rested on the bar a while before the click that opened
+        a menu: the shield must not come back while a subtitle is being picked."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        page.clock.run_for(self.VIMEO_MS - 2000)
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS - 100)
+        assert self._state(page) == "vimeo"
+        page.clock.run_for(200)
+        assert self._state(page) == "visible"
 
     def test_focus_going_into_the_player_with_a_button_keeps_the_shield(self, server, page):
         """A click on play reports itself, up to a settle time after the focus."""
@@ -5194,7 +5214,7 @@ class TestFullscreenCursorIdle:
         self._set_fs(page, True)
         assert page.evaluate("document.activeElement.id") != "focus-probe"
 
-    def test_shield_back_by_timeout_over_a_resting_pointer_leaves_focus_in_the_player(self, server, page):
+    def test_shield_back_by_timeout_under_the_pointer_leaves_focus_in_the_player(self, server, page):
         """The pointer may rest on a Vimeo menu still open under the shield;
         taking focus from the iframe would close it."""
         self._goto_preview(server, page)
@@ -5203,7 +5223,7 @@ class TestFullscreenCursorIdle:
         self._focus_probe(page)
         w, h = self._size(page)
         page.mouse.move(w // 2, h // 2)
-        page.clock.run_for(self.VIMEO_MS + 10)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
         page.mouse.move(w // 2 + 10, h // 2)
         page.clock.run_for(200)
         assert self._state(page) == "visible"
@@ -5217,10 +5237,20 @@ class TestFullscreenCursorIdle:
         self._set_fs(page, True)
         self._into_the_hole(page)
         self._focus_probe(page)
-        page.clock.run_for(self.VIMEO_MS + 10)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
         assert page.evaluate("document.activeElement.id") == "focus-probe"
         page.clock.run_for(200)
         assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_leaving_fullscreen_right_after_a_timeout_return_leaves_focus_alone(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
+        self._set_fs(page, False)
+        page.clock.run_for(200)
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
 
     def test_a_player_event_under_the_shield_takes_focus_back(self, server, page):
         """A second click on the bar (pause after play) leaves focus in the
@@ -5254,7 +5284,7 @@ class TestFullscreenCursorIdle:
         self._into_the_hole(page)
         self._focus_probe(page)
         if by == "timeout":
-            page.clock.run_for(self.VIMEO_MS + 10)
+            page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
         else:
             page.evaluate("window._vimeoPlayer._fire('seeked', {})")
         assert self._state(page) == "visible"
@@ -5295,7 +5325,7 @@ class TestFullscreenCursorIdle:
         self._focus_probe(page)
         w, h = self._size(page)
         page.mouse.move(w // 2, h // 2)
-        page.clock.run_for(self.VIMEO_MS + 10)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
         page.mouse.move(w // 2 + 10, h // 2)
         assert page.evaluate("document.activeElement.id") == "focus-probe"
         self._hide(page)

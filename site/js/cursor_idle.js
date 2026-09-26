@@ -19,10 +19,12 @@
 // altogether, since Vimeo's menus (a long subtitle list among them) open
 // upwards over the video. The page is blind to the pointer then, so the
 // shield comes back when the player reports a change — a menu choice, a
-// button — or when FS_VIMEO_MODE_MS pass without one. Back by an event, the
-// menu has closed and the page may take focus back. Back by timeout, a menu
-// may still be open under the shield, and taking focus would close it, so
-// the first press on the shield only does that (menuMayBeOpen).
+// button — or when FS_VIMEO_MODE_MS pass without one, counted from the last
+// click that opened a menu. Back by an event, the menu has closed and the
+// page takes focus back. Back by timeout, a menu may still be open under the
+// shield: the page takes focus back (closing it) only once the pointer is
+// off the shield or the cursor hides, and until then the first press on the
+// shield only closes it (menuMayBeOpen).
 //
 // In CSS the shield carries the bar's height as --fs-vimeo-bar-h.
 
@@ -34,10 +36,10 @@ var FS_DOUBLE_PRESS_MS = 500;
 var FS_MOVE_SLOP_PX = 4;
 // How long focus going into the player waits for a player event before it
 // counts as a menu opening: a button click reports itself up to this long
-// after its focus reaches the page.
+// after the page loses focus to the player.
 var FS_FOCUS_SETTLE_MS = 300;
 // How long after the shield comes back its :hover is settled — once it has
-// been laid out under the pointer (two frames).
+// been laid out and hit-tested under the pointer, a few frames.
 var FS_HOVER_SETTLE_MS = 100;
 
 // Where the player draws the video inside `rect` (the shield's client rect):
@@ -182,9 +184,10 @@ function createCursorIdle(opts) {
       if (onShield()) handOver();
     },
     // Keyboard focus went into the player at `since` and is still there: a
-    // click in the hole. One that reported no player event opened a menu.
+    // click in the hole or on the bar. One that reported no player event
+    // opened a menu, and Vimeo mode runs its full spell from that click.
     focusedIntoPlayer: function(since) {
-      if (onShield() && lastEventAt < since) handOver();
+      if (active && lastEventAt < since) handOver();
     },
     // Play/pause, a seek, a subtitle, quality or speed change. Only
     // ends Vimeo mode: the keyboard drives the player too, and only the mouse

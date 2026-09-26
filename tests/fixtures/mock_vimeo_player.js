@@ -7,6 +7,8 @@ window.Vimeo = {
       this._currentTime = 0;
       this._duration = 3600;
       this._callbacks = {};
+      // The embed URL the SPA gave the player, for tests of the player's options.
+      this._src = element && element.getAttribute ? element.getAttribute('src') : null;
       // Replace the iframe with a visible div that honors the real CSS
       // layout around it (width/height inherited via 100% from the mount).
       // A tiny min-height keeps the mock reachable even when the mount
