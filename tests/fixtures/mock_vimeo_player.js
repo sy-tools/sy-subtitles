@@ -3,6 +3,7 @@
 window.Vimeo = {
   Player: class {
     constructor(element) {
+      if (window.__mockPlayerThrows) throw new Error('mock: the SDK could not build a player');
       this._currentTime = 0;
       this._duration = 3600;
       this._callbacks = {};
@@ -23,8 +24,17 @@ window.Vimeo = {
         document.body.appendChild(div);
       }
       window._vimeoPlayer = this;
+      (window.__mockPlayers = window.__mockPlayers || []).push(this);
     }
-    ready() { return Promise.resolve(); }
+    // A test fails the load with window.__mockReadyReject, or with
+    // window.__mockReadyHeld settles each player's ready() itself, via _settle.
+    ready() {
+      if (window.__mockReadyReject) return Promise.reject(new Error('mock: the player failed to load'));
+      if (!window.__mockReadyHeld) return Promise.resolve();
+      var self = this;
+      if (!self._held) self._held = new Promise(function(resolve, reject) { self._settle = {resolve: resolve, reject: reject}; });
+      return self._held;
+    }
     pause() {
       var wasPaused = this._paused !== false;
       this._paused = true;
@@ -44,10 +54,35 @@ window.Vimeo = {
       this._callbacks[event].push(callback);
     }
     getCurrentTime() { return Promise.resolve(this._currentTime); }
-    getDuration() { return Promise.resolve(this._duration); }
+    // The metadata length, as Vimeo's getDuration() reports it at ready (the
+    // SPA asks it then), before playback loads the media: a whole number of seconds
+    // that can run past the media's true end (see _setMediaDuration). A test
+    // delays the answer with window.__mockDurationDelayMs and waits on
+    // window.__mockDurationAnswered to know it has landed.
+    getDuration() {
+      var d = this._duration, ms = window.__mockDurationDelayMs;
+      if (!ms) return Promise.resolve(d);
+      return new Promise(function(resolve) {
+        setTimeout(function() { resolve(d); }, ms);
+      }).then(function(v) {
+        // Flagged on a later task, so the SPA's own .then has run first.
+        setTimeout(function() { window.__mockDurationAnswered = true; }, 0);
+        return v;
+      });
+    }
+    // Intrinsic size; a test picks another shape via window.__mockVideoSize.
+    getVideoWidth() { return Promise.resolve((window.__mockVideoSize || [1280, 720])[0]); }
+    getVideoHeight() { return Promise.resolve((window.__mockVideoSize || [1280, 720])[1]); }
     _fire(event, data) {
       var cbs = this._callbacks[event] || [];
       for (var i = 0; i < cbs.length; i++) cbs[i](data);
+    }
+    // Test helper: the media's true length arrives, as Vimeo's 'durationchange'
+    // does once playback loads the media. (The real getDuration() also answers
+    // with it from then on; this mock keeps the metadata, as the SPA only asks
+    // at ready.)
+    _setMediaDuration(seconds) {
+      this._fire('durationchange', { duration: seconds });
     }
     // Test helper: set time and fire timeupdate
     _setTime(seconds) {

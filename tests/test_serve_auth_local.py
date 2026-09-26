@@ -26,12 +26,10 @@ from tools import serve_auth_local
 def stand():
     """The real server on an ephemeral port, torn down after the test."""
     import functools
-    import socketserver
 
     serve_auth_local.Handler.script = serve_auth_local.injection("http://x/exchange", "", "")
     handler = functools.partial(serve_auth_local.Handler, directory=serve_auth_local.SITE_DIR)
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("127.0.0.1", 0), handler) as httpd:
+    with serve_auth_local.SpaHTTPServer(("127.0.0.1", 0), handler) as httpd:
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)
         thread.start()
         try:

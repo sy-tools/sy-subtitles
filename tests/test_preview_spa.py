@@ -11,6 +11,7 @@ from urllib.parse import quote, unquote
 import pytest
 import yaml
 
+from tools.serve_auth_local import SpaHTTPServer
 from tools.vimeo_codec import decode_video_ref
 
 pytestmark = pytest.mark.e2e
@@ -144,12 +145,13 @@ def server(spa_path):
                 return
             super().do_GET()
 
-    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    httpd = SpaHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     t = threading.Thread(target=httpd.serve_forever, daemon=True)
     t.start()
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture(scope="module")
@@ -421,6 +423,106 @@ class TestPreviewView:
         )
         h = page.evaluate("document.getElementById('subtitle-overlay').style.getPropertyValue('height')")
         assert h.endswith("px"), f"fullscreen should pin an explicit px height, got {h!r}"
+
+    def test_overlay_fullscreen_repins_when_the_video_box_changes(self, server, page):
+        # The fullscreen font and paddings are fractions of the displayed video,
+        # so rotating a phone (or resizing the window) resizes the text under a
+        # subtitle that is still showing. The pinned height must follow, not
+        # wait for the next subtitle — else the band is left sized for the old
+        # box (on a phone turned upright: a band the full height of the video).
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        # Let the player's async ready() (resume, duration) settle first, or it
+        # can move the time off the subtitle after we set it.
+        page.wait_for_timeout(1000)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.set_viewport_size({"width": 390, "height": 844})
+        page.wait_for_timeout(300)
+        got = page.evaluate("""() => {
+            const ov = document.getElementById('subtitle-overlay');
+            const pinned = parseFloat(ov.style.getPropertyValue('height'));
+            ov.style.removeProperty('height');
+            const natural = ov.offsetHeight;
+            return {pinned, natural, text: ov.textContent};
+        }""")
+        assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
+        assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
+
+    def test_overlay_fullscreen_repins_when_the_video_shape_lands(self, server, page):
+        # The video's aspect can arrive (or change) with the window untouched:
+        # fullscreen entered before player.ready() resolves shows the SRT's
+        # cues at the 16:9 fallback, then --preview-aspect lands. The text is
+        # sized from that box, so the pinned height must follow it too.
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        page.wait_for_timeout(1000)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.evaluate("document.getElementById('view-preview').style.setProperty('--preview-aspect', '4 / 3')")
+        page.wait_for_timeout(300)
+        got = page.evaluate("""() => {
+            const ov = document.getElementById('subtitle-overlay');
+            const pinned = parseFloat(ov.style.getPropertyValue('height'));
+            ov.style.removeProperty('height');
+            const natural = ov.offsetHeight;
+            return {pinned, natural, text: ov.textContent};
+        }""")
+        assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
+        assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
+
+    def test_overlay_fullscreen_repins_when_the_subtitle_face_lands(self, server, page):
+        # The subtitle face is a web font. A cue pinned while the fallback was
+        # drawing (a cold cache, entering fullscreen early) re-flows when the
+        # face lands, and the pin must follow — else the band clips a line or
+        # hangs a line too tall until the next cue.
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        page.wait_for_timeout(1000)
+        # A fallback half again as wide as the face, from the same file: two
+        # lines where the face fits one, on any platform.
+        page.evaluate("""async () => {
+            const wide = new FontFace('Wide Fallback', 'url(fonts/PT_Serif-Web-Regular.ttf)', {sizeAdjust: '150%'});
+            document.fonts.add(wide);
+            await wide.load();
+            const vp = document.getElementById('view-preview');
+            vp.classList.add('fs-mode');
+            vp.style.setProperty('--preview-aspect', '16 / 9');
+            vp.style.setProperty('--f-subtitle', "'Late Subtitle Face', 'Wide Fallback'");
+            const ov = document.getElementById('subtitle-overlay');
+            ov.style.width = '415px';
+            ov.style.padding = '0';
+        }""")
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_function(
+            "document.getElementById('subtitle-overlay').textContent === 'Перший субтитр'",
+            timeout=2000,
+        )
+        page.wait_for_timeout(300)
+        in_fallback = page.evaluate("parseFloat(document.getElementById('subtitle-overlay').style.height)")
+        page.evaluate("""async () => {
+            const face = new FontFace('Late Subtitle Face', 'url(fonts/PT_Serif-Web-Regular.ttf)');
+            document.fonts.add(face);
+            await face.load();
+        }""")
+        page.wait_for_timeout(300)
+        got = page.evaluate("""() => {
+            const ov = document.getElementById('subtitle-overlay');
+            const pinned = parseFloat(ov.style.getPropertyValue('height'));
+            ov.style.removeProperty('height');
+            return {pinned, natural: ov.offsetHeight, text: ov.textContent};
+        }""")
+        assert got["text"] == "Перший субтитр", "the subtitle must still be showing"
+        assert got["natural"] < in_fallback, ("the face must re-flow the cue onto fewer lines", in_fallback, got)
+        assert got["pinned"] == pytest.approx(got["natural"], abs=1), got
 
     def test_overlay_embedded_does_not_pin_height(self, server, page):
         # Embedded keeps the default sizing (const + auto-expand, or the user's
@@ -933,14 +1035,143 @@ class TestFullscreenMode:
         """)
         assert display == "none"
 
-    def test_fs_mode_subtitle_overlay_fixed(self, server, page):
-        """In fullscreen, subtitle overlay should be position:fixed."""
+    def test_fs_mode_subtitle_overlay_sits_in_the_player(self, server, page):
+        """In fullscreen the overlay is positioned in the player container (the
+        box the video is letterboxed in), not in the viewport."""
         self._goto_preview(server, page)
         self._enter_fs(page)
         position = page.evaluate("""
             getComputedStyle(document.getElementById('subtitle-overlay')).position
         """)
-        assert position == "fixed"
+        assert position == "absolute"
+
+    def test_fs_mode_overlay_takes_the_shape_of_the_playing_video(self, server, page):
+        """The fullscreen band is sized from the displayed video, so the video's
+        own aspect must reach the overlay — a 4:3 talk is pillarboxed, and a
+        band spanning the whole screen wraps wider than the burn will."""
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        self._enter_fs(page)
+        got = page.evaluate("""() => ({
+            aspect: getComputedStyle(document.getElementById('view-preview'))
+                .getPropertyValue('--preview-aspect').trim(),
+            width: document.getElementById('subtitle-overlay').getBoundingClientRect().width,
+        })""")
+        assert got["aspect"] == "640 / 480"
+        assert got["width"] == pytest.approx(720 * 4 / 3, abs=1)
+
+    def test_switching_videos_never_falls_back_to_16_9_in_between(self, server, page):
+        """The embedded player is boxed in --preview-aspect too: dropping it
+        while the next video's shape is still on its way snaps a 4:3 player to
+        16:9 and back on every switch."""
+        self._goto_preview(server, page)
+        kept = page.evaluate("""() => {
+            const vp = document.getElementById('view-preview');
+            vp.style.setProperty('--preview-aspect', '640 / 480');
+            const pending = new Promise(() => {});
+            setPreviewAspect({getVideoWidth: () => pending, getVideoHeight: () => pending}, () => true);
+            return vp.style.getPropertyValue('--preview-aspect');
+        }""")
+        assert kept == "640 / 480"
+
+    @pytest.mark.parametrize("player", ["size-rejected", "size-unknown", "no-player"])
+    def test_a_video_whose_shape_never_arrives_falls_back_to_16_9_as_the_burn_does(self, server, page, player):
+        """burnGeometry dispatches a video of unknown size as 16:9, so the
+        preview must not keep drawing the previous video's shape instead."""
+        self._goto_preview(server, page)
+        left = page.evaluate(
+            """async (kind) => {
+            const players = {
+                'size-rejected': {getVideoWidth: () => Promise.reject(new Error('gone')),
+                                  getVideoHeight: () => Promise.resolve(480)},
+                'size-unknown': {getVideoWidth: () => Promise.resolve(0), getVideoHeight: () => Promise.resolve(0)},
+                'no-player': null,
+            };
+            const vp = document.getElementById('view-preview');
+            vp.style.setProperty('--preview-aspect', '640 / 480');
+            setPreviewAspect(players[kind], () => true);
+            await new Promise(r => setTimeout(r, 50));
+            return vp.style.getPropertyValue('--preview-aspect');
+        }""",
+            player,
+        )
+        assert left == ""
+
+    def _switch_video(self, page, slug):
+        """Navigate in-page, the way a reader moves between a talk's videos.
+
+        The mock swaps the player's iframe for #mock-player, and showPreview
+        builds the next player in place of that iframe, so it is put back first.
+        """
+        page.evaluate(
+            "document.getElementById('mock-player').replaceWith(Object.assign(document.createElement('iframe'), {id: 'vimeo-player'}))"
+        )
+        page.evaluate(f"location.hash = '#/preview/2001-01-01_Test-Talk/{slug}'")
+        page.wait_for_function(f"window.previewState && previewState.videoSlug === {slug!r}", timeout=10000)
+
+    def _aspect(self, page):
+        return page.evaluate("document.getElementById('view-preview').style.getPropertyValue('--preview-aspect')")
+
+    def _wait_aspect(self, page, want):
+        page.wait_for_function(
+            f"document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === {want!r}",
+            timeout=5000,
+        )
+
+    def test_moving_to_a_video_without_a_link_drops_the_previous_shape(self, server, page):
+        linkless = SAMPLE_META.replace("  video_ref: r1CRxJTlpYUFZF\n", "")
+        page.route(
+            "**/raw.githubusercontent.com/**/meta.yaml",
+            lambda route: route.fulfill(status=200, content_type="text/plain", body=linkless),
+        )
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        self._goto_preview(server, page)
+        self._wait_aspect(page, "640 / 480")
+
+        self._switch_video(page, "Test-Video-2")
+
+        self._wait_aspect(page, "")
+
+    def test_moving_to_a_video_whose_player_fails_drops_the_previous_shape(self, server, page):
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        self._goto_preview(server, page)
+        self._wait_aspect(page, "640 / 480")
+
+        page.evaluate("window.__mockReadyReject = true")
+        self._switch_video(page, "Test-Video-2")
+
+        self._wait_aspect(page, "")
+
+    def test_moving_to_a_video_whose_player_cannot_be_built_drops_the_previous_shape(self, server, page):
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        self._goto_preview(server, page)
+        self._wait_aspect(page, "640 / 480")
+
+        page.evaluate("window.__mockPlayerThrows = true")
+        self._switch_video(page, "Test-Video-2")
+
+        self._wait_aspect(page, "")
+
+    def test_a_late_failure_of_a_replaced_player_leaves_the_live_players_shape(self, server, page):
+        page.add_init_script("window.__mockVideoSize = [640, 480]; window.__mockReadyHeld = true;")
+        self._goto_preview(server, page)
+        self._switch_video(page, "Test-Video-2")
+        self._switch_video(page, "Test-Video")
+        page.wait_for_function("window.__mockPlayers.length === 3 && window.__mockPlayers[2]._settle")
+        page.evaluate("window.__mockPlayers[2]._settle.resolve()")
+        self._wait_aspect(page, "640 / 480")
+
+        page.evaluate("window.__mockPlayers[0]._settle.reject(new Error('late'))")
+        page.wait_for_timeout(200)
+
+        assert self._aspect(page) == "640 / 480"
+
+    def test_the_subtitle_face_loads_with_the_preview(self, server, page):
+        """Loaded when the preview opens, not when fullscreen first lays a cue
+        out in it — else that cue is drawn in the fallback first."""
+        self._goto_preview(server, page)
+        page.wait_for_function("document.fonts.check('16px \"SY Subtitle Serif\"')", timeout=5000)
 
     def test_fs_mode_subtitle_still_syncs(self, server, page):
         """Subtitles should still update in fullscreen mode."""
@@ -4656,9 +4887,386 @@ class TestUkrainianPlurals:
         assert "всі" not in message
 
 
+class TestFullscreenCursorIdle:
+    """Fullscreen cursor auto-hide (js/cursor_idle.js): after five seconds
+    without pointer activity a shield with `cursor: none` covers the player,
+    and a real pointer move takes it down again. The shield is what lets the
+    page hide the cursor at all — over the cross-origin Vimeo iframe the page
+    can neither style the cursor nor see a mousemove. It goes up a second early
+    with the cursor still showing (the probe): a move then means the pointer
+    was busy over the iframe all along."""
+
+    IDLE_MS = 5000
+    PROBE_MS = 1000
+
+    def _goto_preview(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.clock.install()
+
+    def _set_fs(self, page, on):
+        page.evaluate(
+            f"document.getElementById('view-preview').classList.toggle('fs-mode', {'true' if on else 'false'})"
+        )
+
+    def _shield(self, page):
+        """(display, cursor) of the shield as the browser computes them."""
+        return tuple(
+            page.evaluate(
+                """() => {
+                  const cs = getComputedStyle(document.getElementById('fs-idle-shield'));
+                  return [cs.display, cs.cursor];
+                }"""
+            )
+        )
+
+    def _cursor_hidden(self, page):
+        return self._shield(page) == ("block", "none")
+
+    def _shield_down(self, page):
+        return self._shield(page)[0] == "none"
+
+    def _hit_at_player_centre(self, page):
+        return page.evaluate(
+            """() => {
+              const r = document.getElementById('mock-player').getBoundingClientRect();
+              return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).id;
+            }"""
+        )
+
+    def _hide(self, page):
+        page.clock.run_for(self.IDLE_MS + 100)
+        assert self._cursor_hidden(page)
+
+    def test_cursor_hidden_after_idle_delay_in_fullscreen(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS - 100)
+        assert self._shield_down(page)
+        page.clock.run_for(self.PROBE_MS)
+        assert not self._cursor_hidden(page)
+        page.clock.run_for(200)
+        assert self._cursor_hidden(page)
+        assert self._hit_at_player_centre(page) == "fs-idle-shield"
+
+    def test_probe_shield_keeps_the_cursor_showing(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
+        display, cursor = self._shield(page)
+        assert display == "block"
+        assert cursor != "none"
+
+    def test_move_during_probe_takes_the_shield_down(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
+        page.mouse.move(200, 200)
+        page.mouse.move(240, 220)
+        assert self._shield_down(page)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS - 200)
+        assert self._shield_down(page)
+
+    def test_shield_covers_the_whole_screen(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        box = page.evaluate(
+            """() => {
+              const r = document.getElementById('fs-idle-shield').getBoundingClientRect();
+              return [r.left, r.top, r.width, r.height, innerWidth, innerHeight];
+            }"""
+        )
+        assert box[:4] == [0, 0, box[4], box[5]]
+
+    def test_shield_stays_under_the_subtitles(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        shield_z, overlay_z = page.evaluate(
+            """() => [getComputedStyle(document.getElementById('fs-idle-shield')).zIndex,
+                      getComputedStyle(document.getElementById('subtitle-overlay')).zIndex]"""
+        )
+        assert int(shield_z) < int(overlay_z)
+
+    def test_real_pointer_move_reveals_cursor(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.move(200, 200)
+        page.mouse.move(240, 220)
+        assert self._shield_down(page)
+        assert self._hit_at_player_centre(page) == "mock-player"
+
+    def test_pointer_move_at_rest_position_keeps_cursor_hidden(self, server, page):
+        self._goto_preview(server, page)
+        page.mouse.move(200, 200)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.move(200, 200)
+        page.mouse.move(200, 200)
+        assert self._cursor_hidden(page)
+
+    def test_cursor_hides_again_after_reveal(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.move(200, 200)
+        page.mouse.move(240, 220)
+        assert self._shield_down(page)
+        self._hide(page)
+
+    def test_cursor_hides_while_paused(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.pause()")
+        self._set_fs(page, True)
+        self._hide(page)
+
+    def test_blind_click_toggles_playback(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.click(300, 300)
+        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+
+    def test_click_during_probe_toggles_playback(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
+        page.mouse.click(300, 300)
+        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+
+    def test_shield_stays_up_with_cursor_after_video_click(self, server, page):
+        self._goto_preview(server, page)
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.click(300, 300)
+        display, cursor = self._shield(page)
+        assert display == "block"
+        assert cursor != "none"
+
+    def test_double_click_while_hidden_leaves_fullscreen_and_keeps_playing(self, server, page):
+        """The real player applies play/pause over postMessage, so the second
+        press can land before the first toggle has: the mock defers them."""
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(
+            """() => {
+              const p = window._vimeoPlayer;
+              const pause = p.pause.bind(p), play = p.play.bind(p);
+              p.pause = () => { setTimeout(pause, 30); return Promise.resolve(); };
+              p.play = () => { setTimeout(play, 30); return Promise.resolve(); };
+            }"""
+        )
+        page.mouse.move(300, 300)
+        page.evaluate("SPA.toggleFullscreen()")
+        self._hide(page)
+        page.mouse.dblclick(300, 300)
+        page.clock.run_for(100)
+        assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_click_in_the_control_strip_while_hidden_only_reveals(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        h = page.evaluate("innerHeight")
+        page.mouse.move(300, h - 20)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.click(300, h - 20)
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def _hidden_on_4_3_video(self, server, page, width, height):
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        page.set_viewport_size({"width": width, "height": height})
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
+            timeout=2000,
+        )
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(width // 2, height // 2)
+        self._set_fs(page, True)
+        self._hide(page)
+
+    def test_click_on_the_pillarbox_bars_only_reveals(self, server, page):
+        self._hidden_on_4_3_video(server, page, 1280, 720)
+        page.mouse.click(60, 360)
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_control_strip_follows_the_letterboxed_video_not_the_screen(self, server, page):
+        """A 4:3 video on an 800x900 screen ends at y=750; Vimeo's bar hangs
+        off that edge, 150 px above the screen's bottom."""
+        self._hidden_on_4_3_video(server, page, 800, 900)
+        page.mouse.click(400, 720)
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_shield_takes_keyboard_focus_back_from_the_player(self, server, page):
+        """A click on the bare player leaves focus inside its iframe, where the
+        page's shortcuts and key tracking go blind."""
+        self._goto_preview(server, page)
+        page.evaluate(
+            """() => {
+              const f = document.createElement('iframe');
+              f.id = 'focus-probe';
+              f.style.visibility = 'visible';
+              document.querySelector('#view-preview .video-wrap').appendChild(f);
+              f.focus();
+            }"""
+        )
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_ctrl_click_while_hidden_does_not_toggle_playback(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.keyboard.down("Control")
+        page.mouse.click(300, 300)
+        page.keyboard.up("Control")
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_touch_press_while_hidden_only_reveals(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        self._set_fs(page, True)
+        self._hide(page)
+        page.evaluate(
+            """() => document.getElementById('fs-idle-shield').dispatchEvent(
+                 new PointerEvent('pointerdown', {pointerType: 'touch', button: 0, bubbles: true}))"""
+        )
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    @pytest.mark.parametrize("event", ["seeked", "volumechange"])
+    def test_player_change_without_a_key_reveals_cursor(self, server, page, event):
+        """A drag on Vimeo's own seek or volume bar keeps the pointer inside
+        the iframe; the change it makes is all the page gets to see."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.evaluate(f"window._vimeoPlayer._fire('{event}', {{}})")
+        assert self._shield_down(page)
+
+    def test_right_click_while_hidden_does_not_toggle_playback(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.click(300, 300, button="right")
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+
+    def test_blind_click_on_a_dialog_above_does_not_toggle_playback(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.evaluate(
+            """() => {
+              const b = document.createElement('button');
+              b.id = 'above-fs';
+              b.style.cssText = 'position:fixed;left:250px;top:250px;width:100px;height:100px;z-index:var(--z-modal)';
+              document.body.appendChild(b);
+            }"""
+        )
+        page.mouse.click(300, 300)
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+
+    @pytest.mark.parametrize("event", ["play", "pause", "seeked", "volumechange"])
+    def test_player_activity_postpones_hiding(self, server, page, event):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS - 1000)
+        page.evaluate(f"window._vimeoPlayer._fire('{event}', {{}})")
+        page.clock.run_for(2000)
+        assert self._shield_down(page)
+        self._hide(page)
+
+    def test_keyboard_does_not_reveal_cursor(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.keyboard.press("Space")
+        page.evaluate("window._vimeoPlayer._fire('seeked', {seconds: 42})")
+        assert self._cursor_hidden(page)
+
+    def test_leaving_fullscreen_takes_the_shield_down(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        self._set_fs(page, False)
+        assert self._shield_down(page)
+
+    def test_no_shield_outside_fullscreen(self, server, page):
+        self._goto_preview(server, page)
+        page.clock.run_for(self.IDLE_MS * 3)
+        assert self._shield_down(page)
+
+    def test_toggling_fullscreen_off_takes_the_shield_down(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("SPA.toggleFullscreen()")
+        self._hide(page)
+        page.evaluate("SPA.toggleFullscreen()")
+        assert self._shield_down(page)
+
+    _HOVER_STUB = """
+      (() => {
+        const real = window.matchMedia.bind(window);
+        const listeners = [];
+        const mq = {
+          media: '(hover: hover)', matches: false,
+          addEventListener: (type, fn) => listeners.push(fn),
+          removeEventListener() {},
+        };
+        window.__setHover = (on) => { mq.matches = on; listeners.forEach((fn) => fn({ matches: on })); };
+        window.matchMedia = (q) => (q === '(hover: hover)' ? mq : real(q));
+      })();
+    """
+
+    def test_no_shield_without_hover(self, server, page):
+        page.add_init_script(self._HOVER_STUB)
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS * 3)
+        assert self._shield_down(page)
+
+    def test_hover_arriving_later_enables_the_shield(self, server, page):
+        page.add_init_script(self._HOVER_STUB)
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.evaluate("window.__setHover(true)")
+        self._hide(page)
+        page.evaluate("window.__setHover(false)")
+        assert self._shield_down(page)
+
+
 class TestEndFreeze:
-    """Fullscreen end-freeze: the player pauses just before the video ends so
-    the Vimeo 'more from this user' end screen never fires (js/end_freeze.js).
+    """End-freeze, embedded and fullscreen alike: the player pauses just before
+    the video ends so the Vimeo 'more from this user' end screen never fires
+    (js/end_freeze.js).
     The mock player reports a 3600s duration; 3599.8 is inside the 0.3s
     epsilon window before the end."""
 
@@ -4681,12 +5289,13 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
 
-    def test_no_freeze_outside_fullscreen(self, server, page):
+    def test_freezes_on_last_frame_embedded(self, server, page):
+        # The end screen shows in the embedded player too: no mode is exempt.
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer.play()")
         page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
         page.wait_for_timeout(300)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert page.evaluate("window._vimeoPlayer._paused") is True
 
     def test_frozen_latch_lets_viewer_play_the_tail(self, server, page):
         self._goto_preview(server, page)
@@ -4701,6 +5310,20 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is False
 
+    def test_rewind_after_freeze_saves_the_resume_position_again(self, server, page):
+        # A paused seek into the last 0.3s freezes (and resets the saved
+        # position, as the end does). Rewinding below the threshold leaves the
+        # end, so the position the reviewer went back to must persist again.
+        self._goto_preview(server, page)
+        page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("previewState._frozen") is True
+        page.evaluate("window._vimeoPlayer._setTime(1500)")
+        page.wait_for_timeout(300)
+        page.evaluate("flushPreviewPos()")
+        pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
+        assert pos == "1500", f"the position rewound to must be saved, got {pos}"
+
     def test_freeze_clears_saved_resume_position(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -4709,6 +5332,38 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
         assert pos in (None, "0"), f"freeze must not persist the end position, got {pos}"
+
+    # Vimeo's getDuration() asked at ready answers with the metadata length, a
+    # whole number of seconds (1591), while the media really ends earlier
+    # (1590.741) — told by 'durationchange' once playback loads the media. A
+    # threshold taken from the metadata leaves the
+    # freeze a 41ms window, or none at all, and the end screen wins.
+    MEDIA_END_SEC = 3599.6
+    INSIDE_MEDIA_WINDOW_SEC = 3599.35
+
+    def test_freezes_before_the_media_end_not_the_metadata_end(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
+
+    def test_late_metadata_length_does_not_override_the_media_length(self, server, page):
+        # The media length can land before getDuration() answers; the rounded
+        # metadata arriving second must not move the threshold back.
+        page.add_init_script("window.__mockDurationDelayMs = 600")
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_function("window._vimeoPlayer && window._vimeoPlayer._callbacks.durationchange", timeout=10000)
+        page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
+        assert page.evaluate("!window.__mockDurationAnswered"), "the metadata must land second"
+        page.wait_for_function("window.__mockDurationAnswered === true", timeout=10000)
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
 
 
 class TestClearAllCount:
@@ -5145,13 +5800,13 @@ class TestSubtitleOverlaySize:
             f"Fullscreen font should grow with subs handle, got small={result['small']}px big={result['big']}px"
         )
 
-    # fs-mode no-drag baseline = clamp(28px, 4vw, 80px). On a 1600px
-    # viewport that's min(80, 64) = 64px; FLOOR_PX leaves ~12% rounding
-    # slack. TINY_PX catches regressions to the embedded base 32px font.
+    # fs-mode no-drag baseline = 4% of the displayed video's width. A 16:9
+    # video fills a 1600x900 viewport, so that's 64px; FLOOR_PX leaves ~12%
+    # rounding slack. TINY_PX catches regressions to the embedded base 32px font.
     FS_MODE_BASELINE_PX = 64
     FS_MODE_BASELINE_FLOOR_PX = 56
     FS_MODE_TINY_PX = 30
-    FS_MODE_FLOOR_PX = 20  # CSS hard floor: drag-down must stay readable.
+    FS_MODE_FLOOR_PX = 20  # drag-down must stay readable.
 
     # Single source of truth for the test-side mirror of applySubsPx — used
     # by every "set the handle to h, read the resulting font" probe so a
@@ -5247,17 +5902,17 @@ class TestSubtitleOverlaySize:
 
     def test_fs_mode_default_matches_baseline(self, server, page):
         """Entering fullscreen WITHOUT having dragged must give the
-        un-tuned baseline `clamp(28px, 4vw, 80px)` — not tiny
+        un-tuned baseline, 4% of the video width — not tiny
         (cascade-fallback bug) and not oversize."""
         self._goto_preview(server, page)
         font_px = self._read_fs_font_px_via_toggle(page, drag_to_h=None)
         assert font_px >= self.FS_MODE_BASELINE_FLOOR_PX, (
             f"fs-mode default font shrank to {font_px}px — expected ≈ "
-            f"{self.FS_MODE_BASELINE_PX}px (4vw on 1600 viewport)"
+            f"{self.FS_MODE_BASELINE_PX}px (4% of a 1600px-wide video)"
         )
-        # Ceiling for the baseline rule clamp(28, 4vw, 80) on a 1600px
-        # viewport is 80px; allow 10px slack for rounding/scrollbars.
-        assert font_px <= 90, f"fs-mode default {font_px}px exceeds the 80px ceiling of clamp(28, 4vw, 80)"
+        # Unscaled, nothing may push it past 4% of the width (64px here);
+        # allow slack for rounding/scrollbars.
+        assert font_px <= 70, f"fs-mode default {font_px}px exceeds 4% of the video width"
 
     def test_fs_mode_smaller_block_shrinks_proportionally(self, server, page):
         """A smaller embedded subtitle block (handle dragged UP — the handle
@@ -5458,18 +6113,20 @@ class TestSubtitleOverlaySize:
         scale_val = float(result["scale"])
         assert 0.5 <= scale_val <= 4, f"scale {scale_val} outside [0.5, 4]"
 
-    def test_fs_mode_22vh_cap_holds_on_short_viewport(self, server, page):
-        """The 22vh hard cap must pin the fs-mode font on a short viewport
-        even with the handle dragged to its largest position. Without the
-        cap, two-line subtitles get pushed off-screen."""
-        # Use a deliberately short viewport so 22vh < 4vw * scale_max.
+    def test_fs_mode_font_cap_holds_on_short_viewport(self, server, page):
+        """The burn's ceiling (FONT_RATIO_MAX of the video height) must pin
+        the fs-mode font even with the handle dragged to its largest
+        position — the preview must not grow past what the burn will draw,
+        and without a cap two-line subtitles get pushed off the frame."""
+        # A short viewport: the 16:9 video is 400px tall (711px wide), so
+        # 0.12 x 400 = 48px sits well under 4% of the width x the scale.
         page.set_viewport_size({"width": 1600, "height": 400})
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
         page.wait_for_selector("#preview-subs-resize", timeout=10000)
         font_px = self._read_fs_font_px_via_toggle(page, drag_to_h=720)
-        # 22vh on 400px viewport = 88px. Allow 1px rounding slack.
-        assert font_px <= 89, f"22vh cap not enforced: font {font_px}px > 88px on a 400px viewport"
+        # Allow 1px rounding slack.
+        assert font_px <= 49, f"font cap not enforced: font {font_px}px > 48px on a 400px-tall video"
 
 
 class TestRepoAutoDetect:
@@ -6371,44 +7028,37 @@ class TestTypoHints:
     def _type_into_first_cell(self, page, text, wait_for_paint=True):
         """Replace the first cell's text and wait for the hints to catch up.
 
-        The wait belongs here, with the edit that causes the repaint, and not in
-        whatever reads the result afterwards. A scan is debounced, so an instant
-        after the edit `typoSeq` has not moved yet — anything comparing it with
-        `typoPaintedSeq` is answered by the paint that came BEFORE the edit and
-        reads the screen as it was. Assertions about what is painted survive
-        that; assertions that nothing is painted do not.
-
         `wait_for_paint=False` is for the one case where no paint is coming
         because the preference is off and nothing is scanning.
         """
-        before = page.evaluate("() => typoPaintedSeq")
-        page.evaluate(
-            """(text) => {
-              var el = document.querySelector('.cell.uk .cell-text');
-              el.focus();
-              el.innerText = text;
-              el.dispatchEvent(new Event('input', { bubbles: true }));
-            }""",
-            text,
-        )
+        edit = """(text) => {
+          var el = document.querySelector('.cell.uk .cell-text');
+          el.focus();
+          el.innerText = text;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }"""
         if wait_for_paint:
-            self._wait_for_repaint(page, before)
+            self._edit_then_wait_for_repaint(page, edit, text)
+        else:
+            page.evaluate(edit, text)
 
-    def _wait_for_repaint(self, page, before):
-        """Wait for a paint LATER than `before` (from `_paint_count`).
+    def _edit_then_wait_for_repaint(self, page, edit, arg=None):
+        """Run `edit` in the page, then wait for the paint of a scan sent after it.
 
-        Later, not merely current: `typoPaintedSeq == typoSeq` is already true
-        while a debounced scan is still pending, so on its own it is satisfied
-        by the paint that preceded whatever the test just did.
+        The wait belongs with the edit, not with whatever reads the result: a
+        scan is debounced, so right after the edit `typoPaintedSeq === typoSeq`
+        still holds for the paint that came BEFORE it. `typoSeq` is read in the
+        same task as the edit, because a reply whose sequence number is not later
+        than that one may have been measured before the edit; only a later one
+        cannot have been. A separate read would let a paint landing between it
+        and the edit pass for the edit's own.
         """
+        sent = page.evaluate(f"(arg) => {{ ({edit})(arg); return typoSeq; }}", arg)
         page.wait_for_function(
-            "(before) => typoPaintedSeq > before && typoPaintedSeq === typoSeq",
-            arg=before,
+            "(sent) => typoPaintedSeq > sent && typoPaintedSeq === typoSeq",
+            arg=sent,
             timeout=15000,
         )
-
-    def _paint_count(self, page):
-        return page.evaluate("() => typoPaintedSeq")
 
     def _painted_words(self, page):
         """What the highlight registry covers. A read, nothing more — whatever
@@ -6701,16 +7351,15 @@ class TestTypoHints:
         self._open_editor_with_hints_on(page, server, lang="uk")
         self._type_into_first_cell(page, "ваші Mати слабшають")
 
-        painted = self._paint_count(page)
-        page.evaluate(
+        self._edit_then_wait_for_repaint(
+            page,
             """() => {
               const el = document.querySelector('.cell.uk .cell-text');
               const b = document.createElement('b');
               b.textContent = el.textContent;
               el.replaceChildren(b);
-            }"""
+            }""",
         )
-        self._wait_for_repaint(page, painted)
         self._hover_the_mixed_word(page)
 
         tip = page.locator("#typo-tip")

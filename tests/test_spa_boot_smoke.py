@@ -21,6 +21,8 @@ from pathlib import Path
 
 import pytest
 
+from tools.serve_auth_local import SpaHTTPServer
+
 pytestmark = [pytest.mark.e2e, pytest.mark.smoke]
 
 SITE = Path(__file__).parent.parent / "site"
@@ -60,11 +62,12 @@ def smoke_server():
                 return
             super().do_GET()
 
-    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    httpd = SpaHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture
@@ -118,7 +121,13 @@ def test_spa_boots_renders_and_is_styled_without_errors(smoke_server, smoke_page
     bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
     assert bg not in _UNSTYLED_BG, f"<body> is unstyled — app CSS did not apply (bg={bg!r})"
 
-    # 3. Nothing threw uncaught while booting.
+    # 3. The burn's geometry reached the stylesheet: the fullscreen band reads
+    #    it from --fs-* with no fallback, and a page that never wrote them would
+    #    draw a band the burn does not reproduce.
+    ratio = page.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--fs-font-w-ratio')")
+    assert ratio.strip(), "the --fs-* burn geometry was never written onto :root\n  " + "\n  ".join(page_errors)
+
+    # 4. Nothing threw uncaught while booting.
     assert not page_errors, "uncaught JS error(s) during boot:\n  " + "\n  ".join(page_errors)
 
 
@@ -142,3 +151,15 @@ def test_the_boot_loader_gives_way_to_the_index(smoke_server, smoke_page):
     assert page.evaluate("!!document.getElementById('index-toolbar').offsetParent"), (
         "the loader let go but the index never rendered"
     )
+
+
+def test_the_styleguide_builds_its_live_catalog_without_errors(smoke_server, smoke_page):
+    page = smoke_page
+    page_errors = []
+    page.on("pageerror", lambda e: page_errors.append(str(e)))
+
+    page.goto(f"{smoke_server}/styleguide.html")
+    page.wait_for_load_state("load")
+
+    assert not page_errors, "uncaught JS error(s) in the styleguide:\n  " + "\n  ".join(page_errors)
+    assert page.locator(".burn-seg").count() > 0, "the burn-progress examples were never built"

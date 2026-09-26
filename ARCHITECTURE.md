@@ -57,9 +57,6 @@ sy-subtitles/
 │           └── final/
 │               ├── uk.srt          # Final Ukrainian subtitles
 │               └── report.txt      # Validation report
-├── assets/                         # Vendored binary assets
-│   └── fonts/                      # PT Serif TTF + license — libass reads it via fontsdir,
-│                                   #   so a burned line breaks exactly where the SPA's does
 ├── glossary/                       # Translation knowledge base
 │   ├── terms_lookup.yaml           # 374 EN→UK terms
 │   ├── terms_context.yaml          # Disambiguation context
@@ -70,6 +67,7 @@ sy-subtitles/
 │   ├── whisper_run.py              # Whisper speech detection wrapper
 │   ├── burn_subtitles.py           # SRT → ASS → ffmpeg+libass burned-in video
 │   ├── render_gate.py              # Blocks a burn gate step until the encode passes N%
+│   ├── burn_clip.py                # A burn's clip: the one parser, cue re-basing, rendered span
 │   ├── build_map.py / build_srt.py # Subtitle builder (prepare → LLM → assemble)
 │   ├── builder_data.py             # Whisper / EN-SRT timing query interface
 │   ├── validate_subtitles.py       # SRT validation (text, CPS, overlaps, gaps)
@@ -98,6 +96,8 @@ sy-subtitles/
 │   ├── index.html                  # Preview + Review app shell
 │   ├── js/                         # Plain-JS modules (single source, shared with node --test)
 │   ├── css/                        # Design tokens + components (tokens.css, components.css)
+│   ├── fonts/                      # PT Serif TTF + license — the fullscreen preview AND libass
+│   │                               #   (via fontsdir) draw this one file, so lines break alike
 │   ├── styleguide.html             # Live design-system catalog
 │   ├── sw.js                       # Service worker (offline shell precache)
 │   └── icon.png                    # Mahayantra favicon
@@ -157,7 +157,10 @@ Triggered manually via `workflow_dispatch`. Full pipeline:
    review tracking Issue
 
 ### sync-subtitles.yml
-Triggered on PRs that modify `transcript_uk.txt` **or** `*/final/uk.srt`.
+Triggered on PRs that modify `transcript_uk.txt` **or** `*/final/uk.srt`,
+except `bot/*` branches: a pipeline build regenerates both sides together, so
+there is no reviewer edit to reconcile, and a sync pass would rewrite the
+transcript the build was made from.
 Its bot commit also carries a rebuilt `site/dict/words_uk.txt`: a reviewer's
 edit changes the corpus the wordlist is generated from, so the PR would
 otherwise ship text the typo hints underline.
@@ -195,6 +198,29 @@ status check** on `main`. Requiring a lane directly would wedge any PR whose
 paths skip it, and requiring nothing at all is how a PR whose run never
 arrived merged untested (#1069).
 
+### Bot PRs (`.github/scripts/bot-pr.sh`)
+Pipeline, whisper and review-status results reach `main` as a PR with
+auto-merge, never a direct push, so they pass `gate` like any other change.
+They are opened with a token minted for the bot GitHub App
+(`vars.BOT_APP_ID` + `BOT_APP_PRIVATE_KEY`), not with `GITHUB_TOKEN`:
+GitHub holds every run on a PR that `github-actions[bot]` opened until a person
+approves it, no repository setting lifts that, and a held run never reports
+`gate` — the PR then waits forever. When there is no App token (App not
+configured, or minting failed) the jobs fall back to `GITHUB_TOKEN` and warn
+that the PR needs that approval, rather than losing what the run produced.
+
+The key is a secret of the `main` environment, never a repository secret. That
+environment admits only the `main` branch, so a workflow pushed on another
+branch cannot read it; reaching it takes a commit merged into `main`. The
+minting jobs run in that environment, so running them from a branch needs the
+branch admitted to `main` for the run, exactly as the pipeline's LLM jobs
+already do. The one step that sees the key runs an action pinned to a commit.
+
+`sync-review-status` also waits (`BOT_PR_WAIT_MERGE_SECONDS`) until its PR has
+merged. Its runs are serialized, but issue events come in bursts and every run
+rewrites `updated_at`: a run that branched off `main` before the previous PR
+landed would conflict with it and never auto-merge.
+
 ### deploy-pages.yml
 Deploys `site/` to GitHub Pages on changes under `site/`.
 
@@ -214,12 +240,34 @@ the build/sync stack without burning Claude calls.
 
 ### burn-subtitles.yml
 `workflow_dispatch` from the preview SPA: downloads the video, burns
-`final/uk.srt` into the picture with ffmpeg+libass reproducing the fullscreen
-subtitle look, and uploads the MP4 as a 7-day artifact. Sizing arrives as
-ratios measured in the browser (see `tools/burn_subtitles.py`). `run-name` is
-the talk's human title, so a run is found by eye in the Actions list; the
-caller's `request_id` rides along at the end because `workflow_dispatch`
-returns no run id, and that is how the SPA finds its own run.
+`final/uk.srt` into the picture — the whole video or a clip of it — with
+ffmpeg+libass reproducing the fullscreen subtitle look, and uploads the MP4 as a
+7-day artifact. Sizing arrives as ratios measured in the browser (see
+`tools/burn_subtitles.py`).
+
+**The run name is the record of a render.** The REST API does not return a
+run's `workflow_dispatch` inputs, and the SPA lists a talk's rendered, unexpired
+videos with a single request for this workflow's recent successful runs. So
+whatever that list shows is written into `run-name`: the human label first, so
+a run is found by eye in the Actions list; then talk/video, the actor who
+rendered it, the subtitle scale and the clip; and the caller's `request_id`
+last, because `workflow_dispatch` returns no run id and matching that token is
+how the SPA finds the run it just started. The segments are read from the
+right, since the label is free text and may contain the separator itself.
+`subs_scale` changes nothing in the picture; it is recorded only to be listed.
+
+**A clip is cut by the render, not by the download.** The whole video is still
+downloaded. ffmpeg seeks on the input side, so the output clock starts at zero,
+and the cues are re-based onto that clock before the ASS document is built and
+before the font probe, so both see only what the fragment draws. The gates
+measure the span actually rendered — END clamped to the downloaded file — not
+the source, or a clip would never near 100% and `Finish render` would fail it
+as truncated; for the same reason the final verdict pairs its proportional
+floor with a small absolute slack, since one frame of a short clip outweighs
+the floor. Audio is re-encoded only for a clip: a copied stream can start only
+at one of the source's packets, not at the seek point. Output and artifact
+names do not depend on the clip. `tools/burn_clip.py` is the one parser of the
+`clip` input, shared by the input guard, the burner and the span computation.
 
 **Two refs, on purpose.** The workflow file and `tools/` come from the ref the
 dispatch names — always the deployed SPA's own version. The subtitles come from
@@ -266,6 +314,33 @@ Data sources (zero backend):
 - `raw.githubusercontent.com` → meta.yaml, SRT, transcripts
 - `review-status.json` → review badges (static file, no API cost)
 - `localStorage` → markers, edits, preferences, cache
+
+### Burned videos in the preview
+
+The download menu's video item renders; it never downloads. A click opens two
+choices — the whole video, or a fragment chosen in a floating panel — and while a
+run is followed the item is its progress readout. A finished render is not one
+of its faces: that face used to hide the offer to build for as long as the
+subtitles stayed the same, which is exactly when a reviewer wants a fragment of
+them. The finished video joins the **list of created videos** under the item
+instead, and every download starts from a row of it.
+
+That list is one request for `burn-subtitles.yml`'s successful runs within the
+artifact retention, parsed back out of each run's name
+(`parseBurnRunTitle` in `site/js/burn_video.js`): the run name is the only place
+a render's talk, author, subtitle scale and span survive, because the API does
+not return dispatch inputs. It shows every author's renders of the video on
+screen and names the author only when it is someone else. The SPA and the
+workflow pin the shared shape against each other from both languages
+(`tests/test_burn_video.js` parses the YAML's run-name back;
+`tests/test_burn_workflow.py` pins the separator, the shortest clip and the
+retention).
+
+The fragment panel is deliberately **not modal**: the reviewer finds the
+boundaries by playing and seeking the player underneath it, and its buttons read
+the player's position at millisecond precision. It refuses what the workflow
+would refuse — a render already in flight, edits still syncing, the wrong
+language, an impossible span — before anything is dispatched.
 
 ### Typo hints
 

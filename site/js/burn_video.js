@@ -6,6 +6,14 @@
 
 var BURN_WORKFLOW = 'burn-subtitles.yml';
 
+// The burn's geometry (js/burn_geometry.js): require()d in Node, a global set
+// by its own <script src> in the browser.
+var _burnGeometry = (
+  typeof require !== 'undefined' && typeof module !== 'undefined'
+    ? require('./burn_geometry')
+    : BURN_GEOMETRY
+);
+
 // The branch whose burn-subtitles.yml actually runs. Production always wants
 // the default branch, but a workflow change cannot be exercised from the UI
 // until it is ON that branch — so a run dispatched while testing would execute
@@ -21,8 +29,8 @@ function burnRef(win) {
 }
 
 // The three ratios the workflow requires. Sizing travels as fractions of the
-// displayed video height, never pixels: fullscreen derives its font size from
-// viewport width, so pixels would make the output depend on the monitor.
+// video frame, never pixels: fullscreen draws the band on the displayed video's
+// box, so the same fractions reproduce it on the real frame at any resolution.
 var BURN_RATIO_KEYS = ['font_ratio', 'padtop_ratio', 'padbot_ratio'];
 
 // workflow_dispatch does not return a run id, so we stamp an opaque token into
@@ -59,19 +67,58 @@ function burnRunLabel(talkTitle, videoTitle) {
   return label.slice(0, RUN_LABEL_MAX - 1) + '…';
 }
 
+// How long a burned video stays downloadable: mirrors `retention-days: 7` in
+// burn-subtitles.yml, and a cross-language test pins the two. Past it a run
+// still reads "success", but its file is gone.
+var BURN_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+
+// The shortest fragment a render takes. Mirrors CLIP_MIN_MS in the Python
+// tools, and a cross-language test pins the two — change both or neither.
+var BURN_CLIP_MIN_MS = 1000;
+
+// Nine digits of milliseconds, about 277 hours: where the workflow's clip grammar
+// (tools/burn_clip.py) and BURN_RUN_CLIP_RE below both stop. A longer span would
+// be refused after the wait, or rendered and then never listed.
+var BURN_CLIP_MAX_MS = 999999999;
+
+// The run-name field separator, U+00B7 MIDDLE DOT between spaces. The label
+// ahead of the fields is free text and may contain it too, which is why
+// parseBurnRunTitle reads the fields from the right.
+var BURN_TITLE_SEP = ' · ';
+
+// The subtitle scale travels as a whole percent, inside the band a run name
+// can carry back (parseBurnRunTitle).
+var BURN_SCALE_PCT_MIN = 10;
+var BURN_SCALE_PCT_MAX = 1000;
+
 // `opts.sourceRef` is the ref holding the subtitles to burn; the workflow file
 // itself comes from the ref the dispatch names (see burnRef). It is REQUIRED
 // even though the workflow defaults it to main: a caller that forgot would
 // render the published subtitles while showing the reviewer their edits, and
 // the run would look like a success.
+//
+// `opts.subsScale` is the preview's --preview-subs-scale, REQUIRED for a reason
+// of the same kind: the list of created videos reads the size back out of the
+// run name, so a guessed default would label a 150% video as 100% for as long
+// as it is listed.
+//
+// `opts.clip` is {startMs, endMs} for a fragment, or absent for the whole video.
 function buildBurnInputs(talkId, videoSlug, ratios, requestId, opts) {
   var sourceRef = opts && opts.sourceRef;
   if (typeof sourceRef !== 'string' || !sourceRef) {
     throw new Error('burn: missing source ref');
   }
+  var subsScale = opts.subsScale;
+  if (typeof subsScale !== 'number' || !isFinite(subsScale) || subsScale <= 0) {
+    throw new Error('burn: missing or non-numeric subtitle scale');
+  }
   var inputs = { talk_id: String(talkId), video_slug: String(videoSlug),
                  request_id: String(requestId), source_ref: sourceRef,
-                 run_label: burnRunLabel(opts.talkTitle, opts.videoTitle) };
+                 run_label: burnRunLabel(opts.talkTitle, opts.videoTitle),
+                 subs_scale: String(clampNum(BURN_SCALE_PCT_MIN,
+                                             Math.round(subsScale * 100),
+                                             BURN_SCALE_PCT_MAX)),
+                 clip: burnClipInput(opts.clip) };
   for (var i = 0; i < BURN_RATIO_KEYS.length; i++) {
     var key = BURN_RATIO_KEYS[i];
     var value = ratios ? ratios[key] : undefined;
@@ -82,6 +129,20 @@ function buildBurnInputs(talkId, videoSlug, ratios, requestId, opts) {
     inputs[key] = String(value);
   }
   return inputs;
+}
+
+// '' for the whole video — empty, not omitted, the same rule as run_label —
+// else START-END in whole milliseconds. A span the render would refuse throws
+// here, instead of dispatching a run that is refused after the wait.
+function burnClipInput(clip) {
+  if (clip == null) return '';
+  var start = clip.startMs;
+  var end = clip.endMs;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0
+      || end - start < BURN_CLIP_MIN_MS || end > BURN_CLIP_MAX_MS) {
+    throw new Error('burn: invalid clip');
+  }
+  return start + '-' + end;
 }
 
 // Match on a word boundary so 'req-A' never matches a run titled 'req-A-EXTRA'.
@@ -103,17 +164,146 @@ function burnStateKey(talkId, videoSlug) {
   return 'sy.burn.' + talkId + '.' + videoSlug;
 }
 
-// Mirrors the fullscreen CSS in components.css:
-//   font-size: clamp(20px, calc(clamp(28px, 4vw, 80px) * var(--preview-subs-scale, 1)), 22vh)
-//   padding-top: 80px; padding-bottom: 36px
-// Kept as named constants so a CSS change has one obvious counterpart here.
-var FS_FONT_MIN_PX = 28;
-var FS_FONT_MAX_PX = 80;
-var FS_FONT_VW = 0.04;
-var FS_FONT_FLOOR_PX = 20;
-var FS_FONT_VH_CAP = 0.22;
-var FS_PADTOP_PX = 80;
-var FS_PADBOT_PX = 36;
+// The shapes a run-name field must have. Talk and slug mirror TALK_ID_RE and
+// VIDEO_SLUG_RE in tools/workflow_validation.py; the actor is a GitHub login,
+// with the [bot] suffix an App acting as one carries; the request id is what
+// makeRequestId produces. A clip span has no leading zeros, so one span has
+// exactly one spelling.
+var BURN_RUN_PLACE_RE = /^(\d{4}-\d{2}-\d{2}_[A-Za-z0-9_.-]{1,80})\/([A-Za-z0-9_][A-Za-z0-9_.-]{0,63})$/;
+var BURN_RUN_ACTOR_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$/;
+var BURN_RUN_SCALE_RE = /^([1-9][0-9]{1,3})%$/;
+var BURN_RUN_CLIP_RE = /^(0|[1-9][0-9]{0,8})-([1-9][0-9]{0,8})$/;
+var BURN_RUN_REQUEST_RE = /^req-[a-z0-9]+-[a-z0-9]+$/;
+
+// A run name read back into the fields the list of created videos shows, or
+// null. Every run is named
+//   {label} · {talk_id}/{video_slug} · {actor} · {subs_scale}% · {START-END or full} · {request_id}
+// so the runs list alone describes every video. The label is a free-text title
+// that may contain the separator itself, so the five fields are taken from the
+// RIGHT and whatever is left over is the label. A name that does not fit is
+// not a video the list can describe — the old two-segment "label · request_id"
+// among them, which carries no talk, author or size.
+function parseBurnRunTitle(title) {
+  if (typeof title !== 'string') return null;
+  // Cut from the RIGHT, one separator at a time, rather than split left to
+  // right and keep the tail: a label may not only CONTAIN the separator but end
+  // in half of one ("Ganesha Puja ·"). A split then takes the label's own
+  // " · " as the first separator, reads every field one place over, and the
+  // video that run made is missing from the list for good. No field may contain
+  // a space, so the five cuts can only land between fields.
+  var fields = [];
+  var label = title;
+  for (var f = 0; f < 5; f++) {
+    var at = label.lastIndexOf(BURN_TITLE_SEP);
+    if (at < 0) return null;
+    fields.unshift(label.slice(at + BURN_TITLE_SEP.length));
+    label = label.slice(0, at);
+  }
+  var place = BURN_RUN_PLACE_RE.exec(fields[0]);
+  var scale = BURN_RUN_SCALE_RE.exec(fields[2]);
+  if (!place || !BURN_RUN_ACTOR_RE.test(fields[1]) || !scale
+      || !BURN_RUN_REQUEST_RE.test(fields[4])) {
+    return null;
+  }
+  var scalePct = Number(scale[1]);
+  if (scalePct < BURN_SCALE_PCT_MIN || scalePct > BURN_SCALE_PCT_MAX) return null;
+  var clip = null;
+  if (fields[3] !== 'full') {
+    var span = BURN_RUN_CLIP_RE.exec(fields[3]);
+    if (!span || Number(span[1]) >= Number(span[2])) return null;
+    clip = { startMs: Number(span[1]), endMs: Number(span[2]) };
+  }
+  return { label: label, talkId: place[1],
+           videoSlug: place[2], actor: fields[1], scalePct: scalePct, clip: clip,
+           requestId: fields[4] };
+}
+
+// The created videos of one talk + video, newest first, out of the runs
+// listBurnRuns returns (every talk, every author, the retention week). Each
+// rule stops one way of listing a video wrongly:
+//   conclusion  the query asks for success, but a stale or odd payload must not
+//               offer the file of a run that never uploaded one;
+//   retention   past seven days a success has no file left to download;
+//   run id      pages are fetched one after another, and a run finishing in
+//               between shifts the list, so one run can arrive on two pages.
+// `mine` marks the viewer's own videos, which the row shows without an author.
+// GitHub logins are case-insensitive, and a viewer with no login owns nothing.
+function burnHistoryEntries(runs, q) {
+  var list = runs || [];
+  var login = q.login ? String(q.login).toLowerCase() : '';
+  var seen = {};
+  var entries = [];
+  for (var i = 0; i < list.length; i++) {
+    var run = list[i];
+    if (!run || run.conclusion !== 'success') continue;
+    var parsed = parseBurnRunTitle(run.display_title || run.name);
+    if (!parsed || parsed.talkId !== q.talkId || parsed.videoSlug !== q.videoSlug) continue;
+    var createdMs = Date.parse(run.created_at);
+    // A run the viewer's slow clock places in the future is kept: the check
+    // bounds age, not time of day.
+    if (!isFinite(createdMs) || !(q.nowMs - createdMs < BURN_RETENTION_MS)) continue;
+    if (seen[run.id]) continue;
+    seen[run.id] = true;
+    entries.push({
+      runId: run.id,
+      // No run URL: a row is a download, not a link to the Actions run. Carrying
+      // one meant carrying the https guard that keeps an unexpected value out of
+      // an href, for a value nothing rendered — a guard nobody can see working is
+      // a guard nobody will notice failing. Add both back together, or neither.
+      createdMs: createdMs,
+      actor: parsed.actor,
+      mine: !!login && parsed.actor.toLowerCase() === login,
+      scalePct: parsed.scalePct,
+      clip: parsed.clip,
+      requestId: parsed.requestId
+    });
+  }
+  entries.sort(function(a, b) {
+    return (b.createdMs - a.createdMs) || (b.runId - a.runId);
+  });
+  return entries;
+}
+
+// The runs `created` filter bound for the retention week, as a date-time to the
+// second (the filter takes a full date-time, not only a date). Dropping the
+// milliseconds moves the bound earlier, never later: it can only fetch a run
+// burnHistoryEntries then drops, never miss one it would list.
+function burnHistorySince(nowMs) {
+  return new Date(nowMs - BURN_RETENTION_MS).toISOString().slice(0, 19) + 'Z';
+}
+
+// What is wrong with a chosen fragment, as an i18n key, or '' when nothing is.
+// Only the first problem, in the order it has to be fixed: an end cannot be
+// judged against a start that is not a time, nor a length against a span that
+// runs backwards. The end is held to the video only when its duration is known.
+//
+// BURN_CLIP_MAX_MS is judged AFTER the video's own length, which is the closer
+// bound and the more useful sentence wherever it is known. It is judged at all
+// because the length often is NOT known — the player answers late, or not at
+// all — and a bound past the render's own grammar was then accepted here and
+// thrown out by burnClipInput, whose "burn: invalid clip" is an English
+// exception rather than anything the panel can show. A bound the render cannot
+// carry is not a time it can use, so it is named as one: no new i18n key.
+function burnClipProblem(startMs, endMs, durationMs) {
+  if (typeof startMs !== 'number' || !isFinite(startMs)) return 'clip.bad_start';
+  if (typeof endMs !== 'number' || !isFinite(endMs)) return 'clip.bad_end';
+  if (startMs >= endMs) return 'clip.order';
+  if (typeof durationMs === 'number' && isFinite(durationMs) && durationMs > 0
+      && endMs > durationMs) {
+    return 'clip.past_end';
+  }
+  if (startMs > BURN_CLIP_MAX_MS) return 'clip.bad_start';
+  if (endMs > BURN_CLIP_MAX_MS) return 'clip.bad_end';
+  if (endMs - startMs < BURN_CLIP_MIN_MS) return 'clip.too_short';
+  return '';
+}
+
+// Fullscreen draws the subtitle band on the displayed video's own box — not
+// on the screen — and sizes it in fractions of that box, so the burn can use
+// the very same fractions on the real frame.
+var FS_FONT_WIDTH_RATIO = _burnGeometry.fontWidthRatio;
+var FS_PADTOP_RATIO = _burnGeometry.padTopPx / _burnGeometry.refHeight;
+var FS_PADBOT_RATIO = _burnGeometry.padBotPx / _burnGeometry.refHeight;
 
 // The band the workflow's "Validate inputs" step accepts for font_ratio
 // (.github/workflows/burn-subtitles.yml). The subtitle resize handle allows
@@ -122,44 +312,76 @@ var FS_PADBOT_PX = 36;
 // dies minutes later in validation.
 //
 // The clamp is silent, which is acceptable only because it is exactly what
-// tools/burn_subtitles.py already does to the same value (FONT_RATIO_MIN /
-// FONT_RATIO_MAX there, applied in ass_font_size): the burned output is
-// identical whether the ratio is clamped here or there. Keep all three in step —
-// tests/test_burn_workflow.py pins the numbers across the three files.
-var FONT_RATIO_MIN = 0.02;
-var FONT_RATIO_MAX = 0.12;
+// tools/burn_subtitles.py already does to the same value (in css_font_px): the
+// burned output is identical whether the ratio is clamped here or there.
+var FONT_RATIO_MIN = _burnGeometry.fontRatioMin;
+var FONT_RATIO_MAX = _burnGeometry.fontRatioMax;
 
 function clampNum(min, value, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function fullscreenFontPx(viewportWidth, viewportHeight, subsScale) {
-  var scale = (typeof subsScale === 'number' && isFinite(subsScale) && subsScale > 0)
-    ? subsScale : 1;
-  var base = clampNum(FS_FONT_MIN_PX, FS_FONT_VW * viewportWidth, FS_FONT_MAX_PX);
-  return clampNum(FS_FONT_FLOOR_PX, base * scale, FS_FONT_VH_CAP * viewportHeight);
-}
-
-// A <video>/iframe letterboxes: whichever axis binds first decides the height
-// the viewer actually sees, and that is what the ratios are relative to.
-function displayedVideoHeight(viewportWidth, viewportHeight, videoWidth, videoHeight) {
-  if (!(videoWidth > 0) || !(videoHeight > 0)) return viewportHeight;
-  var byWidth = viewportWidth * (videoHeight / videoWidth);
-  return Math.min(viewportHeight, byWidth);
-}
-
+// Nothing about the screen enters: the band is a fraction of the video, so a
+// phone and a desktop dispatch the same render. Only the video's aspect and the
+// handle's scale matter; 16:9 and 1x stand in for what is unknown.
 function measureBurnRatios(geometry) {
   var g = geometry || {};
-  var vw = g.viewportWidth > 0 ? g.viewportWidth : 1920;
-  var vh = g.viewportHeight > 0 ? g.viewportHeight : 1080;
-  var shown = displayedVideoHeight(vw, vh, g.videoWidth, g.videoHeight) || vh;
+  var aspect = (g.videoWidth > 0 && g.videoHeight > 0) ? g.videoWidth / g.videoHeight : 16 / 9;
+  var scale = (typeof g.subsScale === 'number' && isFinite(g.subsScale) && g.subsScale > 0)
+    ? g.subsScale : 1;
   return {
-    font_ratio: clampNum(FONT_RATIO_MIN,
-                         fullscreenFontPx(vw, vh, g.subsScale) / shown,
-                         FONT_RATIO_MAX),
-    padtop_ratio: FS_PADTOP_PX / shown,
-    padbot_ratio: FS_PADBOT_PX / shown,
+    font_ratio: clampNum(FONT_RATIO_MIN, FS_FONT_WIDTH_RATIO * aspect * scale, FONT_RATIO_MAX),
+    padtop_ratio: FS_PADTOP_RATIO,
+    padbot_ratio: FS_PADBOT_RATIO,
   };
+}
+
+// The fullscreen band's CSS (components.css) draws with these properties and
+// has no fallback for them: a page that never wrote them fails the boot smoke
+// (tests/test_spa_boot_smoke.py) rather than drawing a band the burn does not
+// reproduce. The side pad is the burner's wrap limit: its insets, then its
+// wrapSafety headroom inside them.
+function applyBurnGeometry(style) {
+  var g = _burnGeometry;
+  var props = {
+    '--fs-font-w-ratio': g.fontWidthRatio,
+    '--fs-font-min': g.fontRatioMin,
+    '--fs-font-max': g.fontRatioMax,
+    '--fs-padtop-ratio': FS_PADTOP_RATIO,
+    '--fs-padbot-ratio': FS_PADBOT_RATIO,
+    '--fs-side-pad-ratio': (1 - g.wrapSafety * (1 - 2 * g.sideInsetRatio)) / 2,
+    '--fs-line-advance': g.lineAdvance,
+  };
+  Object.keys(props).forEach(function(name) { style.setProperty(name, String(props[name])); });
+}
+
+// The words tools/burn_subtitles.py wraps: `text.split()` — any whitespace run
+// is one gap and nothing else is. A browser also breaks after a hyphen, a dash
+// or a slash ("Нью-" / "Йорка"), which the burner never does, so fullscreen
+// lays the text out from these words (fillFullscreenSubtitle) and breaks only
+// where the burn can.
+function burnWords(text) {
+  return String(text == null ? '' : text).split(/\s+/).filter(Boolean);
+}
+
+// Fill the fullscreen band: each word in a no-break box, joined by plain
+// spaces — the only break opportunities left are the burner's. All of it in
+// one wrapper: the band is a flex container, and loose words would each become
+// a flex item that never wraps (one text node used to be one item).
+function fillFullscreenSubtitle(el, text) {
+  var doc = el.ownerDocument;
+  var words = burnWords(text);
+  var line = doc.createElement('span');
+  line.className = 'fs-text';
+  for (var i = 0; i < words.length; i++) {
+    if (i) line.appendChild(doc.createTextNode(' '));
+    var span = doc.createElement('span');
+    span.className = 'fs-word';
+    span.textContent = words[i];
+    line.appendChild(span);
+  }
+  el.textContent = '';
+  el.appendChild(line);
 }
 
 // Weights per workflow step. Names must match burn-subtitles.yml exactly —
@@ -538,6 +760,12 @@ function computeProgress(job, nowMs) {
   return result;
 }
 
+// In the page, as soon as this module loads — before any view renders, and
+// with nothing else in the way that could throw first.
+if (typeof document !== 'undefined' && document.documentElement) {
+  applyBurnGeometry(document.documentElement.style);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     BURN_WORKFLOW: BURN_WORKFLOW,
@@ -550,14 +778,23 @@ if (typeof module !== 'undefined' && module.exports) {
     RUN_LABEL_MAX: RUN_LABEL_MAX,
     matchRun: matchRun,
     burnStateKey: burnStateKey,
+    BURN_RETENTION_MS: BURN_RETENTION_MS,
+    BURN_CLIP_MIN_MS: BURN_CLIP_MIN_MS,
+    BURN_CLIP_MAX_MS: BURN_CLIP_MAX_MS,
+    BURN_TITLE_SEP: BURN_TITLE_SEP,
+    parseBurnRunTitle: parseBurnRunTitle,
+    burnHistoryEntries: burnHistoryEntries,
+    burnHistorySince: burnHistorySince,
+    burnClipProblem: burnClipProblem,
     FONT_RATIO_MIN: FONT_RATIO_MIN,
     FONT_RATIO_MAX: FONT_RATIO_MAX,
-    FS_FONT_MAX_PX: FS_FONT_MAX_PX,
-    FS_PADTOP_PX: FS_PADTOP_PX,
-    FS_PADBOT_PX: FS_PADBOT_PX,
-    fullscreenFontPx: fullscreenFontPx,
-    displayedVideoHeight: displayedVideoHeight,
+    FS_FONT_WIDTH_RATIO: FS_FONT_WIDTH_RATIO,
+    FS_PADTOP_RATIO: FS_PADTOP_RATIO,
+    FS_PADBOT_RATIO: FS_PADBOT_RATIO,
     measureBurnRatios: measureBurnRatios,
+    applyBurnGeometry: applyBurnGeometry,
+    burnWords: burnWords,
+    fillFullscreenSubtitle: fillFullscreenSubtitle,
     BURN_STEP_WEIGHTS: BURN_STEP_WEIGHTS,
     BURN_RENDER_BLOCK: BURN_RENDER_BLOCK,
     burnPhases: burnPhases,

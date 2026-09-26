@@ -499,12 +499,21 @@ body.sync-player-resizing, body.sync-player-resizing * {
 #view-preview.fs-mode .header { display: none !important; }
 #view-preview.fs-mode .preview-list { display: none !important; }
 #view-preview.fs-mode #btn-mark { display: none !important; }
-#view-preview.fs-mode .player-container { flex: 1; max-width: 100%; margin: 0; width: 100%; display: flex; flex-direction: column; overflow: hidden; }
+#view-preview.fs-mode .player-container { flex: 1; max-width: 100%; margin: 0; width: 100%; display: flex; flex-direction: column; overflow: hidden; container-type: size; }
 #view-preview.fs-mode .video-wrap { flex: 1; padding-bottom: 0; height: 100%; }
 #view-preview.fs-mode .video-wrap iframe,
 #view-preview.fs-mode .video-wrap > div { position: relative; width: 100%; height: 100%; }
-#view-preview.fs-mode #subtitle-overlay { position: fixed; bottom: 0; left: 0; width: 100%; z-index: 10000; font-size: clamp(28px, 4vw, 80px); background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 40px 10% 28px; min-height: 0; border-radius: 0; text-shadow: 0 2px 6px rgba(0,0,0,1); pointer-events: none; }
+#view-preview.fs-mode #subtitle-overlay { position: absolute; z-index: 10000; min-height: 0; border-radius: 0; pointer-events: none; }
 #view-preview.fs-mode .controls { display: none !important; }
+/* Goes up over the Vimeo iframe only while the pointer looks idle (js/cursor_idle.js):
+   the iframe is cross-origin, so its cursor is out of the page's reach and only
+   an element of ours on top can hide it. Above the iframe (z-index 1), below
+   the subtitles, which stay pointer-transparent over it. While probing the
+   cursor still shows; only a still pointer gets hidden. */
+.fs-idle-shield { display: none; }
+#view-preview.fs-mode .fs-idle-shield[data-state="probe"],
+#view-preview.fs-mode .fs-idle-shield[data-state="hidden"] { display: block; position: absolute; inset: 0; z-index: 2; }
+#view-preview.fs-mode .fs-idle-shield[data-state="hidden"] { cursor: none; }
 body {
   font-family: var(--f-sans);
   font-feature-settings: 'ss01', 'cv11';
@@ -794,11 +803,14 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
 /* Note: --preview-subs-scale is set by JS in applySubsPx() as a unitless
    number. Computing it from --preview-subs-h via calc(length/length) only
    works on Safari ≥ 16.4 / Firefox ≥ 89 — and a single browser without
-   support causes the rule below to fall back to the embedded font, which
-   makes fs-mode look broken. Doing the math in JS avoids the foot-gun. */
+   support leaves the fullscreen band's font-size, which multiplies by it,
+   invalid at computed-value time — it drops to the inherited size, and
+   fs-mode looks broken. Doing the math in JS avoids the foot-gun. */
 
-/* Only once a custom height is set do we enable the scaling behavior. */
-#view-preview[data-subs-tuned="1"] #subtitle-overlay {
+/* Only once a custom height is set do we enable the scaling behavior — in the
+   embedded player only: fullscreen has its own band (below), and this rule
+   would otherwise tie its specificity and win or lose on source order alone. */
+#view-preview:not(.fs-mode)[data-subs-tuned="1"] #subtitle-overlay {
   height: var(--preview-subs-h);
   overflow: hidden;
   /* Font sizing is constrained by BOTH block height AND block width.
@@ -898,6 +910,52 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   margin-top: 10px;
 }
 #view-preview.fs-mode #subtitle-overlay {
+  /* The band sits on the DISPLAYED VIDEO, not on the screen: the player fills
+     .player-container and letterboxes the video inside it, so the video's box
+     is the largest rectangle of its aspect (--preview-aspect, written by
+     setPreviewAspect) that fits the container. Everything below is a fraction
+     of that box, which is exactly what the burn reproduces on the real frame.
+     The fractions are the burn's own (js/burn_geometry.js, written onto :root
+     as --fs-* by applyBurnGeometry) and deliberately have no fallback here: a
+     copy in this file is a number the burn cannot see. Sized from the screen
+     instead, a pillarboxed talk wrapped wider here than in the burn, and a
+     phone dispatched a render with giant text.
+     tests/test_spa_fs_subtitle_box.py holds all of it.
+
+     Container units, not vw/vh: in fullscreen .player-container is a size
+     container, and — the overlay being absolute in it (it is position:
+     relative) — also the box left/bottom are measured in, so position and
+     size share one frame. `fixed` would not: its offsets follow the viewport
+     whatever the container units say, and only coincide while the container
+     happens to fill the screen. */
+  --fs-video-w: min(100cqw, 100cqh * (var(--preview-aspect, 16 / 9)));
+  --fs-video-h: min(100cqh, 100cqw / (var(--preview-aspect, 16 / 9)));
+  left: calc((100cqw - var(--fs-video-w)) / 2);
+  bottom: calc((100cqh - var(--fs-video-h)) / 2);
+  width: var(--fs-video-w);
+  /* The burn's own face and line advance: libass steps one ASS FontSize per
+     line, the geometry's lineAdvance in em. */
+  font-family: var(--f-subtitle);
+  line-height: var(--fs-line-advance);
+  /* ...and nothing the page's own type adds on top: body's tracking and its
+     Inter feature flags would narrow every line by ~1% against the burn's
+     measurement (Pillow, plain advances + kerning) and fit words it cannot. */
+  letter-spacing: normal;
+  font-feature-settings: normal;
+  text-rendering: geometricPrecision;
+  /* A fraction of the video width, held inside the burn's band of the video
+     height. The resize handle's --preview-subs-scale (written by applySubsPx,
+     removed on reset) scales it here as burnGeometry scales the burn. */
+  font-size: clamp(
+    calc(var(--fs-video-h) * var(--fs-font-min)),
+    calc(var(--fs-video-w) * var(--fs-font-w-ratio) * var(--preview-subs-scale, 1)),
+    calc(var(--fs-video-h) * var(--fs-font-max))
+  );
+  /* The sides pad out to the burn's wrap limit, so a line breaks here exactly
+     where the burn breaks it. */
+  padding: calc(var(--fs-video-h) * var(--fs-padtop-ratio))
+           calc(var(--fs-video-w) * var(--fs-side-pad-ratio))
+           calc(var(--fs-video-h) * var(--fs-padbot-ratio));
   /* Deeper, longer gradient so the top of the text also sits on a dark
      enough backdrop — prior version faded to transparent too early and
      bright shots (sky, water) left the first line hard to read. */
@@ -913,14 +971,12 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
   /* Belt-and-braces: a soft shadow keeps letters legible even if the
      gradient ever sits over a near-white frame. */
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85), 0 0 2px rgba(0, 0, 0, 0.9);
-  padding-top: 80px;      /* extend the dark band above the text */
-  padding-bottom: 36px;
-  /* In fullscreen the overlay is fixed to the bottom of the viewport and
-     must size from its content — NEVER from the preview-mode resize var,
-     which is sized for the embedded player, not the viewport. Otherwise
-     a two-line subtitle overflows below the screen. */
+  /* In fullscreen the overlay must size from its content — NEVER from the
+     preview-mode resize var, which is sized for the embedded player, not the
+     video. Otherwise a two-line subtitle overflows below the frame. Capped at
+     the frame, as the burned band is. */
   height: auto !important;
-  max-height: 60vh;
+  max-height: var(--fs-video-h);
   overflow: hidden;
   /* Fullscreen only: the render loop pins an explicit px height every frame
      (measured from content), so subtitle-to-subtitle size changes are px→px and
@@ -928,32 +984,10 @@ body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-sele
      design. The inline `height: Npx !important` set by JS beats the auto above. */
   transition: height 0.2s ease;
 }
-/* Fullscreen mirrors the embedded resize handle: --preview-subs-scale is
-   set by JS as a unitless number; if absent (no drag yet) the fallback 1
-   keeps the original baseline. */
-#view-preview.fs-mode[data-subs-tuned="1"] #subtitle-overlay {
-  font-size: clamp(
-    20px,
-    calc(clamp(28px, 4vw, 80px) * var(--preview-subs-scale, 1)),
-    22vh
-  );
-  height: auto;
-  line-height: 1.25;
-  /* Re-assert the fullscreen side inset. `#view-preview.fs-mode
-     #subtitle-overlay` gives fullscreen a 10% side inset, but
-     `#view-preview[data-subs-tuned="1"] #subtitle-overlay` (written for the
-     embedded resized block) has equal specificity, sits later, and its
-     `padding: 16px 24px` shorthand wins once the user has dragged the subtitle
-     handle. This rule is more specific than both, so re-asserting the inset here
-     restores it. Keep the 10% in sync with the fs-mode rule above and with
-     SIDE_INSET_RATIO in tools/burn_subtitles.py.
-
-     Selectors, not line numbers: the numbers this comment used to carry had
-     already drifted by nine lines. */
-  padding-left: 10%;
-  padding-right: 10%;
-}
-
+/* One word per box (fillFullscreenSubtitle): the spaces between them are the
+   only places a line may break — the burner's text.split() — never after a
+   hyphen or a dash inside a word. */
+#view-preview.fs-mode #subtitle-overlay .fs-word { white-space: nowrap; }
 /* Focus ring — warm */
 button:focus-visible, a:focus-visible,
 input:focus-visible, select:focus-visible, textarea:focus-visible,
@@ -1318,22 +1352,11 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
   animation: burn-seg-breathe 1.6s ease-in-out infinite alternate;
 }
 @keyframes burn-seg-breathe { from { opacity: 0.16; } to { opacity: 0.45; } }
-.export-item-group--done .burn-seg__fill { background: var(--accent-green); }
-/* While the finished video transfers to disk the same track shows the transfer
-   instead, as one span. It must NOT be green: the group still carries --done
-   from the render that produced the file, and green is the colour of "already
-   there" — creeping across while a few hundred megabytes are still moving, it
-   says the opposite of the label above it. Same specificity as the rule above,
-   so this must stay below it. */
-.export-item-group--transfer .burn-seg__fill { background: var(--sync-progress); }
 /* The failed mark is on the segment BODY, not its fill: a run that died in its
    first gate has a zero-width fill, and red that only lived there would show
    nothing at all. */
 .burn-seg--failed { background: var(--danger-bg); box-shadow: inset 0 0 0 1px var(--accent-red); }
 .burn-seg--failed .burn-seg__fill { background: var(--accent-red); }
-/* Expired: the artifact is gone, so the whole track goes quiet rather than
-   sitting there looking like a finished render. */
-.export-item-group--expired .burn-seg__fill { background: var(--border3); transition: none; }
 /* Dot separators live between ADJACENT NON-EMPTY spans, so an absent elapsed or
    ETA leaves no leading or doubled dot. */
 .export-item__meta > span:not(:empty) ~ span:not(:empty)::before {
@@ -1361,6 +1384,244 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
      text update, which needs no motion. The tint stays: on an empty segment it
      still says which phase is running. */
   .burn-seg--active.burn-seg--empty::after { animation: none; opacity: 0.35; }
+}
+
+/* ── Export menu: the two errands under "Create the video" ──────────────────
+   The video item opens a whole-video and a fragment choice instead of
+   dispatching. They fly out to the LEFT: the menu hangs from the header's right
+   edge, so the right is off-screen, and unfolding downwards would shove the list
+   of created videos away from a pointer travelling towards it. */
+.export-sub { position: relative; }
+.export-item__chevron { display: inline-flex; color: var(--fg5); }
+.export-item__chevron svg { display: block; }
+.export-submenu {
+  position: absolute;
+  /* Border and padding above the first choice, so its text lines up with the
+     item it came out of. */
+  top: calc(-1 * var(--space-2) - 1px);
+  right: calc(100% + var(--space-4));
+  z-index: var(--z-dropdown);
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+.export-submenu[hidden] { display: none; }
+/* An invisible bridge over the gap: a pointer crossing from the item to the
+   choices never leaves the anchor, so the choices do not blink shut mid-way. */
+.export-submenu::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: var(--space-4);
+}
+/* No room to fly out on a phone, and no hover to open it with on a touch
+   screen: there the choices unfold under the item, indented as its
+   continuation, and the chevron turns to say so. */
+@media (max-width: 640px), (hover: none) {
+  .export-submenu {
+    position: static;
+    width: auto;
+    padding: 0 0 0 var(--space-4);
+    background: none;
+    border: 0;
+    box-shadow: none;
+  }
+  .export-submenu::after { content: none; }
+  .export-item__chevron svg { transform: rotate(-90deg); }
+}
+
+/* ── Export menu: the videos already created ─────────────────────────────────
+   Every finished render of this video whose artifact still exists, newest
+   first, by anyone. A row IS a download; its transfer readout is the row's own
+   continuation, the way the render readout is the video item's. */
+.export-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+.export-history[hidden] { display: none; }
+.export-history__title { margin: 0 var(--space-3); font-size: var(--text-xs); color: var(--fg4); }
+/* The loading ring rides in the heading line rather than standing between the
+   heading and the rows, where appearing and vanishing shifted everything below
+   it twice per look. To ride there it must not be able to grow the line box:
+   measured in `em` of this very line, and pinned just below the baseline so
+   its top and bottom both stay inside the strut. No height is reserved on the
+   heading either — a longer translation would simply outgrow it. */
+.export-history__title .spinner {
+  display: inline-block;
+  vertical-align: -0.15em;
+  width: 1em;
+  height: 1em;
+  /* The gap is the literal space in the markup — a margin here would only be a
+     second way to say the same thing. box-sizing: border-box keeps the ring's
+     2px inside the 1em, so it stays as thick as the standalone one: at this
+     size a hairline ring would be a smudge. */
+  margin: 0;
+}
+.export-history__note { margin: var(--space-1) var(--space-3); font-size: var(--text-xs); color: var(--fg4); }
+.export-history__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  /* A busy week must not push the menu off the bottom of the screen. */
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.export-history__list[hidden] { display: none; }
+.export-history__row { display: flex; flex-direction: column; border-radius: var(--radius-sm); }
+/* The highlight belongs to the ROW, not to the button inside it. The note, the
+   track and the error line are siblings of the button, so a tint that stopped
+   at the button left them sitting on the menu ground — and "Video with
+   subtitles downloaded" read as a remark about nothing in particular rather
+   than about the video directly above it. :focus-within is the keyboard's half
+   of the same sentence: the ring says where the focus is, the tint says which
+   row is the reviewer's. */
+.export-history__row:hover,
+.export-history__row:focus-within { background: var(--bg3); }
+/* A row whose bytes are moving refuses a click (paintBurnRow marks it), and a
+   tint under the pointer would promise one. Same specificity as the rule
+   above, so it has to come after it. */
+.export-history__row--busy:hover { background: none; }
+/* The tint makes the row's box visible, and the box was open at the bottom: the
+   button's own padding gives 6px above the first line, and the note had nothing
+   at all below it, so against --bg3 the block read as cropped short instead of
+   as the note's container. The same 6px closes it. Unconditional, not on
+   :hover — correct spacing is correct either way, and a padding that appeared
+   with the pointer would make the row jump under it. paintBurnRow adds the
+   class only when the track, the note or the error line is actually showing, so
+   a row with nothing beneath its button keeps the geometry it always had. */
+.export-history__row--continued { padding-bottom: var(--space-2); }
+/* No second tint on top of the row's: two of them stack into a darker strip
+   behind the button alone, redrawing the very seam the move removed. */
+.export-history__item:hover:not(:disabled) { background: none; }
+.export-history__text { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+/* Tabular digits: a column of times and percentages reads as a column. */
+.export-history__detail { font-size: var(--text-xs); color: var(--fg4); font-variant-numeric: tabular-nums; }
+.export-history__new {
+  align-self: center;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-2xs);
+  color: var(--fg3);
+  background: var(--bg4);
+}
+.export-history__new[hidden] { display: none; }
+.export-history__icon { display: inline-flex; color: var(--fg5); }
+.export-history__icon svg { width: 16px; height: 16px; }
+.export-history__row .burn-track,
+.export-history__row .export-item__meta,
+.export-history__row .burn-panel__error {
+  margin: var(--space-1) var(--space-3) 0;
+}
+.export-history__row .burn-track { height: 5px; }
+/* One span, not four phases: a transfer has no phases. */
+.export-history__row .burn-seg { flex-grow: 1; }
+
+/* ── Spinner ──────────────────────────────────────────────────────────────────
+   The short wait nothing can measure: one request of unknown length. Anything
+   with a measurable end gets a track instead (.burn-track). */
+.spinner {
+  width: 16px;
+  height: 16px;
+  margin: var(--space-2) var(--space-3);
+  border: 2px solid var(--bg4);
+  border-top-color: var(--sync-progress);
+  border-radius: 50%;
+  animation: spinner-turn 0.8s linear infinite;
+}
+.spinner[hidden] { display: none; }
+@keyframes spinner-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  /* Slowed, not stopped: a ring standing still reads as a ring that is stuck. */
+  .spinner { animation-duration: 2.4s; }
+}
+
+/* ── Floating panel ───────────────────────────────────────────────────────────
+   A small tool window that floats over the page WITHOUT blocking it: the
+   fragment panel sits over the player the reviewer keeps using to find the
+   fragment's boundaries. Dragged by its head, clamped to the viewport by
+   js/float_panel.js so the head can never be dragged out of reach. Above the
+   dropdowns, below the modal layer: a confirm it raises lands on top of it. */
+.float-panel {
+  position: fixed;
+  top: var(--space-8);
+  right: var(--space-4);
+  z-index: var(--z-overlay);
+  width: 420px;
+  max-width: calc(100vw - 2 * var(--space-4));
+  display: flex;
+  flex-direction: column;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.float-panel[hidden] { display: none; }
+/* Fullscreen takes the header and every control with it; the panel goes too. */
+#view-preview.fs-mode .float-panel { display: none; }
+.float-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  cursor: move;
+  /* A touch drag on the head moves the panel, never the page under it. */
+  touch-action: none;
+  user-select: none;
+}
+/* Reset to a plain line of text: the page's own heading rules (a rule under an
+   h2, its margins) would draw a second line inside the head. */
+.float-panel__title {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--fg);
+}
+.float-panel__close {
+  display: inline-flex;
+  padding: var(--space-1);
+  color: var(--fg4);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.float-panel__close svg { width: 18px; height: 18px; display: block; }
+.float-panel__close:hover { color: var(--fg2); background: var(--bg4); }
+.float-panel__body { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); }
+/* The fragment's two boundaries, side by side: start on the left, end on the
+   right, each with the button that reads it off the player beneath it. */
+.clip-fields { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.clip-field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.clip-field__label { font-size: var(--text-xs); color: var(--fg4); }
+/* "Встановити поточний час програвача" is longer than half a 420px panel: a
+   button that refuses to wrap spills its label over the neighbouring column. */
+.clip-field .btn { white-space: normal; height: auto; line-height: 1.3; text-align: center; }
+/* Tabular digits, so a boundary nudged by a few milliseconds does not make the
+   whole value shuffle sideways. */
+.clip-field__input { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.clip-panel__problem { margin: 0; font-size: var(--text-xs); color: var(--danger-fg); }
+@media (max-width: 480px) {
+  .clip-fields { grid-template-columns: 1fr; }
 }
 
 /* ── Preferences menu ────────────────────────────────────────────────────────

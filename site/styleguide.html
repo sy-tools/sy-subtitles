@@ -394,9 +394,10 @@ keeps a running render — reopening picks the polling back up.</p>
 
 <h3>The video item is the progress readout</h3>
 <p style="color:var(--fg4)">The second row is not a button beside a progress panel. It wears
-one of four faces — <em>create</em>, <em>building… please wait</em>, <em>download</em>, or
-absent for a session that cannot dispatch — and the render's track, times, run link and
-error line are that row's own continuation, indented to its text.</p>
+one of three faces — <em>create</em>, <em>building… please wait</em>, or absent for a session
+that cannot dispatch — and the render's track, times, run link and error line are that row's
+own continuation, indented to its text. A finished render is <strong>not</strong> a face: its
+video goes to the list of created videos below, which is where every download happens.</p>
 <p style="color:var(--fg4)">The track is <strong>four phase segments with visible seams</strong>,
 each as wide as its share of the work (5 / 15 / 70 / 10). The long middle is visibly the long
 middle: the form itself says "three quick certainties, then one patient stretch". Fills reuse
@@ -416,9 +417,173 @@ ticks every 5s and must stay out of it), and the error line is <code>role="alert
 A failed phase is marked on the segment <em>body</em>, so it shows even at zero fill.</p>
 <div id="sg-burn-panels"></div>
 
+<h3>Two choices under "Create"</h3>
+<p style="color:var(--fg4)">The video item does not dispatch on a click: it opens two choices —
+the whole video, or a fragment of it. <code>.export-submenu</code> flies out to the
+<strong>left</strong> of the menu: the menu hangs from the header's right edge, so the right is
+off-screen, and unfolding downwards would shove the list below away from a pointer heading for
+it. A mouse opens it by hovering, with a short grace period and an invisible bridge over the gap;
+a click, a tap or Enter pins it open. On a narrow or touch screen the choices unfold under the
+item instead, indented, and the chevron turns to point down.</p>
+<div id="sg-export-choices" style="height: 150px; display: flex; justify-content: flex-end; align-items: flex-start"></div>
+
+<h3>Videos already created</h3>
+<p style="color:var(--fg4)">Under the item: every finished render of this video whose artifact
+still exists, by anyone, newest first. A row <strong>is</strong> a download. It says when, then
+whose — but only when it is someone else's — the subtitle size it was made at, and its span or
+"full". The render that finished while the page was open is marked <em>new</em>. While a row
+downloads, its own track and byte counter are its continuation, as the render readout is the
+item's, and a failure is written into that row alone; once the file has landed the row says so
+and still offers the video again. <strong>Hover a row below:</strong> the tint is the
+<code>&lt;li&gt;</code>'s, not the button's, so it covers the note, the track and the error line
+that belong to that video — <code>:focus-within</code> does the same for the keyboard. A row with
+anything beneath its button wears <code>.export-history__row--continued</code>, which closes the
+box under it with the same 6px the button's padding opens it with; without that the tint stopped
+at the note's last pixel and read as cropped. A row mid-transfer wears
+<code>.export-history__row--busy</code> and stays unlit, because it would
+refuse the click. The list is discovered afresh on every open with one request, so a
+<code>.spinner</code> stands in for it during that wait — <em>inside</em> the heading line, a
+space after the text, so that it can appear and vanish without moving a single row.</p>
+<div id="sg-history-rows"></div>
+
+<h2>Spinner</h2>
+<p style="color:var(--fg4)">The short wait nothing can measure: one request of unknown length.
+Anything with a measurable end gets a track instead. It is a <code>role="status"</code> with a
+label, so the wait is announced as well as drawn, and under reduced motion it slows rather than
+stops — a ring standing still reads as a stuck one. Standalone it is a block, as below; inside a
+heading it becomes an inline ring sized in <code>em</code> of that line and pinned inside its
+box, so appearing and vanishing moves nothing (see <em>Videos already created</em> above).</p>
+<div class="sg-row"><div class="spinner" role="status" aria-label="Loading"></div></div>
+
+<h2>Floating panel</h2>
+<p style="color:var(--fg4)">A small tool window over the page that does <strong>not</strong> block
+it — no backdrop, no <code>aria-modal</code> — for work that needs the page underneath: the
+fragment panel sits over the player the reviewer keeps using to find the fragment's boundaries.
+It is dragged by its head (<code>touch-action: none</code>, so a touch drag moves the panel, not
+the page) and clamped to the viewport, so the head can never be dragged out of reach. It sits on
+<code>--z-overlay</code>, above the dropdowns and below the modal layer, so a confirm it raises
+lands on top of it, and it leaves with the other controls in fullscreen. Because the export
+menu lives in the sticky header's stacking context and cannot rise above it, the panel steps
+aside — left of the menu, else below it — whenever the menu or its choices open underneath. Its fields read times
+at millisecond precision in tabular digits.</p>
+<div id="sg-float-panel" style="position: relative; height: 260px"></div>
+
 <script src="js/sync_status_view.js"></script>
+<script src="js/burn_geometry.js"></script>
 <script src="js/burn_video.js"></script>
 <script src="js/export_menu.js"></script>
+<script src="js/clip_time.js"></script>
+<script>
+  // The two choices, the list of created videos and the floating panel — drawn
+  // by the real CSS from the real formatting functions (js/clip_time.js,
+  // js/export_menu.js), so the catalog cannot say what the app does not.
+  (function () {
+    var chevron = '<span class="export-item__chevron" aria-hidden="true"><svg viewBox="0 0 24 24"'
+      + ' width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"'
+      + ' stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"/></svg></span>';
+    document.getElementById('sg-export-choices').innerHTML =
+      '<span class="export-pop">'
+      + '<button class="btn btn--icon" aria-label="Download">' + exportIconSvg() + '</button>'
+      + '<div class="export-menu">'
+      + '<button class="export-item"><span class="export-item__label">Subtitle file (.srt)</span></button>'
+      + '<div class="export-item-group"><div class="export-sub">'
+      + '<button class="export-item" aria-haspopup="menu" aria-expanded="true">'
+      + '<span class="export-item__label">Create the video with subtitles</span>' + chevron + '</button>'
+      + '<div class="export-submenu" role="menu">'
+      + '<button class="export-item" role="menuitem"><span class="export-item__label">Create the full video</span></button>'
+      + '<button class="export-item" role="menuitem"><span class="export-item__label">Create a fragment</span></button>'
+      + '</div></div></div></div></span>';
+
+    var HOUR = 3600000;
+    var now = Date.now();
+    var ROWS = [
+      { when: now - HOUR, actor: 'me', mine: true, scale: 100, clip: null, fresh: true },
+      { when: now - 5 * HOUR, actor: 'reviewer-2', mine: false, scale: 150,
+        clip: { startMs: 600000, endMs: 930500 }, transfer: { loaded: 120, total: 281 } },
+      // The landed claim, which is the row whose hover tint has the most to
+      // cover: hovering it shows the note highlighted with the video it is about.
+      { when: now - 9 * HOUR, actor: 'me', mine: true, scale: 100,
+        clip: null, downloaded: true },
+      { when: now - 30 * HOUR, actor: 'me', mine: true, scale: 125,
+        clip: { startMs: 3723000, endMs: 3781250 },
+        error: 'The artifact expired (7 days) — render again' }
+    ];
+    function rowHtml(r) {
+      var span = r.clip
+        ? formatClipTime(r.clip.startMs, { trimZeroMs: true }) + '–'
+          + formatClipTime(r.clip.endMs, { trimZeroMs: true })
+        : 'full';
+      var state = historyRowState({ downloading: !!r.transfer, downloaded: !!r.downloaded });
+      var pct = r.transfer
+        ? Math.round(downloadFraction(r.transfer.loaded, r.transfer.total) * 100) : 0;
+      // Exactly what paintBurnRow writes: --busy while the bytes move, and
+      // --continued whenever the track, the note or the error line is showing,
+      // so the box closes under it instead of cropping at its last pixel.
+      var continued = !!(r.transfer || state.state === 'downloaded' || r.error);
+      return '<li class="export-history__row'
+        + (state.disabled ? ' export-history__row--busy' : '')
+        + (continued ? ' export-history__row--continued' : '') + '">'
+        + '<button class="export-item export-history__item"' + (state.disabled ? ' disabled' : '') + '>'
+        + '<span class="export-history__text"><span class="export-item__label">'
+        + historyWhen(r.when, 'en-GB') + (r.mine ? '' : ' · ' + r.actor) + '</span>'
+        + '<span class="export-history__detail">' + r.scale + '% · ' + span + '</span></span>'
+        + (r.fresh ? '<span class="export-history__new">new</span>' : '')
+        + '<span class="export-history__icon" aria-hidden="true">' + exportIconSvg() + '</span></button>'
+        + (r.transfer
+          ? '<div class="burn-track" role="progressbar" aria-valuenow="' + pct + '">'
+            + '<div class="burn-seg" aria-hidden="true"><div class="burn-seg__fill" style="width:'
+            + pct + '%"></div></div></div>'
+            + '<p class="export-item__meta">' + r.transfer.loaded + ' MB of ' + r.transfer.total + ' MB</p>'
+          : '')
+        + (state.state === 'downloaded'
+          ? '<p class="export-item__meta">Video with subtitles downloaded</p>' : '')
+        + (r.error ? '<p class="burn-panel__error" role="alert">' + r.error + '</p>' : '')
+        + '</li>';
+    }
+    // `looking` is the one card whose heading carries the spinner — the ring
+    // rides in that line, and a card that drew it as a block of its own would
+    // teach back the layout jump the arrangement exists to prevent.
+    function card(name, inner, looking) {
+      return '<div class="sg-card" style="max-width:320px;margin-top:var(--space-5)">'
+        + '<p style="font-family:var(--f-mono);font-size:var(--text-2xs);color:var(--fg5);'
+        + 'margin:0 0 var(--space-2)">' + name + '</p>'
+        + '<div style="background:var(--bg2);border:1px solid var(--border2);'
+        + 'border-radius:var(--radius-md);padding:var(--space-2)">'
+        + '<div class="export-history"><p class="export-history__title">'
+        + '<span>Videos with subtitles already created</span>'
+        + (looking ? ' <span class="spinner" role="status" aria-label="Looking for created videos"></span>' : '')
+        + '</p>'
+        + inner + '</div></div></div>';
+    }
+    document.getElementById('sg-history-rows').innerHTML =
+      card('looking', '', true)
+      + card('listed', '<ul class="export-history__list">' + ROWS.map(rowHtml).join('') + '</ul>')
+      + card('empty', '<p class="export-history__note">No videos have been created yet</p>');
+
+    // Placed in the flow for the catalog; in the app it is position: fixed.
+    var fields = [['Start time', formatClipTime(5040000, { trimZeroMs: true })],
+                  ['End time', formatClipTime(5025120, { trimZeroMs: true })]];
+    document.getElementById('sg-float-panel').innerHTML =
+      '<section class="float-panel" role="dialog" aria-labelledby="sg-float-title"'
+      + ' style="position:absolute;top:0;right:0">'
+      + '<div class="float-panel__head"><h2 id="sg-float-title" class="float-panel__title">'
+      + 'Create a video fragment with subtitles</h2>'
+      + '<button type="button" class="float-panel__close" aria-label="Close"><svg viewBox="0 0 24 24"'
+      + ' fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"'
+      + ' stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/>'
+      + '<line x1="18" y1="6" x2="6" y2="18"/></svg></button></div>'
+      + '<div class="float-panel__body"><div class="clip-fields">'
+      + fields.map(function (f, i) {
+          return '<div class="clip-field"><label class="clip-field__label" for="sg-clip-' + i + '">'
+            + f[0] + '</label><input id="sg-clip-' + i + '" class="input clip-field__input" value="'
+            + f[1] + '"><button type="button" class="btn btn--ghost btn--sm">'
+            + 'Set the player’s current time</button></div>';
+        }).join('')
+      + '</div><p class="clip-panel__problem">The end time must come after the start time</p>'
+      + '<button type="button" class="btn btn--primary">Create the video fragment with subtitles</button>'
+      + '</div></section>';
+  })();
+</script>
 <script>
   (function () {
     document.getElementById('sg-icon-buttons').innerHTML =
@@ -439,7 +604,7 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
   })();
 
   (function () {
-    // Built from the REAL phase model in js/burn_video.js (it is pure — no DOM),
+    // Built from the REAL phase model in js/burn_video.js,
     // so these example widths cannot drift from the workflow's step weights.
     //
     // The fractions are summed from BURN_STEP_WEIGHTS as well: a hand-written
@@ -465,10 +630,6 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
         p: { fraction: fractionThrough('Render 40%'), label: 'Render 50%' },
         status: ['Step 3 of 4 — Burning in the subtitles', '12 min elapsed',
                  'about 9 min to go'], link: true },
-      { name: 'done', tint: 'export-item-group--done',
-        label: 'Download the video with subtitles',
-        p: { fraction: 1, done: true },
-        status: ['', '', 'done in 21 min'], link: true },
       // A failed run offers to build again — the error line says what went
       // wrong, and it names the PHASE, as the app does, never the raw step.
       { name: 'failed', tint: '', label: 'Create the video with subtitles',
@@ -476,43 +637,14 @@ A failed phase is marked on the segment <em>body</em>, so it shows even at zero 
              failed: true, failedStep: 'Render 10%' },
         status: ['', '', ''], link: true,
         error: 'Failed at step "Burning in the subtitles"' },
-      // The phase AFTER the render: the finished video moving to disk. Written
-      // through the save dialog's own file handle, so the browser reports it
-      // nowhere — this readout is the only sign it is happening. One span, not
-      // four phases, and deliberately NOT green: the group still carries --done
-      // from the render, and green would read as "already there".
-      { name: 'transferring', tint: 'export-item-group--done export-item-group--transfer',
-        disabled: true, label: 'Downloading the video, please wait',
-        transfer: 0.43, status: ['120 MB of 281 MB', '', ''], link: true },
-      // The file has just landed. A statement, not a button: flipping straight
-      // back to "Download..." read as if nothing happened. The group keeps the
-      // render's --done green; closing and reopening the menu re-arms the offer.
-      { name: 'downloaded', tint: 'export-item-group--done', disabled: true,
-        label: 'The video with subtitles has been downloaded',
-        p: { fraction: 1, done: true },
-        status: ['', '', 'done in 21 min'], link: true },
       // Offered, but refused: the preview shows subtitles the render would not
       // burn. The reason lives on the control's own title, as in the app.
       { name: 'wrong language', tint: '', disabled: true,
         label: 'Create the video with subtitles',
         title: 'The render burns the Ukrainian subtitles, and EN is on screen',
-        p: { fraction: 0, label: '' }, status: ['', '', ''] },
-      { name: 'expired', tint: 'export-item-group--expired',
-        label: 'Create the video with subtitles',
-        p: { fraction: 1, done: true }, status: ['', '', ''],
-        error: 'The artifact expired (7 days) — render again' }
+        p: { fraction: 0, label: '' }, status: ['', '', ''] }
     ];
     function trackHtml(state, id) {
-      // A transfer is one span across the whole track, exactly as the driver
-      // builds it — the four phase weights describe the render, not this.
-      if (state.transfer != null) {
-        var width = Math.round(state.transfer * 100);
-        return '<div class="burn-track" role="progressbar" aria-labelledby="' + id
-          + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + width + '">'
-          + '<div class="burn-seg" aria-hidden="true" style="flex-grow:100">'
-          + '<div class="burn-seg__fill" style="width:' + width + '%"></div>'
-          + '</div></div>';
-      }
       var segs = burnSegments(state.p).map(function (s) {
         // --empty exactly as the driver sets it: only a running phase with no
         // credited fill carries the breathing overlay.

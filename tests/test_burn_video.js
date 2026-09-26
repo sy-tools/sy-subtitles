@@ -24,15 +24,28 @@ describe('makeRequestId', () => {
   });
 });
 
+const {
+  BURN_TITLE_SEP,
+  BURN_RETENTION_MS,
+  BURN_CLIP_MIN_MS,
+  BURN_CLIP_MAX_MS,
+  parseBurnRunTitle,
+  burnHistoryEntries,
+  burnHistorySince,
+  burnClipProblem,
+} = require('../site/js/burn_video');
+
 describe('buildBurnInputs', () => {
   const ratios = { font_ratio: 0.0711, padtop_ratio: 0.0741, padbot_ratio: 0.0333 };
-  const opts = { sourceRef: 'main' };
+  const opts = { sourceRef: 'main', subsScale: 1 };
+  const withOpts = (over) => buildBurnInputs('talk', 'slug', ratios, 'r',
+                                             Object.assign({}, opts, over));
 
   it('sends every input the workflow declares', () => {
     const inputs = buildBurnInputs('talk', 'slug', ratios, 'req-1', opts);
     assert.deepStrictEqual(Object.keys(inputs).sort(), [
-      'font_ratio', 'padbot_ratio', 'padtop_ratio', 'request_id',
-      'run_label', 'source_ref', 'talk_id', 'video_slug',
+      'clip', 'font_ratio', 'padbot_ratio', 'padtop_ratio', 'request_id',
+      'run_label', 'source_ref', 'subs_scale', 'talk_id', 'video_slug',
     ]);
   });
 
@@ -43,7 +56,8 @@ describe('buildBurnInputs', () => {
   });
 
   it('rejects a missing ratio instead of sending undefined', () => {
-    assert.throws(() => buildBurnInputs('talk', 'slug', { font_ratio: 0.05 }, 'r', opts));
+    assert.throws(() => buildBurnInputs('talk', 'slug', { font_ratio: 0.05 }, 'r', opts),
+                  /ratio/);
   });
 
   it('demands the content ref rather than letting the workflow default it', () => {
@@ -58,7 +72,7 @@ describe('buildBurnInputs', () => {
 
   it('passes the content ref through untouched', () => {
     const inputs = buildBurnInputs('talk', 'slug', ratios, 'req-1',
-                                   { sourceRef: 'sync/me/talk--slug-uk' });
+                                   { sourceRef: 'sync/me/talk--slug-uk', subsScale: 1 });
     assert.strictEqual(inputs.source_ref, 'sync/me/talk--slug-uk');
   });
 
@@ -66,6 +80,400 @@ describe('buildBurnInputs', () => {
     // An absent input is not the same as an empty one: the run-name expression
     // needs a value to fall back from.
     assert.strictEqual(buildBurnInputs('talk', 'slug', ratios, 'r', opts).run_label, '');
+  });
+
+  it('sends the subtitle scale as a whole percent', () => {
+    assert.strictEqual(withOpts({ subsScale: 1 }).subs_scale, '100');
+    assert.strictEqual(withOpts({ subsScale: 1.5 }).subs_scale, '150');
+    assert.strictEqual(withOpts({ subsScale: 1.234 }).subs_scale, '123');
+    assert.strictEqual(withOpts({ subsScale: 0.5 }).subs_scale, '50');
+  });
+
+  it('clamps the percent into the band the run name can carry', () => {
+    // parseBurnRunTitle reads 10..1000 back; a value outside would name a run
+    // the list can never show. The resize handle stays well inside, so this
+    // guards a caller, not a reviewer.
+    assert.strictEqual(withOpts({ subsScale: 0.01 }).subs_scale, '10');
+    assert.strictEqual(withOpts({ subsScale: 25 }).subs_scale, '1000');
+  });
+
+  it('demands the subtitle scale rather than guessing one', () => {
+    // The list reads the size back out of the run name, so a default would
+    // label a 150% video as 100% for as long as it is listed.
+    for (const subsScale of [undefined, null, NaN, Infinity, 0, -1, '1.5']) {
+      assert.throws(() => buildBurnInputs('talk', 'slug', ratios, 'r',
+                                          { sourceRef: 'main', subsScale }),
+                    /subtitle scale/, String(subsScale));
+    }
+  });
+
+  it('sends an empty clip for the whole video', () => {
+    // Empty, not absent — the same rule as run_label.
+    assert.strictEqual(withOpts({}).clip, '');
+    assert.strictEqual(withOpts({ clip: null }).clip, '');
+  });
+
+  it('sends a fragment as START-END whole milliseconds', () => {
+    assert.strictEqual(withOpts({ clip: { startMs: 600000, endMs: 930500 } }).clip,
+                       '600000-930500');
+    // Exactly the shortest fragment the render takes.
+    assert.strictEqual(BURN_CLIP_MIN_MS, 1000);
+    assert.strictEqual(withOpts({ clip: { startMs: 0, endMs: 1000 } }).clip, '0-1000');
+  });
+
+  it('refuses a fragment the workflow would refuse, before dispatching it', () => {
+    const bad = [
+      { startMs: 5000, endMs: 5000 },                     // empty
+      { startMs: 6000, endMs: 5000 },                     // backwards
+      { startMs: 0, endMs: 999 },                         // below the minimum
+      { startMs: -1000, endMs: 5000 },                    // negative
+      { startMs: 1000.5, endMs: 5000 },                   // not whole milliseconds
+      { startMs: '0', endMs: '5000' },                    // text, not numbers
+      { startMs: 0, endMs: Number.MAX_SAFE_INTEGER + 1 }, // not exact
+      { startMs: NaN, endMs: 5000 },
+      {},
+      '0-5000',
+    ];
+    for (const clip of bad) {
+      assert.throws(() => withOpts({ clip }), /invalid clip/, JSON.stringify(clip));
+    }
+  });
+
+  it('sends values the run-name parser reads back', () => {
+    // burn-subtitles.yml builds the run name out of these inputs,
+    //   run_label · talk_id/video_slug · actor · subs_scale% · (clip or full) · request_id
+    // so whatever the SPA sends has to fit the grammar the list parses.
+    const requestId = makeRequestId(1757764800000, () => 0.5);
+    const inputs = buildBurnInputs('1993-09-19_Ganesha-Puja', 'Talk-Cabella', ratios, requestId, {
+      sourceRef: 'main', subsScale: 1.5, talkTitle: 'Ganesha Puja', videoTitle: 'Talk',
+      clip: { startMs: 600000, endMs: 930500 },
+    });
+    const title = [inputs.run_label, inputs.talk_id + '/' + inputs.video_slug, 'SlavaSubotskiy',
+                   inputs.subs_scale + '%', inputs.clip || 'full', inputs.request_id]
+      .join(BURN_TITLE_SEP);
+    assert.deepStrictEqual(parseBurnRunTitle(title), {
+      label: 'Ganesha Puja — Talk', talkId: '1993-09-19_Ganesha-Puja', videoSlug: 'Talk-Cabella',
+      actor: 'SlavaSubotskiy', scalePct: 150,
+      clip: { startMs: 600000, endMs: 930500 }, requestId: requestId,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The already-created videos. burn-subtitles.yml names every run
+//   label · talk_id/video_slug · actor · subs_scale% · clip-or-full · request_id
+// and the list is read out of those names alone: one runs request, no per-run
+// lookups.
+// ---------------------------------------------------------------------------
+const TALK = '1993-09-19_Ganesha-Puja-Cabella';
+const SLUG = 'Talk-Cabella';
+
+function runTitle(over) {
+  const f = Object.assign({
+    label: 'Ganesha Puja — Talk, Cabella', talk: TALK, slug: SLUG,
+    actor: 'SlavaSubotskiy', scale: '150%', clip: 'full', req: 'req-mf1abc-2s3',
+  }, over);
+  return [f.label, f.talk + '/' + f.slug, f.actor, f.scale, f.clip, f.req].join(' · ');
+}
+
+describe('parseBurnRunTitle', () => {
+  it('reads every field of the run name', () => {
+    assert.deepStrictEqual(parseBurnRunTitle(runTitle({ clip: '600000-930500' })), {
+      label: 'Ganesha Puja — Talk, Cabella', talkId: TALK, videoSlug: SLUG,
+      actor: 'SlavaSubotskiy', scalePct: 150,
+      clip: { startMs: 600000, endMs: 930500 }, requestId: 'req-mf1abc-2s3',
+    });
+  });
+
+  it('splits on the separator the workflow writes', () => {
+    assert.strictEqual(BURN_TITLE_SEP, ' · ');
+  });
+
+  it('reads "full" as the whole video', () => {
+    assert.strictEqual(parseBurnRunTitle(runTitle()).clip, null);
+  });
+
+  it('reads a fragment that starts at zero', () => {
+    assert.deepStrictEqual(parseBurnRunTitle(runTitle({ clip: '0-1000' })).clip,
+                           { startMs: 0, endMs: 1000 });
+  });
+
+  it('keeps a label that contains the separator itself whole', () => {
+    // The label is a free-text title from meta.yaml, so the fields are taken
+    // from the right and whatever is left over is the label.
+    const parsed = parseBurnRunTitle(runTitle({ label: 'Puja · Talk · Q&A' }));
+    assert.strictEqual(parsed.label, 'Puja · Talk · Q&A');
+    assert.strictEqual(parsed.talkId, TALK);
+    assert.strictEqual(parsed.requestId, 'req-mf1abc-2s3');
+  });
+
+  it('keeps a label that ENDS in a piece of the separator whole as well', () => {
+    // The label is free text: it may not only contain the separator but end in
+    // half of one. A left-to-right split then took the label's own " · " as the
+    // first separator and read every field one place over — the place field
+    // arrived as "· 1993-09-19_…", failed to parse, and the video that run had
+    // made was simply missing from the list, for good.
+    for (const label of ['Ganesha Puja ·', 'Ganesha Puja · ', '· Ganesha Puja ·']) {
+      const parsed = parseBurnRunTitle(runTitle({ label }));
+      assert.ok(parsed, 'no run may be lost to its own title: ' + JSON.stringify(label));
+      assert.strictEqual(parsed.label, label);
+      assert.strictEqual(parsed.talkId, TALK);
+      assert.strictEqual(parsed.requestId, 'req-mf1abc-2s3');
+    }
+  });
+
+  it('does not read the old two-segment run name', () => {
+    // "label · request_id" carries no talk, author or size to list.
+    assert.strictEqual(parseBurnRunTitle('Ganesha Puja — Talk, Cabella · req-mf1abc-2s3'), null);
+    // Nor one whose label happens to pad it out to six segments.
+    assert.strictEqual(parseBurnRunTitle('a · b · c · d · e · req-mf1abc-2s3'), null);
+  });
+
+  it('reads the request id makeRequestId produces', () => {
+    const req = makeRequestId(1757764800000, () => 0.73);
+    assert.strictEqual(parseBurnRunTitle(runTitle({ req })).requestId, req);
+  });
+
+  it('accepts the ends of the scale band, and an App as the author', () => {
+    assert.strictEqual(parseBurnRunTitle(runTitle({ scale: '10%' })).scalePct, 10);
+    assert.strictEqual(parseBurnRunTitle(runTitle({ scale: '1000%' })).scalePct, 1000);
+    assert.strictEqual(parseBurnRunTitle(runTitle({ actor: 'github-actions[bot]' })).actor,
+                       'github-actions[bot]');
+  });
+
+  it('refuses a run name with any field out of shape', () => {
+    const bad = {
+      talk: ['1993-09-19', '93-09-19_Talk', '1993-09-19_Ganesha Puja',
+             '1993-09-19_' + 'x'.repeat(81)],
+      slug: ['.hidden', '-rf', 'a/b', 'x'.repeat(65), ''],
+      actor: ['-lead', 'a_b', 'x'.repeat(40), 'bot[bot]x', ''],
+      scale: ['9%', '1001%', '150', '0150%', '15.5%', '10000%'],
+      clip: ['FULL', '1000-1000', '2000-1000', '01-2000', '0-0', '-1000', '1000-',
+             '0-1234567890', 'abc'],
+      req: ['req-ABC-def', 'req-abc', 'abc-def-ghi', 'req-abc-def-ghi', ''],
+    };
+    for (const field of Object.keys(bad)) {
+      for (const value of bad[field]) {
+        assert.strictEqual(parseBurnRunTitle(runTitle({ [field]: value })), null,
+                           field + '=' + JSON.stringify(value));
+      }
+    }
+  });
+
+  it('refuses what is not a run name at all', () => {
+    for (const v of [null, undefined, 42, '', 'Burn subtitles']) {
+      assert.strictEqual(parseBurnRunTitle(v), null, String(v));
+    }
+    // The dot without its spaces is not the separator.
+    assert.strictEqual(parseBurnRunTitle(runTitle().split(' · ').join('·')), null);
+  });
+});
+
+describe('burnHistoryEntries', () => {
+  const NOW = Date.parse('2026-09-13T12:00:00Z');
+  const Q = { talkId: TALK, videoSlug: SLUG, login: 'SlavaSubotskiy', nowMs: NOW };
+
+  function run(id, over, titleOver) {
+    return Object.assign({
+      id, conclusion: 'success', created_at: '2026-09-12T10:00:00Z',
+      html_url: 'https://github.com/sy-tools/sy-subtitles/actions/runs/' + id,
+      display_title: runTitle(titleOver),
+    }, over);
+  }
+  const ids = (entries) => entries.map((e) => e.runId);
+
+  it('lists a finished render of this video with what its row shows', () => {
+    const entries = burnHistoryEntries([run(11, {}, { clip: '600000-930500' })], Q);
+    assert.deepStrictEqual(entries, [{
+      runId: 11,
+      createdMs: Date.parse('2026-09-12T10:00:00Z'),
+      actor: 'SlavaSubotskiy', mine: true, scalePct: 150,
+      clip: { startMs: 600000, endMs: 930500 }, requestId: 'req-mf1abc-2s3',
+    }]);
+  });
+
+  it("lists every author's videos, and marks the viewer's own", () => {
+    // The row names the author only when it is someone else.
+    const entries = burnHistoryEntries([
+      run(1, {}, { actor: 'SlavaSubotskiy' }),
+      run(2, {}, { actor: 'ira-k' }),
+      run(3, {}, { actor: 'github-actions[bot]' }),
+    ], Q);
+    assert.deepStrictEqual(entries.map((e) => [e.runId, e.actor, e.mine]), [
+      [3, 'github-actions[bot]', false], [2, 'ira-k', false], [1, 'SlavaSubotskiy', true],
+    ]);
+  });
+
+  it("recognises the viewer's own videos whatever the case of the login", () => {
+    // GitHub logins are case-insensitive.
+    const [entry] = burnHistoryEntries([run(1, {}, { actor: 'slavasubotskiy' })], Q);
+    assert.strictEqual(entry.mine, true);
+  });
+
+  it('claims no video for a viewer without a login, and still lists them all', () => {
+    for (const login of ['', null, undefined]) {
+      const entries = burnHistoryEntries([run(1), run(2, {}, { actor: 'ira-k' })],
+                                         Object.assign({}, Q, { login }));
+      assert.deepStrictEqual(entries.map((e) => [e.runId, e.mine]), [[2, false], [1, false]],
+                             String(login));
+    }
+  });
+
+  it('lists only this talk and this video, spelled exactly', () => {
+    const entries = burnHistoryEntries([
+      run(1),
+      run(2, {}, { talk: TALK + '-2' }),
+      run(3, {}, { slug: SLUG + '-2' }),
+      run(4, {}, { slug: SLUG.toLowerCase() }),
+      run(5, {}, { talk: '1993-09-20_Ganesha-Puja-Cabella' }),
+    ], Q);
+    assert.deepStrictEqual(ids(entries), [1]);
+  });
+
+  it('leaves out a run whose name does not parse, reading name when there is no title', () => {
+    const entries = burnHistoryEntries([
+      run(1, { display_title: 'Ganesha Puja — Talk, Cabella · req-mf1abc-2s3' }),
+      run(2, { display_title: undefined, name: runTitle() }),
+      run(3, { display_title: null, name: null }),
+    ], Q);
+    assert.deepStrictEqual(ids(entries), [2]);
+  });
+
+  it('lists only successful runs, whatever the query asked for', () => {
+    // The request filters on status=success, but a stale or odd payload must
+    // not offer the file of a run that never uploaded one.
+    const entries = burnHistoryEntries([
+      run(1), run(2, { conclusion: 'failure' }), run(3, { conclusion: 'cancelled' }),
+      run(4, { conclusion: null }),
+    ], Q);
+    assert.deepStrictEqual(ids(entries), [1]);
+  });
+
+  it('drops a video once its artifact is past the seven-day retention', () => {
+    const at = (ms) => new Date(ms).toISOString();
+    const entries = burnHistoryEntries([
+      run(1, { created_at: at(NOW - BURN_RETENTION_MS + 1) }),   // one ms to spare
+      run(2, { created_at: at(NOW - BURN_RETENTION_MS) }),       // gone
+      run(3, { created_at: at(NOW - BURN_RETENTION_MS - 3600000) }),
+    ], Q);
+    assert.deepStrictEqual(ids(entries), [1]);
+  });
+
+  it("keeps a video the viewer's clock places in the future", () => {
+    // A client clock running behind must not hide a video that was just made.
+    const entries = burnHistoryEntries([run(1, { created_at: '2026-09-13T12:05:00Z' })], Q);
+    assert.deepStrictEqual(ids(entries), [1]);
+  });
+
+  it('leaves out a run with no readable creation time', () => {
+    const entries = burnHistoryEntries([
+      run(1, { created_at: '' }), run(2, { created_at: 'yesterday' }),
+      run(3, { created_at: undefined }),
+    ], Q);
+    assert.deepStrictEqual(entries, []);
+  });
+
+  it('puts the newest first, and the higher run id first on a tie', () => {
+    const entries = burnHistoryEntries([
+      run(5, { created_at: '2026-09-10T08:00:00Z' }),
+      run(6, { created_at: '2026-09-12T09:00:00Z' }),
+      run(7, { created_at: '2026-09-12T09:00:00Z' }),
+      run(9, { created_at: '2026-09-11T09:00:00Z' }),
+    ], Q);
+    assert.deepStrictEqual(ids(entries), [7, 6, 9, 5]);
+  });
+
+  it('lists a run once even when the payload repeats it', () => {
+    // Pages are fetched one after another, and a run finishing in between
+    // shifts the list by one, so the same run can arrive on two pages.
+    const entries = burnHistoryEntries([run(1), run(2), run(1)], Q);
+    assert.deepStrictEqual(ids(entries), [2, 1]);
+  });
+
+  it('tolerates junk rows and a missing list', () => {
+    assert.deepStrictEqual(burnHistoryEntries([null, undefined, {}, 42], Q), []);
+    assert.deepStrictEqual(burnHistoryEntries(null, Q), []);
+  });
+});
+
+describe('burnHistorySince', () => {
+  it('is seven days before now, as the date-time the runs filter takes', () => {
+    assert.strictEqual(BURN_RETENTION_MS, 7 * 24 * 60 * 60 * 1000);
+    assert.strictEqual(burnHistorySince(Date.parse('2026-09-13T12:00:00Z')),
+                       '2026-09-06T12:00:00Z');
+  });
+
+  it('drops the milliseconds, which moves the bound earlier and never later', () => {
+    // Earlier can only fetch a run burnHistoryEntries then drops; later could
+    // miss one it would list.
+    assert.strictEqual(burnHistorySince(Date.parse('2026-09-13T12:00:00.999Z')),
+                       '2026-09-06T12:00:00Z');
+  });
+});
+
+describe('burnClipProblem', () => {
+  const HOUR = 3600000;
+
+  it('has nothing to say about a sound fragment', () => {
+    assert.strictEqual(burnClipProblem(600000, 930500, HOUR), '');
+    assert.strictEqual(burnClipProblem(0, BURN_CLIP_MIN_MS, HOUR), '');
+    // Ending exactly where the video ends is inside it.
+    assert.strictEqual(burnClipProblem(HOUR - 5000, HOUR, HOUR), '');
+  });
+
+  it('does not judge the end against a duration it does not know', () => {
+    for (const duration of [undefined, null, NaN, 0, -1]) {
+      assert.strictEqual(burnClipProblem(0, 10 * HOUR, duration), '', String(duration));
+    }
+  });
+
+  it('names a start that is not a time', () => {
+    for (const start of [null, undefined, NaN, Infinity, '10']) {
+      assert.strictEqual(burnClipProblem(start, 5000, HOUR), 'clip.bad_start', String(start));
+    }
+  });
+
+  it('names an end that is not a time', () => {
+    for (const end of [null, undefined, NaN, -Infinity, '10']) {
+      assert.strictEqual(burnClipProblem(0, end, HOUR), 'clip.bad_end', String(end));
+    }
+  });
+
+  it('names a span that is empty or runs backwards', () => {
+    assert.strictEqual(burnClipProblem(5000, 5000, HOUR), 'clip.order');
+    assert.strictEqual(burnClipProblem(6000, 5000, HOUR), 'clip.order');
+  });
+
+  it('names an end past the end of the video', () => {
+    assert.strictEqual(burnClipProblem(0, HOUR + 1, HOUR), 'clip.past_end');
+  });
+
+  it('names a fragment shorter than the render takes', () => {
+    assert.strictEqual(burnClipProblem(0, BURN_CLIP_MIN_MS - 1, HOUR), 'clip.too_short');
+  });
+
+  it('names a bound past what the render can carry, length known or not', () => {
+    // The workflow's clip grammar stops at nine digits of milliseconds and the
+    // run-name parser stops with it. Unjudged here, a "300:00:00" typed while
+    // the player's length was still unknown was accepted by the panel and then
+    // thrown out by buildBurnInputs — whose "burn: invalid clip" is an English
+    // exception, not a sentence the panel can show anyone.
+    assert.strictEqual(burnClipProblem(0, BURN_CLIP_MAX_MS, null), '',
+      'the bound itself is still a fragment the render takes');
+    assert.strictEqual(burnClipProblem(0, BURN_CLIP_MAX_MS + 1, null), 'clip.bad_end');
+    assert.strictEqual(burnClipProblem(BURN_CLIP_MAX_MS + 1, BURN_CLIP_MAX_MS + 5000, null),
+                       'clip.bad_start');
+    // A known length is the closer bound and the more useful sentence, so it
+    // still goes first.
+    assert.strictEqual(burnClipProblem(0, BURN_CLIP_MAX_MS + 1, HOUR), 'clip.past_end');
+  });
+
+  it('names only the first problem, in a fixed order', () => {
+    // One message at a time, and the one to fix first: an end cannot be judged
+    // against a start that is not a time, nor a length against a backwards span.
+    assert.strictEqual(burnClipProblem(NaN, NaN, HOUR), 'clip.bad_start');
+    assert.strictEqual(burnClipProblem(7000, 5000, 4000), 'clip.order');
+    assert.strictEqual(burnClipProblem(4500, 5000, 4800), 'clip.past_end');
   });
 });
 
@@ -169,127 +577,177 @@ describe('BURN_WORKFLOW', () => {
 const {
   FONT_RATIO_MAX,
   FONT_RATIO_MIN,
-  displayedVideoHeight,
-  fullscreenFontPx,
+  FS_FONT_WIDTH_RATIO,
+  FS_PADTOP_RATIO,
+  FS_PADBOT_RATIO,
   measureBurnRatios,
+  applyBurnGeometry,
 } = require('../site/js/burn_video');
+const BURN_GEOMETRY = require('../site/js/burn_geometry');
 
-describe('fullscreenFontPx', () => {
-  it('is 4% of viewport width in the middle of the range', () => {
-    assert.strictEqual(fullscreenFontPx(1200, 900, 1), 48);
+describe('fullscreen box constants', () => {
+  it('keep the approved 1080p look: 4% of width, 80px over and 36px under', () => {
+    assert.strictEqual(FS_FONT_WIDTH_RATIO, 0.04);
+    assert.ok(Math.abs(FS_PADTOP_RATIO - 80 / 1080) < 1e-12);
+    assert.ok(Math.abs(FS_PADBOT_RATIO - 36 / 1080) < 1e-12);
   });
 
-  it('pins to the 80px ceiling on a wide monitor', () => {
-    assert.strictEqual(fullscreenFontPx(2560, 1440, 1), 80);
-  });
-
-  it('respects the 28px floor on a narrow window', () => {
-    assert.strictEqual(fullscreenFontPx(500, 800, 1), 28);
-  });
-
-  it('respects the 20px floor when even the inner clamp is squeezed by height', () => {
-    // Inner clamp gives base 28, but 22% of a very short 80px viewport is
-    // 17.6, so the outer floor of 20 is what actually wins.
-    assert.strictEqual(fullscreenFontPx(500, 80, 1), 20);
-  });
-
-  it('multiplies by the user subtitle scale after the inner clamp', () => {
-    // Inner clamp pins at 80, then scale 2 doubles it.
-    assert.strictEqual(fullscreenFontPx(2560, 1440, 2), 160);
-  });
-
-  it('is capped by 22vh so tall text cannot overflow the screen', () => {
-    // 22% of 300px viewport height = 66px, below the scaled 160.
-    assert.strictEqual(fullscreenFontPx(2560, 300, 2), 66);
-  });
-
-  it('treats a missing scale as 1', () => {
-    assert.strictEqual(fullscreenFontPx(1200, 900, undefined), 48);
+  it('come from the one geometry file', () => {
+    assert.strictEqual(FS_FONT_WIDTH_RATIO, BURN_GEOMETRY.fontWidthRatio);
+    assert.strictEqual(FONT_RATIO_MIN, BURN_GEOMETRY.fontRatioMin);
+    assert.strictEqual(FONT_RATIO_MAX, BURN_GEOMETRY.fontRatioMax);
+    assert.strictEqual(FS_PADTOP_RATIO, BURN_GEOMETRY.padTopPx / BURN_GEOMETRY.refHeight);
+    assert.strictEqual(FS_PADBOT_RATIO, BURN_GEOMETRY.padBotPx / BURN_GEOMETRY.refHeight);
   });
 });
 
-describe('displayedVideoHeight', () => {
-  it('fills the height when the video is narrower than the window', () => {
-    // 4:3 video in a 16:9 window is letterboxed on the sides: height fills.
-    assert.strictEqual(displayedVideoHeight(1920, 1080, 640, 480), 1080);
+describe('applyBurnGeometry', () => {
+  function recordedStyle() {
+    const props = {};
+    return { props, setProperty: (name, value) => { props[name] = value; } };
+  }
+
+  it('hands the fullscreen band every number it draws with', () => {
+    const style = recordedStyle();
+    applyBurnGeometry(style);
+    assert.deepStrictEqual(Object.keys(style.props).sort(), [
+      '--fs-font-max', '--fs-font-min', '--fs-font-w-ratio', '--fs-line-advance',
+      '--fs-padbot-ratio', '--fs-padtop-ratio', '--fs-side-pad-ratio',
+    ]);
+    assert.strictEqual(style.props['--fs-font-w-ratio'], '0.04');
+    assert.strictEqual(style.props['--fs-line-advance'], String(BURN_GEOMETRY.lineAdvance));
+    assert.strictEqual(style.props['--fs-padtop-ratio'], String(80 / 1080));
   });
 
-  it('is limited by width when the video is wider than the window', () => {
-    // 16:9 video in a 4:3 window: width binds, height is 1000 * 9/16.
-    assert.strictEqual(displayedVideoHeight(1000, 1000, 1920, 1080), 562.5);
+  it('pads the sides out to the burn\'s wrap limit: insets, then its safety headroom', () => {
+    const style = recordedStyle();
+    applyBurnGeometry(style);
+    const side = Number(style.props['--fs-side-pad-ratio']);
+    assert.ok(Math.abs((1 - 2 * side) - 0.98 * (1 - 2 * 0.07)) < 1e-12);
   });
 });
 
 describe('measureBurnRatios', () => {
-  const geometry = {
-    viewportWidth: 1920, viewportHeight: 1080,
-    videoWidth: 640, videoHeight: 480, subsScale: 1,
-  };
+  const hd = { videoWidth: 1920, videoHeight: 1080, subsScale: 1 };
 
-  it('reproduces the approved fullscreen baseline', () => {
-    const r = measureBurnRatios(geometry);
-    // 4vw of 1920 = 76.8; displayed height 1080 -> 0.0711.
-    assert.ok(Math.abs(r.font_ratio - 76.8 / 1080) < 1e-9);
-    assert.ok(Math.abs(r.padtop_ratio - 80 / 1080) < 1e-9);   // approved 0.0741
-    assert.ok(Math.abs(r.padbot_ratio - 36 / 1080) < 1e-9);   // approved 0.0333
+  it('reproduces the approved fullscreen baseline for a 16:9 video', () => {
+    const r = measureBurnRatios(hd);
+    // 4% of the video width over its height: 76.8 / 1080 = 0.0711.
+    assert.ok(Math.abs(r.font_ratio - 76.8 / 1080) < 1e-12);
+    assert.ok(Math.abs(r.padtop_ratio - 80 / 1080) < 1e-12);
+    assert.ok(Math.abs(r.padbot_ratio - 36 / 1080) < 1e-12);
   });
 
-  it('holds while 4vw stays inside the 28-80px band', () => {
-    const wide = measureBurnRatios(geometry);
-    const narrow = measureBurnRatios(Object.assign({}, geometry, {
-      viewportWidth: 1280, viewportHeight: 720,
+  it('does not depend on the device the render was started from', () => {
+    // A phone held upright used to measure 28px (the CSS floor) over a 219px
+    // tall video: font 0.12 (clamped) and a band covering ~80% of the frame.
+    // The box is the video's own, so the screen has no say at all.
+    const phone = measureBurnRatios(Object.assign({}, hd, {
+      viewportWidth: 390, viewportHeight: 844,
     }));
-    // Neither case is clamped (76.8 and 51.2 are both inside 28-80); only in
-    // the linear region does 4vw/height stay the same fraction regardless of
-    // monitor size. Once 4vw pins to the 80px ceiling this equality breaks —
-    // see the 2560-wide case in the fullscreenFontPx suite above.
-    assert.ok(Math.abs(wide.font_ratio - narrow.font_ratio) < 1e-9);
+    assert.deepStrictEqual(phone, measureBurnRatios(hd));
+  });
+
+  it('keeps the characters per line for a 4:3 video', () => {
+    // Sized from the width, so a narrower frame gets proportionally smaller
+    // letters and the same number of them per line.
+    const r = measureBurnRatios({ videoWidth: 640, videoHeight: 480, subsScale: 1 });
+    assert.ok(Math.abs(r.font_ratio - 0.04 * 640 / 480) < 1e-12);
   });
 
   it('grows the font ratio when the user enlarged the subtitles', () => {
-    const bigger = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.5 }));
-    assert.ok(bigger.font_ratio > measureBurnRatios(geometry).font_ratio);
+    const bigger = measureBurnRatios(Object.assign({}, hd, { subsScale: 1.5 }));
+    assert.ok(bigger.font_ratio > measureBurnRatios(hd).font_ratio);
   });
 
   it('clamps a ratio the workflow would refuse', () => {
     // The resize handle allows --preview-subs-scale up to 4, which measures
-    // 0.22 on a 1920x1080 screen — outside the [0.02, 0.12] band the workflow's
+    // 0.28 on a 16:9 video — outside the [0.02, 0.12] band the workflow's
     // "Validate inputs" step enforces, so the run would die before it started.
-    const huge = measureBurnRatios(Object.assign({}, geometry, { subsScale: 4 }));
+    const huge = measureBurnRatios(Object.assign({}, hd, { subsScale: 4 }));
     assert.strictEqual(huge.font_ratio, FONT_RATIO_MAX);
     // Just past the point where the raw measurement leaves the band (scale 1.7
-    // measured 0.1209 on this geometry) — the boundary a reviewer really hits.
-    const past = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.7 }));
+    // measures 0.1209) — the boundary a reviewer really hits.
+    const past = measureBurnRatios(Object.assign({}, hd, { subsScale: 1.7 }));
     assert.strictEqual(past.font_ratio, FONT_RATIO_MAX);
   });
 
   it('leaves a legal ratio exactly as measured', () => {
     // The clamp must be a guard, not a rounding: scale 1.5 measures 0.1067,
     // which is inside the band and must travel untouched.
-    const legal = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.5 }));
+    const legal = measureBurnRatios(Object.assign({}, hd, { subsScale: 1.5 }));
     assert.ok(Math.abs(legal.font_ratio - (76.8 * 1.5) / 1080) < 1e-12);
     assert.ok(legal.font_ratio < FONT_RATIO_MAX);
   });
 
   it('clamps up to the floor when the measurement is absurdly small', () => {
-    // A 4K screen with the subtitles shrunk to 0.5x measures 40px over a 2250px
-    // displayed height = 0.0178, below the floor the workflow accepts. The
-    // burner clamps the same way, so the render is unaffected either way.
-    const tiny = measureBurnRatios({
-      viewportWidth: 4000, viewportHeight: 2400,
-      videoWidth: 16, videoHeight: 9, subsScale: 0.5,
-    });
+    // A portrait 9:16 video with the subtitles shrunk to 0.5x: 4% of a width
+    // that is 0.5625 of the height, halved = 0.01125, below the floor the
+    // workflow accepts. The burner clamps the same way.
+    const tiny = measureBurnRatios({ videoWidth: 9, videoHeight: 16, subsScale: 0.5 });
     assert.strictEqual(tiny.font_ratio, FONT_RATIO_MIN);
   });
 
-  it('returns numbers, never NaN, for degenerate geometry', () => {
-    const r = measureBurnRatios({
-      viewportWidth: 0, viewportHeight: 0,
-      videoWidth: 0, videoHeight: 0, subsScale: 0,
-    });
-    Object.keys(r).forEach((k) => {
-      assert.ok(isFinite(r[k]) && r[k] > 0, k + ' must be a positive number');
-    });
+  it('falls back to 16:9 and scale 1 for degenerate geometry', () => {
+    const r = measureBurnRatios({ videoWidth: 0, videoHeight: 0, subsScale: 0 });
+    assert.deepStrictEqual(r, measureBurnRatios(hd));
+    assert.deepStrictEqual(measureBurnRatios(undefined), measureBurnRatios(hd));
+  });
+});
+
+const { burnWords, fillFullscreenSubtitle } = require('../site/js/burn_video');
+
+describe('burnWords', () => {
+  it('splits only where the burner splits: on whitespace', () => {
+    // tools/burn_subtitles.py wraps on text.split(); a hyphen, a dash or a
+    // slash is no break opportunity there, so it must not be one on screen.
+    assert.deepStrictEqual(burnWords('до Нью-Йорка, 1990–1995 і/або'),
+      ['до', 'Нью-Йорка,', '1990–1995', 'і/або']);
+  });
+
+  it('treats any whitespace run as one gap, as str.split() does', () => {
+    assert.deepStrictEqual(burnWords('  а\u00a0не\t\nтак  '), ['а', 'не', 'так']);
+  });
+
+  it('gives no words for blank text', () => {
+    assert.deepStrictEqual(burnWords('   '), []);
+    assert.deepStrictEqual(burnWords(''), []);
+  });
+});
+
+describe('fillFullscreenSubtitle', () => {
+  function fakeDoc() {
+    function node(tag) {
+      return {
+        tagName: tag, className: '', children: [], text: '',
+        appendChild(c) { this.children.push(c); return c; },
+        set textContent(v) { this.children = []; this.text = v; },
+        get textContent() {
+          return this.text + this.children.map((c) => c.textContent).join('');
+        },
+      };
+    }
+    return {
+      createElement: (tag) => node(tag),
+      createTextNode: (t) => ({ textContent: t }),
+      node,
+    };
+  }
+
+  it('wraps every word in a no-break box, joined by plain spaces, in one wrapper', () => {
+    const doc = fakeDoc();
+    const el = doc.node('div');
+    el.ownerDocument = doc;
+    el.textContent = 'old';
+    fillFullscreenSubtitle(el, 'до  Нью-Йорка,');
+    assert.strictEqual(el.textContent, 'до Нью-Йорка,');
+    // One child: the band is a flex container, and loose words would each be
+    // a flex item that never wraps.
+    assert.strictEqual(el.children.length, 1);
+    assert.strictEqual(el.children[0].className, 'fs-text');
+    const words = el.children[0].children.filter((c) => c.tagName === 'span');
+    assert.deepStrictEqual(words.map((w) => w.className), ['fs-word', 'fs-word']);
+    assert.deepStrictEqual(words.map((w) => w.textContent), ['до', 'Нью-Йорка,']);
   });
 });
 
@@ -770,5 +1228,84 @@ describe('burnPhaseNumber', () => {
     assert.equal(burnPhaseNumber({label: 'Render 40%'}), 3);
     assert.equal(burnPhaseNumber({label: 'Upload result'}), 4);
     assert.equal(burnPhaseNumber({label: ''}), null);
+  });
+});
+
+describe('parseBurnRunTitle against the workflow run-name', () => {
+  // The workflow writes the run name and this module reads it back, in two
+  // languages. The contract is checked from the YAML itself rather than from a
+  // copy of it, so a segment added, dropped or reordered there fails here.
+  const fs = require('fs');
+  const { parseBurnRunTitle } = require('../site/js/burn_video');
+  const yaml = fs.readFileSync('.github/workflows/burn-subtitles.yml', 'utf8');
+  const block = yaml.match(/^run-name: >-\n((?: {2}.*\n)+)/m);
+
+  // A folded scalar joins its lines with single spaces; each ${{ }} is replaced
+  // with the value the runner would put there.
+  function render(values) {
+    assert.ok(block, 'run-name is no longer a folded block in burn-subtitles.yml');
+    const template = block[1].split('\n').map((line) => line.trim()).filter(Boolean).join(' ');
+    return template.replace(/\$\{\{ (.+?) \}\}/g, (whole, expr) => {
+      assert.ok(expr in values, 'run-name uses an expression this test does not know: ' + expr);
+      return values[expr];
+    });
+  }
+
+  const LABEL = "inputs.run_label || format('{0}/{1}', inputs.talk_id, inputs.video_slug)";
+
+  it('reads back every field the workflow writes, a separator inside the label included', () => {
+    const title = render({
+      [LABEL]: 'Puja · Part 2 — Talk',
+      'inputs.talk_id': '1993-09-19_Ganesha-Puja-Cabella',
+      'inputs.video_slug': 'Talk',
+      'github.actor': 'SlavaSubotskiy',
+      "inputs.subs_scale || '100'": '150',
+      "inputs.clip || 'full'": '600000-930500',
+      'inputs.request_id': 'req-mtrnhgm2-158i'
+    });
+    assert.deepStrictEqual(parseBurnRunTitle(title), {
+      label: 'Puja · Part 2 — Talk',
+      talkId: '1993-09-19_Ganesha-Puja-Cabella',
+      videoSlug: 'Talk',
+      actor: 'SlavaSubotskiy',
+      scalePct: 150,
+      clip: { startMs: 600000, endMs: 930500 },
+      requestId: 'req-mtrnhgm2-158i'
+    });
+  });
+
+  it('reads a whole-video run exactly as the input defaults write it', () => {
+    const title = render({
+      [LABEL]: 'Ganesha Puja — Talk',
+      'inputs.talk_id': '1993-09-19_Ganesha-Puja-Cabella',
+      'inputs.video_slug': 'Talk',
+      'github.actor': 'reviewer-2',
+      "inputs.subs_scale || '100'": '100',
+      "inputs.clip || 'full'": 'full',
+      'inputs.request_id': 'req-a-1'
+    });
+    const parsed = parseBurnRunTitle(title);
+    assert.ok(parsed, 'a run dispatched with the defaults must parse: ' + title);
+    assert.strictEqual(parsed.clip, null);
+    assert.strictEqual(parsed.scalePct, 100);
+  });
+});
+
+describe('buildBurnInputs clip digits', () => {
+  // Nine digits of milliseconds — about 277 hours — is where both the workflow's
+  // clip grammar and parseBurnRunTitle stop. A longer span would be dispatched
+  // and then refused, or rendered and never listed.
+  const { buildBurnInputs: build } = require('../site/js/burn_video');
+  const RATIOS = { font_ratio: 0.07, padtop_ratio: 0.07, padbot_ratio: 0.03 };
+  const opts = (clip) => ({ sourceRef: 'main', subsScale: 1, clip: clip });
+
+  it('accepts an end of nine digits', () => {
+    assert.strictEqual(build('t', 'v', RATIOS, 'req-a-1', opts({ startMs: 0, endMs: 999999999 })).clip,
+      '0-999999999');
+  });
+
+  it('refuses an end of ten', () => {
+    assert.throws(() => build('t', 'v', RATIOS, 'req-a-1', opts({ startMs: 0, endMs: 1000000000 })),
+      /invalid clip/);
   });
 });

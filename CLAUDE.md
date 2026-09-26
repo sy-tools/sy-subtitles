@@ -33,8 +33,8 @@ Source language: English. Target language: Ukrainian.
 1. Download talk: `python -m tools.download --url "https://www.amruta.org/..."`
 2. Push source files (`meta.yaml`, `transcript_en.txt`, `en.srt`)
 3. Trigger pipeline: `gh workflow run subtitle-pipeline.yml -f talk_id={date}_{slug}`
-   Optional inputs: `model=claude-opus-5|claude-opus-4-8|claude-fable-5-1|claude-sonnet-5`
-   (default `claude-opus-5`), `build_model=...` (build-step-only override,
+   Optional inputs: `model=claude-opus-5-5|claude-fable-5-1|claude-sonnet-5`
+   (default `claude-opus-5-5`), `build_model=...` (build-step-only override,
    default `same-as-model`), `oauth_token=default|EXTRA` (Claude account:
    value `X` → secret `CLAUDE_CODE_OAUTH_TOKEN_X`; missing/empty named secret
    FAILS the run — no silent fallback to the default account),
@@ -221,10 +221,11 @@ that live nowhere else.
   disagree. Auth/cookie: `docs/amruta-auth.md`.
 - `whisper_run` — speech detection, word-level timestamps.
 - `burn_subtitles` — burn subtitles into a video (SRT → ASS → ffmpeg+libass).
-  Sizing comes from ratios the SPA measured against the *displayed* video, not
-  from pixels. The font is PT Serif because that is what the preview really
-  draws: its stack is `'Fraunces', Georgia, …` and Fraunces has no Cyrillic, so
-  Georgia wins — matching the preview means matching Georgia, not the stack.
+  Sizing is fractions of the video frame, the same fractions fullscreen draws
+  on the displayed video's box — never pixels, never the screen. The font is
+  one file, `site/fonts/`, which the fullscreen preview also loads: a system
+  font would differ per device, and Georgia (what the preview used to fall
+  back to) may not be served as a web font.
 - `text_export` — SRT → plain text.
 
 **Building and timing subtitles**
@@ -286,6 +287,8 @@ that live nowhere else.
 - `render_gate` — blocks until a detached burn encode passes a percentage. Each
   gate step in `burn-subtitles.yml` is one call, and a step *completing* is the
   only live progress channel the SPA has into a running job.
+- `burn_clip` — the one reading of a burn's `clip` input: the input guard, the
+  render and the span the gates measure all parse it here.
 - `retime_snapshot` — carry a dry-run snapshot's timings onto a new block cut.
   Run it after changing `text_segmentation` or `subtitle_omit`, which move block
   boundaries; see `TESTING.md`.

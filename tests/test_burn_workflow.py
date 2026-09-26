@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -53,6 +54,22 @@ CONTRACT_STEPS = [
 ]
 
 
+# run-name, split on its " · " separators. Read back by the SPA from the right.
+RUN_NAME_SEGMENTS = [
+    "${{ inputs.run_label || format('{0}/{1}', inputs.talk_id, inputs.video_slug) }}",
+    "${{ inputs.talk_id }}/${{ inputs.video_slug }}",
+    "${{ github.actor }}",
+    "${{ inputs.subs_scale || '100' }}%",
+    "${{ inputs.clip || 'full' }}",
+    "${{ inputs.request_id }}",
+]
+
+# "1993" in Arabic-Indic digits. Python's \d matches these, a browser's does not
+# — so this is the one string that tells the two apart, and the run-name patterns
+# are compared against it precisely because neither side may accept it.
+ARABIC_INDIC_1993 = "١٩٩٣"
+
+
 def _raw():
     with open(WORKFLOW, encoding="utf-8") as f:
         return f.read()
@@ -86,20 +103,49 @@ class TestInputs:
             "request_id",
             "source_ref",
             "run_label",
+            "subs_scale",
+            "clip",
         }
 
-    def test_run_name_embeds_request_id(self):
-        # workflow_dispatch returns no run id; this is how the SPA finds its run.
-        assert "inputs.request_id" in _doc()["run-name"]
+    def test_the_two_render_record_inputs_are_optional_with_neutral_defaults(self):
+        # A dispatch that sends neither — a hand-started run, or an SPA from
+        # before they existed — must render exactly as it always did.
+        inputs = _doc()[True]["workflow_dispatch"]["inputs"]
+        assert inputs["subs_scale"]["required"] is False
+        assert inputs["subs_scale"]["default"] == "100"
+        assert inputs["clip"]["required"] is False
+        assert inputs["clip"]["default"] == ""
 
-    def test_run_name_leads_with_the_human_label(self):
-        # A run is found by eye in the Actions list, the way a PR is found by
-        # its title. The talk_id/video_slug fallback keeps a hand-started run
-        # from being nameless.
-        run_name = _doc()["run-name"]
-        assert "inputs.run_label" in run_name
-        assert "inputs.talk_id" in run_name and "inputs.video_slug" in run_name
-        assert run_name.index("inputs.run_label") < run_name.index("inputs.request_id")
+    def test_run_name_is_the_six_segments_in_the_contract_order(self):
+        # The SPA parses display_title back into these fields, so the order and
+        # the " · " separator are a contract, not formatting.
+        assert _doc()["run-name"].split(" · ") == RUN_NAME_SEGMENTS
+
+    def test_run_name_leads_with_the_human_label_and_ends_with_request_id(self):
+        # The label first: a run is found by eye in the Actions list, the way a
+        # PR is found by its title, and the talk_id/video_slug fallback keeps a
+        # hand-started run from being nameless. request_id last: workflow_dispatch
+        # returns no run id, and matching this token is how the SPA finds its run.
+        segments = _doc()["run-name"].split(" · ")
+        assert "inputs.run_label" in segments[0]
+        assert segments[-1] == "${{ inputs.request_id }}"
+
+    def test_a_label_containing_the_separator_still_parses_from_the_right(self):
+        # The label is free text; the SPA reads the last five segments from the
+        # right, so a " · " inside the label shifts nothing.
+        values = {
+            "inputs.run_label || format('{0}/{1}', inputs.talk_id, inputs.video_slug)": "Puja · Part 2 — Talk",
+            "inputs.talk_id": "1993-09-19_Ganesha-Puja-Cabella",
+            "inputs.video_slug": "talk",
+            "github.actor": "SlavaSubotskiy",
+            "inputs.subs_scale || '100'": "120",
+            "inputs.clip || 'full'": "60000-90000",
+            "inputs.request_id": "req-abc-1",
+        }
+        title = re.sub(r"\$\{\{ (.+?) \}\}", lambda m: values[m.group(1)], _doc()["run-name"])
+        label, *fields = title.rsplit(" · ", 5)
+        assert label == "Puja · Part 2 — Talk"
+        assert fields == ["1993-09-19_Ganesha-Puja-Cabella/talk", "SlavaSubotskiy", "120%", "60000-90000", "req-abc-1"]
 
     def test_the_content_ref_defaults_to_the_published_subtitles(self):
         # A hand-started run that names no ref renders what is on main, which is
@@ -184,7 +230,7 @@ class TestSteps:
         assert "pip install yt-dlp" not in _commands(run)
 
     def test_installs_only_the_devanagari_fallback_font(self):
-        # PT Serif is vendored under assets/fonts/ and handed to libass via
+        # PT Serif is vendored under site/fonts/ and handed to libass via
         # fontsdir; it must stay the PRIMARY face, and the probe proves it did.
         # Noto is here for the twelve videos whose subtitles carry Sanskrit
         # mantras in Devanagari — glyphs PT Serif does not have. Without a
@@ -219,6 +265,13 @@ class TestSteps:
         for run in _runs():
             assert "set -euo pipefail" in run, run
 
+    def test_no_run_block_splices_an_expression(self):
+        # Inputs reach the shell only through env:. A ${{ }} inside run: is
+        # substituted into the script text before bash parses it, so a crafted
+        # label or clip would become code rather than a value.
+        for run in _runs():
+            assert "${{" not in run, run
+
     def test_no_step_masks_a_non_zero_exit(self):
         # A font that libass cannot resolve must fail the run loudly.
         joined = "\n".join(_runs())
@@ -236,6 +289,17 @@ class TestValidation:
 
     def test_requires_the_ukrainian_srt_to_exist(self):
         assert "final/uk.srt" in _step("Validate inputs")["run"]
+
+    def test_guard_cli_checks_the_scale_and_the_clip_in_the_equals_form(self):
+        # --flag="$VALUE", never --flag "$VALUE": argparse on the runner's Python
+        # reads a clip such as "-5-3000" as an option and dies with a usage
+        # error instead of the guard's legible ::error::.
+        step = _step("Validate inputs")
+        assert step["env"]["SUBS_SCALE"] == "${{ inputs.subs_scale }}"
+        assert step["env"]["CLIP"] == "${{ inputs.clip }}"
+        run = _commands(step["run"])
+        assert '--subs-scale="$SUBS_SCALE"' in run
+        assert '--clip="$CLIP"' in run
 
     @pytest.mark.integration
     @pytest.mark.parametrize(
@@ -268,25 +332,150 @@ class TestValidation:
         done = subprocess.run(["bash", "-c", script], env=env, capture_output=True, text=True)
         assert done.returncode == exit_code, f"{ratios} -> {done.returncode}: {done.stdout}"
 
-    def test_the_font_ratio_band_is_the_same_number_in_all_three_files(self):
-        """YAML guard, Python clamp and browser clamp, or the SPA dispatches a refusal.
+    def test_the_font_ratio_band_comes_from_the_geometry_file(self):
+        """The guard, the burner and the browser clamp share one font band.
 
-        The browser measures the ratio, the burner clamps it and this step
-        rejects it. When those three disagree the failure lands in Actions,
-        minutes after the click, with a generic message.
+        When they disagree the SPA dispatches a ratio this step refuses, and the
+        failure lands in Actions minutes after the click with a generic message.
+        The burner and the browser read site/js/burn_geometry.js (see
+        test_burn_geometry.py and test_burn_video.js); so must the guard.
         """
-        from tools import burn_subtitles
-
         run = _step("Validate inputs")["run"]
-        match = re.search(r'"FONT_RATIO":\s*\(([0-9.]+),\s*([0-9.]+)\)', run)
-        assert match, "the ratio bounds are no longer readable out of the guard"
-        low, high = float(match.group(1)), float(match.group(2))
-        assert (low, high) == (burn_subtitles.FONT_RATIO_MIN, burn_subtitles.FONT_RATIO_MAX)
+        assert "from tools.burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN" in run
+        assert '"FONT_RATIO": (FONT_RATIO_MIN, FONT_RATIO_MAX)' in run
 
+
+class TestSpaContract:
+    """What the preview SPA shares with this workflow beyond the step names.
+
+    Each number lives in two languages, so it is read out of the JS source here:
+    a change made on one side alone fails in CI, not in a render the reviewer
+    waited minutes for — or, for the list of created videos, in a list that
+    quietly shows nothing.
+    """
+
+    @staticmethod
+    def _js(name):
         with open("site/js/burn_video.js", encoding="utf-8") as f:
-            source = f.read()
-        js = {name: float(value) for name, value in re.findall(r"var (FONT_RATIO_(?:MIN|MAX)) = ([0-9.]+);", source)}
-        assert js == {"FONT_RATIO_MIN": low, "FONT_RATIO_MAX": high}
+            match = re.search(rf"^var {name} = (.+);$", f.read(), re.M)
+        assert match, f"{name} is no longer declared in site/js/burn_video.js"
+        return match.group(1)
+
+    def test_the_shortest_clip_is_the_same_number_in_the_spa(self):
+        # The panel refuses what the guard would refuse, so a fragment the
+        # reviewer was allowed to ask for is never rejected in Validate inputs.
+        from tools import burn_clip
+
+        assert int(self._js("BURN_CLIP_MIN_MS")) == burn_clip.CLIP_MIN_MS
+
+    def test_the_longest_clip_number_is_the_same_in_the_spa(self):
+        # Nine digits of milliseconds on both sides: a longer span would pass
+        # the panel, then be refused in Validate inputs after the wait — or be
+        # rendered and never read back by the list's run-title parser.
+        from tools import burn_clip
+
+        longest = int(self._js("BURN_CLIP_MAX_MS"))
+        assert burn_clip.parse_clip(f"0-{longest}") == (0, longest)
+        with pytest.raises(burn_clip.ClipError):
+            burn_clip.parse_clip(f"0-{longest + 1}")
+
+    def test_the_spa_lists_no_further_back_than_an_artifact_lives(self):
+        # Listed past the retention, a row would offer a download whose artifact
+        # is already gone.
+        import math
+
+        days = _step("Upload result")["with"]["retention-days"]
+        factors = [int(part) for part in self._js("BURN_RETENTION_MS").split("*")]
+        assert math.prod(factors) == days * 24 * 60 * 60 * 1000
+
+    def test_the_spa_splits_titles_on_the_separator_the_run_name_writes(self):
+        # tests/test_burn_video.js renders this run-name and parses it back; this
+        # half pins the separator itself, so neither side can drift alone.
+        import ast
+
+        separator = ast.literal_eval(self._js("BURN_TITLE_SEP"))
+        assert _doc()["run-name"].split(separator) == RUN_NAME_SEGMENTS
+
+    @staticmethod
+    def _js_regex(name):
+        """One of the SPA's run-name field patterns, as a Python regex.
+
+        The two sides spell the same grammar in two syntaxes, so they are
+        compared by the strings they ACCEPT rather than character for character:
+        a reformatting is not a drift, and a widened character class is.
+
+        re.ASCII because the pattern has to be read the way the BROWSER reads it,
+        not the way Python would: JavaScript's \\d is ASCII, Python's matches
+        every Unicode digit. Without the flag this helper modelled a wider
+        pattern than the one that ships, and would have called a browser-only
+        rejection an agreement.
+        """
+        literal = TestSpaContract._js(name)
+        assert literal.startswith("/^") and literal.endswith("$/"), literal
+        return re.compile(literal[1:-1], re.ASCII)
+
+    def test_the_spa_reads_back_every_request_id_the_workflow_lets_through(self):
+        # The token is the run name's last field, and the list of created videos
+        # finds a run by it. A request_id the workflow accepts but the SPA cannot
+        # parse is a video that renders and is then never listed — so every value
+        # that gets past Validate inputs has to come back out of the run name.
+        from tools.workflow_validation import REQUEST_ID_RE
+
+        spa = self._js_regex("BURN_RUN_REQUEST_RE")
+        # The corners of the workflow's own grammar: the shortest, the widest
+        # stamp a safe integer spells, and the widest 16-bit noise.
+        for value in ["req-0-0", "req-" + "z" * 11 + "-1ekf", "req-mf3k9d2-1a"]:
+            assert REQUEST_ID_RE.fullmatch(value), f"{value} is the workflow's own shape"
+            assert spa.fullmatch(value), f"the SPA cannot read back {value}"
+        # And the shapes neither side may take: an id carrying separators or
+        # uppercase would let a run name claim another talk, author or size.
+        for value in ["req-abc", "req--1", "req-ABC-1", "req-abc-1-x", "xreq-abc-1", "req-abc-1 "]:
+            assert not REQUEST_ID_RE.fullmatch(value), value
+            assert not spa.fullmatch(value), value
+
+    def test_the_subtitle_size_band_is_the_same_number_in_the_spa(self):
+        # The SPA clamps the measured size into this band before dispatching and
+        # refuses to list a run outside it. A band only one side knows either
+        # fails the run in Validate inputs, or drops a rendered video from the
+        # list for a size the SPA itself asked for.
+        from tools import workflow_validation as wv
+
+        assert int(self._js("BURN_SCALE_PCT_MIN")) == wv.SUBS_SCALE_MIN
+        assert int(self._js("BURN_SCALE_PCT_MAX")) == wv.SUBS_SCALE_MAX
+
+    def test_the_spa_reads_back_exactly_the_talks_and_slugs_the_workflow_accepts(self):
+        # The run name's second field is talk_id/video_slug, and it is what scopes
+        # a listed video to the one on screen. The SPA's pattern for it is the two
+        # workflow guards written as one, so a talk the workflow renders and the
+        # SPA cannot place would simply be missing from the list.
+        from tools.workflow_validation import TALK_ID_RE, VIDEO_SLUG_RE
+
+        place = self._js_regex("BURN_RUN_PLACE_RE")
+        for talk, slug in [
+            ("1993-09-19_Ganesha-Puja", "Talk"),
+            ("2000-07-23_Guru-Puja-Shraddha", "Talk_2.part-1"),
+            ("1979-09-27_" + "x" * 80, "_" + "y" * 63),
+        ]:
+            assert TALK_ID_RE.fullmatch(talk) and VIDEO_SLUG_RE.fullmatch(slug)
+            found = place.fullmatch(f"{talk}/{slug}")
+            assert found, f"the SPA cannot place {talk}/{slug}"
+            assert found.group(1) == talk and found.group(2) == slug
+        for talk, slug in [
+            ("1993-9-19_Ganesha", "Talk"),  # an unpadded date
+            ("1993-09-19_" + "x" * 81, "Talk"),  # one character past the talk id
+            ("1993-09-19_Ganesha", "-rf"),  # an option-shaped slug
+            ("1993-09-19_Ganesha", "."),  # a dot-only slug
+            ("1993-09-19_Ganesha", "y" * 65),  # one character past the slug
+            # Digits only a Unicode-aware \d calls digits. The browser's \d is
+            # ASCII, so the SPA cannot place these; the workflow must not let one
+            # render either, or the video renders and is never listed. Without a
+            # sample here the whole dimension went untried, and the test read
+            # these patterns under Python's rule rather than the browser's.
+            (ARABIC_INDIC_1993 + "-09-19_Ganesha", "Talk"),
+            ("1993-" + ARABIC_INDIC_1993[:2] + "-19_Ganesha", "Talk"),
+        ]:
+            assert not (TALK_ID_RE.fullmatch(talk) and VIDEO_SLUG_RE.fullmatch(slug))
+            assert not place.fullmatch(f"{talk}/{slug}"), f"{talk}/{slug} must not place"
 
 
 class TestDownload:
@@ -307,6 +496,12 @@ class TestDownload:
         # Without this yt-dlp may merge into source.mkv, exit 0, and leave the
         # empty-file check complaining about an .mp4 that was never written.
         assert "--merge-output-format mp4" in _step("Download video")["run"]
+
+    def test_the_whole_video_is_downloaded_even_for_a_clip(self):
+        # The fragment is cut by the render's input-side seek, not by the download.
+        step = _step("Download video")
+        assert "CLIP" not in (step.get("env") or {})
+        assert "clip" not in _commands(step["run"]).lower()
 
     def test_download_failure_is_loud(self):
         # A silent empty file would produce a video with no audio track.
@@ -344,6 +539,11 @@ class TestBurn:
         assert source.count('print("[burn] ') == 1, "only the encode may echo its command"
         comment = _step("Start render")["run"]
         assert 'Exactly ONE "[burn] ffmpeg ..." line' in comment
+
+    def test_the_render_receives_the_clip_in_the_equals_form(self):
+        step = _step("Start render")
+        assert step["env"]["CLIP"] == "${{ inputs.clip }}"
+        assert '--clip="$CLIP"' in _commands(step["run"])
 
     def test_probes_the_source_duration_before_launching(self):
         # out_time_us only becomes a percentage against a known duration.
@@ -389,6 +589,59 @@ class TestBurn:
         assert "cat /tmp/burn/render.log" in _step("Finish render")["run"]
 
 
+class TestRenderDuration:
+    """What the gates measure against: the source, or the span a clip renders.
+
+    Executed, not grepped, with ffprobe stubbed: the arithmetic that decides
+    whether Finish render calls a clip truncated deserves more than a string check.
+    """
+
+    def _script(self, root):
+        run = _step("Start render")["run"]
+        return "set -euo pipefail\n" + run[run.index("ffprobe -v error") : run.index("nohup bash -c")].replace(
+            "/tmp/burn", root
+        )
+
+    def _run(self, tmp_path, clip, probed="10.000000"):
+        root = tmp_path / "burn"
+        root.mkdir()
+        bindir = tmp_path / "bin"
+        bindir.mkdir()
+        ffprobe = bindir / "ffprobe"
+        ffprobe.write_text(f"#!/bin/sh\necho {probed}\n", encoding="utf-8")
+        ffprobe.chmod(0o755)
+        python = bindir / "python"
+        python.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n', encoding="utf-8")
+        python.chmod(0o755)
+        env = dict(os.environ, PATH=f"{bindir}{os.pathsep}{os.environ['PATH']}", CLIP=clip)
+        done = subprocess.run(
+            ["bash", "-c", self._script(str(root))], env=env, cwd=REPO_ROOT, capture_output=True, text=True
+        )
+        return done, root / "duration_s.txt"
+
+    @pytest.mark.integration
+    def test_without_a_clip_the_gates_measure_the_source_exactly_as_before(self, tmp_path):
+        done, duration = self._run(tmp_path, clip="")
+        assert done.returncode == 0, done.stderr
+        assert duration.read_text(encoding="utf-8") == "10.000000\n"
+
+    @pytest.mark.integration
+    def test_a_clip_is_measured_by_the_span_it_renders(self, tmp_path):
+        # END past the end of the file: the gates must expect the 8 s that
+        # ffmpeg will actually encode before EOF, not 18 s and not 10 s.
+        done, duration = self._run(tmp_path, clip="2000-20000")
+        assert done.returncode == 0, done.stderr
+        assert float(duration.read_text(encoding="utf-8")) == 8.0
+
+    @pytest.mark.integration
+    def test_an_unrenderable_clip_fails_the_step_before_the_render_starts(self, tmp_path):
+        run = _step("Start render")["run"]
+        assert run.index("tools.burn_clip") < run.index("nohup bash -c")
+        done, _ = self._run(tmp_path, clip="12000-15000")
+        assert done.returncode != 0
+        assert "::error::" in done.stderr
+
+
 class TestRenderLauncherInjection:
     """The detached body is single-quoted; the shell must splice nothing into it."""
 
@@ -417,6 +670,7 @@ class TestRenderLauncherInjection:
             PATH=f"{bindir}{os.pathsep}{os.environ['PATH']}",
             TALK_ID=f'x"; touch {pwned}; #',
             VIDEO_SLUG=f"v'; touch {pwned}; #",
+            CLIP=f'1"; touch {pwned}; #',
             FONT_RATIO="0.0711",
             PADTOP_RATIO="0.0741",
             PADBOT_RATIO="0.0333",
@@ -441,6 +695,11 @@ class TestArtifact:
     def test_artifact_name_uses_double_underscore_delimiter(self):
         # talk_id contains hyphens, so '-' cannot delimit.
         assert "__" in self._upload()["with"]["name"]
+
+    def test_output_and_artifact_names_do_not_vary_with_the_clip(self):
+        # The SPA names the file it saves; the workflow's names stay fixed.
+        assert self._upload()["with"]["name"] == "burned__${{ inputs.talk_id }}__${{ inputs.video_slug }}"
+        assert '--output "/tmp/burn/out/${TALK_ID}__${VIDEO_SLUG}__uk.mp4"' in _step("Start render")["run"]
 
     def test_an_empty_artifact_fails_the_job(self):
         # The MP4 IS the deliverable: the default 'warn' would report success

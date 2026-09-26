@@ -1,11 +1,24 @@
 name: Burn subtitles
 
-# Named after the talk, so a run is found by eye in the Actions list the way a
-# PR is found by its title. The trailing request_id is machinery, not decoration:
-# workflow_dispatch returns no run id, so the caller (the preview SPA) finds its
-# own run by matching that token in the run name.
+# The run name is the record of a render as well as its title. The REST API does
+# not return a run's workflow_dispatch inputs, and the preview SPA lists a talk's
+# rendered, unexpired videos with ONE request for this workflow's successful runs
+# of the last seven days — so everything that list shows has to be readable from
+# display_title: talk/video, who rendered it, the subtitle scale and the clip.
+# The human label leads, so a run is found by eye in the Actions list the way a
+# PR is found by its title. request_id stays last: workflow_dispatch returns no
+# run id, and the SPA finds the run it just started by matching that token.
+# The SPA splits the segments from the RIGHT, because the label is free text and
+# may itself contain " · ".
+# No truncation guard: measured 2026-09-13, GitHub keeps a 422-character
+# display_title intact, tail included, and this format's worst case over the
+# corpus is ~365 characters.
 run-name: >-
   ${{ inputs.run_label || format('{0}/{1}', inputs.talk_id, inputs.video_slug) }}
+  · ${{ inputs.talk_id }}/${{ inputs.video_slug }}
+  · ${{ github.actor }}
+  · ${{ inputs.subs_scale || '100' }}%
+  · ${{ inputs.clip || 'full' }}
   · ${{ inputs.request_id }}
 
 on:
@@ -30,7 +43,9 @@ on:
         required: true
         default: "0.0333"
       request_id:
-        description: Opaque token so the caller can find this run
+        description: >-
+          Token so the caller can find this run, req-STAMP-NOISE in lowercase
+          base36 as the SPA generates it; anything else fails validation
         required: true
       source_ref:
         description: >-
@@ -44,6 +59,20 @@ on:
           back to talk_id/video_slug without it
         required: false
         default: ""
+      # Ten inputs, the limit workflow_dispatch has historically allowed: check
+      # the current one before adding an eleventh.
+      subs_scale:
+        description: >-
+          Subtitle size set in the preview, whole percent (10-1000). Recorded in
+          the run name only; the render sizes text from the ratios above
+        required: false
+        default: "100"
+      clip:
+        description: >-
+          Render only START_MS-END_MS of the video, e.g. 60000-90000; empty
+          renders all of it
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -53,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      # The renderer: tools/, assets/fonts/, requirements.txt, at the ref this
+      # The renderer: tools/, site/fonts/, requirements.txt, at the ref this
       # run was dispatched against. Deliberately unpinned and unnamed.
       - uses: actions/checkout@v7
 
@@ -95,7 +124,7 @@ jobs:
           # extra. A bare `pip install yt-dlp` here would find the requirement
           # already satisfied and install the extra for nobody.
           pip install -r requirements.txt
-          # PT Serif stays vendored in assets/fonts/ and reaches libass through
+          # PT Serif stays vendored in site/fonts/ and reaches libass through
           # fontsdir; the pre-flight probe proves it stayed the PRIMARY face.
           # Noto is a GLYPH fallback only: twelve videos carry Sanskrit mantras
           # in Devanagari, which PT Serif does not cover — without a fallback
@@ -110,10 +139,21 @@ jobs:
           FONT_RATIO: ${{ inputs.font_ratio }}
           PADTOP_RATIO: ${{ inputs.padtop_ratio }}
           PADBOT_RATIO: ${{ inputs.padbot_ratio }}
+          SUBS_SCALE: ${{ inputs.subs_scale }}
+          CLIP: ${{ inputs.clip }}
+          REQUEST_ID: ${{ inputs.request_id }}
         run: |
           set -euo pipefail
+          # --flag="$VALUE" for the scale, the clip and the request id, never
+          # two words: on the runner's Python argparse reads a clip such as
+          # "-5-3000" as an option and dies with a usage error instead of the
+          # ::error:: that says what is wrong. An empty clip means the whole
+          # video and passes. The request id ends the run name, whose fields the
+          # SPA reads from the right, so an unchecked one could carry forged
+          # talk, author, scale and clip fields into the list of created videos.
           python3 -m tools.workflow_validation_cli \
-            --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG"
+            --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG" \
+            --subs-scale="$SUBS_SCALE" --clip="$CLIP" --request-id="$REQUEST_ID"
           test -f "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
             || { echo "::error::no final/uk.srt for $TALK_ID/$VIDEO_SLUG"; exit 1; }
           # The video_ref, checked HERE for two reasons. Presence: a talk whose
@@ -137,13 +177,16 @@ jobs:
           python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
           # The ratios are measured in the browser. Reject nonsense here, with a
           # legible message, rather than deep inside ffmpeg. The font_ratio
-          # bounds mirror the clamp in tools/burn_subtitles.py.
+          # band is the one the browser and the burner clamp to
+          # (site/js/burn_geometry.js); the loader is stdlib-only.
           python3 - <<'PY'
           import os
           import sys
 
+          from tools.burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN
+
           BOUNDS = {
-              "FONT_RATIO": (0.02, 0.12),
+              "FONT_RATIO": (FONT_RATIO_MIN, FONT_RATIO_MAX),
               "PADTOP_RATIO": (0.0, 0.5),
               "PADBOT_RATIO": (0.0, 0.5),
           }
@@ -221,25 +264,38 @@ jobs:
           FONT_RATIO: ${{ inputs.font_ratio }}
           PADTOP_RATIO: ${{ inputs.padtop_ratio }}
           PADBOT_RATIO: ${{ inputs.padbot_ratio }}
+          CLIP: ${{ inputs.clip }}
         run: |
           set -euo pipefail
           mkdir -p /tmp/burn/out
-          # The gates turn out_time_us into a percentage, which needs the source
-          # duration. A non-numeric probe result fails the gates loudly rather
-          # than degrading into "release everything".
+          # The gates turn out_time_us into a percentage, which needs the
+          # duration being rendered. A non-numeric probe result fails the gates
+          # loudly rather than degrading into "release everything".
           ffprobe -v error -show_entries format=duration -of csv=p=0 \
             /tmp/burn/source.mp4 > /tmp/burn/duration_s.txt
           test -s /tmp/burn/duration_s.txt \
             || { echo "::error::could not probe the source duration"; exit 1; }
+          # A clip renders only its span, so the gates must measure that: against
+          # the whole source a clip never nears 100% and Finish render fails it
+          # as truncated. The span is min(END, file) - START, clamped to THIS
+          # file's probed duration on purpose — the SPA bounds END by the
+          # player's reported duration, which can differ from the downloaded
+          # file by a fraction of a second. A clip that starts past the end, or
+          # keeps under a second, fails here, before anything is launched.
+          if [ -n "$CLIP" ]; then
+            python -m tools.burn_clip --clip="$CLIP" \
+              --source-duration-file /tmp/burn/duration_s.txt > /tmp/burn/span_s.txt
+            mv /tmp/burn/span_s.txt /tmp/burn/duration_s.txt
+          fi
           # Detached with stdio on files, so this step's shell can exit while the
           # encode keeps running across the gate steps below. nohup is what keeps
           # it alive; no `disown` is needed, and none is used — it would have to
           # be guarded by an exit-code mask, which this workflow forbids.
           #
           # SECURITY: the body is SINGLE-quoted, so the outer shell splices
-          # nothing into it. TALK_ID and VIDEO_SLUG arrive through `env:` above
-          # and are expanded by the inner shell as ordinary variables, which is
-          # what makes a crafted talk_id inert here.
+          # nothing into it. TALK_ID, VIDEO_SLUG and CLIP arrive through `env:`
+          # above and are expanded by the inner shell as ordinary variables,
+          # which is what makes a crafted talk_id inert here.
           #
           # No `set -e` inside: the wrapper must ALWAYS reach `echo $?`, so the
           # gates get an unambiguous "the render is over" signal instead of
@@ -263,7 +319,8 @@ jobs:
               --padtop-ratio "$PADTOP_RATIO" \
               --padbot-ratio "$PADBOT_RATIO" \
               --ass-out /tmp/burn/subs.ass \
-              --progress-file /tmp/burn/progress.txt
+              --progress-file /tmp/burn/progress.txt \
+              --clip="$CLIP"
             echo $? > /tmp/burn/exit_code
           ' > /tmp/burn/render.log 2>&1 < /dev/null &
           # Return only once ffmpeg has written its first sample, so the first

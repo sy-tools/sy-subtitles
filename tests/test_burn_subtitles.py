@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -15,7 +16,7 @@ from tools.burn_subtitles import (
     FONT_PROBE_MAX_CHARS,
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
-    PT_SERIF_WIN_FACTOR,
+    LINE_ADVANCE,
     SIDE_INSET_RATIO,
     WRAP_SAFETY,
     ass_alpha_byte,
@@ -38,6 +39,7 @@ from tools.burn_subtitles import (
     probe_text_for,
     text_measurer,
     wrap_text,
+    wrap_width_for,
 )
 
 
@@ -89,9 +91,9 @@ class TestSizingConstants:
     detect a drifted or typo'd value, so the values are asserted directly.
     """
 
-    def test_win_factor_matches_pt_serif_win_metrics(self):
+    def test_line_advance_matches_pt_serif_win_metrics(self):
         # FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm.
-        assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == PT_SERIF_WIN_FACTOR
+        assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == LINE_ADVANCE
 
     def test_ratio_clamp_bounds(self):
         assert FONT_RATIO_MIN == 0.02
@@ -99,25 +101,30 @@ class TestSizingConstants:
 
 
 class TestFontSizeFor:
-    def test_applies_win_metric_factor(self):
+    def test_applies_the_line_advance(self):
         # ASS FontSize is the font's Win cell height, not CSS pixels.
-        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * PT_SERIF_WIN_FACTOR)
+        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * LINE_ADVANCE, 2)
 
     def test_pins_size_for_1080p(self):
-        # 0.0711 * 1080 * 1.325 = 101.7 -> 102. Independent of the constants,
-        # so a drift in any of them fails here.
-        assert font_size_for(0.0711, 1080) == 102
+        # 0.0711 * 1080 * 1.325 = 101.74. Independent of the constants, so a
+        # drift in any of them fails here.
+        assert font_size_for(0.0711, 1080) == 101.74
+
+    def test_is_not_rounded_to_a_whole_size(self):
+        # libass takes a fractional FontSize. Rounded, a 640x480 frame at the
+        # handle's 0.6x (15.36px, FontSize 20.35) drew its text at 20 — 1.7%
+        # narrower than the preview showed it.
+        assert font_size_for(0.032, 480) == 20.35
 
     def test_pins_clamped_sizes(self):
-        # 0.02 * 1000 * 1.325 = 26.5, which Python rounds to even -> 26.
-        assert font_size_for(0.001, 1000) == 26
-        assert font_size_for(0.9, 1000) == 159  # 0.12 * 1000 * 1.325
+        assert font_size_for(0.001, 1000) == 26.5  # 0.02 * 1000 * 1.325
+        assert font_size_for(0.9, 1000) == 159.0  # 0.12 * 1000 * 1.325
 
     def test_clamps_below_minimum(self):
-        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * PT_SERIF_WIN_FACTOR)
+        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * LINE_ADVANCE, 2)
 
     def test_clamps_above_maximum(self):
-        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * PT_SERIF_WIN_FACTOR)
+        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * LINE_ADVANCE, 2)
 
     def test_rejects_non_positive_height(self):
         with pytest.raises(ValueError):
@@ -152,6 +159,11 @@ class TestBuildAssHeader:
         # libass >= 0.15 defaults this to no.
         assert "ScaledBorderAndShadow: yes" in self._header()
 
+    def test_kerns_as_the_browser_does(self):
+        # libass leaves kerning off unless the script asks; the preview kerns,
+        # so without it every burned line ran 0.45% wider than the preview's.
+        assert "Kerning: yes" in self._header()
+
     def test_declares_default_and_band_styles(self):
         h = self._header()
         assert "Style: Default," in h
@@ -180,7 +192,22 @@ def fake_measure(text):
     return len(text) * 10
 
 
+def kerned_measure(text):
+    # 10 units a character, and a comma followed by a space kerns 3 units
+    # tighter — as PT Serif's comma/space pair really does (2.3px at 57.6px).
+    return 10 * len(text) - 3 * text.count(", ")
+
+
 class TestWrapText:
+    def test_a_line_carries_the_kern_into_the_space_after_it(self):
+        # A browser shapes before it breaks, so a comma that ends a line still
+        # carries its kern with the space that follows — and fits a word the
+        # bare line (80) would not. "aa bbbb, " is 87 - 10 for the space = 77.
+        assert wrap_text("aa bbbb, cc", kerned_measure, 78 / WRAP_SAFETY) == ["aa bbbb,", "cc"]
+
+    def test_the_last_word_has_no_space_to_kern_with(self):
+        assert wrap_text("aa bbbb,", kerned_measure, 78 / WRAP_SAFETY) == ["aa", "bbbb,"]
+
     def test_short_text_stays_one_line(self):
         assert wrap_text("abc def", fake_measure, 1000) == ["abc def"]
 
@@ -247,6 +274,11 @@ class TestAssAlphaByte:
 
 
 class TestBandGeometry:
+    def test_a_fractional_font_size_still_gives_whole_pixel_edges(self):
+        # The strips are positioned with \\pos in whole pixels.
+        top, band_h = band_geometry(480, 20.35, 2, 16, 36)
+        assert (top, band_h) == (480 - 93, 93)  # 36 + 2 * 20.35 + 16 = 92.7
+
     def test_band_encloses_text_and_padding(self):
         top, height = band_geometry(
             height=1080,
@@ -364,12 +396,23 @@ class TestDefaults:
     def test_gradient_steps_default_is_64(self):
         assert DEFAULT_GRADIENT_STEPS == 64
 
-    def test_side_inset_ratio_is_ten_percent(self):
+    def test_side_inset_ratio_is_seven_percent(self):
         # Fullscreen's horizontal insets; also the wrap width the SPA showed.
-        assert SIDE_INSET_RATIO == 0.10
+        assert SIDE_INSET_RATIO == 0.07
 
     def test_font_defaults_point_at_the_vendored_pt_serif(self):
-        assert DEFAULT_FONT_FILE.endswith(os.path.join("assets", "fonts", "PT_Serif-Web-Regular.ttf"))
+        assert DEFAULT_FONT_FILE.endswith(os.path.join("site", "fonts", "PT_Serif-Web-Regular.ttf"))
+
+    def test_the_preview_loads_the_very_file_the_burn_renders_with(self):
+        # One file, not a copy: the fullscreen preview's @font-face must resolve
+        # to DEFAULT_FONT_FILE, or the two can drift apart again (Georgia vs PT
+        # Serif re-wrapped cues by ~6% of a line).
+        css_dir = Path(__file__).resolve().parents[1] / "site" / "css"
+        css = (css_dir / "tokens.css").read_text(encoding="utf-8")
+        face = re.search(r"@font-face\s*\{[^}]*font-family:\s*'SY Subtitle Serif'[^}]*\}", css)
+        assert face, "tokens.css declares no 'SY Subtitle Serif' face"
+        src = re.search(r"url\('([^']+)'\)", face.group(0)).group(1)
+        assert (css_dir / src).resolve() == Path(DEFAULT_FONT_FILE).resolve()
         assert DEFAULT_FONT_NAME == "PT Serif"
 
     def test_default_font_path_is_absolute(self):
@@ -378,20 +421,62 @@ class TestDefaults:
         assert os.path.isabs(DEFAULT_FONT_FILE)
 
 
+class TestWrapGeometry:
+    """The wrap limit and the measurer are what the preview is held to
+    (tests/test_spa_fs_subtitle_box.py compares line breaks cue by cue), so
+    neither may carry pixel rounding the browser does not do."""
+
+    def test_wrap_width_is_the_unrounded_inset(self):
+        # The ASS margins are whole pixels (round(100.8) = 101 on a 1440 frame),
+        # but the width a line may fill must not inherit that rounding: 0.4px
+        # was enough to wrap a cue the preview showed on one line.
+        assert wrap_width_for(1440) == pytest.approx(1440 * (1 - 2 * SIDE_INSET_RATIO))
+
+    def test_measures_unhinted_advances(self):
+        # FreeType hints the advances at small sizes, rounding every glyph to a
+        # whole pixel; libass (no hinting) and the browser do not. Measured at a
+        # large size and scaled, the width is the design width.
+        from PIL import ImageFont
+
+        text = "знає про свого чоловіка, що з ним не так, але"
+        big = ImageFont.truetype(DEFAULT_FONT_FILE, 1000).getlength(text)
+        assert text_measurer(DEFAULT_FONT_FILE, 57.6)(text) == pytest.approx(big * 57.6 / 1000, abs=0.01)
+
+    def test_measures_with_the_shaping_the_browser_does(self):
+        # Kerning and ligatures come from HarfBuzz (Pillow's RAQM layout); the
+        # BASIC layout leaves them out and is 4.7% wider on this line.
+        from PIL import ImageFont
+
+        text = "office fifty affluent"
+        shaped = ImageFont.truetype(DEFAULT_FONT_FILE, 1000, layout_engine=ImageFont.Layout.RAQM).getlength(text)
+        plain = ImageFont.truetype(DEFAULT_FONT_FILE, 1000, layout_engine=ImageFont.Layout.BASIC).getlength(text)
+        assert shaped != plain
+        assert text_measurer(DEFAULT_FONT_FILE, 1000)(text) == pytest.approx(shaped)
+
+    def test_refuses_to_measure_without_shaping(self, monkeypatch):
+        # Pillow falls back to BASIC with only a warning when libraqm or
+        # libfribidi is missing, and the burn would silently wrap differently.
+        from PIL import features
+
+        monkeypatch.setattr(features, "check", lambda name: name != "raqm")
+        with pytest.raises(RuntimeError, match="RAQM"):
+            text_measurer(DEFAULT_FONT_FILE, 57.6)
+
+
 class TestCssFontPx:
     """The module carries two sizes; conflating them mis-wraps every cue.
 
     CSS px is the real em size on screen and is what Pillow's `truetype(size=)`
-    wants; the ASS FontSize is that value scaled by the Win-metric factor.
+    wants; the ASS FontSize is that value scaled by LINE_ADVANCE.
     """
 
     def test_pins_the_fullscreen_baseline(self):
         # 0.0711 * 1080 = 76.788 — the SPA's measured 76.8px overlay font.
         assert css_font_px(0.0711, 1080) == pytest.approx(76.788)
 
-    def test_font_size_is_css_px_times_the_win_factor(self):
+    def test_font_size_is_css_px_times_the_line_advance(self):
         for ratio, height in ((0.0711, 1080), (0.05, 480), (0.11, 2160)):
-            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * PT_SERIF_WIN_FACTOR)
+            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * LINE_ADVANCE, 2)
 
     def test_shares_the_clamp_with_font_size_for(self):
         assert css_font_px(0.001, 1000) == pytest.approx(FONT_RATIO_MIN * 1000)
@@ -451,7 +536,7 @@ class TestBuildAssDocument:
         assert r"\{речення\}" in _doc()
 
     def test_wraps_long_cues_itself(self):
-        # 200 chars at 10 units each = 2000 > the 1536 px wrap width.
+        # 200 chars at 10 units each = 2000 > the 1652 px wrap width.
         long_cue = [{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "аб " * 100}]
         text_line = next(ln for ln in _doc(long_cue).splitlines() if ln.startswith("Dialogue: 1,"))
         assert "\\N" in text_line
@@ -466,9 +551,9 @@ class TestBuildAssDocument:
 
         assert band_top(many) < band_top(one)
 
-    def test_side_margins_are_ten_percent_of_width(self):
+    def test_side_margins_are_seven_percent_of_width(self):
         line = next(ln for ln in _doc().splitlines() if ln.startswith("Style: Default,"))
-        assert line.split(",")[19] == "192"  # MarginL, 10% of 1920
+        assert line.split(",")[19] == "134"  # MarginL, 7% of 1920 = 134.4
 
     def test_skips_cues_with_no_text(self):
         doc = _doc([{"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "   "}])
@@ -548,10 +633,10 @@ class TestBandBridgesGaps:
 
 class TestBuildFfmpegCommand:
     def _cmd(self):
-        return build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "assets/fonts")
+        return build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "site/fonts")
 
     def test_burns_via_the_ass_filter_with_fontsdir(self):
-        assert "ass=subs.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
+        assert "ass=subs.ass:fontsdir=site/fonts" in " ".join(self._cmd())
 
     def test_copies_audio_untouched(self):
         cmd = self._cmd()
@@ -570,6 +655,76 @@ class TestBuildFfmpegCommand:
     def test_build_ffmpeg_command_omits_progress_by_default(self):
         cmd = burn_subtitles.build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts")
         assert "-progress" not in cmd
+
+    def test_the_whole_video_argv_is_pinned(self):
+        # No seek, audio copied: a clip must leave the full render exactly as it was.
+        assert build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "fonts", progress_file="p.txt") == [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-progress",
+            "p.txt",
+            "-nostats",
+            "-i",
+            "in.mp4",
+            "-vf",
+            "ass=subs.ass:fontsdir=fonts",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
+            "out.mp4",
+        ]
+
+    def test_the_clip_argv_is_pinned(self):
+        # -ss/-t BEFORE -i: an input-side seek, so the output clock starts at
+        # zero where the re-based cues do. Audio is re-encoded, because a copied
+        # stream starts at a packet of the source, not at the seek point.
+        cmd = build_ffmpeg_command("in.mp4", "subs.ass", "out.mp4", "fonts", progress_file="p.txt", clip=(2000, 5000))
+        assert cmd == [
+            "ffmpeg",
+            "-nostdin",
+            "-y",
+            "-progress",
+            "p.txt",
+            "-nostats",
+            "-ss",
+            "2.000",
+            "-t",
+            "3.000",
+            "-i",
+            "in.mp4",
+            "-vf",
+            "ass=subs.ass:fontsdir=fonts",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "20",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+            "out.mp4",
+        ]
+
+    def test_clip_seconds_are_exact_to_the_millisecond(self):
+        cmd = build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts", clip=(1_234_567, 1_300_001))
+        assert cmd[cmd.index("-ss") + 1] == "1234.567"
+        assert cmd[cmd.index("-t") + 1] == "65.434"
 
     def test_build_ffmpeg_command_writes_progress_to_the_given_file(self):
         cmd = burn_subtitles.build_ffmpeg_command("in.mp4", "s.ass", "out.mp4", "/fonts", progress_file="/tmp/p.txt")
@@ -608,7 +763,7 @@ LIBASS_FALLBACK_STDERR = (
     "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (PT Serif, 400, 0) -> Georgia, 0, Georgia\n"
 )
 
-# The success case, captured the same way with --sub-fonts-dir=assets/fonts.
+# The success case, captured the same way with --sub-fonts-dir=site/fonts.
 LIBASS_SUCCESS_STDERR = (
     "[Parsed_ass_0 @ 0x7f8e1c] fontselect: (PT Serif, 400, 0) -> PTSerif-Regular, 0, PTSerif-Regular\n"
 )
@@ -739,7 +894,7 @@ class TestFontSelectionError:
 
 class TestFontProbeCommand:
     def _cmd(self):
-        return build_font_probe_command("probe.ass", "assets/fonts")
+        return build_font_probe_command("probe.ass", "site/fonts")
 
     def test_pins_the_log_level_so_font_selection_is_visible(self):
         # The check reads ffmpeg's stderr; an inherited quieter level would turn
@@ -754,7 +909,7 @@ class TestFontProbeCommand:
         assert cmd[-1] == "-"
 
     def test_uses_the_same_ass_filter_and_fontsdir(self):
-        assert "ass=probe.ass:fontsdir=assets/fonts" in " ".join(self._cmd())
+        assert "ass=probe.ass:fontsdir=site/fonts" in " ".join(self._cmd())
 
     def test_font_probe_command_never_carries_progress(self):
         """The pre-flight is a one-frame probe; progress from it would be noise."""
@@ -836,15 +991,16 @@ class TestMain:
         probe_stderr=LIBASS_SUCCESS_STDERR,
         cue_text="Перше речення.",
         missing_glyph=None,
+        srt_text=None,
     ):
         """Return (run, state); state survives a SystemExit raised inside main.
 
         `missing_glyph` stands in for libass: if the probe document contains that
         character, the fake probe answers the way libass does when no font can
-        supply it.
+        supply it. `srt_text` replaces the one-cue SRT built from `cue_text`.
         """
         srt = tmp_path / "uk.srt"
-        srt.write_text(f"1\n00:00:00,000 --> 00:00:02,000\n{cue_text}\n\n", encoding="utf-8")
+        srt.write_text(srt_text or f"1\n00:00:00,000 --> 00:00:02,000\n{cue_text}\n\n", encoding="utf-8")
         ass_out = tmp_path / "subs.ass"
         output = tmp_path / "out.mp4"
         state = {"seen": {}, "commands": [], "ass_out": ass_out, "output": output}
@@ -903,7 +1059,8 @@ class TestMain:
 
     def test_measures_in_css_pixels_not_in_ass_font_size(self, tmp_path, monkeypatch):
         # Pillow's truetype(size=) takes the CSS em size. Handing it the ASS
-        # FontSize would inflate every measurement by ~20% and wrap a word early.
+        # FontSize would inflate every measurement by LINE_ADVANCE (32.5% for
+        # PT Serif) and wrap a word early.
         seen, _, _ = self._invoke(tmp_path, monkeypatch)
         assert seen["font_px"] == pytest.approx(css_font_px(0.0711, 1080))
         assert seen["font_px"] != font_size_for(0.0711, 1080)
@@ -998,6 +1155,94 @@ class TestMain:
             run()
         assert state["commands"] == []  # refused before the probe, not after it
 
+    # Rendered as --clip=2000-5000: one cue before the clip, one straddling each
+    # edge, one inside, one starting exactly at its end. ♪ and № appear only in
+    # the two cues the clip drops.
+    CLIP_SRT = (
+        "1\n00:00:00,000 --> 00:00:01,500\nПерше ♪\n\n"
+        "2\n00:00:01,500 --> 00:00:02,500\nДруге\n\n"
+        "3\n00:00:03,000 --> 00:00:04,000\nТретє\n\n"
+        "4\n00:00:04,500 --> 00:00:06,000\nЧетверте\n\n"
+        "5\n00:00:05,000 --> 00:00:07,000\nП’яте №\n\n"
+    )
+
+    def _text_events(self, doc):
+        """(start, end, text) of every Layer-1 text event."""
+        events = []
+        for line in doc.splitlines():
+            if line.startswith("Dialogue: 1,"):
+                _, start, end = line.split(",")[0:3]
+                events.append((start, end, line.rsplit("}", 1)[1]))
+        return events
+
+    def test_a_clip_seeks_the_input_and_renders_only_its_span(self, tmp_path, monkeypatch):
+        _, commands, _ = self._invoke(tmp_path, monkeypatch, srt_text=self.CLIP_SRT, extra_args=["--clip=2000-5000"])
+        encode = self._encode_command(commands)
+        assert encode[encode.index("-ss") + 1] == "2.000"
+        assert encode[encode.index("-t") + 1] == "3.000"
+        assert encode.index("-t") < encode.index("-i")
+        assert encode[encode.index("-c:a") + 1] == "aac"
+
+    def test_a_clip_rebases_the_cues_onto_the_fragment(self, tmp_path, monkeypatch):
+        _, _, ass_out = self._invoke(tmp_path, monkeypatch, srt_text=self.CLIP_SRT, extra_args=["--clip=2000-5000"])
+        assert self._text_events(ass_out.read_text(encoding="utf-8")) == [
+            ("0:00:00.00", "0:00:00.50", "Друге"),
+            ("0:00:01.00", "0:00:02.00", "Третє"),
+            ("0:00:02.50", "0:00:03.00", "Четверте"),
+        ]
+
+    def test_the_probe_covers_only_what_the_clip_draws(self, tmp_path, monkeypatch):
+        # The characters of cues outside the clip never reach the frame, so a
+        # glyph missing from them must not veto the fragment.
+        run, state = self._harness(
+            tmp_path, monkeypatch, srt_text=self.CLIP_SRT, extra_args=["--clip=2000-5000"], missing_glyph="♪"
+        )
+        run()
+        assert "Т" in state["probe_document"]
+        assert "♪" not in state["probe_document"] and "№" not in state["probe_document"]
+
+    def test_the_clip_log_counts_only_cues_that_draw(self, tmp_path, monkeypatch, capsys):
+        # build_ass_document skips a blank cue, so counting one would report a
+        # subtitle on screen that never appears. parse_srt drops blank blocks
+        # from a file, so the blank cue is injected past it.
+        cues = [
+            {"idx": 1, "start_ms": 0, "end_ms": 1000, "text": "Перше"},
+            {"idx": 2, "start_ms": 3000, "end_ms": 4000, "text": "Третє"},
+            {"idx": 3, "start_ms": 3500, "end_ms": 3800, "text": "   "},
+        ]
+        run, _ = self._harness(tmp_path, monkeypatch, extra_args=["--clip=2000-5000"])
+        monkeypatch.setattr(burn_subtitles, "parse_srt", lambda path: [dict(cue) for cue in cues])
+        run()
+        assert "[burn] clip 2000-5000 ms: 1 of 3 cues on screen" in capsys.readouterr().out
+
+    def test_a_backslash_outside_the_clip_does_not_block_it(self, tmp_path, monkeypatch):
+        # The refusal protects the frame, and this cue never reaches one.
+        srt_text = self.CLIP_SRT.replace("Перше ♪", r"Перше \N ♪")
+        _, commands, _ = self._invoke(tmp_path, monkeypatch, srt_text=srt_text, extra_args=["--clip=2000-5000"])
+        assert len(commands) == 2
+
+    def test_a_backslash_inside_the_clip_is_refused_by_name(self, tmp_path, monkeypatch):
+        # The clip's cue count escapes every cue, and escaping raises on a
+        # backslash without naming the cue — so the refusal has to come first.
+        srt_text = self.CLIP_SRT.replace("Третє", r"Третє \N")
+        run, state = self._harness(tmp_path, monkeypatch, srt_text=srt_text, extra_args=["--clip=2000-5000"])
+        with pytest.raises(SystemExit, match="cue 3"):
+            run()
+        assert state["commands"] == []
+
+    def test_an_invalid_clip_is_refused_before_anything_runs(self, tmp_path, monkeypatch):
+        run, state = self._harness(tmp_path, monkeypatch, extra_args=["--clip=3000-1000"])
+        with pytest.raises(SystemExit, match="before"):
+            run()
+        assert state["commands"] == []
+
+    def test_an_empty_clip_renders_the_whole_video(self, tmp_path, monkeypatch):
+        # The workflow input's default is "", and the workflow passes it through.
+        _, commands, _ = self._invoke(tmp_path, monkeypatch, extra_args=["--clip="])
+        encode = self._encode_command(commands)
+        assert "-ss" not in encode and "-t" not in encode
+        assert encode[encode.index("-c:a") + 1] == "copy"
+
     def test_a_clean_encode_still_surfaces_ffmpegs_complaints(self, tmp_path, monkeypatch, capsys):
         # ffmpeg can truncate on a damaged source and still exit 0. Its stderr
         # was captured and thrown away on success, so a green job with a short
@@ -1037,7 +1282,7 @@ class TestVendoredFont:
         assert TTFont(DEFAULT_FONT_FILE)["name"].getDebugName(1) == DEFAULT_FONT_NAME
 
     def test_font_win_metrics_back_the_size_factor(self):
-        # PT_SERIF_WIN_FACTOR is derived from these three numbers; a font swap
+        # LINE_ADVANCE is derived from these three numbers; a font swap
         # that changed them would silently resize every burned subtitle.
         from fontTools.ttLib import TTFont
 

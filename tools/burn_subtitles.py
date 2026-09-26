@@ -4,12 +4,11 @@ Converts an SRT into an ASS subtitle file and invokes ffmpeg with libass.
 Replaces the Pillow-PNG-per-subtitle workaround used when the local ffmpeg
 lacks libass.
 
-Sizing is driven by dimensionless ratios measured by the SPA against the
-displayed video, never by pixels: fullscreen derives its font size from the
-viewport width, so raw pixels would make the output depend on the monitor that
-happened to trigger the render.
-
-See docs/superpowers/specs/2026-07-30-burned-in-subtitle-video-design.md.
+Sizing is driven by dimensionless ratios of the video frame, never by pixels:
+fullscreen draws its subtitle band on the displayed video's own box, in
+fractions of that box, so the same fractions reproduce it on the real frame
+whatever screen the render was started from. The numbers themselves live in
+site/js/burn_geometry.js, shared with the preview (tools/burn_geometry.py).
 """
 
 import argparse
@@ -22,40 +21,33 @@ import sys
 import tempfile
 from pathlib import Path
 
+from .burn_clip import ClipError, parse_clip, rebase_cues, seconds_text
+from .burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN, LINE_ADVANCE, SIDE_INSET_RATIO, WRAP_SAFETY
 from .srt_utils import parse_srt
 
 # Vendored rather than apt-installed: a silent substitution would re-wrap the
-# entire corpus. The typeface matches what the preview actually draws. The SPA
-# asks for `'Fraunces', Georgia, …`, but Fraunces ships no Cyrillic, so every
-# Ukrainian subtitle on screen is rendered by the fallback — Georgia. PT Serif
-# is the free face that lands closest to it: a serif of the same colour, and
-# 99.8% of Georgia's width over 400 sampled corpus lines, so line breaks match.
+# entire corpus. It lives under site/ because the fullscreen preview loads this
+# very file (tokens.css, `--f-subtitle`), so the preview and the burn draw the
+# same glyphs and break lines in the same places. The preview used to draw a
+# system Georgia (the SPA's serif stack, Fraunces having no Cyrillic) and PT
+# Serif stood in for it here — close, but a different face on every device, and
+# on real cues far enough off to re-wrap. Georgia itself cannot be served: its
+# licence forbids hosting it as a web font.
 # Source: Google Fonts PT Serif Web Regular v1.000W, OFL (LICENSE-PTSerif.txt).
 # Its Win metrics (upm 1000, ascent 1039, descent 286) are what make
-# PT_SERIF_WIN_FACTOR correct and are pinned by tests.
+# LINE_ADVANCE correct and are pinned by tests.
 # Absolute: the CLI is run from wherever the caller stands, and a relative
 # default would only resolve from the repo root.
-DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "assets" / "fonts" / "PT_Serif-Web-Regular.ttf")
+DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "site" / "fonts" / "PT_Serif-Web-Regular.ttf")
 DEFAULT_FONT_NAME = "PT Serif"
-
-# Fullscreen's 10% horizontal insets.
-SIDE_INSET_RATIO = 0.10
 
 # ASS FontSize is mapped onto the font's Win cell height, not CSS pixels:
 #   FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm
-# PT Serif: (1039 + 286) / 1000. Its hhea and Win metrics agree exactly (both
-# 1325/1000), so libass's FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the
-# arithmetic value — a face whose two metric sets disagree would not, and its
-# rendered glyph height would have to be confirmed on a real frame.
-PT_SERIF_WIN_FACTOR = 1.325
-
-# Guards against a pathological measurement arriving from the browser.
-FONT_RATIO_MIN = 0.02
-FONT_RATIO_MAX = 0.12
-
-# Rendering measures glyph advances slightly differently from our layout maths;
-# 2% of headroom keeps a line from spilling a hair past the margin.
-WRAP_SAFETY = 0.98
+# PT Serif: (1039 + 286) / 1000 = LINE_ADVANCE (burn_geometry's lineAdvance).
+# Its hhea and Win metrics agree exactly (both 1325/1000), so libass's
+# FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the arithmetic value —
+# a face whose two metric sets disagree would not, and its rendered glyph height
+# would have to be confirmed on a real frame.
 
 _WS_RUN = re.compile(r"\s+")
 
@@ -105,8 +97,8 @@ def css_font_px(font_ratio, height):
 
     This, not `font_size_for`, is what a text measurer wants: Pillow's
     `ImageFont.truetype(size=...)` takes the em size, so feeding it the ASS
-    FontSize would inflate every width by the Win-metric factor (~20%) and wrap
-    cues a word early. The clamp lives here so both sizes share it.
+    FontSize would inflate every width by LINE_ADVANCE (32.5% for PT Serif) and
+    wrap cues a word early. The clamp lives here so both sizes share it.
     """
     if height <= 0:
         raise ValueError(f"height must be positive, got {height}")
@@ -114,9 +106,13 @@ def css_font_px(font_ratio, height):
     return ratio * height
 
 
-def font_size_for(font_ratio, height, win_factor=PT_SERIF_WIN_FACTOR):
-    """ASS FontSize for a font-height-to-frame-height ratio."""
-    return round(css_font_px(font_ratio, height) * win_factor)
+def font_size_for(font_ratio, height, line_advance=LINE_ADVANCE):
+    """ASS FontSize for a font-height-to-frame-height ratio.
+
+    Fractional: libass takes one, and a whole number drifts the text off the
+    size the preview draws — by 1.7% on a 640x480 frame at the handle's 0.6x.
+    """
+    return round(css_font_px(font_ratio, height) * line_advance, 2)
 
 
 def wrap_text(text, measure, max_width):
@@ -127,6 +123,13 @@ def wrap_text(text, measure, max_width):
 
     A word wider than the whole line is kept on a line of its own rather than
     dropped or split: overflowing by a few pixels beats losing the word.
+
+    A line is measured as the browser measures it: a browser shapes the text
+    before it breaks it, so a line's last glyph keeps its kern with the space
+    that follows (a comma and a space kern 2.3px tighter in PT Serif at 57.6px)
+    even when the line breaks on that space. The fullscreen preview fits such a
+    word; so must this, or the burn wraps a cue the preview showed on one line.
+    The rendered line then runs that kern past the limit — into WRAP_SAFETY.
     """
     limit = max_width * WRAP_SAFETY
     words = text.split()
@@ -134,11 +137,16 @@ def wrap_text(text, measure, max_width):
         # Callers count lines to size the band behind the text, so an empty
         # cue must still be one line, not zero.
         return [""]
+    space = measure(" ")
+
+    def width(line, followed):
+        return measure(line + " ") - space if followed else measure(line)
+
     lines = []
     current = ""
-    for word in words:
+    for i, word in enumerate(words):
         candidate = f"{current} {word}".strip()
-        if not current or measure(candidate) <= limit:
+        if not current or width(candidate, i < len(words) - 1) <= limit:
             current = candidate
         else:
             lines.append(current)
@@ -147,13 +155,42 @@ def wrap_text(text, measure, max_width):
     return lines
 
 
-def text_measurer(font_file, font_px):
-    """Width measurer backed by the very TTF libass will render with."""
-    # Imported lazily so the pure-logic helpers stay usable without Pillow.
-    from PIL import ImageFont
+# The size the measurer lays text out at before scaling to the real one. Large
+# enough that FreeType's hinting — which rounds every advance to a whole pixel
+# at small sizes — is noise; libass (no hinting) and the browser use the design
+# widths, and the preview's line breaks are held to this measurement.
+MEASURE_PX = 1000
 
-    font = ImageFont.truetype(font_file, font_px)
-    return font.getlength
+
+def text_measurer(font_file, font_px):
+    """Width measurer backed by the very TTF libass will render with.
+
+    Shaped with HarfBuzz (Pillow's RAQM layout), as the browser and libass
+    shape: kerning and ligatures in. Pillow drops to its BASIC layout with no
+    more than a warning when libraqm or libfribidi is missing, and every line
+    would then be measured up to a few percent wide — so that is refused.
+    """
+    # Imported lazily so the pure-logic helpers stay usable without Pillow.
+    from PIL import ImageFont, features
+
+    if not features.check("raqm"):
+        raise RuntimeError(
+            "Pillow has no RAQM layout (libraqm/libfribidi missing): it would measure "
+            "without kerning and wrap cues where the preview does not"
+        )
+    font = ImageFont.truetype(font_file, MEASURE_PX, layout_engine=ImageFont.Layout.RAQM)
+    scale = font_px / MEASURE_PX
+    return lambda text: font.getlength(text) * scale
+
+
+def wrap_width_for(width):
+    """The width a line may fill: the frame minus the side insets, unrounded.
+
+    The ASS margins are whole pixels, but this must not be: the fullscreen
+    preview wraps at the exact fraction, and 0.4px of rounding was enough to
+    wrap a cue it showed on one line.
+    """
+    return width * (1 - 2 * SIDE_INSET_RATIO)
 
 
 def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
@@ -182,6 +219,9 @@ def build_ass_header(width, height, font_size, font_name, margin_h, margin_v):
             "WrapStyle: 2",
             # libass >= 0.15 defaults this to no, which would shrink border/shadow.
             "ScaledBorderAndShadow: yes",
+            # Off unless asked for; the preview kerns (browsers do by default),
+            # and unkerned every line ran 0.45% wider than the preview's.
+            "Kerning: yes",
             "YCbCr Matrix: None",
             "",
             "[V4+ Styles]",
@@ -236,7 +276,7 @@ def band_geometry(height, font_size, line_count, margin_v, padtop_px):
     wrapped unusually wide cannot place the band off-screen.
     """
     text_h = max(1, line_count) * font_size
-    band_h = min(height, padtop_px + text_h + margin_v)
+    band_h = min(height, round(padtop_px + text_h + margin_v))
     return height - band_h, band_h
 
 
@@ -317,7 +357,7 @@ def build_ass_document(
     margin_h = round(SIDE_INSET_RATIO * width)
     margin_v = round(padbot_ratio * height)
     padtop_px = round(padtop_ratio * height)
-    wrap_width = width - 2 * margin_h
+    wrap_width = wrap_width_for(width)
 
     # Escape first: wrapping then measures the escaped form, so the one
     # backslash each escaped brace adds is counted although libass will not
@@ -340,14 +380,18 @@ def build_ass_document(
     return "\n".join(lines) + "\n"
 
 
-def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None):
-    """ffmpeg argv. Audio is copied, never re-encoded.
+def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None, clip=None):
+    """ffmpeg argv. Audio is copied for the whole video, re-encoded for a clip.
 
     `progress_file` turns on ffmpeg's own machine-readable `-progress` channel.
     The workflow points it at a file the render-gate steps poll, which is how the
     SPA learns the true encode percentage — see tools/render_gate.py for why that
     detour exists. `-nostats` rides along so the periodic human status line stops
     flooding the job log now that the same numbers go to the file.
+
+    `clip` is a (start_ms, end_ms) pair from tools.burn_clip.parse_clip, and the
+    ASS document must already be re-based onto it. An end past the source is
+    left to ffmpeg, which simply stops at EOF.
     """
     cmd = ["ffmpeg", "-nostdin", "-y"]
     if progress_file:
@@ -355,6 +399,13 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None)
         # other globals and, crucially, ahead of the output path: after it
         # ffmpeg would parse them as options of a second output file.
         cmd += ["-progress", progress_file, "-nostats"]
+    if clip:
+        start_ms, end_ms = clip
+        # Input options, before -i. ffmpeg then seeks rather than decoding and
+        # discarding everything up to START — most of the encode, for a clip
+        # late in a two-hour talk — and the frames reach the ass filter with
+        # their clock reset to zero, the timeline the cues were re-based onto.
+        cmd += ["-ss", seconds_text(start_ms), "-t", seconds_text(end_ms - start_ms)]
     cmd += [
         "-i",
         video,
@@ -368,12 +419,12 @@ def build_ffmpeg_command(video, ass_path, output, fonts_dir, progress_file=None)
         "20",
         "-pix_fmt",
         "yuv420p",
-        "-c:a",
-        "copy",
-        "-movflags",
-        "+faststart",
-        output,
     ]
+    # A copied audio stream can only start at one of the source's packets, not
+    # at an input seek point, so a clip's sound would open out of step with its
+    # picture. The whole video has no seek point and keeps its audio untouched.
+    cmd += ["-c:a", "aac", "-b:a", "192k"] if clip else ["-c:a", "copy"]
+    cmd += ["-movflags", "+faststart", output]
     return cmd
 
 
@@ -612,13 +663,35 @@ def main(argv=None):
         "--progress-file",
         help="write ffmpeg's machine-readable -progress stream here (polled by tools.render_gate)",
     )
+    parser.add_argument(
+        "--clip",
+        default="",
+        help=(
+            "render only START_MS-END_MS of the video; empty renders all of it. "
+            "Pass it as --clip=VALUE, or a value such as -5-3000 is read as an option"
+        ),
+    )
     args = parser.parse_args(argv)
+
+    clip = None
+    if args.clip:
+        try:
+            clip = parse_clip(args.clip)
+        except ClipError as e:
+            raise SystemExit(str(e)) from None
 
     width, height = probe_dimensions(args.video)
     font_size = font_size_for(args.font_ratio, height)
     # The measurer takes CSS pixels, not the ASS FontSize — see css_font_px.
     measure = text_measurer(args.font_file, css_font_px(args.font_ratio, height))
     cues = parse_srt(args.srt)
+    total = len(cues)
+    if clip:
+        # First, so everything below sees only what this fragment draws, on its
+        # own clock: band bridging runs on the cues as they will play, and the
+        # backslash refusal and the font probe judge the frames being made —
+        # not a cue from elsewhere in the talk that never reaches one.
+        cues = rebase_cues(cues, *clip)
     # Refused here, before anything runs, so the message can name the cue — the
     # ValueError escape_ass_text would raise later names only the text, and the
     # reviewer is left grepping four hundred cues for it.
@@ -629,6 +702,12 @@ def main(argv=None):
                 "ASS reads \\N as a line break the layout never counted; "
                 "fix the subtitle text."
             )
+    if clip:
+        # Counted by the test build_ass_document draws by: a cue whose text
+        # escapes to nothing puts nothing on screen. Only after the backslash
+        # refusal, the one input escape_ass_text raises on.
+        drawn = sum(1 for cue in cues if escape_ass_text(cue["text"]))
+        print(f"[burn] clip {clip[0]}-{clip[1]} ms: {drawn} of {total} cues on screen")
     doc = build_ass_document(
         cues,
         width,
@@ -652,7 +731,7 @@ def main(argv=None):
     # one cue to be discovered twenty minutes later.
     verify_font_selection(args.font_name, fonts_dir, args.font_file, probe_text_for(cues))
 
-    cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir, args.progress_file)
+    cmd = build_ffmpeg_command(args.video, ass_path, args.output, fonts_dir, args.progress_file, clip)
     print("[burn] " + " ".join(cmd))
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:

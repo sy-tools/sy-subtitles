@@ -214,16 +214,28 @@ class TestRealVimeoIntegration:
         _goto_review_srt_real(real_vimeo_page, server)
         real_vimeo_page.click("#btn-sync-player")
         real_vimeo_page.wait_for_selector("#sync-player-mount iframe", state="attached", timeout=15000)
+        # Every await here is bounded: page.evaluate has no timeout of its own,
+        # and a promise the player never settles held a CI shard for hours.
+        # Vimeo moves the playhead but (since 2026-09) leaves the promise
+        # setCurrentTime returns unsettled, so the test watches the playhead —
+        # what the app relies on — rather than that promise.
         result = real_vimeo_page.evaluate("""
           async () => {
             var iframe = document.querySelector('#sync-player-mount iframe');
             var player = new Vimeo.Player(iframe);
-            var timeout = new Promise(function(_, rej) {
-              setTimeout(function() { rej(new Error('timeout')); }, 28000);
-            });
-            await Promise.race([player.ready(), timeout]);
-            await player.setCurrentTime(5);
-            return await player.getCurrentTime();
+            var wait = function(ms, value) {
+              return new Promise(function(resolve) { setTimeout(function() { resolve(value); }, ms); });
+            };
+            var ready = await Promise.race([player.ready().then(function() { return true; }), wait(28000, false)]);
+            if (!ready) return 'player never became ready';
+            player.setCurrentTime(5).catch(function() {});
+            var time = null;
+            for (var deadline = Date.now() + 15000; Date.now() < deadline; ) {
+              time = await Promise.race([player.getCurrentTime(), wait(2000, null)]);
+              if (typeof time === 'number' && Math.abs(time - 5) < 1) break;
+              await wait(250);
+            }
+            return time;
           }
         """)
         assert isinstance(result, int | float), f"Expected numeric time, got {result!r}"

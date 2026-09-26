@@ -3,7 +3,10 @@ import pytest
 from tools.vimeo_codec import encode_video_ref
 from tools.workflow_validation import (
     InvalidWorkflowInput,
+    validate_clip,
     validate_git_ref,
+    validate_request_id,
+    validate_subs_scale,
     validate_talk_id,
     validate_video_ref,
     validate_video_slug,
@@ -223,3 +226,163 @@ def test_cli_rejects_bad_video_ref() -> None:
 
     with pytest.raises(SystemExit):
         main(["--video-ref", "not-a-ref"])
+
+
+@pytest.mark.parametrize("value", ["10", "55", "100", "250", "1000"])
+def test_subs_scale_accepts_a_whole_percent_in_the_band(value: str) -> None:
+    assert validate_subs_scale(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "",
+        "9",
+        "1001",
+        "0",
+        "010",
+        "+100",
+        "-5",
+        "100%",
+        "100.0",
+        "1e2",
+        " 100",
+        "100\n",
+        "١٠٠",  # Arabic-Indic digits: \d and int() accept them
+    ],
+)
+def test_subs_scale_rejects_the_rest(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_subs_scale(value)
+
+
+def test_an_empty_clip_means_the_whole_video() -> None:
+    # The input's default. burn_clip.parse_clip refuses "" on purpose — to it
+    # there is no such clip — so this is the one value where the two differ.
+    assert validate_clip("") == ""
+
+
+@pytest.mark.parametrize("value", ["0-1000", "1000-2000", "2000-5000", "7200000-7260000", "0-999999999"])
+def test_clip_accepts_valid(value: str) -> None:
+    assert validate_clip(value) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        " ",
+        "1000",
+        "-5-3000",
+        "01000-3000",
+        "1000-3000\n",
+        "1.5-3000",
+        "3000-1000",
+        "1000-1999",  # under the one-second minimum
+        "١٠٠٠-٣٠٠٠",  # Arabic-Indic digits
+        "0-1000000000",  # ten digits
+        "0-9999999999999999",  # passed once, then killed ffmpeg after the download
+    ],
+)
+def test_clip_rejects_the_rest(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_clip(value)
+
+
+def test_the_clip_guard_says_what_is_wrong() -> None:
+    with pytest.raises(InvalidWorkflowInput, match="before"):
+        validate_clip("3000-1000")
+
+
+def test_cli_accepts_the_values_a_default_dispatch_sends() -> None:
+    from tools.workflow_validation_cli import main
+
+    main(["--subs-scale=100", "--clip="])  # must not raise / exit
+
+
+@pytest.mark.parametrize("argv", [["--subs-scale=5"], ["--subs-scale=-5"], ["--clip=3000-1000"]])
+def test_cli_rejects_a_bad_scale_or_clip_legibly(argv: list[str], capsys: pytest.CaptureFixture[str]) -> None:
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(argv)
+    assert excinfo.value.code == 1
+    assert capsys.readouterr().err.startswith("::error::")
+
+
+def test_cli_refuses_a_clip_bound_past_nine_digits_by_name(capsys: pytest.CaptureFixture[str]) -> None:
+    # The review's example: accepted by an unbounded grammar, clamped for the
+    # gates, and then fatal to ffmpeg's -t parser after the whole download.
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--clip=0-9999999999999999"])
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("::error::") and "9 digits" in err
+
+
+def test_cli_reads_a_dash_leading_clip_as_a_value_in_the_equals_form(capsys: pytest.CaptureFixture[str]) -> None:
+    # As a separate word, "-5-3000" is an option to argparse (Python 3.12, the
+    # runner's): a usage error with exit 2 instead of a legible annotation. The
+    # workflow passes --clip="$CLIP" for exactly this reason.
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--clip=-5-3000"])
+    assert excinfo.value.code == 1
+    err = capsys.readouterr().err
+    assert err.startswith("::error::") and "-5-3000" in err
+
+
+# makeRequestId in site/js/burn_video.js: "req-" + a millisecond stamp and a
+# 16-bit noise, both in lowercase base36. The widest stamp a safe integer can
+# spell is 11 characters; the widest noise, 0xffff, is "1ekf".
+@pytest.mark.parametrize("value", ["req-mu07udq0-1ekf", "req-0-0", "req-2gosa7pa2gv-1ekf", "req-abc-1"])
+def test_request_id_accepts_what_the_spa_generates(value: str) -> None:
+    assert validate_request_id(value) == value
+
+
+# The run name ends with the request id and the SPA reads its fields from the
+# RIGHT, so a request id carrying the separator would list this run as another
+# talk, author, scale and clip. The first value is the review's example.
+FORGED_REQUEST_ID = "1993-09-19_X/Talk · SomeoneElse · 150% · 0-5000 · req-x-y"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        FORGED_REQUEST_ID,
+        "",
+        "req-",
+        "req-abc",
+        "req-abc-",
+        "req--1",
+        "req-ABC-def",
+        "req-abc-def-ghi",
+        "req-abc_1-2",
+        " req-abc-1",
+        "req-abc-1 ",
+        "req-abc-1\n",
+        "req-2gosa7pa2gv0-1",  # a stamp wider than any safe integer spells
+        "req-abc-1ekf0",  # noise wider than 0xffff spells
+        "req-١٢-1",  # Arabic-Indic digits
+    ],
+)
+def test_request_id_rejects_the_rest(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_request_id(value)
+
+
+def test_cli_accepts_a_generated_request_id() -> None:
+    from tools.workflow_validation_cli import main
+
+    main(["--request-id=req-mu07udq0-1ekf"])  # must not raise / exit
+
+
+def test_cli_refuses_a_request_id_that_forges_run_name_fields(capsys: pytest.CaptureFixture[str]) -> None:
+    from tools.workflow_validation_cli import main
+
+    with pytest.raises(SystemExit) as excinfo:
+        main([f"--request-id={FORGED_REQUEST_ID}"])
+    assert excinfo.value.code == 1
+    assert capsys.readouterr().err.startswith("::error::invalid request_id")
