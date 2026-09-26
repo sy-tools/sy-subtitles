@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
-      # The renderer: tools/, assets/fonts/, requirements.txt, at the ref this
+      # The renderer: tools/, site/fonts/, requirements.txt, at the ref this
       # run was dispatched against. Deliberately unpinned and unnamed.
       - uses: actions/checkout@v7
 
@@ -124,7 +124,7 @@ jobs:
           # extra. A bare `pip install yt-dlp` here would find the requirement
           # already satisfied and install the extra for nobody.
           pip install -r requirements.txt
-          # PT Serif stays vendored in assets/fonts/ and reaches libass through
+          # PT Serif stays vendored in site/fonts/ and reaches libass through
           # fontsdir; the pre-flight probe proves it stayed the PRIMARY face.
           # Noto is a GLYPH fallback only: twelve videos carry Sanskrit mantras
           # in Devanagari, which PT Serif does not cover — without a fallback
@@ -177,13 +177,16 @@ jobs:
           python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
           # The ratios are measured in the browser. Reject nonsense here, with a
           # legible message, rather than deep inside ffmpeg. The font_ratio
-          # bounds mirror the clamp in tools/burn_subtitles.py.
+          # band is the one the browser and the burner clamp to
+          # (site/js/burn_geometry.js); the loader is stdlib-only.
           python3 - <<'PY'
           import os
           import sys
 
+          from tools.burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN
+
           BOUNDS = {
-              "FONT_RATIO": (0.02, 0.12),
+              "FONT_RATIO": (FONT_RATIO_MIN, FONT_RATIO_MAX),
               "PADTOP_RATIO": (0.0, 0.5),
               "PADBOT_RATIO": (0.0, 0.5),
           }

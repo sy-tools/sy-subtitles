@@ -14,6 +14,17 @@
    this split is pixel-identical (guarded by tests/test_spa_theme_tokens.py).
    ============================================================================= */
 
+
+/* The subtitle face: the very TTF the burn renders with (tools/burn_subtitles.py,
+   DEFAULT_FONT_FILE) — one file, so fullscreen shows the glyphs, widths and line
+   breaks the burned video will have. A private family name, so a locally
+   installed "PT Serif" of another version can never stand in for it. */
+@font-face {
+  font-family: 'SY Subtitle Serif';
+  src: url('../fonts/PT_Serif-Web-Regular.ttf') format('truetype');
+  font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
 
@@ -69,6 +80,7 @@
   --f-serif: 'Fraunces', Georgia, 'Times New Roman', serif;
   --f-sans:  'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --f-mono:  'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --f-subtitle: 'SY Subtitle Serif', Georgia, serif;
 
   /* ===== Scales — reach for these when building new UI, so sizes stay on a grid
      instead of being re-invented. (Existing rules still carry literal values;

@@ -64,10 +64,12 @@ def test_architecture_lists_the_burn_tools():
 
 
 def test_architecture_shows_the_vendored_font_directory():
-    # The whole line-break-fidelity argument rests on the vendored face, so a
-    # repo tree without assets/ hides the thing the burn output depends on.
+    # The whole line-break-fidelity argument rests on the vendored face — one
+    # file the preview and the burn both draw with — so a repo tree without it
+    # hides the thing the burn output depends on.
     tree = _read("ARCHITECTURE.md")
-    assert "├── assets/" in tree or "└── assets/" in tree
+    tree = tree[tree.index("├── site/") :]
+    assert "fonts/" in tree
 
 
 def test_architecture_explains_why_the_gate_steps_exist():
