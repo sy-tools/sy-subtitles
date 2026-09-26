@@ -59,6 +59,7 @@ def auth_server():
     httpd, url = _serve(index_html)
     yield url
     httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture
@@ -70,6 +71,7 @@ def plain_server():
     httpd, url = _serve(index_html)
     yield url
     httpd.shutdown()
+    httpd.server_close()
 
 
 def _route_github(pg, auth_server):
@@ -199,6 +201,7 @@ def hooks_only_server():
     httpd, url = _serve(index_html)
     yield url
     httpd.shutdown()
+    httpd.server_close()
 
 
 def test_callback_restores_app_params_saved_before_login(hooks_only_server, browser):

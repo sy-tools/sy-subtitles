@@ -47,7 +47,7 @@ def test_the_derived_ratios_are_fractions_of_the_frame():
     [
         ("SIDE_INSET_RATIO", "sideInsetRatio"),
         ("WRAP_SAFETY", "wrapSafety"),
-        ("PT_SERIF_WIN_FACTOR", "lineAdvance"),
+        ("LINE_ADVANCE", "lineAdvance"),
         ("FONT_RATIO_MIN", "fontRatioMin"),
         ("FONT_RATIO_MAX", "fontRatioMax"),
     ],

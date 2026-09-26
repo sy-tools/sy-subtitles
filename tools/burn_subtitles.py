@@ -22,8 +22,7 @@ import tempfile
 from pathlib import Path
 
 from .burn_clip import ClipError, parse_clip, rebase_cues, seconds_text
-from .burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN, SIDE_INSET_RATIO, WRAP_SAFETY
-from .burn_geometry import LINE_ADVANCE as PT_SERIF_WIN_FACTOR
+from .burn_geometry import FONT_RATIO_MAX, FONT_RATIO_MIN, LINE_ADVANCE, SIDE_INSET_RATIO, WRAP_SAFETY
 from .srt_utils import parse_srt
 
 # Vendored rather than apt-installed: a silent substitution would re-wrap the
@@ -36,7 +35,7 @@ from .srt_utils import parse_srt
 # licence forbids hosting it as a web font.
 # Source: Google Fonts PT Serif Web Regular v1.000W, OFL (LICENSE-PTSerif.txt).
 # Its Win metrics (upm 1000, ascent 1039, descent 286) are what make
-# PT_SERIF_WIN_FACTOR correct and are pinned by tests.
+# LINE_ADVANCE correct and are pinned by tests.
 # Absolute: the CLI is run from wherever the caller stands, and a relative
 # default would only resolve from the repo root.
 DEFAULT_FONT_FILE = str(Path(__file__).resolve().parents[1] / "site" / "fonts" / "PT_Serif-Web-Regular.ttf")
@@ -44,9 +43,9 @@ DEFAULT_FONT_NAME = "PT Serif"
 
 # ASS FontSize is mapped onto the font's Win cell height, not CSS pixels:
 #   FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm
-# PT Serif: (1039 + 286) / 1000 = PT_SERIF_WIN_FACTOR (burn_geometry's
-# lineAdvance). Its hhea and Win metrics agree exactly (both 1325/1000), so
-# libass's FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the arithmetic value —
+# PT Serif: (1039 + 286) / 1000 = LINE_ADVANCE (burn_geometry's lineAdvance).
+# Its hhea and Win metrics agree exactly (both 1325/1000), so libass's
+# FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the arithmetic value —
 # a face whose two metric sets disagree would not, and its rendered glyph height
 # would have to be confirmed on a real frame.
 
@@ -98,8 +97,8 @@ def css_font_px(font_ratio, height):
 
     This, not `font_size_for`, is what a text measurer wants: Pillow's
     `ImageFont.truetype(size=...)` takes the em size, so feeding it the ASS
-    FontSize would inflate every width by the Win-metric factor (~20%) and wrap
-    cues a word early. The clamp lives here so both sizes share it.
+    FontSize would inflate every width by LINE_ADVANCE (32.5% for PT Serif) and
+    wrap cues a word early. The clamp lives here so both sizes share it.
     """
     if height <= 0:
         raise ValueError(f"height must be positive, got {height}")
@@ -107,13 +106,13 @@ def css_font_px(font_ratio, height):
     return ratio * height
 
 
-def font_size_for(font_ratio, height, win_factor=PT_SERIF_WIN_FACTOR):
+def font_size_for(font_ratio, height, line_advance=LINE_ADVANCE):
     """ASS FontSize for a font-height-to-frame-height ratio.
 
     Fractional: libass takes one, and a whole number drifts the text off the
     size the preview draws — by 1.7% on a 640x480 frame at the handle's 0.6x.
     """
-    return round(css_font_px(font_ratio, height) * win_factor, 2)
+    return round(css_font_px(font_ratio, height) * line_advance, 2)
 
 
 def wrap_text(text, measure, max_width):
