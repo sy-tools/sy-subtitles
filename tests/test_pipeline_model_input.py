@@ -14,7 +14,10 @@ import yaml
 
 WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 
-DEFAULT_MODEL = "claude-opus-5"
+DEFAULT_MODEL = "claude-opus-5-5"
+
+# Retired models must not come back as a selectable option.
+RETIRED_MODELS = ("claude-opus-5", "claude-opus-4-8")
 
 
 def _load() -> dict:
@@ -36,6 +39,8 @@ def test_model_input_on_dispatch_and_call() -> None:
     options = dispatch["model"].get("options", [])
     assert DEFAULT_MODEL in options
     assert "claude-fable-5-1" in options
+    for retired in RETIRED_MODELS:
+        assert retired not in options, f"retired model {retired} is still offered"
 
     # workflow_call inputs don't support `choice` — plain string with the
     # same default keeps matrix/driver callers on the current model.
@@ -62,6 +67,8 @@ def test_build_model_input_on_dispatch_and_call() -> None:
     # an explicit empty-string default is not representable in choice, so the
     # sentinel option "same-as-model" must come first.
     assert options[0] == "same-as-model"
+    for retired in RETIRED_MODELS:
+        assert retired not in options, f"retired model {retired} is still offered"
 
     call = on["workflow_call"]["inputs"]
     assert "build_model" in call, "workflow_call is missing the `build_model` input"

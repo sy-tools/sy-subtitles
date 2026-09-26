@@ -10,6 +10,8 @@ from pathlib import Path
 
 import pytest
 
+from tools.serve_auth_local import SpaHTTPServer
+
 pytestmark = [pytest.mark.e2e]
 
 SITE = Path(__file__).parent.parent / "site"
@@ -36,7 +38,7 @@ def _serve(index_html: bytes):
                 return
             super().do_GET()
 
-    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    httpd = SpaHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd, f"http://127.0.0.1:{port}"
@@ -57,6 +59,7 @@ def auth_server():
     httpd, url = _serve(index_html)
     yield url
     httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture
@@ -68,6 +71,7 @@ def plain_server():
     httpd, url = _serve(index_html)
     yield url
     httpd.shutdown()
+    httpd.server_close()
 
 
 def _route_github(pg, auth_server):
@@ -197,6 +201,7 @@ def hooks_only_server():
     httpd, url = _serve(index_html)
     yield url
     httpd.shutdown()
+    httpd.server_close()
 
 
 def test_callback_restores_app_params_saved_before_login(hooks_only_server, browser):

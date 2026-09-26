@@ -1,15 +1,17 @@
-// End-freeze: decide when to pause the fullscreen preview player just before
-// the video ends, so the Vimeo end screen ("more from this user") never
-// appears. We have no access to the Vimeo account, so the account-side end
-// screen setting is unavailable — the freeze leaves the real last frame on
-// screen instead. Single source for browser (script tag) and Node tests.
+// End-freeze: decide when to pause the preview player — embedded or
+// fullscreen alike — just before the video ends, so the Vimeo end screen
+// ("more from this user") never appears. We have no access to the Vimeo
+// account, so the account-side end screen setting is unavailable — the freeze
+// leaves the real last frame on screen instead. Single source for browser
+// (script tag) and Node tests.
 
 // The rAF loop polls getCurrentTime() at ~16ms granularity plus postMessage
 // latency, so the pause must be requested this far before the end to reliably
 // beat the 'ended' event.
 var END_FREEZE_EPSILON_SEC = 0.3;
 
-// state: {fsMode, sec, duration, frozen} -> 'freeze' | 'unfreeze' | null.
+// state: {sec, duration, frozen} -> 'freeze' | 'unfreeze' | null. No view
+// mode: the end screen shows in the embedded player as much as in fullscreen.
 // The `frozen` latch prevents re-pausing at the freeze point (a viewer who
 // presses play may watch the final tail), and is only released once the
 // position moves back below the threshold — rewinding re-arms the freeze.
@@ -19,7 +21,7 @@ function endFreezeAction(state) {
   if (typeof d !== 'number' || !isFinite(d) || d <= END_FREEZE_EPSILON_SEC) return null;
   if (state.sec >= d - END_FREEZE_EPSILON_SEC) {
     if (state.frozen) return null;
-    return state.fsMode ? 'freeze' : null;
+    return 'freeze';
   }
   return state.frozen ? 'unfreeze' : null;
 }

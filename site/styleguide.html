@@ -469,6 +469,7 @@ at millisecond precision in tabular digits.</p>
 <div id="sg-float-panel" style="position: relative; height: 260px"></div>
 
 <script src="js/sync_status_view.js"></script>
+<script src="js/burn_geometry.js"></script>
 <script src="js/burn_video.js"></script>
 <script src="js/export_menu.js"></script>
 <script src="js/clip_time.js"></script>
@@ -603,7 +604,7 @@ at millisecond precision in tabular digits.</p>
   })();
 
   (function () {
-    // Built from the REAL phase model in js/burn_video.js (it is pure — no DOM),
+    // Built from the REAL phase model in js/burn_video.js,
     // so these example widths cannot drift from the workflow's step weights.
     //
     // The fractions are summed from BURN_STEP_WEIGHTS as well: a hand-written

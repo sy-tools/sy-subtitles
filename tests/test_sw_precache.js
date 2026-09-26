@@ -47,6 +47,19 @@ function swArray(name) {
   return (m[1].match(/'([^']+)'/g) || []).map((s) => s.slice(1, -1));
 }
 
+// The fonts the stylesheets load, as page-relative paths: `url('../fonts/x.ttf')`
+// in css/tokens.css is `fonts/x.ttf` from index.html.
+function cssFonts() {
+  const out = [];
+  for (const sheet of pageCss()) {
+    const css = fs.readFileSync('site/' + sheet, 'utf8');
+    const re = /url\(['"]?\.\.\/(fonts\/[^'")]+)['"]?\)/g;
+    let m;
+    while ((m = re.exec(css)) !== null) out.push(m[1]);
+  }
+  return out;
+}
+
 const shellAssets = () => swArray('SHELL_ASSETS');
 const shellCdn = () => swArray('SHELL_CDN');
 
@@ -67,6 +80,16 @@ describe('SW shell precache', () => {
       page,
       'sw.js SHELL_ASSETS js list drifted from index.html <script src="js/…"> tags',
     );
+  });
+
+  it('precaches the fonts the stylesheets load', () => {
+    // The subtitle face is what makes fullscreen wrap where the burn wraps. A
+    // session that never fetched it online would draw the fallback offline for
+    // good, and nothing on screen says the lines are now the wrong ones.
+    const fonts = cssFonts();
+    assert.ok(fonts.length > 0, 'expected a url(../fonts/…) in the stylesheets');
+    const assets = shellAssets();
+    for (const font of fonts) assert.ok(assets.includes(font), `SHELL_ASSETS must precache '${font}'`);
   });
 
   it('precaches the scripts the typo worker imports', () => {

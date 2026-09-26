@@ -6,6 +6,14 @@
 
 var BURN_WORKFLOW = 'burn-subtitles.yml';
 
+// The burn's geometry (js/burn_geometry.js): require()d in Node, a global set
+// by its own <script src> in the browser.
+var _burnGeometry = (
+  typeof require !== 'undefined' && typeof module !== 'undefined'
+    ? require('./burn_geometry')
+    : BURN_GEOMETRY
+);
+
 // The branch whose burn-subtitles.yml actually runs. Production always wants
 // the default branch, but a workflow change cannot be exercised from the UI
 // until it is ON that branch — so a run dispatched while testing would execute
@@ -21,8 +29,8 @@ function burnRef(win) {
 }
 
 // The three ratios the workflow requires. Sizing travels as fractions of the
-// displayed video height, never pixels: fullscreen derives its font size from
-// viewport width, so pixels would make the output depend on the monitor.
+// video frame, never pixels: fullscreen draws the band on the displayed video's
+// box, so the same fractions reproduce it on the real frame at any resolution.
 var BURN_RATIO_KEYS = ['font_ratio', 'padtop_ratio', 'padbot_ratio'];
 
 // workflow_dispatch does not return a run id, so we stamp an opaque token into
@@ -290,17 +298,12 @@ function burnClipProblem(startMs, endMs, durationMs) {
   return '';
 }
 
-// Mirrors the fullscreen CSS in components.css:
-//   font-size: clamp(20px, calc(clamp(28px, 4vw, 80px) * var(--preview-subs-scale, 1)), 22vh)
-//   padding-top: 80px; padding-bottom: 36px
-// Kept as named constants so a CSS change has one obvious counterpart here.
-var FS_FONT_MIN_PX = 28;
-var FS_FONT_MAX_PX = 80;
-var FS_FONT_VW = 0.04;
-var FS_FONT_FLOOR_PX = 20;
-var FS_FONT_VH_CAP = 0.22;
-var FS_PADTOP_PX = 80;
-var FS_PADBOT_PX = 36;
+// Fullscreen draws the subtitle band on the displayed video's own box — not
+// on the screen — and sizes it in fractions of that box, so the burn can use
+// the very same fractions on the real frame.
+var FS_FONT_WIDTH_RATIO = _burnGeometry.fontWidthRatio;
+var FS_PADTOP_RATIO = _burnGeometry.padTopPx / _burnGeometry.refHeight;
+var FS_PADBOT_RATIO = _burnGeometry.padBotPx / _burnGeometry.refHeight;
 
 // The band the workflow's "Validate inputs" step accepts for font_ratio
 // (.github/workflows/burn-subtitles.yml). The subtitle resize handle allows
@@ -309,44 +312,76 @@ var FS_PADBOT_PX = 36;
 // dies minutes later in validation.
 //
 // The clamp is silent, which is acceptable only because it is exactly what
-// tools/burn_subtitles.py already does to the same value (FONT_RATIO_MIN /
-// FONT_RATIO_MAX there, applied in ass_font_size): the burned output is
-// identical whether the ratio is clamped here or there. Keep all three in step —
-// tests/test_burn_workflow.py pins the numbers across the three files.
-var FONT_RATIO_MIN = 0.02;
-var FONT_RATIO_MAX = 0.12;
+// tools/burn_subtitles.py already does to the same value (in css_font_px): the
+// burned output is identical whether the ratio is clamped here or there.
+var FONT_RATIO_MIN = _burnGeometry.fontRatioMin;
+var FONT_RATIO_MAX = _burnGeometry.fontRatioMax;
 
 function clampNum(min, value, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-function fullscreenFontPx(viewportWidth, viewportHeight, subsScale) {
-  var scale = (typeof subsScale === 'number' && isFinite(subsScale) && subsScale > 0)
-    ? subsScale : 1;
-  var base = clampNum(FS_FONT_MIN_PX, FS_FONT_VW * viewportWidth, FS_FONT_MAX_PX);
-  return clampNum(FS_FONT_FLOOR_PX, base * scale, FS_FONT_VH_CAP * viewportHeight);
-}
-
-// A <video>/iframe letterboxes: whichever axis binds first decides the height
-// the viewer actually sees, and that is what the ratios are relative to.
-function displayedVideoHeight(viewportWidth, viewportHeight, videoWidth, videoHeight) {
-  if (!(videoWidth > 0) || !(videoHeight > 0)) return viewportHeight;
-  var byWidth = viewportWidth * (videoHeight / videoWidth);
-  return Math.min(viewportHeight, byWidth);
-}
-
+// Nothing about the screen enters: the band is a fraction of the video, so a
+// phone and a desktop dispatch the same render. Only the video's aspect and the
+// handle's scale matter; 16:9 and 1x stand in for what is unknown.
 function measureBurnRatios(geometry) {
   var g = geometry || {};
-  var vw = g.viewportWidth > 0 ? g.viewportWidth : 1920;
-  var vh = g.viewportHeight > 0 ? g.viewportHeight : 1080;
-  var shown = displayedVideoHeight(vw, vh, g.videoWidth, g.videoHeight) || vh;
+  var aspect = (g.videoWidth > 0 && g.videoHeight > 0) ? g.videoWidth / g.videoHeight : 16 / 9;
+  var scale = (typeof g.subsScale === 'number' && isFinite(g.subsScale) && g.subsScale > 0)
+    ? g.subsScale : 1;
   return {
-    font_ratio: clampNum(FONT_RATIO_MIN,
-                         fullscreenFontPx(vw, vh, g.subsScale) / shown,
-                         FONT_RATIO_MAX),
-    padtop_ratio: FS_PADTOP_PX / shown,
-    padbot_ratio: FS_PADBOT_PX / shown,
+    font_ratio: clampNum(FONT_RATIO_MIN, FS_FONT_WIDTH_RATIO * aspect * scale, FONT_RATIO_MAX),
+    padtop_ratio: FS_PADTOP_RATIO,
+    padbot_ratio: FS_PADBOT_RATIO,
   };
+}
+
+// The fullscreen band's CSS (components.css) draws with these properties and
+// has no fallback for them: a page that never wrote them fails the boot smoke
+// (tests/test_spa_boot_smoke.py) rather than drawing a band the burn does not
+// reproduce. The side pad is the burner's wrap limit: its insets, then its
+// wrapSafety headroom inside them.
+function applyBurnGeometry(style) {
+  var g = _burnGeometry;
+  var props = {
+    '--fs-font-w-ratio': g.fontWidthRatio,
+    '--fs-font-min': g.fontRatioMin,
+    '--fs-font-max': g.fontRatioMax,
+    '--fs-padtop-ratio': FS_PADTOP_RATIO,
+    '--fs-padbot-ratio': FS_PADBOT_RATIO,
+    '--fs-side-pad-ratio': (1 - g.wrapSafety * (1 - 2 * g.sideInsetRatio)) / 2,
+    '--fs-line-advance': g.lineAdvance,
+  };
+  Object.keys(props).forEach(function(name) { style.setProperty(name, String(props[name])); });
+}
+
+// The words tools/burn_subtitles.py wraps: `text.split()` — any whitespace run
+// is one gap and nothing else is. A browser also breaks after a hyphen, a dash
+// or a slash ("Нью-" / "Йорка"), which the burner never does, so fullscreen
+// lays the text out from these words (fillFullscreenSubtitle) and breaks only
+// where the burn can.
+function burnWords(text) {
+  return String(text == null ? '' : text).split(/\s+/).filter(Boolean);
+}
+
+// Fill the fullscreen band: each word in a no-break box, joined by plain
+// spaces — the only break opportunities left are the burner's. All of it in
+// one wrapper: the band is a flex container, and loose words would each become
+// a flex item that never wraps (one text node used to be one item).
+function fillFullscreenSubtitle(el, text) {
+  var doc = el.ownerDocument;
+  var words = burnWords(text);
+  var line = doc.createElement('span');
+  line.className = 'fs-text';
+  for (var i = 0; i < words.length; i++) {
+    if (i) line.appendChild(doc.createTextNode(' '));
+    var span = doc.createElement('span');
+    span.className = 'fs-word';
+    span.textContent = words[i];
+    line.appendChild(span);
+  }
+  el.textContent = '';
+  el.appendChild(line);
 }
 
 // Weights per workflow step. Names must match burn-subtitles.yml exactly —
@@ -725,6 +760,12 @@ function computeProgress(job, nowMs) {
   return result;
 }
 
+// In the page, as soon as this module loads — before any view renders, and
+// with nothing else in the way that could throw first.
+if (typeof document !== 'undefined' && document.documentElement) {
+  applyBurnGeometry(document.documentElement.style);
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     BURN_WORKFLOW: BURN_WORKFLOW,
@@ -747,12 +788,13 @@ if (typeof module !== 'undefined' && module.exports) {
     burnClipProblem: burnClipProblem,
     FONT_RATIO_MIN: FONT_RATIO_MIN,
     FONT_RATIO_MAX: FONT_RATIO_MAX,
-    FS_FONT_MAX_PX: FS_FONT_MAX_PX,
-    FS_PADTOP_PX: FS_PADTOP_PX,
-    FS_PADBOT_PX: FS_PADBOT_PX,
-    fullscreenFontPx: fullscreenFontPx,
-    displayedVideoHeight: displayedVideoHeight,
+    FS_FONT_WIDTH_RATIO: FS_FONT_WIDTH_RATIO,
+    FS_PADTOP_RATIO: FS_PADTOP_RATIO,
+    FS_PADBOT_RATIO: FS_PADBOT_RATIO,
     measureBurnRatios: measureBurnRatios,
+    applyBurnGeometry: applyBurnGeometry,
+    burnWords: burnWords,
+    fillFullscreenSubtitle: fillFullscreenSubtitle,
     BURN_STEP_WEIGHTS: BURN_STEP_WEIGHTS,
     BURN_RENDER_BLOCK: BURN_RENDER_BLOCK,
     burnPhases: burnPhases,

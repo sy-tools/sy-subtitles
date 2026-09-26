@@ -57,9 +57,6 @@ sy-subtitles/
 │           └── final/
 │               ├── uk.srt          # Final Ukrainian subtitles
 │               └── report.txt      # Validation report
-├── assets/                         # Vendored binary assets
-│   └── fonts/                      # PT Serif TTF + license — libass reads it via fontsdir,
-│                                   #   so a burned line breaks exactly where the SPA's does
 ├── glossary/                       # Translation knowledge base
 │   ├── terms_lookup.yaml           # 374 EN→UK terms
 │   ├── terms_context.yaml          # Disambiguation context
@@ -99,6 +96,8 @@ sy-subtitles/
 │   ├── index.html                  # Preview + Review app shell
 │   ├── js/                         # Plain-JS modules (single source, shared with node --test)
 │   ├── css/                        # Design tokens + components (tokens.css, components.css)
+│   ├── fonts/                      # PT Serif TTF + license — the fullscreen preview AND libass
+│   │                               #   (via fontsdir) draw this one file, so lines break alike
 │   ├── styleguide.html             # Live design-system catalog
 │   ├── sw.js                       # Service worker (offline shell precache)
 │   └── icon.png                    # Mahayantra favicon

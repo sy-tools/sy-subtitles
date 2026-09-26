@@ -577,127 +577,177 @@ describe('BURN_WORKFLOW', () => {
 const {
   FONT_RATIO_MAX,
   FONT_RATIO_MIN,
-  displayedVideoHeight,
-  fullscreenFontPx,
+  FS_FONT_WIDTH_RATIO,
+  FS_PADTOP_RATIO,
+  FS_PADBOT_RATIO,
   measureBurnRatios,
+  applyBurnGeometry,
 } = require('../site/js/burn_video');
+const BURN_GEOMETRY = require('../site/js/burn_geometry');
 
-describe('fullscreenFontPx', () => {
-  it('is 4% of viewport width in the middle of the range', () => {
-    assert.strictEqual(fullscreenFontPx(1200, 900, 1), 48);
+describe('fullscreen box constants', () => {
+  it('keep the approved 1080p look: 4% of width, 80px over and 36px under', () => {
+    assert.strictEqual(FS_FONT_WIDTH_RATIO, 0.04);
+    assert.ok(Math.abs(FS_PADTOP_RATIO - 80 / 1080) < 1e-12);
+    assert.ok(Math.abs(FS_PADBOT_RATIO - 36 / 1080) < 1e-12);
   });
 
-  it('pins to the 80px ceiling on a wide monitor', () => {
-    assert.strictEqual(fullscreenFontPx(2560, 1440, 1), 80);
-  });
-
-  it('respects the 28px floor on a narrow window', () => {
-    assert.strictEqual(fullscreenFontPx(500, 800, 1), 28);
-  });
-
-  it('respects the 20px floor when even the inner clamp is squeezed by height', () => {
-    // Inner clamp gives base 28, but 22% of a very short 80px viewport is
-    // 17.6, so the outer floor of 20 is what actually wins.
-    assert.strictEqual(fullscreenFontPx(500, 80, 1), 20);
-  });
-
-  it('multiplies by the user subtitle scale after the inner clamp', () => {
-    // Inner clamp pins at 80, then scale 2 doubles it.
-    assert.strictEqual(fullscreenFontPx(2560, 1440, 2), 160);
-  });
-
-  it('is capped by 22vh so tall text cannot overflow the screen', () => {
-    // 22% of 300px viewport height = 66px, below the scaled 160.
-    assert.strictEqual(fullscreenFontPx(2560, 300, 2), 66);
-  });
-
-  it('treats a missing scale as 1', () => {
-    assert.strictEqual(fullscreenFontPx(1200, 900, undefined), 48);
+  it('come from the one geometry file', () => {
+    assert.strictEqual(FS_FONT_WIDTH_RATIO, BURN_GEOMETRY.fontWidthRatio);
+    assert.strictEqual(FONT_RATIO_MIN, BURN_GEOMETRY.fontRatioMin);
+    assert.strictEqual(FONT_RATIO_MAX, BURN_GEOMETRY.fontRatioMax);
+    assert.strictEqual(FS_PADTOP_RATIO, BURN_GEOMETRY.padTopPx / BURN_GEOMETRY.refHeight);
+    assert.strictEqual(FS_PADBOT_RATIO, BURN_GEOMETRY.padBotPx / BURN_GEOMETRY.refHeight);
   });
 });
 
-describe('displayedVideoHeight', () => {
-  it('fills the height when the video is narrower than the window', () => {
-    // 4:3 video in a 16:9 window is letterboxed on the sides: height fills.
-    assert.strictEqual(displayedVideoHeight(1920, 1080, 640, 480), 1080);
+describe('applyBurnGeometry', () => {
+  function recordedStyle() {
+    const props = {};
+    return { props, setProperty: (name, value) => { props[name] = value; } };
+  }
+
+  it('hands the fullscreen band every number it draws with', () => {
+    const style = recordedStyle();
+    applyBurnGeometry(style);
+    assert.deepStrictEqual(Object.keys(style.props).sort(), [
+      '--fs-font-max', '--fs-font-min', '--fs-font-w-ratio', '--fs-line-advance',
+      '--fs-padbot-ratio', '--fs-padtop-ratio', '--fs-side-pad-ratio',
+    ]);
+    assert.strictEqual(style.props['--fs-font-w-ratio'], '0.04');
+    assert.strictEqual(style.props['--fs-line-advance'], String(BURN_GEOMETRY.lineAdvance));
+    assert.strictEqual(style.props['--fs-padtop-ratio'], String(80 / 1080));
   });
 
-  it('is limited by width when the video is wider than the window', () => {
-    // 16:9 video in a 4:3 window: width binds, height is 1000 * 9/16.
-    assert.strictEqual(displayedVideoHeight(1000, 1000, 1920, 1080), 562.5);
+  it('pads the sides out to the burn\'s wrap limit: insets, then its safety headroom', () => {
+    const style = recordedStyle();
+    applyBurnGeometry(style);
+    const side = Number(style.props['--fs-side-pad-ratio']);
+    assert.ok(Math.abs((1 - 2 * side) - 0.98 * (1 - 2 * 0.07)) < 1e-12);
   });
 });
 
 describe('measureBurnRatios', () => {
-  const geometry = {
-    viewportWidth: 1920, viewportHeight: 1080,
-    videoWidth: 640, videoHeight: 480, subsScale: 1,
-  };
+  const hd = { videoWidth: 1920, videoHeight: 1080, subsScale: 1 };
 
-  it('reproduces the approved fullscreen baseline', () => {
-    const r = measureBurnRatios(geometry);
-    // 4vw of 1920 = 76.8; displayed height 1080 -> 0.0711.
-    assert.ok(Math.abs(r.font_ratio - 76.8 / 1080) < 1e-9);
-    assert.ok(Math.abs(r.padtop_ratio - 80 / 1080) < 1e-9);   // approved 0.0741
-    assert.ok(Math.abs(r.padbot_ratio - 36 / 1080) < 1e-9);   // approved 0.0333
+  it('reproduces the approved fullscreen baseline for a 16:9 video', () => {
+    const r = measureBurnRatios(hd);
+    // 4% of the video width over its height: 76.8 / 1080 = 0.0711.
+    assert.ok(Math.abs(r.font_ratio - 76.8 / 1080) < 1e-12);
+    assert.ok(Math.abs(r.padtop_ratio - 80 / 1080) < 1e-12);
+    assert.ok(Math.abs(r.padbot_ratio - 36 / 1080) < 1e-12);
   });
 
-  it('holds while 4vw stays inside the 28-80px band', () => {
-    const wide = measureBurnRatios(geometry);
-    const narrow = measureBurnRatios(Object.assign({}, geometry, {
-      viewportWidth: 1280, viewportHeight: 720,
+  it('does not depend on the device the render was started from', () => {
+    // A phone held upright used to measure 28px (the CSS floor) over a 219px
+    // tall video: font 0.12 (clamped) and a band covering ~80% of the frame.
+    // The box is the video's own, so the screen has no say at all.
+    const phone = measureBurnRatios(Object.assign({}, hd, {
+      viewportWidth: 390, viewportHeight: 844,
     }));
-    // Neither case is clamped (76.8 and 51.2 are both inside 28-80); only in
-    // the linear region does 4vw/height stay the same fraction regardless of
-    // monitor size. Once 4vw pins to the 80px ceiling this equality breaks —
-    // see the 2560-wide case in the fullscreenFontPx suite above.
-    assert.ok(Math.abs(wide.font_ratio - narrow.font_ratio) < 1e-9);
+    assert.deepStrictEqual(phone, measureBurnRatios(hd));
+  });
+
+  it('keeps the characters per line for a 4:3 video', () => {
+    // Sized from the width, so a narrower frame gets proportionally smaller
+    // letters and the same number of them per line.
+    const r = measureBurnRatios({ videoWidth: 640, videoHeight: 480, subsScale: 1 });
+    assert.ok(Math.abs(r.font_ratio - 0.04 * 640 / 480) < 1e-12);
   });
 
   it('grows the font ratio when the user enlarged the subtitles', () => {
-    const bigger = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.5 }));
-    assert.ok(bigger.font_ratio > measureBurnRatios(geometry).font_ratio);
+    const bigger = measureBurnRatios(Object.assign({}, hd, { subsScale: 1.5 }));
+    assert.ok(bigger.font_ratio > measureBurnRatios(hd).font_ratio);
   });
 
   it('clamps a ratio the workflow would refuse', () => {
     // The resize handle allows --preview-subs-scale up to 4, which measures
-    // 0.22 on a 1920x1080 screen — outside the [0.02, 0.12] band the workflow's
+    // 0.28 on a 16:9 video — outside the [0.02, 0.12] band the workflow's
     // "Validate inputs" step enforces, so the run would die before it started.
-    const huge = measureBurnRatios(Object.assign({}, geometry, { subsScale: 4 }));
+    const huge = measureBurnRatios(Object.assign({}, hd, { subsScale: 4 }));
     assert.strictEqual(huge.font_ratio, FONT_RATIO_MAX);
     // Just past the point where the raw measurement leaves the band (scale 1.7
-    // measured 0.1209 on this geometry) — the boundary a reviewer really hits.
-    const past = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.7 }));
+    // measures 0.1209) — the boundary a reviewer really hits.
+    const past = measureBurnRatios(Object.assign({}, hd, { subsScale: 1.7 }));
     assert.strictEqual(past.font_ratio, FONT_RATIO_MAX);
   });
 
   it('leaves a legal ratio exactly as measured', () => {
     // The clamp must be a guard, not a rounding: scale 1.5 measures 0.1067,
     // which is inside the band and must travel untouched.
-    const legal = measureBurnRatios(Object.assign({}, geometry, { subsScale: 1.5 }));
+    const legal = measureBurnRatios(Object.assign({}, hd, { subsScale: 1.5 }));
     assert.ok(Math.abs(legal.font_ratio - (76.8 * 1.5) / 1080) < 1e-12);
     assert.ok(legal.font_ratio < FONT_RATIO_MAX);
   });
 
   it('clamps up to the floor when the measurement is absurdly small', () => {
-    // A 4K screen with the subtitles shrunk to 0.5x measures 40px over a 2250px
-    // displayed height = 0.0178, below the floor the workflow accepts. The
-    // burner clamps the same way, so the render is unaffected either way.
-    const tiny = measureBurnRatios({
-      viewportWidth: 4000, viewportHeight: 2400,
-      videoWidth: 16, videoHeight: 9, subsScale: 0.5,
-    });
+    // A portrait 9:16 video with the subtitles shrunk to 0.5x: 4% of a width
+    // that is 0.5625 of the height, halved = 0.01125, below the floor the
+    // workflow accepts. The burner clamps the same way.
+    const tiny = measureBurnRatios({ videoWidth: 9, videoHeight: 16, subsScale: 0.5 });
     assert.strictEqual(tiny.font_ratio, FONT_RATIO_MIN);
   });
 
-  it('returns numbers, never NaN, for degenerate geometry', () => {
-    const r = measureBurnRatios({
-      viewportWidth: 0, viewportHeight: 0,
-      videoWidth: 0, videoHeight: 0, subsScale: 0,
-    });
-    Object.keys(r).forEach((k) => {
-      assert.ok(isFinite(r[k]) && r[k] > 0, k + ' must be a positive number');
-    });
+  it('falls back to 16:9 and scale 1 for degenerate geometry', () => {
+    const r = measureBurnRatios({ videoWidth: 0, videoHeight: 0, subsScale: 0 });
+    assert.deepStrictEqual(r, measureBurnRatios(hd));
+    assert.deepStrictEqual(measureBurnRatios(undefined), measureBurnRatios(hd));
+  });
+});
+
+const { burnWords, fillFullscreenSubtitle } = require('../site/js/burn_video');
+
+describe('burnWords', () => {
+  it('splits only where the burner splits: on whitespace', () => {
+    // tools/burn_subtitles.py wraps on text.split(); a hyphen, a dash or a
+    // slash is no break opportunity there, so it must not be one on screen.
+    assert.deepStrictEqual(burnWords('до Нью-Йорка, 1990–1995 і/або'),
+      ['до', 'Нью-Йорка,', '1990–1995', 'і/або']);
+  });
+
+  it('treats any whitespace run as one gap, as str.split() does', () => {
+    assert.deepStrictEqual(burnWords('  а\u00a0не\t\nтак  '), ['а', 'не', 'так']);
+  });
+
+  it('gives no words for blank text', () => {
+    assert.deepStrictEqual(burnWords('   '), []);
+    assert.deepStrictEqual(burnWords(''), []);
+  });
+});
+
+describe('fillFullscreenSubtitle', () => {
+  function fakeDoc() {
+    function node(tag) {
+      return {
+        tagName: tag, className: '', children: [], text: '',
+        appendChild(c) { this.children.push(c); return c; },
+        set textContent(v) { this.children = []; this.text = v; },
+        get textContent() {
+          return this.text + this.children.map((c) => c.textContent).join('');
+        },
+      };
+    }
+    return {
+      createElement: (tag) => node(tag),
+      createTextNode: (t) => ({ textContent: t }),
+      node,
+    };
+  }
+
+  it('wraps every word in a no-break box, joined by plain spaces, in one wrapper', () => {
+    const doc = fakeDoc();
+    const el = doc.node('div');
+    el.ownerDocument = doc;
+    el.textContent = 'old';
+    fillFullscreenSubtitle(el, 'до  Нью-Йорка,');
+    assert.strictEqual(el.textContent, 'до Нью-Йорка,');
+    // One child: the band is a flex container, and loose words would each be
+    // a flex item that never wraps.
+    assert.strictEqual(el.children.length, 1);
+    assert.strictEqual(el.children[0].className, 'fs-text');
+    const words = el.children[0].children.filter((c) => c.tagName === 'span');
+    assert.deepStrictEqual(words.map((w) => w.className), ['fs-word', 'fs-word']);
+    assert.deepStrictEqual(words.map((w) => w.textContent), ['до', 'Нью-Йорка,']);
   });
 });
 

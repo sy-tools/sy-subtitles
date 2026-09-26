@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1991-04-14_Shri-Ganesha-Puja-The-Innate-Maryadas/Ganesha-Puja/final/uk.srt
+  Transcript: talks/1991-04-14_Shri-Ganesha-Puja-The-Innate-Maryadas/transcript_uk.txt
+  EN SRT: talks/1991-04-14_Shri-Ganesha-Puja-The-Innate-Maryadas/Ganesha-Puja/source/en.srt
+  SRT blocks: 304
+  EN SRT blocks: 317
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:01:32,819 — 00:30:09,968
+  SRT range:       00:01:32,819 — 00:30:11,968
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 304
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 304
+  CPS: avg=11.5, median=11.6, max=19.7
+  CPS > target: 41 (13.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #252: CPS=19.7 (69ch/3.5s) "Вони саме вашого стилю». Він сказав: «Ми були справді зачаро..."
+    #253: CPS=19.0 (44ch/2.3s) "які вони приємні, розумієте, і вони були...»"
+    #251: CPS=18.3 (42ch/2.3s) "а ви можете вписатися серед них. Це легко."
+    #248: CPS=17.7 (73ch/4.1s) "Але цього разу я побачив також кількох індійців та індійськи..."
+    #250: CPS=16.6 (53ch/3.2s) "«Так, – сказала Я, – вони можуть вписатися серед вас,"
+    #200: CPS=15.8 (67ch/4.2s) "Тобто Я ніколи не думала, що жінки можуть бути жорстокими, с..."
+    #243: CPS=15.4 (58ch/3.8s) "здебільшого це не рекламується в індійських газетах, і ми,"
+    #249: CPS=15.1 (61ch/4.0s) "які співали, тож здається, що ми можемо вписатися серед них»..."
+    #282: CPS=15.0 (69ch/4.6s) "І, як Я вам казала, Австралія колись була невід’ємною частин..."
+    #255: CPS=15.0 (22ch/1.5s) "Індія така, розумієте."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 304
+  EN SRT blocks: 317
+  Ratio UK/EN: 0.96 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.5 (target ≤15.0)
+  CPS > 15.0: 41 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

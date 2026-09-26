@@ -138,3 +138,26 @@ def test_pull_request_runs_supersede_rather_than_stack() -> None:
     assert re.search(r"pull_request\.number", str(concurrency["group"])), (
         "the group must be per-PR, or one PR's push cancels another's run"
     )
+
+
+def test_every_test_lane_has_a_deadline() -> None:
+    """A hung test holds a runner for GitHub's default 360 minutes, and the PR
+    waits on `gate` for all of it. A real-Vimeo await that never settled did
+    exactly that to an e2e shard."""
+    jobs = _load()["jobs"]
+    lanes = {name: job for name, job in jobs.items() if name.startswith("test-")}
+    assert lanes, "no test lanes found"
+    for name, job in lanes.items():
+        assert 0 < job.get("timeout-minutes", 0) <= 30, f"{name} needs a timeout-minutes of at most 30"
+
+
+def test_the_e2e_lane_renders_with_libass_and_refuses_to_skip_without_it() -> None:
+    """test_burn_preview_fidelity.py renders the burned frame with libass and
+    skips where the library is missing — so the lane must install it AND set
+    REQUIRE_LIBASS, or a runner without it would pass the burn check on nothing.
+    """
+    steps = _load()["jobs"]["test-e2e"]["steps"]
+    runs = "\n".join(step.get("run", "") for step in steps)
+    assert "libass9" in runs, "the e2e lane does not install libass"
+    pytest_step = next(step for step in steps if step.get("run", "").startswith("pytest"))
+    assert str(pytest_step.get("env", {}).get("REQUIRE_LIBASS")) == "1"

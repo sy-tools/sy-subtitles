@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from tools.serve_auth_local import SpaHTTPServer
+
 pytestmark = pytest.mark.e2e
 
 SITE = Path(__file__).parent.parent / "site"
@@ -120,11 +122,12 @@ def server():
                 return
             super().do_GET()
 
-    httpd = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    httpd = SpaHTTPServer(("127.0.0.1", 0), Handler)
     port = httpd.server_address[1]
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
+    httpd.server_close()
 
 
 def _record(calls):
