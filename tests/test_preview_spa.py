@@ -151,6 +151,7 @@ def server(spa_path):
     t.start()
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture(scope="module")

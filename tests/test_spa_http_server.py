@@ -79,3 +79,23 @@ def test_the_guard_sees_a_bare_server_however_it_is_imported(line):
 def test_the_guard_lets_the_shared_server_through():
     assert not BARE_SERVER.search("httpd = SpaHTTPServer(addr, Handler)")
     assert not BARE_SERVER.search("class SpaHTTPServer(http.server.ThreadingHTTPServer):")
+
+
+# `shutdown()` only stops the serve loop; the listening socket stays open until
+# `server_close()`, one leaked descriptor per module-scoped fixture.
+UNCLOSED_SHUTDOWN = re.compile(r"^([ \t]*)(\w+)\.shutdown\(\)\n(?!\1\2\.server_close\(\)$)", re.M)
+
+
+def test_every_server_a_test_stops_is_also_closed():
+    offenders = [
+        f"{path.name}:{text[: match.start()].count(chr(10)) + 1}"
+        for path in sorted(TESTS.glob("*.py"))
+        for text in [path.read_text(encoding="utf-8")]
+        for match in UNCLOSED_SHUTDOWN.finditer(text)
+    ]
+    assert offenders == [], f"follow httpd.shutdown() with httpd.server_close(): {offenders}"
+
+
+def test_the_close_guard_accepts_a_closed_server_only():
+    assert UNCLOSED_SHUTDOWN.search("    httpd.shutdown()\n\n")
+    assert not UNCLOSED_SHUTDOWN.search("    httpd.shutdown()\n    httpd.server_close()\n")

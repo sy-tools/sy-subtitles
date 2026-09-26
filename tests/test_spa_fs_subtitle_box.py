@@ -89,6 +89,7 @@ def served_site():
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{port}/index.html"
     httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture

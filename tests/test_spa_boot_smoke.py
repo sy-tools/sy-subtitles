@@ -67,6 +67,7 @@ def smoke_server():
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     yield f"http://127.0.0.1:{port}"
     httpd.shutdown()
+    httpd.server_close()
 
 
 @pytest.fixture
