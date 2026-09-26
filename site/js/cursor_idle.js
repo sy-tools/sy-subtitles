@@ -11,16 +11,28 @@
 // showing ('probe'), and only a pointer that then stays still for the whole
 // probe gets hidden ('hidden'). A move during the probe means someone was using
 // the player all along — the shield comes straight down again.
+//
+// While the shield is up it stands in for the video surface under it, so a
+// press on it is a click on the video: play/pause, and a double click leaves
+// fullscreen, as on the bare player.
 
 var FS_CURSOR_IDLE_MS = 5000;
 var FS_CURSOR_PROBE_MS = 1000;
+var FS_DOUBLE_PRESS_MS = 500;
+// A seek or volume change this soon after a key press came from the keyboard.
+var FS_KEY_ECHO_MS = 1000;
 
-// opts: {delayMs, probeMs, setTimer, clearTimer,
-//        onChange(state: 'visible' | 'probe' | 'hidden')}
+// opts: {delayMs, probeMs, doublePressMs, keyEchoMs, now, setTimer, clearTimer,
+//        onChange(state: 'visible' | 'probe' | 'hidden'),
+//        onVideoClick(), onVideoDoubleClick() — which must also undo the click
+//        that opened it: that one already went out as a click}
 function createCursorIdle(opts) {
   var active = false;
   var state = 'visible';
   var timer = null;
+  var lastKeyAt = -Infinity;
+  // Time of a video press that could still become the first half of a double.
+  var pressAt = null;
   // First position seen since the shield went up. A browser may dispatch a
   // mousemove with no physical movement when the element under a resting
   // pointer changes, so only a position that differs from this one counts.
@@ -47,7 +59,12 @@ function createCursorIdle(opts) {
   }
   function reveal() {
     anchor = null;
+    pressAt = null;
     setState('visible');
+  }
+  function wake() {
+    reveal();
+    countdown();
   }
 
   return {
@@ -66,25 +83,44 @@ function createCursorIdle(opts) {
       if (state !== 'visible') {
         if (anchor === null) { anchor = { x: x, y: y }; return; }
         if (anchor.x === x && anchor.y === y) return;
-        reveal();
+        wake();
+        return;
       }
       countdown();
     },
-    // True when the press came while the cursor was hidden: nobody can aim at
-    // a control they cannot see, so the caller may act on the whole video.
-    pointerDown: function() {
-      if (!active) return false;
-      var blind = state === 'hidden';
-      reveal();
-      countdown();
-      return blind;
+    // A press anywhere but on the shield.
+    wake: function() {
+      if (!active) return;
+      wake();
     },
-    // Player activity (seek, volume, play/pause) keeps a visible cursor up but
-    // never ends a probe or reveals a hidden one: the keyboard drives the
-    // player too.
-    nudge: function() {
-      if (!active || state !== 'visible') return;
-      countdown();
+    // A primary mouse press on the shield. The shield stays up with the cursor
+    // showing, so the second press of a double click lands on it as well.
+    videoPress: function() {
+      if (!active) return;
+      var now = opts.now();
+      var isDouble = pressAt !== null && now - pressAt < opts.doublePressMs;
+      anchor = null;
+      setState('probe');
+      schedule(opts.delayMs, function() { setState('hidden'); });
+      if (isDouble) {
+        pressAt = null;
+        opts.onVideoDoubleClick();
+      } else {
+        pressAt = now;
+        opts.onVideoClick();
+      }
+    },
+    key: function() { lastKeyAt = opts.now(); },
+    // Player activity keeps a visible cursor up. Play and pause never reveal a
+    // hidden one — Space and a click on the video both cause them. A seek or
+    // volume change with no key just before it was made with the mouse inside
+    // the iframe (a drag holds the pointer there), so that one does.
+    playerEvent: function(name) {
+      if (!active) return;
+      var byMouse = (name === 'seeked' || name === 'volumechange')
+        && opts.now() - lastKeyAt >= opts.keyEchoMs;
+      if (byMouse) wake();
+      else if (state === 'visible') countdown();
     },
     state: function() { return state; },
   };
@@ -94,6 +130,8 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     FS_CURSOR_IDLE_MS: FS_CURSOR_IDLE_MS,
     FS_CURSOR_PROBE_MS: FS_CURSOR_PROBE_MS,
+    FS_DOUBLE_PRESS_MS: FS_DOUBLE_PRESS_MS,
+    FS_KEY_ECHO_MS: FS_KEY_ECHO_MS,
     createCursorIdle: createCursorIdle,
   };
 }

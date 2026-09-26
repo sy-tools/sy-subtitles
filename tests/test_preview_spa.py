@@ -5030,17 +5030,82 @@ class TestFullscreenCursorIdle:
         self._hide(page)
         page.mouse.click(300, 300)
         page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
-        assert self._shield_down(page)
 
-    def test_click_during_probe_does_not_toggle_playback(self, server, page):
+    def test_click_during_probe_toggles_playback(self, server, page):
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer.play()")
         page.mouse.move(300, 300)
         self._set_fs(page, True)
         page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
         page.mouse.click(300, 300)
+        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+
+    def test_shield_stays_up_with_cursor_after_video_click(self, server, page):
+        self._goto_preview(server, page)
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.click(300, 300)
+        display, cursor = self._shield(page)
+        assert display == "block"
+        assert cursor != "none"
+
+    def test_double_click_while_hidden_leaves_fullscreen_and_keeps_playing(self, server, page):
+        """The real player applies play/pause over postMessage, so the second
+        press can land before the first toggle has: the mock defers them."""
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(
+            """() => {
+              const p = window._vimeoPlayer;
+              const pause = p.pause.bind(p), play = p.play.bind(p);
+              p.pause = () => { setTimeout(pause, 30); return Promise.resolve(); };
+              p.play = () => { setTimeout(play, 30); return Promise.resolve(); };
+            }"""
+        )
+        page.mouse.move(300, 300)
+        page.evaluate("SPA.toggleFullscreen()")
+        self._hide(page)
+        page.mouse.dblclick(300, 300)
+        page.clock.run_for(100)
+        assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_ctrl_click_while_hidden_does_not_toggle_playback(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(300, 300)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.keyboard.down("Control")
+        page.mouse.click(300, 300)
+        page.keyboard.up("Control")
         page.clock.run_for(50)
         assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_touch_press_while_hidden_only_reveals(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        self._set_fs(page, True)
+        self._hide(page)
+        page.evaluate(
+            """() => document.getElementById('fs-idle-shield').dispatchEvent(
+                 new PointerEvent('pointerdown', {pointerType: 'touch', button: 0, bubbles: true}))"""
+        )
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    @pytest.mark.parametrize("event", ["seeked", "volumechange"])
+    def test_player_change_without_a_key_reveals_cursor(self, server, page, event):
+        """A drag on Vimeo's own seek or volume bar keeps the pointer inside
+        the iframe; the change it makes is all the page gets to see."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.evaluate(f"window._vimeoPlayer._fire('{event}', {{}})")
         assert self._shield_down(page)
 
     def test_right_click_while_hidden_does_not_toggle_playback(self, server, page):

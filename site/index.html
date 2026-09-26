@@ -3581,7 +3581,7 @@ function showPreview(talkId, videoSlug) {
       // Vimeo's own controls sit under the pointer without the page seeing it,
       // so their effects are the only sign that someone is using them.
       ['play', 'pause', 'seeked', 'volumechange'].forEach(function(ev) {
-        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.nudge(); });
+        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.playerEvent(ev); });
       });
       var pollInFlight = false;
       function overlayLoop() {
@@ -3958,12 +3958,34 @@ var fsCursorIdle = (function() {
   var view = document.getElementById('view-preview');
   var shield = document.getElementById('fs-idle-shield');
   if (!view || !shield) return null;
+  var clickPlayer = null;
+  var beforeClick = null;
   var idle = createCursorIdle({
     delayMs: FS_CURSOR_IDLE_MS,
     probeMs: FS_CURSOR_PROBE_MS,
+    doublePressMs: FS_DOUBLE_PRESS_MS,
+    keyEchoMs: FS_KEY_ECHO_MS,
+    now: function() { return Date.now(); },
     setTimer: function(fn, ms) { return setTimeout(fn, ms); },
     clearTimer: function(id) { clearTimeout(id); },
     onChange: function(state) { shield.dataset.state = state; },
+    onVideoClick: function() {
+      var player = previewState.player;
+      if (!player) return;
+      clickPlayer = player;
+      beforeClick = player.getPaused();
+      beforeClick.then(function(paused) { if (paused) player.play(); else player.pause(); });
+    },
+    // Restore what the first click changed from, rather than toggle again: the
+    // player answers getPaused() over postMessage, and a quick second press
+    // can read the state from before the first toggle landed.
+    onVideoDoubleClick: function() {
+      var player = clickPlayer;
+      if (player && player === previewState.player && beforeClick) {
+        beforeClick.then(function(paused) { if (paused) player.pause(); else player.play(); });
+      }
+      SPA.toggleFullscreen();
+    },
   });
   var hover = window.matchMedia ? window.matchMedia('(hover: hover)') : null;
   function follow() {
@@ -3974,11 +3996,14 @@ var fsCursorIdle = (function() {
   if (hover && hover.addEventListener) hover.addEventListener('change', follow);
   follow();
   document.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
-  // The press that ends a blind spell lands on the shield, so the player never
-  // sees it. Clicking a video you cannot aim at means play/pause — do that.
+  // A touch or pen press, a secondary button and a macOS ctrl-click only bring
+  // the cursor back: none of them is a click on the video.
   document.addEventListener('pointerdown', function(e) {
-    if (idle.pointerDown() && e.target === shield && e.button === 0) SPA.togglePlay();
+    var videoPress = e.target === shield && e.pointerType === 'mouse'
+      && e.button === 0 && !e.ctrlKey;
+    if (videoPress) idle.videoPress(); else idle.wake();
   });
+  document.addEventListener('keydown', function() { idle.key(); }, true);
   return idle;
 })();
 
