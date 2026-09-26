@@ -47,6 +47,7 @@ var SHELL_ASSETS = [
   'js/text_sanitize.js',
   'js/vimeo_codec.js',
   'js/end_freeze.js',
+  'js/cursor_idle.js',
   'js/add_talk_data.js',
   'js/shell_version.js',
   'js/boot_loader.js',

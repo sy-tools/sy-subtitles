@@ -28,6 +28,7 @@
 <script src="js/text_sanitize.js"></script>
 <script src="js/vimeo_codec.js"></script>
 <script src="js/end_freeze.js"></script>
+<script src="js/cursor_idle.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/boot_loader.js"></script>
@@ -540,6 +541,7 @@
   </section>
   <div class="player-container">
     <div class="video-wrap"><iframe id="vimeo-player" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
+    <div id="fs-idle-shield" class="fs-idle-shield" aria-hidden="true"></div>
     <div id="subtitle-overlay"></div>
     <div class="controls">
       <span id="time-display">00:00:00</span>
@@ -3576,6 +3578,11 @@ function showPreview(talkId, videoSlug) {
         previewState._duration = d;
         previewState._durationFromEvent = true;
       });
+      // Vimeo's own controls sit under the pointer without the page seeing it,
+      // so their effects are the only sign that someone is using them.
+      ['play', 'pause', 'seeked', 'volumechange'].forEach(function(ev) {
+        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.nudge(); });
+      });
       var pollInFlight = false;
       function overlayLoop() {
         if (!isCurrentPlayer()) return;
@@ -3942,6 +3949,32 @@ document.addEventListener('keydown', function(e) {
     document.body.classList.remove('sy-fs-active');
   }
 });
+
+// Fullscreen cursor auto-hide (js/cursor_idle.js). It follows the .fs-mode
+// class itself rather than every path that flips it (toggleFullscreen,
+// syncFsMode, the Escape handler above). A touch screen has no cursor to hide,
+// and there the shield would only swallow the tap meant for the player.
+var fsCursorIdle = (function() {
+  var view = document.getElementById('view-preview');
+  var shield = document.getElementById('fs-idle-shield');
+  if (!view || !shield) return null;
+  var idle = createCursorIdle({
+    delayMs: FS_CURSOR_IDLE_MS,
+    setTimer: function(fn, ms) { return setTimeout(fn, ms); },
+    clearTimer: function(id) { clearTimeout(id); },
+    onChange: function(hidden) { shield.classList.toggle('is-idle', hidden); },
+  });
+  var canHover = !window.matchMedia || window.matchMedia('(hover: hover)').matches;
+  function follow() {
+    if (canHover && view.classList.contains('fs-mode')) idle.enter();
+    else idle.exit();
+  }
+  new MutationObserver(follow).observe(view, { attributes: true, attributeFilter: ['class'] });
+  follow();
+  document.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
+  document.addEventListener('pointerdown', function() { idle.pointerDown(); });
+  return idle;
+})();
 
 // --- Edit-field input guards -------------------------------------------------
 //

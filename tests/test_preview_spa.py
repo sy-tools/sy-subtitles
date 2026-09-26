@@ -4887,6 +4887,148 @@ class TestUkrainianPlurals:
         assert "всі" not in message
 
 
+class TestFullscreenCursorIdle:
+    """Fullscreen cursor auto-hide (js/cursor_idle.js): after five seconds
+    without pointer activity a shield with `cursor: none` covers the player,
+    and a real pointer move takes it down again. The shield is what lets the
+    page hide the cursor at all — over the cross-origin Vimeo iframe the page
+    can neither style the cursor nor see a mousemove."""
+
+    IDLE_MS = 5000
+
+    def _goto_preview(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.clock.install()
+
+    def _set_fs(self, page, on):
+        page.evaluate(
+            f"document.getElementById('view-preview').classList.toggle('fs-mode', {'true' if on else 'false'})"
+        )
+
+    def _shield_up(self, page):
+        return page.evaluate(
+            """() => {
+              const s = document.getElementById('fs-idle-shield');
+              return !!s && getComputedStyle(s).display !== 'none';
+            }"""
+        )
+
+    def _hit_at_player_centre(self, page):
+        return page.evaluate(
+            """() => {
+              const r = document.getElementById('mock-player').getBoundingClientRect();
+              return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).id;
+            }"""
+        )
+
+    def test_cursor_hidden_after_idle_delay_in_fullscreen(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - 100)
+        assert not self._shield_up(page)
+        page.clock.run_for(200)
+        assert self._shield_up(page)
+        assert page.evaluate("getComputedStyle(document.getElementById('fs-idle-shield')).cursor") == "none"
+        assert self._hit_at_player_centre(page) == "fs-idle-shield"
+
+    def test_shield_covers_the_whole_screen(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        box = page.evaluate(
+            """() => {
+              const r = document.getElementById('fs-idle-shield').getBoundingClientRect();
+              return [r.left, r.top, r.width, r.height, innerWidth, innerHeight];
+            }"""
+        )
+        assert box[:4] == [0, 0, box[4], box[5]]
+
+    def test_shield_stays_under_the_subtitles(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        shield_z, overlay_z = page.evaluate(
+            """() => [getComputedStyle(document.getElementById('fs-idle-shield')).zIndex,
+                      getComputedStyle(document.getElementById('subtitle-overlay')).zIndex]"""
+        )
+        assert int(shield_z) < int(overlay_z)
+
+    def test_real_pointer_move_reveals_cursor(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        page.mouse.move(200, 200)
+        page.mouse.move(240, 220)
+        assert not self._shield_up(page)
+        assert self._hit_at_player_centre(page) == "mock-player"
+
+    def test_pointer_move_at_rest_position_keeps_cursor_hidden(self, server, page):
+        self._goto_preview(server, page)
+        page.mouse.move(200, 200)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        page.mouse.move(200, 200)
+        page.mouse.move(200, 200)
+        assert self._shield_up(page)
+
+    def test_cursor_hides_again_after_reveal(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        page.mouse.move(200, 200)
+        page.mouse.move(240, 220)
+        assert not self._shield_up(page)
+        page.clock.run_for(self.IDLE_MS + 100)
+        assert self._shield_up(page)
+
+    def test_cursor_hides_while_paused(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.pause()")
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        assert self._shield_up(page)
+
+    def test_player_seek_postpones_hiding(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - 1000)
+        page.evaluate("window._vimeoPlayer._fire('seeked', {seconds: 42})")
+        page.clock.run_for(2000)
+        assert not self._shield_up(page)
+        page.clock.run_for(self.IDLE_MS)
+        assert self._shield_up(page)
+
+    def test_keyboard_does_not_reveal_cursor(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        page.keyboard.press("Space")
+        page.evaluate("window._vimeoPlayer._fire('seeked', {seconds: 42})")
+        assert self._shield_up(page)
+
+    def test_leaving_fullscreen_takes_the_shield_down(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS + 100)
+        assert self._shield_up(page)
+        self._set_fs(page, False)
+        assert not self._shield_up(page)
+
+    def test_no_shield_outside_fullscreen(self, server, page):
+        self._goto_preview(server, page)
+        page.clock.run_for(self.IDLE_MS * 3)
+        assert not self._shield_up(page)
+
+    def test_toggling_fullscreen_off_takes_the_shield_down(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("SPA.toggleFullscreen()")
+        page.clock.run_for(self.IDLE_MS + 100)
+        assert self._shield_up(page)
+        page.evaluate("SPA.toggleFullscreen()")
+        assert not self._shield_up(page)
+
+
 class TestEndFreeze:
     """End-freeze, embedded and fullscreen alike: the player pauses just before
     the video ends so the Vimeo 'more from this user' end screen never fires
