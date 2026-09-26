@@ -82,20 +82,26 @@ def test_the_guard_lets_the_shared_server_through():
     assert not BARE_SERVER.search("class SpaHTTPServer(http.server.ThreadingHTTPServer):")
 
 
-def _outermost_functions(node):
-    for child in ast.iter_child_nodes(node):
-        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            yield child
-        else:
-            yield from _outermost_functions(child)
+def _units(tree):
+    """The module's own code, then each outermost function with its closures."""
+    module, functions = [], []
+
+    def split(node):
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                functions.append(list(ast.walk(child)))
+            else:
+                module.append(child)
+                split(child)
+
+    split(tree)
+    return [module, *functions]
 
 
 def _bound_names(target):
     if isinstance(target, (ast.Tuple, ast.List)):
         for element in target.elts:
             yield from _bound_names(element)
-    elif isinstance(target, ast.Starred):
-        yield from _bound_names(target.value)
     elif target is not None:
         yield ast.unparse(target)
 
@@ -109,12 +115,12 @@ def _unclosed_shutdowns(source):
 
     The unit is an outermost function or method with its closures, since a
     fixture may stop its server from a nested helper or hand `httpd.shutdown`
-    to a finalizer. A `shutdown(...)` with arguments — a socket's half-close,
-    an executor's `wait=` — is not a server's.
+    to a finalizer; code outside every function is a unit of its own. A
+    `shutdown(...)` with arguments — a socket's half-close, an executor's
+    `wait=` — is not a server's.
     """
     unclosed = set()
-    for fn in _outermost_functions(ast.parse(source)):
-        nodes = list(ast.walk(fn))
+    for nodes in _units(ast.parse(source)):
         managed = {
             name
             for node in nodes
@@ -153,10 +159,25 @@ def test_every_server_a_test_shuts_down_is_also_closed():
         "class TestA:\n    class TestB:\n        def stop(self):\n            self.httpd.shutdown()\n",
         "if True:\n    def f():\n        httpd.shutdown()\n",
         "try:\n    import x\nexcept ImportError:\n    pass\nelse:\n    def f():\n        httpd.shutdown()\n",
+        "httpd.shutdown()\n",
+        "atexit.register(lambda: httpd.shutdown())\n",
+        "def f():\n    httpd.server_close()\n\n\nhttpd.shutdown()\n",
     ],
 )
 def test_the_close_guard_sees_a_server_left_open(source):
     assert _unclosed_shutdowns(source)
+
+
+@pytest.mark.parametrize(
+    ("source", "lines"),
+    [
+        ("def f():\n    a.shutdown()\n    b.shutdown()\n", [2, 3]),
+        ("def f():\n    a.shutdown()\n\n\ndef g():\n    b.shutdown()\n", [2, 6]),
+        ("a.shutdown()\n\n\ndef g():\n    b.shutdown()\n", [1, 5]),
+    ],
+)
+def test_the_close_guard_names_every_server_left_open(source, lines):
+    assert _unclosed_shutdowns(source) == lines
 
 
 def test_the_close_guard_names_the_first_line_that_stops_the_server():
@@ -176,6 +197,8 @@ def test_the_close_guard_names_the_first_line_that_stops_the_server():
         "def f(request):\n    request.addfinalizer(httpd.shutdown)\n    request.addfinalizer(httpd.server_close)\n",
         "def f():\n    sock.shutdown(socket.SHUT_WR)\n",
         "def f():\n    pool.shutdown(wait=True)\n",
+        "httpd.shutdown()\nhttpd.server_close()\n",
+        "with Server() as httpd:\n    httpd.shutdown()\n",
     ],
 )
 def test_the_close_guard_accepts_a_closed_server(source):
