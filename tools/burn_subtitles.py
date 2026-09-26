@@ -43,8 +43,9 @@ DEFAULT_FONT_NAME = "PT Serif"
 
 # ASS FontSize is mapped onto the font's Win cell height, not CSS pixels:
 #   FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm
-# PT Serif: (1039 + 286) / 1000 = LINE_ADVANCE. Its hhea and Win metrics agree exactly (both 1325/1000), so
-# libass's FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the arithmetic value —
+# PT Serif: (1039 + 286) / 1000 = LINE_ADVANCE (burn_geometry's lineAdvance).
+# Its hhea and Win metrics agree exactly (both 1325/1000), so libass's
+# FT_SIZE_REQUEST_TYPE_REAL_DIM sizing lands on the arithmetic value —
 # a face whose two metric sets disagree would not, and its rendered glyph height
 # would have to be confirmed on a real frame.
 
@@ -105,13 +106,13 @@ def css_font_px(font_ratio, height):
     return ratio * height
 
 
-def font_size_for(font_ratio, height, win_factor=LINE_ADVANCE):
+def font_size_for(font_ratio, height, line_advance=LINE_ADVANCE):
     """ASS FontSize for a font-height-to-frame-height ratio.
 
     Fractional: libass takes one, and a whole number drifts the text off the
     size the preview draws — by 1.7% on a 640x480 frame at the handle's 0.6x.
     """
-    return round(css_font_px(font_ratio, height) * win_factor, 2)
+    return round(css_font_px(font_ratio, height) * line_advance, 2)
 
 
 def wrap_text(text, measure, max_width):

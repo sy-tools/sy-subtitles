@@ -91,7 +91,7 @@ class TestSizingConstants:
     detect a drifted or typo'd value, so the values are asserted directly.
     """
 
-    def test_win_factor_matches_pt_serif_win_metrics(self):
+    def test_line_advance_matches_pt_serif_win_metrics(self):
         # FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm.
         assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == LINE_ADVANCE
 
@@ -474,7 +474,7 @@ class TestCssFontPx:
         # 0.0711 * 1080 = 76.788 — the SPA's measured 76.8px overlay font.
         assert css_font_px(0.0711, 1080) == pytest.approx(76.788)
 
-    def test_font_size_is_css_px_times_the_win_factor(self):
+    def test_font_size_is_css_px_times_the_line_advance(self):
         for ratio, height in ((0.0711, 1080), (0.05, 480), (0.11, 2160)):
             assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * LINE_ADVANCE, 2)
 

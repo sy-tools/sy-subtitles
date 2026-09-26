@@ -36,7 +36,6 @@ def stand():
             yield httpd.server_address[1]
         finally:
             httpd.shutdown()
-            httpd.server_close()
 
 
 def _head(port: int, path: str):

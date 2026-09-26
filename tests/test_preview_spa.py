@@ -6624,9 +6624,10 @@ class TestTypoHints:
         The wait belongs with the edit, not with whatever reads the result: a
         scan is debounced, so right after the edit `typoPaintedSeq === typoSeq`
         still holds for the paint that came BEFORE it. `typoSeq` is read in the
-        same task as the edit, because a paint landing between a separate read
-        and the edit would pass for the edit's own — the reply to a scan sent
-        earlier describes the old text, and only a later sequence number cannot.
+        same task as the edit, because a reply whose sequence number is not later
+        than that one may have been measured before the edit; only a later one
+        cannot have been. A separate read would let a paint landing between it
+        and the edit pass for the edit's own.
         """
         sent = page.evaluate(f"(arg) => {{ ({edit})(arg); return typoSeq; }}", arg)
         page.wait_for_function(

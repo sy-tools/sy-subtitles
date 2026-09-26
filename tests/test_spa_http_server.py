@@ -7,6 +7,7 @@ so a module silently fails to load or the load outlasts `Page.goto`'s timeout â€
 a red shard that passes on a rerun and looks like a flake.
 """
 
+import ast
 import re
 from pathlib import Path
 
@@ -81,21 +82,62 @@ def test_the_guard_lets_the_shared_server_through():
     assert not BARE_SERVER.search("class SpaHTTPServer(http.server.ThreadingHTTPServer):")
 
 
-# `shutdown()` only stops the serve loop; the listening socket stays open until
-# `server_close()`, one leaked descriptor per module-scoped fixture.
-UNCLOSED_SHUTDOWN = re.compile(r"^([ \t]*)(\w+)\.shutdown\(\)\n(?!\1\2\.server_close\(\)$)", re.M)
+def _unclosed_shutdowns(source):
+    """Lines where a function shuts a server down and never closes it.
+
+    `shutdown()` only stops the serve loop; the listening socket stays open
+    until `server_close()`, or until garbage collection gets to it. A server
+    bound by `with ... as` is closed on the way out, so it needs no call.
+    """
+    unclosed = set()
+    for fn in ast.walk(ast.parse(source)):
+        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        managed = {
+            ast.unparse(item.optional_vars)
+            for node in ast.walk(fn)
+            if isinstance(node, ast.With)
+            for item in node.items
+            if item.optional_vars is not None
+        }
+        calls = {"shutdown": {}, "server_close": {}}
+        for node in ast.walk(fn):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in calls:
+                calls[node.func.attr][ast.unparse(node.func.value)] = node.lineno
+        for receiver, line in calls["shutdown"].items():
+            if receiver not in managed and receiver not in calls["server_close"]:
+                unclosed.add(line)
+    return sorted(unclosed)
 
 
-def test_every_server_a_test_stops_is_also_closed():
+def test_every_server_a_test_shuts_down_is_also_closed():
     offenders = [
-        f"{path.name}:{text[: match.start()].count(chr(10)) + 1}"
+        f"{path.name}:{line}"
         for path in sorted(TESTS.glob("*.py"))
-        for text in [path.read_text(encoding="utf-8")]
-        for match in UNCLOSED_SHUTDOWN.finditer(text)
+        for line in _unclosed_shutdowns(path.read_text(encoding="utf-8"))
     ]
     assert offenders == [], f"follow httpd.shutdown() with httpd.server_close(): {offenders}"
 
 
-def test_the_close_guard_accepts_a_closed_server_only():
-    assert UNCLOSED_SHUTDOWN.search("    httpd.shutdown()\n\n")
-    assert not UNCLOSED_SHUTDOWN.search("    httpd.shutdown()\n    httpd.server_close()\n")
+@pytest.mark.parametrize(
+    "source",
+    [
+        "def f():\n    httpd.shutdown()\n",
+        "def f():\n    self.httpd.shutdown()\n",
+        "def f():\n    httpd.shutdown()  # stop\n\n    other.server_close()\n",
+    ],
+)
+def test_the_close_guard_sees_a_server_left_open(source):
+    assert _unclosed_shutdowns(source)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "def f():\n    httpd.shutdown()\n    httpd.server_close()\n",
+        "def f():\n    self.httpd.shutdown()\n\n    self.httpd.server_close()  # free the port\n",
+        "def f():\n    with Server() as httpd:\n        httpd.shutdown()\n",
+    ],
+)
+def test_the_close_guard_accepts_a_closed_server(source):
+    assert not _unclosed_shutdowns(source)
