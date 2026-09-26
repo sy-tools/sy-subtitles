@@ -4963,7 +4963,8 @@ class TestEndFreeze:
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_function("window._vimeoPlayer && window._vimeoPlayer._callbacks.durationchange", timeout=10000)
         page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
-        page.wait_for_timeout(1000)
+        assert page.evaluate("!window.__mockDurationAnswered"), "the metadata must land second"
+        page.wait_for_function("window.__mockDurationAnswered === true", timeout=10000)
         self._enter_fs(page)
         page.evaluate("window._vimeoPlayer.play()")
         page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")

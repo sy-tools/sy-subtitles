@@ -56,11 +56,18 @@ window.Vimeo = {
     getCurrentTime() { return Promise.resolve(this._currentTime); }
     // The metadata length, as Vimeo reports it: a whole number of seconds
     // that can run past the media's true end (see _setMediaDuration). A test
-    // delays the answer with window.__mockDurationDelayMs.
+    // delays the answer with window.__mockDurationDelayMs and waits on
+    // window.__mockDurationAnswered to know it has landed.
     getDuration() {
       var d = this._duration, ms = window.__mockDurationDelayMs;
       if (!ms) return Promise.resolve(d);
-      return new Promise(function(resolve) { setTimeout(function() { resolve(d); }, ms); });
+      return new Promise(function(resolve) {
+        setTimeout(function() { resolve(d); }, ms);
+      }).then(function(v) {
+        // Flagged on a later task, so the SPA's own .then has run first.
+        setTimeout(function() { window.__mockDurationAnswered = true; }, 0);
+        return v;
+      });
     }
     // Intrinsic size; a test picks another shape via window.__mockVideoSize.
     getVideoWidth() { return Promise.resolve((window.__mockVideoSize || [1280, 720])[0]); }
