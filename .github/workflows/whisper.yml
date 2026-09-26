@@ -242,6 +242,7 @@ jobs:
       - name: Mint bot App token
         id: bot-token
         if: env.BOT_APP_READY == 'true'
+        continue-on-error: true
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
           app-id: ${{ vars.BOT_APP_ID }}
@@ -249,8 +250,8 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
       - name: Warn that the bot PR will wait for approval
-        if: env.BOT_APP_READY != 'true'
-        run: echo "::warning::The bot App is not configured (vars.BOT_APP_ID, and BOT_APP_PRIVATE_KEY in the main environment), so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
+        if: steps.bot-token.outputs.token == ''
+        run: echo "::warning::No bot App token (the App is not configured, or minting failed above), so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
       - uses: actions/checkout@v7
         with:
           token: ${{ steps.bot-token.outputs.token || github.token }}

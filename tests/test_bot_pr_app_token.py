@@ -28,7 +28,6 @@ over a rebuild rewrites the transcript the build was made from. Bot branches
 are skipped explicitly.
 """
 
-import re
 from pathlib import Path
 
 import pytest
@@ -37,7 +36,7 @@ import yaml
 WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 
 APP_TOKEN_ACTION = "actions/create-github-app-token@"
-APP_TOKEN_PIN = re.compile(r"actions/create-github-app-token@[0-9a-f]{40}$")
+APP_TOKEN_PIN = "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1"  # v3.2.0
 APP_READY = "${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}"
 TOKEN_EXPR = "steps.bot-token.outputs.token || github.token"
 
@@ -98,17 +97,27 @@ def test_app_token_is_minted_before_checkout(workflow, job):
     # rejects it for this action; `app-id` is only deprecated, and works.
     assert step["with"]["app-id"] == "${{ vars.BOT_APP_ID }}"
     assert step["with"]["private-key"] == "${{ secrets.BOT_APP_PRIVATE_KEY }}"
-    assert APP_TOKEN_PIN.match(step["uses"]), "the one step that sees the key runs a commit, not a movable tag"
+    assert step["uses"] == APP_TOKEN_PIN, "the one step that sees the key runs a commit, not a movable tag"
+    assert step.get("continue-on-error") is True, (
+        "a failed mint (App not installed, key revoked) must fall back, not lose the build"
+    )
+    permissions = {k: v for k, v in step["with"].items() if k.startswith("permission-")}
+    assert permissions == {"permission-contents": "write", "permission-pull-requests": "write"}
     assert step.get("if") == "env.BOT_APP_READY == 'true'", (
         "an unconfigured App or an unreachable key must fall back, not fail the job"
     )
 
 
 @pytest.mark.parametrize(("workflow", "job"), BOT_PR_JOBS)
-def test_checkout_pushes_with_the_app_token(workflow, job):
+def test_every_checkout_before_bot_pr_pushes_with_the_app_token(workflow, job):
     steps = _steps(workflow, job)
-    checkout = steps[_index(steps, _is_checkout)]
-    assert TOKEN_EXPR in checkout.get("with", {}).get("token", "")
+    before_bot_pr = steps[: _index(steps, _runs_bot_pr)]
+    checkouts = [s for s in before_bot_pr if _is_checkout(s)]
+    assert checkouts
+    for checkout in checkouts:
+        assert checkout.get("with", {}).get("token") == f"${{{{ {TOKEN_EXPR} }}}}", (
+            "any checkout left on the default token resets the push credentials to GITHUB_TOKEN"
+        )
 
 
 @pytest.mark.parametrize(("workflow", "job"), BOT_PR_JOBS)
@@ -121,7 +130,7 @@ def test_bot_pr_opens_the_pr_with_the_app_token(workflow, job):
 @pytest.mark.parametrize(("workflow", "job"), BOT_PR_JOBS)
 def test_fallback_is_announced(workflow, job):
     steps = _steps(workflow, job)
-    warn = [s for s in steps if s.get("if") == "env.BOT_APP_READY != 'true'"]
+    warn = [s for s in steps if s.get("if") == "steps.bot-token.outputs.token == ''"]
     assert warn and "::warning" in warn[0]["run"], (
         "falling back to github.token means a person must approve the bot PR's CI; the log has to say so"
     )
@@ -151,5 +160,13 @@ def test_only_main_environment_jobs_name_the_app_key():
 
 def test_sync_subtitles_skips_bot_branches():
     cond = _load("sync-subtitles.yml")["jobs"]["sync"]["if"]
-    assert "!startsWith(github.head_ref, 'bot/')" in cond
-    assert "github.event.pull_request.draft == false" in cond
+    assert cond == "github.event.pull_request.draft == false && !startsWith(github.head_ref, 'bot/')"
+
+
+def test_review_status_waits_for_its_pr_to_merge_when_it_has_the_app_token():
+    """The serialized review-status runs must not branch off a main that lacks
+    the previous run's status. Without the App the PR waits for a person, so
+    waiting would only turn every run red."""
+    steps = _steps("sync-review-status.yml", "sync")
+    bot_pr = steps[_index(steps, _runs_bot_pr)]
+    assert bot_pr["env"].get("BOT_PR_WAIT_MERGE_SECONDS") == "${{ steps.bot-token.outputs.token != '' && '600' || '' }}"

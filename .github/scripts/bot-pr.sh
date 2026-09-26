@@ -84,3 +84,23 @@ else
   echo "Auto-merge not available, merging immediately"
   gh pr merge --delete-branch --merge "$PR_URL"
 fi
+
+# BOT_PR_WAIT_MERGE_SECONDS: hold this job until the PR has merged. A caller
+# that serializes its runs needs it, or the next run branches off a main that
+# lacks this change, rewrites the same lines, and its PR conflicts once this one
+# lands — then its auto-merge never fires.
+if [ -n "${BOT_PR_WAIT_MERGE_SECONDS:-}" ]; then
+  deadline=$(( $(date +%s) + BOT_PR_WAIT_MERGE_SECONDS ))
+  while :; do
+    state=$(gh pr view "$PR_URL" --json state --jq .state)
+    case "$state" in
+      MERGED) echo "Merged: $PR_URL"; break ;;
+      CLOSED) echo "::error::$PR_URL was closed without merging"; exit 1 ;;
+    esac
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      echo "::error::$PR_URL did not merge within ${BOT_PR_WAIT_MERGE_SECONDS}s; check its CI"
+      exit 1
+    fi
+    sleep "${BOT_PR_POLL_SECONDS:-10}"
+  done
+fi

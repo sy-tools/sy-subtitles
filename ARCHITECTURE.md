@@ -206,13 +206,21 @@ They are opened with a token minted for the bot GitHub App
 (`vars.BOT_APP_ID` + `BOT_APP_PRIVATE_KEY`), not with `GITHUB_TOKEN`:
 GitHub holds every run on a PR that `github-actions[bot]` opened until a person
 approves it, no repository setting lifts that, and a held run never reports
-`gate` — the PR then waits forever. Without the App configured the jobs fall
-back to `GITHUB_TOKEN` and warn that the PR needs that approval.
+`gate` — the PR then waits forever. When there is no App token (App not
+configured, or minting failed) the jobs fall back to `GITHUB_TOKEN` and warn
+that the PR needs that approval, rather than losing what the run produced.
 
 The key is a secret of the `main` environment, never a repository secret. That
-environment admits only the `main` branch, so anyone with write access who
-pushes a workflow on a branch still cannot read it; the minting jobs run in it,
-and the one step that sees the key runs an action pinned to a commit.
+environment admits only the `main` branch, so a workflow pushed on another
+branch cannot read it; reaching it takes a commit merged into `main`. The
+minting jobs run in that environment, so running them from a branch needs the
+branch admitted to `main` for the run, exactly as the pipeline's LLM jobs
+already do. The one step that sees the key runs an action pinned to a commit.
+
+`sync-review-status` also waits (`BOT_PR_WAIT_MERGE_SECONDS`) until its PR has
+merged. Its runs are serialized, but issue events come in bursts and every run
+rewrites `updated_at`: a run that branched off `main` before the previous PR
+landed would conflict with it and never auto-merge.
 
 ### deploy-pages.yml
 Deploys `site/` to GitHub Pages on changes under `site/`.
