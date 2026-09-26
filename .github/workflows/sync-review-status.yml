@@ -12,50 +12,24 @@ permissions:
   pull-requests: write
 
 jobs:
-  sync:
+  # Label edits need no serialization, and must stay out of the sync queue:
+  # GitHub keeps one pending run per concurrency group and cancels the older
+  # one, which would drop its label edit while the running sync waits for its
+  # PR to merge.
+  labels:
     runs-on: ubuntu-latest
-    # Serialize syncs: rapid issue events (e.g. claiming two talks seconds
-    # apart) used to spawn parallel runs that raced bot-pr.sh from the same
-    # base into duplicate stuck PRs (#728/#729). Job-level on purpose —
-    # workflow-level concurrency is ignored when this file runs via
-    # workflow_call. cancel-in-progress stays false: an in-flight sync is a
-    # multi-step sequence (label edits → regenerate → PR → merge) and must
-    # finish; new runs queue behind it.
-    concurrency:
-      group: review-status-sync
-      cancel-in-progress: false
-    # For 'unlabeled' the issue's label list reflects the state AFTER removal,
-    # so removing the last review:* label would skip the sync — also check the
-    # removed label itself (github.event.label.name).
     if: >
-      github.event_name != 'issues' ||
-      contains(join(github.event.issue.labels.*.name, ','), 'review:') ||
-      startsWith(github.event.label.name, 'review:')
+      github.event_name == 'issues' && (
+        github.event.action == 'assigned' ||
+        github.event.action == 'unassigned' ||
+        github.event.action == 'closed' ||
+        github.event.action == 'reopened'
+      )
     steps:
-      # Always branch off the live main tip, not the inherited SHA. When this
-      # workflow runs via `workflow_call` from subtitle-pipeline.yml, the default
-      # checkout uses the caller's `github.sha` — the pipeline's dispatch SHA,
-      # which can be ~1h stale once the long translate/build jobs finish.
-      # sync-review-status.py regenerates review-status.json by merging entries
-      # preserved from the on-disk file, so a stale base yields stale content;
-      # bot-pr.sh then opens a PR off that stale base and merges into a moved
-      # main, producing a 3-way conflict whenever another status update landed
-      # during the run. Pinning `ref: main` bases the regenerated file on the
-      # current tip and lets the PR merge cleanly.
-      - uses: actions/checkout@v7
-        with:
-          ref: main
-
       - name: Auto-update labels on assign/unassign/close/reopen
-        if: >
-          github.event_name == 'issues' && (
-            github.event.action == 'assigned' ||
-            github.event.action == 'unassigned' ||
-            github.event.action == 'closed' ||
-            github.event.action == 'reopened'
-          )
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           ISSUE: ${{ github.event.issue.number }}
           ACTION: ${{ github.event.action }}
         run: |
@@ -72,6 +46,62 @@ jobs:
             gh issue edit "$ISSUE" --remove-label "review:approved" --add-label "review:pending"
           fi
 
+  sync:
+    needs: labels
+    runs-on: ubuntu-latest
+    # The App key is a secret of the `main` environment, which admits only the
+    # main branch, so a workflow pushed on another branch cannot read it.
+    environment: main
+    env:
+      BOT_APP_READY: ${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
+    # Serialize syncs: rapid issue events (e.g. claiming two talks seconds
+    # apart) used to spawn parallel runs that raced bot-pr.sh from the same
+    # base into duplicate stuck PRs (#728/#729). Job-level on purpose —
+    # workflow-level concurrency is ignored when this file runs via
+    # workflow_call. cancel-in-progress stays false: an in-flight sync is a
+    # multi-step sequence (regenerate → PR → merge) and must
+    # finish; new runs queue behind it.
+    concurrency:
+      group: review-status-sync
+      cancel-in-progress: false
+    # For 'unlabeled' the issue's label list reflects the state AFTER removal,
+    # so removing the last review:* label would skip the sync — also check the
+    # removed label itself (github.event.label.name).
+    if: >-
+      !cancelled() && (
+      github.event_name != 'issues' ||
+      contains(join(github.event.issue.labels.*.name, ','), 'review:') ||
+      startsWith(github.event.label.name, 'review:'))
+    steps:
+      # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
+      - name: Mint bot App token
+        id: bot-token
+        if: env.BOT_APP_READY == 'true'
+        continue-on-error: true
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: steps.bot-token.outputs.token == ''
+        run: echo "::warning::No bot App token (the App is not configured, or minting failed above), so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
+      # Always branch off the live main tip, not the inherited SHA. When this
+      # workflow runs via `workflow_call` from subtitle-pipeline.yml, the default
+      # checkout uses the caller's `github.sha` — the pipeline's dispatch SHA,
+      # which can be ~1h stale once the long translate/build jobs finish.
+      # sync-review-status.py regenerates review-status.json by merging entries
+      # preserved from the on-disk file, so a stale base yields stale content;
+      # bot-pr.sh then opens a PR off that stale base and merges into a moved
+      # main, producing a 3-way conflict whenever another status update landed
+      # during the run. Pinning `ref: main` bases the regenerated file on the
+      # current tip and lets the PR merge cleanly.
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          token: ${{ steps.bot-token.outputs.token || github.token }}
+
       - name: Generate review-status.json
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -79,5 +109,6 @@ jobs:
 
       - name: Commit via PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
+          BOT_PR_WAIT_MERGE_SECONDS: ${{ steps.bot-token.outputs.token != '' && '600' || '' }}
         run: .github/scripts/bot-pr.sh bot/review-status "Update review status" review-status.json

@@ -27,7 +27,10 @@ jobs:
     # edited files in the background every few seconds of editing. Running
     # the reconciliation on each of those pushes would be a CI storm, and
     # its bot commits would race the client's next push. Sync only real PRs.
-    if: github.event.pull_request.draft == false
+    # Bot branches carry a pipeline build: transcript and SRTs regenerated
+    # together, with no reviewer edit to reconcile. Syncing one rewrites the
+    # transcript the build was made from.
+    if: github.event.pull_request.draft == false && !startsWith(github.head_ref, 'bot/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

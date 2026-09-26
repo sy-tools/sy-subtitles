@@ -232,8 +232,29 @@ jobs:
     needs: [discover, whisper]
     if: needs.discover.outputs.has_jobs == 'true' && !cancelled()
     runs-on: ubuntu-latest
+    # The App key is a secret of the `main` environment, which admits only the
+    # main branch, so a workflow pushed on another branch cannot read it.
+    environment: main
+    env:
+      BOT_APP_READY: ${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
     steps:
+      # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
+      - name: Mint bot App token
+        id: bot-token
+        if: env.BOT_APP_READY == 'true'
+        continue-on-error: true
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: steps.bot-token.outputs.token == ''
+        run: echo "::warning::No bot App token (the App is not configured, or minting failed above), so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
       - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.bot-token.outputs.token || github.token }}
 
       - name: Download all whisper artifacts
         uses: actions/download-artifact@v8
@@ -292,6 +313,6 @@ jobs:
 
       - name: Commit via PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
         run: |
           .github/scripts/bot-pr.sh bot/whisper "Add Whisper data" "talks/*/*/source/whisper.json"
