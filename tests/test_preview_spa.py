@@ -4888,16 +4888,16 @@ class TestUkrainianPlurals:
 
 
 class TestFullscreenCursorIdle:
-    """Fullscreen cursor auto-hide (js/cursor_idle.js): after five seconds
-    without pointer activity a shield with `cursor: none` covers the player,
-    and a real pointer move takes it down again. The shield is what lets the
-    page hide the cursor at all — over the cross-origin Vimeo iframe the page
-    can neither style the cursor nor see a mousemove. It goes up a second early
-    with the cursor still showing (the probe): a move then means the pointer
-    was busy over the iframe all along."""
+    """Fullscreen cursor auto-hide (js/cursor_idle.js). A shield covers the
+    player for as long as fullscreen lasts, because the page can hide the
+    cursor only over an element of its own — over the cross-origin Vimeo
+    iframe it cannot even see a move. It hides the cursor after three seconds
+    without one, and steps aside when the pointer leaves it through the hole
+    over Vimeo's control bar, whose menus open upwards over the video."""
 
-    IDLE_MS = 5000
-    PROBE_MS = 1000
+    IDLE_MS = 3000
+    VIMEO_MS = 10000
+    FOCUS_SETTLE_MS = 300
 
     def _goto_preview(self, server, page):
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
@@ -4909,148 +4909,226 @@ class TestFullscreenCursorIdle:
             f"document.getElementById('view-preview').classList.toggle('fs-mode', {'true' if on else 'false'})"
         )
 
-    def _shield(self, page):
-        """(display, cursor) of the shield as the browser computes them."""
-        return tuple(
-            page.evaluate(
-                """() => {
-                  const cs = getComputedStyle(document.getElementById('fs-idle-shield'));
-                  return [cs.display, cs.cursor];
-                }"""
-            )
-        )
+    def _state(self, page):
+        return page.evaluate("document.getElementById('fs-idle-shield').dataset.state")
 
-    def _cursor_hidden(self, page):
-        return self._shield(page) == ("block", "none")
+    def _cursor(self, page):
+        return page.evaluate("getComputedStyle(document.getElementById('fs-idle-shield')).cursor")
 
-    def _shield_down(self, page):
-        return self._shield(page)[0] == "none"
+    def _hit(self, page, x, y):
+        return page.evaluate(f"document.elementFromPoint({x}, {y}).id")
 
-    def _hit_at_player_centre(self, page):
-        return page.evaluate(
-            """() => {
-              const r = document.getElementById('mock-player').getBoundingClientRect();
-              return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2).id;
-            }"""
-        )
+    def _size(self, page):
+        return page.evaluate("[innerWidth, innerHeight]")
+
+    def _paused(self, page):
+        return page.evaluate("window._vimeoPlayer._paused")
 
     def _hide(self, page):
         page.clock.run_for(self.IDLE_MS + 100)
-        assert self._cursor_hidden(page)
+        assert self._state(page) == "hidden"
+        assert self._cursor(page) == "none"
 
-    def test_cursor_hidden_after_idle_delay_in_fullscreen(self, server, page):
+    def _playing_hidden(self, server, page, x=300, y=300):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(x, y)
+        self._set_fs(page, True)
+        page.mouse.move(x + 1, y)
+        self._hide(page)
+
+    def test_shield_covers_the_player_from_the_start_of_fullscreen(self, server, page):
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        page.clock.run_for(self.IDLE_MS - self.PROBE_MS - 100)
-        assert self._shield_down(page)
-        page.clock.run_for(self.PROBE_MS)
-        assert not self._cursor_hidden(page)
+        w, h = self._size(page)
+        assert self._state(page) == "visible"
+        assert self._cursor(page) != "none"
+        assert self._hit(page, w // 2, h // 2) == "fs-idle-shield"
+
+    def test_cursor_hidden_after_three_seconds(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - 100)
+        assert self._state(page) == "visible"
         page.clock.run_for(200)
-        assert self._cursor_hidden(page)
-        assert self._hit_at_player_centre(page) == "fs-idle-shield"
+        assert self._state(page) == "hidden"
+        assert self._cursor(page) == "none"
 
-    def test_probe_shield_keeps_the_cursor_showing(self, server, page):
-        self._goto_preview(server, page)
-        self._set_fs(page, True)
-        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
-        display, cursor = self._shield(page)
-        assert display == "block"
-        assert cursor != "none"
-
-    def test_move_during_probe_takes_the_shield_down(self, server, page):
-        self._goto_preview(server, page)
-        self._set_fs(page, True)
-        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
-        page.mouse.move(200, 200)
-        page.mouse.move(240, 220)
-        assert self._shield_down(page)
-        page.clock.run_for(self.IDLE_MS - self.PROBE_MS - 200)
-        assert self._shield_down(page)
-
-    def test_shield_covers_the_whole_screen(self, server, page):
-        self._goto_preview(server, page)
-        self._set_fs(page, True)
+    def test_real_move_reveals_and_the_cursor_hides_again(self, server, page):
+        self._playing_hidden(server, page)
+        page.mouse.move(340, 320)
+        assert self._state(page) == "visible"
         self._hide(page)
-        box = page.evaluate(
-            """() => {
-              const r = document.getElementById('fs-idle-shield').getBoundingClientRect();
-              return [r.left, r.top, r.width, r.height, innerWidth, innerHeight];
-            }"""
+
+    def test_move_at_the_rest_position_keeps_the_cursor_hidden(self, server, page):
+        self._playing_hidden(server, page)
+        page.mouse.move(301, 300)
+        page.mouse.move(301, 300)
+        assert self._state(page) == "hidden"
+
+    def test_no_shield_outside_fullscreen(self, server, page):
+        self._goto_preview(server, page)
+        page.clock.run_for(self.IDLE_MS * 3)
+        assert self._state(page) == "off"
+        assert page.evaluate("getComputedStyle(document.getElementById('fs-idle-shield')).display") == "none"
+
+    def test_player_has_no_transcript_panel(self, server, page):
+        # Vimeo's Transcript button opens a panel over the video, where the
+        # shield is; a click on it there would play or pause instead.
+        self._goto_preview(server, page)
+        src = page.evaluate("window._vimeoPlayer._src")
+        assert "transcript=0" in src.split("?", 1)[1].split("&")
+
+    def test_hole_over_the_control_bar_reaches_the_player(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        w, h = self._size(page)
+        assert self._hit(page, w // 2, h - 20) == "mock-player"
+        assert self._hit(page, w // 2, h - 80) == "fs-idle-shield"
+
+    def _on_4_3_video(self, server, page, width, height):
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        page.set_viewport_size({"width": width, "height": height})
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
+            timeout=2000,
         )
-        assert box[:4] == [0, 0, box[4], box[5]]
+        self._set_fs(page, True)
 
-    def test_shield_stays_under_the_subtitles(self, server, page):
+    def test_hole_follows_the_letterboxed_video(self, server, page):
+        """A 4:3 video on an 800x900 screen ends at y=750, and Vimeo's bar
+        hangs off that edge, not the screen's."""
+        self._on_4_3_video(server, page, 800, 900)
+        assert self._hit(page, 400, 730) == "mock-player"
+        assert self._hit(page, 400, 800) == "fs-idle-shield"
+        assert self._hit(page, 400, 660) == "fs-idle-shield"
+
+    def test_hole_spans_only_the_pillarboxed_video(self, server, page):
+        self._on_4_3_video(server, page, 1280, 720)
+        assert self._hit(page, 640, 700) == "mock-player"
+        assert self._hit(page, 60, 700) == "fs-idle-shield"
+
+    def _into_the_hole(self, page):
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h // 2)
+        page.mouse.move(w // 2, h - 20)
+
+    def test_leaving_through_the_hole_hands_the_pointer_to_vimeo(self, server, page):
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        self._hide(page)
-        shield_z, overlay_z = page.evaluate(
-            """() => [getComputedStyle(document.getElementById('fs-idle-shield')).zIndex,
-                      getComputedStyle(document.getElementById('subtitle-overlay')).zIndex]"""
-        )
-        assert int(shield_z) < int(overlay_z)
+        self._into_the_hole(page)
+        w, h = self._size(page)
+        assert self._state(page) == "vimeo"
+        assert self._hit(page, w // 2, h // 2) == "mock-player"
+        page.clock.run_for(self.VIMEO_MS - 100)
+        assert self._state(page) == "vimeo"
+        page.clock.run_for(200)
+        assert self._state(page) == "visible"
+        assert self._hit(page, w // 2, h // 2) == "fs-idle-shield"
 
-    def test_real_pointer_move_reveals_cursor(self, server, page):
+    @pytest.mark.parametrize(
+        "event",
+        ["play", "pause", "seeked", "texttrackchange", "qualitychange", "playbackratechange"],
+    )
+    def test_a_player_change_brings_the_shield_back(self, server, page, event):
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        self._hide(page)
-        page.mouse.move(200, 200)
-        page.mouse.move(240, 220)
-        assert self._shield_down(page)
-        assert self._hit_at_player_centre(page) == "mock-player"
+        self._into_the_hole(page)
+        assert self._state(page) == "vimeo"
+        page.evaluate(f"window._vimeoPlayer._fire('{event}', {{}})")
+        assert self._state(page) == "visible"
 
-    def test_pointer_move_at_rest_position_keeps_cursor_hidden(self, server, page):
-        self._goto_preview(server, page)
-        page.mouse.move(200, 200)
-        self._set_fs(page, True)
-        self._hide(page)
-        page.mouse.move(200, 200)
-        page.mouse.move(200, 200)
-        assert self._cursor_hidden(page)
-
-    def test_cursor_hides_again_after_reveal(self, server, page):
+    def test_a_volume_change_keeps_vimeo_mode(self, server, page):
+        """Vimeo's volume slider stays open while it is dragged."""
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        self._hide(page)
-        page.mouse.move(200, 200)
-        page.mouse.move(240, 220)
-        assert self._shield_down(page)
+        self._into_the_hole(page)
+        page.evaluate("window._vimeoPlayer._fire('volumechange', {})")
+        assert self._state(page) == "vimeo"
+
+    def test_focus_going_into_the_player_hands_the_pointer_to_vimeo(self, server, page):
+        """A click on the bar's menu button after the shield came back takes
+        focus into the player; the menu then opens above the hole, under the
+        shield, so the shield must step aside."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        assert self._state(page) == "visible"
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS - 50)
+        assert self._state(page) == "visible"
+        page.clock.run_for(100)
+        assert self._state(page) == "vimeo"
+
+    def test_a_menu_opened_late_in_vimeo_mode_gets_the_whole_spell(self, server, page):
+        """The pointer rested on the bar a while before the click that opened
+        a menu: the shield must not come back while a subtitle is being picked."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        page.clock.run_for(self.VIMEO_MS - 2000)
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS - 100)
+        assert self._state(page) == "vimeo"
+        page.clock.run_for(200)
+        assert self._state(page) == "visible"
+
+    def test_focus_going_into_the_player_with_a_button_keeps_the_shield(self, server, page):
+        """A click on play reports itself, up to a settle time after the focus."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._focus_probe(page)
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        page.clock.run_for(self.FOCUS_SETTLE_MS + 50)
+        assert self._state(page) == "visible"
+
+    def test_focus_leaving_for_another_app_keeps_the_shield(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.evaluate("window.dispatchEvent(new Event('blur'))")
+        page.clock.run_for(self.FOCUS_SETTLE_MS + 50)
+        assert self._state(page) == "visible"
+
+    def test_shield_back_under_a_pointer_resting_above_the_bar_keeps_it(self, server, page):
+        """Right above the bar sit the subtitles and a menu's lowest items; the
+        browser reports the shield appearing under a still pointer as an
+        arrival from the player, which must not hand it straight back."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h - 100)
+        page.clock.run_for(self.VIMEO_MS + 10)
+        page.mouse.move(w // 2 + 10, h - 100)
+        assert self._state(page) == "visible"
         self._hide(page)
 
-    def test_cursor_hides_while_paused(self, server, page):
+    def test_shield_back_under_a_pointer_resting_on_the_video_keeps_it(self, server, page):
         self._goto_preview(server, page)
-        page.evaluate("window._vimeoPlayer.pause()")
         self._set_fs(page, True)
+        self._into_the_hole(page)
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h // 2)
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        page.mouse.move(w // 2 + 10, h // 2)
+        assert self._state(page) == "visible"
         self._hide(page)
 
-    def test_blind_click_toggles_playback(self, server, page):
-        self._goto_preview(server, page)
-        page.evaluate("window._vimeoPlayer.play()")
-        page.mouse.move(300, 300)
-        self._set_fs(page, True)
-        self._hide(page)
-        page.mouse.click(300, 300)
+    def test_player_changes_do_not_reveal_a_hidden_cursor(self, server, page):
+        self._playing_hidden(server, page)
+        page.keyboard.press("Space")
+        page.evaluate("window._vimeoPlayer._fire('seeked', {})")
+        assert self._state(page) == "hidden"
+
+    def test_blind_click_toggles_playback_and_shows_the_cursor(self, server, page):
+        self._playing_hidden(server, page)
+        page.mouse.click(301, 300)
         page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+        assert self._state(page) == "visible"
 
-    def test_click_during_probe_toggles_playback(self, server, page):
-        self._goto_preview(server, page)
-        page.evaluate("window._vimeoPlayer.play()")
-        page.mouse.move(300, 300)
-        self._set_fs(page, True)
-        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
-        page.mouse.click(300, 300)
-        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
-
-    def test_shield_stays_up_with_cursor_after_video_click(self, server, page):
-        self._goto_preview(server, page)
-        page.mouse.move(300, 300)
-        self._set_fs(page, True)
-        self._hide(page)
-        page.mouse.click(300, 300)
-        display, cursor = self._shield(page)
-        assert display == "block"
-        assert cursor != "none"
-
-    def test_double_click_while_hidden_leaves_fullscreen_and_keeps_playing(self, server, page):
+    def test_double_click_leaves_fullscreen_and_keeps_playing(self, server, page):
         """The real player applies play/pause over postMessage, so the second
         press can land before the first toggle has: the mock defers them."""
         self._goto_preview(server, page)
@@ -5069,120 +5147,43 @@ class TestFullscreenCursorIdle:
         page.mouse.dblclick(300, 300)
         page.clock.run_for(100)
         assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
-        assert page.evaluate("window._vimeoPlayer._paused") is False
-        assert self._shield_down(page)
+        assert self._paused(page) is False
+        assert self._state(page) == "off"
 
-    def test_click_in_the_control_strip_while_hidden_only_reveals(self, server, page):
-        self._goto_preview(server, page)
-        page.evaluate("window._vimeoPlayer.play()")
-        h = page.evaluate("innerHeight")
-        page.mouse.move(300, h - 20)
-        self._set_fs(page, True)
-        self._hide(page)
-        page.mouse.click(300, h - 20)
+    def test_right_click_does_not_toggle_playback(self, server, page):
+        self._playing_hidden(server, page)
+        page.mouse.click(301, 300, button="right")
         page.clock.run_for(50)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
-        assert self._shield_down(page)
+        assert self._paused(page) is False
+        assert self._state(page) == "visible"
 
-    def _hidden_on_4_3_video(self, server, page, width, height):
-        page.add_init_script("window.__mockVideoSize = [640, 480];")
-        page.set_viewport_size({"width": width, "height": height})
-        self._goto_preview(server, page)
-        page.wait_for_function(
-            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
-            timeout=2000,
-        )
-        page.evaluate("window._vimeoPlayer.play()")
-        page.mouse.move(width // 2, height // 2)
-        self._set_fs(page, True)
-        self._hide(page)
-
-    def test_click_on_the_pillarbox_bars_only_reveals(self, server, page):
-        self._hidden_on_4_3_video(server, page, 1280, 720)
-        page.mouse.click(60, 360)
-        page.clock.run_for(50)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
-        assert self._shield_down(page)
-
-    def test_control_strip_follows_the_letterboxed_video_not_the_screen(self, server, page):
-        """A 4:3 video on an 800x900 screen ends at y=750; Vimeo's bar hangs
-        off that edge, 150 px above the screen's bottom."""
-        self._hidden_on_4_3_video(server, page, 800, 900)
-        page.mouse.click(400, 720)
-        page.clock.run_for(50)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
-        assert self._shield_down(page)
-
-    def test_shield_takes_keyboard_focus_back_from_the_player(self, server, page):
-        """A click on the bare player leaves focus inside its iframe, where the
-        page's shortcuts and key tracking go blind."""
-        self._goto_preview(server, page)
-        page.evaluate(
-            """() => {
-              const f = document.createElement('iframe');
-              f.id = 'focus-probe';
-              f.style.visibility = 'visible';
-              document.querySelector('#view-preview .video-wrap').appendChild(f);
-              f.focus();
-            }"""
-        )
-        assert page.evaluate("document.activeElement.id") == "focus-probe"
-        self._set_fs(page, True)
-        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
-        assert page.evaluate("document.activeElement.id") != "focus-probe"
-
-    def test_ctrl_click_while_hidden_does_not_toggle_playback(self, server, page):
-        self._goto_preview(server, page)
-        page.evaluate("window._vimeoPlayer.play()")
-        page.mouse.move(300, 300)
-        self._set_fs(page, True)
-        self._hide(page)
+    def test_ctrl_click_does_not_toggle_playback(self, server, page):
+        self._playing_hidden(server, page)
         page.keyboard.down("Control")
-        page.mouse.click(300, 300)
+        page.mouse.click(301, 300)
         page.keyboard.up("Control")
         page.clock.run_for(50)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
-        assert self._shield_down(page)
+        assert self._paused(page) is False
 
-    def test_touch_press_while_hidden_only_reveals(self, server, page):
-        self._goto_preview(server, page)
-        page.evaluate("window._vimeoPlayer.play()")
-        self._set_fs(page, True)
-        self._hide(page)
+    def test_touch_press_only_reveals(self, server, page):
+        self._playing_hidden(server, page)
         page.evaluate(
             """() => document.getElementById('fs-idle-shield').dispatchEvent(
                  new PointerEvent('pointerdown', {pointerType: 'touch', button: 0, bubbles: true}))"""
         )
         page.clock.run_for(50)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
-        assert self._shield_down(page)
+        assert self._paused(page) is False
+        assert self._state(page) == "visible"
 
-    @pytest.mark.parametrize("event", ["seeked", "volumechange"])
-    def test_player_change_without_a_key_reveals_cursor(self, server, page, event):
-        """A drag on Vimeo's own seek or volume bar keeps the pointer inside
-        the iframe; the change it makes is all the page gets to see."""
-        self._goto_preview(server, page)
-        self._set_fs(page, True)
-        self._hide(page)
-        page.evaluate(f"window._vimeoPlayer._fire('{event}', {{}})")
-        assert self._shield_down(page)
-
-    def test_right_click_while_hidden_does_not_toggle_playback(self, server, page):
-        self._goto_preview(server, page)
+    def test_click_on_the_pillarbox_bars_does_not_toggle_playback(self, server, page):
+        self._on_4_3_video(server, page, 1280, 720)
         page.evaluate("window._vimeoPlayer.play()")
-        page.mouse.move(300, 300)
-        self._set_fs(page, True)
-        self._hide(page)
-        page.mouse.click(300, 300, button="right")
+        page.mouse.click(60, 360)
         page.clock.run_for(50)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._paused(page) is False
 
-    def test_blind_click_on_a_dialog_above_does_not_toggle_playback(self, server, page):
-        self._goto_preview(server, page)
-        page.evaluate("window._vimeoPlayer.play()")
-        page.mouse.move(300, 300)
-        self._set_fs(page, True)
-        self._hide(page)
+    def test_click_on_a_dialog_above_does_not_toggle_playback(self, server, page):
+        self._playing_hidden(server, page)
         page.evaluate(
             """() => {
               const b = document.createElement('button');
@@ -5193,44 +5194,167 @@ class TestFullscreenCursorIdle:
         )
         page.mouse.click(300, 300)
         page.clock.run_for(50)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._paused(page) is False
 
-    @pytest.mark.parametrize("event", ["play", "pause", "seeked", "volumechange"])
-    def test_player_activity_postpones_hiding(self, server, page, event):
+    def _focus_probe(self, page):
+        page.evaluate(
+            """() => {
+              const f = document.createElement('iframe');
+              f.id = 'focus-probe';
+              f.style.visibility = 'visible';
+              document.querySelector('#view-preview .video-wrap').appendChild(f);
+              f.focus();
+            }"""
+        )
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
+
+    def test_a_player_click_outside_fullscreen_does_not_hand_over(self, server, page):
+        """Focus going into the player outside fullscreen is no menu over the
+        shield; fullscreen must still start on the shield with the keys."""
+        self._goto_preview(server, page)
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + 10)
+        self._set_fs(page, True)
+        assert self._state(page) == "visible"
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_entering_fullscreen_takes_keyboard_focus_back_from_the_player(self, server, page):
+        self._goto_preview(server, page)
+        self._focus_probe(page)
+        self._set_fs(page, True)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_shield_back_by_timeout_under_the_pointer_leaves_focus_in_the_player(self, server, page):
+        """The pointer may rest on a Vimeo menu still open under the shield;
+        taking focus from the iframe would close it."""
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        page.clock.run_for(self.IDLE_MS - self.PROBE_MS - 1000)
-        page.evaluate(f"window._vimeoPlayer._fire('{event}', {{}})")
-        page.clock.run_for(2000)
-        assert self._shield_down(page)
-        self._hide(page)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h // 2)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
+        page.mouse.move(w // 2 + 10, h // 2)
+        page.clock.run_for(200)
+        assert self._state(page) == "visible"
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
 
-    def test_keyboard_does_not_reveal_cursor(self, server, page):
+    def test_shield_back_by_timeout_with_the_pointer_on_the_bar_takes_focus_back(self, server, page):
+        """A menu above a pointer resting on the bar is out of reach under the
+        shield anyway; with focus back, the next click on a menu button is
+        seen, so that menu opens with the shield out of its way."""
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        self._hide(page)
-        page.keyboard.press("Space")
-        page.evaluate("window._vimeoPlayer._fire('seeked', {seconds: 42})")
-        assert self._cursor_hidden(page)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
+        page.clock.run_for(200)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
 
-    def test_leaving_fullscreen_takes_the_shield_down(self, server, page):
+    def test_leaving_fullscreen_right_after_a_timeout_return_leaves_focus_alone(self, server, page):
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        self._hide(page)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
         self._set_fs(page, False)
-        assert self._shield_down(page)
+        page.clock.run_for(200)
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
 
-    def test_no_shield_outside_fullscreen(self, server, page):
+    def test_a_player_event_under_the_shield_takes_focus_back(self, server, page):
+        """A second click on the bar (pause after play) leaves focus in the
+        player with the shield already up; without taking it back, the next
+        menu button's click would not be seen."""
         self._goto_preview(server, page)
-        page.clock.run_for(self.IDLE_MS * 3)
-        assert self._shield_down(page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        self._focus_probe(page)
+        page.evaluate("window._vimeoPlayer._fire('pause', {})")
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+        page.clock.run_for(self.FOCUS_SETTLE_MS + 50)
+        assert self._state(page) == "visible"
 
-    def test_toggling_fullscreen_off_takes_the_shield_down(self, server, page):
+    def test_shield_back_by_an_event_takes_focus_back(self, server, page):
+        """The event was the choice, and the menu closed with it; with focus
+        back, the next click on a menu button is seen again."""
         self._goto_preview(server, page)
-        page.evaluate("SPA.toggleFullscreen()")
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        page.evaluate("window._vimeoPlayer._fire('texttrackchange', {})")
+        assert self._state(page) == "visible"
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def _back_with_player_focused(self, server, page, by):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        if by == "timeout":
+            page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
+        else:
+            page.evaluate("window._vimeoPlayer._fire('seeked', {})")
+        assert self._state(page) == "visible"
+        page.mouse.move(300, 300)
+
+    def test_press_after_the_shield_came_back_by_an_event_is_an_ordinary_click(self, server, page):
+        self._back_with_player_focused(server, page, "event")
+        page.mouse.click(300, 300)
+        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_first_press_after_the_shield_came_back_by_timeout_only_closes_menus(self, server, page):
+        """A Vimeo menu may still be open under the shield: like a click beside
+        a menu, the press closes it (taking focus from the player) and does
+        nothing more."""
+        self._back_with_player_focused(server, page, "timeout")
+        page.mouse.click(300, 300)
+        page.clock.run_for(50)
+        assert self._paused(page) is False
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+        page.clock.run_for(600)
+        page.mouse.click(300, 300)
+        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+
+    def test_double_click_after_the_shield_came_back_by_timeout_leaves_fullscreen(self, server, page):
+        self._back_with_player_focused(server, page, "timeout")
+        page.mouse.dblclick(300, 300)
+        page.clock.run_for(100)
+        assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
+        assert self._paused(page) is False
+
+    def test_hiding_over_the_shield_hands_the_keys_back_to_the_page(self, server, page):
+        """Back by timeout the shield leaves focus in the player; once the
+        pointer idles over the shield, nobody is using the player."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h // 2)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
+        page.mouse.move(w // 2 + 10, h // 2)
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
         self._hide(page)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_leaving_fullscreen_puts_the_shield_away(self, server, page):
+        self._playing_hidden(server, page)
+        self._set_fs(page, False)
+        assert self._state(page) == "off"
+
+    def test_toggling_fullscreen_drives_the_shield(self, server, page):
+        self._goto_preview(server, page)
         page.evaluate("SPA.toggleFullscreen()")
-        assert self._shield_down(page)
+        assert self._state(page) == "visible"
+        # Toggling back before requestFullscreen settles races syncFsMode.
+        page.wait_for_function("!!document.fullscreenElement", timeout=2000)
+        page.evaluate("SPA.toggleFullscreen()")
+        page.wait_for_function("!document.fullscreenElement", timeout=2000)
+        assert self._state(page) == "off"
 
     _HOVER_STUB = """
       (() => {
@@ -5250,17 +5374,16 @@ class TestFullscreenCursorIdle:
         page.add_init_script(self._HOVER_STUB)
         self._goto_preview(server, page)
         self._set_fs(page, True)
-        page.clock.run_for(self.IDLE_MS * 3)
-        assert self._shield_down(page)
+        assert self._state(page) == "off"
 
-    def test_hover_arriving_later_enables_the_shield(self, server, page):
+    def test_hover_arriving_later_brings_the_shield(self, server, page):
         page.add_init_script(self._HOVER_STUB)
         self._goto_preview(server, page)
         self._set_fs(page, True)
         page.evaluate("window.__setHover(true)")
-        self._hide(page)
+        assert self._state(page) == "visible"
         page.evaluate("window.__setHover(false)")
-        assert self._shield_down(page)
+        assert self._state(page) == "off"
 
 
 class TestEndFreeze:

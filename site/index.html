@@ -3352,7 +3352,9 @@ function showPreview(talkId, videoSlug) {
     iframe.allow = 'autoplay; fullscreen';
     iframe.allowFullscreen = true;
     iframe.style.cssText = oldIframe.style.cssText || 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
-    if (embedUrl) iframe.src = withQueryParam(embedUrl, 'texttrack=false');
+    // No Vimeo captions under the SPA's own overlay, and no Transcript panel:
+    // in fullscreen it would open over the video, under the cursor shield.
+    if (embedUrl) iframe.src = withQueryParam(embedUrl, 'texttrack=false&transcript=0');
     oldIframe.parentNode.replaceChild(iframe, oldIframe);
   }
 
@@ -3578,10 +3580,12 @@ function showPreview(talkId, videoSlug) {
         previewState._duration = d;
         previewState._durationFromEvent = true;
       });
-      // Vimeo's own controls sit under the pointer without the page seeing it,
-      // so their effects are the only sign that someone is using them.
-      ['play', 'pause', 'seeked', 'volumechange'].forEach(function(ev) {
-        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.playerEvent(ev); });
+      // While Vimeo has the pointer the page is blind to it; a change the
+      // player reports is the sign that a button or a menu choice was used.
+      // Not a volume change: the volume slider stays open while it is dragged.
+      ['play', 'pause', 'seeked', 'texttrackchange', 'qualitychange',
+        'playbackratechange'].forEach(function(ev) {
+        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.playerEvent(); });
       });
       var pollInFlight = false;
       function overlayLoop() {
@@ -3957,25 +3961,44 @@ document.addEventListener('keydown', function(e) {
 var fsCursorIdle = (function() {
   var view = document.getElementById('view-preview');
   var shield = document.getElementById('fs-idle-shield');
-  if (!view || !shield) return null;
+  var mount = view && view.querySelector('.video-wrap');
+  if (!view || !shield || !mount) return null;
   var clickPlayer = null;
   var beforeClick = null;
+  // A click on the player leaves keyboard focus inside the iframe, where the
+  // SPA's shortcuts go dead — and where a Vimeo menu may still be open.
+  function playerHasFocus() {
+    var focused = document.activeElement;
+    return !!focused && focused.tagName === 'IFRAME' && view.contains(focused);
+  }
+  function reclaimFocus() {
+    if (playerHasFocus()) document.activeElement.blur();
+  }
+  function box() {
+    return videoBox(shield.getBoundingClientRect(), view.style.getPropertyValue('--preview-aspect'));
+  }
   var idle = createCursorIdle({
-    delayMs: FS_CURSOR_IDLE_MS,
-    probeMs: FS_CURSOR_PROBE_MS,
+    idleMs: FS_CURSOR_IDLE_MS,
+    vimeoMs: FS_VIMEO_MODE_MS,
     doublePressMs: FS_DOUBLE_PRESS_MS,
-    keyEchoMs: FS_KEY_ECHO_MS,
     now: function() { return Date.now(); },
     setTimer: function(fn, ms) { return setTimeout(fn, ms); },
     clearTimer: function(id) { clearTimeout(id); },
     onChange: function(state) {
+      var wasVimeo = shield.dataset.state === 'vimeo';
       shield.dataset.state = state;
-      // A click on the bare player leaves keyboard focus inside the iframe,
-      // where the page no longer sees keys: a keyboard seek would then pass
-      // for the mouse, and the SPA's own shortcuts would stop working. The
-      // price: Vimeo's own Up/Down volume keys stop at the next probe.
-      var focused = document.activeElement;
-      if (state === 'probe' && focused && focused.tagName === 'IFRAME' && view.contains(focused)) focused.blur();
+      if (wasVimeo && state === 'visible' && idle.menuMayBeOpen()) {
+        // Back by timeout. A menu above a pointer resting on the bar is out
+        // of reach under the shield anyway; taking focus closes it, and the
+        // next click on a menu button is seen again. :hover settles only
+        // once the shield has been laid out under the pointer.
+        setTimeout(function() {
+          if (shield.dataset.state === 'visible' && !shield.matches(':hover')) reclaimFocus();
+        }, FS_HOVER_SETTLE_MS);
+      }
+      // Idle over the shield, nobody is using the player: the keys are the
+      // page's again. Not while the pointer rests on Vimeo's bar.
+      if (state === 'hidden' && shield.matches(':hover')) reclaimFocus();
     },
     onVideoClick: function() {
       var player = previewState.player;
@@ -3987,9 +4010,9 @@ var fsCursorIdle = (function() {
     // Restore what the first click changed from, rather than toggle again: the
     // player answers getPaused() over postMessage, and a quick second press
     // can read the state from before the first toggle landed.
-    onVideoDoubleClick: function() {
+    onVideoDoubleClick: function(toggled) {
       var player = clickPlayer;
-      if (player && player === previewState.player && beforeClick) {
+      if (toggled && player && player === previewState.player && beforeClick) {
         beforeClick.then(function(paused) { if (paused) player.pause(); else player.play(); });
       }
       SPA.toggleFullscreen();
@@ -3997,23 +4020,51 @@ var fsCursorIdle = (function() {
   });
   var hover = window.matchMedia ? window.matchMedia('(hover: hover)') : null;
   function follow() {
-    if ((!hover || hover.matches) && view.classList.contains('fs-mode')) idle.enter();
-    else idle.exit();
+    if ((!hover || hover.matches) && view.classList.contains('fs-mode')) {
+      idle.enter();
+      if (shield.dataset.state === 'off' || !shield.dataset.state) reclaimFocus();
+      shield.dataset.state = idle.state();
+    } else {
+      idle.exit();
+      shield.dataset.state = 'off';
+    }
   }
   new MutationObserver(follow).observe(view, { attributes: true, attributeFilter: ['class'] });
   if (hover && hover.addEventListener) hover.addEventListener('change', follow);
   follow();
-  document.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
-  document.addEventListener('pointerdown', function(e) {
-    var videoPress = e.target === shield && isVideoPress({
-      onShield: true, pointerType: e.pointerType, button: e.button, ctrlKey: e.ctrlKey,
-      x: e.clientX, y: e.clientY,
-      box: videoBox(shield.getBoundingClientRect(), view.style.getPropertyValue('--preview-aspect')),
-    });
-    if (videoPress) idle.videoPress(); else idle.wake();
+  shield.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
+  shield.addEventListener('pointerleave', function(e) {
+    if (e.relatedTarget && mount.contains(e.relatedTarget)) idle.leaveToPlayer();
   });
-  document.addEventListener('keydown', function() { idle.key(); }, true);
-  return idle;
+  // A click in the hole takes focus into the player: that is how Vimeo's
+  // menus open. Focus leaving the window for another app does not count.
+  window.addEventListener('blur', function() {
+    var since = Date.now();
+    setTimeout(function() { if (playerHasFocus()) idle.focusedIntoPlayer(since); }, FS_FOCUS_SETTLE_MS);
+  });
+  function playerEvent() {
+    idle.playerEvent();
+    // A button, a menu choice, the keyboard or the SPA's own pause: whatever
+    // menu was open is past use. Taking focus back lets the next click on a
+    // menu button be seen.
+    var state = shield.dataset.state;
+    if (state !== 'off' && state !== 'vimeo') reclaimFocus();
+  }
+  document.addEventListener('pointerdown', function(e) {
+    if (e.target !== shield) { idle.wake(); return; }
+    var videoPress = isVideoPress({
+      onShield: true, pointerType: e.pointerType, button: e.button, ctrlKey: e.ctrlKey,
+      x: e.clientX, y: e.clientY, box: box(),
+    });
+    var menuMaybe = playerHasFocus() && idle.menuMayBeOpen();
+    reclaimFocus();
+    // Taking focus from the player closes its menus. With one maybe open under
+    // the shield, that is all the press does, like a click beside a menu.
+    if (videoPress && menuMaybe) idle.focusPress();
+    else if (videoPress) idle.videoPress();
+    else idle.wake();
+  });
+  return { playerEvent: playerEvent };
 })();
 
 // --- Edit-field input guards -------------------------------------------------
