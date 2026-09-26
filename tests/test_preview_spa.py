@@ -4933,6 +4933,20 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is False
 
+    def test_rewind_after_freeze_saves_the_resume_position_again(self, server, page):
+        # A paused seek into the last 0.3s freezes (and resets the saved
+        # position, as the end does). Rewinding below the threshold leaves the
+        # end, so the position the reviewer went back to must persist again.
+        self._goto_preview(server, page)
+        page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("previewState._frozen") is True
+        page.evaluate("window._vimeoPlayer._setTime(1500)")
+        page.wait_for_timeout(300)
+        page.evaluate("flushPreviewPos()")
+        pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
+        assert pos == "1500", f"the position rewound to must be saved, got {pos}"
+
     def test_freeze_clears_saved_resume_position(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)

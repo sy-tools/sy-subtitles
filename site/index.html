@@ -3606,7 +3606,11 @@ function showPreview(talkId, videoSlug) {
                   console.warn('[SPA] end-freeze pause failed:', e);
                 });
               } else if (freezeAct === 'unfreeze') {
+                // Back below the threshold is back out of the end: the position
+                // persists again (a paused seek past the end and back never
+                // brings the 'play' that would otherwise clear _ended).
                 previewState._frozen = false;
+                previewState._ended = false;
               }
             }
           }).catch(function() { pollInFlight = false; });
@@ -6647,6 +6651,10 @@ function setClipFromPlayer(which) {
     return Promise.resolve();
   }
   return player.getCurrentTime().then(function(sec) {
+    // A frozen player holds the last frame ~0.3s short of the media's end
+    // (js/end_freeze.js); an end taken from it means the end of the video.
+    var d = previewState._duration;
+    if (which === 'end' && previewState._frozen && typeof d === 'number' && isFinite(d)) sec = d;
     var ms = Math.round(Number(sec) * 1000);
     if (!isFinite(ms) || ms < 0) return;
     input.value = formatClipTime(ms);
