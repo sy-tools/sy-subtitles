@@ -7,7 +7,9 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  createCursorIdle, FS_CURSOR_IDLE_MS, FS_CURSOR_PROBE_MS, FS_DOUBLE_PRESS_MS, FS_KEY_ECHO_MS,
+  createCursorIdle, isVideoPress,
+  FS_CURSOR_IDLE_MS, FS_CURSOR_PROBE_MS, FS_DOUBLE_PRESS_MS, FS_KEY_ECHO_MS,
+  FS_MOVE_SLOP_PX, FS_CONTROL_STRIP_PX,
 } = require('../site/js/cursor_idle.js');
 
 const IDLE = 5000;
@@ -111,7 +113,7 @@ test('a move during the probe is a false alarm: back to visible, never hidden', 
   idle.enter();
   clock.advance(QUIET);
   idle.pointerMove(100, 100);
-  idle.pointerMove(104, 100);
+  idle.pointerMove(110, 100);
   assert.deepStrictEqual(changes, ['probe', 'visible']);
   clock.advance(QUIET - 1);
   assert.deepStrictEqual(changes, ['probe', 'visible']);
@@ -171,7 +173,7 @@ test('a real move after hiding reveals the cursor and re-arms the countdown', ()
   idle.enter();
   hide(clock);
   idle.pointerMove(100, 100); // anchors the position, not yet a move
-  idle.pointerMove(103, 100);
+  idle.pointerMove(110, 100);
   assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible']);
   hide(clock);
   assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe', 'hidden']);
@@ -190,6 +192,28 @@ test('a move event at the same position does not count as a move', () => {
   assert.deepStrictEqual(changes, ['probe', 'hidden']);
 });
 
+test('a move within the slop is not a move', () => {
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  hide(clock);
+  idle.pointerMove(100, 100);
+  idle.pointerMove(100 + FS_MOVE_SLOP_PX, 100 - FS_MOVE_SLOP_PX);
+  assert.deepStrictEqual(changes, ['probe', 'hidden']);
+  idle.pointerMove(100 + FS_MOVE_SLOP_PX + 1, 100);
+  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible']);
+});
+
+test('a double click survives a pixel of jitter between its presses', () => {
+  const { clock, presses, idle } = setup();
+  idle.enter();
+  hide(clock);
+  idle.videoPress();
+  idle.pointerMove(641, 300);
+  idle.pointerMove(642, 301);
+  idle.videoPress();
+  assert.deepStrictEqual(presses, ['click', 'double']);
+});
+
 test('each shield starts with a fresh anchor', () => {
   const { clock, changes, idle } = setup();
   idle.enter();
@@ -199,7 +223,7 @@ test('each shield starts with a fresh anchor', () => {
   hide(clock);
   idle.pointerMove(200, 200);
   assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe', 'hidden']);
-  idle.pointerMove(201, 200);
+  idle.pointerMove(210, 200);
   assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe', 'hidden', 'visible']);
 });
 
@@ -347,6 +371,33 @@ test('exit without enter is a no-op', () => {
   idle.exit();
   assert.deepStrictEqual(changes, []);
   assert.strictEqual(clock.pending(), 0);
+});
+
+function press(over) {
+  return Object.assign({
+    onShield: true, pointerType: 'mouse', button: 0, ctrlKey: false,
+    y: 300, bottom: 900,
+  }, over);
+}
+
+test('a primary mouse press on the shield above the control strip is a video press', () => {
+  assert.strictEqual(isVideoPress(press()), true);
+  assert.strictEqual(isVideoPress(press({ y: 900 - FS_CONTROL_STRIP_PX - 1 })), true);
+});
+
+test('a press in the control strip is not a video press', () => {
+  // Vimeo's control bar sits there: the press is likelier aimed at a control
+  // the shield happens to cover than at the video.
+  assert.strictEqual(isVideoPress(press({ y: 900 - FS_CONTROL_STRIP_PX })), false);
+  assert.strictEqual(isVideoPress(press({ y: 899 })), false);
+});
+
+test('touch, pen, secondary buttons, ctrl-click and presses off the shield are not video presses', () => {
+  assert.strictEqual(isVideoPress(press({ onShield: false })), false);
+  assert.strictEqual(isVideoPress(press({ pointerType: 'touch' })), false);
+  assert.strictEqual(isVideoPress(press({ pointerType: 'pen' })), false);
+  assert.strictEqual(isVideoPress(press({ button: 2 })), false);
+  assert.strictEqual(isVideoPress(press({ ctrlKey: true })), false);
 });
 
 test('index.html loads cursor_idle.js and builds the controller', () => {

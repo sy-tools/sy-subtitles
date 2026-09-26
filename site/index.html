@@ -3968,7 +3968,14 @@ var fsCursorIdle = (function() {
     now: function() { return Date.now(); },
     setTimer: function(fn, ms) { return setTimeout(fn, ms); },
     clearTimer: function(id) { clearTimeout(id); },
-    onChange: function(state) { shield.dataset.state = state; },
+    onChange: function(state) {
+      shield.dataset.state = state;
+      // A click on the bare player leaves keyboard focus inside the iframe,
+      // where the page no longer sees keys: a keyboard seek would then pass
+      // for the mouse, and the SPA's own shortcuts would stop working.
+      var focused = document.activeElement;
+      if (state === 'probe' && focused && focused.tagName === 'IFRAME' && view.contains(focused)) focused.blur();
+    },
     onVideoClick: function() {
       var player = previewState.player;
       if (!player) return;
@@ -3996,11 +4003,11 @@ var fsCursorIdle = (function() {
   if (hover && hover.addEventListener) hover.addEventListener('change', follow);
   follow();
   document.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
-  // A touch or pen press, a secondary button and a macOS ctrl-click only bring
-  // the cursor back: none of them is a click on the video.
   document.addEventListener('pointerdown', function(e) {
-    var videoPress = e.target === shield && e.pointerType === 'mouse'
-      && e.button === 0 && !e.ctrlKey;
+    var videoPress = isVideoPress({
+      onShield: e.target === shield, pointerType: e.pointerType, button: e.button,
+      ctrlKey: e.ctrlKey, y: e.clientY, bottom: shield.getBoundingClientRect().bottom,
+    });
     if (videoPress) idle.videoPress(); else idle.wake();
   });
   document.addEventListener('keydown', function() { idle.key(); }, true);

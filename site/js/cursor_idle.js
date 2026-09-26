@@ -14,13 +14,29 @@
 //
 // While the shield is up it stands in for the video surface under it, so a
 // press on it is a click on the video: play/pause, and a double click leaves
-// fullscreen, as on the bare player.
+// fullscreen, as on the bare player. That is a guess too: someone who worked
+// the player, then held still to aim, gets the shield under their click. A
+// press in the strip where Vimeo's control bar sits therefore only brings the
+// cursor back — a lost click there beats a pause where a seek was meant.
 
 var FS_CURSOR_IDLE_MS = 5000;
 var FS_CURSOR_PROBE_MS = 1000;
 var FS_DOUBLE_PRESS_MS = 500;
 // A seek or volume change this soon after a key press came from the keyboard.
 var FS_KEY_ECHO_MS = 1000;
+// Pointer travel that is still no move: the jitter of a hand on a mouse or a
+// trackpad tap, the same slop a double click is allowed.
+var FS_MOVE_SLOP_PX = 4;
+// Height of Vimeo's control bar along the bottom of the player.
+var FS_CONTROL_STRIP_PX = 64;
+
+// press: {onShield, pointerType, button, ctrlKey, y, bottom} — y and the
+// shield's bottom edge in the same (client) coordinates. A touch or pen press,
+// a secondary button and a macOS ctrl-click are no click on the video either.
+function isVideoPress(press) {
+  return press.onShield && press.pointerType === 'mouse' && press.button === 0
+    && !press.ctrlKey && press.y < press.bottom - FS_CONTROL_STRIP_PX;
+}
 
 // opts: {delayMs, probeMs, doublePressMs, keyEchoMs, now, setTimer, clearTimer,
 //        onChange(state: 'visible' | 'probe' | 'hidden'),
@@ -35,7 +51,7 @@ function createCursorIdle(opts) {
   var pressAt = null;
   // First position seen since the shield went up. A browser may dispatch a
   // mousemove with no physical movement when the element under a resting
-  // pointer changes, so only a position that differs from this one counts.
+  // pointer changes, so only travel beyond the slop from here counts.
   var anchor = null;
 
   function setState(next) {
@@ -82,7 +98,8 @@ function createCursorIdle(opts) {
       if (!active) return;
       if (state !== 'visible') {
         if (anchor === null) { anchor = { x: x, y: y }; return; }
-        if (anchor.x === x && anchor.y === y) return;
+        if (Math.abs(x - anchor.x) <= FS_MOVE_SLOP_PX
+          && Math.abs(y - anchor.y) <= FS_MOVE_SLOP_PX) return;
         wake();
         return;
       }
@@ -132,6 +149,9 @@ if (typeof module !== 'undefined' && module.exports) {
     FS_CURSOR_PROBE_MS: FS_CURSOR_PROBE_MS,
     FS_DOUBLE_PRESS_MS: FS_DOUBLE_PRESS_MS,
     FS_KEY_ECHO_MS: FS_KEY_ECHO_MS,
+    FS_MOVE_SLOP_PX: FS_MOVE_SLOP_PX,
+    FS_CONTROL_STRIP_PX: FS_CONTROL_STRIP_PX,
     createCursorIdle: createCursorIdle,
+    isVideoPress: isVideoPress,
   };
 }

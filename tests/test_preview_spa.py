@@ -5072,6 +5072,36 @@ class TestFullscreenCursorIdle:
         assert page.evaluate("window._vimeoPlayer._paused") is False
         assert self._shield_down(page)
 
+    def test_click_in_the_control_strip_while_hidden_only_reveals(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        h = page.evaluate("innerHeight")
+        page.mouse.move(300, h - 20)
+        self._set_fs(page, True)
+        self._hide(page)
+        page.mouse.click(300, h - 20)
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_shield_takes_keyboard_focus_back_from_the_player(self, server, page):
+        """A click on the bare player leaves focus inside its iframe, where the
+        page's shortcuts and key tracking go blind."""
+        self._goto_preview(server, page)
+        page.evaluate(
+            """() => {
+              const f = document.createElement('iframe');
+              f.id = 'focus-probe';
+              f.style.visibility = 'visible';
+              document.querySelector('#view-preview .video-wrap').appendChild(f);
+              f.focus();
+            }"""
+        )
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
+        self._set_fs(page, True)
+        page.clock.run_for(self.IDLE_MS - self.PROBE_MS + 100)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
     def test_ctrl_click_while_hidden_does_not_toggle_playback(self, server, page):
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer.play()")
