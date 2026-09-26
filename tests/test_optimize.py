@@ -496,6 +496,56 @@ def test_enforce_drift_cap_keeps_a_block_it_pushed_forward_at_min_duration():
     assert span >= config.min_duration_ms
 
 
+def test_enforce_drift_cap_moves_a_short_block_shown_before_its_speech_into_the_silence_after_it():
+    config = OptimizeConfig(max_drift_ms=1000)
+    gone_before_it_is_said = {"idx": 1, "start_ms": 0, "end_ms": 1200, "text": "Не муштра!", "anchor_ms": 2500}
+    next_line_after_a_pause = {"idx": 2, "start_ms": 5000, "end_ms": 8000, "text": "x" * 40, "anchor_ms": 5000}
+
+    enforce_drift_cap([gone_before_it_is_said, next_line_after_a_pause], config)
+
+    assert gone_before_it_is_said["start_ms"] == 1500
+    assert gone_before_it_is_said["end_ms"] == 2700
+    assert next_line_after_a_pause["start_ms"] == 5000
+
+
+def test_enforce_drift_cap_carries_the_early_blocks_after_it_along_when_they_leave_no_room():
+    config = OptimizeConfig(max_drift_ms=1000)
+    early = {"idx": 1, "start_ms": 0, "end_ms": 1200, "text": "x" * 20, "anchor_ms": 2500}
+    early_too = {"idx": 2, "start_ms": 1280, "end_ms": 2480, "text": "x" * 15, "anchor_ms": 3700}
+    after_a_pause = {"idx": 3, "start_ms": 6000, "end_ms": 9000, "text": "x" * 40, "anchor_ms": 6000}
+    blocks = [early, early_too, after_a_pause]
+
+    enforce_drift_cap(blocks, config)
+    fix_overlaps(blocks, config)
+
+    assert all(abs(b["start_ms"] - b["anchor_ms"]) <= 1000 for b in blocks)
+    assert all(b["end_ms"] - b["start_ms"] >= config.min_duration_ms for b in blocks)
+
+
+def test_enforce_drift_cap_takes_the_room_from_a_padded_neighbour_rather_than_moving_it():
+    config = OptimizeConfig(max_drift_ms=1000)
+    early = {"idx": 1, "start_ms": 0, "end_ms": 1200, "text": "x" * 10, "anchor_ms": 2500}
+    padded_40_chars_over_5s = {"idx": 2, "start_ms": 1280, "end_ms": 6280, "text": "x" * 40, "anchor_ms": 3000}
+    blocks = [early, padded_40_chars_over_5s]
+
+    enforce_drift_cap(blocks, config)
+
+    assert early["start_ms"] == 1500
+    assert padded_40_chars_over_5s["start_ms"] == 2780
+    assert padded_40_chars_over_5s["end_ms"] == 6280
+
+
+def test_enforce_drift_cap_will_not_push_a_neighbour_past_the_start_of_its_own_speech():
+    config = OptimizeConfig(max_drift_ms=1000)
+    early = {"idx": 1, "start_ms": 0, "end_ms": 1200, "text": "x" * 10, "anchor_ms": 2500}
+    padded_neighbour_already_late = {"idx": 2, "start_ms": 1280, "end_ms": 6280, "text": "x" * 40, "anchor_ms": 1500}
+    blocks = [early, padded_neighbour_already_late]
+
+    enforce_drift_cap(blocks, config)
+
+    assert padded_neighbour_already_late["start_ms"] <= padded_neighbour_already_late["anchor_ms"]
+
+
 def test_enforce_drift_cap_leaves_a_block_that_carries_no_anchor():
     config = OptimizeConfig(max_drift_ms=1000)
     block_a_split_left_without_an_anchor = {"idx": 1, "start_ms": 9000, "end_ms": 11000, "text": "x" * 20}

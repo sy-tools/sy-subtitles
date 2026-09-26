@@ -280,6 +280,58 @@ def _shift_room_ms(moving, config, sign):
     return room
 
 
+def _later_moves(blocks, i, shift, config):
+    """What moving block ``i`` ``shift`` later whole does to the blocks after it.
+
+    Returns ``(index, start_delta, end_delta)`` per block that moves. The
+    silence before the next block is spent first; the rest the next block
+    absorbs by starting later, down to what it needs at the hard ceiling. Only
+    what it cannot absorb carries it along whole, onto the block after — so
+    the chain ends at the first block with reading time to spare.
+    """
+    moves = [(i, shift, shift)]
+    carry = shift
+    j = i + 1
+    while carry > 0 and j < len(blocks):
+        prev_end = blocks[j - 1]["end_ms"]
+        push = carry - max(0, blocks[j]["start_ms"] - prev_end - config.min_gap_ms)
+        if push <= 0:
+            break
+        b = blocks[j]
+        floor = _readable_floor_ms(len(b["text"].replace("\n", "")), config.hard_max_cps, config)
+        spare = max(0, b["end_ms"] - b["start_ms"] - floor)
+        carry = max(0, push - spare)
+        moves.append((j, push, carry))
+        j += 1
+    return moves
+
+
+def _carry_later(blocks, i, shift, config):
+    """Move block ``i`` later whole, making room in the blocks after it.
+
+    Block ``i`` keeps its span; a neighbour gives up only reading time it has
+    beyond the hard ceiling. A neighbour may lose its lead on its speech but
+    is never made to lag it — the budget's late edge belongs to that block's
+    own drift, not to a fix for someone else's. Returns how far block ``i``
+    travelled.
+    """
+    while shift > 0:
+        moves = _later_moves(blocks, i, shift, config)
+        excess = 0
+        for j, start_delta, _ in moves:
+            anchor = blocks[j].get("anchor_ms")
+            if anchor is not None:
+                latest = anchor + config.max_drift_ms if j == i else anchor
+                excess = max(excess, start_delta - max(0, latest - blocks[j]["start_ms"]))
+        if excess <= 0:
+            for j, start_delta, end_delta in moves:
+                blocks[j]["start_ms"] += start_delta
+                blocks[j]["end_ms"] += end_delta
+            return shift
+        shift -= excess
+    return 0
+
+
 def enforce_drift_cap(blocks, config):
     """Pull block starts back inside the budget allowed around their anchor.
 
@@ -287,9 +339,11 @@ def enforce_drift_cap(blocks, config):
     said; one lagging behind leaves the speaker unsubtitled. Either is a worse
     trade than the reading time the drift bought, so a block that left its
     budget returns to the edge of it — but never at the cost of a block nobody
-    can read. Pushing a start forward shortens this block; pulling one back
-    shortens the previous block, which the next overlap fix trims to make room.
-    Either move stops where the block it shortens would pass the hard ceiling,
+    can read. An early block first moves later whole, into the silence after
+    it; only what that silence cannot take is bought by pushing its start
+    forward, which shortens it. Pulling a late start back shortens the
+    previous block, which the next overlap fix trims to make room.
+    Either shortening stops where the block would pass the hard ceiling,
     so in a dense passage the budget gives way rather than the reading time.
     """
     if not config.max_drift_ms:
@@ -300,6 +354,11 @@ def enforce_drift_cap(blocks, config):
         if anchor is None:
             continue
         start = min(max(b["start_ms"], anchor - config.max_drift_ms), anchor + config.max_drift_ms)
+        carried = _carry_later(blocks, i, start - b["start_ms"], config) if start > b["start_ms"] else 0
+        if carried:
+            moved += 1
+            if start == b["start_ms"]:
+                continue
         if start > b["start_ms"]:
             floor = _readable_floor_ms(len(b["text"].replace("\n", "")), config.hard_max_cps, config)
             start = max(b["start_ms"], min(start, b["end_ms"] - floor))
