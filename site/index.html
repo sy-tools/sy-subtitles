@@ -3578,10 +3578,11 @@ function showPreview(talkId, videoSlug) {
         previewState._duration = d;
         previewState._durationFromEvent = true;
       });
-      // Vimeo's own controls sit under the pointer without the page seeing it,
-      // so their effects are the only sign that someone is using them.
-      ['play', 'pause', 'seeked', 'volumechange'].forEach(function(ev) {
-        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.playerEvent(ev); });
+      // While Vimeo has the pointer the page is blind to it; a change the
+      // player reports is the sign that a menu choice was made and closed.
+      ['play', 'pause', 'seeked', 'volumechange', 'texttrackchange', 'qualitychange',
+        'playbackratechange'].forEach(function(ev) {
+        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.playerEvent(); });
       });
       var pollInFlight = false;
       function overlayLoop() {
@@ -3957,25 +3958,27 @@ document.addEventListener('keydown', function(e) {
 var fsCursorIdle = (function() {
   var view = document.getElementById('view-preview');
   var shield = document.getElementById('fs-idle-shield');
-  if (!view || !shield) return null;
+  var mount = view && view.querySelector('.video-wrap');
+  if (!view || !shield || !mount) return null;
   var clickPlayer = null;
   var beforeClick = null;
+  // A click on the bare player leaves keyboard focus inside the iframe, where
+  // the SPA's shortcuts go dead. Whenever the shield takes over, take focus
+  // back too. The price: Vimeo's own Up/Down volume keys.
+  function reclaimFocus() {
+    var focused = document.activeElement;
+    if (focused && focused.tagName === 'IFRAME' && view.contains(focused)) focused.blur();
+  }
   var idle = createCursorIdle({
-    delayMs: FS_CURSOR_IDLE_MS,
-    probeMs: FS_CURSOR_PROBE_MS,
+    idleMs: FS_CURSOR_IDLE_MS,
+    vimeoMs: FS_VIMEO_MODE_MS,
     doublePressMs: FS_DOUBLE_PRESS_MS,
-    keyEchoMs: FS_KEY_ECHO_MS,
     now: function() { return Date.now(); },
     setTimer: function(fn, ms) { return setTimeout(fn, ms); },
     clearTimer: function(id) { clearTimeout(id); },
     onChange: function(state) {
+      if (shield.dataset.state === 'vimeo' && state === 'visible') reclaimFocus();
       shield.dataset.state = state;
-      // A click on the bare player leaves keyboard focus inside the iframe,
-      // where the page no longer sees keys: a keyboard seek would then pass
-      // for the mouse, and the SPA's own shortcuts would stop working. The
-      // price: Vimeo's own Up/Down volume keys stop at the next probe.
-      var focused = document.activeElement;
-      if (state === 'probe' && focused && focused.tagName === 'IFRAME' && view.contains(focused)) focused.blur();
     },
     onVideoClick: function() {
       var player = previewState.player;
@@ -3997,13 +4000,22 @@ var fsCursorIdle = (function() {
   });
   var hover = window.matchMedia ? window.matchMedia('(hover: hover)') : null;
   function follow() {
-    if ((!hover || hover.matches) && view.classList.contains('fs-mode')) idle.enter();
-    else idle.exit();
+    if ((!hover || hover.matches) && view.classList.contains('fs-mode')) {
+      idle.enter();
+      if (shield.dataset.state === 'off' || !shield.dataset.state) reclaimFocus();
+      shield.dataset.state = idle.state();
+    } else {
+      idle.exit();
+      shield.dataset.state = 'off';
+    }
   }
   new MutationObserver(follow).observe(view, { attributes: true, attributeFilter: ['class'] });
   if (hover && hover.addEventListener) hover.addEventListener('change', follow);
   follow();
-  document.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
+  shield.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
+  shield.addEventListener('pointerleave', function(e) {
+    if (e.relatedTarget && mount.contains(e.relatedTarget)) idle.leaveToPlayer();
+  });
   document.addEventListener('pointerdown', function(e) {
     var videoPress = e.target === shield && isVideoPress({
       onShield: true, pointerType: e.pointerType, button: e.button, ctrlKey: e.ctrlKey,
@@ -4012,7 +4024,6 @@ var fsCursorIdle = (function() {
     });
     if (videoPress) idle.videoPress(); else idle.wake();
   });
-  document.addEventListener('keydown', function() { idle.key(); }, true);
   return idle;
 })();
 

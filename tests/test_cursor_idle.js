@@ -1,6 +1,7 @@
-// Fullscreen cursor auto-hide: after FS_CURSOR_IDLE_MS without pointer activity
-// the fullscreen preview hides the mouse cursor; a real pointer move brings it
-// back. Single source: site/js/cursor_idle.js (loaded by the SPA, require'd here).
+// Fullscreen cursor auto-hide: the shield over the player hides the cursor
+// after FS_CURSOR_IDLE_MS without a move and steps aside while Vimeo's own
+// controls are in use. Single source: site/js/cursor_idle.js (loaded by the
+// SPA, require'd here).
 const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
@@ -8,15 +9,12 @@ const path = require('path');
 
 const {
   createCursorIdle, isVideoPress, videoBox,
-  FS_CURSOR_IDLE_MS, FS_CURSOR_PROBE_MS, FS_DOUBLE_PRESS_MS, FS_KEY_ECHO_MS,
-  FS_MOVE_SLOP_PX, FS_CONTROL_STRIP_PX,
+  FS_CURSOR_IDLE_MS, FS_VIMEO_MODE_MS, FS_DOUBLE_PRESS_MS, FS_MOVE_SLOP_PX,
 } = require('../site/js/cursor_idle.js');
 
-const IDLE = 5000;
-const PROBE = 1000;
-const QUIET = IDLE - PROBE;
+const IDLE = 3000;
+const VIMEO = 10000;
 const DOUBLE = 500;
-const KEY_ECHO = 1000;
 
 function fakeClock() {
   let now = 0;
@@ -46,10 +44,9 @@ function setup() {
   const changes = [];
   const presses = [];
   const idle = createCursorIdle({
-    delayMs: IDLE,
-    probeMs: PROBE,
+    idleMs: IDLE,
+    vimeoMs: VIMEO,
     doublePressMs: DOUBLE,
-    keyEchoMs: KEY_ECHO,
     now: clock.now,
     setTimer: clock.setTimer,
     clearTimer: clock.clearTimer,
@@ -62,225 +59,137 @@ function setup() {
 
 function hide(clock) { clock.advance(IDLE); }
 
-test('the cursor hides after five seconds, the last one spent probing', () => {
-  assert.strictEqual(FS_CURSOR_IDLE_MS, 5000);
-  assert.strictEqual(FS_CURSOR_PROBE_MS, 1000);
+test('the cursor hides after three seconds, as in Vimeo\'s own fullscreen', () => {
+  assert.strictEqual(FS_CURSOR_IDLE_MS, 3000);
+  assert.strictEqual(FS_VIMEO_MODE_MS, 10000);
   assert.ok(FS_DOUBLE_PRESS_MS > 0);
-  assert.ok(FS_KEY_ECHO_MS > 0);
+  assert.ok(FS_MOVE_SLOP_PX > 0);
 });
 
-test('probes, then hides, once the delay passes after entering fullscreen', () => {
+test('hides the cursor once the delay passes after entering fullscreen', () => {
   const { clock, changes, idle } = setup();
   idle.enter();
-  clock.advance(QUIET - 1);
+  clock.advance(IDLE - 1);
   assert.deepStrictEqual(changes, []);
   clock.advance(1);
-  assert.deepStrictEqual(changes, ['probe']);
-  assert.strictEqual(idle.state(), 'probe');
-  clock.advance(PROBE - 1);
-  assert.deepStrictEqual(changes, ['probe']);
-  clock.advance(1);
-  assert.deepStrictEqual(changes, ['probe', 'hidden']);
+  assert.deepStrictEqual(changes, ['hidden']);
   assert.strictEqual(idle.state(), 'hidden');
 });
 
 test('does nothing outside fullscreen', () => {
-  const { clock, changes, idle } = setup();
+  const { clock, changes, presses, idle } = setup();
   idle.pointerMove(10, 10);
   idle.wake();
   idle.videoPress();
-  idle.playerEvent('seeked');
+  idle.leaveToPlayer();
+  idle.playerEvent();
   clock.advance(60000);
   assert.deepStrictEqual(changes, []);
+  assert.deepStrictEqual(presses, []);
   assert.strictEqual(clock.pending(), 0);
 });
 
-test('a pointer move before the probe restarts the countdown', () => {
+test('a move restarts the countdown', () => {
   const { clock, changes, idle } = setup();
   idle.enter();
-  clock.advance(QUIET - 1000);
+  clock.advance(IDLE - 1000);
   idle.pointerMove(10, 10);
-  clock.advance(QUIET - 1);
+  clock.advance(IDLE - 1);
   assert.deepStrictEqual(changes, []);
   clock.advance(1);
-  assert.deepStrictEqual(changes, ['probe']);
+  assert.deepStrictEqual(changes, ['hidden']);
 });
 
-test('a move during the probe is a false alarm: back to visible, never hidden', () => {
-  // The pointer was moving over the cross-origin iframe all along, where the
-  // page could not see it; the probe shield is the first place it can.
+test('a move beyond the slop reveals a hidden cursor and re-arms the countdown', () => {
   const { clock, changes, idle } = setup();
   idle.enter();
-  clock.advance(QUIET);
   idle.pointerMove(100, 100);
-  idle.pointerMove(110, 100);
-  assert.deepStrictEqual(changes, ['probe', 'visible']);
-  clock.advance(QUIET - 1);
-  assert.deepStrictEqual(changes, ['probe', 'visible']);
-});
-
-test('player activity (seek, volume, play/pause) restarts the countdown while visible', () => {
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  clock.advance(QUIET - 1000);
-  idle.playerEvent('volumechange');
-  clock.advance(QUIET - 1);
-  assert.deepStrictEqual(changes, []);
-  clock.advance(1);
-  assert.deepStrictEqual(changes, ['probe']);
-});
-
-test('play and pause neither end a probe nor reveal a hidden cursor', () => {
-  // Space drives the player too, and so does a click on the video itself; the
-  // cursor comes back only for the mouse.
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  clock.advance(QUIET);
-  idle.playerEvent('pause');
-  clock.advance(PROBE);
-  idle.playerEvent('play');
-  assert.deepStrictEqual(changes, ['probe', 'hidden']);
-});
-
-test('a seek or volume change right after a key does not reveal a hidden cursor', () => {
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  clock.advance(IDLE);
-  idle.key();
-  clock.advance(KEY_ECHO - 1);
-  idle.playerEvent('seeked');
-  idle.playerEvent('volumechange');
-  assert.deepStrictEqual(changes, ['probe', 'hidden']);
-});
-
-test('a seek or volume change with no key before it reveals the cursor', () => {
-  // A drag on Vimeo's own seek or volume bar holds the pointer inside the
-  // iframe, where the page sees none of it; the change is the only trace.
-  for (const ev of ['seeked', 'volumechange']) {
-    const { clock, changes, idle } = setup();
-    idle.enter();
-    idle.key();
-    clock.advance(IDLE);
-    idle.playerEvent(ev);
-    assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible'], ev);
-    clock.advance(QUIET);
-    assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe'], ev);
-  }
-});
-
-test('a real move after hiding reveals the cursor and re-arms the countdown', () => {
-  const { clock, changes, idle } = setup();
-  idle.enter();
   hide(clock);
-  idle.pointerMove(100, 100); // anchors the position, not yet a move
-  idle.pointerMove(110, 100);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible']);
-  hide(clock);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe', 'hidden']);
-});
-
-test('a move event at the same position does not count as a move', () => {
-  // A browser may dispatch a mousemove without any physical movement when the
-  // element under a resting pointer changes — as the shield appearing does.
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  clock.advance(QUIET);
-  idle.pointerMove(100, 100);
-  idle.pointerMove(100, 100);
-  clock.advance(PROBE);
-  idle.pointerMove(100, 100);
-  assert.deepStrictEqual(changes, ['probe', 'hidden']);
-});
-
-test('a move within the slop is not a move', () => {
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  hide(clock);
-  idle.pointerMove(100, 100);
-  idle.pointerMove(100 + FS_MOVE_SLOP_PX, 100 - FS_MOVE_SLOP_PX);
-  assert.deepStrictEqual(changes, ['probe', 'hidden']);
   idle.pointerMove(100 + FS_MOVE_SLOP_PX + 1, 100);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible']);
-});
-
-test('a double click survives a pixel of jitter between its presses', () => {
-  const { clock, presses, idle } = setup();
-  idle.enter();
+  assert.deepStrictEqual(changes, ['hidden', 'visible']);
   hide(clock);
-  idle.videoPress();
-  idle.pointerMove(641, 300);
-  idle.pointerMove(642, 301);
-  idle.videoPress();
-  assert.deepStrictEqual(presses, ['click', 'double']);
+  assert.deepStrictEqual(changes, ['hidden', 'visible', 'hidden']);
 });
 
-test('each shield starts with a fresh anchor', () => {
+test('a move within the slop keeps the cursor hidden', () => {
+  // The jitter of a hand resting on a mouse, or a browser's own move event
+  // at the same spot, is no activity.
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  idle.pointerMove(100, 100);
+  hide(clock);
+  idle.pointerMove(100 + FS_MOVE_SLOP_PX, 100 - FS_MOVE_SLOP_PX);
+  idle.pointerMove(100, 100);
+  assert.deepStrictEqual(changes, ['hidden']);
+});
+
+test('with no move seen before hiding, the first one only anchors the position', () => {
   const { clock, changes, idle } = setup();
   idle.enter();
   hide(clock);
-  idle.pointerMove(100, 100);
-  idle.pointerMove(200, 200);
-  hide(clock);
-  idle.pointerMove(200, 200);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe', 'hidden']);
-  idle.pointerMove(210, 200);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe', 'hidden', 'visible']);
+  idle.pointerMove(300, 300);
+  assert.deepStrictEqual(changes, ['hidden']);
+  idle.pointerMove(310, 300);
+  assert.deepStrictEqual(changes, ['hidden', 'visible']);
 });
 
-test('any other press reveals the cursor and re-arms the countdown', () => {
+test('leaving the shield for the player hands the pointer to Vimeo', () => {
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  clock.advance(1000);
+  idle.leaveToPlayer();
+  assert.deepStrictEqual(changes, ['vimeo']);
+  clock.advance(VIMEO - 1);
+  assert.deepStrictEqual(changes, ['vimeo']);
+});
+
+test('Vimeo keeps the pointer until the time runs out, then the shield is back', () => {
+  // Nothing tells the page when Vimeo's menu closes without a choice.
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  idle.leaveToPlayer();
+  clock.advance(VIMEO);
+  assert.deepStrictEqual(changes, ['vimeo', 'visible']);
+  clock.advance(IDLE);
+  assert.deepStrictEqual(changes, ['vimeo', 'visible', 'hidden']);
+});
+
+test('any player event ends Vimeo mode: the choice closed the menu', () => {
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  idle.leaveToPlayer();
+  clock.advance(2000);
+  idle.playerEvent();
+  assert.deepStrictEqual(changes, ['vimeo', 'visible']);
+  clock.advance(IDLE);
+  assert.deepStrictEqual(changes, ['vimeo', 'visible', 'hidden']);
+});
+
+test('player events do not reveal a hidden cursor or restart the countdown', () => {
+  // Space and the arrow keys drive the player too; only the mouse counts.
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  clock.advance(IDLE - 1000);
+  idle.playerEvent();
+  clock.advance(1000);
+  idle.playerEvent();
+  assert.deepStrictEqual(changes, ['hidden']);
+});
+
+test('a press on the shield is a click on the video, and shows the cursor', () => {
   const { clock, changes, presses, idle } = setup();
   idle.enter();
   hide(clock);
-  idle.wake();
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible']);
-  assert.deepStrictEqual(presses, []);
-  clock.advance(QUIET);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible', 'probe']);
-});
-
-test('a press on the shield is a click on the video', () => {
-  const { clock, presses, idle } = setup();
-  idle.enter();
-  hide(clock);
   idle.videoPress();
   assert.deepStrictEqual(presses, ['click']);
-});
-
-test('a press on the probing shield is a click on the video too', () => {
-  const { clock, presses, idle } = setup();
-  idle.enter();
-  clock.advance(QUIET);
-  idle.videoPress();
-  assert.deepStrictEqual(presses, ['click']);
-});
-
-test('the shield stays up after a video click, with the cursor showing', () => {
-  // The second press of a double click has to land on the shield too.
-  const { clock, changes, idle } = setup();
-  idle.enter();
+  assert.deepStrictEqual(changes, ['hidden', 'visible']);
   hide(clock);
-  idle.videoPress();
-  assert.strictEqual(idle.state(), 'probe');
-  clock.advance(IDLE - 1);
-  assert.strictEqual(idle.state(), 'probe');
-  clock.advance(1);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'probe', 'hidden']);
-});
-
-test('a real move after a video click takes the shield down', () => {
-  const { clock, idle } = setup();
-  idle.enter();
-  hide(clock);
-  idle.videoPress();
-  idle.pointerMove(100, 100);
-  idle.pointerMove(110, 100);
-  assert.strictEqual(idle.state(), 'visible');
+  assert.deepStrictEqual(changes, ['hidden', 'visible', 'hidden']);
 });
 
 test('a second press within the double-press window is a double click, not another click', () => {
   const { clock, presses, idle } = setup();
   idle.enter();
-  hide(clock);
   idle.videoPress();
   clock.advance(DOUBLE - 1);
   idle.videoPress();
@@ -290,7 +199,6 @@ test('a second press within the double-press window is a double click, not anoth
 test('presses further apart are two single clicks', () => {
   const { clock, presses, idle } = setup();
   idle.enter();
-  hide(clock);
   idle.videoPress();
   clock.advance(DOUBLE);
   idle.videoPress();
@@ -298,72 +206,64 @@ test('presses further apart are two single clicks', () => {
 });
 
 test('a third quick press starts a new click rather than another double', () => {
-  const { clock, presses, idle } = setup();
+  const { presses, idle } = setup();
   idle.enter();
-  hide(clock);
   idle.videoPress();
   idle.videoPress();
   idle.videoPress();
   assert.deepStrictEqual(presses, ['click', 'double', 'click']);
 });
 
-test('a press on the visible page never counts toward a double click', () => {
-  const { clock, presses, idle } = setup();
+test('a double click survives jitter between its presses', () => {
+  const { presses, idle } = setup();
+  idle.enter();
+  idle.pointerMove(640, 300);
+  idle.videoPress();
+  idle.pointerMove(641, 300);
+  idle.pointerMove(642, 301);
+  idle.videoPress();
+  assert.deepStrictEqual(presses, ['click', 'double']);
+});
+
+test('any other press shows the cursor and never counts toward a double click', () => {
+  const { clock, changes, presses, idle } = setup();
   idle.enter();
   hide(clock);
   idle.videoPress();
   idle.wake();
   idle.videoPress();
   assert.deepStrictEqual(presses, ['click', 'click']);
+  assert.deepStrictEqual(changes, ['hidden', 'visible']);
 });
 
-test('leaving fullscreen while hidden reveals the cursor and stops the timer', () => {
-  const { clock, changes, idle } = setup();
+test('presses mean nothing while Vimeo has the pointer', () => {
+  const { changes, presses, idle } = setup();
   idle.enter();
-  hide(clock);
-  idle.exit();
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible']);
-  assert.strictEqual(clock.pending(), 0);
-  clock.advance(60000);
-  assert.deepStrictEqual(changes, ['probe', 'hidden', 'visible']);
+  idle.leaveToPlayer();
+  idle.videoPress();
+  idle.wake();
+  assert.deepStrictEqual(presses, []);
+  assert.deepStrictEqual(changes, ['vimeo']);
 });
 
-test('leaving fullscreen mid-probe takes the shield down and stops the timer', () => {
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  clock.advance(QUIET);
-  idle.exit();
-  assert.deepStrictEqual(changes, ['probe', 'visible']);
-  assert.strictEqual(clock.pending(), 0);
-});
-
-test('leaving fullscreen before the probe cancels the pending hide', () => {
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  clock.advance(QUIET - 1000);
-  idle.exit();
-  clock.advance(60000);
-  assert.deepStrictEqual(changes, []);
-  assert.strictEqual(clock.pending(), 0);
+test('leaving fullscreen shows the cursor and stops every timer', () => {
+  for (const before of ['hidden', 'vimeo']) {
+    const { clock, changes, idle } = setup();
+    idle.enter();
+    if (before === 'hidden') hide(clock); else idle.leaveToPlayer();
+    idle.exit();
+    assert.deepStrictEqual(changes, [before, 'visible'], before);
+    assert.strictEqual(clock.pending(), 0, before);
+  }
 });
 
 test('entering again while in fullscreen does not restart the countdown', () => {
   const { clock, changes, idle } = setup();
   idle.enter();
-  clock.advance(QUIET - 1000);
+  clock.advance(IDLE - 1000);
   idle.enter();
   clock.advance(1000);
-  assert.deepStrictEqual(changes, ['probe']);
-});
-
-test('entering again while hidden keeps the cursor hidden without a new timer', () => {
-  const { clock, changes, idle } = setup();
-  idle.enter();
-  hide(clock);
-  idle.enter();
-  assert.deepStrictEqual(changes, ['probe', 'hidden']);
-  assert.strictEqual(idle.state(), 'hidden');
-  assert.strictEqual(clock.pending(), 0);
+  assert.deepStrictEqual(changes, ['hidden']);
 });
 
 test('exit without enter is a no-op', () => {
@@ -382,16 +282,9 @@ function press(over) {
   }, over);
 }
 
-test('a primary mouse press on the video above the control strip is a video press', () => {
+test('a primary mouse press on the video is a video press', () => {
   assert.strictEqual(isVideoPress(press()), true);
-  assert.strictEqual(isVideoPress(press({ y: 900 - FS_CONTROL_STRIP_PX - 1 })), true);
-});
-
-test('a press in the control strip is not a video press', () => {
-  // Vimeo's control bar sits there: the press is likelier aimed at a control
-  // the shield happens to cover than at the video.
-  assert.strictEqual(isVideoPress(press({ y: 900 - FS_CONTROL_STRIP_PX })), false);
-  assert.strictEqual(isVideoPress(press({ y: 899 })), false);
+  assert.strictEqual(isVideoPress(press({ y: 899 })), true);
 });
 
 test('a press on the letterbox or pillarbox bars is not a video press', () => {
@@ -400,6 +293,14 @@ test('a press on the letterbox or pillarbox bars is not a video press', () => {
   assert.strictEqual(isVideoPress(press({ x: 1300 })), false);
   assert.strictEqual(isVideoPress(press({ y: 900 })), false);
   assert.strictEqual(isVideoPress(press({ y: -1 })), false);
+});
+
+test('touch, pen, secondary buttons, ctrl-click and presses off the shield are not video presses', () => {
+  assert.strictEqual(isVideoPress(press({ onShield: false })), false);
+  assert.strictEqual(isVideoPress(press({ pointerType: 'touch' })), false);
+  assert.strictEqual(isVideoPress(press({ pointerType: 'pen' })), false);
+  assert.strictEqual(isVideoPress(press({ button: 2 })), false);
+  assert.strictEqual(isVideoPress(press({ ctrlKey: true })), false);
 });
 
 test('the video box is the largest box of its aspect centred in the player', () => {
@@ -413,14 +314,6 @@ test('an unknown aspect falls back to 16:9, as the fullscreen CSS does', () => {
   const r = { left: 0, top: 0, width: 1600, height: 1600 };
   assert.deepStrictEqual(videoBox(r, ''), { left: 0, right: 1600, top: 350, bottom: 1250 });
   assert.deepStrictEqual(videoBox(r, 'garbage'), videoBox(r, ''));
-});
-
-test('touch, pen, secondary buttons, ctrl-click and presses off the shield are not video presses', () => {
-  assert.strictEqual(isVideoPress(press({ onShield: false })), false);
-  assert.strictEqual(isVideoPress(press({ pointerType: 'touch' })), false);
-  assert.strictEqual(isVideoPress(press({ pointerType: 'pen' })), false);
-  assert.strictEqual(isVideoPress(press({ button: 2 })), false);
-  assert.strictEqual(isVideoPress(press({ ctrlKey: true })), false);
 });
 
 test('index.html loads cursor_idle.js and builds the controller', () => {

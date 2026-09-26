@@ -2,39 +2,33 @@
 // pointer inactivity in the fullscreen preview and returns on the next real
 // move. Single source for browser (script tag) and Node tests.
 //
-// In fullscreen the cross-origin Vimeo iframe covers the whole screen, so the
-// page can neither style the cursor over it nor see a single mousemove there.
-// The SPA therefore lays a transparent shield of its own over the iframe, and
-// only while the pointer looks idle, so Vimeo's controls stay clickable the
-// rest of the time. Because moves over the iframe are invisible, "idle" is a
-// guess until the shield is up: the shield first goes up with the cursor still
-// showing ('probe'), and only a pointer that then stays still for the whole
-// probe gets hidden ('hidden'). A move during the probe means someone was using
-// the player all along — the shield comes straight down again.
+// Vimeo hides the cursor only while it is the fullscreen element itself, and
+// the preview's fullscreen element is the SPA's own view. Hiding it from the
+// page takes an element of the page under the pointer: the browser shows the
+// cursor of whichever document the last real mouse event went to (Chromium's
+// CursorManager), so `cursor: none` set on the page while the pointer rests
+// over the cross-origin iframe is never shown. The SPA therefore keeps a
+// shield of its own over the player for as long as fullscreen lasts; it sees
+// every move, and a press on it is a click on the video: play/pause, and a
+// double click leaves fullscreen, as on the bare player.
 //
-// While the shield is up it stands in for the video surface under it, so a
-// press on it is a click on the video: play/pause, and a double click leaves
-// fullscreen, as on the bare player. That is a guess too: someone who worked
-// the player, then held still to aim, gets the shield under their click. A
-// press in the strip where Vimeo's control bar sits therefore only brings the
-// cursor back — a lost click there beats a pause where a seek was meant.
+// A hole in the shield over Vimeo's control bar lets the pointer reach the
+// player. Leaving the shield through it hands the pointer to Vimeo ('vimeo'):
+// the shield steps aside altogether, since Vimeo's menus (a long subtitle list
+// among them) open upwards over the video. The page is blind to the pointer
+// then, so the shield comes back when the player reports a change — a menu
+// choice — or when FS_VIMEO_MODE_MS pass without one.
 
-var FS_CURSOR_IDLE_MS = 5000;
-var FS_CURSOR_PROBE_MS = 1000;
+var FS_CURSOR_IDLE_MS = 3000;
+var FS_VIMEO_MODE_MS = 10000;
 var FS_DOUBLE_PRESS_MS = 500;
-// A seek or volume change this soon after a key press came from the keyboard.
-var FS_KEY_ECHO_MS = 1000;
 // Pointer travel that is still no move: the jitter of a hand on a mouse or a
 // trackpad tap, the same slop a double click is allowed.
 var FS_MOVE_SLOP_PX = 4;
-// Height of Vimeo's control bar along the bottom of the video.
-var FS_CONTROL_STRIP_PX = 64;
 
 // Where the player draws the video inside `rect` (the shield's client rect):
 // the largest box of the video's aspect, centred — the same box the fullscreen
 // CSS derives from --preview-aspect ("W / H"), with the same 16:9 fallback.
-// Vimeo letterboxes or pillarboxes the rest and hangs its control bar off the
-// video's bottom edge, not the screen's.
 function videoBox(rect, aspect) {
   var m = /^\s*([\d.]+)\s*\/\s*([\d.]+)\s*$/.exec(aspect || '');
   var a = m && +m[1] > 0 && +m[2] > 0 ? m[1] / m[2] : 16 / 9;
@@ -53,24 +47,22 @@ function isVideoPress(press) {
   var b = press.box;
   return press.onShield && press.pointerType === 'mouse' && press.button === 0
     && !press.ctrlKey && press.x >= b.left && press.x < b.right
-    && press.y >= b.top && press.y < b.bottom - FS_CONTROL_STRIP_PX;
+    && press.y >= b.top && press.y < b.bottom;
 }
 
-// opts: {delayMs, probeMs, doublePressMs, keyEchoMs, now, setTimer, clearTimer,
-//        onChange(state: 'visible' | 'probe' | 'hidden'),
+// opts: {idleMs, vimeoMs, doublePressMs, now, setTimer, clearTimer,
+//        onChange(state: 'visible' | 'hidden' | 'vimeo'),
 //        onVideoClick(), onVideoDoubleClick() — which must also undo the click
 //        that opened it: that one already went out as a click}
 function createCursorIdle(opts) {
   var active = false;
   var state = 'visible';
   var timer = null;
-  var lastKeyAt = -Infinity;
+  // Last position of a move on the shield. A browser may dispatch a move with
+  // no physical movement, so while hidden only travel beyond the slop counts.
+  var lastPos = null;
   // Time of a video press that could still become the first half of a double.
   var pressAt = null;
-  // First position seen since the shield went up. A browser may dispatch a
-  // mousemove with no physical movement when the element under a resting
-  // pointer changes, so only travel beyond the slop from here counts.
-  var anchor = null;
 
   function setState(next) {
     if (state === next) return;
@@ -85,58 +77,50 @@ function createCursorIdle(opts) {
     timer = opts.setTimer(function() { timer = null; if (active) fn(); }, ms);
   }
   function countdown() {
-    schedule(opts.delayMs - opts.probeMs, function() {
-      anchor = null;
-      setState('probe');
-      schedule(opts.probeMs, function() { setState('hidden'); });
-    });
+    schedule(opts.idleMs, function() { setState('hidden'); });
   }
-  function reveal() {
-    anchor = null;
-    pressAt = null;
+  function show() {
     setState('visible');
-  }
-  function wake() {
-    reveal();
     countdown();
+  }
+  function onShield() {
+    return active && state !== 'vimeo';
   }
 
   return {
     enter: function() {
       if (active) return;
       active = true;
-      countdown();
+      show();
     },
     exit: function() {
       active = false;
       disarm();
-      reveal();
+      lastPos = null;
+      pressAt = null;
+      setState('visible');
     },
     pointerMove: function(x, y) {
-      if (!active) return;
-      if (state !== 'visible') {
-        if (anchor === null) { anchor = { x: x, y: y }; return; }
-        if (Math.abs(x - anchor.x) <= FS_MOVE_SLOP_PX
-          && Math.abs(y - anchor.y) <= FS_MOVE_SLOP_PX) return;
-        wake();
-        return;
+      if (!onShield()) return;
+      if (state === 'hidden') {
+        if (lastPos === null) { lastPos = { x: x, y: y }; return; }
+        if (Math.abs(x - lastPos.x) <= FS_MOVE_SLOP_PX
+          && Math.abs(y - lastPos.y) <= FS_MOVE_SLOP_PX) return;
       }
-      countdown();
+      lastPos = { x: x, y: y };
+      show();
     },
-    // A press anywhere but on the shield.
+    // A press anywhere but on the video.
     wake: function() {
-      if (!active) return;
-      wake();
+      if (!onShield()) return;
+      pressAt = null;
+      show();
     },
-    // A primary mouse press on the shield. The shield stays up with the cursor
-    // showing, so the second press of a double click lands on it as well.
     videoPress: function() {
-      if (!active) return;
+      if (!onShield()) return;
       var now = opts.now();
       var isDouble = pressAt !== null && now - pressAt < opts.doublePressMs;
-      anchor = null;
-      setState('probe');
-      schedule(opts.delayMs, function() { setState('hidden'); });
+      show();
       if (isDouble) {
         pressAt = null;
         opts.onVideoDoubleClick();
@@ -145,17 +129,19 @@ function createCursorIdle(opts) {
         opts.onVideoClick();
       }
     },
-    key: function() { lastKeyAt = opts.now(); },
-    // Player activity keeps a visible cursor up. Play and pause never reveal a
-    // hidden one — Space and a click on the video both cause them. A seek or
-    // volume change with no key just before it was made with the mouse inside
-    // the iframe (a drag holds the pointer there), so that one does.
-    playerEvent: function(name) {
-      if (!active) return;
-      var byMouse = (name === 'seeked' || name === 'volumechange')
-        && opts.now() - lastKeyAt >= opts.keyEchoMs;
-      if (byMouse) wake();
-      else if (state === 'visible') countdown();
+    // The pointer left the shield through the hole, onto the player.
+    leaveToPlayer: function() {
+      if (!onShield()) return;
+      lastPos = null;
+      pressAt = null;
+      setState('vimeo');
+      schedule(opts.vimeoMs, show);
+    },
+    // Play/pause, a seek, a volume, subtitle, quality or speed change. Only
+    // ends Vimeo mode: the keyboard drives the player too, and only the mouse
+    // counts as activity on the shield.
+    playerEvent: function() {
+      if (active && state === 'vimeo') show();
     },
     state: function() { return state; },
   };
@@ -164,11 +150,9 @@ function createCursorIdle(opts) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     FS_CURSOR_IDLE_MS: FS_CURSOR_IDLE_MS,
-    FS_CURSOR_PROBE_MS: FS_CURSOR_PROBE_MS,
+    FS_VIMEO_MODE_MS: FS_VIMEO_MODE_MS,
     FS_DOUBLE_PRESS_MS: FS_DOUBLE_PRESS_MS,
-    FS_KEY_ECHO_MS: FS_KEY_ECHO_MS,
     FS_MOVE_SLOP_PX: FS_MOVE_SLOP_PX,
-    FS_CONTROL_STRIP_PX: FS_CONTROL_STRIP_PX,
     createCursorIdle: createCursorIdle,
     isVideoPress: isVideoPress,
     videoBox: videoBox,
