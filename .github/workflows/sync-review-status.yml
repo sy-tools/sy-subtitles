@@ -12,7 +12,42 @@ permissions:
   pull-requests: write
 
 jobs:
+  # Label edits need no serialization, and must stay out of the sync queue:
+  # GitHub keeps one pending run per concurrency group and cancels the older
+  # one, which would drop its label edit while the running sync waits for its
+  # PR to merge.
+  labels:
+    runs-on: ubuntu-latest
+    if: >
+      github.event_name == 'issues' && (
+        github.event.action == 'assigned' ||
+        github.event.action == 'unassigned' ||
+        github.event.action == 'closed' ||
+        github.event.action == 'reopened'
+      )
+    steps:
+      - name: Auto-update labels on assign/unassign/close/reopen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          if [ "$ACTION" = "assigned" ]; then
+            gh issue edit "$ISSUE" --remove-label "review:pending" --add-label "review:in-progress"
+          elif [ "$ACTION" = "unassigned" ]; then
+            ASSIGNEES=$(gh issue view "$ISSUE" --json assignees --jq '.assignees | length')
+            if [ "$ASSIGNEES" = "0" ]; then
+              gh issue edit "$ISSUE" --remove-label "review:in-progress" --add-label "review:pending"
+            fi
+          elif [ "$ACTION" = "closed" ]; then
+            gh issue edit "$ISSUE" --remove-label "review:pending,review:in-progress" --add-label "review:approved"
+          elif [ "$ACTION" = "reopened" ]; then
+            gh issue edit "$ISSUE" --remove-label "review:approved" --add-label "review:pending"
+          fi
+
   sync:
+    needs: labels
     runs-on: ubuntu-latest
     # The App key is a secret of the `main` environment, which admits only the
     # main branch, so a workflow pushed on another branch cannot read it.
@@ -24,7 +59,7 @@ jobs:
     # base into duplicate stuck PRs (#728/#729). Job-level on purpose —
     # workflow-level concurrency is ignored when this file runs via
     # workflow_call. cancel-in-progress stays false: an in-flight sync is a
-    # multi-step sequence (label edits → regenerate → PR → merge) and must
+    # multi-step sequence (regenerate → PR → merge) and must
     # finish; new runs queue behind it.
     concurrency:
       group: review-status-sync
@@ -32,10 +67,11 @@ jobs:
     # For 'unlabeled' the issue's label list reflects the state AFTER removal,
     # so removing the last review:* label would skip the sync — also check the
     # removed label itself (github.event.label.name).
-    if: >
+    if: >-
+      !cancelled() && (
       github.event_name != 'issues' ||
       contains(join(github.event.issue.labels.*.name, ','), 'review:') ||
-      startsWith(github.event.label.name, 'review:')
+      startsWith(github.event.label.name, 'review:'))
     steps:
       # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
       - name: Mint bot App token
@@ -65,32 +101,6 @@ jobs:
         with:
           ref: main
           token: ${{ steps.bot-token.outputs.token || github.token }}
-
-      - name: Auto-update labels on assign/unassign/close/reopen
-        if: >
-          github.event_name == 'issues' && (
-            github.event.action == 'assigned' ||
-            github.event.action == 'unassigned' ||
-            github.event.action == 'closed' ||
-            github.event.action == 'reopened'
-          )
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE: ${{ github.event.issue.number }}
-          ACTION: ${{ github.event.action }}
-        run: |
-          if [ "$ACTION" = "assigned" ]; then
-            gh issue edit "$ISSUE" --remove-label "review:pending" --add-label "review:in-progress"
-          elif [ "$ACTION" = "unassigned" ]; then
-            ASSIGNEES=$(gh issue view "$ISSUE" --json assignees --jq '.assignees | length')
-            if [ "$ASSIGNEES" = "0" ]; then
-              gh issue edit "$ISSUE" --remove-label "review:in-progress" --add-label "review:pending"
-            fi
-          elif [ "$ACTION" = "closed" ]; then
-            gh issue edit "$ISSUE" --remove-label "review:pending,review:in-progress" --add-label "review:approved"
-          elif [ "$ACTION" = "reopened" ]; then
-            gh issue edit "$ISSUE" --remove-label "review:approved" --add-label "review:pending"
-          fi
 
       - name: Generate review-status.json
         env:

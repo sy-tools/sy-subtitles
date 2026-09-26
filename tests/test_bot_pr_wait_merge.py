@@ -18,7 +18,8 @@ import pytest
 
 from tests.test_bot_pr_base import BOT_PR, repo  # noqa: F401  — fixture re-export
 
-# Answers `pr view` with the next state from GH_PR_STATES (the last one repeats).
+# Answers `pr view` with the next state from GH_PR_STATES (the last one repeats);
+# ERR makes that call fail, like a transient API error.
 FAKE_GH = """#!/usr/bin/env bash
 printf '%s\\n' "$*" >> "$GH_CALL_LOG"
 if [ "$1" = "pr" ] && [ "$2" = "create" ]; then
@@ -28,6 +29,7 @@ elif [ "$1" = "pr" ] && [ "$2" = "view" ]; then
   IFS=, read -ra states <<< "$GH_PR_STATES"
   i=$(( n < ${#states[@]} ? n : ${#states[@]} - 1 ))
   echo $((n + 1)) > "$GH_VIEW_COUNT"
+  [ "${states[$i]}" = ERR ] && exit 1
   echo "${states[$i]}"
 fi
 exit 0
@@ -61,6 +63,7 @@ def _run(repo: Path, tmp_path: Path, **env_overrides: str) -> tuple[subprocess.C
         env=env,
         capture_output=True,
         text=True,
+        timeout=30,
     )
     calls = [ln for ln in log.read_text(encoding="utf-8").splitlines() if ln.strip()]
     return result, calls
@@ -80,13 +83,13 @@ def test_without_the_wait_setting_the_script_does_not_poll(repo: Path, tmp_path:
 
 
 def test_waits_until_the_pr_has_merged(repo: Path, tmp_path: Path) -> None:  # noqa: F811
-    result, calls = _run(repo, tmp_path, BOT_PR_WAIT_MERGE_SECONDS="60", GH_PR_STATES="OPEN,OPEN,MERGED")
+    result, calls = _run(repo, tmp_path, BOT_PR_WAIT_MERGE_SECONDS="5", GH_PR_STATES="OPEN,OPEN,MERGED")
     assert result.returncode == 0, result.stdout + result.stderr
     assert len(_views(calls)) == 3
 
 
 def test_a_pr_closed_without_merging_fails_the_job(repo: Path, tmp_path: Path) -> None:  # noqa: F811
-    result, _ = _run(repo, tmp_path, BOT_PR_WAIT_MERGE_SECONDS="60", GH_PR_STATES="OPEN,CLOSED")
+    result, _ = _run(repo, tmp_path, BOT_PR_WAIT_MERGE_SECONDS="5", GH_PR_STATES="OPEN,CLOSED")
     assert result.returncode != 0
     assert "::error::" in result.stdout
 
@@ -96,3 +99,9 @@ def test_a_pr_that_never_merges_fails_at_the_deadline(repo: Path, tmp_path: Path
     assert result.returncode != 0
     assert "::error::" in result.stdout
     assert len(_views(calls)) >= 1
+
+
+def test_a_transient_gh_error_keeps_waiting(repo: Path, tmp_path: Path) -> None:  # noqa: F811
+    result, calls = _run(repo, tmp_path, BOT_PR_WAIT_MERGE_SECONDS="5", GH_PR_STATES="ERR,OPEN,MERGED")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert len(_views(calls)) == 3

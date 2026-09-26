@@ -170,3 +170,17 @@ def test_review_status_waits_for_its_pr_to_merge_when_it_has_the_app_token():
     steps = _steps("sync-review-status.yml", "sync")
     bot_pr = steps[_index(steps, _runs_bot_pr)]
     assert bot_pr["env"].get("BOT_PR_WAIT_MERGE_SECONDS") == "${{ steps.bot-token.outputs.token != '' && '600' || '' }}"
+
+
+def test_label_edits_run_outside_the_serialized_sync_queue():
+    """GitHub keeps one pending run per concurrency group and cancels the older
+    one. While the running sync waits for its PR to merge, a cancelled pending
+    run would drop its label edit — and labels are the source of truth."""
+    jobs = _load("sync-review-status.yml")["jobs"]
+    labels, sync = jobs["labels"], jobs["sync"]
+    edits = "Auto-update labels on assign/unassign/close/reopen"
+    assert [s["name"] for s in labels["steps"]] == [edits]
+    assert "concurrency" not in labels
+    assert all(s.get("name") != edits for s in sync["steps"])
+    assert sync["needs"] == "labels"
+    assert sync["if"].startswith("!cancelled() &&"), "a skipped label job must not skip the sync"

@@ -92,7 +92,7 @@ fi
 if [ -n "${BOT_PR_WAIT_MERGE_SECONDS:-}" ]; then
   deadline=$(( $(date +%s) + BOT_PR_WAIT_MERGE_SECONDS ))
   while :; do
-    state=$(gh pr view "$PR_URL" --json state --jq .state)
+    state=$(gh pr view "$PR_URL" --json state --jq .state) || state=""  # transient API error: poll again
     case "$state" in
       MERGED) echo "Merged: $PR_URL"; break ;;
       CLOSED) echo "::error::$PR_URL was closed without merging"; exit 1 ;;
