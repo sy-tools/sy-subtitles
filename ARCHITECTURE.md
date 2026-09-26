@@ -203,11 +203,16 @@ arrived merged untested (#1069).
 Pipeline, whisper and review-status results reach `main` as a PR with
 auto-merge, never a direct push, so they pass `gate` like any other change.
 They are opened with a token minted for the bot GitHub App
-(`vars.BOT_APP_ID` + `secrets.BOT_APP_PRIVATE_KEY`), not with `GITHUB_TOKEN`:
+(`vars.BOT_APP_ID` + `BOT_APP_PRIVATE_KEY`), not with `GITHUB_TOKEN`:
 GitHub holds every run on a PR that `github-actions[bot]` opened until a person
 approves it, no repository setting lifts that, and a held run never reports
 `gate` — the PR then waits forever. Without the App configured the jobs fall
 back to `GITHUB_TOKEN` and warn that the PR needs that approval.
+
+The key is a secret of the `main` environment, never a repository secret. That
+environment admits only the `main` branch, so anyone with write access who
+pushes a workflow on a branch still cannot read it; the minting jobs run in it,
+and the one step that sees the key runs an action pinned to a commit.
 
 ### deploy-pages.yml
 Deploys `site/` to GitHub Pages on changes under `site/`.

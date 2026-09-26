@@ -5,9 +5,6 @@ on:
     types: [labeled, unlabeled, assigned, unassigned, closed, reopened]
   workflow_dispatch:
   workflow_call:
-    secrets:
-      BOT_APP_PRIVATE_KEY:
-        required: false
 
 permissions:
   contents: write
@@ -17,6 +14,11 @@ permissions:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    # The App key is a secret of the `main` environment, which admits only the
+    # main branch, so a workflow pushed on another branch cannot read it.
+    environment: main
+    env:
+      BOT_APP_READY: ${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
     # Serialize syncs: rapid issue events (e.g. claiming two talks seconds
     # apart) used to spawn parallel runs that raced bot-pr.sh from the same
     # base into duplicate stuck PRs (#728/#729). Job-level on purpose —
@@ -38,16 +40,16 @@ jobs:
       # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
       - name: Mint bot App token
         id: bot-token
-        if: vars.BOT_APP_ID != ''
-        uses: actions/create-github-app-token@v3
+        if: env.BOT_APP_READY == 'true'
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
         with:
           app-id: ${{ vars.BOT_APP_ID }}
           private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
       - name: Warn that the bot PR will wait for approval
-        if: vars.BOT_APP_ID == ''
-        run: echo "::warning::vars.BOT_APP_ID is not set, so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
+        if: env.BOT_APP_READY != 'true'
+        run: echo "::warning::The bot App is not configured (vars.BOT_APP_ID, and BOT_APP_PRIVATE_KEY in the main environment), so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
       # Always branch off the live main tip, not the inherited SHA. When this
       # workflow runs via `workflow_call` from subtitle-pipeline.yml, the default
       # checkout uses the caller's `github.sha` — the pipeline's dispatch SHA,

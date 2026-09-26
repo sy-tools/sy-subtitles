@@ -12,8 +12,13 @@ runs `bot-pr.sh` mints one first and uses it for BOTH halves of the job: the
 checkout (git pushes the bot branch with the checkout's credentials) and
 `GH_TOKEN` (gh opens the PR and enables auto-merge).
 
-Until the App is configured (`vars.BOT_APP_ID` empty) the jobs fall back to
-`github.token` — the old behaviour, where a person approves the run — and say
+The private key is an environment secret of `main`, whose branch policy admits
+only `main`: a workflow pushed on any other branch cannot read it. So every job
+that mints runs in that environment, and nothing else may name the secret.
+The key is only ever seen by the mint step, whose action is pinned to a commit.
+
+Until the App is configured, or when the key is out of reach, the jobs fall back
+to `github.token` — the old behaviour, where a person approves the run — and say
 so in the log rather than failing the build that produced the artifacts.
 
 Side effect guarded here too: `sync-subtitles.yml` listens for PRs touching
@@ -23,6 +28,7 @@ over a rebuild rewrites the transcript the build was made from. Bot branches
 are skipped explicitly.
 """
 
+import re
 from pathlib import Path
 
 import pytest
@@ -31,6 +37,8 @@ import yaml
 WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 
 APP_TOKEN_ACTION = "actions/create-github-app-token@"
+APP_TOKEN_PIN = re.compile(r"actions/create-github-app-token@[0-9a-f]{40}$")
+APP_READY = "${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}"
 TOKEN_EXPR = "steps.bot-token.outputs.token || github.token"
 
 BOT_PR_JOBS = [
@@ -90,7 +98,10 @@ def test_app_token_is_minted_before_checkout(workflow, job):
     # rejects it for this action; `app-id` is only deprecated, and works.
     assert step["with"]["app-id"] == "${{ vars.BOT_APP_ID }}"
     assert step["with"]["private-key"] == "${{ secrets.BOT_APP_PRIVATE_KEY }}"
-    assert "vars.BOT_APP_ID != ''" in step.get("if", ""), "an unconfigured App must fall back, not fail the job"
+    assert APP_TOKEN_PIN.match(step["uses"]), "the one step that sees the key runs a commit, not a movable tag"
+    assert step.get("if") == "env.BOT_APP_READY == 'true'", (
+        "an unconfigured App or an unreachable key must fall back, not fail the job"
+    )
 
 
 @pytest.mark.parametrize(("workflow", "job"), BOT_PR_JOBS)
@@ -110,29 +121,32 @@ def test_bot_pr_opens_the_pr_with_the_app_token(workflow, job):
 @pytest.mark.parametrize(("workflow", "job"), BOT_PR_JOBS)
 def test_fallback_is_announced(workflow, job):
     steps = _steps(workflow, job)
-    warn = [s for s in steps if "vars.BOT_APP_ID == ''" in str(s.get("if", ""))]
+    warn = [s for s in steps if s.get("if") == "env.BOT_APP_READY != 'true'"]
     assert warn and "::warning" in warn[0]["run"], (
         "falling back to github.token means a person must approve the bot PR's CI; the log has to say so"
     )
 
 
-@pytest.mark.parametrize("workflow", ["whisper.yml", "sync-review-status.yml"])
-def test_reusable_workflows_accept_the_app_key(workflow):
-    wf = _load(workflow)
-    call = wf[True]["workflow_call"] or {}  # PyYAML reads bare `on:` as True
-    assert "BOT_APP_PRIVATE_KEY" in (call.get("secrets") or {})
+@pytest.mark.parametrize(("workflow", "job"), BOT_PR_JOBS)
+def test_minting_job_runs_in_the_main_environment(workflow, job):
+    spec = _load(workflow)["jobs"][job]
+    assert spec.get("environment") == "main"
+    assert spec.get("env", {}).get("BOT_APP_READY") == APP_READY
 
 
-@pytest.mark.parametrize("callee", ["whisper.yml", "sync-review-status.yml"])
-def test_pipeline_passes_the_app_key_to_reusable_workflows(callee):
-    jobs = _load("subtitle-pipeline.yml")["jobs"]
-    callers = [j for j in jobs.values() if j.get("uses") == f"./.github/workflows/{callee}"]
-    assert callers, f"pipeline no longer calls {callee}"
-    for job in callers:
-        secrets = job.get("secrets")
-        assert secrets == "inherit" or (
-            isinstance(secrets, dict) and secrets.get("BOT_APP_PRIVATE_KEY") == "${{ secrets.BOT_APP_PRIVATE_KEY }}"
-        )
+def test_only_main_environment_jobs_name_the_app_key():
+    """A job outside `main` naming the key would get an empty value, or — if the
+    key were ever added as a repository secret — hand it to any branch."""
+    offenders = []
+    for path in WORKFLOWS.glob("*.yml"):
+        wf = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for job_id, spec in (wf.get("jobs") or {}).items():
+            if "BOT_APP_PRIVATE_KEY" in yaml.safe_dump(spec) and spec.get("environment") != "main":
+                offenders.append(f"{path.name}:{job_id}")
+        call = (wf.get(True) or {}).get("workflow_call") or {}
+        if "BOT_APP_PRIVATE_KEY" in (call.get("secrets") or {}):
+            offenders.append(f"{path.name}:workflow_call")
+    assert offenders == []
 
 
 def test_sync_subtitles_skips_bot_branches():
