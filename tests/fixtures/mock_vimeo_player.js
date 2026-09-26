@@ -54,7 +54,8 @@ window.Vimeo = {
       this._callbacks[event].push(callback);
     }
     getCurrentTime() { return Promise.resolve(this._currentTime); }
-    // The metadata length, as Vimeo reports it: a whole number of seconds
+    // The metadata length, as Vimeo's getDuration() reports it at ready (the
+    // SPA asks it then), before playback loads the media: a whole number of seconds
     // that can run past the media's true end (see _setMediaDuration). A test
     // delays the answer with window.__mockDurationDelayMs and waits on
     // window.__mockDurationAnswered to know it has landed.
@@ -77,7 +78,9 @@ window.Vimeo = {
       for (var i = 0; i < cbs.length; i++) cbs[i](data);
     }
     // Test helper: the media's true length arrives, as Vimeo's 'durationchange'
-    // does once the video loads — getDuration() keeps the rounded metadata.
+    // does once playback loads the media. (The real getDuration() also answers
+    // with it from then on; this mock keeps the metadata, as the SPA only asks
+    // at ready.)
     _setMediaDuration(seconds) {
       this._fire('durationchange', { duration: seconds });
     }

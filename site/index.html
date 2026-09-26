@@ -3564,11 +3564,12 @@ function showPreview(talkId, videoSlug) {
         if (stillOnSameVideo()) previewState._ended = false;
       });
       // The end-freeze threshold needs where the media really ends. getDuration()
-      // answers with Vimeo's metadata length, whole seconds that can run past it
+      // asked at ready (as below), before playback has loaded the media, answers
+      // with Vimeo's metadata length: whole seconds that can run past the end
       // (1591 for a video that ends at 1590.741), which leaves the freeze a
       // window too short to hit or none at all. 'durationchange' first repeats
-      // the metadata, then brings the true length once the media loads — so the
-      // latest event wins, and over getDuration() whichever lands first.
+      // the metadata, then brings the true length once playback loads the media
+      // — so the latest event wins, and over getDuration() whichever lands first.
       player.on('durationchange', function(data) {
         var d = data && data.duration;
         if (!isCurrentPlayer() || typeof d !== 'number' || !isFinite(d) || d <= 0) return;

@@ -4940,9 +4940,10 @@ class TestEndFreeze:
         pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
         assert pos in (None, "0"), f"freeze must not persist the end position, got {pos}"
 
-    # Vimeo's getDuration() answers with the metadata length, a whole number
-    # of seconds (1591), while the media really ends earlier (1590.741) — told
-    # only by 'durationchange'. A threshold taken from the metadata leaves the
+    # Vimeo's getDuration() asked at ready answers with the metadata length, a
+    # whole number of seconds (1591), while the media really ends earlier
+    # (1590.741) — told by 'durationchange' once playback loads the media. A
+    # threshold taken from the metadata leaves the
     # freeze a 41ms window, or none at all, and the end screen wins.
     MEDIA_END_SEC = 3599.6
     INSIDE_MEDIA_WINDOW_SEC = 3599.35
