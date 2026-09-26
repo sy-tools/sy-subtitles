@@ -3960,19 +3960,25 @@ var fsCursorIdle = (function() {
   if (!view || !shield) return null;
   var idle = createCursorIdle({
     delayMs: FS_CURSOR_IDLE_MS,
+    probeMs: FS_CURSOR_PROBE_MS,
     setTimer: function(fn, ms) { return setTimeout(fn, ms); },
     clearTimer: function(id) { clearTimeout(id); },
-    onChange: function(hidden) { shield.classList.toggle('is-idle', hidden); },
+    onChange: function(state) { shield.dataset.state = state; },
   });
-  var canHover = !window.matchMedia || window.matchMedia('(hover: hover)').matches;
+  var hover = window.matchMedia ? window.matchMedia('(hover: hover)') : null;
   function follow() {
-    if (canHover && view.classList.contains('fs-mode')) idle.enter();
+    if ((!hover || hover.matches) && view.classList.contains('fs-mode')) idle.enter();
     else idle.exit();
   }
   new MutationObserver(follow).observe(view, { attributes: true, attributeFilter: ['class'] });
+  if (hover && hover.addEventListener) hover.addEventListener('change', follow);
   follow();
   document.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
-  document.addEventListener('pointerdown', function() { idle.pointerDown(); });
+  // The press that ends a blind spell lands on the shield, so the player never
+  // sees it. Clicking a video you cannot aim at means play/pause — do that.
+  document.addEventListener('pointerdown', function(e) {
+    if (idle.pointerDown() && e.target === shield && e.button === 0) SPA.togglePlay();
+  });
   return idle;
 })();
 

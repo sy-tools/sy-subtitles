@@ -4,48 +4,57 @@
 //
 // In fullscreen the cross-origin Vimeo iframe covers the whole screen, so the
 // page can neither style the cursor over it nor see a single mousemove there.
-// The SPA therefore lays a transparent shield over the iframe only while idle:
-// the shield carries `cursor: none` and, being ours, receives the move that
-// ends the idle spell. Between spells the shield is gone and Vimeo's own
-// controls stay clickable — the controller below decides when it goes up.
+// The SPA therefore lays a transparent shield of its own over the iframe, and
+// only while the pointer looks idle, so Vimeo's controls stay clickable the
+// rest of the time. Because moves over the iframe are invisible, "idle" is a
+// guess until the shield is up: the shield first goes up with the cursor still
+// showing ('probe'), and only a pointer that then stays still for the whole
+// probe gets hidden ('hidden'). A move during the probe means someone was using
+// the player all along — the shield comes straight down again.
 
 var FS_CURSOR_IDLE_MS = 5000;
+var FS_CURSOR_PROBE_MS = 1000;
 
-// opts: {delayMs, setTimer, clearTimer, onChange(hidden: boolean)}
+// opts: {delayMs, probeMs, setTimer, clearTimer,
+//        onChange(state: 'visible' | 'probe' | 'hidden')}
 function createCursorIdle(opts) {
   var active = false;
-  var hidden = false;
+  var state = 'visible';
   var timer = null;
-  // First position seen after hiding. The shield appearing under a resting
-  // pointer makes the browser dispatch a mousemove with no physical movement,
-  // so only a position that differs from this one counts as activity.
+  // First position seen since the shield went up. A browser may dispatch a
+  // mousemove with no physical movement when the element under a resting
+  // pointer changes, so only a position that differs from this one counts.
   var anchor = null;
 
+  function setState(next) {
+    if (state === next) return;
+    state = next;
+    opts.onChange(next);
+  }
   function disarm() {
     if (timer !== null) { opts.clearTimer(timer); timer = null; }
   }
-  function arm() {
+  function schedule(ms, fn) {
     disarm();
-    timer = opts.setTimer(function() {
-      timer = null;
-      if (!active) return;
-      hidden = true;
+    timer = opts.setTimer(function() { timer = null; if (active) fn(); }, ms);
+  }
+  function countdown() {
+    schedule(opts.delayMs - opts.probeMs, function() {
       anchor = null;
-      opts.onChange(true);
-    }, opts.delayMs);
+      setState('probe');
+      schedule(opts.probeMs, function() { setState('hidden'); });
+    });
   }
   function reveal() {
-    if (!hidden) return;
-    hidden = false;
     anchor = null;
-    opts.onChange(false);
+    setState('visible');
   }
 
   return {
     enter: function() {
       if (active) return;
       active = true;
-      arm();
+      countdown();
     },
     exit: function() {
       active = false;
@@ -54,31 +63,37 @@ function createCursorIdle(opts) {
     },
     pointerMove: function(x, y) {
       if (!active) return;
-      if (hidden) {
+      if (state !== 'visible') {
         if (anchor === null) { anchor = { x: x, y: y }; return; }
         if (anchor.x === x && anchor.y === y) return;
         reveal();
       }
-      arm();
+      countdown();
     },
+    // True when the press came while the cursor was hidden: nobody can aim at
+    // a control they cannot see, so the caller may act on the whole video.
     pointerDown: function() {
-      if (!active) return;
+      if (!active) return false;
+      var blind = state === 'hidden';
       reveal();
-      arm();
+      countdown();
+      return blind;
     },
     // Player activity (seek, volume, play/pause) keeps a visible cursor up but
-    // never reveals a hidden one: the keyboard drives the player too.
+    // never ends a probe or reveals a hidden one: the keyboard drives the
+    // player too.
     nudge: function() {
-      if (!active || hidden) return;
-      arm();
+      if (!active || state !== 'visible') return;
+      countdown();
     },
-    isIdle: function() { return hidden; },
+    state: function() { return state; },
   };
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     FS_CURSOR_IDLE_MS: FS_CURSOR_IDLE_MS,
+    FS_CURSOR_PROBE_MS: FS_CURSOR_PROBE_MS,
     createCursorIdle: createCursorIdle,
   };
 }

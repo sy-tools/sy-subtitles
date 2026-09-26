@@ -505,12 +505,15 @@ body.sync-player-resizing, body.sync-player-resizing * {
 #view-preview.fs-mode .video-wrap > div { position: relative; width: 100%; height: 100%; }
 #view-preview.fs-mode #subtitle-overlay { position: absolute; z-index: 10000; min-height: 0; border-radius: 0; pointer-events: none; }
 #view-preview.fs-mode .controls { display: none !important; }
-/* Goes up over the Vimeo iframe only while the pointer is idle (js/cursor_idle.js):
+/* Goes up over the Vimeo iframe only while the pointer looks idle (js/cursor_idle.js):
    the iframe is cross-origin, so its cursor is out of the page's reach and only
    an element of ours on top can hide it. Above the iframe (z-index 1), below
-   the subtitles, which stay pointer-transparent over it. */
+   the subtitles, which stay pointer-transparent over it. While probing the
+   cursor still shows; only a still pointer gets hidden. */
 .fs-idle-shield { display: none; }
-#view-preview.fs-mode .fs-idle-shield.is-idle { display: block; position: absolute; inset: 0; z-index: 2; cursor: none; }
+#view-preview.fs-mode .fs-idle-shield[data-state="probe"],
+#view-preview.fs-mode .fs-idle-shield[data-state="hidden"] { display: block; position: absolute; inset: 0; z-index: 2; }
+#view-preview.fs-mode .fs-idle-shield[data-state="hidden"] { cursor: none; }
 body {
   font-family: var(--f-sans);
   font-feature-settings: 'ss01', 'cv11';
