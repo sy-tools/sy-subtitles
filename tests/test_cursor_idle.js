@@ -10,6 +10,7 @@ const path = require('path');
 const {
   createCursorIdle, isVideoPress, videoBox,
   FS_CURSOR_IDLE_MS, FS_VIMEO_MODE_MS, FS_DOUBLE_PRESS_MS, FS_MOVE_SLOP_PX, FS_FOCUS_SETTLE_MS,
+  FS_HOVER_SETTLE_MS,
 } = require('../site/js/cursor_idle.js');
 
 const IDLE = 3000;
@@ -65,6 +66,7 @@ test('the cursor hides after three seconds, as in Vimeo\'s own fullscreen', () =
   assert.ok(FS_DOUBLE_PRESS_MS > 0);
   assert.ok(FS_MOVE_SLOP_PX > 0);
   assert.ok(FS_FOCUS_SETTLE_MS > 0);
+  assert.ok(FS_HOVER_SETTLE_MS > 0);
 });
 
 test('hides the cursor once the delay passes after entering fullscreen', () => {
@@ -180,8 +182,8 @@ test('focus going into the player with no player event since hands the pointer t
 });
 
 test('focus going into the player along with a player event keeps the shield', () => {
-  // A click on play or on the seek bar reports itself; its focus may reach
-  // the page after the event.
+  // A click on play or on the seek bar reports itself, up to the settle time
+  // after its focus reaches the page.
   const { clock, changes, idle } = setup();
   idle.enter();
   const since = clock.now();

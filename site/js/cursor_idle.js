@@ -33,9 +33,12 @@ var FS_DOUBLE_PRESS_MS = 500;
 // trackpad tap, the same slop a double click is allowed.
 var FS_MOVE_SLOP_PX = 4;
 // How long focus going into the player waits for a player event before it
-// counts as a menu opening. Focus crosses processes on its own schedule, and
-// may reach the page after the event the same click caused.
+// counts as a menu opening: a button click reports itself up to this long
+// after its focus reaches the page.
 var FS_FOCUS_SETTLE_MS = 300;
+// How long after the shield comes back its :hover is settled — once it has
+// been laid out under the pointer (two frames).
+var FS_HOVER_SETTLE_MS = 100;
 
 // Where the player draws the video inside `rect` (the shield's client rect):
 // the largest box of the video's aspect, centred — the same box the fullscreen
@@ -183,7 +186,7 @@ function createCursorIdle(opts) {
     focusedIntoPlayer: function(since) {
       if (onShield() && lastEventAt < since) handOver();
     },
-    // Play/pause, a seek, a volume, subtitle, quality or speed change. Only
+    // Play/pause, a seek, a subtitle, quality or speed change. Only
     // ends Vimeo mode: the keyboard drives the player too, and only the mouse
     // counts as activity on the shield.
     playerEvent: function() {
@@ -201,6 +204,7 @@ if (typeof module !== 'undefined' && module.exports) {
     FS_DOUBLE_PRESS_MS: FS_DOUBLE_PRESS_MS,
     FS_MOVE_SLOP_PX: FS_MOVE_SLOP_PX,
     FS_FOCUS_SETTLE_MS: FS_FOCUS_SETTLE_MS,
+    FS_HOVER_SETTLE_MS: FS_HOVER_SETTLE_MS,
     createCursorIdle: createCursorIdle,
     isVideoPress: isVideoPress,
     videoBox: videoBox,

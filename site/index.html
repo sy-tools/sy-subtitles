@@ -3985,7 +3985,15 @@ var fsCursorIdle = (function() {
     onChange: function(state) {
       var wasVimeo = shield.dataset.state === 'vimeo';
       shield.dataset.state = state;
-      if (wasVimeo && state === 'visible' && !idle.menuMayBeOpen()) reclaimFocus();
+      if (wasVimeo && state === 'visible' && idle.menuMayBeOpen()) {
+        // Back by timeout. A menu above a pointer resting on the bar is out
+        // of reach under the shield anyway; taking focus closes it, and the
+        // next click on a menu button is seen again. :hover settles only
+        // once the shield has been laid out under the pointer.
+        setTimeout(function() {
+          if (shield.dataset.state !== 'vimeo' && !shield.matches(':hover')) reclaimFocus();
+        }, FS_HOVER_SETTLE_MS);
+      }
       // Idle over the shield, nobody is using the player: the keys are the
       // page's again. Not while the pointer rests on Vimeo's bar.
       if (state === 'hidden' && shield.matches(':hover')) reclaimFocus();
@@ -4032,6 +4040,13 @@ var fsCursorIdle = (function() {
     var since = Date.now();
     setTimeout(function() { if (playerHasFocus()) idle.focusedIntoPlayer(since); }, FS_FOCUS_SETTLE_MS);
   });
+  function playerEvent() {
+    idle.playerEvent();
+    // A button, a menu choice or the keyboard: whatever menu was open is past
+    // use. Taking focus back lets the next click on a menu button be seen.
+    var state = shield.dataset.state;
+    if (state !== 'off' && state !== 'vimeo') reclaimFocus();
+  }
   document.addEventListener('pointerdown', function(e) {
     if (e.target !== shield) { idle.wake(); return; }
     var videoPress = isVideoPress({
@@ -4046,7 +4061,7 @@ var fsCursorIdle = (function() {
     else if (videoPress) idle.videoPress();
     else idle.wake();
   });
-  return idle;
+  return { playerEvent: playerEvent };
 })();
 
 // --- Edit-field input guards -------------------------------------------------
