@@ -6604,44 +6604,36 @@ class TestTypoHints:
     def _type_into_first_cell(self, page, text, wait_for_paint=True):
         """Replace the first cell's text and wait for the hints to catch up.
 
-        The wait belongs here, with the edit that causes the repaint, and not in
-        whatever reads the result afterwards. A scan is debounced, so an instant
-        after the edit `typoSeq` has not moved yet — anything comparing it with
-        `typoPaintedSeq` is answered by the paint that came BEFORE the edit and
-        reads the screen as it was. Assertions about what is painted survive
-        that; assertions that nothing is painted do not.
-
         `wait_for_paint=False` is for the one case where no paint is coming
         because the preference is off and nothing is scanning.
         """
-        before = page.evaluate("() => typoPaintedSeq")
-        page.evaluate(
-            """(text) => {
-              var el = document.querySelector('.cell.uk .cell-text');
-              el.focus();
-              el.innerText = text;
-              el.dispatchEvent(new Event('input', { bubbles: true }));
-            }""",
-            text,
-        )
+        edit = """(text) => {
+          var el = document.querySelector('.cell.uk .cell-text');
+          el.focus();
+          el.innerText = text;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+        }"""
         if wait_for_paint:
-            self._wait_for_repaint(page, before)
+            self._edit_then_wait_for_repaint(page, edit, text)
+        else:
+            page.evaluate(edit, text)
 
-    def _wait_for_repaint(self, page, before):
-        """Wait for a paint LATER than `before` (from `_paint_count`).
+    def _edit_then_wait_for_repaint(self, page, edit, arg=None):
+        """Run `edit` in the page, then wait for the paint of a scan sent after it.
 
-        Later, not merely current: `typoPaintedSeq == typoSeq` is already true
-        while a debounced scan is still pending, so on its own it is satisfied
-        by the paint that preceded whatever the test just did.
+        The wait belongs with the edit, not with whatever reads the result: a
+        scan is debounced, so right after the edit `typoPaintedSeq === typoSeq`
+        still holds for the paint that came BEFORE it. `typoSeq` is read in the
+        same task as the edit, because a paint landing between a separate read
+        and the edit would pass for the edit's own — the reply to a scan sent
+        earlier describes the old text, and only a later sequence number cannot.
         """
+        sent = page.evaluate(f"(arg) => {{ ({edit})(arg); return typoSeq; }}", arg)
         page.wait_for_function(
-            "(before) => typoPaintedSeq > before && typoPaintedSeq === typoSeq",
-            arg=before,
+            "(sent) => typoPaintedSeq > sent && typoPaintedSeq === typoSeq",
+            arg=sent,
             timeout=15000,
         )
-
-    def _paint_count(self, page):
-        return page.evaluate("() => typoPaintedSeq")
 
     def _painted_words(self, page):
         """What the highlight registry covers. A read, nothing more — whatever
@@ -6934,16 +6926,15 @@ class TestTypoHints:
         self._open_editor_with_hints_on(page, server, lang="uk")
         self._type_into_first_cell(page, "ваші Mати слабшають")
 
-        painted = self._paint_count(page)
-        page.evaluate(
+        self._edit_then_wait_for_repaint(
+            page,
             """() => {
               const el = document.querySelector('.cell.uk .cell-text');
               const b = document.createElement('b');
               b.textContent = el.textContent;
               el.replaceChildren(b);
-            }"""
+            }""",
         )
-        self._wait_for_repaint(page, painted)
         self._hover_the_mixed_word(page)
 
         tip = page.locator("#typo-tip")
