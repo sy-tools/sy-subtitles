@@ -107,7 +107,7 @@ def _bound_names(target):
 
 
 def _unclosed_shutdowns(source):
-    """Lines where a function shuts a server down and never closes it.
+    """Lines where a server is shut down and never closed.
 
     `shutdown()` only stops the serve loop; the listening socket stays open
     until `server_close()`, or until garbage collection gets to it. A server
@@ -132,7 +132,8 @@ def _unclosed_shutdowns(source):
         seen = {"shutdown": {}, "server_close": {}}
         for node in nodes:
             if isinstance(node, ast.Attribute) and node.attr in seen and id(node) not in with_args:
-                seen[node.attr].setdefault(ast.unparse(node.value), node.lineno)
+                receiver = ast.unparse(node.value)
+                seen[node.attr][receiver] = min(node.lineno, seen[node.attr].get(receiver, node.lineno))
         for receiver, line in seen["shutdown"].items():
             if receiver not in managed and receiver not in seen["server_close"]:
                 unclosed.add(line)
@@ -162,6 +163,7 @@ def test_every_server_a_test_shuts_down_is_also_closed():
         "httpd.shutdown()\n",
         "atexit.register(lambda: httpd.shutdown())\n",
         "def f():\n    httpd.server_close()\n\n\nhttpd.shutdown()\n",
+        "async def f():\n    httpd.server_close()\n\n\nhttpd.shutdown()\n",
     ],
 )
 def test_the_close_guard_sees_a_server_left_open(source):
@@ -180,8 +182,16 @@ def test_the_close_guard_names_every_server_left_open(source, lines):
     assert _unclosed_shutdowns(source) == lines
 
 
-def test_the_close_guard_names_the_first_line_that_stops_the_server():
-    assert _unclosed_shutdowns("def f(r):\n    r.addfinalizer(httpd.shutdown)\n    httpd.shutdown()\n") == [2]
+@pytest.mark.parametrize(
+    "source",
+    [
+        "def f(r):\n    r.addfinalizer(httpd.shutdown)\n    httpd.shutdown()\n",
+        "def f():\n    if x:\n        httpd.shutdown()\n    httpd.shutdown()\n",
+    ],
+)
+def test_the_close_guard_names_the_first_line_that_stops_the_server(source):
+    first = next(i for i, line in enumerate(source.splitlines(), 1) if "shutdown" in line)
+    assert _unclosed_shutdowns(source) == [first]
 
 
 @pytest.mark.parametrize(
