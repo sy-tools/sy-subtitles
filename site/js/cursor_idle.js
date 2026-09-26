@@ -19,8 +19,8 @@
 // altogether, since Vimeo's menus (a long subtitle list among them) open
 // upwards over the video. The page is blind to the pointer then, so the
 // shield comes back when the player reports a change — a menu choice, a
-// button — or when FS_VIMEO_MODE_MS pass without one, counted from the last
-// click that opened a menu. Back by an event, the menu has closed and the
+// button — or when FS_VIMEO_MODE_MS pass without one, counted from the click
+// that took focus into the player (the page sees no later click in there). Back by an event, the menu has closed and the
 // page takes focus back. Back by timeout, a menu may still be open under the
 // shield: the page takes focus back (closing it) only once the pointer is
 // off the shield or the cursor hides, and until then the first press on the
@@ -184,7 +184,7 @@ function createCursorIdle(opts) {
       if (onShield()) handOver();
     },
     // Keyboard focus went into the player at `since` and is still there: a
-    // click in the hole or on the bar. One that reported no player event
+    // click on the bar, or a Tab. A click that reported no player event
     // opened a menu, and Vimeo mode runs its full spell from that click.
     focusedIntoPlayer: function(since) {
       if (active && lastEventAt < since) handOver();

@@ -3993,8 +3993,7 @@ var fsCursorIdle = (function() {
         // next click on a menu button is seen again. :hover settles only
         // once the shield has been laid out under the pointer.
         setTimeout(function() {
-          var now = shield.dataset.state;
-          if ((now === 'visible' || now === 'hidden') && !shield.matches(':hover')) reclaimFocus();
+          if (shield.dataset.state === 'visible' && !shield.matches(':hover')) reclaimFocus();
         }, FS_HOVER_SETTLE_MS);
       }
       // Idle over the shield, nobody is using the player: the keys are the

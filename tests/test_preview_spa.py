@@ -5208,6 +5208,16 @@ class TestFullscreenCursorIdle:
         )
         assert page.evaluate("document.activeElement.id") == "focus-probe"
 
+    def test_a_player_click_outside_fullscreen_does_not_hand_over(self, server, page):
+        """Focus going into the player outside fullscreen is no menu over the
+        shield; fullscreen must still start on the shield with the keys."""
+        self._goto_preview(server, page)
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS + 10)
+        self._set_fs(page, True)
+        assert self._state(page) == "visible"
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
     def test_entering_fullscreen_takes_keyboard_focus_back_from_the_player(self, server, page):
         self._goto_preview(server, page)
         self._focus_probe(page)
