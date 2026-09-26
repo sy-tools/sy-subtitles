@@ -16,7 +16,7 @@ from tools.burn_subtitles import (
     FONT_PROBE_MAX_CHARS,
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
-    PT_SERIF_WIN_FACTOR,
+    LINE_ADVANCE,
     SIDE_INSET_RATIO,
     WRAP_SAFETY,
     ass_alpha_byte,
@@ -91,9 +91,9 @@ class TestSizingConstants:
     detect a drifted or typo'd value, so the values are asserted directly.
     """
 
-    def test_win_factor_matches_pt_serif_win_metrics(self):
+    def test_line_advance_matches_pt_serif_win_metrics(self):
         # FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm.
-        assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == PT_SERIF_WIN_FACTOR
+        assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == LINE_ADVANCE
 
     def test_ratio_clamp_bounds(self):
         assert FONT_RATIO_MIN == 0.02
@@ -101,9 +101,9 @@ class TestSizingConstants:
 
 
 class TestFontSizeFor:
-    def test_applies_win_metric_factor(self):
+    def test_applies_the_line_advance(self):
         # ASS FontSize is the font's Win cell height, not CSS pixels.
-        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * PT_SERIF_WIN_FACTOR, 2)
+        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * LINE_ADVANCE, 2)
 
     def test_pins_size_for_1080p(self):
         # 0.0711 * 1080 * 1.325 = 101.74. Independent of the constants, so a
@@ -121,10 +121,10 @@ class TestFontSizeFor:
         assert font_size_for(0.9, 1000) == 159.0  # 0.12 * 1000 * 1.325
 
     def test_clamps_below_minimum(self):
-        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * PT_SERIF_WIN_FACTOR, 2)
+        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * LINE_ADVANCE, 2)
 
     def test_clamps_above_maximum(self):
-        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * PT_SERIF_WIN_FACTOR, 2)
+        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * LINE_ADVANCE, 2)
 
     def test_rejects_non_positive_height(self):
         with pytest.raises(ValueError):
@@ -467,16 +467,16 @@ class TestCssFontPx:
     """The module carries two sizes; conflating them mis-wraps every cue.
 
     CSS px is the real em size on screen and is what Pillow's `truetype(size=)`
-    wants; the ASS FontSize is that value scaled by the Win-metric factor.
+    wants; the ASS FontSize is that value scaled by LINE_ADVANCE.
     """
 
     def test_pins_the_fullscreen_baseline(self):
         # 0.0711 * 1080 = 76.788 — the SPA's measured 76.8px overlay font.
         assert css_font_px(0.0711, 1080) == pytest.approx(76.788)
 
-    def test_font_size_is_css_px_times_the_win_factor(self):
+    def test_font_size_is_css_px_times_the_line_advance(self):
         for ratio, height in ((0.0711, 1080), (0.05, 480), (0.11, 2160)):
-            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * PT_SERIF_WIN_FACTOR, 2)
+            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * LINE_ADVANCE, 2)
 
     def test_shares_the_clamp_with_font_size_for(self):
         assert css_font_px(0.001, 1000) == pytest.approx(FONT_RATIO_MIN * 1000)
@@ -1059,7 +1059,8 @@ class TestMain:
 
     def test_measures_in_css_pixels_not_in_ass_font_size(self, tmp_path, monkeypatch):
         # Pillow's truetype(size=) takes the CSS em size. Handing it the ASS
-        # FontSize would inflate every measurement by ~20% and wrap a word early.
+        # FontSize would inflate every measurement by LINE_ADVANCE (32.5% for
+        # PT Serif) and wrap a word early.
         seen, _, _ = self._invoke(tmp_path, monkeypatch)
         assert seen["font_px"] == pytest.approx(css_font_px(0.0711, 1080))
         assert seen["font_px"] != font_size_for(0.0711, 1080)
@@ -1281,7 +1282,7 @@ class TestVendoredFont:
         assert TTFont(DEFAULT_FONT_FILE)["name"].getDebugName(1) == DEFAULT_FONT_NAME
 
     def test_font_win_metrics_back_the_size_factor(self):
-        # PT_SERIF_WIN_FACTOR is derived from these three numbers; a font swap
+        # LINE_ADVANCE is derived from these three numbers; a font swap
         # that changed them would silently resize every burned subtitle.
         from fontTools.ttLib import TTFont
 
