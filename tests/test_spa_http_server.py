@@ -82,30 +82,43 @@ def test_the_guard_lets_the_shared_server_through():
     assert not BARE_SERVER.search("class SpaHTTPServer(http.server.ThreadingHTTPServer):")
 
 
+def _top_level_functions(tree):
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef):
+            yield from (n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            yield node
+
+
 def _unclosed_shutdowns(source):
     """Lines where a function shuts a server down and never closes it.
 
     `shutdown()` only stops the serve loop; the listening socket stays open
     until `server_close()`, or until garbage collection gets to it. A server
     bound by `with ... as` is closed on the way out, so it needs no call.
+
+    The unit is a top-level function or method with its closures, since a
+    fixture may stop its server from a nested helper or hand `httpd.shutdown`
+    to a finalizer. A `shutdown(...)` with arguments is a socket's or an
+    executor's, not a server's.
     """
     unclosed = set()
-    for fn in ast.walk(ast.parse(source)):
-        if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        managed = {
-            ast.unparse(item.optional_vars)
-            for node in ast.walk(fn)
-            if isinstance(node, ast.With)
-            for item in node.items
-            if item.optional_vars is not None
-        }
-        calls = {"shutdown": {}, "server_close": {}}
-        for node in ast.walk(fn):
-            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in calls:
-                calls[node.func.attr][ast.unparse(node.func.value)] = node.lineno
-        for receiver, line in calls["shutdown"].items():
-            if receiver not in managed and receiver not in calls["server_close"]:
+    for fn in _top_level_functions(ast.parse(source)):
+        nodes = list(ast.walk(fn))
+        managed = set()
+        for node in nodes:
+            if isinstance(node, (ast.With, ast.AsyncWith)):
+                for item in node.items:
+                    target = item.optional_vars
+                    names = target.elts if isinstance(target, ast.Tuple) else [target] if target else []
+                    managed.update(ast.unparse(name) for name in names)
+        with_args = {id(node.func) for node in nodes if isinstance(node, ast.Call) and (node.args or node.keywords)}
+        seen = {"shutdown": {}, "server_close": {}}
+        for node in nodes:
+            if isinstance(node, ast.Attribute) and node.attr in seen and id(node) not in with_args:
+                seen[node.attr].setdefault(ast.unparse(node.value), node.lineno)
+        for receiver, line in seen["shutdown"].items():
+            if receiver not in managed and receiver not in seen["server_close"]:
                 unclosed.add(line)
     return sorted(unclosed)
 
@@ -125,6 +138,8 @@ def test_every_server_a_test_shuts_down_is_also_closed():
         "def f():\n    httpd.shutdown()\n",
         "def f():\n    self.httpd.shutdown()\n",
         "def f():\n    httpd.shutdown()  # stop\n\n    other.server_close()\n",
+        "def f(request):\n    request.addfinalizer(httpd.shutdown)\n",
+        "class T:\n    def stop(self):\n        self.httpd.shutdown()\n",
     ],
 )
 def test_the_close_guard_sees_a_server_left_open(source):
@@ -137,6 +152,11 @@ def test_the_close_guard_sees_a_server_left_open(source):
         "def f():\n    httpd.shutdown()\n    httpd.server_close()\n",
         "def f():\n    self.httpd.shutdown()\n\n    self.httpd.server_close()  # free the port\n",
         "def f():\n    with Server() as httpd:\n        httpd.shutdown()\n",
+        "async def f():\n    async with Server() as (httpd, port):\n        httpd.shutdown()\n",
+        "def f():\n    def stop():\n        httpd.shutdown()\n    stop()\n    httpd.server_close()\n",
+        "def f(request):\n    request.addfinalizer(httpd.shutdown)\n    request.addfinalizer(httpd.server_close)\n",
+        "def f():\n    sock.shutdown(socket.SHUT_WR)\n",
+        "def f():\n    pool.shutdown(wait=True)\n",
     ],
 )
 def test_the_close_guard_accepts_a_closed_server(source):

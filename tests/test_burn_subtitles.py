@@ -101,7 +101,7 @@ class TestSizingConstants:
 
 
 class TestFontSizeFor:
-    def test_applies_win_metric_factor(self):
+    def test_applies_the_line_advance(self):
         # ASS FontSize is the font's Win cell height, not CSS pixels.
         assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * LINE_ADVANCE, 2)
 
@@ -467,7 +467,7 @@ class TestCssFontPx:
     """The module carries two sizes; conflating them mis-wraps every cue.
 
     CSS px is the real em size on screen and is what Pillow's `truetype(size=)`
-    wants; the ASS FontSize is that value scaled by the Win-metric factor.
+    wants; the ASS FontSize is that value scaled by LINE_ADVANCE.
     """
 
     def test_pins_the_fullscreen_baseline(self):

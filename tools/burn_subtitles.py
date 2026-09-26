@@ -97,8 +97,8 @@ def css_font_px(font_ratio, height):
 
     This, not `font_size_for`, is what a text measurer wants: Pillow's
     `ImageFont.truetype(size=...)` takes the em size, so feeding it the ASS
-    FontSize would inflate every width by the Win-metric factor (~20%) and wrap
-    cues a word early. The clamp lives here so both sizes share it.
+    FontSize would inflate every width by LINE_ADVANCE (32.5% for PT Serif) and
+    wrap cues a word early. The clamp lives here so both sizes share it.
     """
     if height <= 0:
         raise ValueError(f"height must be positive, got {height}")
