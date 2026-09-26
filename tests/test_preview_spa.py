@@ -4940,6 +4940,36 @@ class TestEndFreeze:
         pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
         assert pos in (None, "0"), f"freeze must not persist the end position, got {pos}"
 
+    # Vimeo's getDuration() answers with the metadata length, a whole number
+    # of seconds (1591), while the media really ends earlier (1590.741) — told
+    # only by 'durationchange'. A threshold taken from the metadata leaves the
+    # freeze a 41ms window, or none at all, and the end screen wins.
+    MEDIA_END_SEC = 3599.6
+    INSIDE_MEDIA_WINDOW_SEC = 3599.35
+
+    def test_freezes_before_the_media_end_not_the_metadata_end(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
+
+    def test_late_metadata_length_does_not_override_the_media_length(self, server, page):
+        # The media length can land before getDuration() answers; the rounded
+        # metadata arriving second must not move the threshold back.
+        page.add_init_script("window.__mockDurationDelayMs = 600")
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_function("window._vimeoPlayer && window._vimeoPlayer._callbacks.durationchange", timeout=10000)
+        page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
+        page.wait_for_timeout(1000)
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
+
 
 class TestClearAllCount:
     """Preview's Clear-all button must show (N) suffix, matching Revert-all."""

@@ -54,13 +54,25 @@ window.Vimeo = {
       this._callbacks[event].push(callback);
     }
     getCurrentTime() { return Promise.resolve(this._currentTime); }
-    getDuration() { return Promise.resolve(this._duration); }
+    // The metadata length, as Vimeo reports it: a whole number of seconds
+    // that can run past the media's true end (see _setMediaDuration). A test
+    // delays the answer with window.__mockDurationDelayMs.
+    getDuration() {
+      var d = this._duration, ms = window.__mockDurationDelayMs;
+      if (!ms) return Promise.resolve(d);
+      return new Promise(function(resolve) { setTimeout(function() { resolve(d); }, ms); });
+    }
     // Intrinsic size; a test picks another shape via window.__mockVideoSize.
     getVideoWidth() { return Promise.resolve((window.__mockVideoSize || [1280, 720])[0]); }
     getVideoHeight() { return Promise.resolve((window.__mockVideoSize || [1280, 720])[1]); }
     _fire(event, data) {
       var cbs = this._callbacks[event] || [];
       for (var i = 0; i < cbs.length; i++) cbs[i](data);
+    }
+    // Test helper: the media's true length arrives, as Vimeo's 'durationchange'
+    // does once the video loads — getDuration() keeps the rounded metadata.
+    _setMediaDuration(seconds) {
+      this._fire('durationchange', { duration: seconds });
     }
     // Test helper: set time and fire timeupdate
     _setTime(seconds) {

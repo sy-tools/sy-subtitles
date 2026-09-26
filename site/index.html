@@ -3563,6 +3563,17 @@ function showPreview(talkId, videoSlug) {
       player.on('play', function() {
         if (stillOnSameVideo()) previewState._ended = false;
       });
+      // The end-freeze threshold needs where the media really ends. getDuration()
+      // answers with Vimeo's metadata length, whole seconds that can run past it
+      // (1591 for a video that ends at 1590.741), which leaves the freeze a
+      // window too short to hit or none at all. The true length comes only with
+      // 'durationchange', so it wins over the metadata whenever it arrives.
+      player.on('durationchange', function(data) {
+        var d = data && data.duration;
+        if (!isCurrentPlayer() || typeof d !== 'number' || !isFinite(d) || d <= 0) return;
+        previewState._duration = d;
+        previewState._mediaDuration = true;
+      });
       var pollInFlight = false;
       function overlayLoop() {
         if (!isCurrentPlayer()) return;
@@ -3619,7 +3630,8 @@ function showPreview(talkId, videoSlug) {
         // getDuration must degrade to no freeze, never to a dead overlay.
         try {
           player.getDuration().then(function(d) {
-            if (isCurrentPlayer()) previewState._duration = d;
+            // Only a fallback until the media's own length is known.
+            if (isCurrentPlayer() && !previewState._mediaDuration) previewState._duration = d;
           }).catch(function() {});
         } catch (e) {
           console.warn('[SPA] end-freeze getDuration unavailable:', e);
