@@ -32,7 +32,7 @@ import pytest
 
 from tools.burn_subtitles import (
     DEFAULT_FONT_FILE,
-    PT_SERIF_WIN_FACTOR,
+    LINE_ADVANCE,
     SIDE_INSET_RATIO,
     WRAP_SAFETY,
     css_font_px,
@@ -363,7 +363,7 @@ def test_fullscreen_breaks_lines_where_the_burn_does(page, vw, vh, aspect, ar, s
 
 def test_fullscreen_draws_the_burn_font_with_its_line_advance(page):
     """PT Serif, from the very file libass renders with, advancing one ASS
-    FontSize per line — PT_SERIF_WIN_FACTOR em — as libass does (band_geometry).
+    FontSize per line — LINE_ADVANCE em — as libass does (band_geometry).
     Georgia, the old fallback, is ~6% narrower and re-wrapped cues."""
     for tuned, scale in ((False, None), (True, 1.3)):
         page.set_viewport_size({"width": 1280, "height": 720})
@@ -387,4 +387,4 @@ def test_fullscreen_draws_the_burn_font_with_its_line_advance(page):
         )
         assert got["family"].strip("'\" ").startswith(SUBTITLE_FAMILY), got
         assert got["loaded"], "the subtitle face did not load"
-        assert got["ratio"] == pytest.approx(PT_SERIF_WIN_FACTOR, abs=0.002), (tuned, got)
+        assert got["ratio"] == pytest.approx(LINE_ADVANCE, abs=0.002), (tuned, got)

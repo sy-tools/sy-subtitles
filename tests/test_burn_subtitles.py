@@ -16,7 +16,7 @@ from tools.burn_subtitles import (
     FONT_PROBE_MAX_CHARS,
     FONT_RATIO_MAX,
     FONT_RATIO_MIN,
-    PT_SERIF_WIN_FACTOR,
+    LINE_ADVANCE,
     SIDE_INSET_RATIO,
     WRAP_SAFETY,
     ass_alpha_byte,
@@ -93,7 +93,7 @@ class TestSizingConstants:
 
     def test_win_factor_matches_pt_serif_win_metrics(self):
         # FontSize = css_px * (usWinAscent + usWinDescent) / unitsPerEm.
-        assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == PT_SERIF_WIN_FACTOR
+        assert pytest.approx((1039 + 286) / 1000, abs=1e-4) == LINE_ADVANCE
 
     def test_ratio_clamp_bounds(self):
         assert FONT_RATIO_MIN == 0.02
@@ -103,7 +103,7 @@ class TestSizingConstants:
 class TestFontSizeFor:
     def test_applies_win_metric_factor(self):
         # ASS FontSize is the font's Win cell height, not CSS pixels.
-        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * PT_SERIF_WIN_FACTOR, 2)
+        assert font_size_for(0.0711, 1080) == round(0.0711 * 1080 * LINE_ADVANCE, 2)
 
     def test_pins_size_for_1080p(self):
         # 0.0711 * 1080 * 1.325 = 101.74. Independent of the constants, so a
@@ -121,10 +121,10 @@ class TestFontSizeFor:
         assert font_size_for(0.9, 1000) == 159.0  # 0.12 * 1000 * 1.325
 
     def test_clamps_below_minimum(self):
-        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * PT_SERIF_WIN_FACTOR, 2)
+        assert font_size_for(0.001, 1000) == round(FONT_RATIO_MIN * 1000 * LINE_ADVANCE, 2)
 
     def test_clamps_above_maximum(self):
-        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * PT_SERIF_WIN_FACTOR, 2)
+        assert font_size_for(0.9, 1000) == round(FONT_RATIO_MAX * 1000 * LINE_ADVANCE, 2)
 
     def test_rejects_non_positive_height(self):
         with pytest.raises(ValueError):
@@ -476,7 +476,7 @@ class TestCssFontPx:
 
     def test_font_size_is_css_px_times_the_win_factor(self):
         for ratio, height in ((0.0711, 1080), (0.05, 480), (0.11, 2160)):
-            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * PT_SERIF_WIN_FACTOR, 2)
+            assert font_size_for(ratio, height) == round(css_font_px(ratio, height) * LINE_ADVANCE, 2)
 
     def test_shares_the_clamp_with_font_size_for(self):
         assert css_font_px(0.001, 1000) == pytest.approx(FONT_RATIO_MIN * 1000)
@@ -1281,7 +1281,7 @@ class TestVendoredFont:
         assert TTFont(DEFAULT_FONT_FILE)["name"].getDebugName(1) == DEFAULT_FONT_NAME
 
     def test_font_win_metrics_back_the_size_factor(self):
-        # PT_SERIF_WIN_FACTOR is derived from these three numbers; a font swap
+        # LINE_ADVANCE is derived from these three numbers; a font swap
         # that changed them would silently resize every burned subtitle.
         from fontTools.ttLib import TTFont
 
