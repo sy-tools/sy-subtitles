@@ -4888,8 +4888,9 @@ class TestUkrainianPlurals:
 
 
 class TestEndFreeze:
-    """Fullscreen end-freeze: the player pauses just before the video ends so
-    the Vimeo 'more from this user' end screen never fires (js/end_freeze.js).
+    """End-freeze, embedded and fullscreen alike: the player pauses just before
+    the video ends so the Vimeo 'more from this user' end screen never fires
+    (js/end_freeze.js).
     The mock player reports a 3600s duration; 3599.8 is inside the 0.3s
     epsilon window before the end."""
 
@@ -4912,12 +4913,13 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
 
-    def test_no_freeze_outside_fullscreen(self, server, page):
+    def test_freezes_on_last_frame_embedded(self, server, page):
+        # The end screen shows in the embedded player too: no mode is exempt.
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer.play()")
         page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
         page.wait_for_timeout(300)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert page.evaluate("window._vimeoPlayer._paused") is True
 
     def test_frozen_latch_lets_viewer_play_the_tail(self, server, page):
         self._goto_preview(server, page)
@@ -4932,6 +4934,20 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is False
 
+    def test_rewind_after_freeze_saves_the_resume_position_again(self, server, page):
+        # A paused seek into the last 0.3s freezes (and resets the saved
+        # position, as the end does). Rewinding below the threshold leaves the
+        # end, so the position the reviewer went back to must persist again.
+        self._goto_preview(server, page)
+        page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("previewState._frozen") is True
+        page.evaluate("window._vimeoPlayer._setTime(1500)")
+        page.wait_for_timeout(300)
+        page.evaluate("flushPreviewPos()")
+        pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
+        assert pos == "1500", f"the position rewound to must be saved, got {pos}"
+
     def test_freeze_clears_saved_resume_position(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -4940,6 +4956,38 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
         assert pos in (None, "0"), f"freeze must not persist the end position, got {pos}"
+
+    # Vimeo's getDuration() asked at ready answers with the metadata length, a
+    # whole number of seconds (1591), while the media really ends earlier
+    # (1590.741) — told by 'durationchange' once playback loads the media. A
+    # threshold taken from the metadata leaves the
+    # freeze a 41ms window, or none at all, and the end screen wins.
+    MEDIA_END_SEC = 3599.6
+    INSIDE_MEDIA_WINDOW_SEC = 3599.35
+
+    def test_freezes_before_the_media_end_not_the_metadata_end(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
+
+    def test_late_metadata_length_does_not_override_the_media_length(self, server, page):
+        # The media length can land before getDuration() answers; the rounded
+        # metadata arriving second must not move the threshold back.
+        page.add_init_script("window.__mockDurationDelayMs = 600")
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_function("window._vimeoPlayer && window._vimeoPlayer._callbacks.durationchange", timeout=10000)
+        page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
+        assert page.evaluate("!window.__mockDurationAnswered"), "the metadata must land second"
+        page.wait_for_function("window.__mockDurationAnswered === true", timeout=10000)
+        self._enter_fs(page)
+        page.evaluate("window._vimeoPlayer.play()")
+        page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
+        page.wait_for_timeout(300)
+        assert page.evaluate("window._vimeoPlayer._paused") is True
 
 
 class TestClearAllCount:

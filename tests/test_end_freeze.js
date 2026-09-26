@@ -1,4 +1,4 @@
-// End-freeze decision logic: pause the fullscreen preview player just before
+// End-freeze decision logic: pause the preview player, in any mode, just before
 // the video ends so the Vimeo "more from this user" end screen never appears.
 // Single source: site/js/end_freeze.js (loaded by the SPA, require'd here).
 const { test } = require('node:test');
@@ -11,10 +11,10 @@ const { endFreezeAction, END_FREEZE_EPSILON_SEC } = require('../site/js/end_free
 const DUR = 3600; // seconds, a typical talk
 
 function state(over) {
-  return Object.assign({ fsMode: true, sec: 0, duration: DUR, frozen: false }, over);
+  return Object.assign({ sec: 0, duration: DUR, frozen: false }, over);
 }
 
-test('freezes in fullscreen once inside the epsilon window before the end', () => {
+test('freezes once inside the epsilon window before the end', () => {
   assert.strictEqual(endFreezeAction(state({ sec: DUR - 0.1 })), 'freeze');
 });
 
@@ -26,8 +26,9 @@ test('does nothing before the threshold', () => {
   assert.strictEqual(endFreezeAction(state({ sec: DUR - END_FREEZE_EPSILON_SEC - 0.01 })), null);
 });
 
-test('never freezes outside fullscreen mode', () => {
-  assert.strictEqual(endFreezeAction(state({ sec: DUR - 0.1, fsMode: false })), null);
+test('freezes in every view mode — the state carries no mode at all', () => {
+  // The end screen shows in the embedded player as much as in fullscreen.
+  assert.strictEqual(endFreezeAction({ sec: DUR - 0.1, duration: DUR, frozen: false }), 'freeze');
 });
 
 test('does not re-pause while frozen (viewer may play through the tail)', () => {
@@ -36,10 +37,6 @@ test('does not re-pause while frozen (viewer may play through the tail)', () => 
 
 test('unfreezes when the viewer rewinds below the threshold', () => {
   assert.strictEqual(endFreezeAction(state({ sec: DUR / 2, frozen: true })), 'unfreeze');
-});
-
-test('unfreezes on rewind even after leaving fullscreen', () => {
-  assert.strictEqual(endFreezeAction(state({ sec: DUR / 2, frozen: true, fsMode: false })), 'unfreeze');
 });
 
 test('no unfreeze churn when not frozen below the threshold', () => {
