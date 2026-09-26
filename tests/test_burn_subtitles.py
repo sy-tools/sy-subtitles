@@ -1059,7 +1059,8 @@ class TestMain:
 
     def test_measures_in_css_pixels_not_in_ass_font_size(self, tmp_path, monkeypatch):
         # Pillow's truetype(size=) takes the CSS em size. Handing it the ASS
-        # FontSize would inflate every measurement by ~20% and wrap a word early.
+        # FontSize would inflate every measurement by LINE_ADVANCE (32.5% for
+        # PT Serif) and wrap a word early.
         seen, _, _ = self._invoke(tmp_path, monkeypatch)
         assert seen["font_px"] == pytest.approx(css_font_px(0.0711, 1080))
         assert seen["font_px"] != font_size_for(0.0711, 1080)

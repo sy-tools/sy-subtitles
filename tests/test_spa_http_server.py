@@ -82,12 +82,22 @@ def test_the_guard_lets_the_shared_server_through():
     assert not BARE_SERVER.search("class SpaHTTPServer(http.server.ThreadingHTTPServer):")
 
 
-def _top_level_functions(tree):
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef):
-            yield from (n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)))
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            yield node
+def _outermost_functions(node):
+    for child in ast.iter_child_nodes(node):
+        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            yield child
+        else:
+            yield from _outermost_functions(child)
+
+
+def _bound_names(target):
+    if isinstance(target, (ast.Tuple, ast.List)):
+        for element in target.elts:
+            yield from _bound_names(element)
+    elif isinstance(target, ast.Starred):
+        yield from _bound_names(target.value)
+    elif target is not None:
+        yield ast.unparse(target)
 
 
 def _unclosed_shutdowns(source):
@@ -97,21 +107,21 @@ def _unclosed_shutdowns(source):
     until `server_close()`, or until garbage collection gets to it. A server
     bound by `with ... as` is closed on the way out, so it needs no call.
 
-    The unit is a top-level function or method with its closures, since a
+    The unit is an outermost function or method with its closures, since a
     fixture may stop its server from a nested helper or hand `httpd.shutdown`
-    to a finalizer. A `shutdown(...)` with arguments is a socket's or an
-    executor's, not a server's.
+    to a finalizer. A `shutdown(...)` with arguments — a socket's half-close,
+    an executor's `wait=` — is not a server's.
     """
     unclosed = set()
-    for fn in _top_level_functions(ast.parse(source)):
+    for fn in _outermost_functions(ast.parse(source)):
         nodes = list(ast.walk(fn))
-        managed = set()
-        for node in nodes:
-            if isinstance(node, (ast.With, ast.AsyncWith)):
-                for item in node.items:
-                    target = item.optional_vars
-                    names = target.elts if isinstance(target, ast.Tuple) else [target] if target else []
-                    managed.update(ast.unparse(name) for name in names)
+        managed = {
+            name
+            for node in nodes
+            if isinstance(node, (ast.With, ast.AsyncWith))
+            for item in node.items
+            for name in _bound_names(item.optional_vars)
+        }
         with_args = {id(node.func) for node in nodes if isinstance(node, ast.Call) and (node.args or node.keywords)}
         seen = {"shutdown": {}, "server_close": {}}
         for node in nodes:
@@ -140,10 +150,17 @@ def test_every_server_a_test_shuts_down_is_also_closed():
         "def f():\n    httpd.shutdown()  # stop\n\n    other.server_close()\n",
         "def f(request):\n    request.addfinalizer(httpd.shutdown)\n",
         "class T:\n    def stop(self):\n        self.httpd.shutdown()\n",
+        "class TestA:\n    class TestB:\n        def stop(self):\n            self.httpd.shutdown()\n",
+        "if True:\n    def f():\n        httpd.shutdown()\n",
+        "try:\n    import x\nexcept ImportError:\n    pass\nelse:\n    def f():\n        httpd.shutdown()\n",
     ],
 )
 def test_the_close_guard_sees_a_server_left_open(source):
     assert _unclosed_shutdowns(source)
+
+
+def test_the_close_guard_names_the_first_line_that_stops_the_server():
+    assert _unclosed_shutdowns("def f(r):\n    r.addfinalizer(httpd.shutdown)\n    httpd.shutdown()\n") == [2]
 
 
 @pytest.mark.parametrize(
@@ -153,6 +170,8 @@ def test_the_close_guard_sees_a_server_left_open(source):
         "def f():\n    self.httpd.shutdown()\n\n    self.httpd.server_close()  # free the port\n",
         "def f():\n    with Server() as httpd:\n        httpd.shutdown()\n",
         "async def f():\n    async with Server() as (httpd, port):\n        httpd.shutdown()\n",
+        "def f():\n    with Server() as [httpd, port]:\n        httpd.shutdown()\n",
+        "def f():\n    with Server() as ((httpd, port), *rest):\n        httpd.shutdown()\n",
         "def f():\n    def stop():\n        httpd.shutdown()\n    stop()\n    httpd.server_close()\n",
         "def f(request):\n    request.addfinalizer(httpd.shutdown)\n    request.addfinalizer(httpd.server_close)\n",
         "def f():\n    sock.shutdown(socket.SHUT_WR)\n",
