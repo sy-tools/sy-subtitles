@@ -5084,6 +5084,35 @@ class TestFullscreenCursorIdle:
         assert page.evaluate("window._vimeoPlayer._paused") is False
         assert self._shield_down(page)
 
+    def _hidden_on_4_3_video(self, server, page, width, height):
+        page.add_init_script("window.__mockVideoSize = [640, 480];")
+        page.set_viewport_size({"width": width, "height": height})
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
+            timeout=2000,
+        )
+        page.evaluate("window._vimeoPlayer.play()")
+        page.mouse.move(width // 2, height // 2)
+        self._set_fs(page, True)
+        self._hide(page)
+
+    def test_click_on_the_pillarbox_bars_only_reveals(self, server, page):
+        self._hidden_on_4_3_video(server, page, 1280, 720)
+        page.mouse.click(60, 360)
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
+    def test_control_strip_follows_the_letterboxed_video_not_the_screen(self, server, page):
+        """A 4:3 video on an 800x900 screen ends at y=750; Vimeo's bar hangs
+        off that edge, 150 px above the screen's bottom."""
+        self._hidden_on_4_3_video(server, page, 800, 900)
+        page.mouse.click(400, 720)
+        page.clock.run_for(50)
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert self._shield_down(page)
+
     def test_shield_takes_keyboard_focus_back_from_the_player(self, server, page):
         """A click on the bare player leaves focus inside its iframe, where the
         page's shortcuts and key tracking go blind."""

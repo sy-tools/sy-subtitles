@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  createCursorIdle, isVideoPress,
+  createCursorIdle, isVideoPress, videoBox,
   FS_CURSOR_IDLE_MS, FS_CURSOR_PROBE_MS, FS_DOUBLE_PRESS_MS, FS_KEY_ECHO_MS,
   FS_MOVE_SLOP_PX, FS_CONTROL_STRIP_PX,
 } = require('../site/js/cursor_idle.js');
@@ -373,14 +373,16 @@ test('exit without enter is a no-op', () => {
   assert.strictEqual(clock.pending(), 0);
 });
 
+const BOX = { left: 100, right: 1300, top: 0, bottom: 900 };
+
 function press(over) {
   return Object.assign({
     onShield: true, pointerType: 'mouse', button: 0, ctrlKey: false,
-    y: 300, bottom: 900,
+    x: 700, y: 300, box: BOX,
   }, over);
 }
 
-test('a primary mouse press on the shield above the control strip is a video press', () => {
+test('a primary mouse press on the video above the control strip is a video press', () => {
   assert.strictEqual(isVideoPress(press()), true);
   assert.strictEqual(isVideoPress(press({ y: 900 - FS_CONTROL_STRIP_PX - 1 })), true);
 });
@@ -390,6 +392,27 @@ test('a press in the control strip is not a video press', () => {
   // the shield happens to cover than at the video.
   assert.strictEqual(isVideoPress(press({ y: 900 - FS_CONTROL_STRIP_PX })), false);
   assert.strictEqual(isVideoPress(press({ y: 899 })), false);
+});
+
+test('a press on the letterbox or pillarbox bars is not a video press', () => {
+  // On the bare player the bars do nothing.
+  assert.strictEqual(isVideoPress(press({ x: 99 })), false);
+  assert.strictEqual(isVideoPress(press({ x: 1300 })), false);
+  assert.strictEqual(isVideoPress(press({ y: 900 })), false);
+  assert.strictEqual(isVideoPress(press({ y: -1 })), false);
+});
+
+test('the video box is the largest box of its aspect centred in the player', () => {
+  const pillar = { left: 0, top: 0, width: 1280, height: 720 };
+  assert.deepStrictEqual(videoBox(pillar, '640 / 480'), { left: 160, right: 1120, top: 0, bottom: 720 });
+  const letter = { left: 0, top: 0, width: 1024, height: 1000 };
+  assert.deepStrictEqual(videoBox(letter, '640 / 480'), { left: 0, right: 1024, top: 116, bottom: 884 });
+});
+
+test('an unknown aspect falls back to 16:9, as the fullscreen CSS does', () => {
+  const r = { left: 0, top: 0, width: 1600, height: 1600 };
+  assert.deepStrictEqual(videoBox(r, ''), { left: 0, right: 1600, top: 350, bottom: 1250 });
+  assert.deepStrictEqual(videoBox(r, 'garbage'), videoBox(r, ''));
 });
 
 test('touch, pen, secondary buttons, ctrl-click and presses off the shield are not video presses', () => {

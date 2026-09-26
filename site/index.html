@@ -3972,7 +3972,8 @@ var fsCursorIdle = (function() {
       shield.dataset.state = state;
       // A click on the bare player leaves keyboard focus inside the iframe,
       // where the page no longer sees keys: a keyboard seek would then pass
-      // for the mouse, and the SPA's own shortcuts would stop working.
+      // for the mouse, and the SPA's own shortcuts would stop working. The
+      // price: Vimeo's own Up/Down volume keys stop at the next probe.
       var focused = document.activeElement;
       if (state === 'probe' && focused && focused.tagName === 'IFRAME' && view.contains(focused)) focused.blur();
     },
@@ -4004,9 +4005,10 @@ var fsCursorIdle = (function() {
   follow();
   document.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
   document.addEventListener('pointerdown', function(e) {
-    var videoPress = isVideoPress({
-      onShield: e.target === shield, pointerType: e.pointerType, button: e.button,
-      ctrlKey: e.ctrlKey, y: e.clientY, bottom: shield.getBoundingClientRect().bottom,
+    var videoPress = e.target === shield && isVideoPress({
+      onShield: true, pointerType: e.pointerType, button: e.button, ctrlKey: e.ctrlKey,
+      x: e.clientX, y: e.clientY,
+      box: videoBox(shield.getBoundingClientRect(), view.style.getPropertyValue('--preview-aspect')),
     });
     if (videoPress) idle.videoPress(); else idle.wake();
   });

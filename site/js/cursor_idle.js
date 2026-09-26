@@ -27,15 +27,33 @@ var FS_KEY_ECHO_MS = 1000;
 // Pointer travel that is still no move: the jitter of a hand on a mouse or a
 // trackpad tap, the same slop a double click is allowed.
 var FS_MOVE_SLOP_PX = 4;
-// Height of Vimeo's control bar along the bottom of the player.
+// Height of Vimeo's control bar along the bottom of the video.
 var FS_CONTROL_STRIP_PX = 64;
 
-// press: {onShield, pointerType, button, ctrlKey, y, bottom} — y and the
-// shield's bottom edge in the same (client) coordinates. A touch or pen press,
-// a secondary button and a macOS ctrl-click are no click on the video either.
+// Where the player draws the video inside `rect` (the shield's client rect):
+// the largest box of the video's aspect, centred — the same box the fullscreen
+// CSS derives from --preview-aspect ("W / H"), with the same 16:9 fallback.
+// Vimeo letterboxes or pillarboxes the rest and hangs its control bar off the
+// video's bottom edge, not the screen's.
+function videoBox(rect, aspect) {
+  var m = /^\s*([\d.]+)\s*\/\s*([\d.]+)\s*$/.exec(aspect || '');
+  var a = m && +m[1] > 0 && +m[2] > 0 ? m[1] / m[2] : 16 / 9;
+  var w = Math.min(rect.width, rect.height * a);
+  var h = Math.min(rect.height, rect.width / a);
+  var left = rect.left + (rect.width - w) / 2;
+  var top = rect.top + (rect.height - h) / 2;
+  return { left: left, right: left + w, top: top, bottom: top + h };
+}
+
+// press: {onShield, pointerType, button, ctrlKey, x, y, box} — the point and
+// the videoBox() in the same (client) coordinates. A touch or pen press, a
+// secondary button, a macOS ctrl-click and a press on the bars around the
+// video (inert on the bare player) are no click on the video.
 function isVideoPress(press) {
+  var b = press.box;
   return press.onShield && press.pointerType === 'mouse' && press.button === 0
-    && !press.ctrlKey && press.y < press.bottom - FS_CONTROL_STRIP_PX;
+    && !press.ctrlKey && press.x >= b.left && press.x < b.right
+    && press.y >= b.top && press.y < b.bottom - FS_CONTROL_STRIP_PX;
 }
 
 // opts: {delayMs, probeMs, doublePressMs, keyEchoMs, now, setTimer, clearTimer,
@@ -153,5 +171,6 @@ if (typeof module !== 'undefined' && module.exports) {
     FS_CONTROL_STRIP_PX: FS_CONTROL_STRIP_PX,
     createCursorIdle: createCursorIdle,
     isVideoPress: isVideoPress,
+    videoBox: videoBox,
   };
 }
