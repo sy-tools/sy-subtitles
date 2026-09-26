@@ -3579,7 +3579,7 @@ function showPreview(talkId, videoSlug) {
         previewState._durationFromEvent = true;
       });
       // While Vimeo has the pointer the page is blind to it; a change the
-      // player reports is the sign that a menu choice was made and closed.
+      // player reports is the sign that a button or a menu choice was used.
       // Not a volume change: the volume slider stays open while it is dragged.
       ['play', 'pause', 'seeked', 'texttrackchange', 'qualitychange',
         'playbackratechange'].forEach(function(ev) {
@@ -3982,7 +3982,14 @@ var fsCursorIdle = (function() {
     now: function() { return Date.now(); },
     setTimer: function(fn, ms) { return setTimeout(fn, ms); },
     clearTimer: function(id) { clearTimeout(id); },
-    onChange: function(state) { shield.dataset.state = state; },
+    onChange: function(state) {
+      var wasVimeo = shield.dataset.state === 'vimeo';
+      shield.dataset.state = state;
+      if (wasVimeo && state === 'visible' && !idle.menuMayBeOpen()) reclaimFocus();
+      // Idle over the shield, nobody is using the player: the keys are the
+      // page's again. Not while the pointer rests on Vimeo's bar.
+      if (state === 'hidden' && shield.matches(':hover')) reclaimFocus();
+    },
     onVideoClick: function() {
       var player = previewState.player;
       if (!player) return;
@@ -3993,9 +4000,9 @@ var fsCursorIdle = (function() {
     // Restore what the first click changed from, rather than toggle again: the
     // player answers getPaused() over postMessage, and a quick second press
     // can read the state from before the first toggle landed.
-    onVideoDoubleClick: function() {
+    onVideoDoubleClick: function(toggled) {
       var player = clickPlayer;
-      if (player && player === previewState.player && beforeClick) {
+      if (toggled && player && player === previewState.player && beforeClick) {
         beforeClick.then(function(paused) { if (paused) player.pause(); else player.play(); });
       }
       SPA.toggleFullscreen();
@@ -4019,24 +4026,25 @@ var fsCursorIdle = (function() {
   shield.addEventListener('pointerleave', function(e) {
     if (e.relatedTarget && mount.contains(e.relatedTarget)) idle.leaveToPlayer();
   });
-  shield.addEventListener('pointerover', function(e) {
-    if (!e.relatedTarget || !mount.contains(e.relatedTarget)) return;
-    var barPx = parseFloat(getComputedStyle(shield).getPropertyValue('--fs-vimeo-bar-h')) || 0;
-    if (isHoleCrossing({ x: e.clientX, y: e.clientY, box: box(), barPx: barPx })) idle.leaveToPlayer();
+  // A click in the hole takes focus into the player: that is how Vimeo's
+  // menus open. Focus leaving the window for another app does not count.
+  window.addEventListener('blur', function() {
+    var since = Date.now();
+    setTimeout(function() { if (playerHasFocus()) idle.focusedIntoPlayer(since); }, FS_FOCUS_SETTLE_MS);
   });
   document.addEventListener('pointerdown', function(e) {
-    // The first press on the shield after using the player hands focus back
-    // to the page, and like a click beside an open menu, does nothing else.
-    if (e.target === shield && playerHasFocus()) {
-      reclaimFocus();
-      idle.wake();
-      return;
-    }
-    var videoPress = e.target === shield && isVideoPress({
+    if (e.target !== shield) { idle.wake(); return; }
+    var videoPress = isVideoPress({
       onShield: true, pointerType: e.pointerType, button: e.button, ctrlKey: e.ctrlKey,
       x: e.clientX, y: e.clientY, box: box(),
     });
-    if (videoPress) idle.videoPress(); else idle.wake();
+    var menuMaybe = playerHasFocus() && idle.menuMayBeOpen();
+    reclaimFocus();
+    // Taking focus from the player closes its menus. With one maybe open under
+    // the shield, that is all the press does, like a click beside a menu.
+    if (videoPress && menuMaybe) idle.focusPress();
+    else if (videoPress) idle.videoPress();
+    else idle.wake();
   });
   return idle;
 })();

@@ -8,8 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 const {
-  createCursorIdle, isVideoPress, isHoleCrossing, videoBox,
-  FS_CURSOR_IDLE_MS, FS_VIMEO_MODE_MS, FS_DOUBLE_PRESS_MS, FS_MOVE_SLOP_PX,
+  createCursorIdle, isVideoPress, videoBox,
+  FS_CURSOR_IDLE_MS, FS_VIMEO_MODE_MS, FS_DOUBLE_PRESS_MS, FS_MOVE_SLOP_PX, FS_FOCUS_SETTLE_MS,
 } = require('../site/js/cursor_idle.js');
 
 const IDLE = 3000;
@@ -52,7 +52,7 @@ function setup() {
     clearTimer: clock.clearTimer,
     onChange: (state) => changes.push(state),
     onVideoClick: () => presses.push('click'),
-    onVideoDoubleClick: () => presses.push('double'),
+    onVideoDoubleClick: (toggled) => presses.push(toggled ? 'double' : 'double-untoggled'),
   });
   return { clock, changes, presses, idle };
 }
@@ -64,6 +64,7 @@ test('the cursor hides after three seconds, as in Vimeo\'s own fullscreen', () =
   assert.strictEqual(FS_VIMEO_MODE_MS, 10000);
   assert.ok(FS_DOUBLE_PRESS_MS > 0);
   assert.ok(FS_MOVE_SLOP_PX > 0);
+  assert.ok(FS_FOCUS_SETTLE_MS > 0);
 });
 
 test('hides the cursor once the delay passes after entering fullscreen', () => {
@@ -82,7 +83,9 @@ test('does nothing outside fullscreen', () => {
   idle.wake();
   idle.videoPress();
   idle.leaveToPlayer();
+  idle.focusPress();
   idle.playerEvent();
+  idle.focusedIntoPlayer(0);
   clock.advance(60000);
   assert.deepStrictEqual(changes, []);
   assert.deepStrictEqual(presses, []);
@@ -165,6 +168,30 @@ test('any player event ends Vimeo mode: the choice closed the menu', () => {
   assert.deepStrictEqual(changes, ['vimeo', 'visible', 'hidden']);
 });
 
+test('focus going into the player with no player event since hands the pointer to Vimeo', () => {
+  // A click on a menu button: the menu opens with no event.
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  clock.advance(1000);
+  const since = clock.now();
+  clock.advance(300);
+  idle.focusedIntoPlayer(since);
+  assert.deepStrictEqual(changes, ['vimeo']);
+});
+
+test('focus going into the player along with a player event keeps the shield', () => {
+  // A click on play or on the seek bar reports itself; its focus may reach
+  // the page after the event.
+  const { clock, changes, idle } = setup();
+  idle.enter();
+  const since = clock.now();
+  clock.advance(100);
+  idle.playerEvent();
+  clock.advance(200);
+  idle.focusedIntoPlayer(since);
+  assert.deepStrictEqual(changes, []);
+});
+
 test('player events do not reveal a hidden cursor or restart the countdown', () => {
   // Space and the arrow keys drive the player too; only the mouse counts.
   const { clock, changes, idle } = setup();
@@ -194,6 +221,43 @@ test('a second press within the double-press window is a double click, not anoth
   clock.advance(DOUBLE - 1);
   idle.videoPress();
   assert.deepStrictEqual(presses, ['click', 'double']);
+});
+
+test('a menu may be open under the shield only after it came back by timeout', () => {
+  const { clock, idle } = setup();
+  idle.enter();
+  assert.strictEqual(idle.menuMayBeOpen(), false);
+  idle.leaveToPlayer();
+  idle.playerEvent();
+  assert.strictEqual(idle.menuMayBeOpen(), false);
+  idle.leaveToPlayer();
+  clock.advance(VIMEO);
+  assert.strictEqual(idle.menuMayBeOpen(), true);
+});
+
+test('a press closes the menu that may be open, and the next press is an ordinary click', () => {
+  const { clock, changes, presses, idle } = setup();
+  idle.enter();
+  idle.leaveToPlayer();
+  clock.advance(VIMEO);
+  idle.focusPress();
+  assert.strictEqual(idle.menuMayBeOpen(), false);
+  assert.deepStrictEqual(presses, []);
+  clock.advance(DOUBLE);
+  idle.videoPress();
+  assert.deepStrictEqual(presses, ['click']);
+  assert.deepStrictEqual(changes, ['vimeo', 'visible']);
+});
+
+test('a press that only closed a menu still opens a double click, with nothing toggled', () => {
+  const { clock, presses, idle } = setup();
+  idle.enter();
+  idle.leaveToPlayer();
+  clock.advance(VIMEO);
+  idle.focusPress();
+  clock.advance(DOUBLE - 1);
+  idle.videoPress();
+  assert.deepStrictEqual(presses, ['double-untoggled']);
 });
 
 test('presses further apart are two single clicks', () => {
@@ -301,27 +365,6 @@ test('touch, pen, secondary buttons, ctrl-click and presses off the shield are n
   assert.strictEqual(isVideoPress(press({ pointerType: 'pen' })), false);
   assert.strictEqual(isVideoPress(press({ button: 2 })), false);
   assert.strictEqual(isVideoPress(press({ ctrlKey: true })), false);
-});
-
-// The hole is the bottom 64 px of the video box.
-function crossing(over) {
-  return Object.assign({ x: 700, y: 820, box: BOX, barPx: 64 }, over);
-}
-
-test('arriving on the shield just above the hole is a crossing out of it', () => {
-  // Vimeo's menus open upwards from the bar: a pointer coming up out of the
-  // hole is heading for one.
-  assert.strictEqual(isHoleCrossing(crossing()), true);
-  assert.strictEqual(isHoleCrossing(crossing({ y: 900 - 64 - 64 })), true);
-  assert.strictEqual(isHoleCrossing(crossing({ y: 899 })), true);
-});
-
-test('arriving on the shield far above the hole, or beside it, is no crossing', () => {
-  // The shield came back under a pointer that rested over the video.
-  assert.strictEqual(isHoleCrossing(crossing({ y: 900 - 64 - 65 })), false);
-  assert.strictEqual(isHoleCrossing(crossing({ y: 300 })), false);
-  assert.strictEqual(isHoleCrossing(crossing({ x: 99 })), false);
-  assert.strictEqual(isHoleCrossing(crossing({ x: 1300 })), false);
 });
 
 test('the video box is the largest box of its aspect centred in the player', () => {

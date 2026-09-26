@@ -4897,6 +4897,7 @@ class TestFullscreenCursorIdle:
 
     IDLE_MS = 3000
     VIMEO_MS = 10000
+    FOCUS_SETTLE_MS = 300
 
     def _goto_preview(self, server, page):
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
@@ -5039,17 +5040,50 @@ class TestFullscreenCursorIdle:
         page.evaluate("window._vimeoPlayer._fire('volumechange', {})")
         assert self._state(page) == "vimeo"
 
-    def test_coming_up_out_of_the_hole_hands_the_pointer_to_vimeo(self, server, page):
-        """A menu opened from the bar after the shield came back sits above
-        the hole, under the shield: the pointer heading up to it must reach it."""
+    def test_focus_going_into_the_player_hands_the_pointer_to_vimeo(self, server, page):
+        """A click on the bar's menu button after the shield came back takes
+        focus into the player; the menu then opens above the hole, under the
+        shield, so the shield must step aside."""
         self._goto_preview(server, page)
         self._set_fs(page, True)
         self._into_the_hole(page)
         page.evaluate("window._vimeoPlayer._fire('play', {})")
         assert self._state(page) == "visible"
+        self._focus_probe(page)
+        page.clock.run_for(self.FOCUS_SETTLE_MS - 50)
+        assert self._state(page) == "visible"
+        page.clock.run_for(100)
+        assert self._state(page) == "vimeo"
+
+    def test_focus_going_into_the_player_with_a_button_keeps_the_shield(self, server, page):
+        """A click on play reports itself; its focus may reach the page later."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._focus_probe(page)
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        page.clock.run_for(self.FOCUS_SETTLE_MS + 50)
+        assert self._state(page) == "visible"
+
+    def test_focus_leaving_for_another_app_keeps_the_shield(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        page.evaluate("window.dispatchEvent(new Event('blur'))")
+        page.clock.run_for(50)
+        assert self._state(page) == "visible"
+
+    def test_shield_back_under_a_pointer_resting_above_the_bar_keeps_it(self, server, page):
+        """Right above the bar sit the subtitles and a menu's lowest items; the
+        browser reports the shield appearing under a still pointer as an
+        arrival from the player, which must not hand it straight back."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
         w, h = self._size(page)
         page.mouse.move(w // 2, h - 100)
-        assert self._state(page) == "vimeo"
+        page.clock.run_for(self.VIMEO_MS + 10)
+        page.mouse.move(w // 2 + 10, h - 100)
+        assert self._state(page) == "visible"
+        self._hide(page)
 
     def test_shield_back_under_a_pointer_resting_on_the_video_keeps_it(self, server, page):
         self._goto_preview(server, page)
@@ -5160,28 +5194,89 @@ class TestFullscreenCursorIdle:
         self._set_fs(page, True)
         assert page.evaluate("document.activeElement.id") != "focus-probe"
 
-    def test_shield_coming_back_leaves_focus_in_the_player(self, server, page):
+    def test_shield_back_by_timeout_leaves_focus_in_the_player(self, server, page):
         """Taking focus from the iframe would close a Vimeo menu still open."""
         self._goto_preview(server, page)
         self._set_fs(page, True)
         self._into_the_hole(page)
         self._focus_probe(page)
-        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        page.clock.run_for(self.VIMEO_MS + 10)
         assert self._state(page) == "visible"
         assert page.evaluate("document.activeElement.id") == "focus-probe"
 
-    def test_first_press_after_using_the_player_only_takes_focus_back(self, server, page):
-        """Like a click beside an open menu: it closes the menu, nothing more."""
+    def test_shield_back_by_an_event_takes_focus_back(self, server, page):
+        """The event was the choice, and the menu closed with it; with focus
+        back, the next click on a menu button is seen again."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        page.evaluate("window._vimeoPlayer._fire('texttrackchange', {})")
+        assert self._state(page) == "visible"
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def _back_with_player_focused(self, server, page, by):
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer.play()")
         self._set_fs(page, True)
+        self._into_the_hole(page)
         self._focus_probe(page)
+        if by == "timeout":
+            page.clock.run_for(self.VIMEO_MS + 10)
+        else:
+            page.evaluate("window._vimeoPlayer._fire('seeked', {})")
+        assert self._state(page) == "visible"
+        page.mouse.move(300, 300)
+
+    def test_press_after_the_shield_came_back_by_an_event_is_an_ordinary_click(self, server, page):
+        self._back_with_player_focused(server, page, "event")
+        page.mouse.click(300, 300)
+        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_first_press_after_the_shield_came_back_by_timeout_only_closes_menus(self, server, page):
+        """A Vimeo menu may still be open under the shield: like a click beside
+        a menu, the press closes it (taking focus from the player) and does
+        nothing more."""
+        self._back_with_player_focused(server, page, "timeout")
         page.mouse.click(300, 300)
         page.clock.run_for(50)
         assert self._paused(page) is False
         assert page.evaluate("document.activeElement.id") != "focus-probe"
+        page.clock.run_for(600)
         page.mouse.click(300, 300)
         page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+
+    def test_double_click_after_the_shield_came_back_by_timeout_leaves_fullscreen(self, server, page):
+        self._back_with_player_focused(server, page, "timeout")
+        page.mouse.dblclick(300, 300)
+        page.clock.run_for(100)
+        assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
+        assert self._paused(page) is False
+
+    def test_hiding_over_the_shield_hands_the_keys_back_to_the_page(self, server, page):
+        """Back by timeout the shield leaves focus in the player; once the
+        pointer idles over the shield, nobody is using the player."""
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        w, h = self._size(page)
+        page.mouse.move(w // 2, h // 2)
+        page.clock.run_for(self.VIMEO_MS + 10)
+        page.mouse.move(w // 2 + 10, h // 2)
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
+        self._hide(page)
+        assert page.evaluate("document.activeElement.id") != "focus-probe"
+
+    def test_hiding_while_the_pointer_rests_on_the_bar_leaves_focus_in_the_player(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        self._focus_probe(page)
+        page.clock.run_for(self.VIMEO_MS + self.IDLE_MS + 100)
+        assert self._state(page) == "hidden"
+        assert page.evaluate("document.activeElement.id") == "focus-probe"
 
     def test_leaving_fullscreen_puts_the_shield_away(self, server, page):
         self._playing_hidden(server, page)

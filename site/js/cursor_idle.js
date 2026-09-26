@@ -13,13 +13,16 @@
 // double click leaves fullscreen, as on the bare player.
 //
 // A hole in the shield over Vimeo's control bar lets the pointer reach the
-// player. Crossing its edge, either way, hands the pointer to Vimeo ('vimeo'):
-// the shield steps aside altogether, since Vimeo's menus (a long subtitle list
-// among them) open upwards over the video. The page is blind to the pointer
-// then, so the shield comes back when the player reports a change — a menu
-// choice, a button — or when FS_VIMEO_MODE_MS pass without one. Coming back,
-// it leaves keyboard focus where it is: taking it from the iframe would close
-// a menu still open there.
+// player; over the bar itself the cursor is Vimeo's and never hides. Going
+// down through the hole, or clicking in it (which takes keyboard focus into
+// the iframe), hands the pointer to Vimeo ('vimeo'): the shield steps aside
+// altogether, since Vimeo's menus (a long subtitle list among them) open
+// upwards over the video. The page is blind to the pointer then, so the
+// shield comes back when the player reports a change — a menu choice, a
+// button — or when FS_VIMEO_MODE_MS pass without one. Back by an event, the
+// menu has closed and the page may take focus back. Back by timeout, a menu
+// may still be open under the shield, and taking focus would close it, so
+// the first press on the shield only does that (menuMayBeOpen).
 //
 // In CSS the shield carries the bar's height as --fs-vimeo-bar-h.
 
@@ -29,6 +32,10 @@ var FS_DOUBLE_PRESS_MS = 500;
 // Pointer travel that is still no move: the jitter of a hand on a mouse or a
 // trackpad tap, the same slop a double click is allowed.
 var FS_MOVE_SLOP_PX = 4;
+// How long focus going into the player waits for a player event before it
+// counts as a menu opening. Focus crosses processes on its own schedule, and
+// may reach the page after the event the same click caused.
+var FS_FOCUS_SETTLE_MS = 300;
 
 // Where the player draws the video inside `rect` (the shield's client rect):
 // the largest box of the video's aspect, centred — the same box the fullscreen
@@ -54,20 +61,11 @@ function isVideoPress(press) {
     && press.y >= b.top && press.y < b.bottom;
 }
 
-// Whether a pointer arriving on the shield from the player came up out of
-// the hole ({x, y, box: videoBox(), barPx}): it lands in the band one bar high
-// above the hole. Arriving anywhere else, the shield came back under a pointer
-// resting over the video, and keeps it.
-function isHoleCrossing(p) {
-  var b = p.box;
-  return p.x >= b.left && p.x < b.right
-    && p.y >= b.bottom - 2 * p.barPx && p.y < b.bottom;
-}
-
 // opts: {idleMs, vimeoMs, doublePressMs, now, setTimer, clearTimer,
 //        onChange(state: 'visible' | 'hidden' | 'vimeo'),
-//        onVideoClick(), onVideoDoubleClick() — which must also undo the click
-//        that opened it: that one already went out as a click}
+//        onVideoClick(),
+//        onVideoDoubleClick(toggled) — toggled: the press that opened it went
+//        out as a click, and the double click must undo it}
 function createCursorIdle(opts) {
   var active = false;
   var state = 'visible';
@@ -75,8 +73,13 @@ function createCursorIdle(opts) {
   // Last position of a move on the shield. A browser may dispatch a move with
   // no physical movement, so while hidden only travel beyond the slop counts.
   var lastPos = null;
-  // Time of a video press that could still become the first half of a double.
+  // Time of a video press that could still become the first half of a double,
+  // and whether that press toggled playback.
   var pressAt = null;
+  var pressToggled = false;
+  // Whether the shield came back by timeout, over a menu maybe still open.
+  var menuMaybe = false;
+  var lastEventAt = -Infinity;
 
   function setState(next) {
     if (state === next) return;
@@ -100,18 +103,37 @@ function createCursorIdle(opts) {
   function onShield() {
     return active && state !== 'vimeo';
   }
+  function comeBack(byTimeout) {
+    menuMaybe = byTimeout;
+    show();
+  }
+  function handOver() {
+    lastPos = null;
+    pressAt = null;
+    menuMaybe = false;
+    setState('vimeo');
+    schedule(opts.vimeoMs, function() { comeBack(true); });
+  }
+  function firstHalf(toggled) {
+    pressAt = opts.now();
+    pressToggled = toggled;
+  }
+  function isSecondHalf() {
+    return pressAt !== null && opts.now() - pressAt < opts.doublePressMs;
+  }
 
   return {
     enter: function() {
       if (active) return;
       active = true;
-      show();
+      comeBack(false);
     },
     exit: function() {
       active = false;
       disarm();
       lastPos = null;
       pressAt = null;
+      menuMaybe = false;
       setState('visible');
     },
     pointerMove: function(x, y) {
@@ -128,34 +150,45 @@ function createCursorIdle(opts) {
     wake: function() {
       if (!onShield()) return;
       pressAt = null;
+      menuMaybe = false;
       show();
     },
     videoPress: function() {
       if (!onShield()) return;
-      var now = opts.now();
-      var isDouble = pressAt !== null && now - pressAt < opts.doublePressMs;
+      menuMaybe = false;
       show();
-      if (isDouble) {
+      if (isSecondHalf()) {
         pressAt = null;
-        opts.onVideoDoubleClick();
+        opts.onVideoDoubleClick(pressToggled);
       } else {
-        pressAt = now;
+        firstHalf(true);
         opts.onVideoClick();
       }
     },
-    // The pointer crossed the hole's edge, either way.
-    leaveToPlayer: function() {
+    // A press on the video that only closes the menu which may be open under
+    // the shield. It may still open a double click.
+    focusPress: function() {
       if (!onShield()) return;
-      lastPos = null;
-      pressAt = null;
-      setState('vimeo');
-      schedule(opts.vimeoMs, show);
+      menuMaybe = false;
+      show();
+      firstHalf(false);
+    },
+    menuMayBeOpen: function() { return onShield() && menuMaybe; },
+    // The pointer went down through the hole.
+    leaveToPlayer: function() {
+      if (onShield()) handOver();
+    },
+    // Keyboard focus went into the player at `since` and is still there: a
+    // click in the hole. One that reported no player event opened a menu.
+    focusedIntoPlayer: function(since) {
+      if (onShield() && lastEventAt < since) handOver();
     },
     // Play/pause, a seek, a volume, subtitle, quality or speed change. Only
     // ends Vimeo mode: the keyboard drives the player too, and only the mouse
     // counts as activity on the shield.
     playerEvent: function() {
-      if (active && state === 'vimeo') show();
+      lastEventAt = opts.now();
+      if (active && state === 'vimeo') comeBack(false);
     },
     state: function() { return state; },
   };
@@ -167,9 +200,9 @@ if (typeof module !== 'undefined' && module.exports) {
     FS_VIMEO_MODE_MS: FS_VIMEO_MODE_MS,
     FS_DOUBLE_PRESS_MS: FS_DOUBLE_PRESS_MS,
     FS_MOVE_SLOP_PX: FS_MOVE_SLOP_PX,
+    FS_FOCUS_SETTLE_MS: FS_FOCUS_SETTLE_MS,
     createCursorIdle: createCursorIdle,
     isVideoPress: isVideoPress,
-    isHoleCrossing: isHoleCrossing,
     videoBox: videoBox,
   };
 }
