@@ -3565,9 +3565,9 @@ function showPreview(talkId, videoSlug) {
       });
       // The end-freeze threshold needs where the media really ends. getDuration()
       // asked at ready (as below), before playback has loaded the media, answers
-      // with Vimeo's metadata length: whole seconds that can run past the end
-      // (1591 for a video that ends at 1590.741), which leaves the freeze a
-      // window too short to hit or none at all. 'durationchange' first repeats
+      // with Vimeo's metadata length: the true length rounded to whole seconds.
+      // Rounded up (1591 for a video that ends at 1590.741) it leaves the freeze
+      // a window too short to hit or none at all. 'durationchange' first repeats
       // the metadata, then brings the true length once playback loads the media
       // — so the latest event wins, and over getDuration() whichever lands first.
       player.on('durationchange', function(data) {
@@ -6651,10 +6651,6 @@ function setClipFromPlayer(which) {
     return Promise.resolve();
   }
   return player.getCurrentTime().then(function(sec) {
-    // A frozen player holds the last frame ~0.3s short of the media's end
-    // (js/end_freeze.js); an end taken from it means the end of the video.
-    var d = previewState._duration;
-    if (which === 'end' && previewState._frozen && typeof d === 'number' && isFinite(d)) sec = d;
     var ms = Math.round(Number(sec) * 1000);
     if (!isFinite(ms) || ms < 0) return;
     input.value = formatClipTime(ms);

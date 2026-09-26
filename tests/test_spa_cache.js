@@ -7541,18 +7541,6 @@ describe('burn video driver behaviour', () => {
     assert.strictEqual(env.els['btn-clip-create'].disabled, false);
   });
 
-  it('reads the end off a frozen player as the whole length, not the freeze point', async () => {
-    // The end-freeze holds the last frame ~0.3s before the media ends; a
-    // reviewer who takes the end from it means the end of the video.
-    const env = makeHarness();
-    env.previewState.player = fakePlayer(600, 599.7);
-    env.previewState._frozen = true;
-    env.previewState._duration = 599.95;
-    await env.api.openClipPanel();
-    await env.api.setClipFromPlayer('end');
-    assert.strictEqual(env.els['clip-end'].value, '09:59.950');
-  });
-
   it('says the player is not ready rather than doing nothing', async () => {
     const env = makeHarness();
     await env.api.openClipPanel();
