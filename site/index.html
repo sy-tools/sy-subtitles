@@ -3587,10 +3587,10 @@ function showPreview(talkId, videoSlug) {
             pollInFlight = false;
             if (isCurrentPlayer()) {
               renderOverlayAt(sec);
-              // Fullscreen end-freeze: pause on the last frame before 'ended'
-              // can fire, so the Vimeo end screen never appears (js/end_freeze.js).
+              // End-freeze, in every view mode: pause on the last frame before
+              // 'ended' can fire, so the Vimeo end screen never appears
+              // (js/end_freeze.js).
               var freezeAct = endFreezeAction({
-                fsMode: !!(viewEl && viewEl.classList.contains('fs-mode')),
                 sec: sec,
                 duration: previewState._duration,
                 frozen: !!previewState._frozen,

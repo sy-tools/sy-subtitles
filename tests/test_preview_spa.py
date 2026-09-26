@@ -4887,8 +4887,9 @@ class TestUkrainianPlurals:
 
 
 class TestEndFreeze:
-    """Fullscreen end-freeze: the player pauses just before the video ends so
-    the Vimeo 'more from this user' end screen never fires (js/end_freeze.js).
+    """End-freeze, embedded and fullscreen alike: the player pauses just before
+    the video ends so the Vimeo 'more from this user' end screen never fires
+    (js/end_freeze.js).
     The mock player reports a 3600s duration; 3599.8 is inside the 0.3s
     epsilon window before the end."""
 
@@ -4911,12 +4912,13 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
 
-    def test_no_freeze_outside_fullscreen(self, server, page):
+    def test_freezes_on_last_frame_embedded(self, server, page):
+        # The end screen shows in the embedded player too: no mode is exempt.
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer.play()")
         page.evaluate(f"window._vimeoPlayer._setTime({self.END_SEC})")
         page.wait_for_timeout(300)
-        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert page.evaluate("window._vimeoPlayer._paused") is True
 
     def test_frozen_latch_lets_viewer_play_the_tail(self, server, page):
         self._goto_preview(server, page)
