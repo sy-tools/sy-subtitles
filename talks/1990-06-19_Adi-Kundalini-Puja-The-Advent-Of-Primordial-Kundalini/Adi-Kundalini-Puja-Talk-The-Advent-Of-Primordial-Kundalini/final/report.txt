@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1990-06-19_Adi-Kundalini-Puja-The-Advent-Of-Primordial-Kundalini/Adi-Kundalini-Puja-Talk-The-Advent-Of-Primordial-Kundalini/final/uk.srt
+  Transcript: talks/1990-06-19_Adi-Kundalini-Puja-The-Advent-Of-Primordial-Kundalini/transcript_uk.txt
+  EN SRT: talks/1990-06-19_Adi-Kundalini-Puja-The-Advent-Of-Primordial-Kundalini/Adi-Kundalini-Puja-Talk-The-Advent-Of-Primordial-Kundalini/source/en.srt
+  SRT blocks: 238
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 238
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 238
+  CPS: avg=9.5, median=9.2, max=15.0
+  CPS > target: 6 (2.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 4
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #231: CPS=15.0 (46ch/3.1s) "готовністю – готовністю служити Божественному."
+    #233: CPS=15.0 (35ch/2.3s) "Я лише хочу служити Божественному»."
+    #237: CPS=15.0 (35ch/2.3s) "і одного дня ви станете Махайоґами."
+    #193: CPS=15.0 (50ch/3.3s) "що це було неправильно, і тоді знову підіймаєтеся."
+    #194: CPS=15.0 (65ch/4.3s) "Тож люди йдуть ось так: вгору і вниз, вгору і вниз, вгору і ..."
+    #226: CPS=15.0 (68ch/4.5s) "ви цілком у порядку, у вас немає поганих звичок, у вас нічог..."
+    #177: CPS=15.0 (39ch/2.6s) "свій розум, робити всілякі речі, тапас,"
+    #188: CPS=15.0 (57ch/3.8s) "але потім люди починають використовувати Сахаджа Йоґу для"
+    #192: CPS=15.0 (36ch/2.4s) "падаєте, тоді знову маєте зрозуміти,"
+    #225: CPS=15.0 (75ch/5.0s) "Тоді як ви маєте дякувати своїй долі, що ніхто з вас не має ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.5 (target ≤15.0)
+  CPS > 15.0: 6 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 4 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
