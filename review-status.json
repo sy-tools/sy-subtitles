@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-26T08:29:54.455809+00:00",
+  "updated_at": "2026-09-28T21:50:09.132731+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -619,6 +619,12 @@
       "reviewer": null,
       "issue_number": 1114,
       "updated_at": "2026-09-25T21:19:28Z"
+    },
+    "1990-06-19_Adi-Kundalini-Puja-The-Advent-Of-Primordial-Kundalini": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1128,
+      "updated_at": "2026-09-28T21:49:49Z"
     }
   }
 }
