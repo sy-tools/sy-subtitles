@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-09-26T08:29:54.455809+00:00",
+  "updated_at": "2026-10-01T13:18:19.861221+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -261,10 +261,10 @@
       "updated_at": "2026-06-14T09:57:07Z"
     },
     "1982-07-10_From-Mooladhara-to-Void": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "anastasijka-prog",
       "issue_number": 276,
-      "updated_at": "2026-07-16T08:58:24Z"
+      "updated_at": "2026-10-01T13:18:00Z"
     },
     "1983-09-17_Shri-Ekadasha-Rudra-Puja-We-have-to-drop-out-many-things": {
       "status": "pending",
@@ -619,6 +619,12 @@
       "reviewer": null,
       "issue_number": 1114,
       "updated_at": "2026-09-25T21:19:28Z"
+    },
+    "1990-06-19_Adi-Kundalini-Puja-The-Advent-Of-Primordial-Kundalini": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1128,
+      "updated_at": "2026-09-28T21:49:49Z"
     }
   }
 }
