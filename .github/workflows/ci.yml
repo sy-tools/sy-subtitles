@@ -15,6 +15,11 @@ on:
     # needs it to merge has nothing left that could nudge it. Every open PR
     # here is a draft — the SPA's edit auto-sync works in one.
     types: [opened, synchronize, reopened, ready_for_review]
+  # A push made with GITHUB_TOKEN starts no workflow, so the sync bot's commit
+  # (sync-subtitles.yml) would become a PR head with no `gate` on it. Dispatch
+  # is the one event that token may trigger; the bot fires it after its push.
+  # `changes` has no range to compare for this event and runs every lane.
+  workflow_dispatch:
 
 # The SPA's edit auto-sync commits to a draft PR every few seconds of editing,
 # and those pushes now reach this workflow. Supersede rather than stack, so a

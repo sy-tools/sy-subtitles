@@ -13,6 +13,8 @@ on:
 
 permissions:
   contents: write
+  # Dispatching ci.yml after the bot push — see "Commit and push".
+  actions: write
 
 # Overlapping runs race on the final push: the loser's push is rejected
 # non-fast-forward, which would surface as a spurious red on a PR whose
@@ -69,6 +71,9 @@ jobs:
 
       - name: Commit and push
         if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -86,3 +91,9 @@ jobs:
           # match, so the user.name above is load-bearing too.
           git commit -m "Sync subtitles and transcript edits [skip ci]" -m "Sync-Bot: v1"
           git push
+          # That commit is now the PR head, and nothing will test it: besides
+          # [skip ci], a GITHUB_TOKEN push starts no workflow at all. The
+          # required `gate` would never report and the PR would stay blocked
+          # (#1132). workflow_dispatch is the one event this token may fire,
+          # and a run on the branch reports on its head — this commit.
+          gh workflow run ci.yml --ref "$HEAD_REF"
