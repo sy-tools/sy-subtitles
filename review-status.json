@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-10-01T13:18:19.861221+00:00",
+  "updated_at": "2026-10-02T12:01:18.197411+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -183,10 +183,10 @@
       "updated_at": "2026-07-15T04:51:50Z"
     },
     "1978-10-02_Knots-On-The-Three-Channels": {
-      "status": "in-progress",
+      "status": "approved",
       "reviewer": "anastasijka-prog",
       "issue_number": 208,
-      "updated_at": "2026-08-30T10:46:53Z"
+      "updated_at": "2026-10-02T12:00:58Z"
     },
     "1992-03-01_Evening-Program-and-Talk-to-Sahaja-Yogis-The-Day-after-Mahashivaratri-Puja": {
       "status": "pending",
