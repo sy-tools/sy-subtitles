@@ -176,6 +176,12 @@ carrying the `Sync-Bot: v1` trailer on this branch, else the merge-base with
 applied. It also discovers the changed files itself, scoped to
 `transcript_uk.txt` and `final/uk.srt`.
 
+The bot commit is pushed with `GITHUB_TOKEN` and `[skip ci]` (so the sync does
+not re-trigger itself), which means no CI run starts on it — yet it is now the
+PR head, where the required `gate` must report. So the same step dispatches
+`ci.yml` onto the branch right after the push (#1132): `workflow_dispatch` is
+the one event that token is allowed to fire.
+
 ### sync-review-status.yml
 Triggered on Issue label/assign changes. Syncs GitHub Issues → `review-status.json`.
 Auto-updates labels: assign → `review:in-progress`, close → `review:approved`.
@@ -197,6 +203,9 @@ or was skipped — so it is always reported and can be the single **required
 status check** on `main`. Requiring a lane directly would wedge any PR whose
 paths skip it, and requiring nothing at all is how a PR whose run never
 arrived merged untested (#1069).
+It also takes `workflow_dispatch`, solely so the sync bot can give its own
+commit a `gate` (see sync-subtitles.yml); with no range to compare, `changes`
+runs every lane for that event.
 
 ### Bot PRs (`.github/scripts/bot-pr.sh`)
 Pipeline, whisper and review-status results reach `main` as a PR with

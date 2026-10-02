@@ -161,3 +161,41 @@ def test_the_e2e_lane_renders_with_libass_and_refuses_to_skip_without_it() -> No
     assert "libass9" in runs, "the e2e lane does not install libass"
     pytest_step = next(step for step in steps if step.get("run", "").startswith("pytest"))
     assert str(pytest_step.get("env", {}).get("REQUIRE_LIBASS")) == "1"
+
+
+SYNC_WORKFLOW = WORKFLOW.parent / "sync-subtitles.yml"
+
+
+def test_ci_can_be_dispatched_onto_a_branch() -> None:
+    """The one way a bot push can still earn a `gate`.
+
+    A push made with GITHUB_TOKEN starts no workflow, by GitHub's design — the
+    only events that token may trigger are `workflow_dispatch` and
+    `repository_dispatch`. A run dispatched onto a branch reports its checks on
+    that branch's head commit, which is exactly where the PR looks for `gate`.
+    """
+    assert "workflow_dispatch" in _triggers(), (
+        "without a dispatch trigger a GITHUB_TOKEN push can never be given a gate run"
+    )
+
+
+def test_every_sync_bot_push_dispatches_ci() -> None:
+    """#1132: the sync bot's commit became the PR head and `gate` never came.
+
+    sync-subtitles.yml pushes its result with GITHUB_TOKEN and `[skip ci]` —
+    either alone starts no CI run. The required check then never reports on
+    the new head, and the PR is unmergeable with nothing left to nudge it. So
+    the step that pushes must dispatch ci.yml onto the branch it pushed to.
+    """
+    sync = yaml.safe_load(SYNC_WORKFLOW.read_text(encoding="utf-8"))
+    pushing = [step for job in sync["jobs"].values() for step in job["steps"] if "git push" in step.get("run", "")]
+    assert pushing, "sync-subtitles.yml no longer pushes — revisit this guard"
+    for step in pushing:
+        run = step["run"]
+        assert re.search(r"gh workflow run ci\.yml --ref\b", run), (
+            f"step {step.get('name')!r} pushes but does not dispatch ci.yml, so `gate` never reports on its commit"
+        )
+        assert run.index("git push") < run.index("gh workflow run"), (
+            "dispatch must follow the push, or CI runs the old head"
+        )
+    assert sync["permissions"].get("actions") == "write", "dispatching a workflow needs `actions: write`"
