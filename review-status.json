@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-10-02T12:01:18.197411+00:00",
+  "updated_at": "2026-10-09T22:27:50.263067+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -625,6 +625,12 @@
       "reviewer": null,
       "issue_number": 1128,
       "updated_at": "2026-09-28T21:49:49Z"
+    },
+    "1989-10-06_8th-Day-of-Navaratri-Talk-to-English-Yogis-on-Style-and-Content": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1148,
+      "updated_at": "2026-10-09T22:27:34Z"
     }
   }
 }
