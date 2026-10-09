@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1989-10-06_8th-Day-of-Navaratri-Talk-to-English-Yogis-on-Style-and-Content/8th-Day-Of-Navaratri/final/uk.srt
+  Transcript: talks/1989-10-06_8th-Day-of-Navaratri-Talk-to-English-Yogis-on-Style-and-Content/transcript_uk.txt
+  EN SRT: talks/1989-10-06_8th-Day-of-Navaratri-Talk-to-English-Yogis-on-Style-and-Content/8th-Day-Of-Navaratri/source/en.srt
+  SRT blocks: 578
+  EN SRT blocks: 865
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:01:04,016 — 00:46:58,080
+  SRT range:       00:01:04,016 — 00:47:00,080
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 578
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 578
+  CPS: avg=12.2, median=13.2, max=20.0
+  CPS > target: 57 (9.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #146: CPS=20.0 (55ch/2.8s) "Я сказала: «Почни їх розглядати – і ти про це забудеш»."
+    #145: CPS=19.3 (37ch/1.9s) "Він сказав: «Просто зараз я не можу»."
+    #277: CPS=19.0 (66ch/3.5s) "то можемо стати бхутуватими разом із ними, бо вони були спра..."
+    #113: CPS=19.0 (78ch/4.1s) "в нього буде стиль, для цього в нього буде стиль, для того в..."
+    #109: CPS=18.9 (40ch/2.1s) "І вони сміються з людей, які там живуть."
+    #111: CPS=18.9 (63ch/3.3s) "бо на цьому випадку з Ґевіном тепер ви можете це ясно побачи..."
+    #292: CPS=18.6 (66ch/3.6s) "І було кілька рядків, їх прочитали, і Я сказала: «Баба! Прип..."
+    #110: CPS=18.4 (68ch/3.7s) "Але все ж ми повинні знати, що в нас можуть лежати якісь тон..."
+    #280: CPS=17.4 (49ch/2.8s) "А тепер вони померли й пішли, ми – новонароджені,"
+    #429: CPS=16.1 (44ch/2.7s) "і три-чотири дівчини, що реготали: «Ха! Ха!»"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 578
+  EN SRT blocks: 865
+  Ratio UK/EN: 0.67 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.2 (target ≤15.0)
+  CPS > 15.0: 57 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
