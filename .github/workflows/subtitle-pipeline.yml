@@ -310,7 +310,7 @@ jobs:
 
       - name: Translate to Ukrainian
         if: inputs.translate != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@fd1c128679612beff4ca259c78021c506e8aa7a7  # v1.0.237
+        uses: anthropics/claude-code-action@ed670b4cf9de2a5a570d130d2f6197b9e543cd64  # v1.0.240
         with:
           claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -421,7 +421,7 @@ jobs:
 
       - name: Review translation (2+1)
         if: inputs.review != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@fd1c128679612beff4ca259c78021c506e8aa7a7  # v1.0.237
+        uses: anthropics/claude-code-action@ed670b4cf9de2a5a570d130d2f6197b9e543cd64  # v1.0.240
         with:
           claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -747,7 +747,7 @@ jobs:
 
       - name: Build timecodes (Claude)
         if: inputs.dry_run != true
-        uses: anthropics/claude-code-action@fd1c128679612beff4ca259c78021c506e8aa7a7  # v1.0.237
+        uses: anthropics/claude-code-action@ed670b4cf9de2a5a570d130d2f6197b9e543cd64  # v1.0.240
         env:
           CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
         with:
