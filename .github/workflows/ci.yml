@@ -41,6 +41,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.detect.outputs.code }}
+      whisper: ${{ steps.detect.outputs.whisper }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -79,6 +80,13 @@ jobs:
             '.github/workflows/'
           )
 
+          # The whisper lane installs a model runtime; only these can break it.
+          WHISPER_PATHS=(
+            'requirements-whisper.txt'
+            'tools/whisper_run.py'
+            'tests/test_whisper_deps.py'
+          )
+
           if [ "$EVENT" = "pull_request" ]; then
             RANGE="$BASE_SHA...$HEAD_SHA"
           elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
@@ -87,6 +95,7 @@ jobs:
             # A first push, a force-push, or anything else whose range cannot be
             # named: test it rather than guess it is uninteresting.
             echo "code=true" >> "$GITHUB_OUTPUT"
+            echo "whisper=true" >> "$GITHUB_OUTPUT"
             echo "no comparable range for $EVENT — running every lane"
             exit 0
           fi
@@ -99,6 +108,12 @@ jobs:
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
             echo "no watched path changed in $RANGE"
+          fi
+
+          if [ -n "$(git diff --name-only "$RANGE" -- "${WHISPER_PATHS[@]}")" ]; then
+            echo "whisper=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "whisper=false" >> "$GITHUB_OUTPUT"
           fi
 
   lint:
@@ -225,13 +240,37 @@ jobs:
           node-version: '22'
       - run: node --test tests/test_*.js
 
+  # faster-whisper pins only a floor on PyAV, so an unpinned install once
+  # broke every whisper run (PyAV 19). The set is pinned in
+  # requirements-whisper.txt; this lane proves a change to it still decodes
+  # audio, so a Dependabot bump that breaks the pairing fails here, not on a talk.
+  test-whisper:
+    needs: changes
+    if: needs.changes.outputs.whisper == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            requirements-whisper.txt
+      - run: pip install -r requirements.txt -r requirements-whisper.txt pytest
+        # REQUIRE_FASTER_WHISPER: the decode test fails instead of skipping.
+      - run: pytest tests/test_whisper_deps.py --tb=short
+        env:
+          REQUIRE_FASTER_WHISPER: '1'
+
   # The one check to require on `main`. Every lane above can legitimately be
   # skipped, and a skipped check is not something branch protection can wait
   # on — so this job depends on all of them, always runs, and speaks for the
   # lot. Requiring it means a pull request whose run never arrived stays
   # unmergeable instead of sailing through (see #1069).
   gate:
-    needs: [changes, lint, test-unit, test-e2e, test-js]
+    needs: [changes, lint, test-unit, test-e2e, test-js, test-whisper]
     if: always()
     runs-on: ubuntu-latest
     steps:

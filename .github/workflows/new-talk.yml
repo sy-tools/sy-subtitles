@@ -303,14 +303,13 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/pip
-          key: pip-whisper-${{ hashFiles('requirements.txt') }}
+          key: pip-whisper-${{ hashFiles('requirements.txt', 'requirements-whisper.txt') }}
           restore-keys: pip-whisper-
 
       - name: Install dependencies
         run: |
           sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install -r requirements.txt
-          pip install faster-whisper>=1.2.1 'yt-dlp[default,curl-cffi]'
+          pip install -r requirements.txt -r requirements-whisper.txt 'yt-dlp[default,curl-cffi]'
 
       - name: Cache Whisper model
         uses: actions/cache@v6
