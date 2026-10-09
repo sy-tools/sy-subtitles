@@ -162,7 +162,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/pip
-          key: pip-whisper-${{ hashFiles('requirements.txt') }}
+          key: pip-whisper-${{ hashFiles('requirements.txt', 'requirements-whisper.txt') }}
           restore-keys: pip-whisper-
 
       - name: Install system dependencies
@@ -170,9 +170,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install -r requirements.txt
-          # quoted: unquoted >= is a shell redirect that drops the version floor
-          pip install 'faster-whisper>=1.2.1'
+          pip install -r requirements.txt -r requirements-whisper.txt
 
       - name: Cache Whisper model
         uses: actions/cache@v6

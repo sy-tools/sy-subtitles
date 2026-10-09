@@ -33,6 +33,7 @@ from bs4 import BeautifulSoup, Tag
 from dotenv import load_dotenv
 
 from tools.talk_slug import slugify
+from tools.text_normalize import fix_text
 from tools.vimeo_codec import encode_video_ref, to_player_url
 
 
@@ -135,6 +136,13 @@ def slugify_video_name(name):
     name = re.sub(r"\s+", "-", name)
     name = re.sub(r"-+", "-", name)
     return name.strip("-")
+
+
+def _normalize_in_place(path):
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        f.write(fix_text(text, uk=False))
 
 
 class AmrutaDownloader:
@@ -349,6 +357,8 @@ class AmrutaDownloader:
         # Rename {vimeo_id}.{lang}.srt -> {lang}.srt
         downloaded = []
         for f in globmod.glob(os.path.join(output_dir, "*.srt")):
+            # Vimeo tracks can carry a BOM inside a cue, which yt-dlp keeps.
+            _normalize_in_place(f)
             basename = os.path.basename(f)
             parts = basename.rsplit(".", 2)  # e.g. ['333507352', 'en', 'srt']
             if len(parts) == 3:
