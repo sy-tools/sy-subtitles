@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 
 from tools import download
 from tools.download import AmrutaDownloader, setup_talk
+from tools.text_normalize import check_text
 from tools.vimeo_codec import decode_video_ref
 
 
@@ -379,3 +380,21 @@ def test_download_vimeo_subs_uses_player_url(monkeypatch, tmp_path):
     dl = AmrutaDownloader.__new__(AmrutaDownloader)
     dl.download_vimeo_subs("https://vimeo.com/111111111/aaaaaaaaaa", str(tmp_path))
     assert captured[0][-1] == "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"
+
+
+def test_download_vimeo_subs_strips_stray_bom(monkeypatch, tmp_path):
+    def fake_run(cmd, **kwargs):
+        (tmp_path / "111111111.en.srt").write_text(
+            "1\r\n00:00:01,000 --> 00:00:02,000\r\n\ufeffToday is the eighth day\r\n",
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr(download.subprocess, "run", fake_run)
+    monkeypatch.setattr(download.shutil, "which", lambda name: "/usr/bin/yt-dlp")
+    dl = AmrutaDownloader.__new__(AmrutaDownloader)
+    [path] = dl.download_vimeo_subs("https://vimeo.com/111111111/aaaaaaaaaa", str(tmp_path))
+
+    text = (tmp_path / "en.srt").read_text(encoding="utf-8")
+    assert path == str(tmp_path / "en.srt")
+    assert check_text(text, uk=False) == []
+    assert "00:00:01,000 --> 00:00:02,000\nToday is the eighth day" in text

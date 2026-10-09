@@ -25,19 +25,6 @@ def test_commit_job_places_glossary_json() -> None:
         assert "glossary.json" in loop, f"placement loop misses glossary.json: for f in {loop}"
 
 
-def test_whisper_pip_version_spec_is_quoted() -> None:
-    """`pip install faster-whisper>=1.2.1` unquoted is a shell redirection:
-    the real command is `pip install faster-whisper` with stdout sent to a
-    file named '=1.2.1' — the version floor silently vanishes."""
-    text = (WORKFLOWS / "whisper.yml").read_text(encoding="utf-8")
-    for line in text.splitlines():
-        if "pip install" in line and "faster-whisper" in line:
-            spec = line.strip()
-            assert re.search(r"['\"]faster-whisper>=[^'\"]+['\"]", spec), (
-                f"unquoted version spec (shell redirect): {spec}"
-            )
-
-
 def test_commit_job_places_build_manifest() -> None:
     """build_manifest.yaml is written during build, uploaded in the subtitles
     artifact, and listed in the bot-pr patterns — but the commit job's

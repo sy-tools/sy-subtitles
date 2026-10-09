@@ -1,0 +1,10 @@
+# Speech detection (tools.whisper_run), installed only by the whisper jobs.
+# Exact pins: faster-whisper declares just `av>=11`, and PyAV 19 removed the
+# `metadata_errors` keyword faster-whisper 1.2.1 passes to av.open. CI's
+# test-whisper lane decodes audio with this exact set whenever it changes.
+faster-whisper==1.2.1
+av==18.1.0
+ctranslate2==4.8.2
+onnxruntime==1.31.0
+tokenizers==0.23.3
+huggingface-hub==2.2.0
