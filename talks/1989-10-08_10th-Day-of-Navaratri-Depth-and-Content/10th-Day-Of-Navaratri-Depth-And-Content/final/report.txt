@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1989-10-08_10th-Day-of-Navaratri-Depth-and-Content/10th-Day-Of-Navaratri-Depth-And-Content/final/uk.srt
+  Transcript: talks/1989-10-08_10th-Day-of-Navaratri-Depth-and-Content/transcript_uk.txt
+  EN SRT: talks/1989-10-08_10th-Day-of-Navaratri-Depth-and-Content/10th-Day-Of-Navaratri-Depth-And-Content/source/en.srt
+  SRT blocks: 422
+  EN SRT blocks: 553
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:02,344 — 00:41:20,774
+  SRT range:       00:00:02,344 — 00:41:22,774
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 422
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 422
+  CPS: avg=9.8, median=9.5, max=16.1
+  CPS > target: 6 (1.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #277: CPS=16.1 (59ch/3.7s) "вони можуть бути просто як радіоприймачі: хвалять, хвалять."
+    #380: CPS=15.0 (61ch/4.1s) "Нехай вони виконують свою роботу, вони роблять її дуже добре..."
+    #275: CPS=15.0 (35ch/2.3s) "Я вважаю, що це не так, це ж легко."
+    #266: CPS=15.0 (76ch/5.1s) "Якщо ви прочитаєте ту книжку, дві сторінки, у вас заболить г..."
+    #264: CPS=15.0 (53ch/3.5s) "Як хтось може зрозуміти цю книжку, вона така жахлива!"
+    #364: CPS=15.0 (56ch/3.7s) "Своїм миром, насолоджується всім Своїм: Своїм творінням,"
+    #363: CPS=15.0 (48ch/3.2s) "насолоджується Своїм блаженством, насолоджується"
+    #284: CPS=15.0 (73ch/4.9s) "Будь-яка розумна людина може це бачити, для цього не потрібн..."
+    #370: CPS=15.0 (70ch/4.7s) "Навіть якщо ви цього не скажете, нічого страшного, про вас п..."
+    #158: CPS=15.0 (67ch/4.5s) "Знову ж таки, питання в тому, як ця міць приходить до сахадж..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 422
+  EN SRT blocks: 553
+  Ratio UK/EN: 0.76 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.8 (target ≤15.0)
+  CPS > 15.0: 6 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
