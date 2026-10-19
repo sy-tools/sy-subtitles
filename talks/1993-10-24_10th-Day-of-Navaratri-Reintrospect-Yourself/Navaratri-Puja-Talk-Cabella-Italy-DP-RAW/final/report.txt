@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1993-10-24_10th-Day-of-Navaratri-Reintrospect-Yourself/Navaratri-Puja-Talk-Cabella-Italy-DP-RAW/final/uk.srt
+  Transcript: talks/1993-10-24_10th-Day-of-Navaratri-Reintrospect-Yourself/transcript_uk.txt
+  EN SRT: talks/1993-10-24_10th-Day-of-Navaratri-Reintrospect-Yourself/Navaratri-Puja-Talk-Cabella-Italy-DP-RAW/source/en.srt
+  SRT blocks: 576
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 576
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 576
+  CPS: avg=9.2, median=8.9, max=16.0
+  CPS > target: 5 (0.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.7, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #112: CPS=16.0 (52ch/3.3s) "що треба робити в такій ситуації або як вам вчинити."
+    #217: CPS=15.7 (55ch/3.5s) "Тепер, що б ти не зробила, краще Я подивлюся на дитину,"
+    #113: CPS=15.3 (50ch/3.3s) "Якщо вони пропустили поїзд, вони телефонують Мені:"
+    #179: CPS=15.2 (74ch/4.9s) "Потім ви віддаєте дитину – «Ви бачили цю школу, Матінко?» «Н..."
+    #489: CPS=15.0 (83ch/5.5s) "Отже, ви маєте бути суворими до свого тіла, ви маєте бути су..."
+    #161: CPS=15.0 (64ch/4.3s) "Ви ніколи не були з’єднані з Істиною, ви ніколи не були з’єд..."
+    #169: CPS=15.0 (55ch/3.7s) "а щонайменше десять імен – говорить про те, що Вона дає"
+    #443: CPS=15.0 (52ch/3.5s) "Це моя робота, моя справа, і це те, що я маю робити."
+    #119: CPS=15.0 (49ch/3.3s) "«Матінко, мій батько хворий, у нього хворе серце,"
+    #103: CPS=15.0 (46ch/3.1s) "Нещодавно одна сахаджа йоґиня подзвонила Мені."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.2 (target ≤15.0)
+  CPS > 15.0: 5 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
