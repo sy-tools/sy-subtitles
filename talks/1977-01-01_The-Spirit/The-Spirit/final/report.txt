@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1977-01-01_The-Spirit/The-Spirit/final/uk.srt
+  Transcript: talks/1977-01-01_The-Spirit/transcript_uk.txt
+  EN SRT: talks/1977-01-01_The-Spirit/The-Spirit/source/en.srt
+  SRT blocks: 146
+  EN SRT blocks: 163
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:01,904 — 00:18:50,386
+  SRT range:       00:00:01,904 — 00:18:52,386
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 146
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 146
+  CPS: avg=8.0, median=7.7, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #71: CPS=15.0 (71ch/4.7s) "бачити все більше, і дедалі ширший спектр радості потрапляє ..."
+    #108: CPS=15.0 (68ch/4.5s) "Як ось щойно ви відчули Його і сказали: «О, яка ж це прекрас..."
+    #132: CPS=15.0 (65ch/4.3s) "Вона не може насолоджуватися мистецтвом, створеним цим чолов..."
+    #109: CPS=15.0 (31ch/2.1s) "Ви відчули себе дуже щасливими."
+    #128: CPS=15.0 (53ch/3.5s) "він ніколи не зможе отримати радість від цієї людини."
+    #85: CPS=15.0 (45ch/3.0s) "Завдяки цьому світлу ми говоримо про релігію,"
+    #105: CPS=14.7 (55ch/3.7s) "І лише коли це усвідомлення входить і приходить до вас,"
+    #44: CPS=14.3 (44ch/3.1s) "спершу від стадії Істини до асат [неістини],"
+    #129: CPS=13.9 (73ch/5.2s) "Єдине, що він може зробити, – це піднести цю людину вище, до..."
+    #120: CPS=13.6 (84ch/6.2s) "Ви бачите кору дерева, ви розкриваєте її, бачите візерунки –..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 146
+  EN SRT blocks: 163
+  Ratio UK/EN: 0.90 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 8.0 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
