@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1979-11-18_How-to-go-beyond-the-ego-and-know-yourself-Meditation/How-To-Get-To-Meditation/final/uk.srt
+  Transcript: talks/1979-11-18_How-to-go-beyond-the-ego-and-know-yourself-Meditation/transcript_uk.txt
+  Whisper: talks/1979-11-18_How-to-go-beyond-the-ego-and-know-yourself-Meditation/How-To-Get-To-Meditation/source/whisper.json
+  SRT blocks: 379
+  Whisper segments: 373
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 19123
+  SRT chars: 19123
+  Exact normalized match: OK
+  Transcript words: 3131
+  SRT words: 3131
+  Word-level match: OK
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:01,240 — 00:31:29,959
+  SRT range:       00:00:00,000 — 00:31:34,000
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 379
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 379
+  CPS: avg=12.1, median=14.4, max=20.0
+  CPS > target: 61 (16.1%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 4
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #85: CPS=20.0 (69ch/3.5s) "оскільки вони не з’являються у своєму справжньому вигляді, ц..."
+    #104: CPS=20.0 (55ch/2.8s) "Вони робитимуть усе зранку до... щодня він виконує свою"
+    #106: CPS=20.0 (60ch/3.0s) "А тут люди нарікають навіть на те, що треба вставати вранці."
+    #152: CPS=20.0 (64ch/3.2s) "будь-чого, без жодного страху перед будь-ким; а просто [знаю..."
+    #70: CPS=20.0 (55ch/2.8s) "Це те, що треба казати людям, коли вони сюди приходять:"
+    #89: CPS=20.0 (53ch/2.7s) "Потім вони звідти повертаються, йдуть до іншого ґуру,"
+    #90: CPS=19.8 (49ch/2.5s) "йдуть до ще іншого ґуру, але шкоду вже заподіяно."
+    #151: CPS=19.3 (63ch/3.3s) "із повною любов’ю, з відкритістю, без жодного занепокоєння щ..."
+    #91: CPS=18.7 (48ch/2.6s) "Проте вони позбуваються цієї шкоди, бо визнають,"
+    #77: CPS=17.8 (45ch/2.5s) "Так от, щодо нього (Венуґопалана): це людина,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.1 (target ≤15.0)
+  CPS > 15.0: 61 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 4 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
