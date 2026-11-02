@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis/Diwali-Puja-Talk/final/uk.srt
+  Transcript: talks/1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis/transcript_uk.txt
+  EN SRT: talks/1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis/Diwali-Puja-Talk/source/en.srt
+  SRT blocks: 555
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 555
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 555
+  CPS: avg=10.8, median=11.0, max=19.0
+  CPS > target: 79 (14.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 3
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #320: CPS=19.0 (26ch/1.4s) "Тому що це місце насолоди."
+    #553: CPS=17.7 (71ch/4.0s) "Щоразу, коли це можливо, намагайтеся відвідувати все, що є к..."
+    #319: CPS=16.1 (58ch/3.6s) "– «Ні, ні, ні, я не можу залишити Сахаджа Йоґу». – «Чому?»"
+    #554: CPS=15.2 (55ch/3.6s) "намагайтеся бути там, де відбуваються колективні події."
+    #154: CPS=15.2 (40ch/2.6s) "Шрі Матаджі: А, зрозуміло, але діти тут?"
+    #482: CPS=15.1 (79ch/5.2s) "Мого брата – і вона була дуже милою: «Я хочу зустрітися з ва..."
+    #479: CPS=15.0 (79ch/5.2s) "Мій брат розповідав Мені, що одна жінка від цього Муктананди..."
+    #543: CPS=15.0 (44ch/2.9s) "Я розумію, що ви вільні люди, щоб робити те,"
+    #51: CPS=15.0 (82ch/5.5s) "з них треба було відступити вбік – тож він каже: «Я не посту..."
+    #487: CPS=15.0 (19ch/1.3s) "Чим ви займаєтеся?»"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 10.8 (target ≤15.0)
+  CPS > 15.0: 79 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 3 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
