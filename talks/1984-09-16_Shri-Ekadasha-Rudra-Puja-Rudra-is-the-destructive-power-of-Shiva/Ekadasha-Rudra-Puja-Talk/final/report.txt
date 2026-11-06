@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1984-09-16_Shri-Ekadasha-Rudra-Puja-Rudra-is-the-destructive-power-of-Shiva/Ekadasha-Rudra-Puja-Talk/final/uk.srt
+  Transcript: talks/1984-09-16_Shri-Ekadasha-Rudra-Puja-Rudra-is-the-destructive-power-of-Shiva/transcript_uk.txt
+  EN SRT: talks/1984-09-16_Shri-Ekadasha-Rudra-Puja-Rudra-is-the-destructive-power-of-Shiva/Ekadasha-Rudra-Puja-Talk/source/en.srt
+  SRT blocks: 335
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 335
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 335
+  CPS: avg=8.3, median=6.7, max=15.0
+  CPS > target: 1 (0.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=56.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 3
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #321: CPS=15.0 (69ch/4.6s) "свій гаманець, віддайте мені все», – тоді це не може бути рі..."
+    #285: CPS=15.0 (79ch/5.3s) "Тож коли Вона тупала, раптом Вона побачила Своє власне дитя ..."
+    #277: CPS=15.0 (73ch/4.9s) "І Вона була така гнівна, що хотіла знищити весь світ Своєю с..."
+    #320: CPS=15.0 (73ch/4.9s) "але дайте мені за це гроші, ви мусите дати мені гроші, відда..."
+    #67: CPS=15.0 (67ch/4.5s) "Наприклад, багато людей, які приходять у Сахаджа Йоґу, кажут..."
+    #99: CPS=15.0 (55ch/3.7s) "на – скажімо так – на правій стороні вона рухається, бо"
+    #258: CPS=15.0 (52ch/3.5s) "щось позитивне, [тоді] він проникає крізь позитивне,"
+    #211: CPS=15.0 (49ch/3.3s) "Якщо ви не можете насолоджуватися в Сахаджа Йозі,"
+    #173: CPS=15.0 (43ch/2.9s) "бити людей, які намагаються вас підтримати,"
+    #143: CPS=15.0 (40ch/2.7s) "тоді з людиною може статися що завгодно:"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 8.3 (target ≤15.0)
+  CPS > 15.0: 1 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 3 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
