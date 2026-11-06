@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-10-02T12:01:18.197411+00:00",
+  "updated_at": "2026-10-24T21:37:54.579215+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -625,6 +625,30 @@
       "reviewer": null,
       "issue_number": 1128,
       "updated_at": "2026-09-28T21:49:49Z"
+    },
+    "1977-01-01_The-Spirit": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1165,
+      "updated_at": "2026-10-24T21:37:38Z"
+    },
+    "1993-10-24_10th-Day-of-Navaratri-Reintrospect-Yourself": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1158,
+      "updated_at": "2026-10-19T18:05:45Z"
+    },
+    "1989-10-08_10th-Day-of-Navaratri-Depth-and-Content": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1152,
+      "updated_at": "2026-10-12T20:18:20Z"
+    },
+    "1989-10-06_8th-Day-of-Navaratri-Talk-to-English-Yogis-on-Style-and-Content": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1148,
+      "updated_at": "2026-10-09T22:27:34Z"
     }
   }
 }
