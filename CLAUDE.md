@@ -220,6 +220,9 @@ that live nowhere else.
   `tools/talk_slug.py`, the same slug the SPA computes, so the two never
   disagree. Auth/cookie: `docs/amruta-auth.md`.
 - `whisper_run` — speech detection, word-level timestamps.
+- `local_whisper` — the whisper step on this machine, for videos Vimeo or
+  YouTube refuse to GitHub's runners (datacenter IPs) but serve to a home
+  connection. A committed `whisper.json` makes the pipeline skip whisper.
 - `burn_subtitles` — burn subtitles into a video (SRT → ASS → ffmpeg+libass).
   Sizing is fractions of the video frame, the same fractions fullscreen draws
   on the displayed video's box — never pixels, never the screen. The font is

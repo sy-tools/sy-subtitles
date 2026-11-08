@@ -190,7 +190,12 @@ jobs:
           yt-dlp \
             --referer "https://www.amruta.org/" \
             -o "/tmp/whisper_work/video.mp4" \
-            "$VIMEO_URL"
+            "$VIMEO_URL" || {
+            # Some videos are refused to datacenter IPs only; the same
+            # download works from a home connection.
+            echo "::error::Vimeo refused the download from this runner. Run the whisper step locally and commit the result through a PR: python -m tools.local_whisper --talk-id $TALK_ID --video-slug $VIDEO_SLUG"
+            exit 1
+          }
 
       - name: Run Whisper
         run: |
