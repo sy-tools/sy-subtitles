@@ -36,7 +36,7 @@ import yaml
 WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 
 APP_TOKEN_ACTION = "actions/create-github-app-token@"
-APP_TOKEN_PIN = "actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1"  # v3.2.0
+APP_TOKEN_PIN = "actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510"  # v3.3.0
 APP_READY = "${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}"
 TOKEN_EXPR = "steps.bot-token.outputs.token || github.token"
 
