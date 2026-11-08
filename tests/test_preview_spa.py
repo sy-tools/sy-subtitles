@@ -7654,9 +7654,9 @@ class TestShellUpdateDetection:
         )
         return hashlib.sha256(lines.encode()).hexdigest()[:12]
 
-    def _refresh(self, page):
-        page.evaluate("() => SPA.refreshManifest()")
-        page.wait_for_function("() => sessionStorage.getItem('sy_reload_target') !== null", timeout=5000)
+    def _refresh_and_wait_for_reload(self, page):
+        with page.expect_navigation(wait_until="load", timeout=10000):
+            page.evaluate("() => SPA.refreshManifest()")
         return page.evaluate("() => sessionStorage.getItem('sy_reload_target')")
 
     def test_stale_shell_reloads_toward_the_tree_fingerprint(self, server, page):
@@ -7664,7 +7664,7 @@ class TestShellUpdateDetection:
         goto_spa(page, server)
         page.wait_for_selector(".talk-item", timeout=10000)
         page.evaluate("() => { APP_SHELL_VERSION = 'oldoldoldold'; }")
-        assert self._refresh(page) == self._expected_version()
+        assert self._refresh_and_wait_for_reload(page) == self._expected_version()
 
     def test_current_shell_does_not_reload(self, server, page):
         self._serve_shell_tree(page)
