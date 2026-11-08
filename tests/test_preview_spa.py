@@ -7579,3 +7579,46 @@ class TestTypoHints:
         assert page.evaluate("localStorage.getItem('sy_typo_hints')") is None
         page.click("#prefs-btn")
         assert page.evaluate("document.getElementById('prefs-typo').checked") is False
+
+
+class TestFooterNeverWidensPage:
+    """The footer's version stamp is the app-shell version: the 7-char prefixes
+    of every index.html/js/css blob SHA, concatenated — one unbreakable token
+    that grows with each file (~280 chars at 40 files). Printed as-is in a flex
+    footer it pushed the document wider than the window, so a keyboard scroll
+    that reached the page (an arrow key with focus inside the Vimeo iframe)
+    slid the whole preview sideways."""
+
+    LONG_SHA = "abcdef1" * 60  # 420 chars, no break opportunity
+
+    def _stamp(self, page):
+        page.evaluate(
+            "sha => { APP_DEPLOY_SHA = sha; APP_DEPLOY_DATE = '2026-11-07'; updateFooter(); }",
+            self.LONG_SHA,
+        )
+
+    def test_long_version_does_not_overflow_preview(self, server, page):
+        page.set_viewport_size({"width": 1280, "height": 800})
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        self._stamp(page)
+        sw, cw = page.evaluate("() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]")
+        assert sw <= cw, f"document is {sw}px wide in a {cw}px window"
+
+    def test_date_stays_visible_and_full_version_in_title(self, server, page):
+        page.set_viewport_size({"width": 1280, "height": 800})
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        self._stamp(page)
+        info = page.evaluate("""() => {
+            const el = document.getElementById('footer-version');
+            const r = document.createRange();
+            r.selectNodeContents(el);
+            const text = el.textContent, i = text.indexOf('2026-11-07');
+            const box = el.getBoundingClientRect();
+            r.setStart(el.firstChild, i); r.setEnd(el.firstChild, i + 10);
+            const d = r.getBoundingClientRect();
+            return {title: el.title, dateIn: i >= 0 && d.right <= box.right + 0.5 && d.left >= box.left - 0.5};
+        }""")
+        assert info["dateIn"], "the deploy date is clipped out of the footer"
+        assert self.LONG_SHA in info["title"], "the full version must stay readable on hover"

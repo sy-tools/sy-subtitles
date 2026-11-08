@@ -9309,7 +9309,11 @@ function updateFooter() {
   if (!el) return;
   var sha = APP_DEPLOY_SHA || (manifest && manifest._siteIndexSha) || 'dev';
   var date = APP_DEPLOY_DATE || '';
-  el.textContent = sha + (date ? ' | ' + date : '');
+  // The shell version is one long unbreakable token (a 7-char prefix per app
+  // file), so the stylesheet clips it with an ellipsis; the date goes first so
+  // the clipping never takes it, and the full value stays on hover.
+  el.textContent = (date ? date + ' | ' : '') + sha;
+  el.title = sha;
 }
 updateFooter();
 

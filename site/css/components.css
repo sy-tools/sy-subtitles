@@ -1753,3 +1753,13 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 .prefs-switch { display: inline-flex; align-items: center; cursor: pointer; }
 .prefs-switch input { accent-color: var(--link); width: 15px; height: 15px;
   cursor: pointer; margin: 0; }
+
+/* Footer build stamp. The app-shell version is a single token with no break
+   opportunity that grows with every app file; as a flex item its min-width
+   would be the whole token, widening the document past the window. */
+#footer-version {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
