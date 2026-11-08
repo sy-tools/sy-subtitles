@@ -30,14 +30,15 @@ jobs:
       - name: Stamp build info
         run: |
           DEPLOY_DATE=$(date -u +%Y-%m-%d)
-          # App-shell version: combined blob SHAs of site/index.html + site/js/*.js
-          # from the committed tree (matches what the Trees API returns to the
-          # running SPA). Computed before the sed below, so the stamp is not part
-          # of the hashed input. See tools/compute_shell_version.sh.
-          SHELL_SHA=$(bash tools/compute_shell_version.sh)
+          # App-shell fingerprint over the committed blob SHAs of index.html,
+          # js/*.js and css/*.css (what the Trees API returns to the running SPA).
+          # Computed before the sed below, so the stamp is not part of the hashed
+          # input. See tools/compute_shell_version.sh.
+          SHELL_VERSION=$(bash tools/compute_shell_version.sh)
           sed -i "s/var APP_DEPLOY_DATE = '';/var APP_DEPLOY_DATE = '${DEPLOY_DATE}';/" site/index.html
-          sed -i "s/var APP_DEPLOY_SHA = '';/var APP_DEPLOY_SHA = '${SHELL_SHA}';/" site/index.html
-          echo "Deploy: date=$DEPLOY_DATE shell=$SHELL_SHA"
+          sed -i "s/var APP_DEPLOY_COMMIT = '';/var APP_DEPLOY_COMMIT = '${GITHUB_SHA}';/" site/index.html
+          sed -i "s/var APP_SHELL_VERSION = '';/var APP_SHELL_VERSION = '${SHELL_VERSION}';/" site/index.html
+          echo "Deploy: date=$DEPLOY_DATE commit=$GITHUB_SHA shell=$SHELL_VERSION"
 
       - name: Inject passphrase-gate hash
         env:

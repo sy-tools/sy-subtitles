@@ -7581,44 +7581,99 @@ class TestTypoHints:
         assert page.evaluate("document.getElementById('prefs-typo').checked") is False
 
 
-class TestFooterNeverWidensPage:
-    """The footer's version stamp is the app-shell version: the 7-char prefixes
-    of every index.html/js/css blob SHA, concatenated — one unbreakable token
-    that grows with each file (~280 chars at 40 files). Printed as-is in a flex
-    footer it pushed the document wider than the window, so a keyboard scroll
-    that reached the page (an arrow key with focus inside the Vimeo iframe)
-    slid the whole preview sideways."""
+class TestFooterBuildStamp:
+    """The footer names the deploy a person can look up: its date and the short
+    commit it was built from, linked to that commit on GitHub."""
 
-    LONG_SHA = "abcdef1" * 60  # 420 chars, no break opportunity
+    COMMIT = "0a5ef9ae9a2a8f5f33c694ae1a5dabd7ac656ade"
 
-    def _stamp(self, page):
-        page.evaluate(
-            "sha => { APP_DEPLOY_SHA = sha; APP_DEPLOY_DATE = '2026-11-07'; updateFooter(); }",
-            self.LONG_SHA,
-        )
-
-    def test_long_version_does_not_overflow_preview(self, server, page):
+    def _open_preview(self, server, page):
         page.set_viewport_size({"width": 1280, "height": 800})
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
-        self._stamp(page)
+
+    def test_shows_date_and_short_commit_linked_to_github(self, server, page):
+        self._open_preview(server, page)
+        page.evaluate(
+            "c => { APP_DEPLOY_COMMIT = c; APP_DEPLOY_DATE = '2026-11-08'; updateFooter(); }",
+            self.COMMIT,
+        )
+        stamp = page.evaluate("""() => {
+            const el = document.getElementById('footer-version');
+            const a = el.querySelector('a');
+            return {text: el.textContent, href: a && a.getAttribute('href'), title: a && a.title};
+        }""")
+        assert stamp["text"] == "2026-11-08 \u00b7 0a5ef9a"
+        assert stamp["href"] == "https://github.com/sy-tools/sy-subtitles/commit/" + self.COMMIT
+        assert stamp["title"] == self.COMMIT
+
+    def test_local_build_without_a_deploy_stamp_says_dev(self, server, page):
+        self._open_preview(server, page)
+        page.evaluate("() => updateFooter()")
+        assert page.locator("#footer-version").text_content() == "dev"
+
+    def test_long_footer_text_never_widens_the_page(self, server, page):
+        self._open_preview(server, page)
+        page.evaluate("() => { document.getElementById('footer-version').textContent = 'x'.repeat(500); }")
         sw, cw = page.evaluate("() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]")
         assert sw <= cw, f"document is {sw}px wide in a {cw}px window"
 
-    def test_date_stays_visible_and_full_version_in_title(self, server, page):
-        page.set_viewport_size({"width": 1280, "height": 800})
-        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
-        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
-        self._stamp(page)
-        info = page.evaluate("""() => {
-            const el = document.getElementById('footer-version');
-            const r = document.createRange();
-            r.selectNodeContents(el);
-            const text = el.textContent, i = text.indexOf('2026-11-07');
-            const box = el.getBoundingClientRect();
-            r.setStart(el.firstChild, i); r.setEnd(el.firstChild, i + 10);
-            const d = r.getBoundingClientRect();
-            return {title: el.title, dateIn: i >= 0 && d.right <= box.right + 0.5 && d.left >= box.left - 0.5};
-        }""")
-        assert info["dateIn"], "the deploy date is clipped out of the footer"
-        assert self.LONG_SHA in info["title"], "the full version must stay readable on hover"
+
+class TestShellUpdateDetection:
+    """Refresh (↻) compares the stamped shell version with a fingerprint of the
+    live tree and reloads once when they differ."""
+
+    SHELL_TREE = {
+        **MOCK_TREE,
+        "tree": MOCK_TREE["tree"]
+        + [
+            {"path": "site/index.html", "type": "blob", "sha": "a" * 40},
+            {"path": "site/js/x.js", "type": "blob", "sha": "b" * 40},
+            {"path": "site/css/tokens.css", "type": "blob", "sha": "c" * 40},
+        ],
+    }
+
+    def _serve_shell_tree(self, page):
+        page.route(
+            "**/api.github.com/**/git/trees/**",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                headers={"ETag": '"shell-etag"'},
+                body=json.dumps(self.SHELL_TREE),
+            ),
+        )
+
+    def _expected_version(self):
+        import hashlib
+
+        lines = "".join(
+            f"{e['path']} {e['sha']}\n"
+            for e in sorted(self.SHELL_TREE["tree"], key=lambda e: e["path"])
+            if e["path"] in ("site/index.html", "site/js/x.js", "site/css/tokens.css")
+        )
+        return hashlib.sha256(lines.encode()).hexdigest()[:12]
+
+    def _refresh(self, page):
+        page.evaluate("() => SPA.refreshManifest()")
+        page.wait_for_function("() => sessionStorage.getItem('sy_reload_target') !== null", timeout=5000)
+        return page.evaluate("() => sessionStorage.getItem('sy_reload_target')")
+
+    def test_stale_shell_reloads_toward_the_tree_fingerprint(self, server, page):
+        self._serve_shell_tree(page)
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        page.evaluate("() => { APP_SHELL_VERSION = 'oldoldoldold'; }")
+        assert self._refresh(page) == self._expected_version()
+
+    def test_current_shell_does_not_reload(self, server, page):
+        self._serve_shell_tree(page)
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        page.evaluate("v => { APP_SHELL_VERSION = v; }", self._expected_version())
+        page.evaluate("() => SPA.refreshManifest()")
+        page.wait_for_function(
+            "() => document.getElementById('last-updated').textContent !== t('freshness.refreshing')", timeout=5000
+        )
+        page.wait_for_timeout(500)
+        assert page.evaluate("() => sessionStorage.getItem('sy_reload_target')") is None
