@@ -9,4 +9,4 @@ ruff>=0.16.10
 pre-commit>=4.6.2
 playwright>=1.63.0
 hypothesis>=6.168.3
-fonttools>=4.66.0
+fonttools>=4.68.0
