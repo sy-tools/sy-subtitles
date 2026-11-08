@@ -143,7 +143,7 @@ def test_ytdlp_steps_decode_video_ref_to_player_url() -> None:
     `vimeo.com/<id>/<hash>` form (whisper runs 2026-07-27 downloaded nothing).
     Every workflow that feeds a decoded video_ref to yt-dlp must ask for the
     `player.vimeo.com` embed form, which still resolves."""
-    for name in ("whisper.yml", "new-talk.yml"):
+    for name in ("whisper.yml",):
         text = (WORKFLOWS / name).read_text(encoding="utf-8")
         decodes = re.findall(r"python3 -m tools\.vimeo_codec decode ([^\n]*)", text)
         assert decodes, f"{name}: no video_ref decode found"
@@ -210,3 +210,16 @@ def test_burn_validates_the_request_id_its_run_name_ends_with() -> None:
     assert step["env"].get("REQUEST_ID") == "${{ inputs.request_id }}"
     commands = "\n".join(ln for ln in step["run"].splitlines() if not ln.lstrip().startswith("#"))
     assert '--request-id="$REQUEST_ID"' in commands
+
+
+def test_new_talk_setup_does_not_run_whisper() -> None:
+    """Whisper is not run on add-talk PRs any more (decision 2026-11-08).
+
+    The subtitle pipeline runs it for any video that still lacks a
+    `whisper.json`, and many talks are timed from the EN SRT and never need
+    it — so running it on every add-talk PR only burnt runner time on videos
+    that GitHub's datacenter IPs often cannot download anyway."""
+    text = (WORKFLOWS / "new-talk.yml").read_text(encoding="utf-8")
+    jobs = yaml.safe_load(text)["jobs"]
+    assert not [j for j in jobs if "whisper" in j], f"new-talk.yml still has whisper jobs: {list(jobs)}"
+    assert "whisper" not in text.lower(), "new-talk.yml still mentions whisper"

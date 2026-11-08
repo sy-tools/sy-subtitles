@@ -242,6 +242,8 @@ Manual `workflow_dispatch` — runs `tests/test_golden_talks.py` with
 
 ### new-talk.yml
 Triggered when a PR adds a new talk directory; bootstraps metadata.
+It does **not** run whisper: the subtitle pipeline runs it for any video that
+still lacks a `whisper.json`, and talks timed from the EN SRT never need it.
 
 ### pipeline-matrix-dryrun.yml
 Replays the subtitle pipeline using `tools.fake_llm` snapshots — exercises

@@ -21,7 +21,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 REQUIREMENTS = ROOT / "requirements-whisper.txt"
-WHISPER_WORKFLOWS = ("whisper.yml", "new-talk.yml")
+WHISPER_WORKFLOWS = ("whisper.yml",)
 
 
 def _requirement_lines() -> list[str]:

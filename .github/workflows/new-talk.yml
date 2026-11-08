@@ -21,8 +21,6 @@ jobs:
     outputs:
       has_new: ${{ steps.detect.outputs.has_new }}
       metas: ${{ steps.detect.outputs.metas }}
-      whisper_matrix: ${{ steps.detect.outputs.whisper_matrix }}
-      has_whisper: ${{ steps.detect.outputs.has_whisper }}
     env:
       PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -70,10 +68,8 @@ jobs:
               print("No new meta.yaml files found")
               with open(os.environ["GITHUB_OUTPUT"], "a") as out:
                   out.write("has_new=false\n")
-                  out.write("has_whisper=false\n")
           else:
-              # Build whisper matrix: one entry per video
-              whisper_matrix = []
+              # Validate the ids every later step builds paths from.
               for meta_path in new_metas:
                   talk_dir = os.path.dirname(meta_path)
                   talk_id = os.path.basename(talk_dir)
@@ -84,37 +80,18 @@ jobs:
                   with open(meta_path) as f:
                       meta = yaml.safe_load(f)
                   for video in meta.get("videos", []):
-                      # Links are stored obfuscated as video_ref; pass the ref
-                      # through the matrix (decoded at the yt-dlp step) so no
-                      # plaintext URL lands in the public Actions logs.
-                      video_ref = video.get("video_ref", "")
-                      if not video_ref:
-                          continue
-                      slug = video.get("slug", "")
                       try:
-                          validate_video_slug(slug)
-                          validate_video_ref(video_ref)
+                          validate_video_slug(video.get("slug", ""))
+                          if video.get("video_ref"):
+                              validate_video_ref(video["video_ref"])
                       except InvalidWorkflowInput as e:
                           die(f"{meta_path}: {e}")
-                      whisper_path = f"{talk_dir}/{slug}/source/whisper.json"
-                      if os.path.exists(whisper_path):
-                          print(f"SKIP whisper: {whisper_path} exists")
-                          continue
-                      whisper_matrix.append({
-                          "talk_id": talk_id,
-                          "video_slug": slug,
-                          "video_ref": video_ref,
-                      })
-                      print(f"QUEUE whisper: {talk_id}/{slug}")
 
               print(f"\nNew talks: {new_metas}")
-              print(f"Whisper jobs: {len(whisper_matrix)}")
 
               with open(os.environ["GITHUB_OUTPUT"], "a") as out:
                   out.write("has_new=true\n")
                   out.write(f"metas={json.dumps(new_metas)}\n")
-                  out.write(f"has_whisper={'true' if whisper_matrix else 'false'}\n")
-                  out.write(f"whisper_matrix={json.dumps({'include': whisper_matrix})}\n")
           PYEOF
 
   # ── Setup: transcript, dirs, EN SRT, label ──────────────────────
@@ -278,159 +255,3 @@ jobs:
         run: |
           gh label create new-talk --description "PR adds a new talk" --color 0E8A16 2>/dev/null || true
           gh pr edit "$PR_NUMBER" --add-label new-talk
-
-  # ── Whisper: download video, run speech detection (parallel) ─────
-  whisper:
-    needs: detect
-    if: needs.detect.outputs.has_whisper == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 3
-      fail-fast: false
-      matrix: ${{ fromJson(needs.detect.outputs.whisper_matrix) }}
-    env:
-      TALK_ID: ${{ matrix.talk_id }}
-      VIDEO_SLUG: ${{ matrix.video_slug }}
-      VIDEO_REF: ${{ matrix.video_ref }}
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-python@v7
-        with:
-          python-version: '3.12'
-
-      - name: Cache pip packages
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/pip
-          key: pip-whisper-${{ hashFiles('requirements.txt', 'requirements-whisper.txt') }}
-          restore-keys: pip-whisper-
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update && sudo apt-get install -y ffmpeg
-          pip install -r requirements.txt -r requirements-whisper.txt 'yt-dlp[default,curl-cffi]'
-
-      - name: Cache Whisper model
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/huggingface/hub
-          key: faster-whisper-medium
-
-      - name: Validate matrix values
-        run: |
-          python3 -m tools.workflow_validation_cli \
-            --talk-id "$TALK_ID" \
-            --video-slug "$VIDEO_SLUG" \
-            --video-ref "$VIDEO_REF"
-
-      - name: Download video
-        run: |
-          # Decode the obfuscated video_ref at the last moment and mask the
-          # plaintext URL from the logs. --player emits the player.vimeo.com
-          # form: Vimeo answers 401 on the internal API yt-dlp uses for the
-          # canonical vimeo.com/<id>/<hash> links.
-          VIMEO_URL=$(python3 -m tools.vimeo_codec decode --player "$VIDEO_REF")
-          echo "::add-mask::$VIMEO_URL"
-          mkdir -p /tmp/whisper_work
-          yt-dlp --referer "https://www.amruta.org/" -o "/tmp/whisper_work/video.mp4" "$VIMEO_URL"
-
-      - name: Run Whisper
-        run: |
-          LANG_FLAG=$(python3 -c "
-          import os, yaml
-          with open('talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
-            meta = yaml.safe_load(f)
-          if meta.get('other_languages'):
-            print('')
-          else:
-            print('--language ' + meta.get('language', 'en'))
-          ")
-          mkdir -p "talks/${TALK_ID}/${VIDEO_SLUG}/source"
-          python -m tools.whisper_run \
-            --video /tmp/whisper_work/video.mp4 \
-            --output "talks/${TALK_ID}/${VIDEO_SLUG}/source/whisper.json" \
-            --model medium \
-            $LANG_FLAG
-
-      - name: Cleanup video
-        if: always()
-        run: rm -rf /tmp/whisper_work
-
-      - name: Upload whisper artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: whisper__${{ matrix.talk_id }}__${{ matrix.video_slug }}
-          path: talks/${{ matrix.talk_id }}/${{ matrix.video_slug }}/source/whisper.json
-
-  # ── Whisper commit: collect artifacts, push ─────────────────────
-  whisper-commit:
-    needs: [detect, whisper]
-    if: needs.detect.outputs.has_whisper == 'true' && !cancelled()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-
-      - name: Download whisper artifacts
-        uses: actions/download-artifact@v8
-        with:
-          pattern: whisper__*
-          merge-multiple: false
-          path: whisper-downloads
-
-      - name: Place artifacts
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          placed=0
-          # Strategy 1: subdirectories (merge-multiple: false creates dirs)
-          for dir in whisper-downloads/whisper__*/; do
-            [ -d "$dir" ] || continue
-            name="$(basename "$dir")"
-            rest="${name#whisper__}"
-            video_slug="${rest##*__}"
-            talk_id="${rest%__*}"
-            if [ -f "$dir/whisper.json" ]; then
-              dest="talks/${talk_id}/${video_slug}/source"
-              mkdir -p "$dest"
-              cp "$dir/whisper.json" "$dest/whisper.json"
-              echo "Placed: $dest/whisper.json"
-              placed=$((placed + 1))
-            fi
-          done
-
-          # Strategy 2: flat extraction fallback — download-artifact@v6 sometimes
-          # extracts a single artifact flat (no subdir). Recover names via gh API.
-          if [ "$placed" -eq 0 ] && [ -f "whisper-downloads/whisper.json" ]; then
-            echo "WARN: flat extraction detected, resolving via gh API"
-            artifact_name=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" \
-              --jq '.artifacts[] | select(.name | startswith("whisper__")) | .name' | head -1)
-            echo "Artifact name: $artifact_name"
-            if [ -n "$artifact_name" ]; then
-              rest="${artifact_name#whisper__}"
-              video_slug="${rest##*__}"
-              talk_id="${rest%__*}"
-              dest="talks/${talk_id}/${video_slug}/source"
-              mkdir -p "$dest"
-              cp "whisper-downloads/whisper.json" "$dest/whisper.json"
-              echo "Placed (flat fallback): $dest/whisper.json"
-              placed=$((placed + 1))
-            else
-              echo "ERROR: could not resolve artifact name from gh API"
-            fi
-          fi
-
-          echo "Total placed: $placed"
-
-      - name: Commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add talks/*/*/source/whisper.json
-          git diff --cached --quiet && { echo "No whisper changes"; exit 0; }
-          git commit -m "Add Whisper speech detection data"
-          git pull --rebase
-          git push

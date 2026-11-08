@@ -247,6 +247,10 @@ jobs:
       matrix: ${{ fromJson(needs.discover.outputs.whisper_matrix) }}
       fail-fast: false
     uses: ./.github/workflows/whisper.yml
+    # Without `inherit` the called workflow gets an empty `secrets` context,
+    # the `main` environment's App key included, and opens its bot PR with
+    # GITHUB_TOKEN — whose CI waits for a person. tests/test_bot_pr_app_token.py
+    secrets: inherit
     with:
       talk_id: ${{ matrix.talk_id }}
 
@@ -1274,6 +1278,8 @@ jobs:
     # commit's always() and would skip this job even when commit succeeded.
     if: ${{ !cancelled() && needs.commit.result == 'success' }}
     uses: ./.github/workflows/sync-review-status.yml
+    # Same reason as the whisper call above: no `inherit`, no App token.
+    secrets: inherit
     permissions:
       contents: write
       issues: write

@@ -184,3 +184,23 @@ def test_label_edits_run_outside_the_serialized_sync_queue():
     assert all(s.get("name") != edits for s in sync["steps"])
     assert sync["needs"] == "labels"
     assert sync["if"].startswith("!cancelled() &&"), "a skipped label job must not skip the sync"
+
+
+def test_reusable_bot_pr_workflows_are_called_with_inherited_secrets():
+    """A job that calls a reusable workflow without `secrets: inherit` hands it
+    an empty `secrets` context — the `main` environment's App key included,
+    even though the called job names `environment: main`. Its BOT_APP_READY is
+    then false, the bot PR is opened with GITHUB_TOKEN, its CI is held for
+    approval, `gate` never reports and auto-merge waits forever: every review
+    status and whisper PR the pipeline opened from 2026-09-26 on (#1156-#1203)
+    hung exactly so, while the same workflows run directly minted the token."""
+    reusable = {name for name, _ in BOT_PR_JOBS}
+    offenders = []
+    for path in WORKFLOWS.glob("*.yml"):
+        wf = yaml.safe_load(path.read_text(encoding="utf-8"))
+        for job_id, spec in (wf.get("jobs") or {}).items():
+            uses = str(spec.get("uses", ""))
+            is_bot_pr_call = uses.startswith("./.github/workflows/") and Path(uses).name in reusable
+            if is_bot_pr_call and spec.get("secrets") != "inherit":
+                offenders.append(f"{path.name}:{job_id} -> {Path(uses).name}")
+    assert offenders == []
