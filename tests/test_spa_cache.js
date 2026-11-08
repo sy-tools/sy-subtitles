@@ -579,8 +579,8 @@ describe('SPA code integrity', () => {
     assert.ok(parseInt(m[1]) >= 1, 'CACHE_SCHEMA should be >= 1');
   });
 
-  it('APP_DEPLOY_SHA placeholder exists', () => {
-    assert.ok(html.includes("var APP_DEPLOY_SHA = ''"), 'APP_DEPLOY_SHA placeholder not found');
+  it('APP_SHELL_VERSION placeholder exists', () => {
+    assert.ok(html.includes("var APP_SHELL_VERSION = ''"), 'APP_SHELL_VERSION placeholder not found');
   });
 
   it('SW registration without version query', () => {
@@ -2563,8 +2563,8 @@ describe('i18n: data-i18n coverage in HTML', () => {
     assert.ok(html.includes('function translatePage()'), 'translatePage not found');
   });
 
-  it('APP_DEPLOY_SHA and APP_DEPLOY_DATE placeholders', () => {
-    assert.ok(html.includes("var APP_DEPLOY_SHA = ''"), 'APP_DEPLOY_SHA placeholder');
+  it('APP_SHELL_VERSION and APP_DEPLOY_DATE placeholders', () => {
+    assert.ok(html.includes("var APP_SHELL_VERSION = ''"), 'APP_SHELL_VERSION placeholder');
     assert.ok(html.includes("var APP_DEPLOY_DATE = ''"), 'APP_DEPLOY_DATE placeholder');
   });
 });
@@ -2673,39 +2673,6 @@ describe('Cache: schema migration', () => {
 
   it('empty string → needs migration', () => {
     assert.strictEqual(shouldMigrateCache('', 2), false);
-  });
-});
-
-// ============================================================
-// buildManifest: _siteIndexSha extraction
-// ============================================================
-describe('buildManifest: _siteIndexSha', () => {
-  // Minimal buildManifest that extracts _siteIndexSha
-  function extractSiteIndexSha(tree) {
-    var sha = '';
-    tree.forEach(function(entry) {
-      if (entry.path === 'site/index.html') sha = (entry.sha || '').substring(0, 7);
-    });
-    return sha;
-  }
-
-  it('extracts SHA from tree', () => {
-    var tree = [
-      { path: 'talks/test/meta.yaml', sha: 'aaa' },
-      { path: 'site/index.html', sha: 'e3a253d1234567890' },
-      { path: 'site/sw.js', sha: 'bbb' },
-    ];
-    assert.strictEqual(extractSiteIndexSha(tree), 'e3a253d');
-  });
-
-  it('returns empty when site/index.html not in tree', () => {
-    var tree = [{ path: 'talks/test/meta.yaml', sha: 'aaa' }];
-    assert.strictEqual(extractSiteIndexSha(tree), '');
-  });
-
-  it('truncates to 7 chars', () => {
-    var tree = [{ path: 'site/index.html', sha: '1234567890abcdef' }];
-    assert.strictEqual(extractSiteIndexSha(tree), '1234567');
   });
 });
 
@@ -2980,8 +2947,24 @@ describe('Deploy stamps in HTML', () => {
   var fs = require('fs');
   var html = fs.readFileSync('site/index.html', 'utf8');
 
-  it('APP_DEPLOY_SHA placeholder for sed', () => {
-    assert.ok(html.includes("var APP_DEPLOY_SHA = '';"));
+  it('APP_SHELL_VERSION placeholder for sed', () => {
+    assert.ok(html.includes("var APP_SHELL_VERSION = '';"));
+  });
+
+  it('APP_DEPLOY_COMMIT placeholder for sed', () => {
+    assert.ok(html.includes("var APP_DEPLOY_COMMIT = '';"));
+  });
+
+  it('the old concatenated APP_DEPLOY_SHA stamp is gone', () => {
+    assert.ok(!html.includes('APP_DEPLOY_SHA'));
+  });
+
+  it('deploy-pages.yml stamps every placeholder it is given', () => {
+    var wf = fs.readFileSync('.github/workflows/deploy-pages.yml', 'utf8');
+    assert.ok(wf.includes("s/var APP_SHELL_VERSION = '';/"), 'shell version not stamped');
+    assert.ok(wf.includes("s/var APP_DEPLOY_COMMIT = '';/"), 'deploy commit not stamped');
+    assert.ok(wf.includes("s/var APP_DEPLOY_DATE = '';/"), 'deploy date not stamped');
+    assert.ok(!wf.includes('APP_DEPLOY_SHA'), 'stale APP_DEPLOY_SHA stamp left in the workflow');
   });
 
   it('APP_DEPLOY_DATE placeholder for sed', () => {

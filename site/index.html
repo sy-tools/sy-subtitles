@@ -924,7 +924,8 @@ var PAGES_BASE = location.pathname.replace(/\/[^/]*$/, '');
 // ============================================================
 // Deploy info — stamped by deploy-pages.yml at build time
 // ============================================================
-var APP_DEPLOY_SHA = ''; // app-shell version (index.html + js/*.js) at deploy
+var APP_SHELL_VERSION = ''; // app-shell fingerprint at deploy (js/shell_version.js)
+var APP_DEPLOY_COMMIT = ''; // full SHA of the commit this deploy was built from
 var APP_DEPLOY_DATE = ''; // deploy date YYYY-MM-DD
 var APP_GATE_HASH = ''; // passphrase-gate PBKDF2 hash, injected at deploy from the GATE_PASSPHRASE secret (empty => gate disabled / fail-open)
 var APP_GH_CLIENT_ID = 'Iv23liUDzvKwr32aTyMc'; // GitHub App client id (public). Empty => GitHub sign-in hidden.
@@ -937,7 +938,7 @@ function ghExchangeUrl() { return window.__SY_GH_EXCHANGE_URL || APP_GH_EXCHANGE
 // ============================================================
 // Cache — schema versioned, auto-migrates on format change
 // ============================================================
-var CACHE_SCHEMA = 3; // bump when cache format changes
+var CACHE_SCHEMA = 4; // bump when cache format changes
 var CACHE_KEY = 'sy_tree_cache__' + BRANCH;
 (function() {
   try {
@@ -2565,8 +2566,12 @@ function loadManifest() {
         m.treeSha = (data.sha || '').substring(0, 7);
         m.timestamp = Date.now();
         m._schema = CACHE_SCHEMA;
-        localStorage.setItem(CACHE_KEY, JSON.stringify(m));
-        return hydrateManifestMeta(m);
+        return computeShellVersion(data.tree, window.crypto && window.crypto.subtle)
+          .then(function(v) { m._shellVersion = v; }, function() { m._shellVersion = ''; })
+          .then(function() {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(m));
+            return hydrateManifestMeta(m);
+          });
       });
     }, function(networkErr) {
       // Only the fetch() promise's OWN rejection reaches this handler: offline /
@@ -2705,12 +2710,7 @@ function buildManifest(tree) {
   tree.forEach(function(entry) {
     if (entry.path === 'review-status.json') reviewSha = entry.sha || '';
   });
-  // App-shell version covers index.html AND every site/js/*.js, so a fix
-  // shipped only in an external js/ file still triggers the auto-reload.
-  // Mirrors tools/compute_shell_version.sh (the deploy-time stamp).
-  var siteIndexSha = computeShellVersion(tree);
-
-  return { talks: result, _reviewSha: reviewSha, _siteIndexSha: siteIndexSha };
+  return { talks: result, _reviewSha: reviewSha };
 }
 
 // ============================================================
@@ -8819,16 +8819,16 @@ SPA.refreshManifest = function() {
   ]).then(function(results) {
     var m = results[0];
     // Auto-reload if the app shell (index.html or any js/*.js) changed in repo.
-    // Guard against a reload loop: if APP_DEPLOY_SHA is still stale after a
+    // Guard against a reload loop: if APP_SHELL_VERSION is still stale after a
     // reload (e.g. un-propagated Pages CDN), reload at most once per target
     // version per session. A later, different target reloads again.
-    var target = m._siteIndexSha;
-    if (target && APP_DEPLOY_SHA && target !== APP_DEPLOY_SHA) {
+    var target = m._shellVersion;
+    if (target && APP_SHELL_VERSION && target !== APP_SHELL_VERSION) {
       var already = null;
       try { already = sessionStorage.getItem('sy_reload_target'); } catch(e) {}
       if (already !== target) {
         try { sessionStorage.setItem('sy_reload_target', target); } catch(e) {}
-        console.log('SPA update detected: ' + APP_DEPLOY_SHA + ' → ' + target);
+        console.log('SPA update detected: ' + APP_SHELL_VERSION + ' → ' + target);
         location.reload();
         return;
       }
@@ -9307,13 +9307,16 @@ SPA.toggleLang = function() {
 function updateFooter() {
   var el = document.getElementById('footer-version');
   if (!el) return;
-  var sha = APP_DEPLOY_SHA || (manifest && manifest._siteIndexSha) || 'dev';
-  var date = APP_DEPLOY_DATE || '';
-  // The shell version is one long unbreakable token (a 7-char prefix per app
-  // file), so the stylesheet clips it with an ellipsis; the date goes first so
-  // the clipping never takes it, and the full value stays on hover.
-  el.textContent = (date ? date + ' | ' : '') + sha;
-  el.title = sha;
+  el.textContent = '';
+  if (!APP_DEPLOY_COMMIT) { el.textContent = 'dev'; return; }
+  if (APP_DEPLOY_DATE) el.appendChild(document.createTextNode(APP_DEPLOY_DATE + ' \u00b7 '));
+  var a = document.createElement('a');
+  a.href = 'https://github.com/' + REPO + '/commit/' + APP_DEPLOY_COMMIT;
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.title = APP_DEPLOY_COMMIT;
+  a.textContent = APP_DEPLOY_COMMIT.slice(0, 7);
+  el.appendChild(a);
 }
 updateFooter();
 

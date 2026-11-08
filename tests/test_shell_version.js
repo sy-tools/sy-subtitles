@@ -1,57 +1,97 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { execFileSync } = require('node:child_process');
+const crypto = require('node:crypto');
 const path = require('node:path');
-const { computeShellVersion } = require('../site/js/shell_version');
+const { shellVersionInput, computeShellVersion } = require('../site/js/shell_version');
 
 const REPO_ROOT = path.join(__dirname, '..');
 
-describe('computeShellVersion — pure logic', () => {
-  it('keeps index.html + site/js/*.js, sorts by path, joins 7-char SHAs', () => {
+function sha256Prefix(text) {
+  return crypto.createHash('sha256').update(text, 'utf8').digest('hex').slice(0, 12);
+}
+
+describe('shellVersionInput — which files make up the app shell', () => {
+  it('keeps index.html + site/js/*.js as "path sha" lines in path order', () => {
     const entries = [
       { path: 'site/js/preview_state.js', sha: 'bbbbbbbbbb' },
       { path: 'site/index.html', sha: 'aaaaaaaaaa' },
       { path: 'site/js/add_talk_data.js', sha: 'cccccccccc' },
     ];
-    // path order: site/index.html < site/js/add_talk_data.js < site/js/preview_state.js
-    assert.strictEqual(computeShellVersion(entries), 'aaaaaaa' + 'ccccccc' + 'bbbbbbb');
+    assert.strictEqual(
+      shellVersionInput(entries),
+      'site/index.html aaaaaaaaaa\n'
+        + 'site/js/add_talk_data.js cccccccccc\n'
+        + 'site/js/preview_state.js bbbbbbbbbb\n',
+    );
   });
 
   it('keeps site/css/*.css (direct only), sorted into the path order', () => {
-    // CSS moved out of index.html into site/css/*.css must also drive the shell
-    // version — otherwise a CSS-only deploy would not trigger the SPA auto-reload
-    // and users would keep stale styling. Nested css is excluded like nested js.
+    // A CSS-only deploy must still trigger the auto-reload, or users keep stale
+    // styling. Nested css is excluded like nested js.
     const entries = [
-      { path: 'site/css/components.css', sha: 'dddddddddd' },
-      { path: 'site/index.html', sha: 'aaaaaaaaaa' },
-      { path: 'site/css/tokens.css', sha: 'eeeeeeeeee' },
-      { path: 'site/css/sub/nested.css', sha: 'ffffffffff' }, // nested → excluded
+      { path: 'site/css/components.css', sha: 'dd' },
+      { path: 'site/index.html', sha: 'aa' },
+      { path: 'site/css/tokens.css', sha: 'ee' },
+      { path: 'site/css/sub/nested.css', sha: 'ff' },
     ];
-    // path order: site/css/components.css < site/css/tokens.css < site/index.html
-    assert.strictEqual(computeShellVersion(entries), 'ddddddd' + 'eeeeeee' + 'aaaaaaa');
+    assert.strictEqual(
+      shellVersionInput(entries),
+      'site/css/components.css dd\nsite/css/tokens.css ee\nsite/index.html aa\n',
+    );
   });
 
   it('ignores non-shell paths (talks, other dirs, nested js)', () => {
     const entries = [
-      { path: 'site/index.html', sha: '1111111111' },
-      { path: 'talks/x/final/uk.srt', sha: '2222222222' },
-      { path: 'site/sw.js', sha: '3333333333' },          // not under site/js/
-      { path: 'site/js/sub/deep.js', sha: '4444444444' }, // nested, excluded
-      { path: 'tools/x.js', sha: '5555555555' },
+      { path: 'site/index.html', sha: '11' },
+      { path: 'talks/x/final/uk.srt', sha: '22' },
+      { path: 'site/sw.js', sha: '33' },
+      { path: 'site/js/sub/deep.js', sha: '44' },
+      { path: 'tools/x.js', sha: '55' },
     ];
-    assert.strictEqual(computeShellVersion(entries), '1111111');
+    assert.strictEqual(shellVersionInput(entries), 'site/index.html 11\n');
   });
 
-  it('returns empty string for no entries', () => {
-    assert.strictEqual(computeShellVersion([]), '');
-    assert.strictEqual(computeShellVersion(null), '');
+  it('is empty for no entries', () => {
+    assert.strictEqual(shellVersionInput([]), '');
+    assert.strictEqual(shellVersionInput(null), '');
+  });
+});
+
+describe('computeShellVersion — a fixed-length fingerprint', () => {
+  it('is the first 12 hex chars of SHA-256 over the input', async () => {
+    const entries = [
+      { path: 'site/index.html', sha: 'aaaaaaaaaa' },
+      { path: 'site/js/a.js', sha: 'bbbbbbbbbb' },
+    ];
+    const v = await computeShellVersion(entries, crypto.webcrypto.subtle);
+    assert.strictEqual(v, sha256Prefix(shellVersionInput(entries)));
+    assert.match(v, /^[0-9a-f]{12}$/);
+  });
+
+  it('stays 12 chars no matter how many files the shell has', async () => {
+    const entries = [];
+    for (let i = 0; i < 500; i++) entries.push({ path: 'site/js/m' + i + '.js', sha: 'f'.repeat(40) });
+    assert.strictEqual((await computeShellVersion(entries, crypto.webcrypto.subtle)).length, 12);
+  });
+
+  it('changes when any one shell file changes', async () => {
+    const a = [{ path: 'site/index.html', sha: '1' }, { path: 'site/css/tokens.css', sha: '2' }];
+    const b = [{ path: 'site/index.html', sha: '1' }, { path: 'site/css/tokens.css', sha: '3' }];
+    const s = crypto.webcrypto.subtle;
+    assert.notStrictEqual(await computeShellVersion(a, s), await computeShellVersion(b, s));
+  });
+
+  it('is empty when there is no shell or no WebCrypto (insecure context)', async () => {
+    assert.strictEqual(await computeShellVersion([], crypto.webcrypto.subtle), '');
+    assert.strictEqual(await computeShellVersion([{ path: 'site/index.html', sha: '1' }], undefined), '');
   });
 });
 
 describe('computeShellVersion matches the deploy script', () => {
-  it('JS over `git ls-tree HEAD` === tools/compute_shell_version.sh output', () => {
+  it('JS over `git ls-tree HEAD` === tools/compute_shell_version.sh output', async () => {
     // Both read the committed HEAD tree, so the file set is identical; this
-    // asserts the two implementations agree byte-for-byte (sort, 7-char, join).
+    // asserts the two implementations agree byte-for-byte.
     const lsTree = execFileSync(
       'git',
       ['ls-tree', '-r', 'HEAD', '--', 'site/index.html', 'site/js', 'site/css'],
@@ -66,12 +106,12 @@ describe('computeShellVersion matches the deploy script', () => {
         const sha = line.slice(0, tab).split(/\s+/)[2];
         return { path: line.slice(tab + 1), sha: sha };
       });
-    const fromJs = computeShellVersion(entries);
+    const fromJs = await computeShellVersion(entries, crypto.webcrypto.subtle);
     const fromSh = execFileSync('bash', ['tools/compute_shell_version.sh'], {
       cwd: REPO_ROOT,
       encoding: 'utf8',
     });
-    assert.strictEqual(fromJs, fromSh);
-    assert.ok(fromJs.length >= 7, 'expected at least index.html SHA, got: ' + JSON.stringify(fromJs));
+    assert.match(fromJs, /^[0-9a-f]{12}$/);
+    assert.strictEqual(fromSh, fromJs);
   });
 });
