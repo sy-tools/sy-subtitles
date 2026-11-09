@@ -8291,6 +8291,10 @@ function esc(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 // Allow only http(s)/hash-route/mailto hrefs (blocks javascript:, data:,
 // protocol-relative //host), then HTML-escape so a quote/tag cannot break out
 // of the href="" attribute. Returns '' for disallowed/empty URLs.
+// The index page this SPA is served from, without query or hash.
+function spaIndexUrl() {
+  return location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+}
 function safeHref(u) { return /^(https?:\/\/|#|mailto:)/i.test(u || '') ? esc(u) : ''; }
 function showToast(msg, ms) {
   var el = document.getElementById('toast');
@@ -8906,7 +8910,7 @@ document.addEventListener('click', function(e) {
 // Add Talk
 // ============================================================
 (function() {
-  var spaBase = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+  var spaBase = spaIndexUrl();
   // The saved bookmark is a thin LOADER that injects the current scraper
   // (js/bookmarklet.js) from the deployed site at click time. Keeping the
   // scraping logic in that file (not baked into the saved bookmark) means a
@@ -9118,7 +9122,7 @@ SPA.submitAddTalk = function() {
         files: [{ path: filename, content: yaml }],
         commitMessage: 'Add ' + title,
         prTitle: 'Add ' + title,
-        prBody: addTalkPrBody(url, talkId),
+        prBody: addTalkPrBody(url, talkId, spaIndexUrl()),
         onStep: step
       }).then(function(pr) {
         ghCreatedDialog('pr.created', pr);
@@ -9131,7 +9135,7 @@ SPA.submitAddTalk = function() {
   var ghUrl = 'https://github.com/' + REPO + '/new/main?filename=' + encodeURIComponent(filename)
     + '&value=' + encodeURIComponent(yaml)
     + '&message=' + encodeURIComponent('Add ' + title)
-    + '&description=' + encodeURIComponent(addTalkPrBody(url, talkId));
+    + '&description=' + encodeURIComponent(addTalkPrBody(url, talkId, spaIndexUrl()));
 
   var shortUrl = 'https://github.com/' + REPO + '/new/main?filename=' + encodeURIComponent(filename)
     + '&message=' + encodeURIComponent('Add ' + title);
