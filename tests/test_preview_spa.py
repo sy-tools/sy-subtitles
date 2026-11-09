@@ -4929,6 +4929,14 @@ class TestFullscreenCursorIdle:
         assert self._state(page) == "hidden"
         assert self._cursor(page) == "none"
 
+    def _double_click(self, page, x, y):
+        # The shield tells a double click by Date.now() between the presses
+        # (FS_DOUBLE_PRESS_MS). An installed clock still runs in real time, so
+        # driver latency between dblclick's two presses under CI load could
+        # spend the whole window; paused, the presses land at one instant.
+        page.clock.pause_at(page.evaluate("Date.now()"))
+        page.mouse.dblclick(x, y)
+
     def _playing_hidden(self, server, page, x=300, y=300):
         self._goto_preview(server, page)
         page.evaluate("window._vimeoPlayer.play()")
@@ -5144,7 +5152,7 @@ class TestFullscreenCursorIdle:
         page.mouse.move(300, 300)
         page.evaluate("SPA.toggleFullscreen()")
         self._hide(page)
-        page.mouse.dblclick(300, 300)
+        self._double_click(page, 300, 300)
         page.clock.run_for(100)
         assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
         assert self._paused(page) is False
@@ -5321,7 +5329,7 @@ class TestFullscreenCursorIdle:
 
     def test_double_click_after_the_shield_came_back_by_timeout_leaves_fullscreen(self, server, page):
         self._back_with_player_focused(server, page, "timeout")
-        page.mouse.dblclick(300, 300)
+        self._double_click(page, 300, 300)
         page.clock.run_for(100)
         assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
         assert self._paused(page) is False
@@ -6622,11 +6630,21 @@ class TestPassphraseGate:
         page.wait_for_selector("a.preview-link", timeout=10000)
         page.click("a.preview-link")
         page.wait_for_selector("#sy-gate-input", timeout=2000)
-        inp = page.locator("#sy-gate-input").bounding_box()
-        okb = page.locator(".sy-modal-btn.primary").bounding_box()
+        # The modal slides in with a transform (sy-modal-in). Two separate
+        # bounding_box() round trips can straddle that animation and read the
+        # input still shifted down by up to 8px while the button has settled,
+        # so both are read in one frame, after the animation has finished.
+        gap = page.evaluate(
+            """async () => {
+              const modal = document.querySelector('.sy-modal');
+              await Promise.all(modal.getAnimations().map((a) => a.finished));
+              const inp = document.getElementById('sy-gate-input').getBoundingClientRect();
+              const okb = modal.querySelector('.sy-modal-btn.primary').getBoundingClientRect();
+              return okb.top - inp.bottom;
+            }"""
+        )
         # The buttons must sit clearly BELOW the input — a flush/zero gap renders
         # as the buttons crowding (and visually overlapping) the field.
-        gap = okb["y"] - (inp["y"] + inp["height"])
         assert gap >= 10, f"buttons crowd the input: gap={gap:.1f}px (want >= 10)"
 
     def test_gate_password_reveal_toggle(self, server, page):
