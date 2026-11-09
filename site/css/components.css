@@ -257,6 +257,29 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 .ai-tag { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; background: var(--bg3); color: var(--fg6); border: 1px solid var(--border2); margin-left: 4px; }
 .expert-btn { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; background: var(--bg3); color: var(--fg5); border: 1px solid var(--border2); text-decoration: none; margin-left: 6px; }
 .expert-btn:hover { background: var(--bg4); color: var(--link); }
+.expert-btn:is(button) { font: inherit; font-size: 10px; cursor: pointer; }
+
+/* Run status of the newest subtitle-pipeline run, on a talk card (expert mode). */
+.pipe-run { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 4px;
+  font-family: var(--f-mono); font-size: 10px; text-decoration: none;
+  border: 1px solid var(--border2); background: var(--bg3); color: var(--fg5); }
+.pipe-run--queued { color: var(--fg4); }
+.pipe-run--running { color: var(--link); background: var(--stat-active-bg); border-color: var(--sync-progress); }
+.pipe-run--success { color: var(--accent-green); background: var(--primary-bg); border-color: var(--primary-border); }
+.pipe-run--failure { color: var(--danger-fg); background: var(--danger-bg); border-color: var(--danger-border); }
+.pipe-run--cancelled { color: var(--fg5); }
+a.pipe-run:hover { border-color: var(--fg4); }
+
+/* "Run pipeline" form: one row per workflow_dispatch input, drawn from the YAML. */
+.pipe-form { display: flex; flex-direction: column; gap: var(--space-1); max-height: 60vh; overflow-y: auto;
+  margin: 4px 0 8px; text-align: left; }
+.pipe-form__row { display: grid; grid-template-columns: 1fr; gap: 2px; padding: 6px 0;
+  border-bottom: 1px solid var(--border); }
+.pipe-form__row--check { grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; cursor: pointer; }
+.pipe-form__row--check input { accent-color: var(--link); width: 15px; height: 15px; margin: 0; }
+.pipe-form__row--check .pipe-form__help { grid-column: 2; }
+.pipe-form__name { font-family: var(--f-mono); font-size: 12px; color: var(--fg2); }
+.pipe-form__help { font-size: 11px; line-height: 1.35; color: var(--fg5); }
 
 /* --- Pipeline --- */
 .pipe-dag { display: flex; align-items: center; gap: 0; margin-top: 10px; flex-wrap: wrap; }

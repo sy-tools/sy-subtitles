@@ -19,6 +19,7 @@ import threading
 from pathlib import Path
 
 import pytest
+import yaml
 
 from tools.serve_auth_local import SpaHTTPServer
 
@@ -804,4 +805,106 @@ def test_review_issue_i_created_for_someone_elses_review_is_not_my_work(server, 
     pg.wait_for_selector(".stat-card[data-filter='mine']", timeout=10000)
     pg.wait_for_timeout(1500)  # let the async creator fetch land
     assert _mine_chip_num(pg) == "0"
+    ctx.close()
+
+
+PIPELINE_YML = (Path(__file__).parent.parent / ".github" / "workflows" / "subtitle-pipeline.yml").read_text()
+EXPERT_ALL = "localStorage.setItem('sy_expert_mode', '1');localStorage.setItem('sy_filter_expert', 'all');"
+RUN_URL = "https://github.com/sy-tools/sy-subtitles/actions/runs/555"
+
+
+def _wire_pipeline(pg, calls, runs):
+    """The real workflow file behind the contents API, plus the Actions endpoints."""
+    pg.route(
+        "**/api.github.com/repos/**/contents/.github/workflows/subtitle-pipeline.yml*",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"encoding": "base64", "content": base64.b64encode(PIPELINE_YML.encode()).decode()}),
+        ),
+    )
+    pg.route(
+        "**/api.github.com/repos/**/actions/workflows/subtitle-pipeline.yml/runs*",
+        lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"workflow_runs": runs})),
+    )
+    pg.route(
+        "**/api.github.com/repos/**/actions/runs/555",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"id": 555, "status": "queued", "html_url": RUN_URL, "display_title": "x"}),
+        ),
+    )
+    pg.route(
+        "**/api.github.com/repos/**/actions/workflows/subtitle-pipeline.yml/dispatches",
+        _record(calls)(200, {"workflow_run_id": 555, "html_url": RUN_URL, "run_url": "u"}),
+    )
+
+
+def test_expert_pipeline_button_dispatches_from_a_form_drawn_from_the_workflow(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    _wire_pipeline(pg, calls, runs=[])
+    pg.add_init_script(EXPERT_ALL)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".pipe-run-btn", timeout=10000)
+    pg.click(".pipe-run-btn")
+    pg.wait_for_selector(".sy-modal .pipe-form", timeout=5000)
+    names = pg.eval_on_selector_all(".sy-modal [data-pipe-input]", "els => els.map(e => e.dataset.pipeInput)")
+    assert names == [
+        "whisper",
+        "translate",
+        "review",
+        "build",
+        "timing_source",
+        "dry_run",
+        "model",
+        "build_model",
+        "oauth_token",
+    ]
+    other_model = yaml.safe_load(PIPELINE_YML)[True]["workflow_dispatch"]["inputs"]["model"]["options"][1]
+    pg.select_option(".sy-modal [data-pipe-input='model']", other_model)
+    pg.uncheck(".sy-modal [data-pipe-input='translate']")
+    pg.click(".sy-modal-btn.primary")
+    pg.wait_for_selector(".pipe-run.pipe-run--queued", timeout=5000)
+    posts = [c for c in calls if c["method"] == "POST" and c["url"].endswith("/dispatches")]
+    assert len(posts) == 1
+    assert posts[0]["body"]["ref"] == "main"
+    sent = posts[0]["body"]["inputs"]
+    assert sent["talk_id"] == "2001-01-01_Test-Talk"
+    assert sent["model"] == other_model
+    assert sent["translate"] == "false" and sent["whisper"] == "true"
+    assert pg.get_attribute(".pipe-run", "href") == RUN_URL
+    ctx.close()
+
+
+def test_expert_pipeline_button_refuses_a_talk_that_is_already_running(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    running = {
+        "id": 9,
+        "status": "in_progress",
+        "conclusion": None,
+        "html_url": RUN_URL,
+        "display_title": "2001-01-01_Test-Talk | whisper translate review build",
+    }
+    _wire_pipeline(pg, calls, runs=[running])
+    pg.add_init_script(EXPERT_ALL)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".pipe-run.pipe-run--running", timeout=10000)
+    pg.click(".pipe-run-btn")
+    pg.wait_for_timeout(500)
+    assert pg.locator(".sy-modal .pipe-form").count() == 0
+    assert not [c for c in calls if c["url"].endswith("/dispatches")]
+    ctx.close()
+
+
+def test_signed_out_expert_pipeline_button_still_opens_the_actions_page(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, signed_in=False)
+    pg.add_init_script(EXPERT_ALL)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector("a.expert-btn", timeout=10000)
+    assert pg.get_attribute("a.expert-btn", "href").endswith("/actions/workflows/subtitle-pipeline.yml")
+    assert pg.locator(".pipe-run-btn").count() == 0
     ctx.close()

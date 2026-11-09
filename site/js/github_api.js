@@ -409,7 +409,19 @@ function dispatchWorkflow(api, token, workflowFile, ref, inputs, fetchImpl) {
   return ghJson(
     api + '/actions/workflows/' + encodeURIComponent(workflowFile) + '/dispatches',
     token, { method: 'POST', body: { ref: ref, inputs: inputs } }, fetchImpl
-  ).then(function () { /* 204 No Content */ });
+  );
+}
+
+function getRun(api, token, runId, fetchImpl) {
+  return ghJson(api + '/actions/runs/' + runId, token, null, fetchImpl);
+}
+
+function getWorkflowFile(api, token, workflowFile, ref, fetchImpl) {
+  return ghJson(
+    api + '/contents/.github/workflows/' + encodeURIComponent(workflowFile)
+      + '?ref=' + encodeURIComponent(ref),
+    token, null, fetchImpl
+  ).then(function (r) { return base64ToUtf8(r.content || ''); });
 }
 
 function listWorkflowRuns(api, token, workflowFile, fetchImpl) {
@@ -495,6 +507,8 @@ if (typeof module !== 'undefined' && module.exports) {
     dispatchWorkflow: dispatchWorkflow,
     listWorkflowRuns: listWorkflowRuns,
     getRunJobs: getRunJobs,
+    getRun: getRun,
+    getWorkflowFile: getWorkflowFile,
     listRunArtifacts: listRunArtifacts,
     listBurnRuns: listBurnRuns,
   };
