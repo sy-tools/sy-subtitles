@@ -9,6 +9,7 @@ from tools.workflow_validation import (
     die,
     validate_clip,
     validate_git_ref,
+    validate_llm_actor,
     validate_request_id,
     validate_subs_scale,
     validate_talk_id,
@@ -29,6 +30,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--subs-scale")
     parser.add_argument("--clip", help="empty means the whole video")
     parser.add_argument("--request-id")
+    parser.add_argument("--llm-actor", help="login that triggered the run; checked against --llm-actors-allowed")
+    parser.add_argument("--llm-actors-allowed", default="")
     args = parser.parse_args(argv)
     try:
         if args.source_ref is not None:
@@ -45,6 +48,8 @@ def main(argv: list[str] | None = None) -> None:
             validate_clip(args.clip)
         if args.request_id is not None:
             validate_request_id(args.request_id)
+        if args.llm_actor is not None:
+            validate_llm_actor(args.llm_actor, args.llm_actors_allowed)
     except InvalidWorkflowInput as e:
         die(str(e))
 
