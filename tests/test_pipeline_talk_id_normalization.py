@@ -80,7 +80,8 @@ def _artifact_steps() -> Iterator[tuple[str, dict]]:
 def test_raw_inputs_talk_id_only_in_run_name_and_discover_feed() -> None:
     """Raw ``inputs.talk_id`` must be normalized before any downstream use.
 
-    It is allowed only on the cosmetic ``run-name`` line and on the
+    It is allowed only on the cosmetic ``run-name`` line, the workflow-level
+    concurrency ``group`` (no job outputs available there), and on the
     ``INPUT_TALK_ID:`` env feed into the discover job (which strips it). Any
     other occurrence (artifact names, path globs, TALK_ID env vars) can carry
     surrounding whitespace into artifact-name matching and break the pipeline.
@@ -90,7 +91,9 @@ def test_raw_inputs_talk_id_only_in_run_name_and_discover_feed() -> None:
         if not _INPUTS_TALK_ID_EXPR.search(line):
             continue
         stripped = line.lstrip()
-        if stripped.startswith("run-name:") or stripped.startswith("INPUT_TALK_ID:"):
+        # Workflow-level `concurrency.group` cannot read job outputs, so the raw
+        # value is the only option there (a stray space only splits the group).
+        if stripped.startswith(("run-name:", "INPUT_TALK_ID:", "group: subtitle-pipeline-")):
             continue
         offenders.append((lineno, line.strip()))
 
