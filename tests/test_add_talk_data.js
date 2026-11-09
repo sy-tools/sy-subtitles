@@ -315,9 +315,16 @@ describe('syncRolesForRows — roles follow the rows that are actually emitted',
 });
 
 describe('addTalkPrBody', () => {
+  const INDEX = 'https://sy-tools.github.io/sy-subtitles/';
+
   it('includes the source url and the talk_id in a fenced block', () => {
-    const body = addTalkPrBody('https://www.amruta.org/x', '1981-11-01_Diwali');
+    const body = addTalkPrBody('https://www.amruta.org/x', '1981-11-01_Diwali', INDEX);
     assert.ok(body.includes('Added via SY Subtitles SPA from: https://www.amruta.org/x'));
     assert.ok(body.includes('Talk ID:\n```\n1981-11-01_Diwali\n```'));
+  });
+
+  it('links the index searched to this talk, across every status', () => {
+    const body = addTalkPrBody('https://www.amruta.org/x', '1981-11-01_Diwali', INDEX);
+    assert.ok(body.includes('(' + INDEX + '?q=1981-11-01_Diwali&f=all)'), body);
   });
 });
