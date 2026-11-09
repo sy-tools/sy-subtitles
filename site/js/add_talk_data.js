@@ -175,10 +175,14 @@ function buildMetaYaml(fields) {
 }
 
 // PR body for an add-talk PR. The talk_id sits in a fenced block (GitHub adds a
-// copy button) so it can be pasted into the pipeline's "Run workflow" form.
-function addTalkPrBody(url, talkId) {
+// copy button) for the pipeline's "Run workflow" form, and the index link opens
+// the SPA already searched to the talk — ?q=/?f= as js/index_url_state.js reads
+// them; f=all because a talk with no subtitles yet is outside the default filter.
+function addTalkPrBody(url, talkId, indexUrl) {
+  var link = indexUrl + '?q=' + encodeURIComponent(talkId) + '&f=all';
   return 'Added via SY Subtitles SPA from: ' + url
-    + '\n\nTalk ID:\n```\n' + talkId + '\n```\n';
+    + '\n\nTalk ID:\n```\n' + talkId + '\n```\n'
+    + '\nAfter merge: [open this talk in SY Subtitles](' + link + ')\n';
 }
 
 if (typeof module !== 'undefined' && module.exports) {

@@ -556,6 +556,8 @@ def test_add_talk_creates_pr_when_signed_in(server, browser):
     refs = next(c for c in calls if c["url"].endswith("/git/refs"))
     assert refs["body"]["ref"].startswith("refs/heads/add-talk/2002-02-02_Brand-New-Talk--tester--")
     assert pg.evaluate("window.__opened[0]") == "https://github.com/sy-tools/sy-subtitles/pull/9"
+    pr = next(c for c in calls if c["method"] == "POST" and c["url"].endswith("/pulls"))
+    assert f"({server}/?q=2002-02-02_Brand-New-Talk&f=all)" in pr["body"]["body"]
     ctx.close()
 
 
