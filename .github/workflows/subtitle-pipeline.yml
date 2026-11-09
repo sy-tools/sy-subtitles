@@ -105,6 +105,18 @@ on:
         type: string
         default: default
 
+# One run per talk (and per kind: real vs dry-run) at a time. Without this,
+# two dispatches for the same talk ran in parallel and opened two bot PRs.
+# cancel-in-progress is false on purpose: a running pipeline has spent LLM
+# budget and is never killed. Caveat: GitHub keeps only ONE pending run per
+# group; a newer queued run cancels the older queued one.
+# Dry runs get their own group (they never commit, so they must not block a
+# real run); dry_run_tag keeps parallel matrix legs of the same talk apart.
+# On push `inputs` is empty, so the key falls back to github.ref.
+concurrency:
+  group: subtitle-pipeline-${{ inputs.talk_id || github.ref }}-${{ inputs.dry_run && format('dry{0}', inputs.dry_run_tag) || 'real' }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   id-token: write
