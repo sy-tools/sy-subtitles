@@ -159,6 +159,18 @@ jobs:
         with:
           fetch-depth: 2
 
+      # Every job needs discover, so a refusal here stops the run before any
+      # Claude call. Anyone with write access can dispatch; only the people on
+      # PIPELINE_LLM_ACTORS may spend the tokens. triggering_actor (not actor)
+      # so a re-run is judged by whoever pressed "Re-run". Whisper-only runs
+      # and dry runs spend no tokens and stay open to every writer.
+      - name: Authorize Claude token spend
+        if: ${{ !inputs.dry_run && (inputs.translate != false || inputs.review != false || inputs.build != false) }}
+        env:
+          LLM_ACTOR: ${{ github.triggering_actor }}
+          LLM_ACTORS_ALLOWED: ${{ vars.PIPELINE_LLM_ACTORS || 'SlavaSubotskiy' }}
+        run: python -m tools.workflow_validation_cli --llm-actor "$LLM_ACTOR" --llm-actors-allowed "$LLM_ACTORS_ALLOWED"
+
       - name: Install pyyaml
         run: pip install pyyaml
 

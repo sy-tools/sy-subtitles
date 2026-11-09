@@ -135,6 +135,21 @@ def validate_video_ref(value: str) -> str:
     return value
 
 
+def validate_llm_actor(actor: str, allowed: str) -> str:
+    """Refuse a token-spending run started by anyone off the comma-separated list.
+
+    GitHub logins are case-insensitive. An empty list refuses everyone: the
+    guard fails closed, never open.
+    """
+    logins = {login.strip().lower() for login in allowed.split(",") if login.strip()}
+    if not actor or actor.lower() not in logins:
+        raise InvalidWorkflowInput(
+            f"{actor or '(unknown)'} is not allowed to start a run that spends Claude tokens; "
+            "use dry_run, or ask to be added to the PIPELINE_LLM_ACTORS repo variable"
+        )
+    return actor
+
+
 def die(msg: str) -> None:
     print(f"::error::{msg}", file=sys.stderr)
     sys.exit(1)
