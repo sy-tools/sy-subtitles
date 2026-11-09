@@ -9118,7 +9118,7 @@ SPA.submitAddTalk = function() {
         files: [{ path: filename, content: yaml }],
         commitMessage: 'Add ' + title,
         prTitle: 'Add ' + title,
-        prBody: 'Added via SY Subtitles SPA from: ' + url,
+        prBody: addTalkPrBody(url, talkId),
         onStep: step
       }).then(function(pr) {
         ghCreatedDialog('pr.created', pr);
@@ -9131,7 +9131,7 @@ SPA.submitAddTalk = function() {
   var ghUrl = 'https://github.com/' + REPO + '/new/main?filename=' + encodeURIComponent(filename)
     + '&value=' + encodeURIComponent(yaml)
     + '&message=' + encodeURIComponent('Add ' + title)
-    + '&description=' + encodeURIComponent('Added via SY Subtitles SPA from: ' + url);
+    + '&description=' + encodeURIComponent(addTalkPrBody(url, talkId));
 
   var shortUrl = 'https://github.com/' + REPO + '/new/main?filename=' + encodeURIComponent(filename)
     + '&message=' + encodeURIComponent('Add ' + title);
