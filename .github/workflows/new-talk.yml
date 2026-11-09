@@ -1,7 +1,9 @@
 name: New Talk Setup
 run-name: "New talk: ${{ github.event.pull_request.title }}"
 
-# Pushes via GITHUB_TOKEN do not trigger workflows — no recursion risk.
+# The setup commit is pushed with GITHUB_TOKEN and `[skip ci]`: GitHub would
+# otherwise hold its pull_request runs (this workflow and CI) at "Approve and
+# run" (#1216). CI is dispatched onto the branch instead — see "Commit".
 
 on:
   pull_request:
@@ -12,6 +14,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Dispatching ci.yml after the bot push — see "Commit".
+  actions: write
 
 jobs:
   # ── Detect new meta.yaml files ──────────────────────────────────
@@ -240,14 +244,24 @@ jobs:
           PYEOF
 
       - name: Commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add talks/
           git diff --cached --quiet && { echo "No changes to commit"; exit 0; }
-          git commit -m "Setup new talk: extract transcript, create dirs, download SRT"
+          # [skip ci]: a GITHUB_TOKEN push gets its pull_request runs held for
+          # a maintainer's approval (#1216) — this workflow and CI alike.
+          # Skipping them keeps the PR free of runs nobody will approve.
+          git commit -m "Setup new talk: extract transcript, create dirs, download SRT [skip ci]"
           git pull --rebase
           git push
+          # The commit is now the PR head; the required `gate` must still
+          # report on it. workflow_dispatch is the one event this token may
+          # fire without approval, and a run on the branch reports on its head.
+          gh workflow run ci.yml --ref "$HEAD_REF"
 
       - name: Add new-talk label
         env:
