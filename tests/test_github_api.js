@@ -809,3 +809,31 @@ describe('listBurnRuns', () => {
       (e) => e.status === 403);
   });
 });
+
+const { getWorkflowFile } = require('../site/js/github_api');
+
+describe('pipeline dispatch primitives', () => {
+  const API = 'https://api.github.com/repos/o/r';
+
+  it('dispatchWorkflow hands back the run details GitHub now returns', async () => {
+    const r = await dispatchWorkflow(API, 'gho_x', 'subtitle-pipeline.yml', 'main', { talk_id: 'x' },
+      fetchDouble(200, { workflow_run_id: 7, html_url: 'h', run_url: 'r' }));
+    assert.strictEqual(r.workflow_run_id, 7);
+  });
+
+  it('dispatchWorkflow still resolves on the old 204 with no body', async () => {
+    const r = await dispatchWorkflow(API, 'gho_x', 'burn-subtitles.yml', 'main', {},
+      fetchDouble(204, null));
+    assert.deepStrictEqual(r, {});
+  });
+
+  it('getWorkflowFile reads the file at a ref through the contents API, decoded', async () => {
+    const capture = {};
+    const text = 'name: Пайплайн\n';
+    const r = await getWorkflowFile(API, 'gho_x', 'subtitle-pipeline.yml', 'feat/x',
+      fetchDouble(200, { encoding: 'base64', content: Buffer.from(text).toString('base64') }, capture));
+    assert.strictEqual(capture.url,
+      API + '/contents/.github/workflows/subtitle-pipeline.yml?ref=feat%2Fx');
+    assert.strictEqual(r, text);
+  });
+});

@@ -323,6 +323,32 @@ yet", so there is no second place to keep in sync.</p>
   <span class="review-badge in-progress">in progress</span>
 </div>
 
+<h2>Pipeline run (expert mode)</h2>
+<p>The newest <code>subtitle-pipeline.yml</code> run of a talk, beside its <code>▶ pipeline</code>
+button. Rendered by <code>runChipHtml</code> in <code>js/pipeline_dispatch.js</code>; it links to the run.</p>
+<div class="sg-row">
+  <button type="button" class="expert-btn">&#x25B6; pipeline</button>
+  <a href="#" class="pipe-run pipe-run--queued">queued</a>
+  <a href="#" class="pipe-run pipe-run--running">running</a>
+  <a href="#" class="pipe-run pipe-run--success">done</a>
+  <a href="#" class="pipe-run pipe-run--failure">failed</a>
+  <a href="#" class="pipe-run pipe-run--cancelled">cancelled</a>
+</div>
+
+<h3>Run pipeline form (<code>.pipe-form</code>)</h3>
+<p>Drawn inside the confirm dialog from the workflow's own <code>workflow_dispatch.inputs</code>
+(<code>pipelineFormHtml</code>): a boolean is a checkbox, a choice a select, anything else a text field.
+The talk is fixed by the card and gets no control.</p>
+<div class="sy-modal" style="position:relative;max-width:440px">
+  <h3 class="sy-modal-title">Run pipeline: 2001-01-01_Test-Talk</h3>
+  <div class="sy-modal-body"><div class="pipe-form">
+    <label class="pipe-form__row pipe-form__row--check"><input type="checkbox"><span class="pipe-form__name">whisper</span><span class="pipe-form__help">Run whisper step</span></label>
+    <label class="pipe-form__row pipe-form__row--check"><input type="checkbox" checked><span class="pipe-form__name">translate</span><span class="pipe-form__help">Run translate step</span></label>
+    <label class="pipe-form__row"><span class="pipe-form__name">model</span><select class="input compact"><option>claude-opus-5-5</option></select><span class="pipe-form__help">Claude model for LLM steps</span></label>
+  </div></div>
+  <div class="sy-modal-actions"><button type="button" class="sy-modal-btn">Cancel</button><button type="button" class="sy-modal-btn primary">Run</button></div>
+</div>
+
 <h2>Cards</h2>
 <div class="talk-item sg-card">
   <div class="talk-date">1975-03-29 <span class="review-badge needs-review">needs review</span></div>
