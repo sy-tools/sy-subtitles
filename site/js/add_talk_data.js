@@ -174,8 +174,16 @@ function buildMetaYaml(fields) {
   return yaml;
 }
 
+// PR body for an add-talk PR. The talk_id sits in a fenced block (GitHub adds a
+// copy button) so it can be pasted into the pipeline's "Run workflow" form.
+function addTalkPrBody(url, talkId) {
+  return 'Added via SY Subtitles SPA from: ' + url
+    + '\n\nTalk ID:\n```\n' + talkId + '\n```\n';
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    addTalkPrBody: addTalkPrBody,
     parseAddTalkHash: parseAddTalkHash,
     isAmrutaUrl: isAmrutaUrl,
     buildMetaYaml: buildMetaYaml,

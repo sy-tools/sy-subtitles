@@ -5,6 +5,7 @@ const {
   buildMetaYaml,
   defaultSyncRoles,
   syncRolesForRows,
+  addTalkPrBody,
 } = require('../site/js/add_talk_data');
 const { decodeVideoRef } = require('../site/js/vimeo_codec');
 
@@ -310,5 +311,13 @@ describe('syncRolesForRows — roles follow the rows that are actually emitted',
       { title: 'Second Talk', url: 'https://vimeo.com/2' },
     ]).filter(Boolean);
     assert.strictEqual(roles.filter((r) => r === 'primary').length, 1);
+  });
+});
+
+describe('addTalkPrBody', () => {
+  it('includes the source url and the talk_id in a fenced block', () => {
+    const body = addTalkPrBody('https://www.amruta.org/x', '1981-11-01_Diwali');
+    assert.ok(body.includes('Added via SY Subtitles SPA from: https://www.amruta.org/x'));
+    assert.ok(body.includes('Talk ID:\n```\n1981-11-01_Diwali\n```'));
   });
 });
