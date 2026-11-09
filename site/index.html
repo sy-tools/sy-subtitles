@@ -3243,12 +3243,24 @@ document.addEventListener('DOMContentLoaded', function() {
 var pipelineRuns = {};
 var pipelineRunsTimer = null;
 var pipelineRunsLoading = false;
+var pipelineRunsFetchedAt = 0;
 var pipelineDispatching = {};
+// Runs this tab started that GitHub does not list yet (withDispatchedRuns).
+var pipelineDispatched = {};
 // A pipeline runs for 30-90 minutes; a slower poll than a burn's is plenty.
+// window.__SY_PIPELINE_POLL_MS shortens it for the e2e suite only.
 var PIPELINE_POLL_MS = 15000;
+// Index re-renders (every search keystroke, every filter click) reuse a list
+// this fresh instead of asking GitHub again.
+var PIPELINE_RUNS_FRESH_MS = 10000;
 var pipelineWorkflowCache = {};
 
+function pipelinePollMs() {
+  return window.__SY_PIPELINE_POLL_MS || PIPELINE_POLL_MS;
+}
+
 function pipelineRunChip(talkId) {
+  if (!expertMode) return '';
   return runChipHtml(pipelineRuns[talkId] || null, esc, function(state) {
     return t('pipeline.state.' + state);
   }, safeHref);
@@ -3263,30 +3275,38 @@ function paintPipelineRuns() {
 function schedulePipelinePoll() {
   clearTimeout(pipelineRunsTimer);
   var active = Object.keys(pipelineRuns).some(function(id) { return isRunActive(pipelineRuns[id]); });
-  if (active) pipelineRunsTimer = setTimeout(refreshPipelineRuns, PIPELINE_POLL_MS);
+  if (active) {
+    pipelineRunsTimer = setTimeout(function() { refreshPipelineRuns(true); }, pipelinePollMs());
+  }
 }
 
 function fetchPipelineRuns() {
   return listWorkflowRuns(API, getAuthToken(), PIPELINE_WORKFLOW).then(function(runs) {
-    pipelineRuns = latestRunsByTalk(runs);
+    var merged = withDispatchedRuns(latestRunsByTalk(runs), pipelineDispatched, Date.now());
+    pipelineRuns = merged.runs;
+    pipelineDispatched = merged.dispatched;
+    pipelineRunsFetchedAt = Date.now();
     return pipelineRuns;
   });
 }
 
-function refreshPipelineRuns() {
+function refreshPipelineRuns(force) {
   if (pipelineRunsLoading || !ghWriteUser() || !expertMode) return;
   // A hidden tab spends no requests; visibilitychange resumes it.
   if (document.visibilityState === 'hidden') return;
+  if (!force && Date.now() - pipelineRunsFetchedAt < PIPELINE_RUNS_FRESH_MS) return;
   pipelineRunsLoading = true;
-  fetchPipelineRuns().then(function() {
+  // A failed list (network blip, 502, rate limit) keeps the last known runs and
+  // tries again on the next tick, so an active run's chip never freezes.
+  fetchPipelineRuns().catch(function() {}).then(function() {
     pipelineRunsLoading = false;
     paintPipelineRuns();
     schedulePipelinePoll();
-  }, function() { pipelineRunsLoading = false; });
+  });
 }
 
 document.addEventListener('visibilitychange', function() {
-  if (document.visibilityState === 'visible' && document.querySelector('.pipe-run-slot')) refreshPipelineRuns();
+  if (document.visibilityState === 'visible' && document.querySelector('.pipe-run-slot')) refreshPipelineRuns(true);
 });
 
 function loadPipelineInputs(ref) {
@@ -3331,15 +3351,13 @@ function openPipelineDialog(talkId, stages) {
           return;
         }
         return dispatchWorkflow(API, getAuthToken(), PIPELINE_WORKFLOW, ref, payload).then(function(body) {
-          var runId = runIdFromDispatch(body);
-          if (runId) {
-            pipelineRuns[talkId] = { id: runId, status: 'queued', conclusion: null,
-                                     html_url: (body && body.html_url) || '' };
-            paintPipelineRuns();
-          }
+          var run = { id: runIdFromDispatch(body), status: 'queued', conclusion: null,
+                      html_url: (body && body.html_url) || '' };
+          pipelineDispatched[talkId] = { since: Date.now(), run: run };
+          pipelineRuns[talkId] = run;
+          paintPipelineRuns();
           showToast(t('pipeline.started'), 3000);
-          clearTimeout(pipelineRunsTimer);
-          pipelineRunsTimer = setTimeout(refreshPipelineRuns, runId ? PIPELINE_POLL_MS : 3000);
+          schedulePipelinePoll();
         });
       });
     });

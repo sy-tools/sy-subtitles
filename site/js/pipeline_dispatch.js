@@ -151,6 +151,7 @@ function isRunActive(run) {
   return s === 'queued' || s === 'running';
 }
 
+// safeHref returns the URL already escaped for an attribute, or '' when unsafe.
 function runChipHtml(run, esc, labelFor, safeHref) {
   var state = runState(run);
   if (!state) return '';
@@ -158,8 +159,32 @@ function runChipHtml(run, esc, labelFor, safeHref) {
   var href = safeHref(run.html_url || '');
   var text = esc(labelFor(state));
   return href
-    ? '<a class="' + cls + '" target="_blank" rel="noopener" href="' + esc(href) + '">' + text + '</a>'
+    ? '<a class="' + cls + '" target="_blank" rel="noopener" href="' + href + '">' + text + '</a>'
     : '<span class="' + cls + '">' + text + '</span>';
+}
+
+// GitHub lists a dispatched run a few seconds after accepting it, so a re-list
+// right after a dispatch can still show the talk's previous run. The dispatched
+// run is kept until the list has it, or until it plainly never will.
+var DISPATCH_VISIBLE_WITHIN_MS = 2 * 60 * 1000;
+// Runner clocks and ours differ; a run created a little "before" the click is ours.
+var DISPATCH_CLOCK_SKEW_MS = 60 * 1000;
+
+function withDispatchedRuns(listed, dispatched, nowMs) {
+  var runs = {};
+  var still = {};
+  Object.keys(listed).forEach(function(id) { runs[id] = listed[id]; });
+  Object.keys(dispatched).forEach(function(talkId) {
+    var d = dispatched[talkId];
+    var seen = listed[talkId];
+    var arrived = seen && (d.run.id
+      ? seen.id >= d.run.id
+      : Date.parse(seen.created_at) >= d.since - DISPATCH_CLOCK_SKEW_MS);
+    if (arrived || nowMs - d.since > DISPATCH_VISIBLE_WITHIN_MS) return;
+    runs[talkId] = d.run;
+    still[talkId] = d;
+  });
+  return { runs: runs, dispatched: still };
 }
 
 function runIdFromDispatch(body) {
@@ -182,5 +207,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isRunActive: isRunActive,
     runChipHtml: runChipHtml,
     runIdFromDispatch: runIdFromDispatch,
+    withDispatchedRuns: withDispatchedRuns,
+    DISPATCH_VISIBLE_WITHIN_MS: DISPATCH_VISIBLE_WITHIN_MS,
   };
 }

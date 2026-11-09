@@ -810,7 +810,7 @@ describe('listBurnRuns', () => {
   });
 });
 
-const { getRun, getWorkflowFile } = require('../site/js/github_api');
+const { getWorkflowFile } = require('../site/js/github_api');
 
 describe('pipeline dispatch primitives', () => {
   const API = 'https://api.github.com/repos/o/r';
@@ -825,14 +825,6 @@ describe('pipeline dispatch primitives', () => {
     const r = await dispatchWorkflow(API, 'gho_x', 'burn-subtitles.yml', 'main', {},
       fetchDouble(204, null));
     assert.deepStrictEqual(r, {});
-  });
-
-  it('getRun GETs one run by id', async () => {
-    const capture = {};
-    const r = await getRun(API, 'gho_x', 7,
-      fetchDouble(200, { id: 7, status: 'in_progress' }, capture));
-    assert.strictEqual(capture.url, API + '/actions/runs/7');
-    assert.strictEqual(r.status, 'in_progress');
   });
 
   it('getWorkflowFile reads the file at a ref through the contents API, decoded', async () => {

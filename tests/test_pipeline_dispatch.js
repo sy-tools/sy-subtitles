@@ -284,3 +284,44 @@ describe('runChipHtml', () => {
       esc, label, safe), '<span class="pipe-run pipe-run--failure">L:failure</span>');
   });
 });
+
+const { withDispatchedRuns, DISPATCH_VISIBLE_WITHIN_MS } = require('../site/js/pipeline_dispatch');
+
+describe('withDispatchedRuns', () => {
+  const T0 = Date.parse('2026-11-10T10:00:00Z');
+  const listedRun = (id, createdAt, status) => ({
+    id, status: status || 'in_progress', created_at: createdAt, display_title: '2001-01-01_X | build',
+  });
+  const dispatched = (id) => ({ '2001-01-01_X': { since: T0, run: { id, status: 'queued', html_url: '' } } });
+
+  it('shows the dispatched run while the list does not have it yet', () => {
+    const old = listedRun(5, '2026-11-09T10:00:00Z', 'completed');
+    const r = withDispatchedRuns({ '2001-01-01_X': old }, dispatched(9), T0 + 15000);
+    assert.strictEqual(r.runs['2001-01-01_X'].id, 9);
+    assert.ok(r.dispatched['2001-01-01_X']);
+  });
+
+  it('hands over to the listed run once the list catches up', () => {
+    const r = withDispatchedRuns({ '2001-01-01_X': listedRun(9, '2026-11-10T10:00:01Z') }, dispatched(9), T0 + 15000);
+    assert.strictEqual(r.runs['2001-01-01_X'].status, 'in_progress');
+    assert.deepStrictEqual(r.dispatched, {});
+  });
+
+  it('without a run id, recognises the run by when it was created', () => {
+    const r = withDispatchedRuns({ '2001-01-01_X': listedRun(11, '2026-11-10T10:00:02Z') }, dispatched(0), T0 + 5000);
+    assert.strictEqual(r.runs['2001-01-01_X'].id, 11);
+    assert.deepStrictEqual(r.dispatched, {});
+  });
+
+  it('gives up on a run the list never shows', () => {
+    const r = withDispatchedRuns({}, dispatched(0), T0 + DISPATCH_VISIBLE_WITHIN_MS + 1);
+    assert.strictEqual(r.runs['2001-01-01_X'], undefined);
+    assert.deepStrictEqual(r.dispatched, {});
+  });
+
+  it('leaves the other talks as listed', () => {
+    const y = { ...listedRun(3, '2026-11-10T09:00:00Z'), display_title: '2002-02-02_Y | build' };
+    const r = withDispatchedRuns({ '2002-02-02_Y': y }, dispatched(9), T0 + 1000);
+    assert.strictEqual(r.runs['2002-02-02_Y'], y);
+  });
+});

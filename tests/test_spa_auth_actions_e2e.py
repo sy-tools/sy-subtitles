@@ -828,14 +828,6 @@ def _wire_pipeline(pg, calls, runs):
         lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"workflow_runs": runs})),
     )
     pg.route(
-        "**/api.github.com/repos/**/actions/runs/555",
-        lambda r: r.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"id": 555, "status": "queued", "html_url": RUN_URL, "display_title": "x"}),
-        ),
-    )
-    pg.route(
         "**/api.github.com/repos/**/actions/workflows/subtitle-pipeline.yml/dispatches",
         _record(calls)(200, {"workflow_run_id": 555, "html_url": RUN_URL, "run_url": "u"}),
     )
@@ -907,4 +899,53 @@ def test_signed_out_expert_pipeline_button_still_opens_the_actions_page(server, 
     pg.wait_for_selector("a.expert-btn", timeout=10000)
     assert pg.get_attribute("a.expert-btn", "href").endswith("/actions/workflows/subtitle-pipeline.yml")
     assert pg.locator(".pipe-run-btn").count() == 0
+    ctx.close()
+
+
+def test_pipeline_run_chip_leaves_with_expert_mode(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    running = {
+        "id": 9,
+        "status": "in_progress",
+        "conclusion": None,
+        "html_url": RUN_URL,
+        "display_title": "2001-01-01_Test-Talk | build",
+    }
+    _wire_pipeline(pg, calls, runs=[running])
+    pg.add_init_script(EXPERT_ALL)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".pipe-run--running", timeout=10000)
+    pg.evaluate("SPA.toggleExpert()")
+    pg.wait_for_timeout(300)
+    assert pg.locator(".pipe-run:visible").count() == 0
+    ctx.close()
+
+
+def test_pipeline_run_polling_survives_a_failed_list(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    running = {
+        "id": 9,
+        "status": "in_progress",
+        "conclusion": None,
+        "html_url": RUN_URL,
+        "display_title": "2001-01-01_Test-Talk | build",
+    }
+    done = {**running, "status": "completed", "conclusion": "success"}
+    replies = iter([(200, [running]), (502, None)])
+
+    def runs(route):
+        status, body = next(replies, (200, [done]))
+        route.fulfill(
+            status=status,
+            content_type="application/json",
+            body=json.dumps({"workflow_runs": body} if body is not None else {"message": "bad gateway"}),
+        )
+
+    _wire_pipeline(pg, calls, runs=[])
+    pg.route("**/api.github.com/repos/**/actions/workflows/subtitle-pipeline.yml/runs*", runs)
+    pg.add_init_script(EXPERT_ALL + "window.__SY_PIPELINE_POLL_MS = 200;")
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".pipe-run--success", timeout=10000)
     ctx.close()

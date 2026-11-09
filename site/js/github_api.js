@@ -412,10 +412,6 @@ function dispatchWorkflow(api, token, workflowFile, ref, inputs, fetchImpl) {
   );
 }
 
-function getRun(api, token, runId, fetchImpl) {
-  return ghJson(api + '/actions/runs/' + runId, token, null, fetchImpl);
-}
-
 function getWorkflowFile(api, token, workflowFile, ref, fetchImpl) {
   return ghJson(
     api + '/contents/.github/workflows/' + encodeURIComponent(workflowFile)
@@ -507,7 +503,6 @@ if (typeof module !== 'undefined' && module.exports) {
     dispatchWorkflow: dispatchWorkflow,
     listWorkflowRuns: listWorkflowRuns,
     getRunJobs: getRunJobs,
-    getRun: getRun,
     getWorkflowFile: getWorkflowFile,
     listRunArtifacts: listRunArtifacts,
     listBurnRuns: listBurnRuns,
