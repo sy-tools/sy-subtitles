@@ -3,7 +3,7 @@
 The three LLM steps (translate, review, build-timecodes) read the model from
 workflow-level ``env.MODEL_HEAVY``. A ``model`` input on workflow_dispatch and
 workflow_call must feed that env with a safe default, so a run can be
-dispatched on a different model (e.g. claude-fable-5-1) without editing the
+dispatched on a different model (e.g. claude-fable-5-2) without editing the
 workflow. Push-triggered runs have no inputs, so the env expression must
 fall back to the default model.
 """
@@ -17,7 +17,7 @@ WORKFLOWS = Path(__file__).resolve().parents[1] / ".github" / "workflows"
 DEFAULT_MODEL = "claude-opus-5-5"
 
 # Retired models must not come back as a selectable option.
-RETIRED_MODELS = ("claude-opus-5", "claude-opus-4-8")
+RETIRED_MODELS = ("claude-opus-5", "claude-opus-4-8", "claude-fable-5-1")
 
 
 def _load() -> dict:
@@ -38,7 +38,7 @@ def test_model_input_on_dispatch_and_call() -> None:
     assert dispatch["model"].get("type") == "choice"
     options = dispatch["model"].get("options", [])
     assert DEFAULT_MODEL in options
-    assert "claude-fable-5-1" in options
+    assert "claude-fable-5-2" in options
     for retired in RETIRED_MODELS:
         assert retired not in options, f"retired model {retired} is still offered"
 
@@ -62,7 +62,7 @@ def test_build_model_input_on_dispatch_and_call() -> None:
     assert dispatch["build_model"].get("type") == "choice"
     options = dispatch["build_model"].get("options", [])
     assert DEFAULT_MODEL in options
-    assert "claude-fable-5-1" in options
+    assert "claude-fable-5-2" in options
     # first option is the default for a choice input without explicit default;
     # an explicit empty-string default is not representable in choice, so the
     # sentinel option "same-as-model" must come first.
