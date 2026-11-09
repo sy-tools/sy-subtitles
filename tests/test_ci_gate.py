@@ -20,6 +20,7 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
@@ -167,35 +168,49 @@ SYNC_WORKFLOW = WORKFLOW.parent / "sync-subtitles.yml"
 
 
 def test_ci_can_be_dispatched_onto_a_branch() -> None:
-    """The one way a bot push can still earn a `gate`.
+    """The one way a bot push can still earn a `gate` without a human.
 
-    A push made with GITHUB_TOKEN starts no workflow, by GitHub's design — the
-    only events that token may trigger are `workflow_dispatch` and
-    `repository_dispatch`. A run dispatched onto a branch reports its checks on
-    that branch's head commit, which is exactly where the PR looks for `gate`.
+    A push made with GITHUB_TOKEN no longer starts a pull_request run on its
+    own: GitHub either skips it or — as on #1216 — creates the run held at
+    "Approve and run", waiting for a maintainer. The only events that token
+    may trigger outright are `workflow_dispatch` and `repository_dispatch`. A
+    run dispatched onto a branch reports its checks on that branch's head
+    commit, which is exactly where the PR looks for `gate`.
     """
     assert "workflow_dispatch" in _triggers(), (
         "without a dispatch trigger a GITHUB_TOKEN push can never be given a gate run"
     )
 
 
-def test_every_sync_bot_push_dispatches_ci() -> None:
-    """#1132: the sync bot's commit became the PR head and `gate` never came.
+# Every workflow that commits back onto a PR's branch with GITHUB_TOKEN.
+BOT_PUSH_WORKFLOWS = ("sync-subtitles.yml", "new-talk.yml")
 
-    sync-subtitles.yml pushes its result with GITHUB_TOKEN and `[skip ci]` —
-    either alone starts no CI run. The required check then never reports on
-    the new head, and the PR is unmergeable with nothing left to nudge it. So
-    the step that pushes must dispatch ci.yml onto the branch it pushed to.
+
+@pytest.mark.parametrize("name", BOT_PUSH_WORKFLOWS)
+def test_every_bot_push_onto_a_pr_branch_dispatches_ci(name: str) -> None:
+    """#1132, #1216: a bot commit becomes the PR head and nothing tests it.
+
+    Pushed with GITHUB_TOKEN, the commit's pull_request runs are either never
+    created or held for a maintainer's approval — automation that needs a
+    click. So the push carries `[skip ci]` (no held runs, and the workflow
+    does not wake itself again) and the same step dispatches ci.yml onto the
+    branch, which reports `gate` on the new head with no one in the loop.
     """
-    sync = yaml.safe_load(SYNC_WORKFLOW.read_text(encoding="utf-8"))
-    pushing = [step for job in sync["jobs"].values() for step in job["steps"] if "git push" in step.get("run", "")]
-    assert pushing, "sync-subtitles.yml no longer pushes — revisit this guard"
+    workflow = yaml.safe_load((WORKFLOW.parent / name).read_text(encoding="utf-8"))
+    pushing = [step for job in workflow["jobs"].values() for step in job["steps"] if "git push" in step.get("run", "")]
+    assert pushing, f"{name} no longer pushes — revisit this guard"
     for step in pushing:
         run = step["run"]
+        assert "[skip ci]" in run, (
+            f"{name} step {step.get('name')!r} commits without [skip ci], "
+            "so GitHub holds the commit's pull_request runs for approval"
+        )
         assert re.search(r"gh workflow run ci\.yml --ref\b", run), (
-            f"step {step.get('name')!r} pushes but does not dispatch ci.yml, so `gate` never reports on its commit"
+            f"{name} step {step.get('name')!r} pushes but does not dispatch ci.yml, "
+            "so `gate` never reports on its commit"
         )
         assert run.index("git push") < run.index("gh workflow run"), (
             "dispatch must follow the push, or CI runs the old head"
         )
-    assert sync["permissions"].get("actions") == "write", "dispatching a workflow needs `actions: write`"
+        assert step.get("env", {}).get("GH_TOKEN"), f"{name} step {step.get('name')!r} dispatches without GH_TOKEN"
+    assert workflow["permissions"].get("actions") == "write", f"{name}: dispatching a workflow needs `actions: write`"
