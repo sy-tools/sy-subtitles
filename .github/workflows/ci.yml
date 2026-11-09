@@ -273,6 +273,9 @@ jobs:
     needs: [changes, lint, test-unit, test-e2e, test-js, test-whisper]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      # The dispatch-only status below.
+      statuses: write
     steps:
       - name: Every lane passed or was not needed
         env:
@@ -292,3 +295,19 @@ jobs:
             esac
           done
           exit "$status"
+
+      # A bot push onto a PR branch (sync-subtitles.yml, new-talk.yml) gets
+      # its CI by dispatch. GitHub does not associate a dispatched check suite
+      # with any pull request, so this job's check run never reaches the PR
+      # (#1218). A commit status belongs to the SHA alone — post the verdict
+      # as one, under the required check's name.
+      - name: Report the verdict to the pull request
+        if: always() && github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+          TARGET: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            -f state="$STATE" -f context=gate -f target_url="$TARGET" \
+            -f description="CI dispatched onto this commit"
