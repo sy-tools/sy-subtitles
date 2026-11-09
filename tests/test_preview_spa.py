@@ -996,6 +996,19 @@ class TestFullscreenMode:
         page.evaluate("document.getElementById('view-preview').classList.remove('fs-mode')")
         page.wait_for_timeout(100)
 
+    def test_leaving_before_the_browser_finished_entering_stays_left(self, server, page):
+        """requestFullscreen settles later than the toggle that asked for it. A
+        toggle back in that window must not be undone when the entry lands."""
+        self._goto_preview(server, page)
+        state = page.evaluate("""async () => {
+          const el = document.getElementById('view-preview');
+          SPA.toggleFullscreen();
+          SPA.toggleFullscreen();
+          await new Promise((r) => setTimeout(r, 1500));
+          return { cls: el.classList.contains('fs-mode'), native: !!document.fullscreenElement };
+        }""")
+        assert state == {"cls": False, "native": False}
+
     def test_fullscreen_button_exists(self, server, page):
         """Preview should have a fullscreen toggle button."""
         self._goto_preview(server, page)
@@ -4931,9 +4944,8 @@ class TestFullscreenCursorIdle:
 
     def _double_click(self, page, x, y):
         # The shield tells a double click by Date.now() between the presses
-        # (FS_DOUBLE_PRESS_MS). An installed clock still runs in real time, so
-        # driver latency between dblclick's two presses under CI load could
-        # spend the whole window; paused, the presses land at one instant.
+        # (FS_DOUBLE_PRESS_MS), and an installed clock still runs in real time.
+        # Paused, both presses land at one instant whatever the driver latency.
         page.clock.pause_at(page.evaluate("Date.now()"))
         page.mouse.dblclick(x, y)
 

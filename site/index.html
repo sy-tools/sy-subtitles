@@ -3876,6 +3876,10 @@ SPA.resumePlayer = function() {
 // a foreign fullscreenchange (e.g. a Vimeo iframe going FS and back)
 // when we never had native fullscreen of our own.
 let SY_CSS_ONLY_FS = false;
+// What the last toggle asked for. requestFullscreen settles after the toggle
+// returns, so a toggle back can come first; the late entry must then be
+// undone, not adopted.
+let SY_FS_WANTED = false;
 
 const fsEl = () => document.fullscreenElement
   || document.webkitFullscreenElement
@@ -3900,6 +3904,7 @@ SPA.toggleFullscreen = function() {
     el.classList.remove('fs-mode');
     document.body.classList.remove('sy-fs-active');
     SY_CSS_ONLY_FS = false;
+    SY_FS_WANTED = false;
     return;
   }
 
@@ -3911,6 +3916,7 @@ SPA.toggleFullscreen = function() {
   el.classList.add('fs-mode');
   document.body.classList.add('sy-fs-active');
   SY_CSS_ONLY_FS = true;
+  SY_FS_WANTED = true;
 
   var reqFn = el.requestFullscreen || el.webkitRequestFullscreen;
   if (!reqFn) return;
@@ -3932,6 +3938,15 @@ function syncFsMode() {
   var el = document.getElementById('view-preview');
   if (!el) return;
   var native = fsEl();
+  if (native === el && !SY_FS_WANTED) {
+    try {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } catch (e) {
+      console.warn('[fs] exitFullscreen failed:', e);
+    }
+    return;
+  }
   if (native === el) {
     el.classList.add('fs-mode');
     document.body.classList.add('sy-fs-active');
@@ -3939,6 +3954,7 @@ function syncFsMode() {
   } else if (!native && el.classList.contains('fs-mode') && !SY_CSS_ONLY_FS) {
     el.classList.remove('fs-mode');
     document.body.classList.remove('sy-fs-active');
+    SY_FS_WANTED = false;
   }
 }
 ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
@@ -3951,6 +3967,7 @@ document.addEventListener('keydown', function(e) {
   if (el && el.classList.contains('fs-mode') && !document.fullscreenElement) {
     el.classList.remove('fs-mode');
     document.body.classList.remove('sy-fs-active');
+    SY_FS_WANTED = false;
   }
 });
 
