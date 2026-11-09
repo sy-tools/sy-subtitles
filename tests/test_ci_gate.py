@@ -182,6 +182,28 @@ def test_ci_can_be_dispatched_onto_a_branch() -> None:
     )
 
 
+def test_a_dispatched_run_reports_gate_as_a_commit_status() -> None:
+    """#1218: a dispatched run's `gate` check is invisible to the pull request.
+
+    GitHub leaves a `workflow_dispatch` check suite unassociated with any PR,
+    so its `gate` check run sits on the head commit and the PR still waits —
+    verified live. A commit status is attached to the SHA alone, which is what
+    a PR reads. So on dispatch the gate job also posts its verdict as the
+    `gate` status, including when it fails.
+    """
+    gate = _gate()
+    assert gate.get("permissions", {}).get("statuses") == "write", "posting a commit status needs `statuses: write`"
+    posting = [s for s in gate["steps"] if "/statuses/" in s.get("run", "")]
+    assert len(posting) == 1, "the gate job must post exactly one commit status"
+    step = posting[0]
+    cond = step.get("if", "")
+    assert "always()" in cond and "workflow_dispatch" in cond, (
+        "the status must be posted on dispatch only, and also when the verdict is a failure"
+    )
+    assert "context=gate" in step["run"], "the status context must be the required check's name"
+    assert gate["steps"].index(step) == len(gate["steps"]) - 1, "post the verdict after the check has run"
+
+
 # Every workflow that commits back onto a PR's branch with GITHUB_TOKEN.
 BOT_PUSH_WORKFLOWS = ("sync-subtitles.yml", "new-talk.yml")
 
