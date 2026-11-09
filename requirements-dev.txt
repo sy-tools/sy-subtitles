@@ -8,5 +8,5 @@ coverage>=7.16.2
 ruff>=0.16.10
 pre-commit>=4.6.2
 playwright>=1.63.0
-hypothesis>=6.168.3
+hypothesis>=6.170.14
 fonttools>=4.68.0
