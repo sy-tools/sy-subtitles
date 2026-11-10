@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-08T16:19:31.596985+00:00",
+  "updated_at": "2026-11-10T00:14:57.451383+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -679,6 +679,12 @@
       "reviewer": null,
       "issue_number": 1148,
       "updated_at": "2026-10-09T22:27:34Z"
+    },
+    "1981-11-01_Diwali-Puja-Powers-of-the-Gruha-Lakshmi": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1227,
+      "updated_at": "2026-11-10T00:14:39Z"
     }
   }
 }
