@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1981-11-01_Diwali-Puja-Powers-of-the-Gruha-Lakshmi/Diwali-Puja-Talk/final/uk.srt
+  Transcript: talks/1981-11-01_Diwali-Puja-Powers-of-the-Gruha-Lakshmi/transcript_uk.txt
+  EN SRT: talks/1981-11-01_Diwali-Puja-Powers-of-the-Gruha-Lakshmi/Diwali-Puja-Talk/source/en.srt
+  SRT blocks: 598
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 598
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 598
+  CPS: avg=11.4, median=11.8, max=20.0
+  CPS > target: 24 (4.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #469: CPS=20.0 (73ch/3.6s) "Ми ображаємо через дрібні, дрібні речі, як-от: «Чому ти покл..."
+    #293: CPS=19.8 (50ch/2.5s) "Сахаджа йоґ: Підтримувальна сила? Шрі Матаджі: Що?"
+    #145: CPS=18.8 (65ch/3.5s) "Тож Він сказав: «Гаразд, ви можете одружитися навіть п’ять р..."
+    #291: CPS=18.6 (43ch/2.3s) "Задоволення – це те, чим ви насолоджуєтеся."
+    #444: CPS=17.9 (59ch/3.3s) "Ми можемо заглиблюватися в себе, можемо заглиблюватися в..."
+    #400: CPS=17.6 (63ch/3.6s) "вони можуть бути дуже агресивними, бо бачать своє відображен..."
+    #368: CPS=17.6 (52ch/3.0s) "Шрі Матаджі: Га? Сахаджа йоґ: Ви можете нести інших."
+    #471: CPS=17.3 (58ch/3.3s) "А ще інший бік може бути таким, що інші не мають гідності,"
+    #149: CPS=17.0 (78ch/4.6s) "Натомість тепер мусульмани думають, що це їхнє право – одруж..."
+    #142: CPS=16.7 (49ch/2.9s) "і можете одружуватися з жінками будь-якого віку»."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.4 (target ≤15.0)
+  CPS > 15.0: 24 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
