@@ -108,6 +108,25 @@ def derived_slugs(talk_dir: str | Path) -> list[str]:
     return [s for s, r in resolve_roles(talk_dir).items() if r == "derived"]
 
 
+def declared_ignored_slugs(talk_dir: str | Path) -> set[str]:
+    """Slugs whose meta.yaml entry says `sync: ignored` in so many words.
+
+    This is what whisper discovery asks, and it is deliberately NOT
+    resolve_roles(): that one also answers "ignored" for every video of a
+    multi-video talk that has declared nothing yet, which is a default
+    rather than a decision. Skipping whisper on a default would leave a new
+    talk without timestamps. Only a written declaration opts a video out.
+
+    Never raises: discovery runs before a talk is complete, so a missing
+    meta.yaml or a not-yet-valid role set just means nothing is opted out.
+    """
+    try:
+        videos = _load_videos(Path(talk_dir))
+    except RoleError:
+        return set()
+    return {v["slug"] for v in videos if v.get("sync") == "ignored"}
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Resolve a talk's subtitle sync roles")
     p.add_argument("--talk-dir", required=True)
