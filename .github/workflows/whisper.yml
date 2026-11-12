@@ -8,7 +8,7 @@ on:
         required: false
         type: string
       force:
-        description: 'Re-run even if whisper.json already exists'
+        description: 'Re-run even if whisper.json already exists (never for a video declared sync: ignored)'
         required: false
         type: boolean
         default: false
@@ -19,7 +19,7 @@ on:
         required: true
         type: string
       force:
-        description: 'Re-run even if whisper.json already exists'
+        description: 'Re-run even if whisper.json already exists (never for a video declared sync: ignored)'
         required: false
         type: boolean
         default: false

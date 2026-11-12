@@ -232,8 +232,8 @@ jobs:
                   video_includes.append({"talk_id": talk_id, "video_slug": slug})
                   whisper_path = f"talks/{talk_id}/{slug}/source/whisper.json"
                   # Same rule as whisper.yml's own discover: a video declared
-                  # `sync: ignored` never gets a whisper.json, so its absence
-                  # must not send the talk to whisper on every run.
+                  # `sync: ignored` is not sent to whisper, so a missing
+                  # whisper.json must not send its talk there on every run.
                   if slug in ignored:
                       print(f"IGNORED: {talk_id}/{slug}")
                   elif not os.path.isfile(whisper_path):

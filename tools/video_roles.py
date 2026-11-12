@@ -117,8 +117,10 @@ def declared_ignored_slugs(talk_dir: str | Path) -> set[str]:
     rather than a decision. Skipping whisper on a default would leave a new
     talk without timestamps. Only a written declaration opts a video out.
 
-    Never raises: discovery runs before a talk is complete, so a missing
-    meta.yaml or a not-yet-valid role set just means nothing is opted out.
+    A missing meta.yaml and a role set resolve_roles() would reject both
+    mean nothing is opted out: discovery runs before a talk is complete.
+    A meta.yaml that does not parse still raises, as it does for every
+    other reader.
     """
     try:
         videos = _load_videos(Path(talk_dir))
