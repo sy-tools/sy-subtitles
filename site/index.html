@@ -30,6 +30,7 @@
 <script src="js/end_freeze.js"></script>
 <script src="js/cursor_idle.js"></script>
 <script src="js/add_talk_data.js"></script>
+<script src="js/pipeline_stages.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/boot_loader.js"></script>
 <script src="js/talk_actions.js"></script>
@@ -939,7 +940,7 @@ function ghExchangeUrl() { return window.__SY_GH_EXCHANGE_URL || APP_GH_EXCHANGE
 // ============================================================
 // Cache — schema versioned, auto-migrates on format change
 // ============================================================
-var CACHE_SCHEMA = 4; // bump when cache format changes
+var CACHE_SCHEMA = 5; // bump when cache format changes
 var CACHE_KEY = 'sy_tree_cache__' + BRANCH;
 (function() {
   try {
@@ -2642,7 +2643,9 @@ function hydrateManifestMeta(m) {
                   try { vimeoUrl = decodeVideoRef(v.video_ref); }
                   catch (e) { console.warn('bad video_ref for ' + t.id, e); }
                 }
-                return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl };
+                // `sync` is kept so the pipeline view can leave a declared-ignored
+                // video out of its counts (js/pipeline_stages.js).
+                return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl, sync: v.sync || '' };
               });
               // Mark which videos have SRT
               var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
@@ -3368,25 +3371,7 @@ function openPipelineDialog(talkId, stages) {
 // ============================================================
 // PIPELINE VIEW
 // ============================================================
-function getPipelineStages(tk, st) {
-  var nVideos = (tk.videos || []).length;
-  var nWhisper = (tk._whisperSlugs || []).length;
-  var nSrt = 0;
-  (tk.videos || []).forEach(function(v) { if (v.hasSrt) nSrt++; });
-  return {
-    added: true,
-    whisper: nWhisper >= nVideos && nVideos > 0,
-    whisperProgress: nVideos > 0 ? nWhisper + '/' + nVideos : '0',
-    translated: tk.hasUk,
-    reviewed: tk.hasReviewReport,
-    srt: nSrt >= nVideos && nVideos > 0,
-    srtProgress: nVideos > 0 ? nSrt + '/' + nVideos : '0',
-    hasIssue: !!(st && st.issue_number),
-    review: st && st.status !== 'pending',
-    approved: st && st.status === 'approved',
-    nVideos: nVideos, nWhisper: nWhisper, nSrt: nSrt
-  };
-}
+// getPipelineStages() is provided by js/pipeline_stages.js (loaded in <head>).
 
 function getOverallStatus(stages, reviewSt) {
   if (reviewSt && reviewSt.status === 'approved') return 'approved';

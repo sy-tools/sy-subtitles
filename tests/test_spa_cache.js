@@ -2990,25 +2990,7 @@ describe('Deploy stamps in HTML', () => {
 // ============================================================
 // Pipeline view: stage computation
 // ============================================================
-function getPipelineStages(tk, st) {
-  var nVideos = (tk.videos || []).length;
-  var nWhisper = (tk._whisperSlugs || []).length;
-  var nSrt = 0;
-  (tk.videos || []).forEach(function(v) { if (v.hasSrt) nSrt++; });
-  return {
-    added: true,
-    whisper: nWhisper >= nVideos && nVideos > 0,
-    whisperProgress: nVideos > 0 ? nWhisper + '/' + nVideos : '0',
-    translated: tk.hasUk,
-    reviewed: tk.hasReviewReport,
-    srt: nSrt >= nVideos && nVideos > 0,
-    srtProgress: nVideos > 0 ? nSrt + '/' + nVideos : '0',
-    hasIssue: !!(st && st.issue_number),
-    review: st && st.status !== 'pending',
-    approved: st && st.status === 'approved',
-    nVideos: nVideos, nWhisper: nWhisper, nSrt: nSrt
-  };
-}
+const { getPipelineStages } = require('../site/js/pipeline_stages');
 
 function countDoneStages(s) {
   var done = 1;

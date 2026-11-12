@@ -49,6 +49,7 @@ var SHELL_ASSETS = [
   'js/end_freeze.js',
   'js/cursor_idle.js',
   'js/add_talk_data.js',
+  'js/pipeline_stages.js',
   'js/shell_version.js',
   'js/boot_loader.js',
   'js/talk_actions.js',
