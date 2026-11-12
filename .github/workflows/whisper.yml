@@ -8,7 +8,7 @@ on:
         required: false
         type: string
       force:
-        description: 'Re-run even if whisper.json already exists'
+        description: 'Re-run even if whisper.json already exists (never for a video declared sync: ignored)'
         required: false
         type: boolean
         default: false
@@ -19,7 +19,7 @@ on:
         required: true
         type: string
       force:
-        description: 'Re-run even if whisper.json already exists'
+        description: 'Re-run even if whisper.json already exists (never for a video declared sync: ignored)'
         required: false
         type: boolean
         default: false
@@ -56,6 +56,7 @@ jobs:
           import os
           import yaml
 
+          from tools.video_roles import declared_ignored_slugs
           from tools.workflow_validation import (
               InvalidWorkflowInput,
               die,
@@ -97,8 +98,16 @@ jobs:
                   meta = yaml.safe_load(f)
 
               videos = meta.get("videos", [])
+              # A video declared `sync: ignored` is never read, so it needs
+              # no timestamps. Without this a wordless video is re-queued on
+              # every run: its empty whisper.json fails the contract and is
+              # never committed, so the file this loop looks for never exists.
+              ignored = declared_ignored_slugs(f"talks/{talk_id}")
               for video in videos:
                   slug = video["slug"]
+                  if slug in ignored:
+                      print(f"SKIP: {talk_id}/{slug} is declared sync: ignored")
+                      continue
                   # Links are stored obfuscated as video_ref; pass the ref
                   # through the matrix (decode happens at the yt-dlp step) so no
                   # plaintext URL lands in the public Actions logs.

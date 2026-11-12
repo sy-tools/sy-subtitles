@@ -182,6 +182,7 @@ jobs:
           python3 << 'PYEOF'
           import json, os, subprocess, yaml
 
+          from tools.video_roles import declared_ignored_slugs
           from tools.workflow_validation import (
               InvalidWorkflowInput,
               die,
@@ -218,6 +219,7 @@ jobs:
               with open(meta_path) as f:
                   meta = yaml.safe_load(f)
               slugs_seen = set()
+              ignored = declared_ignored_slugs(f"talks/{talk_id}")
               for v in meta.get("videos", []):
                   slug = v["slug"]
                   try:
@@ -229,7 +231,12 @@ jobs:
                   slugs_seen.add(slug)
                   video_includes.append({"talk_id": talk_id, "video_slug": slug})
                   whisper_path = f"talks/{talk_id}/{slug}/source/whisper.json"
-                  if not os.path.isfile(whisper_path):
+                  # Same rule as whisper.yml's own discover: a video declared
+                  # `sync: ignored` is not sent to whisper, so a missing
+                  # whisper.json must not send its talk there on every run.
+                  if slug in ignored:
+                      print(f"IGNORED: {talk_id}/{slug}")
+                  elif not os.path.isfile(whisper_path):
                       whisper_talk_ids.add(talk_id)
                       print(f"WHISPER NEEDED: {talk_id}/{slug}")
                   else:

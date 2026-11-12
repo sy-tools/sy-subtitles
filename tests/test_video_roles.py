@@ -184,3 +184,36 @@ def test_every_multi_video_talk_in_the_corpus_resolves():
         except RoleError as exc:
             failures.append(str(exc))
     assert not failures, "talks with an unresolvable sync model:\n" + "\n".join(failures)
+
+
+def test_only_an_explicit_declaration_counts_as_declared_ignored(tmp_path):
+    from tools.video_roles import declared_ignored_slugs
+
+    talk = _talk(
+        tmp_path,
+        {
+            "videos": [
+                {"slug": "talk", "sync": "primary"},
+                {"slug": "impressions", "sync": "ignored"},
+                {"slug": "short", "sync": "derived"},
+            ]
+        },
+    )
+    assert declared_ignored_slugs(talk) == {"impressions"}
+
+
+def test_an_undeclared_talk_has_no_declared_ignored_videos(tmp_path):
+    """resolve_roles() calls every video of an undeclared, not-yet-built
+    multi-video talk "ignored" — a default, not a decision. Whisper must not
+    read that default as "skip", or a new talk would never get timestamps."""
+    from tools.video_roles import declared_ignored_slugs
+
+    talk = _talk(tmp_path, {"videos": [{"slug": "a"}, {"slug": "b"}]})
+    assert set(resolve_roles(talk).values()) == {"ignored"}
+    assert declared_ignored_slugs(talk) == set()
+
+
+def test_declared_ignored_tolerates_a_talk_without_meta(tmp_path):
+    from tools.video_roles import declared_ignored_slugs
+
+    assert declared_ignored_slugs(tmp_path / "missing") == set()
