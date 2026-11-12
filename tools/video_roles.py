@@ -117,8 +117,9 @@ def declared_ignored_slugs(talk_dir: str | Path) -> set[str]:
     rather than a decision. Skipping whisper on a default would leave a new
     talk without timestamps. Only a written declaration opts a video out.
 
-    A missing meta.yaml and a role set resolve_roles() would reject both
-    mean nothing is opted out: discovery runs before a talk is complete.
+    A missing meta.yaml means nothing is opted out: discovery runs before a
+    talk is complete. A role set resolve_roles() would reject is not
+    validated here, and its literal `sync: ignored` entries still count.
     A meta.yaml that does not parse still raises, as it does for every
     other reader.
     """
