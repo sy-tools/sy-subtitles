@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1997-05-25_Adi-Shakti-Puja-Respect-the-Mother-Earth-Why-are-we-in-Sahaja-Yoga/Adi-Shakti-Puja/final/uk.srt
+  Transcript: talks/1997-05-25_Adi-Shakti-Puja-Respect-the-Mother-Earth-Why-are-we-in-Sahaja-Yoga/transcript_uk.txt
+  EN SRT: talks/1997-05-25_Adi-Shakti-Puja-Respect-the-Mother-Earth-Why-are-we-in-Sahaja-Yoga/Adi-Shakti-Puja/source/en.srt
+  SRT blocks: 467
+  EN SRT blocks: 452
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:02,991 — 00:48:56,599
+  SRT range:       00:04:08,453 — 00:48:58,599
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 467
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 467
+  CPS: avg=10.7, median=10.6, max=19.0
+  CPS > target: 15 (3.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #461: CPS=19.0 (77ch/4.1s) "Ми прийшли не заради свого блага, а заради вашого блага, тож..."
+    #460: CPS=18.4 (48ch/2.6s) "«Ми тут, щоб допомогти вам, заради вашого блага."
+    #459: CPS=15.5 (49ch/3.2s) "Ви можете говорити з ними, і вам слід сказати їм:"
+    #299: CPS=15.1 (53ch/3.5s) "Чому я маю турбуватися про все тіло?» – так не вийде."
+    #255: CPS=15.1 (54ch/3.6s) "Тобто Я не знала, як сказати йому: «Вийдіть зараз же»,"
+    #453: CPS=15.0 (64ch/4.3s) "Таким буде ваш стиль, мов у божевільних, – ви казатимете: «О..."
+    #464: CPS=15.0 (64ch/4.3s) "Вона не щаслива з людьми, які не використовують Її повною мі..."
+    #256: CPS=15.0 (44ch/2.9s) "– бо Я просто не можу його образити, знаєте."
+    #281: CPS=15.0 (44ch/2.9s) "а ми вийдемо й будемо викладатися на повну»."
+    #297: CPS=15.0 (47ch/3.1s) "збираюся працювати», – або якась клітина скаже:"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 467
+  EN SRT blocks: 452
+  Ratio UK/EN: 1.03 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.7 (target ≤15.0)
+  CPS > 15.0: 15 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
