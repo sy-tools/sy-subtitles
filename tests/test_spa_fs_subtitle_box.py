@@ -524,3 +524,43 @@ def test_the_grip_sits_in_the_right_margin_beside_the_text_column(page):
     )
     assert grip["right"] == pytest.approx(m["right"] / 4, abs=1)
     assert grip["left"] > _box(1280, 800, 4 / 3)["width"] / 2
+
+
+@pytest.mark.parametrize(("vw", "vh", "scale"), [(1280, 720, None), (960, 540, None), (1280, 720, 0.5)])
+@pytest.mark.parametrize("text", ["", "Так."])
+def test_the_handle_stays_clear_of_the_players_control_bar(page, vw, vh, scale, text):
+    """A short band — no cue showing, a small screen, a small scale — would
+    carry the handle down into the strip where Vimeo draws its controls: the
+    bar would stop taking clicks there, and the pointer would reach the player
+    without ever leaving the shield, which is how the page learns it has."""
+    _measure(page, vw, vh, "16 / 9", tuned=scale is not None, scale=scale)
+    page.evaluate("t => { document.getElementById('subtitle-overlay').textContent = t; }", text)
+    _settle(page)
+    gap = page.evaluate(
+        """() => {
+            const h = document.getElementById('fs-subs-resize');
+            const bar = parseFloat(getComputedStyle(h).getPropertyValue('--fs-vimeo-bar-h'));
+            const videoBottom = document.getElementById('subtitle-overlay').getBoundingClientRect().bottom;
+            return videoBottom - bar - h.getBoundingClientRect().bottom;
+        }"""
+    )
+    assert gap >= 4, "a strip of the shield must remain between the handle and the bar"
+
+
+def test_a_scale_set_in_fullscreen_survives_leaving_it(page):
+    """The embedded overlay cannot grow past what its own width allows, but
+    that limit is the embedded box's, not the scale's: cutting the scale with
+    it on the way out shrank the fullscreen text and the burn behind the
+    viewer's back, while the stored value still said otherwise."""
+    _measure(page, 1280, 800, "4 / 3")
+    _drag_handle(page, -600)
+    in_fullscreen = float(_handle_state(page)["scale"])
+    assert in_fullscreen == pytest.approx(0.12 * 800 / (0.04 * 800 * 4 / 3))
+    page.evaluate(
+        """() => {
+            document.getElementById('view-preview').classList.remove('fs-mode');
+            window.dispatchEvent(new Event('resize'));
+            return new Promise(r => setTimeout(r, 150));
+        }"""
+    )
+    assert float(_handle_state(page)["scale"]) == pytest.approx(in_fullscreen)

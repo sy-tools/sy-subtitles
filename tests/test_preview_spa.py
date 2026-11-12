@@ -5004,7 +5004,10 @@ class TestFullscreenCursorIdle:
         self._set_fs(page, True)
         w, h = self._size(page)
         assert self._hit(page, w // 2, h - 20) == "mock-player"
-        assert self._hit(page, w // 2, h - 80) == "fs-idle-shield"
+        # Right above the 64px hole: the subtitle scale handle, at its lowest
+        # with no cue showing, leaves these few pixels of shield under it.
+        assert self._hit(page, w // 2, h - 68) == "fs-idle-shield"
+        assert self._hit(page, w // 2, h - 200) == "fs-idle-shield"
 
     def _on_4_3_video(self, server, page, width, height):
         page.add_init_script("window.__mockVideoSize = [640, 480];")

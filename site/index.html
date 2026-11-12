@@ -139,7 +139,10 @@
   const PREVIEW_SUBS_SCALE_MIN = 0.5;
   const PREVIEW_SUBS_SCALE_MAX = 4;
   let _lastSubsH = NaN, _lastSubsScale = NaN;
-  function applySubsPx(v) {
+  // `scaleFromPx` is the value the scale is read from when it is not `v`: the
+  // embedded overlay's height is held to what its own width allows, and that
+  // limit must not reach the scale fullscreen and the burn draw with.
+  function applySubsPx(v, scaleFromPx) {
     // Reject non-finite input: writing "NaNpx" silently re-creates the
     // "tiny on fullscreen" bug: the fullscreen band's font-size multiplies
     // by the scale, turns invalid, and drops to the inherited size.
@@ -148,7 +151,8 @@
       return;
     }
     const root = document.documentElement.style;
-    const scale = clamp(PREVIEW_SUBS_SCALE_MIN, v / PREVIEW_SUBS_DEF_PX, PREVIEW_SUBS_SCALE_MAX);
+    const scalePx = Number.isFinite(scaleFromPx) ? scaleFromPx : v;
+    const scale = clamp(PREVIEW_SUBS_SCALE_MIN, scalePx / PREVIEW_SUBS_DEF_PX, PREVIEW_SUBS_SCALE_MAX);
     // Skip cascade work on no-op drag pixels — at the clamp boundaries
     // (e.g. h ≥ 480) every mousemove would rewrite the same scale value.
     if (v !== _lastSubsH) { root.setProperty(CSS_SUBS_H, v + 'px'); _lastSubsH = v; }
@@ -350,8 +354,8 @@
     applyPlayerVh(loadNum(keyPlayer(), PREVIEW_PLAYER_DEF, PREVIEW_PLAYER_MIN, PREVIEW_PLAYER_MAX));
     const savedSubs = (() => { try { return localStorage.getItem(keySubs()); } catch(_) { return null; } })();
     if (savedSubs != null) {
-      const maxSubs = computeSubsMaxPx();
-      applySubsPx(loadNum(keySubs(), PREVIEW_SUBS_DEF_PX, PREVIEW_SUBS_MIN_PX, maxSubs));
+      const stored = loadNum(keySubs(), PREVIEW_SUBS_DEF_PX, PREVIEW_SUBS_MIN_PX, PREVIEW_SUBS_MAX_PX);
+      applySubsPx(Math.min(stored, computeSubsMaxPx()), stored);
     } else {
       const vp = document.getElementById('view-preview');
       if (vp) vp.removeAttribute('data-subs-tuned');
@@ -4273,6 +4277,11 @@ var fsCursorIdle = (function() {
   var subsHandle = document.getElementById('fs-subs-resize');
   if (subsHandle) {
     subsHandle.addEventListener('pointermove', function(e) { idle.pointerMove(e.screenX, e.screenY); });
+    // A fast pointer can go from the handle into the player without an event
+    // on the strip of shield between them.
+    subsHandle.addEventListener('pointerleave', function(e) {
+      if (e.relatedTarget && mount.contains(e.relatedTarget)) idle.leaveToPlayer();
+    });
   }
   shield.addEventListener('pointerleave', function(e) {
     if (e.relatedTarget && mount.contains(e.relatedTarget)) idle.leaveToPlayer();
@@ -4292,7 +4301,13 @@ var fsCursorIdle = (function() {
     if (state !== 'off' && state !== 'vimeo') reclaimFocus();
   }
   document.addEventListener('pointerdown', function(e) {
-    if (e.target !== shield) { idle.wake(); return; }
+    if (e.target !== shield) {
+      // The handle is the page's, like the shield: a press on it takes the
+      // keys back from the player and closes a menu left open there.
+      if (e.target === subsHandle) reclaimFocus();
+      idle.wake();
+      return;
+    }
     var videoPress = isVideoPress({
       onShield: true, pointerType: e.pointerType, button: e.button, ctrlKey: e.ctrlKey,
       x: e.clientX, y: e.clientY, box: box(),

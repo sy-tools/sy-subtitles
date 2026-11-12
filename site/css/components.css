@@ -522,6 +522,10 @@ body.sync-player-resizing, body.sync-player-resizing * {
 #view-preview.fs-mode .header { display: none !important; }
 #view-preview.fs-mode .preview-list { display: none !important; }
 #view-preview.fs-mode #btn-mark { display: none !important; }
+/* The height of the strip along the bottom of the video where Vimeo draws its
+   control bar. On the container, for the two things laid out around it: the
+   idle shield's hole and the subtitle scale handle. */
+#view-preview.fs-mode .player-container { --fs-vimeo-bar-h: 64px; }
 #view-preview.fs-mode .player-container { flex: 1; max-width: 100%; margin: 0; width: 100%; display: flex; flex-direction: column; overflow: hidden; container-type: size; }
 #view-preview.fs-mode .video-wrap { flex: 1; padding-bottom: 0; height: 100%; }
 #view-preview.fs-mode .video-wrap iframe,
@@ -540,7 +544,6 @@ body.sync-player-resizing, body.sync-player-resizing * {
 .fs-idle-shield { display: none; }
 #view-preview.fs-mode .fs-idle-shield[data-state="visible"],
 #view-preview.fs-mode .fs-idle-shield[data-state="hidden"] {
-  --fs-vimeo-bar-h: 64px;
   --fs-video-w: min(100cqw, 100cqh * (var(--preview-aspect, 16 / 9)));
   --fs-video-h: min(100cqh, 100cqw / (var(--preview-aspect, 16 / 9)));
   --hole-l: calc((100cqw - var(--fs-video-w)) / 2);
@@ -832,8 +835,9 @@ body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: n
    often is. The grip is white-on-video like the band's text, not a theme colour: it sits on the
    picture, never on the page. */
 .fs-subs-resize {
+  --fs-grip-h: 16px;
   display: none;
-  height: 16px;
+  height: var(--fs-grip-h);
   cursor: ns-resize;
   touch-action: none;
 }
@@ -867,20 +871,28 @@ body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: n
   z-index: 10001;
   left: calc((100cqw - var(--fs-video-w)) / 2);
   width: var(--fs-video-w);
-  bottom: calc((100cqh - var(--fs-video-h)) / 2 + var(--fs-band-h, 0px)
-               - var(--fs-video-h) * var(--fs-padtop-ratio) * var(--fs-grip-drop));
+  /* ...but never down into Vimeo's control bar, where a short band (no cue
+     showing, a small screen, a small scale) would carry it: the bar would
+     stop taking clicks along the strip, and the pointer would go from the
+     handle straight into the player. The 8px keeps a strip of the shield
+     between the two, the way into the player the shield watches. */
+  bottom: max(
+    calc((100cqh - var(--fs-video-h)) / 2 + var(--fs-band-h, 0px)
+         - var(--fs-video-h) * var(--fs-padtop-ratio) * var(--fs-grip-drop)),
+    calc((100cqh - var(--fs-video-h)) / 2 + var(--fs-vimeo-bar-h) + var(--fs-grip-h) / 2 + 8px)
+  );
   transform: translateY(50%);
 }
 /* It leaves with the cursor, and stands aside with the shield while the
    pointer is Vimeo's: the player's menus open upwards across this strip. */
 .fs-idle-shield[data-state="hidden"] ~ .fs-subs-resize:not(.dragging) { cursor: none; }
-.fs-idle-shield[data-state="hidden"] ~ .fs-subs-resize:not(.dragging)::before { opacity: 0; }
+.fs-idle-shield[data-state="hidden"] ~ .fs-subs-resize:not(.dragging):not(:focus-visible)::before { opacity: 0; }
 #view-preview.fs-mode .fs-idle-shield[data-state="vimeo"] ~ .fs-subs-resize { display: none; }
 /* A finger needs a taller strip; and with no shield on a touch screen, one
    reaching the right side would lie across the player's menus for good. So
    there it is the left third of the band, the grip in its middle. */
 @media (pointer: coarse) {
-  .fs-subs-resize { height: 36px; }
+  .fs-subs-resize { --fs-grip-h: 36px; }
   .fs-subs-resize::before { right: auto; left: 50%; transform: translate(-50%, -50%); }
   #view-preview.fs-mode .fs-subs-resize { width: calc(var(--fs-video-w) / 3); }
 }
