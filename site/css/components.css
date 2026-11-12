@@ -821,7 +821,71 @@ body > * { position: relative; z-index: 1; }
 body.preview-player-resize-active-body,
 body.preview-player-resize-active-body *,
 body.preview-subs-resize-active-body,
-body.preview-subs-resize-active-body * { cursor: ns-resize !important; user-select: none !important; }
+body.preview-subs-resize-active-body *,
+body.fs-subs-resize-active-body,
+body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: none !important; }
+
+/* Fullscreen scale handle: a strip over the subtitle band's text, dragged to
+   scale the text — the embedded .preview-subs-resize's value, reached without
+   leaving fullscreen. An invisible strip with a grip at its right end, out in
+   the side margin — not in the middle, where the speaker's face most
+   often is. The grip is white-on-video like the band's text, not a theme colour: it sits on the
+   picture, never on the page. */
+.fs-subs-resize {
+  display: none;
+  height: 16px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.fs-subs-resize::before {
+  content: '';
+  position: absolute; top: 50%;
+  right: calc(100% * var(--fs-side-pad-ratio) / 4);
+  width: 48px; height: 4px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  transform: translateY(-50%);
+  opacity: 0.35;
+  transition: opacity .15s ease, width .15s ease;
+}
+.fs-subs-resize:hover::before,
+.fs-subs-resize:focus-visible::before,
+.fs-subs-resize.dragging::before { opacity: 0.9; width: 72px; }
+#view-preview.fs-mode .fs-subs-resize {
+  /* The overlay's own box formulas: the handle spans the video and rides the
+     band's measured height (--fs-band-h, written by installFsSubsHandle).
+     It sits --fs-grip-drop of the way down the band's top padding (1 = level
+     with the top of the text): on the
+     edge itself the gradient is still clear, and a grip there reads as a
+     mark adrift on the picture rather than as the subtitles' own. */
+  --fs-grip-drop: 1;
+  --fs-video-w: min(100cqw, 100cqh * (var(--preview-aspect, 16 / 9)));
+  --fs-video-h: min(100cqh, 100cqw / (var(--preview-aspect, 16 / 9)));
+  display: block;
+  position: absolute;
+  z-index: 10001;
+  left: calc((100cqw - var(--fs-video-w)) / 2);
+  width: var(--fs-video-w);
+  bottom: calc((100cqh - var(--fs-video-h)) / 2 + var(--fs-band-h, 0px)
+               - var(--fs-video-h) * var(--fs-padtop-ratio) * var(--fs-grip-drop));
+  transform: translateY(50%);
+}
+/* It leaves with the cursor, and stands aside with the shield while the
+   pointer is Vimeo's: the player's menus open upwards across this strip. */
+.fs-idle-shield[data-state="hidden"] ~ .fs-subs-resize:not(.dragging) { cursor: none; }
+.fs-idle-shield[data-state="hidden"] ~ .fs-subs-resize:not(.dragging)::before { opacity: 0; }
+#view-preview.fs-mode .fs-idle-shield[data-state="vimeo"] ~ .fs-subs-resize { display: none; }
+/* A finger needs a taller strip; and with no shield on a touch screen, one
+   reaching the right side would lie across the player's menus for good. So
+   there it is the left third of the band, the grip in its middle. */
+@media (pointer: coarse) {
+  .fs-subs-resize { height: 36px; }
+  .fs-subs-resize::before { right: auto; left: 50%; transform: translate(-50%, -50%); }
+  #view-preview.fs-mode .fs-subs-resize { width: calc(var(--fs-video-w) / 3); }
+}
+/* The band eases between cues; under the hand it must follow at once. */
+body.fs-subs-resize-active-body #view-preview.fs-mode #subtitle-overlay { transition: none; }
 
 /* Tunable subtitle overlay height (driven by its own resize handle).
    Default = original behavior: auto-height, 40px text (24px on mobile).
