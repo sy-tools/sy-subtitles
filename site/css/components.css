@@ -830,12 +830,14 @@ body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: n
 
 /* Fullscreen scale handle: a strip over the subtitle band's text, dragged to
    scale the text — the embedded .preview-subs-resize's value, reached without
-   leaving fullscreen. An invisible strip with a grip at its right end, out in
-   the side margin — not in the middle, where the speaker's face most
-   often is. The grip is white-on-video like the band's text, not a theme colour: it sits on the
+   leaving fullscreen. A grip out in the right side margin — not in the
+   middle, where the speaker's face most often is — inside a hit strip only
+   a little larger than itself: stretched invisibly across the video, the
+   strip ate the click that pauses it along a whole line of the picture. The grip is white-on-video like the band's text, not a theme colour: it sits on the
    picture, never on the page. */
 .fs-subs-resize {
-  --fs-grip-h: 16px;
+  --fs-grip-h: 24px;
+  --fs-grip-inset: 16px;
   display: none;
   height: var(--fs-grip-h);
   cursor: ns-resize;
@@ -844,7 +846,7 @@ body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: n
 .fs-subs-resize::before {
   content: '';
   position: absolute; top: 50%;
-  right: calc(100% * var(--fs-side-pad-ratio) / 4);
+  right: var(--fs-grip-inset);
   width: 48px; height: 4px;
   border-radius: var(--radius-pill);
   background: #fff;
@@ -857,8 +859,8 @@ body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: n
 .fs-subs-resize:focus-visible::before,
 .fs-subs-resize.dragging::before { opacity: 0.9; width: 72px; }
 #view-preview.fs-mode .fs-subs-resize {
-  /* The overlay's own box formulas: the handle spans the video and rides the
-     band's measured height (--fs-band-h, written by installFsSubsHandle).
+  /* The overlay's own box formulas: the handle hangs off the video's right
+     edge and rides the band's measured height (--fs-band-h, written by installFsSubsHandle).
      It sits --fs-grip-drop of the way down the band's top padding (1 = level
      with the top of the text): on the
      edge itself the gradient is still clear, and a grip there reads as a
@@ -869,8 +871,12 @@ body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: n
   display: block;
   position: absolute;
   z-index: 10001;
-  left: calc((100cqw - var(--fs-video-w)) / 2);
-  width: var(--fs-video-w);
+  /* The grip a quarter of the way into the side margin; the strip reaches
+     from the video's edge to a little past the grip at its widest (72px). */
+  --fs-grip-inset: calc(var(--fs-video-w) * var(--fs-side-pad-ratio) / 4);
+  --fs-strip-w: calc(var(--fs-grip-inset) + 96px);
+  left: calc((100cqw + var(--fs-video-w)) / 2 - var(--fs-strip-w));
+  width: var(--fs-strip-w);
   /* ...but never down into Vimeo's control bar, where a short band (no cue
      showing, a small screen, a small scale) would carry it: the bar would
      stop taking clicks along the strip, and the pointer would go from the
@@ -894,7 +900,10 @@ body.fs-subs-resize-active-body * { cursor: ns-resize !important; user-select: n
 @media (pointer: coarse) {
   .fs-subs-resize { --fs-grip-h: 36px; }
   .fs-subs-resize::before { right: auto; left: 50%; transform: translate(-50%, -50%); }
-  #view-preview.fs-mode .fs-subs-resize { width: calc(var(--fs-video-w) / 3); }
+  #view-preview.fs-mode .fs-subs-resize {
+    left: calc((100cqw - var(--fs-video-w)) / 2);
+    width: calc(var(--fs-video-w) / 3);
+  }
 }
 /* The band eases between cues; under the hand it must follow at once. */
 body.fs-subs-resize-active-body #view-preview.fs-mode #subtitle-overlay { transition: none; }

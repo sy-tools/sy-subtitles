@@ -498,7 +498,7 @@ at millisecond precision in tabular digits.</p>
 <p style="color:var(--fg4)">A strip just over the text of the fullscreen subtitle band, dragged
 to scale the text (<code>.fs-subs-resize</code>): up enlarges, down shrinks, a double click resets. It is the
 embedded subtitle handle's value reached without leaving fullscreen, so the burn reads the same
-scale. The strip itself is invisible; only the grip shows — faint while the cursor is awake,
+scale. The hit strip is invisible and only a little larger than the grip; only the grip shows — faint while the cursor is awake,
 bright under the pointer, on focus and through a drag, and gone with the cursor when it hides.
 White on the picture like the band's text, so it carries no theme colour. The grip sits at the right, out in
 the side margin, clear of the middle of the picture, where the speaker's face most often is. On a
@@ -507,9 +507,9 @@ touch screen the strip is taller and only the left third of the band, clear of t
             background: linear-gradient(to bottom, #5b6b7a 0%, #1c1c1c 100%)">
   <div class="fs-subs-resize" role="separator" aria-orientation="horizontal" tabindex="0"
        aria-label="Drag to resize the subtitles"
-       style="display: block; position: absolute; left: 0; right: 0; top: 24px"></div>
+       style="display: block; position: absolute; right: 0; width: 160px; top: 20px"></div>
   <div class="fs-subs-resize dragging" aria-hidden="true"
-       style="display: block; position: absolute; left: 0; right: 0; top: 56px"></div>
+       style="display: block; position: absolute; right: 0; width: 160px; top: 52px"></div>
 </div>
 
 <script src="js/sync_status_view.js"></script>

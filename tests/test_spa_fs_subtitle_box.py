@@ -444,8 +444,20 @@ def test_the_scale_handle_sits_between_the_bands_edge_and_its_text(page):
     s = _handle_state(page)
     assert s["display"] != "none"
     _assert_grip_sits_over_the_text(s)
-    assert s["handle"]["left"] == pytest.approx(s["band"]["left"], abs=0.6)
-    assert s["handle"]["width"] == pytest.approx(s["band"]["width"], abs=0.6)
+
+
+def test_the_handle_takes_presses_only_around_its_grip(page):
+    """The grip is all the viewer can see of it. Stretched invisibly across
+    the video, the strip ate the click that pauses the video along a whole
+    line of the picture, and turned the double click that leaves fullscreen
+    into one that wipes the stored scale."""
+    _measure(page, 1280, 800, "16 / 9")
+    s = _handle_state(page)
+    band_right = s["band"]["left"] + s["band"]["width"]
+    assert s["handle"]["left"] + s["handle"]["width"] == pytest.approx(band_right, abs=0.6)
+    assert s["handle"]["width"] < s["band"]["width"] / 8
+    hit = page.evaluate("([x, y]) => document.elementFromPoint(x, y).id", [640, s["handle"]["mid"]])
+    assert hit != "fs-subs-resize"
 
 
 def test_the_scale_handle_is_fullscreen_only(page):
@@ -519,11 +531,10 @@ def test_the_grip_sits_in_the_right_margin_beside_the_text_column(page):
     grip = page.evaluate(
         """() => {
             const cs = getComputedStyle(document.getElementById('fs-subs-resize'), '::before');
-            return {right: parseFloat(cs.right), left: parseFloat(cs.left), width: parseFloat(cs.width)};
+            return {right: parseFloat(cs.right)};
         }"""
     )
     assert grip["right"] == pytest.approx(m["right"] / 4, abs=1)
-    assert grip["left"] > _box(1280, 800, 4 / 3)["width"] / 2
 
 
 @pytest.mark.parametrize(("vw", "vh", "scale"), [(1280, 720, None), (960, 540, None), (1280, 720, 0.5)])
@@ -556,11 +567,47 @@ def test_a_scale_set_in_fullscreen_survives_leaving_it(page):
     _drag_handle(page, -600)
     in_fullscreen = float(_handle_state(page)["scale"])
     assert in_fullscreen == pytest.approx(0.12 * 800 / (0.04 * 800 * 4 / 3))
-    page.evaluate(
+    embedded_h = page.evaluate(
         """() => {
             document.getElementById('view-preview').classList.remove('fs-mode');
-            window.dispatchEvent(new Event('resize'));
-            return new Promise(r => setTimeout(r, 150));
+            return new Promise(r => setTimeout(r, 150)).then(() =>
+                parseFloat(document.documentElement.style.getPropertyValue('--preview-subs-h')));
         }"""
     )
-    assert float(_handle_state(page)["scale"]) == pytest.approx(in_fullscreen)
+    s = _handle_state(page)
+    assert float(s["scale"]) == pytest.approx(in_fullscreen)
+    # ...while the embedded overlay takes its own limit back at once, not at
+    # the next window resize: leaving CSS-only fullscreen fires none.
+    assert embedded_h < float(s["stored"]) - 10
+
+
+def test_a_press_on_the_embedded_handle_stores_nothing(page):
+    """It used to store the overlay's current height. With a scale set in
+    fullscreen past what the embedded overlay can show, that height is the
+    clamped one: the press alone would shrink fullscreen and the burn on the
+    next visit."""
+    _measure(page, 1280, 800, "16 / 9", fs_mode=False)
+    page.evaluate("() => { window.maybeInstallResize(); }")
+    r = page.evaluate(
+        """() => {
+            const h = document.getElementById('preview-subs-resize');
+            h.scrollIntoView({block: 'center'});
+            const b = h.getBoundingClientRect();
+            return {x: b.left + b.width / 2, y: b.top + b.height / 2};
+        }"""
+    )
+    page.mouse.move(r["x"], r["y"])
+    page.mouse.down()
+    page.mouse.up()
+    assert _handle_state(page)["stored"] is None
+
+
+def test_both_subtitle_handles_say_a_double_click_resets(page):
+    _measure(page, 1280, 800, "16 / 9", fs_mode=False)
+    titles = page.evaluate(
+        """() => {
+            window.maybeInstallResize();
+            return ['preview-subs-resize', 'fs-subs-resize'].map(id => document.getElementById(id).title);
+        }"""
+    )
+    assert titles == ["Drag to resize the subtitles; double-click to reset"] * 2
