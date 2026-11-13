@@ -26,7 +26,7 @@
 // off the shield or the cursor hides, and until then the first press on the
 // shield only closes it (menuMayBeOpen).
 //
-// In CSS the shield carries the bar's height as --fs-vimeo-bar-h.
+// In CSS the player container carries the bar's height as --fs-vimeo-bar-h.
 
 var FS_CURSOR_IDLE_MS = 3000;
 var FS_VIMEO_MODE_MS = 10000;

@@ -389,3 +389,225 @@ def test_fullscreen_draws_the_burn_font_with_its_line_advance(page):
         assert got["family"].strip("'\" ").startswith(SUBTITLE_FAMILY), got
         assert got["loaded"], "the subtitle face did not load"
         assert got["ratio"] == pytest.approx(LINE_ADVANCE, abs=0.002), (tuned, got)
+
+
+# --- The fullscreen scale handle: the band's top edge, dragged ---------------
+
+
+def _handle_state(page):
+    return page.evaluate(
+        """() => {
+            const ov = document.getElementById('subtitle-overlay');
+            const h = document.getElementById('fs-subs-resize');
+            const o = ov.getBoundingClientRect();
+            const r = h.getBoundingClientRect();
+            return {
+                display: getComputedStyle(h).display,
+                handle: {left: r.left, width: r.width, mid: r.top + r.height / 2},
+                band: {left: o.left, width: o.width, top: o.top,
+                       textTop: o.top + parseFloat(getComputedStyle(ov).paddingTop)},
+                font: parseFloat(getComputedStyle(ov).fontSize),
+                scale: document.documentElement.style.getPropertyValue('--preview-subs-scale'),
+                stored: localStorage.getItem('sy.preview_subs_h.__default'),
+            };
+        }"""
+    )
+
+
+def _settle(page):
+    """The handle follows the band through a ResizeObserver: one frame behind."""
+    page.evaluate("() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))")
+
+
+def _drag_handle(page, dy):
+    s = _handle_state(page)
+    x = s["handle"]["left"] + s["handle"]["width"] / 2
+    y = s["handle"]["mid"]
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x, y + dy / 2)
+    page.mouse.move(x, y + dy)
+    page.mouse.up()
+    _settle(page)
+
+
+def _assert_grip_sits_over_the_text(s):
+    """In the half of the top padding nearer the text, down to the text's own
+    top: on the edge itself — where the gradient is still clear — the grip
+    read as a mark adrift on the picture, not as the subtitles' own."""
+    edge, text = s["band"]["top"], s["band"]["textTop"]
+    assert edge + 0.5 * (text - edge) - 1 <= s["handle"]["mid"] <= text + 1
+
+
+def test_the_scale_handle_sits_between_the_bands_edge_and_its_text(page):
+    _measure(page, 1280, 800, "4 / 3")
+    s = _handle_state(page)
+    assert s["display"] != "none"
+    _assert_grip_sits_over_the_text(s)
+
+
+def test_the_handle_takes_presses_only_around_its_grip(page):
+    """The grip is all the viewer can see of it. Stretched invisibly across
+    the video, the strip ate the click that pauses the video along a whole
+    line of the picture, and turned the double click that leaves fullscreen
+    into one that wipes the stored scale."""
+    _measure(page, 1280, 800, "16 / 9")
+    s = _handle_state(page)
+    band_right = s["band"]["left"] + s["band"]["width"]
+    assert s["handle"]["left"] + s["handle"]["width"] == pytest.approx(band_right, abs=0.6)
+    assert s["handle"]["width"] < s["band"]["width"] / 8
+    hit = page.evaluate("([x, y]) => document.elementFromPoint(x, y).id", [640, s["handle"]["mid"]])
+    assert hit != "fs-subs-resize"
+
+
+def test_the_scale_handle_is_fullscreen_only(page):
+    _measure(page, 1280, 800, "16 / 9", fs_mode=False)
+    assert _handle_state(page)["display"] == "none"
+
+
+@pytest.mark.parametrize("dy", [-40, 25])
+def test_dragging_the_edge_moves_it_with_the_pointer(page, dy):
+    """Held to a cue that stays on one line. A cue that rewraps under the drag
+    gains or loses a whole line at once, and no font size puts the edge inside
+    that jump — the handle then follows the font, not the pointer."""
+    _measure(page, 1280, 800, "16 / 9")
+    page.evaluate("() => { document.getElementById('subtitle-overlay').textContent = 'Так.'; }")
+    _settle(page)
+    before = _handle_state(page)
+    _drag_handle(page, dy)
+    after = _handle_state(page)
+    assert after["band"]["top"] - before["band"]["top"] == pytest.approx(dy, abs=1.5)
+    assert (after["font"] > before["font"]) == (dy < 0)
+    _assert_grip_sits_over_the_text(after)
+
+
+def test_a_drag_is_stored_as_the_embedded_handles_own_value(page):
+    """One scale, two handles: what fullscreen stores must be what the embedded
+    handle reads back (a height in px, 120 px = 1x), or the next visit and the
+    burn would each see a different size."""
+    _measure(page, 1280, 800, "16 / 9")
+    _drag_handle(page, -40)
+    s = _handle_state(page)
+    assert float(s["scale"]) > 1
+    assert float(s["stored"]) == pytest.approx(float(s["scale"]) * 120, abs=0.01)
+
+
+def test_a_click_without_a_drag_stores_nothing(page):
+    """A stray press on the edge must not turn an untouched talk into a
+    "tuned" one: the embedded overlay changes its look once a value is stored."""
+    _measure(page, 1280, 800, "16 / 9")
+    _drag_handle(page, 0)
+    s = _handle_state(page)
+    assert s["stored"] is None
+    assert s["scale"] == ""
+
+
+def test_the_drag_stops_at_the_burn_ceiling_and_comes_straight_back(page):
+    m = _measure(page, 1280, 800, "16 / 9")
+    box = _box(1280, 800, 16 / 9)
+    _drag_handle(page, -600)
+    top = _handle_state(page)
+    assert top["font"] == pytest.approx(0.12 * box["height"], abs=0.6)
+    _drag_handle(page, 20)
+    assert _handle_state(page)["font"] < top["font"] - 1, "no dead travel past the ceiling"
+    assert m["font"] < top["font"]
+
+
+def test_a_double_click_on_the_edge_resets_the_scale(page):
+    m = _measure(page, 1280, 800, "16 / 9")
+    _drag_handle(page, -40)
+    s = _handle_state(page)
+    page.mouse.dblclick(s["handle"]["left"] + s["handle"]["width"] / 2, s["handle"]["mid"])
+    after = _handle_state(page)
+    assert after["scale"] == ""
+    assert after["stored"] is None
+    assert after["font"] == pytest.approx(m["font"], abs=0.1)
+
+
+def test_the_grip_sits_in_the_right_margin_beside_the_text_column(page):
+    """Not in the middle: that is where the speaker's face most often is.
+    Out in the side margin, it is clear of the text's last word too."""
+    m = _measure(page, 1280, 800, "4 / 3")
+    grip = page.evaluate(
+        """() => {
+            const cs = getComputedStyle(document.getElementById('fs-subs-resize'), '::before');
+            return {right: parseFloat(cs.right)};
+        }"""
+    )
+    assert grip["right"] == pytest.approx(m["right"] / 4, abs=1)
+
+
+@pytest.mark.parametrize(("vw", "vh", "scale"), [(1280, 720, None), (960, 540, None), (1280, 720, 0.5)])
+@pytest.mark.parametrize("text", ["", "Так."])
+def test_the_handle_stays_clear_of_the_players_control_bar(page, vw, vh, scale, text):
+    """A short band — no cue showing, a small screen, a small scale — would
+    carry the handle down into the strip where Vimeo draws its controls: the
+    bar would stop taking clicks there, and the pointer would reach the player
+    without ever leaving the shield, which is how the page learns it has."""
+    _measure(page, vw, vh, "16 / 9", tuned=scale is not None, scale=scale)
+    page.evaluate("t => { document.getElementById('subtitle-overlay').textContent = t; }", text)
+    _settle(page)
+    gap = page.evaluate(
+        """() => {
+            const h = document.getElementById('fs-subs-resize');
+            const bar = parseFloat(getComputedStyle(h).getPropertyValue('--fs-vimeo-bar-h'));
+            const videoBottom = document.getElementById('subtitle-overlay').getBoundingClientRect().bottom;
+            return videoBottom - bar - h.getBoundingClientRect().bottom;
+        }"""
+    )
+    assert gap >= 4, "a strip of the shield must remain between the handle and the bar"
+
+
+def test_a_scale_set_in_fullscreen_survives_leaving_it(page):
+    """The embedded overlay cannot grow past what its own width allows, but
+    that limit is the embedded box's, not the scale's: cutting the scale with
+    it on the way out shrank the fullscreen text and the burn behind the
+    viewer's back, while the stored value still said otherwise."""
+    _measure(page, 1280, 800, "4 / 3")
+    _drag_handle(page, -600)
+    in_fullscreen = float(_handle_state(page)["scale"])
+    assert in_fullscreen == pytest.approx(0.12 * 800 / (0.04 * 800 * 4 / 3))
+    embedded_h = page.evaluate(
+        """() => {
+            document.getElementById('view-preview').classList.remove('fs-mode');
+            return new Promise(r => setTimeout(r, 150)).then(() =>
+                parseFloat(document.documentElement.style.getPropertyValue('--preview-subs-h')));
+        }"""
+    )
+    s = _handle_state(page)
+    assert float(s["scale"]) == pytest.approx(in_fullscreen)
+    # ...while the embedded overlay takes its own limit back at once, not at
+    # the next window resize: leaving CSS-only fullscreen fires none.
+    assert embedded_h < float(s["stored"]) - 10
+
+
+def test_a_press_on_the_embedded_handle_stores_nothing(page):
+    """It used to store the overlay's current height. With a scale set in
+    fullscreen past what the embedded overlay can show, that height is the
+    clamped one: the press alone would shrink fullscreen and the burn on the
+    next visit."""
+    _measure(page, 1280, 800, "16 / 9", fs_mode=False)
+    page.evaluate("() => { window.maybeInstallResize(); }")
+    r = page.evaluate(
+        """() => {
+            const h = document.getElementById('preview-subs-resize');
+            h.scrollIntoView({block: 'center'});
+            const b = h.getBoundingClientRect();
+            return {x: b.left + b.width / 2, y: b.top + b.height / 2};
+        }"""
+    )
+    page.mouse.move(r["x"], r["y"])
+    page.mouse.down()
+    page.mouse.up()
+    assert _handle_state(page)["stored"] is None
+
+
+def test_both_subtitle_handles_say_a_double_click_resets(page):
+    _measure(page, 1280, 800, "16 / 9", fs_mode=False)
+    titles = page.evaluate(
+        """() => {
+            window.maybeInstallResize();
+            return ['preview-subs-resize', 'fs-subs-resize'].map(id => document.getElementById(id).title);
+        }"""
+    )
+    assert titles == ["Drag to resize the subtitles; double-click to reset"] * 2
