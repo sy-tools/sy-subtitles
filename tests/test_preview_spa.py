@@ -5409,6 +5409,81 @@ class TestFullscreenCursorIdle:
         assert self._state(page) == "off"
 
 
+class TestTouchFullscreenChrome:
+    """Fullscreen on a touch screen (js/touch_fs_chrome.js): no cursor shield,
+    so the scale grip and the exit button show after something the page can
+    see and fade after three seconds; a faded exit button only comes back on
+    the first tap."""
+
+    IDLE_MS = 3000
+    _HOVER_STUB = TestFullscreenCursorIdle._HOVER_STUB
+
+    def _fs_on_touch(self, server, page):
+        page.add_init_script(self._HOVER_STUB)
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.clock.install()
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+
+    def _state(self, page):
+        return page.evaluate("document.getElementById('view-preview').dataset.touchFs || 'off'")
+
+    def _wait_opacity(self, page, selector, pseudo, value):
+        page.wait_for_function(
+            f"getComputedStyle(document.querySelector('{selector}'), {pseudo}).opacity === '{value}'",
+            timeout=2000,
+        )
+
+    def _in_fs(self, page):
+        return page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
+
+    def test_entering_shows_grip_and_exit_button(self, server, page):
+        self._fs_on_touch(server, page)
+        assert self._state(page) == "visible"
+        assert page.is_visible("#fs-exit")
+        self._wait_opacity(page, "#fs-exit", "null", "1")
+        assert page.evaluate("getComputedStyle(document.getElementById('fs-subs-resize'), '::before').opacity") != "0"
+
+    def test_grip_and_exit_button_fade_after_idle(self, server, page):
+        self._fs_on_touch(server, page)
+        page.clock.run_for(self.IDLE_MS + 100)
+        assert self._state(page) == "hidden"
+        self._wait_opacity(page, "#fs-subs-resize", "'::before'", "0")
+        self._wait_opacity(page, "#fs-exit", "null", "0")
+
+    def test_tap_on_faded_exit_only_reveals_then_second_tap_leaves(self, server, page):
+        self._fs_on_touch(server, page)
+        page.clock.run_for(self.IDLE_MS + 100)
+        page.evaluate("document.getElementById('fs-exit').click()")
+        assert self._in_fs(page)
+        assert self._state(page) == "visible"
+        page.evaluate("document.getElementById('fs-exit').click()")
+        assert not self._in_fs(page)
+        assert self._state(page) == "off"
+
+    def test_player_event_brings_the_controls_back(self, server, page):
+        self._fs_on_touch(server, page)
+        page.clock.run_for(self.IDLE_MS + 100)
+        page.evaluate("window._vimeoPlayer.play()")
+        assert self._state(page) == "visible"
+
+    def test_exit_button_sits_top_right_inside_the_safe_area(self, server, page):
+        self._fs_on_touch(server, page)
+        box = page.evaluate(
+            "(() => { const b = document.getElementById('fs-exit').getBoundingClientRect();"
+            " return [b.left, b.top, b.right, innerWidth]; })()"
+        )
+        left, top, right, width = box
+        assert top < 40 and right > width - 40 and left > width / 2
+
+    def test_no_exit_button_with_a_mouse(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        assert self._state(page) == "off"
+        assert not page.is_visible("#fs-exit")
+
+
 class TestEndFreeze:
     """End-freeze, embedded and fullscreen alike: the player pauses just before
     the video ends so the Vimeo 'more from this user' end screen never fires
