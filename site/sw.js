@@ -31,6 +31,7 @@ var SHELL_ASSETS = [
   './',
   'index.html',
   'icon.png',
+  'manifest.webmanifest',
   'fonts/PT_Serif-Web-Regular.ttf',
   'css/tokens.css',
   'css/components.css',
