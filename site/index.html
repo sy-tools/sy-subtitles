@@ -33,6 +33,7 @@
 <script src="js/vimeo_codec.js"></script>
 <script src="js/end_freeze.js"></script>
 <script src="js/cursor_idle.js"></script>
+<script src="js/touch_fs_chrome.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/pipeline_stages.js"></script>
 <script src="js/shell_version.js"></script>
@@ -629,6 +630,8 @@
     <div id="fs-idle-shield" class="fs-idle-shield" aria-hidden="true"></div>
     <!-- After the shield, whose data-state the handle's CSS reads as a sibling. -->
     <div id="fs-subs-resize" class="fs-subs-resize"></div>
+    <button id="fs-exit" type="button" class="fs-exit" data-i18n-title="preview.fs_exit" data-i18n-aria-label="preview.fs_exit"
+            aria-label="Exit fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
     <div id="subtitle-overlay"></div>
     <div class="controls">
       <span id="time-display">00:00:00</span>
@@ -1054,6 +1057,7 @@ var I18N = {
     'gate.hide': '\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043F\u0430\u0440\u043E\u043B\u044C',
     'preview.resize_player': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432\u0438\u0441\u043E\u0442\u0443 \u043F\u043B\u0435\u0454\u0440\u0430',
     'preview.resize_subs': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043C\u0456\u0440 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432; \u043F\u043E\u0434\u0432\u0456\u0439\u043D\u0438\u0439 \u043A\u043B\u0430\u0446 \u2014 \u0441\u043A\u0438\u043D\u0443\u0442\u0438',
+    'preview.fs_exit': '\u0412\u0438\u0439\u0442\u0438 \u0437 \u043F\u043E\u0432\u043D\u043E\u0435\u043A\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0436\u0438\u043C\u0443',
     'search.placeholder': '\u041F\u043E\u0448\u0443\u043A \u043F\u0440\u043E\u043C\u043E\u0432...',
     'index.loading': '\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F...',
     'nav.back': '\u2190 \u0413\u043E\u043B\u043E\u0432\u043D\u0430',
@@ -1313,6 +1317,7 @@ var I18N = {
     'gate.hide': 'Hide password',
     'preview.resize_player': 'Drag to resize the player',
     'preview.resize_subs': 'Drag to resize the subtitles; double-click to reset',
+    'preview.fs_exit': 'Exit fullscreen',
     'search.placeholder': 'Search talks...',
     'index.loading': 'Loading...',
     'nav.back': '\u2190 Home',
@@ -3817,7 +3822,10 @@ function showPreview(talkId, videoSlug) {
       // Not a volume change: the volume slider stays open while it is dragged.
       ['play', 'pause', 'seeked', 'texttrackchange', 'qualitychange',
         'playbackratechange'].forEach(function(ev) {
-        player.on(ev, function() { if (fsCursorIdle) fsCursorIdle.playerEvent(); });
+        player.on(ev, function() {
+          if (fsCursorIdle) fsCursorIdle.playerEvent();
+          if (fsTouchChrome) fsTouchChrome.activity();
+        });
       });
       var pollInFlight = false;
       function overlayLoop() {
@@ -4207,6 +4215,34 @@ document.addEventListener('keydown', function(e) {
 // class itself rather than every path that flips it (toggleFullscreen,
 // syncFsMode, the Escape handler above). A touch screen has no cursor to hide,
 // and there the shield would only swallow the tap meant for the player.
+// The touch-screen counterpart (js/touch_fs_chrome.js): where the shield is
+// off for want of hover, the scale grip and the exit button fade on their own.
+var fsTouchChrome = (function() {
+  var view = document.getElementById('view-preview');
+  var exitBtn = document.getElementById('fs-exit');
+  if (!view || !exitBtn) return null;
+  var chrome = createTouchFsChrome({
+    idleMs: FS_TOUCH_IDLE_MS,
+    setTimer: function(fn, ms) { return setTimeout(fn, ms); },
+    clearTimer: function(id) { clearTimeout(id); },
+    onChange: function(state) { view.dataset.touchFs = state; },
+  });
+  var hover = window.matchMedia ? window.matchMedia('(hover: hover)') : null;
+  function follow() {
+    if (hover && !hover.matches && view.classList.contains('fs-mode')) chrome.enter();
+    else chrome.exit();
+  }
+  new MutationObserver(follow).observe(view, { attributes: true, attributeFilter: ['class'] });
+  if (hover && hover.addEventListener) hover.addEventListener('change', follow);
+  follow();
+  exitBtn.addEventListener('click', function() {
+    if (chrome.leavesOnExitTap()) SPA.toggleFullscreen();
+  });
+  var subsHandle = document.getElementById('fs-subs-resize');
+  if (subsHandle) subsHandle.addEventListener('pointerdown', function() { chrome.activity(); });
+  return chrome;
+})();
+
 var fsCursorIdle = (function() {
   var view = document.getElementById('view-preview');
   var shield = document.getElementById('fs-idle-shield');

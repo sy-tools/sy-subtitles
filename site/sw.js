@@ -49,6 +49,7 @@ var SHELL_ASSETS = [
   'js/vimeo_codec.js',
   'js/end_freeze.js',
   'js/cursor_idle.js',
+  'js/touch_fs_chrome.js',
   'js/add_talk_data.js',
   'js/pipeline_stages.js',
   'js/shell_version.js',
