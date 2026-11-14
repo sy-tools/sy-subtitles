@@ -1,0 +1,11 @@
+{
+  "name": "SY Subtitles",
+  "short_name": "SY Subtitles",
+  "lang": "uk",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "icons": [
+    { "src": "icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
