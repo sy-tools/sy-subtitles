@@ -66,13 +66,17 @@ describe('home-screen app: iOS meta', () => {
 });
 
 describe('home-screen app: safe areas', () => {
-  it('fullscreen keeps video and subtitles clear of notch and home indicator', () => {
+  it('fullscreen keeps video and subtitles clear of the notch and status bar', () => {
     const body = ruleBody('#view-preview.fs-mode');
     assert.ok(body, '#view-preview.fs-mode rule not found');
-    for (const side of ['top', 'right', 'bottom', 'left']) {
+    for (const side of ['top', 'right', 'left']) {
       assert.match(body, new RegExp('env\\(safe-area-inset-' + side + '\\)'),
         `fs-mode must pad safe-area-inset-${side}`);
     }
+  });
+
+  it('fullscreen runs the video down to the bottom edge, under the home indicator', () => {
+    assert.doesNotMatch(ruleBody('#view-preview.fs-mode'), /safe-area-inset-bottom/);
   });
 
   it('fullscreen safe-area bands match the player surfaces around the video', () => {
