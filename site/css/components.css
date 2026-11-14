@@ -520,9 +520,13 @@ body.sync-player-resizing, body.sync-player-resizing * {
 
 /* --- Fullscreen preview mode --- */
 /* The page draws under the notch and home indicator (viewport-fit=cover), so
-   fullscreen pads them out, in the colour of the player surfaces, to keep video and subtitles clear. */
+   fullscreen pads the notch and status bar out, in the colour of the player
+   surfaces. Not the bottom: a landscape video fills the height, so padding the
+   home indicator's inset leaves an empty strip under the picture. The band's own
+   bottom padding (padBotPx of the height, ~13pt on a phone) ends about where the
+   indicator's thin line begins; a descender may touch it. */
 #view-preview.fs-mode { position: fixed; inset: 0; z-index: 9999; background: var(--bg3); display: flex; flex-direction: column; overflow: hidden;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left); }
 #view-preview.fs-mode .header { display: none !important; }
 #view-preview.fs-mode .preview-list { display: none !important; }
 #view-preview.fs-mode #btn-mark { display: none !important; }
@@ -1349,6 +1353,8 @@ body.gh-write::after {
   background: linear-gradient(90deg, transparent, var(--aura) 20%, var(--aura-core) 50%, var(--aura) 80%, transparent);
   box-shadow: 0 1px 6px var(--aura);
 }
+/* Fixed to the viewport top, it would lie across the fullscreen picture. */
+body.gh-write.sy-fs-active::after { content: none; }
 body.gh-write .gh-avatar-wrap #gh-avatar {
   box-shadow: 0 0 0 2px var(--bg), 0 0 10px 2px var(--aura);
 }

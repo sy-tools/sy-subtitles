@@ -414,6 +414,17 @@ def test_signed_in_write_gets_enlightenment_marks(auth_server, auth_page):
     assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).boxShadow") != "none"
 
 
+def test_fullscreen_hides_the_dawn_thread(auth_server, auth_page):
+    """The thread is fixed at the top of the viewport, so in fullscreen it would
+    lie across the picture."""
+    page = auth_page
+    _seed_session(page)
+    page.goto(f"{auth_server}/index.html")
+    page.wait_for_function("document.body.classList.contains('gh-write')", timeout=10000)
+    page.evaluate("document.body.classList.add('sy-fs-active')")
+    assert page.evaluate("getComputedStyle(document.body, '::after').content") == "none"
+
+
 def test_signed_out_has_no_enlightenment_marks(plain_server, browser):
     ctx = browser.new_context()
     pg = ctx.new_page()
