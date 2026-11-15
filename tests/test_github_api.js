@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { authHeaders, exchangeCode, getViewer } = require('../site/js/github_api');
+const { authHeaders, exchangeCode, getViewer, listIssueComments, passQa } = require('../site/js/github_api');
 
 // Statuses the Fetch spec forbids a body on; Response throws otherwise.
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
@@ -44,16 +44,73 @@ describe('exchangeCode', () => {
 });
 
 describe('getViewer', () => {
-  it('GETs /user with the Bearer header and trims the profile', async () => {
+  it('GETs /user with the Bearer header and keeps login, avatar and the numeric id', async () => {
     const capture = {};
-    const u = await getViewer('gho_x', fetchDouble(200, { login: 'ira', avatar_url: 'http://a/i.png', id: 5 }, capture));
-    assert.deepStrictEqual(u, { login: 'ira', avatar_url: 'http://a/i.png' });
+    const u = await getViewer('gho_x', fetchDouble(200, { login: 'ira', avatar_url: 'http://a/i.png', id: 5, email: 'x' }, capture));
+    assert.deepStrictEqual(u, { login: 'ira', avatar_url: 'http://a/i.png', id: 5 });
     assert.strictEqual(capture.url, 'https://api.github.com/user');
     assert.strictEqual(capture.init.headers.Authorization, 'Bearer gho_x');
   });
   it('rejects with status 401 on a revoked token', async () => {
     await assert.rejects(getViewer('gho_x', fetchDouble(401, { message: 'Bad credentials' })),
       (e) => e.status === 401);
+  });
+});
+
+// One canned response per request, in order; every request is recorded.
+function fetchScript(responses, calls) {
+  let i = 0;
+  return async (url, init) => {
+    calls.push({ url, method: (init && init.method) || 'GET', body: init && init.body });
+    const [status, payload] = responses[i++];
+    const body = NULL_BODY_STATUSES.has(status) ? null : JSON.stringify(payload);
+    return new Response(body, { status, headers: { 'Content-Type': 'application/json' } });
+  };
+}
+
+const OP_API = 'https://api.github.com/repos/o/r';
+
+describe('listIssueComments', () => {
+  it('returns author login and body of each comment', async () => {
+    const calls = [];
+    const rows = await listIssueComments(OP_API, 't', 7, fetchScript([[200, [
+      { user: { login: 'github-actions[bot]', id: 1 }, body: 'hi', id: 9 },
+    ]]], calls));
+    assert.deepStrictEqual(rows, [{ user: { login: 'github-actions[bot]' }, body: 'hi' }]);
+    assert.strictEqual(calls[0].url, OP_API + '/issues/7/comments?per_page=100&page=1');
+  });
+  it('pages on until a short page', async () => {
+    const calls = [];
+    const full = Array.from({ length: 100 }, () => ({ user: { login: 'a' }, body: 'x' }));
+    const rows = await listIssueComments(OP_API, 't', 7, fetchScript([[200, full], [200, [{ user: { login: 'b' }, body: 'y' }]]], calls));
+    assert.strictEqual(rows.length, 101);
+    assert.strictEqual(calls[1].url, OP_API + '/issues/7/comments?per_page=100&page=2');
+  });
+});
+
+describe('passQa', () => {
+  it('adds op:qa-passed when the issue does not carry it', async () => {
+    const calls = [];
+    await passQa(OP_API, 't', 7, fetchScript([[200, { number: 7, labels: [{ name: 'op:qa' }] }], [200, []]], calls));
+    assert.deepStrictEqual(calls.map((c) => c.method + ' ' + c.url), [
+      'GET ' + OP_API + '/issues/7',
+      'POST ' + OP_API + '/issues/7/labels',
+    ]);
+    assert.deepStrictEqual(JSON.parse(calls[1].body), { labels: ['op:qa-passed'] });
+  });
+  it('removes and re-adds a label left by a failed run, so the bot sees a new labeled event', async () => {
+    const calls = [];
+    await passQa(OP_API, 't', 7, fetchScript([
+      [200, { number: 7, labels: [{ name: 'op:qa' }, { name: 'op:qa-passed' }] }], [200, []], [200, []],
+    ], calls));
+    assert.deepStrictEqual(calls.map((c) => c.method + ' ' + c.url), [
+      'GET ' + OP_API + '/issues/7',
+      'DELETE ' + OP_API + '/issues/7/labels/op%3Aqa-passed',
+      'POST ' + OP_API + '/issues/7/labels',
+    ]);
+  });
+  it('rejects with the status when GitHub refuses', async () => {
+    await assert.rejects(passQa(OP_API, 't', 7, fetchScript([[403, { message: 'no' }]], [])), (e) => e.status === 403);
   });
 });
 

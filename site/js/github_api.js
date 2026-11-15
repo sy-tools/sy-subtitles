@@ -44,7 +44,7 @@ function getViewer(token, fetchImpl) {
       }
       return r.json();
     })
-    .then(function (u) { return { login: u.login, avatar_url: u.avatar_url }; });
+    .then(function (u) { return { login: u.login, avatar_url: u.avatar_url, id: u.id }; });
 }
 
 // ---------------------------------------------------------------------------
@@ -213,6 +213,39 @@ function ensureLabel(api, token, name, fetchImpl) {
   return ghJson(api + '/labels', token, { method: 'POST', body: { name: name } }, fetchImpl)
     .then(function () { return null; })
     .catch(function (e) { if (e && e.status === 422) return null; throw e; });
+}
+
+// GET /issues/<n>/comments, every page, trimmed to what the SPA reads.
+function listIssueComments(api, token, number, fetchImpl) {
+  var MAX_PAGES = 10;
+  function fetchPage(page, acc) {
+    var url = api + '/issues/' + number + '/comments?per_page=100&page=' + page;
+    return ghJson(url, token, null, fetchImpl).then(function (rows) {
+      var list = Array.isArray(rows) ? rows : [];
+      list.forEach(function (c) {
+        acc.push({ user: { login: (c.user && c.user.login) || '' }, body: c.body || '' });
+      });
+      return list.length < 100 || page >= MAX_PAGES ? acc : fetchPage(page + 1, acc);
+    });
+  }
+  return fetchPage(1, []);
+}
+
+// QA passed = the op:qa-passed label. Adding a label the issue already carries
+// fires no `labeled` event, and a failed packaging run leaves it in place, so
+// a retry has to take it off first or talk-operator.yml never hears of it.
+function passQa(api, token, number, fetchImpl) {
+  var LABEL = 'op:qa-passed';
+  var issueUrl = api + '/issues/' + number;
+  return ghJson(issueUrl, token, null, fetchImpl).then(function (issue) {
+    var has = (issue.labels || []).some(function (l) { return (l && l.name) === LABEL; });
+    var cleared = has
+      ? ghJson(issueUrl + '/labels/' + encodeURIComponent(LABEL), token, { method: 'DELETE' }, fetchImpl)
+      : Promise.resolve();
+    return cleared.then(function () {
+      return ghJson(issueUrl + '/labels', token, { method: 'POST', body: { labels: [LABEL] } }, fetchImpl);
+    });
+  });
 }
 
 function addAssignees(api, token, issueNumber, logins, fetchImpl) {
@@ -473,6 +506,8 @@ if (typeof module !== 'undefined' && module.exports) {
     authHeaders: authHeaders,
     exchangeCode: exchangeCode,
     getViewer: getViewer,
+    listIssueComments: listIssueComments,
+    passQa: passQa,
     getRepoPermissions: getRepoPermissions,
     isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,
