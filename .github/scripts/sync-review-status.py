@@ -132,6 +132,9 @@ def main() -> int:
         }
 
     for talk_id, group in by_talk_operator.items():
+        if not (Path("talks") / talk_id).is_dir():
+            print(f"warning: `Operator: {talk_id}` names no talk in talks/ — skipping", file=sys.stderr)
+            continue
         winner = max(group, key=issue_rank)
         labels = [lbl["name"] for lbl in winner.get("labels", [])]
         assignees = [a["login"] for a in winner.get("assignees", [])]

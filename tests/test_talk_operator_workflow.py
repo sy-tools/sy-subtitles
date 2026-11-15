@@ -80,10 +80,25 @@ def test_qa_job_has_full_history_for_the_build_baseline():
     assert checkouts and checkouts[0]["with"].get("fetch-depth") == 0
 
 
-def test_deliver_job_records_delivery():
+def test_deliver_job_records_delivery_then_labels():
     run = _run_text(_op()["jobs"]["deliver"])
-    for needle in ("talk_operator closed", "amruta_package mark-delivered", "bot-pr.sh bot/amruta-delivery"):
-        assert needle in run, needle
+    order = [
+        "talk_operator closed",
+        "amruta_package mark-delivered",
+        "bot-pr.sh bot/amruta-delivery",
+        "talk_operator delivered",
+    ]
+    positions = [run.index(needle) for needle in order]
+    assert positions == sorted(positions)
+
+
+def test_deliver_job_has_full_history_to_find_the_package_commit():
+    checkouts = [s for s in _op()["jobs"]["deliver"]["steps"] if str(s.get("uses", "")).startswith("actions/checkout@")]
+    assert checkouts and checkouts[0]["with"].get("fetch-depth") == 0
+
+
+def test_pr_job_ignores_fork_prs():
+    assert "github.event.pull_request.head.repo.full_name == github.repository" in _op()["jobs"]["pr"]["if"]
 
 
 def test_status_job_reuses_sync_review_status():

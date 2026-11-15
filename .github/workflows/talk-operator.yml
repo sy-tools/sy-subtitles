@@ -27,6 +27,7 @@ jobs:
   pr:
     if: >-
       github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       startsWith(github.event.pull_request.head.ref, 'sync/') &&
       github.event.pull_request.draft == false
     runs-on: ubuntu-latest
@@ -164,6 +165,10 @@ jobs:
       - uses: actions/checkout@v7
         with:
           ref: main
+          # Full history: in a shallow clone the one commit is a grafted root
+          # that "touches" every path, so the package-commit lookup would
+          # always answer HEAD.
+          fetch-depth: 0
           token: ${{ steps.bot-token.outputs.token || github.token }}
       - uses: actions/setup-python@v7
         with:
@@ -196,6 +201,15 @@ jobs:
           TALK: ${{ steps.gate.outputs.talk }}
         run: |
           .github/scripts/bot-pr.sh bot/amruta-delivery "Record Amruta delivery: $TALK" "talks/$TALK/meta.yaml"
+      # Labelled only after the record is committed: `closed` acts only from
+      # op:ready, so labelling first would leave a failed run no way to retry.
+      - name: Mark the issue delivered
+        if: steps.gate.outputs.decision == 'deliver'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: python -m tools.talk_operator delivered --issue "$ISSUE"
 
   status:
     needs: [pr, qa, deliver]

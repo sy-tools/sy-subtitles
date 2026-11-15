@@ -17,6 +17,7 @@ itself instead of relying on the sync-review-status close handler.
     python -m tools.talk_operator qa-passed --issue N      # prints package|skip
     python -m tools.talk_operator packaged --issue N --comment-file F
     python -m tools.talk_operator closed --issue N         # prints deliver|skip
+    python -m tools.talk_operator delivered --issue N      # after the record landed
 """
 
 import argparse
@@ -26,6 +27,9 @@ import subprocess
 from pathlib import Path
 
 from tools.roles import operator_login
+from tools.workflow_validation import TALK_ID_RE
+
+ROOT = Path(__file__).resolve().parents[1]
 
 OPERATOR_LABEL = "talk-operator"
 REVIEW_LABEL = "talk-review"
@@ -36,7 +40,13 @@ SYNC_BRANCH = re.compile(r"^sync/[^/]+/(?P<talk>.+?)--[^/]+$")
 
 def talk_id_from_branch(branch: str) -> str | None:
     m = SYNC_BRANCH.match(branch or "")
-    return m.group("talk") if m else None
+    if not m or not TALK_ID_RE.fullmatch(m.group("talk")):
+        return None
+    return m.group("talk")
+
+
+def talk_exists(talk_id: str) -> bool:
+    return (ROOT / "talks" / talk_id / "meta.yaml").is_file()
 
 
 def operator_title(talk_id: str) -> str:
@@ -92,9 +102,9 @@ def _approve_review(gh, talk_id: str) -> None:
         gh.close(review["number"])
 
 
-def on_pr_ready(gh, branch: str, pr_number: int) -> None:
+def on_pr_ready(gh, branch: str, pr_number: int, talk_exists=talk_exists) -> None:
     talk_id = talk_id_from_branch(branch)
-    if not talk_id:
+    if not talk_id or not talk_exists(talk_id):
         return
     issue = gh.find_issue(operator_title(talk_id), OPERATOR_LABEL)
     if issue is None:
@@ -111,9 +121,9 @@ def on_pr_ready(gh, branch: str, pr_number: int) -> None:
     gh.comment(issue["number"], f"Translator PR #{pr_number} is ready for review.")
 
 
-def on_pr_merged(gh, branch: str, pr_number: int) -> None:
+def on_pr_merged(gh, branch: str, pr_number: int, talk_exists=talk_exists) -> None:
     talk_id = talk_id_from_branch(branch)
-    if not talk_id:
+    if not talk_id or not talk_exists(talk_id):
         return
     others = [p for p in gh.open_sync_prs(talk_id) if p["number"] != pr_number]
     issue = gh.find_issue(operator_title(talk_id), OPERATOR_LABEL)
@@ -148,12 +158,12 @@ def on_packaged(gh, issue_number: int, comment_md: str) -> None:
 
 
 def on_closed(gh, issue_number: int) -> bool:
+    return next_labels(gh.get_issue(issue_number)["labels"], "closed") is not None
+
+
+def on_delivered(gh, issue_number: int) -> None:
     issue = gh.get_issue(issue_number)
-    change = next_labels(issue["labels"], "closed")
-    if change is None:
-        return False
-    _apply(gh, issue, change)
-    return True
+    _apply(gh, issue, next_labels(issue["labels"], "closed"))
 
 
 class Gh:
@@ -172,21 +182,25 @@ class Gh:
         }
 
     def find_issue(self, title: str, label: str) -> dict | None:
+        # The REST list, not `gh issue list --search`: search goes through an
+        # index that lags, and a lookup seconds after a create would miss it.
         out = self._run(
-            "issue",
-            "list",
-            "--state",
-            "all",
-            "--label",
-            label,
-            "--search",
-            f'"{title}" in:title',
-            "--json",
-            "number,title,state,labels",
-            "--limit",
-            "50",
+            "api",
+            "-X",
+            "GET",
+            "repos/{owner}/{repo}/issues",
+            "--paginate",
+            "-f",
+            f"labels={label}",
+            "-f",
+            "state=all",
+            "-f",
+            "per_page=100",
+            "--jq",
+            ".[] | {number, title, state, labels}",
         )
-        hits = [self._norm(i) for i in json.loads(out) if i["title"] == title]
+        issues = [json.loads(line) for line in out.splitlines() if line.strip()]
+        hits = [dict(self._norm(i), state=i["state"].upper()) for i in issues if i["title"] == title]
         return max(hits, key=lambda i: i["number"]) if hits else None
 
     def get_issue(self, number: int) -> dict:
@@ -227,7 +241,7 @@ def main(argv: list[str] | None = None) -> None:
         p = sub.add_parser(name, help=f"handle a translator sync PR event ({name})")
         p.add_argument("--branch", required=True, help="PR head branch, sync/{login}/{talk_id}--{target}")
         p.add_argument("--pr", type=int, required=True, help="PR number")
-    for name in ("qa-passed", "closed"):
+    for name in ("qa-passed", "closed", "delivered"):
         p = sub.add_parser(name, help=f"handle an Operator: issue event ({name})")
         p.add_argument("--issue", type=int, required=True)
     p = sub.add_parser("packaged", help="mark the package committed and post the e-mail comment")
@@ -246,6 +260,8 @@ def main(argv: list[str] | None = None) -> None:
         on_packaged(gh, args.issue, Path(args.comment_file).read_text(encoding="utf-8"))
     elif args.cmd == "closed":
         print("deliver" if on_closed(gh, args.issue) else "skip")
+    elif args.cmd == "delivered":
+        on_delivered(gh, args.issue)
 
 
 if __name__ == "__main__":

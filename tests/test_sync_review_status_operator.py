@@ -17,6 +17,7 @@ TALK = "1987-04-19_Easter-Puja-Materialism"
 @pytest.fixture
 def sync(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
+    (tmp_path / "talks" / TALK).mkdir(parents=True)
     spec = importlib.util.spec_from_file_location("sync_review_status", SCRIPT)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -85,6 +86,11 @@ def test_operator_title_without_operator_label_is_not_an_operator_issue(sync, mo
     impostor = _issue(1400, f"Operator: {TALK}", ["talk-review", "op:delivered"])
     talks = _run(sync, monkeypatch, [_review(), impostor])
     assert "operator_stage" not in talks.get(TALK, {})
+
+
+def test_operator_issue_for_unknown_talk_is_skipped(sync, monkeypatch):
+    ghost = _issue(1500, "Operator: 2026-01-01_No-Such-Talk", ["talk-operator", "op:ready"])
+    assert "2026-01-01_No-Such-Talk" not in _run(sync, monkeypatch, [_review(), ghost])
 
 
 def test_operator_duplicates_pick_freshest(sync, monkeypatch):

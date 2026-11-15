@@ -167,10 +167,28 @@ def test_packaged_sets_ready_and_posts_comment():
     assert ("comment", 7, "### Ready for Amruta") in gh.calls
 
 
-def test_closed_from_ready_asks_for_delivery_record():
+def test_closed_from_ready_asks_for_delivery_record_without_labelling_yet():
     gh = FakeGh([_operator_issue(7, ["op:ready"], state="CLOSED")])
     assert op.on_closed(gh, 7) is True
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:ready"}
+
+
+def test_delivered_sets_label_after_the_record_lands():
+    gh = FakeGh([_operator_issue(7, ["op:ready"], state="CLOSED")])
+    op.on_delivered(gh, 7)
     assert gh.issues[7]["labels"] == {"talk-operator", "op:delivered"}
+
+
+def test_branch_with_invalid_talk_id_is_ignored():
+    assert op.talk_id_from_branch("sync/x/../../etc--y") is None
+    assert op.talk_id_from_branch("sync/x/not-a-talk--y") is None
+
+
+@pytest.mark.parametrize("handler", ["on_pr_ready", "on_pr_merged"])
+def test_pr_event_for_unknown_talk_is_ignored(handler):
+    gh = FakeGh()
+    getattr(op, handler)(gh, BRANCH, 1, talk_exists=lambda talk_id: False)
+    assert gh.calls == []
 
 
 def test_closed_from_qa_records_nothing():
