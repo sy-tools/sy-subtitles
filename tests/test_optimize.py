@@ -326,6 +326,27 @@ def test_merge_sparse_blocks_does_not_absorb_a_block_that_covers_silence():
     assert len(result) == 2
 
 
+def test_merge_sparse_blocks_respects_the_duration_split_cap():
+    """Phase 0 must not build a block Phase 1b would split.
+
+    The pair below is what a first optimize run leaves behind: Phase 5 refused
+    to merge it because together it spans 22001ms, one over the split cap.
+    Phase 0 of the NEXT run used to merge it anyway (the 12-char block is
+    sparse), Phase 1b then split it at a different point, and
+    optimize(optimize(X)) != optimize(X) - the issue #739 class again.
+    """
+    config = OptimizeConfig()
+    blocks = [
+        {"idx": 1, "start_ms": 10240, "end_ms": 25740, "text": "A. A. A. A. A. A A A A A A A A A."},
+        {"idx": 2, "start_ms": 26240, "end_ms": 32241, "text": "A A AAA AAA."},
+    ]
+
+    result, merged = merge_sparse_blocks(blocks, config)
+
+    assert merged == 0
+    assert [(b["start_ms"], b["end_ms"]) for b in result] == [(10240, 25740), (26240, 32241)]
+
+
 def test_merge_short_blocks_does_not_bridge_a_speech_pause():
     config = OptimizeConfig(min_duration_ms=1200)
     blocks = [

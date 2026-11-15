@@ -518,8 +518,9 @@ def _split_words_at(words, split_pos):
 
 def duration_split_cap_ms(config):
     """Longest duration Phase 1b tolerates without splitting (1s slack over
-    max_duration). Every phase that GROWS a block after Phase 1b has run must
-    respect the SAME cap — merge_short_blocks (Phase 5), the CPS growers
+    max_duration). Every phase that GROWS a block must respect the SAME cap —
+    merge_sparse_blocks (Phase 0, which Phase 1b would re-split),
+    merge_short_blocks (Phase 5), the CPS growers
     (extend_cps / cascade recipients / absorb_large_gaps) and Step-5
     apply_chaining: growth past the cap survives its own run only to be
     dismantled by the NEXT run's split — the optimizer would not be
@@ -784,6 +785,10 @@ def merge_sparse_blocks(blocks, config, word_intervals=None):
     total_merged = 0
 
     MAX_MERGE_GAP = 3000  # Don't merge blocks with >3s gap (timing would be wrong)
+    # Phase 1b runs right after this phase: a merge past its cap is split
+    # again at once, and on a re-run at a different point than the first run
+    # chose — the optimizer would not be idempotent.
+    max_span = duration_split_cap_ms(config)
 
     for _pass in range(10):
         merged = 0
@@ -803,7 +808,8 @@ def merge_sparse_blocks(blocks, config, word_intervals=None):
                 gap = _merge_silence_ms(b, next_b, word_intervals)
                 next_chars = len(next_b["text"].replace("\n", ""))
                 combined_chars = b_chars + next_chars + 1
-                if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP:
+                span = next_b["end_ms"] - b["start_ms"]
+                if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP and span <= max_span:
                     combined_text = b["text"].replace("\n", " ") + " " + next_b["text"].replace("\n", " ")
                     b["end_ms"] = next_b["end_ms"]
                     b["text"] = combined_text.strip()
@@ -823,7 +829,8 @@ def merge_sparse_blocks(blocks, config, word_intervals=None):
                 gap = _merge_silence_ms(prev_b, b, word_intervals)
                 prev_chars = len(prev_b["text"].replace("\n", ""))
                 combined_chars = prev_chars + b_chars + 1
-                if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP:
+                span = b["end_ms"] - prev_b["start_ms"]
+                if combined_chars <= config.max_chars_block and gap <= MAX_MERGE_GAP and span <= max_span:
                     combined_text = prev_b["text"].replace("\n", " ") + " " + b["text"].replace("\n", " ")
                     prev_b["end_ms"] = b["end_ms"]
                     prev_b["text"] = combined_text.strip()
