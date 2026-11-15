@@ -130,7 +130,7 @@ def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None, inset=
     `inset` (a CSS padding) pads the fullscreen view, pushing the player off
     the viewport's edges — as any visible strip beside it would."""
     page.set_viewport_size({"width": vw, "height": vh})
-    return page.evaluate(
+    m = page.evaluate(
         """({fsMode, tuned, aspect, scale, inset}) => {
             const vp = document.getElementById('view-preview');
             const ov = document.getElementById('subtitle-overlay');
@@ -166,6 +166,13 @@ def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None, inset=
         }""",
         {"fsMode": fs_mode, "tuned": tuned, "aspect": aspect, "scale": scale, "inset": inset},
     )
+    # The scale handle follows the band through a ResizeObserver, a frame
+    # later. Read before that frame, it still sits where --fs-band-h was 0px
+    # (mid 716 at 1280x800 4:3, not 660), and a drag pressed there misses the
+    # grip. Locally a frame always slipped in between two CDP calls; on a
+    # loaded CI runner it did not, which made this file flaky on CI only.
+    _settle(page)
+    return m
 
 
 def _assert_matches_burn(m, box):
