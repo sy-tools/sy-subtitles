@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-15T15:32:20.899526+00:00",
+  "updated_at": "2026-11-15T15:33:26.839122+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -24,7 +24,10 @@
       "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": null,
-      "updated_at": "2026-04-01T20:00:00Z"
+      "updated_at": "2026-04-01T20:00:00Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1271
     },
     "1982-07-11_From-Heart-To-Sahastrar-Derby": {
       "status": "approved",
@@ -42,7 +45,10 @@
       "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": null,
-      "updated_at": "2026-04-01T20:00:00Z"
+      "updated_at": "2026-04-01T20:00:00Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1272
     },
     "1984-03-22_Birthday-Puja": {
       "status": "pending",
@@ -54,13 +60,19 @@
       "status": "approved",
       "reviewer": null,
       "issue_number": 987,
-      "updated_at": "2026-08-23T04:24:05Z"
+      "updated_at": "2026-08-23T04:24:05Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1266
     },
     "1993-09-19_Ganesha-Puja-Cabella": {
       "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": null,
-      "updated_at": "2026-04-01T20:00:00Z"
+      "updated_at": "2026-04-01T20:00:00Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1276
     },
     "1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay": {
       "status": "approved",
@@ -81,7 +93,10 @@
       "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 1,
-      "updated_at": "2026-04-15T13:10:01Z"
+      "updated_at": "2026-04-15T13:10:01Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1277
     },
     "1988-05-08_Sahasrara-Puja-How-it-was-decided": {
       "status": "in-progress",
@@ -93,7 +108,10 @@
       "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 31,
-      "updated_at": "2026-04-15T13:10:20Z"
+      "updated_at": "2026-04-15T13:10:20Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1275
     },
     "1987-08-09_Shri-Vishnumaya-Puja-She-has-created-a-big-maya": {
       "status": "in-progress",
@@ -168,7 +186,10 @@
       "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 188,
-      "updated_at": "2026-06-02T20:08:25Z"
+      "updated_at": "2026-06-02T20:08:25Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1273
     },
     "1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others": {
       "status": "in-progress",
@@ -456,10 +477,13 @@
       "updated_at": "2026-07-16T21:47:01Z"
     },
     "1987-04-19_Easter-Puja-Materialism": {
-      "status": "in-progress",
+      "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 411,
-      "updated_at": "2026-11-15T07:12:14Z"
+      "updated_at": "2026-11-15T15:33:19Z",
+      "operator_stage": "qa",
+      "operator": null,
+      "operator_issue": 1279
     },
     "1991-09-15_Shri-Ganesha-Puja-Shri-Ganesha-and-His-Qualities": {
       "status": "pending",
@@ -537,7 +561,10 @@
       "status": "approved",
       "reviewer": "IrynaFilSY",
       "issue_number": 577,
-      "updated_at": "2026-06-27T06:30:12Z"
+      "updated_at": "2026-06-27T06:30:12Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1267
     },
     "1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman": {
       "status": "pending",
@@ -567,7 +594,10 @@
       "status": "approved",
       "reviewer": "IrynaFilSY",
       "issue_number": 895,
-      "updated_at": "2026-08-01T13:02:46Z"
+      "updated_at": "2026-08-01T13:02:46Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1268
     },
     "1993-05-18_Shri-Fatima-Puja-Women-are-responsible-for-the-society": {
       "status": "pending",
@@ -585,7 +615,10 @@
       "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 957,
-      "updated_at": "2026-08-12T21:58:15Z"
+      "updated_at": "2026-08-12T21:58:15Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1270
     },
     "1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours-Only-If-Sahasrara-is-Completely-Open": {
       "status": "pending",
@@ -597,7 +630,10 @@
       "status": "approved",
       "reviewer": null,
       "issue_number": 979,
-      "updated_at": "2026-08-18T04:27:15Z"
+      "updated_at": "2026-08-18T04:27:15Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1274
     },
     "1993-10-10_Shri-Virata-and-Viratangana-Puja-I-have-to-have-16000-children": {
       "status": "pending",
@@ -702,7 +738,10 @@
       "status": "approved",
       "reviewer": "IrynaFilSY",
       "issue_number": 1234,
-      "updated_at": "2026-11-14T19:56:12Z"
+      "updated_at": "2026-11-14T19:56:12Z",
+      "operator_stage": "qa",
+      "operator": null,
+      "operator_issue": 1278
     },
     "1999-05-09_Sahasrara-Puja-Our-Awareness-has-to-become-Paramchaitanya": {
       "status": "pending",
