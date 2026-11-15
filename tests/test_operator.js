@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const {
   isOperator, operatorStageOf, OPERATOR_FILTERS, matchesOperatorFilter,
   countOperatorStages, gmailLinkFromComments, packageFiles,
+  pipelineDone, talkPhase, operatorStep, maySpendLlm,
 } = require('../site/js/operator');
 
 const ROLES = { operators: [{ login: 'SlavaSubotskiy', id: 11644864 }] };
@@ -30,7 +31,7 @@ describe('isOperator', () => {
 
 describe('operatorStageOf', () => {
   it('reads the stage written by sync-review-status.py', () => {
-    ['review', 'qa', 'ready', 'delivered'].forEach((s) =>
+    ['pipeline', 'translator', 'review', 'qa', 'ready', 'delivered'].forEach((s) =>
       assert.strictEqual(operatorStageOf({ operator_stage: s }), s));
   });
   it('is null for no entry, no stage or an unknown stage', () => {
@@ -41,25 +42,90 @@ describe('operatorStageOf', () => {
 });
 
 describe('operator filters', () => {
-  it('lists the five chips in order', () => {
-    assert.deepStrictEqual(OPERATOR_FILTERS, ['op-all', 'op-review', 'op-qa', 'op-ready', 'op-delivered']);
+  it('lists the chips in order', () => {
+    assert.deepStrictEqual(OPERATOR_FILTERS, ['op-all', 'op-new', 'op-pipeline', 'op-translator',
+      'op-review', 'op-qa', 'op-ready', 'op-delivered']);
   });
-  it('"all" is the open work: review, qa and ready', () => {
-    assert.strictEqual(matchesOperatorFilter('review', 'op-all'), true);
-    assert.strictEqual(matchesOperatorFilter('qa', 'op-all'), true);
-    assert.strictEqual(matchesOperatorFilter('ready', 'op-all'), true);
-    assert.strictEqual(matchesOperatorFilter('delivered', 'op-all'), false);
-    assert.strictEqual(matchesOperatorFilter(null, 'op-all'), false);
+  it('"all" is the operator\'s own work: not the translator\'s, not what was sent', () => {
+    ['new', 'pipeline', 'review', 'qa', 'ready'].forEach((s) =>
+      assert.strictEqual(matchesOperatorFilter(s, 'op-all'), true, s));
+    ['translator', 'delivered', null].forEach((s) =>
+      assert.strictEqual(matchesOperatorFilter(s, 'op-all'), false, String(s)));
   });
-  it('each stage chip matches only its stage', () => {
-    assert.strictEqual(matchesOperatorFilter('qa', 'op-qa'), true);
-    assert.strictEqual(matchesOperatorFilter('ready', 'op-qa'), false);
-    assert.strictEqual(matchesOperatorFilter('delivered', 'op-delivered'), true);
+  it('each step chip matches only its step', () => {
+    assert.strictEqual(matchesOperatorFilter('new', 'op-new'), true);
+    assert.strictEqual(matchesOperatorFilter('pipeline', 'op-new'), false);
+    assert.strictEqual(matchesOperatorFilter('translator', 'op-translator'), true);
     assert.strictEqual(matchesOperatorFilter(null, 'op-review'), false);
   });
-  it('counts stages', () => {
-    assert.deepStrictEqual(countOperatorStages(['qa', 'qa', 'ready', 'delivered', null, 'review']),
-      { all: 4, review: 1, qa: 2, ready: 1, delivered: 1 });
+  it('counts steps', () => {
+    assert.deepStrictEqual(countOperatorStages(['new', 'pipeline', 'translator', 'translator', 'qa', 'ready', 'delivered', null, 'review']),
+      { all: 5, new: 1, pipeline: 1, translator: 2, review: 1, qa: 1, ready: 1, delivered: 1 });
+  });
+});
+
+const NONE = { translated: false, reviewed: false, srt: false, nVideos: 1, nWhisper: 0, nSrt: 0 };
+const PART = { translated: true, reviewed: false, srt: false, nVideos: 1, nWhisper: 1, nSrt: 0 };
+const DONE = { translated: true, reviewed: true, srt: true, nVideos: 2, nWhisper: 2, nSrt: 2 };
+const TEXT_ONLY = { translated: true, reviewed: true, srt: false, nVideos: 0, nWhisper: 0, nSrt: 0 };
+
+describe('pipelineDone', () => {
+  it('is done when the Ukrainian transcript and every video\'s subtitles exist', () => {
+    assert.strictEqual(pipelineDone(DONE), true);
+    assert.strictEqual(pipelineDone(PART), false);
+    assert.strictEqual(pipelineDone(NONE), false);
+  });
+  it('a talk without video is done with its transcript', () => {
+    assert.strictEqual(pipelineDone(TEXT_ONLY), true);
+  });
+});
+
+describe('talkPhase — the expert chips', () => {
+  const st = (o) => Object.assign({ status: 'pending', issue_number: 9 }, o);
+  it('sent once delivered', () => {
+    assert.strictEqual(talkPhase(st({ status: 'approved', operator_stage: 'delivered' }), DONE), 'sent');
+  });
+  it('a claimed review stays in review whatever the operator stage', () => {
+    assert.strictEqual(talkPhase(st({ status: 'in-progress', operator_stage: 'pipeline' }), PART), 'in-review');
+  });
+  it('handed back by the translator is in progress', () => {
+    ['review', 'qa', 'ready'].forEach((s) =>
+      assert.strictEqual(talkPhase(st({ status: 'approved', operator_stage: s }), DONE), 'operator', s));
+    assert.strictEqual(talkPhase(st({ status: 'approved' }), DONE), 'operator');
+  });
+  it('a pipeline not finished is in progress', () => {
+    assert.strictEqual(talkPhase(null, NONE), 'operator');
+    assert.strictEqual(talkPhase(st({ operator_stage: 'pipeline', issue_number: null }), PART), 'operator');
+  });
+  it('built with a review issue needs review', () => {
+    assert.strictEqual(talkPhase(st({ operator_stage: 'translator' }), DONE), 'needs-review');
+    assert.strictEqual(talkPhase(st({}), DONE), 'needs-review');
+  });
+  it('built without a review issue is in progress', () => {
+    assert.strictEqual(talkPhase(st({ issue_number: null }), DONE), 'operator');
+  });
+});
+
+describe('operatorStep — the operator chips', () => {
+  const st = (o) => Object.assign({ status: 'pending', issue_number: 9 }, o);
+  it('labels past the translator win', () => {
+    ['review', 'qa', 'ready', 'delivered'].forEach((s) =>
+      assert.strictEqual(operatorStep(st({ status: 'approved', operator_stage: s }), DONE), s));
+  });
+  it('new without any artifact, pipeline with some', () => {
+    assert.strictEqual(operatorStep(null, NONE), 'new');
+    assert.strictEqual(operatorStep(st({ operator_stage: 'pipeline', issue_number: null }), NONE), 'new');
+    assert.strictEqual(operatorStep(null, PART), 'pipeline');
+  });
+  it('built with a review issue, or claimed, is the translator\'s', () => {
+    assert.strictEqual(operatorStep(st({}), DONE), 'translator');
+    assert.strictEqual(operatorStep(st({ status: 'in-progress' }), PART), 'translator');
+  });
+  it('built but no review issue yet is still the pipeline', () => {
+    assert.strictEqual(operatorStep(st({ issue_number: null }), DONE), 'pipeline');
+  });
+  it('approved with no operator stage has no step', () => {
+    assert.strictEqual(operatorStep(st({ status: 'approved' }), DONE), null);
   });
 });
 
@@ -100,5 +166,16 @@ describe('packageFiles', () => {
       { path: 'talks/' + TALK + '/transcript_uk.txt' },
     ];
     assert.deepStrictEqual(packageFiles(tree, TALK), ['Easter-Puja_uk.srt', 'transcript_uk.txt']);
+  });
+});
+
+describe('maySpendLlm', () => {
+  it('needs an operator flagged llm: true, matched by numeric id', () => {
+    const roles = { operators: [{ id: 1, llm: true }, { id: 2 }, { id: 3, llm: 'yes' }] };
+    assert.strictEqual(maySpendLlm(roles, 1), true);
+    assert.strictEqual(maySpendLlm(roles, 2), false);
+    assert.strictEqual(maySpendLlm(roles, 3), false);
+    assert.strictEqual(maySpendLlm(roles, '1'), false);
+    assert.strictEqual(maySpendLlm(null, 1), false);
   });
 });

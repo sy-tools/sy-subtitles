@@ -1120,7 +1120,11 @@ var I18N = {
     'op.chip_review': 'Рев’ю PR',
     'op.chip_qa': 'QA',
     'op.chip_ready': 'До відправки',
-    'op.chip_delivered': 'Доставлено',
+    'op.chip_delivered': 'Надіслано до Amruta',
+    'op.chip_new': 'Нові',
+    'op.chip_pipeline': 'Пайплайн',
+    'op.chip_translator': 'У перекладача',
+    'op.run_pipeline': 'Запустити пайплайн',
     'op.qa_passed': 'QA пройдено',
     'op.download_all': 'Завантажити всі',
     'op.open_mail': 'Відкрити лист',
@@ -1209,8 +1213,8 @@ var I18N = {
     'stat.all': '\u0412\u0441\u0456',
     'stat.needs_review': '\u041F\u043E\u0442\u0440\u0435\u0431\u0443\u0454 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438',
     'stat.in_review': '\u041D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456',
-    'stat.pending': '\u041E\u0447\u0456\u043A\u0443\u0454',
-    'stat.approved': '\u0417\u0430\u0442\u0432\u0435\u0440\u0434\u0436\u0435\u043D\u043E',
+    'stat.pending': 'В обробці',
+    'stat.approved': 'Надіслано до Amruta',
     'pipe.added': '\u0434\u043E\u0434\u0430\u043D\u043E',
     'pipe.ai_transcribed': '\u0448\u0456-\u0442\u0440\u0430\u043D\u0441\u043A\u0440\u0438\u043F\u0442',
     'pipe.ai_translated': '\u0448\u0456-\u043F\u0435\u0440\u0435\u043A\u043B\u0430\u0434',
@@ -1398,7 +1402,11 @@ var I18N = {
     'op.chip_review': 'PR review',
     'op.chip_qa': 'QA',
     'op.chip_ready': 'To send',
-    'op.chip_delivered': 'Delivered',
+    'op.chip_delivered': 'Sent to Amruta',
+    'op.chip_new': 'New',
+    'op.chip_pipeline': 'Pipeline',
+    'op.chip_translator': 'Translator',
+    'op.run_pipeline': 'Run pipeline',
     'op.qa_passed': 'QA passed',
     'op.download_all': 'Download all',
     'op.open_mail': 'Open e-mail',
@@ -1485,8 +1493,8 @@ var I18N = {
     'stat.all': 'All',
     'stat.needs_review': 'Needs review',
     'stat.in_review': 'In review',
-    'stat.pending': 'Pending',
-    'stat.approved': 'Approved',
+    'stat.pending': 'In progress',
+    'stat.approved': 'Sent to Amruta',
     'pipe.added': 'added',
     'pipe.ai_transcribed': 'ai-transcribed',
     'pipe.ai_translated': 'ai-translated',
@@ -2876,6 +2884,10 @@ function buildManifest(tree) {
 // ============================================================
 // Review Status (static JSON, zero API cost)
 // ============================================================
+// Expert chips count by talkPhase (js/operator.js); the chip ids keep their
+// old names so saved filters and ?f= links still land on a chip.
+var EXPERT_PHASE_STATUS = { 'operator': 'in-progress', 'needs-review': 'ready-for-review', 'in-review': 'in-review', 'sent': 'approved' };
+
 function computeStats(talks, statuses, query) {
   var total = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
   var filtered = { talks: 0, needs_review: 0, in_review: 0, approved: 0, pending: 0, mine: 0 };
@@ -2884,7 +2896,7 @@ function computeStats(talks, statuses, query) {
     var matchesSearch = !query || ((t.title || '') + ' ' + (t.date || '') + ' ' + t.id).toLowerCase().indexOf(query) !== -1;
     var st = statuses[t.id] || null;
     var stages = getPipelineStages(t, st);
-    var status = getOverallStatus(stages, st);
+    var status = expertMode ? EXPERT_PHASE_STATUS[talkPhase(st, stages)] : getOverallStatus(stages, st);
     var isMine = !!(authLogin && ((st && st.reviewer === authLogin)
       || myWorkItemsFor(myWork, t.id, expertMode).length));
     // Completed talks stay out of the normal-mode mine set even with open
@@ -3136,6 +3148,8 @@ function showIndex() {
 }
 
 var expertMode = readPref(localStorage, 'expert');
+// Operator mode is above expert mode and includes everything it shows.
+function expertOn() { return expertMode || operatorModeOn(); }
 function filterKey(isExpert) { return isExpert ? 'sy_filter_expert' : 'sy_filter_normal'; }
 // The filter key of whichever chip set is on screen.
 function activeFilterKey() { return operatorModeOn() ? 'sy_filter_operator' : filterKey(expertMode); }
@@ -3166,13 +3180,15 @@ function renderIndex(el) {
     var stages = getPipelineStages(tk, st);
     var status = getOverallStatus(stages, st);
     var isAssigned = !!(authLogin && st && st.reviewer === authLogin);
-    var workItems = authLogin ? myWorkItemsFor(myWork, tk.id, expertMode) : [];
+    var workItems = authLogin ? myWorkItemsFor(myWork, tk.id, expertOn()) : [];
     var isMine = isAssigned || workItems.length > 0;
 
-    var opStage = operatorStageOf(st);
+    var opStep = operatorStep(st, stages);
+    var phase = talkPhase(st, stages);
+    if (expertMode && !opMode) status = EXPERT_PHASE_STATUS[phase];
     // Filter by status
     if (opMode) {
-      if (!matchesOperatorFilter(opStage, activeFilter)) return;
+      if (!matchesOperatorFilter(opStep, activeFilter)) return;
     } else if (activeFilter === 'all' && !expertMode) {
       // Normal "all" = only needs-review + in-review
       if (status !== 'ready-for-review' && status !== 'in-review') return;
@@ -3231,7 +3247,7 @@ function renderIndex(el) {
     // Expert mode: badge every card that has my PRs/issues (any filter),
     // right-aligned in the actions row. Links go to GitHub.
     var workBadges = '';
-    if (expertMode && workItems.length) {
+    if (expertOn() && workItems.length) {
       workBadges = '<span class="work-badges">' + workItems.map(function(w) {
         return '<a class="work-badge work-badge--' + w.state + '" target="_blank" href="'
           + safeHref(w.url) + '">' + (w.kind === 'pr' ? 'PR ' : '') + '#' + w.number + '</a>';
@@ -3251,13 +3267,15 @@ function renderIndex(el) {
       ? ' <button type="button" class="expert-only expert-btn pipe-run-btn" style="display:none;" title="' + esc(t('expert.run_pipeline')) + '" data-i18n-title="expert.run_pipeline">&#x25B6; pipeline</button>'
         + '<span class="pipe-run-slot" data-pipe-talk="' + esc(tk.id) + '">' + pipelineRunChip(tk.id) + '</span>'
       : ' <a href="' + safeHref('https://github.com/' + REPO + '/actions/workflows/subtitle-pipeline.yml') + '" target="_blank" class="expert-only expert-btn" style="display:none;" title="' + esc(t('expert.copy_and_run')) + '">&#x25B6; pipeline</a>';
-    var statusBadge = opMode ? renderOperatorBadge(opStage, st) : renderStatusBadge(status, st);
+    // A talk the operator holds shows which step it is at, in expert view too.
+    var statusBadge = (opMode || (expertMode && (phase === 'operator' || phase === 'sent')))
+      ? renderOperatorBadge(opStep, st) : renderStatusBadge(status, st);
     if (opMode) takeBtn = '';
     div.dataset.talkId = tk.id;
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
       + ((videoLinks || reviewLink || takeBtn || workBadges) ? '<div class="talk-actions">' + videoLinks + reviewLink + takeBtn + workBadges + '</div>' : '');
-    if (opMode) appendOperatorActions(div, tk, st, opStage);
+    if (opMode) appendOperatorActions(div, tk, st, opStep, stages);
 
     var takeEl = div.querySelector('.take-review-btn');
     if (takeEl) takeEl.addEventListener('click', function(e) {
@@ -3279,7 +3297,7 @@ function renderIndex(el) {
     });
 
     // Expert mode: click card to expand inline DAG detail (one at a time)
-    if (expertMode) {
+    if (expertOn()) {
       div.style.cursor = 'pointer';
       var detailDiv = document.createElement('div');
       detailDiv.className = 'pipe-detail';
@@ -3324,9 +3342,9 @@ function renderIndex(el) {
   }
   // Show/hide expert-only elements based on current mode
   if (typeof applyExpertMode === 'function') applyExpertMode();
-  if (expertMode && authLogin) refreshPipelineRuns();
+  if (expertOn() && authLogin) refreshPipelineRuns();
   // Restore expanded card after re-render
-  if (expandedTalkId && expertMode) {
+  if (expandedTalkId && expertOn()) {
     var card = el.querySelector('[data-talk-id="' + expandedTalkId + '"]');
     if (card) card.click();
   }
@@ -3414,7 +3432,7 @@ function pipelinePollMs() {
 }
 
 function pipelineRunChip(talkId) {
-  if (!expertMode) return '';
+  if (!expertOn()) return '';
   return runChipHtml(pipelineRuns[talkId] || null, esc, function(state) {
     return t('pipeline.state.' + state);
   }, safeHref);
@@ -3445,7 +3463,7 @@ function fetchPipelineRuns() {
 }
 
 function refreshPipelineRuns(force) {
-  if (pipelineRunsLoading || !ghWriteUser() || !expertMode) return;
+  if (pipelineRunsLoading || !ghWriteUser() || !expertOn()) return;
   // A hidden tab spends no requests; visibilitychange resumes it.
   if (document.visibilityState === 'hidden') return;
   if (!force && Date.now() - pipelineRunsFetchedAt < PIPELINE_RUNS_FRESH_MS) return;
@@ -8696,12 +8714,18 @@ var OPERATOR_POLL_MS = 30 * 1000;
 var OPERATOR_WAIT_MAX_MS = 15 * 60 * 1000;
 var OPERATOR_STAGE_CHIPS = [
   { filter: 'op-all', key: 'all', label: 'op.chip_all', cls: 'info' },
+  { filter: 'op-new', key: 'new', label: 'op.chip_new', cls: 'info' },
+  { filter: 'op-pipeline', key: 'pipeline', label: 'op.chip_pipeline', cls: 'info' },
+  { filter: 'op-translator', key: 'translator', label: 'op.chip_translator', cls: 'info' },
   { filter: 'op-review', key: 'review', label: 'op.chip_review', cls: 'info' },
   { filter: 'op-qa', key: 'qa', label: 'op.chip_qa', cls: 'warn' },
   { filter: 'op-ready', key: 'ready', label: 'op.chip_ready', cls: 'warn' },
   { filter: 'op-delivered', key: 'delivered', label: 'op.chip_delivered', cls: 'good' },
 ];
-var OPERATOR_BADGE_CLASS = { review: 'in-review', qa: 'ready-for-review', ready: 'ready-for-review', delivered: 'approved' };
+var OPERATOR_BADGE_CLASS = {
+  new: 'in-progress', pipeline: 'in-progress', translator: 'in-review',
+  review: 'in-review', qa: 'ready-for-review', ready: 'ready-for-review', delivered: 'approved',
+};
 
 // A missing or broken roles.yaml must never stop the app booting. Fetched
 // once per page, whichever view it opens on.
@@ -8755,6 +8779,7 @@ function applyOperatorMode() {
   if (box) box.checked = readPref(localStorage, 'operator');
   var flag = document.getElementById('operator-flag');
   if (flag) flag.hidden = !operatorModeOn();
+  applyExpertMode();
   if (manifest && document.getElementById('index-content')) {
     renderStats();
     renderIndex(document.getElementById('index-content'));
@@ -8770,7 +8795,8 @@ SPA.toggleOperator = function() {
 function operatorStatCards(talks, statuses, query) {
   var all = [], shown = [];
   talks.forEach(function(tk) {
-    var stage = operatorStageOf(statuses[tk.id] || null);
+    var st = statuses[tk.id] || null;
+    var stage = operatorStep(st, getPipelineStages(tk, st));
     all.push(stage);
     var text = ((tk.title || '') + ' ' + (tk.date || '') + ' ' + tk.id).toLowerCase();
     if (!query || text.indexOf(query) !== -1) shown.push(stage);
@@ -8804,7 +8830,8 @@ function opButton(cls, variant, label) {
 
 // Card actions per stage. Every handler stops propagation: in expert mode a
 // click on the card expands its pipeline detail.
-function appendOperatorActions(div, tk, st, stage) {
+function appendOperatorActions(div, tk, st, stage, stages) {
+  if (stage === 'new' || stage === 'pipeline') { appendRunPipeline(div, tk, stages); return; }
   var issue = st && st.operator_issue;
   if (!issue || (stage !== 'qa' && stage !== 'ready')) return;
   var row = document.createElement('div');
@@ -8859,6 +8886,20 @@ function appendOperatorActions(div, tk, st, stage) {
     });
   });
   row.appendChild(close);
+}
+
+// The pipeline's own guard decides who may spend tokens; the button is only
+// offered to whom roles.yaml would let through. Progress shows through the
+// artifacts and the run chip, so there is no waiting state here.
+function appendRunPipeline(div, tk, stages) {
+  var user = ghWriteUser();
+  if (!user || !maySpendLlm(operatorRoles, user.id)) return;
+  var row = document.createElement('div');
+  row.className = 'op-actions';
+  var run = opButton('op-run-btn', 'btn--primary', t('op.run_pipeline'));
+  run.addEventListener('click', function(e) { e.stopPropagation(); openPipelineDialog(tk.id, stages); });
+  row.appendChild(run);
+  div.appendChild(row);
 }
 
 // A real link, not window.open after a fetch: a popup opened once the click's
@@ -9989,15 +10030,17 @@ SPA.toggleExpert = function() {
 
 function applyExpertMode() {
   document.querySelectorAll('.expert-only').forEach(function(el) {
-    el.style.display = expertMode ? '' : 'none';
+    el.style.display = expertOn() ? '' : 'none';
   });
   // The switch is the only way in now, and it can be driven from elsewhere
   // (SPA.toggleExpert, a page load with the key already set), so it is painted
   // here rather than assumed to match.
+  // Under operator mode the switch is inactive and shows what is in effect:
+  // operator mode includes expert mode. The stored choice comes back with it off.
   var box = document.getElementById('prefs-expert');
-  if (box) box.checked = expertMode;
+  if (box) { box.checked = expertOn(); box.disabled = operatorModeOn(); }
   var flag = document.getElementById('expert-flag');
-  if (flag) flag.hidden = !expertMode;
+  if (flag) flag.hidden = !expertMode || operatorModeOn();
 }
 applyExpertMode();
 

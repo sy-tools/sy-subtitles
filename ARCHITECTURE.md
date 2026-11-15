@@ -108,7 +108,7 @@ sy-subtitles/
     ├── subtitle-pipeline.yml       # Main pipeline (whisper→translate→review→build)
     ├── sync-subtitles.yml          # PR-based transcript ↔ SRT sync
     ├── sync-review-status.yml      # Issues → review-status.json
-    ├── talk-operator.yml           # Operator issue: QA → Amruta package → delivery
+    ├── talk-operator.yml           # Operator issue: talk added → QA → Amruta package → delivery
     ├── whisper.yml                 # Reusable whisper workflow
     ├── ci.yml                      # Lint + tests + E2E
     ├── deploy-pages.yml            # Deploy site/ to GitHub Pages
@@ -412,13 +412,16 @@ SPA reads review-status.json → shows badges
 
 ### Finalization (operator)
 
-After the translator, the operator reviews the translator's edits, runs QA
-and delivers the files to Amruta. Each talk gets a second issue,
-`Operator: {talk_id}` (label `talk-operator`, assignee from `roles.yaml`),
-driven by `talk-operator.yml` through `tools/talk_operator.py`:
+The operator holds a talk before and after the translator: runs the subtitle
+pipeline, then reviews the translator's edits, runs QA and delivers the files
+to Amruta. Each talk gets a second issue, `Operator: {talk_id}` (label
+`talk-operator`, assignee from `roles.yaml`), driven by `talk-operator.yml`
+and `subtitle-pipeline.yml` through `tools/talk_operator.py`:
 
 | `op:*` label | Set when |
 |---|---|
+| `op:pipeline` | a new `talks/*/meta.yaml` lands on `main` (a push, so hand-pushed talks count) |
+| `op:translator` | `subtitle-pipeline.yml` opened `Review:` — all subtitles built; talks added before this stage get their issue here |
 | `op:review` | a translator `sync/{login}/{talk_id}--*` PR leaves draft |
 | `op:qa` | that PR merged and no other ready sync PR is open; the bot also closes `Review:` with `review:approved` |
 | `op:qa-passed` | the operator: QA done |
@@ -431,8 +434,20 @@ fires no other workflow — so the bot sets `review:approved` itself and its
 keeps `status` as the translator's state (the SPA reads it) and adds
 `operator_stage`, `operator`, `operator_issue` when an `Operator:` issue exists.
 
+How far the pipeline got is not a label: the SPA reads it from the artifacts
+(`whisper.json`, `transcript_uk.txt`, `review_report.md`, `final/uk.srt`), so a
+partial or failed run cannot leave a stage that lies. The SPA's operator mode
+splits `op:pipeline` into "New" (no artifact) and "Pipeline" (some), and places
+talks without an `Operator:` issue the same way (`site/js/operator.js`).
+
 Only an operator acts: anyone with triage access (translators push their sync
 branches here, so they have it) can add `op:qa-passed` or close the issue, so
 the workflow checks the event's sender id against `roles.yaml`. A non-operator's
 `op:qa-passed` is removed, and a non-operator's close at `op:ready` is reopened;
 neither packages nor records anything.
+
+Spending Claude tokens is a role too: `subtitle-pipeline.yml` lets a run that
+translates, reviews or builds start only for an operator flagged `llm: true`,
+matched by the numeric id of whoever triggered it. It reads `roles.yaml` from
+`main`, never from the dispatched ref, where any writer could grant themselves
+the flag. Whisper-only and dry runs stay open to every writer.

@@ -287,15 +287,17 @@ that live nowhere else.
   "Local Setup" above.
 
 **Finalization (operator, delivery to Amruta)**
-- `roles` — who the operator is, from `roles.yaml`. Identity is the numeric
-  GitHub id, never the login: a login can be renamed and re-registered.
+- `roles` — who the operator is, and who may spend Claude tokens (`llm:
+  true`), from `roles.yaml`. Identity is the numeric GitHub id, never the
+  login: a login can be renamed and re-registered.
 - `amruta_package` — builds `talks/{id}/_for_Amruta/` (double-spaced
   transcripts, `{video_slug}_{lang}.srt`) and the Gmail compose link; also
   records a delivery in `meta.yaml`. Other languages ship only if edited
   after the talk's first subtitle build. E-mail addresses come from the
   `AMRUTA_EMAIL_TO` / `AMRUTA_EMAIL_CC` repo variables.
 - `talk_operator` — drives a talk's `Operator:` issue (`op:*` labels) from
-  translator sync-PR and issue events; run by `talk-operator.yml`. Labels
+  talk adds, the pipeline's `Review:` step, translator sync-PR and issue
+  events; run by `talk-operator.yml` and `subtitle-pipeline.yml`. Labels
   are the state; the bot sets `review:approved` itself when it closes
   `Review:`, because GITHUB_TOKEN changes fire no other workflow.
 
