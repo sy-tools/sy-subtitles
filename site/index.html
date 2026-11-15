@@ -3350,6 +3350,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // not saved yet — handleAuthCallback probes after the exchange instead).
   checkWriteAccess();
   hydrateViewerId();
+  loadOperatorRoles();
   setInterval(function() { if (hasNoWrite()) checkWriteAccess(); }, WRITE_RECHECK_MS);
   var searchEl = document.getElementById('search-input');
   if (searchEl) {
@@ -8687,6 +8688,7 @@ function ghWriteUser() {
 // read back through review-status.json (operator_stage / operator_issue).
 // ============================================================
 var operatorRoles = null;      // parsed roles.yaml, null = nobody is operator
+var operatorRolesPromise = null;
 var operatorMailLinks = {};    // issue number → Gmail URL | null (none) | 'loading'
 var operatorWaiting = {};      // talkId → { stage, since, issue }
 var operatorPollTimer = null;
@@ -8701,9 +8703,11 @@ var OPERATOR_STAGE_CHIPS = [
 ];
 var OPERATOR_BADGE_CLASS = { review: 'in-review', qa: 'ready-for-review', ready: 'ready-for-review', delivered: 'approved' };
 
-// A missing or broken roles.yaml must never stop the app booting.
+// A missing or broken roles.yaml must never stop the app booting. Fetched
+// once per page, whichever view it opens on.
 function loadOperatorRoles() {
-  return fetch(RAW + '/roles.yaml')
+  if (operatorRolesPromise) return operatorRolesPromise;
+  return operatorRolesPromise = fetch(RAW + '/roles.yaml')
     .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)); })
     .then(function(text) { operatorRoles = jsyaml.load(text) || null; })
     .catch(function(err) { console.warn('[SPA] roles.yaml not loaded, no operator:', err); operatorRoles = null; })
@@ -8940,9 +8944,11 @@ function pollOperatorStatus() {
     .then(function() {
       var talks = (reviewStatus && reviewStatus.talks) || {};
       var now = Date.now();
+      var packaged = false;
       Object.keys(operatorWaiting).forEach(function(id) {
         var w = operatorWaiting[id];
         if (operatorStageOf(talks[id] || null) !== w.stage) {
+          if (w.stage === 'qa') packaged = true;
           delete operatorWaiting[id];
         } else if (now - w.since > OPERATOR_WAIT_MAX_MS) {
           delete operatorWaiting[id];
@@ -8950,8 +8956,16 @@ function pollOperatorStatus() {
         }
       });
       if (!Object.keys(operatorWaiting).length) { clearInterval(operatorPollTimer); operatorPollTimer = null; }
-      renderStats();
-      renderIndex(document.getElementById('index-content'));
+      // The package files are read from the tree, which predates the bot's
+      // package commit; without a fresh one the card would offer the e-mail
+      // with nothing to attach.
+      var fresh = packaged
+        ? loadManifest().then(function(m) { manifest = m; }).catch(function(err) { console.warn('[SPA] tree refresh failed:', err); })
+        : Promise.resolve();
+      return fresh.then(function() {
+        renderStats();
+        renderIndex(document.getElementById('index-content'));
+      });
     });
 }
 

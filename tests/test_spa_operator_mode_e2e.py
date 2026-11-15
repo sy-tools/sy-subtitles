@@ -249,3 +249,37 @@ def test_sent_close_shows_a_hostile_title_as_text(server, browser):  # noqa: F81
     assert hostile in pg.locator(".sy-modal-body").text_content()
     assert pg.evaluate("window.__pwned") is None
     ctx.close()
+
+
+def test_operator_mode_is_there_when_the_index_is_reached_from_another_view(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR)
+    pg.goto(f"{server}{SPA_URL}#/review/{QA_TALK}")
+    pg.wait_for_function("typeof manifest !== 'undefined' && !!manifest", timeout=10000)
+    pg.evaluate("loadReviewStatus()")
+    pg.wait_for_function("!!reviewStatus", timeout=5000)
+    pg.evaluate("location.hash = ''")
+    pg.wait_for_selector(".stat-card[data-filter='op-all']", timeout=10000)
+    ctx.close()
+
+
+def test_package_files_appear_once_the_bot_has_packaged_the_talk(server, browser):  # noqa: F811
+    calls = []
+    ctx, pg = _page(browser, calls, OPERATOR)
+    pg.clock.install()
+    pg.goto(f"{server}{SPA_URL}")
+    btn = _card(pg, QA_TALK).locator(".op-qa-btn")
+    btn.wait_for(timeout=10000)
+    btn.click()
+    _card(pg, QA_TALK).locator(".op-waiting").wait_for(timeout=5000)
+
+    packaged = json.loads(json.dumps(STATUS))
+    packaged["talks"][QA_TALK]["operator_stage"] = "ready"
+    tree = {
+        "sha": "op2",
+        "tree": TREE["tree"] + [{"path": f"talks/{QA_TALK}/_for_Amruta/transcript_uk.txt", "type": "blob"}],
+    }
+    pg.route("**/raw.githubusercontent.com/**/review-status.json*", lambda r: _json(r, 200, packaged))
+    pg.route("**/api.github.com/repos/**/git/trees/**", lambda r: _json(r, 200, tree))
+    pg.clock.run_for(31000)
+    _card(pg, QA_TALK).locator(".op-file-btn", has_text="transcript_uk.txt").wait_for(timeout=5000)
+    ctx.close()
