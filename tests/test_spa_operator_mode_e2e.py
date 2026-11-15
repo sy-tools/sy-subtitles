@@ -227,3 +227,25 @@ def test_sent_close_asks_first_and_closes_only_on_confirm(server, browser):  # n
     assert len(patches) == 1 and patches[0]["url"].endswith("/issues/1300")
     assert patches[0]["body"] == {"state": "closed", "state_reason": "completed"}
     ctx.close()
+
+
+def test_sent_close_shows_a_hostile_title_as_text(server, browser):  # noqa: F811
+    hostile = "$& <img src=x onerror=window.__pwned=1>"
+    ctx, pg = _page(browser, [], OPERATOR)
+    pg.route(
+        f"**/raw.githubusercontent.com/**/{READY_TALK}/meta.yaml",
+        lambda r: r.fulfill(
+            status=200,
+            content_type="text/plain",
+            body=f"title: {json.dumps(hostile)}\ndate: '2002-02-02'\nvideos:\n- slug: Test-Video\n  title: V\n  video_ref: r1DBtMTl9VW1NC\n",
+        ),
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    btn = _card(pg, READY_TALK).locator(".op-close-btn")
+    btn.wait_for(timeout=10000)
+    btn.click()
+    pg.wait_for_selector(".sy-modal-body", timeout=3000)
+    assert pg.locator(".sy-modal-body img").count() == 0
+    assert hostile in pg.locator(".sy-modal-body").text_content()
+    assert pg.evaluate("window.__pwned") is None
+    ctx.close()

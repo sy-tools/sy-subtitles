@@ -8841,7 +8841,10 @@ function appendOperatorActions(div, tk, st, stage) {
     e.stopPropagation();
     SPA.confirm({
       title: t('op.close_title'),
-      body: t('op.close_body').replace('{title}', tk.title || tk.id),
+      // The body is HTML and the title comes from meta.yaml, which any PR can
+      // change: escape it, and replace through a function so a `$&` in the
+      // title is not read as a replacement pattern.
+      body: t('op.close_body').replace('{title}', function() { return esc(tk.title || tk.id); }),
       confirmLabel: t('op.close_confirm'),
     }).then(function(ok) {
       if (!ok) return;
