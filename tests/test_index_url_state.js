@@ -108,3 +108,11 @@ describe("'mine' filter (signed-in reviewers)", () => {
     assert.strictEqual(qs, 'branch=dev&f=mine');
   });
 });
+
+describe('operator filters', () => {
+  it('are known filters, readable from ?f=', () => {
+    ['op-all', 'op-review', 'op-qa', 'op-ready', 'op-delivered'].forEach(function (f) {
+      assert.strictEqual(readIndexFilter('?f=' + f), f);
+    });
+  });
+});

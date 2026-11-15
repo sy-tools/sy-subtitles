@@ -47,6 +47,7 @@
 <script src="js/marker_sync.js"></script>
 <script src="js/sync_status_view.js"></script>
 <script src="js/my_work.js"></script>
+<script src="js/operator.js"></script>
 <script src="js/burn_geometry.js"></script>
 <script src="js/burn_video.js"></script>
 <script src="js/pipeline_dispatch.js"></script>
@@ -437,6 +438,7 @@
          gear alone looks identical in both states, and someone who left the
          mode on last session would have no cue why their screen differs. -->
     <span id="expert-flag" class="expert-flag" data-i18n="prefs.expert" hidden>Expert mode</span>
+    <span id="operator-flag" class="expert-flag" data-i18n="prefs.operator" hidden>Operator mode</span>
     <!-- Preferences. Language, theme and expert mode used to be three separate
          buttons — two here and one injected into the footer — with no room for
          a fourth. The rows are rendered from js/preferences.js so the menu and
@@ -464,6 +466,11 @@
         <label class="prefs-row">
           <span class="prefs-row__label" data-i18n="prefs.expert">Expert mode</span>
           <span class="prefs-switch"><input type="checkbox" id="prefs-expert" onchange="SPA.toggleExpert()"></span>
+        </label>
+        <!-- Rendered for everyone, shown only to an operator (roles.yaml). -->
+        <label class="prefs-row" id="prefs-operator-row" hidden>
+          <span class="prefs-row__label" data-i18n="prefs.operator">Operator mode</span>
+          <span class="prefs-switch"><input type="checkbox" id="prefs-operator" onchange="SPA.toggleOperator()"></span>
         </label>
       </div>
     </div>
@@ -1108,6 +1115,24 @@ var I18N = {
     'prefs.title': '\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F',
     'prefs.theme': '\u0422\u0435\u043C\u0430',
     'prefs.expert': '\u0415\u043A\u0441\u043F\u0435\u0440\u0442\u043D\u0438\u0439 \u0440\u0435\u0436\u0438\u043C',
+    'prefs.operator': 'Режим оператора',
+    'op.chip_all': 'Усі',
+    'op.chip_review': 'Рев’ю PR',
+    'op.chip_qa': 'QA',
+    'op.chip_ready': 'До відправки',
+    'op.chip_delivered': 'Доставлено',
+    'op.qa_passed': 'QA пройдено',
+    'op.download_all': 'Завантажити всі',
+    'op.open_mail': 'Відкрити лист',
+    'op.mail_loading': 'Шукаю лист…',
+    'op.mail_missing': 'Листа немає — відкрити ішʼю',
+    'op.sent_close': 'Надіслав — закрити',
+    'op.close_title': 'Записати доставку?',
+    'op.close_body': 'Ішʼю «{title}» буде закрито, а доставку в Amruta записано в репозиторій. Роби це лише після того, як лист надіслано.',
+    'op.close_confirm': 'Надіслав, закрити',
+    'op.waiting': 'Чекаю на бота…',
+    'op.bot_slow': 'Бот ще не закінчив — перевір ішʼю #{n}',
+    'op.failed': 'Не вдалося: {err}',
     'prefs.typo': '\u041f\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u0442\u0438 \u043e\u043f\u0438\u0441\u043a\u0438',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
@@ -1368,6 +1393,24 @@ var I18N = {
     'prefs.title': 'Settings',
     'prefs.theme': 'Theme',
     'prefs.expert': 'Expert mode',
+    'prefs.operator': 'Operator mode',
+    'op.chip_all': 'All',
+    'op.chip_review': 'PR review',
+    'op.chip_qa': 'QA',
+    'op.chip_ready': 'To send',
+    'op.chip_delivered': 'Delivered',
+    'op.qa_passed': 'QA passed',
+    'op.download_all': 'Download all',
+    'op.open_mail': 'Open e-mail',
+    'op.mail_loading': 'Looking for the e-mail…',
+    'op.mail_missing': 'No e-mail found — open the issue',
+    'op.sent_close': 'Sent — close',
+    'op.close_title': 'Record the delivery?',
+    'op.close_body': 'The issue for “{title}” will be closed and the delivery to Amruta recorded in the repo. Do this only after the e-mail was sent.',
+    'op.close_confirm': 'Sent, close',
+    'op.waiting': 'Waiting for the bot…',
+    'op.bot_slow': 'The bot has not finished yet — check issue #{n}',
+    'op.failed': 'Failed: {err}',
     'prefs.typo': 'Highlight typos',
     'typo.mixed.title': 'Two keyboard layouts in one word',
     'typo.mixed.instead': 'Latin «{lat}» where «{cyr}» belongs',
@@ -2820,6 +2863,7 @@ function buildManifest(tree) {
     result.push(t);
   }
   result.sort(function(a, b) { return a.id < b.id ? -1 : 1; });
+  result.forEach(function(t) { t.packageFiles = packageFiles(tree, t.id); });
 
   // Extract sha for cache-busting and auto-reload
   var reviewSha = '';
@@ -2874,7 +2918,10 @@ function renderStats() {
   var s = computeStats(manifest.talks, statuses, query);
   var hasSearch = query.length > 0;
   var cards;
-  if (expertMode) {
+  syncFilterToOperatorMode();
+  if (operatorModeOn()) {
+    cards = operatorStatCards(manifest.talks, statuses, query);
+  } else if (expertMode) {
     cards = [
       { f: s.filtered.talks, t: s.total.talks, label: t('stat.all'), cls: 'info', filter: 'all' },
       { f: s.filtered.pending, t: s.total.pending, label: t('stat.pending'), cls: 'info', filter: 'pending' },
@@ -2893,7 +2940,7 @@ function renderStats() {
     ];
   }
   // Reviewers with write access get a "mine" chip in both modes.
-  if (ghWriteUser()) {
+  if (ghWriteUser() && !operatorModeOn()) {
     cards.push({ f: s.filtered.mine, t: s.total.mine, label: t('stat.mine'), cls: 'good', filter: 'mine' });
   }
   bar.innerHTML = '';
@@ -2951,7 +2998,7 @@ function syncIndexUrl() {
   var qs = buildIndexSearch(location.search, {
     query: searchEl ? (searchEl.value || '') : '',
     filter: activeFilter,
-    defaultFilter: loadSavedFilter(expertMode),
+    defaultFilter: operatorModeOn() ? 'op-all' : loadSavedFilter(expertMode),
   });
   // replaceState only — never touch the hash (the index has none; a fresh hash
   // would re-trigger the router). Keep any existing hash just in case.
@@ -3069,7 +3116,8 @@ function showIndex() {
 
   Promise.all([
     manifest ? Promise.resolve(manifest) : loadManifest().then(function(m) { manifest = m; updateLastModifiedUI(); return m; }),
-    reviewStatus ? Promise.resolve(reviewStatus) : loadReviewStatus()
+    reviewStatus ? Promise.resolve(reviewStatus) : loadReviewStatus(),
+    loadOperatorRoles()
   ]).then(function() {
     loader.finish(null);
   }).catch(function(err) {
@@ -3089,6 +3137,8 @@ function showIndex() {
 
 var expertMode = readPref(localStorage, 'expert');
 function filterKey(isExpert) { return isExpert ? 'sy_filter_expert' : 'sy_filter_normal'; }
+// The filter key of whichever chip set is on screen.
+function activeFilterKey() { return operatorModeOn() ? 'sy_filter_operator' : filterKey(expertMode); }
 function loadSavedFilter(isExpert) {
   var saved = localStorage.getItem(filterKey(isExpert));
   return saved || (isExpert ? 'pending' : 'needs-review');
@@ -3102,6 +3152,8 @@ function renderIndex(el) {
   var statuses = (reviewStatus && reviewStatus.talks) || {};
   var query = (document.getElementById('search-input').value || '').toLowerCase();
   var authLogin = (ghWriteUser() || {}).login || null;
+  syncFilterToOperatorMode();
+  var opMode = operatorModeOn();
 
   // Mine filter renders as two groups: assigned first, then a labelled
   // separator + "work I started" (my PRs/issues, not assigned) — both modes.
@@ -3117,8 +3169,11 @@ function renderIndex(el) {
     var workItems = authLogin ? myWorkItemsFor(myWork, tk.id, expertMode) : [];
     var isMine = isAssigned || workItems.length > 0;
 
+    var opStage = operatorStageOf(st);
     // Filter by status
-    if (activeFilter === 'all' && !expertMode) {
+    if (opMode) {
+      if (!matchesOperatorFilter(opStage, activeFilter)) return;
+    } else if (activeFilter === 'all' && !expertMode) {
       // Normal "all" = only needs-review + in-review
       if (status !== 'ready-for-review' && status !== 'in-review') return;
     } else if (activeFilter !== 'all') {
@@ -3196,10 +3251,13 @@ function renderIndex(el) {
       ? ' <button type="button" class="expert-only expert-btn pipe-run-btn" style="display:none;" title="' + esc(t('expert.run_pipeline')) + '" data-i18n-title="expert.run_pipeline">&#x25B6; pipeline</button>'
         + '<span class="pipe-run-slot" data-pipe-talk="' + esc(tk.id) + '">' + pipelineRunChip(tk.id) + '</span>'
       : ' <a href="' + safeHref('https://github.com/' + REPO + '/actions/workflows/subtitle-pipeline.yml') + '" target="_blank" class="expert-only expert-btn" style="display:none;" title="' + esc(t('expert.copy_and_run')) + '">&#x25B6; pipeline</a>';
-    var statusBadge = renderStatusBadge(status, st);
+    var statusBadge = opMode ? renderOperatorBadge(opStage, st) : renderStatusBadge(status, st);
+    if (opMode) takeBtn = '';
+    div.dataset.talkId = tk.id;
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
       + '<div class="talk-title">' + esc(tk.title || tk.id) + '</div>'
       + ((videoLinks || reviewLink || takeBtn || workBadges) ? '<div class="talk-actions">' + videoLinks + reviewLink + takeBtn + workBadges + '</div>' : '');
+    if (opMode) appendOperatorActions(div, tk, st, opStage);
 
     var takeEl = div.querySelector('.take-review-btn');
     if (takeEl) takeEl.addEventListener('click', function(e) {
@@ -3275,8 +3333,9 @@ function renderIndex(el) {
 }
 
 SPA.filterTalks = function(filter) {
-  activeFilter = (activeFilter === filter && filter !== 'all') ? 'all' : filter;
-  localStorage.setItem(filterKey(expertMode), activeFilter);
+  var allFilter = operatorModeOn() ? 'op-all' : 'all';
+  activeFilter = (activeFilter === filter && filter !== allFilter) ? allFilter : filter;
+  localStorage.setItem(activeFilterKey(), activeFilter);
   document.querySelectorAll('.stat-card').forEach(function(c) {
     c.classList.toggle('active', c.dataset.filter === activeFilter);
   });
@@ -3290,6 +3349,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Restored sessions: verify write access (on a callback boot the token is
   // not saved yet — handleAuthCallback probes after the exchange instead).
   checkWriteAccess();
+  hydrateViewerId();
+  loadOperatorRoles();
   setInterval(function() { if (hasNoWrite()) checkWriteAccess(); }, WRITE_RECHECK_MS);
   var searchEl = document.getElementById('search-input');
   if (searchEl) {
@@ -8622,6 +8683,293 @@ function ghWriteUser() {
 }
 
 // ============================================================
+// Operator mode — stage chips + card actions for an operator (roles.yaml).
+// Pure logic in js/operator.js; the state is the Operator: issue's labels,
+// read back through review-status.json (operator_stage / operator_issue).
+// ============================================================
+var operatorRoles = null;      // parsed roles.yaml, null = nobody is operator
+var operatorRolesPromise = null;
+var operatorMailLinks = {};    // issue number → Gmail URL | null (none) | 'loading'
+var operatorWaiting = {};      // talkId → { stage, since, issue }
+var operatorPollTimer = null;
+var OPERATOR_POLL_MS = 30 * 1000;
+var OPERATOR_WAIT_MAX_MS = 15 * 60 * 1000;
+var OPERATOR_STAGE_CHIPS = [
+  { filter: 'op-all', key: 'all', label: 'op.chip_all', cls: 'info' },
+  { filter: 'op-review', key: 'review', label: 'op.chip_review', cls: 'info' },
+  { filter: 'op-qa', key: 'qa', label: 'op.chip_qa', cls: 'warn' },
+  { filter: 'op-ready', key: 'ready', label: 'op.chip_ready', cls: 'warn' },
+  { filter: 'op-delivered', key: 'delivered', label: 'op.chip_delivered', cls: 'good' },
+];
+var OPERATOR_BADGE_CLASS = { review: 'in-review', qa: 'ready-for-review', ready: 'ready-for-review', delivered: 'approved' };
+
+// A missing or broken roles.yaml must never stop the app booting. Fetched
+// once per page, whichever view it opens on.
+function loadOperatorRoles() {
+  if (operatorRolesPromise) return operatorRolesPromise;
+  return operatorRolesPromise = fetch(RAW + '/roles.yaml')
+    .then(function(r) { return r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function(text) { operatorRoles = jsyaml.load(text) || null; })
+    .catch(function(err) { console.warn('[SPA] roles.yaml not loaded, no operator:', err); operatorRoles = null; })
+    .then(function() { applyOperatorMode(); });
+}
+
+function viewerIsOperator() {
+  var user = ghWriteUser();
+  return !!user && isOperator(operatorRoles, user.id);
+}
+
+function operatorModeOn() {
+  return viewerIsOperator() && readPref(localStorage, 'operator');
+}
+
+// Sessions saved before the id was stored have only login + avatar; one /user
+// call fills it in, so an operator does not have to sign in again.
+function hydrateViewerId() {
+  var user = getAuthUser();
+  var token = getAuthToken();
+  if (!user || !token || typeof user.id === 'number') return;
+  getViewer(token).then(function(viewer) {
+    if (viewer.login !== user.login || getAuthToken() !== token) return;
+    saveAuth(token, viewer);
+    updateAuthUI();
+  }).catch(function(err) { console.warn('[SPA] viewer id refresh failed:', err && err.status); });
+}
+
+// The chip sets are disjoint, so a filter from the other set would show an
+// empty list; switch to the saved filter of the set now on screen.
+function syncFilterToOperatorMode() {
+  var isOpFilter = OPERATOR_FILTERS.indexOf(activeFilter) !== -1;
+  if (operatorModeOn() && !isOpFilter) {
+    activeFilter = localStorage.getItem('sy_filter_operator') || 'op-all';
+    if (OPERATOR_FILTERS.indexOf(activeFilter) === -1) activeFilter = 'op-all';
+  } else if (!operatorModeOn() && isOpFilter) {
+    activeFilter = loadSavedFilter(expertMode);
+  }
+}
+
+function applyOperatorMode() {
+  var row = document.getElementById('prefs-operator-row');
+  if (row) row.hidden = !viewerIsOperator();
+  var box = document.getElementById('prefs-operator');
+  if (box) box.checked = readPref(localStorage, 'operator');
+  var flag = document.getElementById('operator-flag');
+  if (flag) flag.hidden = !operatorModeOn();
+  if (manifest && document.getElementById('index-content')) {
+    renderStats();
+    renderIndex(document.getElementById('index-content'));
+  }
+}
+
+SPA.toggleOperator = function() {
+  writePref(localStorage, 'operator', !readPref(localStorage, 'operator'));
+  applyOperatorMode();
+  syncIndexUrl();
+};
+
+function operatorStatCards(talks, statuses, query) {
+  var all = [], shown = [];
+  talks.forEach(function(tk) {
+    var stage = operatorStageOf(statuses[tk.id] || null);
+    all.push(stage);
+    var text = ((tk.title || '') + ' ' + (tk.date || '') + ' ' + tk.id).toLowerCase();
+    if (!query || text.indexOf(query) !== -1) shown.push(stage);
+  });
+  var total = countOperatorStages(all), filtered = countOperatorStages(shown);
+  return OPERATOR_STAGE_CHIPS.map(function(c) {
+    return { f: filtered[c.key], t: total[c.key], label: t(c.label), cls: c.cls, filter: c.filter };
+  });
+}
+
+function operatorIssueUrl(st) {
+  return st && st.operator_issue ? 'https://github.com/' + REPO + '/issues/' + st.operator_issue : '';
+}
+
+function renderOperatorBadge(stage, st) {
+  var chip = OPERATOR_STAGE_CHIPS.filter(function(c) { return c.key === stage; })[0];
+  var text = chip ? t(chip.label) : '';
+  var cls = OPERATOR_BADGE_CLASS[stage] || 'in-progress';
+  var href = safeHref(operatorIssueUrl(st));
+  if (href) return '<a href="' + href + '" target="_blank" class="review-badge ' + cls + '">' + esc(text) + '</a>';
+  return '<span class="review-badge ' + cls + '">' + esc(text) + '</span>';
+}
+
+function opButton(cls, variant, label) {
+  var b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'btn btn--sm ' + variant + ' ' + cls;
+  b.textContent = label;
+  return b;
+}
+
+// Card actions per stage. Every handler stops propagation: in expert mode a
+// click on the card expands its pipeline detail.
+function appendOperatorActions(div, tk, st, stage) {
+  var issue = st && st.operator_issue;
+  if (!issue || (stage !== 'qa' && stage !== 'ready')) return;
+  var row = document.createElement('div');
+  row.className = 'op-actions';
+  div.appendChild(row);
+  if (operatorWaiting[tk.id]) {
+    var w = document.createElement('span');
+    w.className = 'op-waiting';
+    w.textContent = t('op.waiting');
+    row.appendChild(w);
+    return;
+  }
+  if (stage === 'qa') {
+    var qa = opButton('op-qa-btn', 'btn--primary', t('op.qa_passed'));
+    qa.addEventListener('click', function(e) {
+      e.stopPropagation();
+      qa.disabled = true;
+      passQa(API, getAuthToken(), issue)
+        .then(function() { markOperatorWaiting(tk.id, stage, issue); })
+        .catch(function(err) { qa.disabled = false; showToast(t('op.failed').replace('{err}', (err && err.message) || err), 4000); });
+    });
+    row.appendChild(qa);
+    return;
+  }
+  (tk.packageFiles || []).forEach(function(name) {
+    var fb = opButton('op-file-btn', 'btn--ghost', name);
+    fb.addEventListener('click', function(e) { e.stopPropagation(); downloadPackageFile(tk.id, name); });
+    row.appendChild(fb);
+  });
+  if ((tk.packageFiles || []).length > 1) {
+    var allBtn = opButton('op-files-all-btn', 'btn--ghost', t('op.download_all'));
+    allBtn.addEventListener('click', function(e) { e.stopPropagation(); downloadAllPackageFiles(tk.id, tk.packageFiles); });
+    row.appendChild(allBtn);
+  }
+  row.appendChild(operatorMailLink(issue, st));
+  var close = opButton('op-close-btn', 'btn--issue', t('op.sent_close'));
+  close.addEventListener('click', function(e) {
+    e.stopPropagation();
+    SPA.confirm({
+      title: t('op.close_title'),
+      // The body is HTML and the title comes from meta.yaml, which any PR can
+      // change: escape it, and replace through a function so a `$&` in the
+      // title is not read as a replacement pattern.
+      body: t('op.close_body').replace('{title}', function() { return esc(tk.title || tk.id); }),
+      confirmLabel: t('op.close_confirm'),
+    }).then(function(ok) {
+      if (!ok) return;
+      close.disabled = true;
+      updateIssue(API, getAuthToken(), issue, { state: 'closed', state_reason: 'completed' })
+        .then(function() { markOperatorWaiting(tk.id, stage, issue); })
+        .catch(function(err) { close.disabled = false; showToast(t('op.failed').replace('{err}', (err && err.message) || err), 4000); });
+    });
+  });
+  row.appendChild(close);
+}
+
+// A real link, not window.open after a fetch: a popup opened once the click's
+// user activation is spent is blocked. So the bot's comment is read when the
+// card is drawn, and the link is in place by the time the operator clicks it.
+function operatorMailLink(issue, st) {
+  var url = operatorMailLinks[issue];
+  var a = document.createElement('a');
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.addEventListener('click', function(e) { e.stopPropagation(); });
+  if (url === undefined) loadOperatorMailLink(issue);
+  if (url && url !== 'loading') {
+    a.className = 'btn btn--sm btn--primary op-mail-btn';
+    a.href = url;
+    a.textContent = t('op.open_mail');
+  } else if (url === null) {
+    a.className = 'btn btn--sm btn--ghost op-mail-missing';
+    a.href = safeHref(operatorIssueUrl(st));
+    a.textContent = t('op.mail_missing');
+  } else {
+    a.className = 'btn btn--sm btn--ghost op-mail-loading';
+    a.setAttribute('aria-disabled', 'true');
+    a.textContent = t('op.mail_loading');
+  }
+  return a;
+}
+
+function loadOperatorMailLink(issue) {
+  operatorMailLinks[issue] = 'loading';
+  listIssueComments(API, getAuthToken(), issue)
+    .then(function(comments) { operatorMailLinks[issue] = gmailLinkFromComments(comments); })
+    .catch(function(err) {
+      console.warn('[SPA] operator issue comments failed:', err && err.status);
+      operatorMailLinks[issue] = null;
+    })
+    .then(function() { if (manifest) renderIndex(document.getElementById('index-content')); });
+}
+
+// Saved through a blob: the `download` attribute is ignored on a cross-origin
+// link, which would open the text in the tab instead of saving the file.
+function downloadPackageFile(talkId, name) {
+  var url = RAW + '/talks/' + encodeURIComponent(talkId) + '/_for_Amruta/' + encodeURIComponent(name);
+  return fetch(url)
+    .then(function(r) { return r.ok ? r.blob() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function(blob) {
+      var href = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = href;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function() { URL.revokeObjectURL(href); }, 10000);
+    })
+    .catch(function(err) { showToast(t('op.failed').replace('{err}', name + ': ' + ((err && err.message) || err)), 4000); });
+}
+
+function downloadAllPackageFiles(talkId, names) {
+  return names.reduce(function(p, name) {
+    return p.then(function() { return downloadPackageFile(talkId, name); })
+      .then(function() { return new Promise(function(res) { setTimeout(res, 300); }); });
+  }, Promise.resolve());
+}
+
+function markOperatorWaiting(talkId, stage, issue) {
+  operatorWaiting[talkId] = { stage: stage, since: Date.now(), issue: issue };
+  delete operatorMailLinks[issue];
+  renderIndex(document.getElementById('index-content'));
+  if (!operatorPollTimer) operatorPollTimer = setInterval(pollOperatorStatus, OPERATOR_POLL_MS);
+}
+
+// The bot needs from about a minute (close) to over ten (QA passed waits for
+// its package PR to merge). raw.githubusercontent caches, hence the buster.
+function pollOperatorStatus() {
+  fetch(RAW + '/review-status.json?t=' + Date.now())
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+    .then(function(data) {
+      reviewStatus = data;
+      try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+    })
+    .catch(function(err) { console.warn('[SPA] operator status poll failed:', err); })
+    .then(function() {
+      var talks = (reviewStatus && reviewStatus.talks) || {};
+      var now = Date.now();
+      var packaged = false;
+      Object.keys(operatorWaiting).forEach(function(id) {
+        var w = operatorWaiting[id];
+        if (operatorStageOf(talks[id] || null) !== w.stage) {
+          if (w.stage === 'qa') packaged = true;
+          delete operatorWaiting[id];
+        } else if (now - w.since > OPERATOR_WAIT_MAX_MS) {
+          delete operatorWaiting[id];
+          showToast(t('op.bot_slow').replace('{n}', w.issue), 6000);
+        }
+      });
+      if (!Object.keys(operatorWaiting).length) { clearInterval(operatorPollTimer); operatorPollTimer = null; }
+      // The package files are read from the tree, which predates the bot's
+      // package commit; without a fresh one the card would offer the e-mail
+      // with nothing to attach.
+      var fresh = packaged
+        ? loadManifest().then(function(m) { manifest = m; }).catch(function(err) { console.warn('[SPA] tree refresh failed:', err); })
+        : Promise.resolve();
+      return fresh.then(function() {
+        renderStats();
+        renderIndex(document.getElementById('index-content'));
+      });
+    });
+}
+
+// ============================================================
 // "My work" — the viewer's PRs/issues mapped onto talks (mine filter).
 // One /issues?creator= query, classified by js/my_work.js; normal mode
 // counts open items only, expert mode all states (filtering happens at
@@ -8698,6 +9046,7 @@ function updateAuthUI() {
   // so the transition is honoured here explicitly, AFTER the engine was
   // re-keyed so burnSourceRef() reads the new one.
   updateExportUi();
+  applyOperatorMode();
   // Index cards/chips render auth-dependent bits ("take for review", the
   // 'mine' chip, own-talk highlight) — refresh them on login/logout.
   if (manifest && document.getElementById('index-content')) {

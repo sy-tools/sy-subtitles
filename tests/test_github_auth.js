@@ -75,6 +75,11 @@ describe('auth storage', () => {
     assert.strictEqual(getAuthToken(s), null);
     assert.strictEqual(getAuthUser(s), null);
   });
+  it('keeps the numeric id: operator mode is decided by it', () => {
+    const s = fakeStorage();
+    saveAuth('gho_x', { login: 'ira', avatar_url: 'u', id: 5 }, s);
+    assert.deepStrictEqual(getAuthUser(s), { login: 'ira', avatar_url: 'u', id: 5 });
+  });
   it('getAuthUser survives corrupted JSON', () => {
     const s = fakeStorage();
     s.setItem('sy_gh_user', '{nope');

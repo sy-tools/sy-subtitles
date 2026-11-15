@@ -118,3 +118,23 @@ describe('the round trip', () => {
     }
   });
 });
+
+describe('operator mode — a switch that is on until switched off', () => {
+  it('reads as on when nothing is stored', () => {
+    assert.equal(readPref(makeStorage(), 'operator'), true);
+  });
+  it('reads a stored "0" as off and "1" as on', () => {
+    assert.equal(readPref(makeStorage({ sy_operator_mode: '0' }), 'operator'), false);
+    assert.equal(readPref(makeStorage({ sy_operator_mode: '1' }), 'operator'), true);
+  });
+  it('reads an undeclared value as the default, on', () => {
+    assert.equal(readPref(makeStorage({ sy_operator_mode: 'yes' }), 'operator'), true);
+  });
+  it('stores off as "0" and clears the key when switched back on', () => {
+    const storage = makeStorage();
+    writePref(storage, 'operator', false);
+    assert.equal(storage.getItem('sy_operator_mode'), '0');
+    writePref(storage, 'operator', true);
+    assert.equal(storage.getItem('sy_operator_mode'), null);
+  });
+});
