@@ -4911,11 +4911,16 @@ class TestFullscreenCursorIdle:
     IDLE_MS = 3000
     VIMEO_MS = 10000
     FOCUS_SETTLE_MS = 300
+    DOUBLE_PRESS_MS = 500
 
     def _goto_preview(self, server, page):
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
         page.wait_for_selector("#mock-player", state="visible", timeout=10000)
         page.clock.install()
+        # An installed clock still runs in real time, on top of every run_for;
+        # a loaded runner spends enough of it between two steps to eat a 10 ms
+        # margin. Paused, time moves only when a test says so.
+        page.clock.pause_at(page.evaluate("Date.now()"))
 
     def _set_fs(self, page, on):
         page.evaluate(
@@ -4944,9 +4949,8 @@ class TestFullscreenCursorIdle:
 
     def _double_click(self, page, x, y):
         # The shield tells a double click by Date.now() between the presses
-        # (FS_DOUBLE_PRESS_MS), and an installed clock still runs in real time.
-        # Paused, both presses land at one instant whatever the driver latency.
-        page.clock.pause_at(page.evaluate("Date.now()"))
+        # (FS_DOUBLE_PRESS_MS); on the paused clock both land at one instant
+        # whatever the driver latency.
         page.mouse.dblclick(x, y)
 
     def _playing_hidden(self, server, page, x=300, y=300):
@@ -4956,6 +4960,12 @@ class TestFullscreenCursorIdle:
         self._set_fs(page, True)
         page.mouse.move(x + 1, y)
         self._hide(page)
+
+    def test_page_time_moves_only_when_a_test_runs_the_clock(self, server, page):
+        self._goto_preview(server, page)
+        before = page.evaluate("Date.now()")
+        page.wait_for_timeout(300)
+        assert page.evaluate("Date.now()") == before
 
     def test_shield_covers_the_player_from_the_start_of_fullscreen(self, server, page):
         self._goto_preview(server, page)
@@ -5079,6 +5089,9 @@ class TestFullscreenCursorIdle:
         self._into_the_hole(page)
         page.evaluate("window._vimeoPlayer._fire('play', {})")
         assert self._state(page) == "visible"
+        # The click that opens the menu comes after the play it answers; on the
+        # paused clock the two would share one instant.
+        page.clock.run_for(10)
         self._focus_probe(page)
         page.clock.run_for(self.FOCUS_SETTLE_MS - 50)
         assert self._state(page) == "visible"
@@ -5315,6 +5328,7 @@ class TestFullscreenCursorIdle:
         page.evaluate("window._vimeoPlayer.play()")
         self._set_fs(page, True)
         self._into_the_hole(page)
+        page.clock.run_for(10)  # the menu click comes after the play, not with it
         self._focus_probe(page)
         if by == "timeout":
             page.clock.run_for(self.FOCUS_SETTLE_MS + self.VIMEO_MS + 10)
@@ -5340,7 +5354,8 @@ class TestFullscreenCursorIdle:
         assert page.evaluate("document.activeElement.id") != "focus-probe"
         page.clock.run_for(600)
         page.mouse.click(300, 300)
-        page.wait_for_function("window._vimeoPlayer._paused === true", timeout=2000)
+        page.clock.run_for(self.DOUBLE_PRESS_MS + 100)
+        assert self._paused(page) is True
 
     def test_double_click_after_the_shield_came_back_by_timeout_leaves_fullscreen(self, server, page):
         self._back_with_player_focused(server, page, "timeout")
