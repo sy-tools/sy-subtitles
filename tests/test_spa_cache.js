@@ -7044,7 +7044,7 @@ describe('burn video driver behaviour', () => {
     });
     const names = ['document', 'getAuthUser', 'ghWriteUser', 'ghClientId', 't',
       'updatePreviewSubmitButtons', 'ensureEditSync', 'ensureMarkerSync',
-      'manifest', 'updateExportUi'];
+      'manifest', 'updateExportUi', 'applyOperatorMode'];
     const stubs = Object.assign({
       document: {
         getElementById: function (id) { return authEls[id] || null; },
@@ -7063,7 +7063,8 @@ describe('burn video driver behaviour', () => {
       ensureEditSync: function () {},
       ensureMarkerSync: function () {},
       manifest: null,
-      updateExportUi: env.api.updateExportUi
+      updateExportUi: env.api.updateExportUi,
+      applyOperatorMode: function () {}
     }, over || {});
     return new Function(names.join(','),
       html.slice(s, e) + '\nreturn { updateAuthUI: updateAuthUI };')

@@ -90,7 +90,7 @@ function mergeAuthReturnHash(currentHash, savedHash) {
 function saveAuth(token, user, storage) {
   var s = storage || localStorage;
   s.setItem(GH_TOKEN_KEY, token);
-  s.setItem(GH_USER_KEY, JSON.stringify({ login: user.login, avatar_url: user.avatar_url }));
+  s.setItem(GH_USER_KEY, JSON.stringify({ login: user.login, avatar_url: user.avatar_url, id: user.id }));
 }
 function getAuthToken(storage) {
   return (storage || localStorage).getItem(GH_TOKEN_KEY) || null;

@@ -63,6 +63,7 @@ var SHELL_ASSETS = [
   'js/marker_sync.js',
   'js/sync_status_view.js',
   'js/my_work.js',
+  'js/operator.js',
   'js/burn_geometry.js',
   'js/burn_video.js',
   'js/pipeline_dispatch.js',

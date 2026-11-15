@@ -472,6 +472,24 @@ refuse the click. The list is discovered afresh on every open with one request, 
 space after the text, so that it can appear and vanish without moving a single row.</p>
 <div id="sg-history-rows"></div>
 
+<h2>Operator card actions</h2>
+<p style="color:var(--fg4)">What an operator sees on a talk card in operator mode
+(<code>.op-actions</code>). At <em>QA</em> one primary button sets the
+<code>op:qa-passed</code> label; at <em>To send</em> the package files (monospace, each saved
+under its own name), the bot's Gmail link (a real link in a new tab, never a popup opened after
+a fetch, which browsers block) and <em>Sent — close</em>, which always asks first because it
+records the delivery. After either action the row becomes <code>.op-waiting</code> until
+<code>review-status.json</code> shows the bot has moved the stage.</p>
+<div class="sg-row"><div class="op-actions">
+  <button type="button" class="btn btn--sm btn--ghost op-file-btn">Talk_uk.srt</button>
+  <button type="button" class="btn btn--sm btn--ghost op-file-btn">transcript_uk.txt</button>
+  <button type="button" class="btn btn--sm btn--ghost">Download all</button>
+  <a class="btn btn--sm btn--primary op-mail-btn" href="#" target="_blank" rel="noopener">Open e-mail</a>
+  <button type="button" class="btn btn--sm btn--issue">Sent — close</button>
+</div></div>
+<div class="sg-row"><div class="op-actions"><button type="button" class="btn btn--sm btn--primary">QA passed</button></div></div>
+<div class="sg-row"><div class="op-actions"><span class="op-waiting">Waiting for the bot…</span></div></div>
+
 <h2>Spinner</h2>
 <p style="color:var(--fg4)">The short wait nothing can measure: one request of unknown length.
 Anything with a measurable end gets a track instead. It is a <code>role="status"</code> with a
