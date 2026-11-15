@@ -44,6 +44,8 @@ BOT_PR_JOBS = [
     ("whisper.yml", "commit"),
     ("subtitle-pipeline.yml", "commit"),
     ("sync-review-status.yml", "sync"),
+    ("talk-operator.yml", "qa"),
+    ("talk-operator.yml", "deliver"),
 ]
 
 

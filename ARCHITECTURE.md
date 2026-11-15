@@ -108,6 +108,7 @@ sy-subtitles/
     ├── subtitle-pipeline.yml       # Main pipeline (whisper→translate→review→build)
     ├── sync-subtitles.yml          # PR-based transcript ↔ SRT sync
     ├── sync-review-status.yml      # Issues → review-status.json
+    ├── talk-operator.yml           # Operator issue: QA → Amruta package → delivery
     ├── whisper.yml                 # Reusable whisper workflow
     ├── ci.yml                      # Lint + tests + E2E
     ├── deploy-pages.yml            # Deploy site/ to GitHub Pages
@@ -408,3 +409,24 @@ Reviewer closes Issue ────► Action: label → review:approved
                                     JSON updated
 SPA reads review-status.json → shows badges
 ```
+
+### Finalization (operator)
+
+After the translator, the operator reviews the translator's edits, runs QA
+and delivers the files to Amruta. Each talk gets a second issue,
+`Operator: {talk_id}` (label `talk-operator`, assignee from `roles.yaml`),
+driven by `talk-operator.yml` through `tools/talk_operator.py`:
+
+| `op:*` label | Set when |
+|---|---|
+| `op:review` | a translator `sync/{login}/{talk_id}--*` PR leaves draft |
+| `op:qa` | that PR merged and no other ready sync PR is open; the bot also closes `Review:` with `review:approved` |
+| `op:qa-passed` | the operator: QA done |
+| `op:ready` | `tools/amruta_package.py` committed `talks/{id}/_for_Amruta/` and posted the Gmail compose link |
+| `op:delivered` | the operator closed the issue from `op:ready`; `amruta_delivery` (date + package commit) appended to `meta.yaml` |
+
+Labels are the state. The workflow edits issues with GITHUB_TOKEN, which
+fires no other workflow — so the bot sets `review:approved` itself and its
+`status` job calls `sync-review-status.yml` explicitly. `review-status.json`
+keeps `status` as the translator's state (the SPA reads it) and adds
+`operator_stage`, `operator`, `operator_issue` when an `Operator:` issue exists.

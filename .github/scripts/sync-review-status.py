@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Rebuild review-status.json from GitHub review-tracking issues.
 
-Source of truth: issues labeled `talk-review`. Pipeline applies this label
-when creating the initialization issue; no other issue type is tracked.
+Source of truth: issues labeled `talk-review` (the translator's
+`Review: {talk_id}`, created by the pipeline) and `talk-operator` (the
+operator's `Operator: {talk_id}`, see tools/talk_operator.py).
+
+`status` stays the translator's state because the SPA reads it; the operator
+issue adds `operator_stage`, `operator` and `operator_issue` to the entry.
 
 Preserves manually-set entries for talk_ids not covered by any issue.
 
@@ -18,6 +22,9 @@ from pathlib import Path
 STATUS_FILE = Path("review-status.json")
 GATE_LABEL = "talk-review"
 TITLE_PREFIX = "Review: "
+OPERATOR_LABEL = "talk-operator"
+OPERATOR_PREFIX = "Operator: "
+OPERATOR_STAGES = (("op:delivered", "delivered"), ("op:ready", "ready"), ("op:qa", "qa"), ("op:review", "review"))
 
 
 def load_existing() -> dict:
@@ -36,7 +43,7 @@ def fetch_issues() -> list[dict]:
             "issue",
             "list",
             "--search",
-            f"label:{GATE_LABEL}",
+            f"label:{GATE_LABEL},{OPERATOR_LABEL}",
             "--state",
             "all",
             "--json",
@@ -55,6 +62,10 @@ def talk_id_from_title(title: str) -> str | None:
     if title.startswith(TITLE_PREFIX):
         return title[len(TITLE_PREFIX) :].strip()
     return None
+
+
+def operator_stage(labels: list[str]) -> str | None:
+    return next((stage for label, stage in OPERATOR_STAGES if label in labels), None)
 
 
 def status_from_labels(labels: list[str]) -> str:
@@ -85,7 +96,12 @@ def main() -> int:
     # cached review-status has no issue number yet). One of them must win, and
     # the choice must not depend on list order.
     by_talk: dict[str, list[dict]] = {}
+    by_talk_operator: dict[str, list[dict]] = {}
     for issue in issues:
+        names = {lbl["name"] for lbl in issue.get("labels", [])}
+        if issue["title"].startswith(OPERATOR_PREFIX) and OPERATOR_LABEL in names:
+            by_talk_operator.setdefault(issue["title"][len(OPERATOR_PREFIX) :].strip(), []).append(issue)
+            continue
         talk_id = talk_id_from_title(issue["title"])
         if not talk_id:
             print(
@@ -114,6 +130,21 @@ def main() -> int:
             "issue_number": winner["number"],
             "updated_at": winner["updatedAt"],
         }
+
+    for talk_id, group in by_talk_operator.items():
+        if not (Path("talks") / talk_id).is_dir():
+            print(f"warning: `Operator: {talk_id}` names no talk in talks/ — skipping", file=sys.stderr)
+            continue
+        winner = max(group, key=issue_rank)
+        labels = [lbl["name"] for lbl in winner.get("labels", [])]
+        assignees = [a["login"] for a in winner.get("assignees", [])]
+        entry = talks.setdefault(
+            talk_id,
+            {"status": "pending", "reviewer": None, "issue_number": None, "updated_at": winner["updatedAt"]},
+        )
+        entry["operator_stage"] = operator_stage(labels)
+        entry["operator"] = assignees[0] if assignees else None
+        entry["operator_issue"] = winner["number"]
 
     output = {
         "version": 1,

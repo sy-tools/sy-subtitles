@@ -68,6 +68,7 @@ kept in lockstep with `.github/workflows/` by `tests/test_claude_md_lockstep.py`
 - `new-talk.yml` — bootstrap a talk from an add-talk PR
 - `pipeline-matrix-dryrun.yml` — replay the pipeline against snapshots
 - `golden-talks.yml` — full-corpus pytest, on demand
+- `talk-operator.yml` — operator issue lifecycle: QA, Amruta package, delivery record
 <!-- workflow-index:end -->
 
 `ci.yml`'s **`gate`** job is the ONE required check on `main`. It is always
@@ -284,6 +285,19 @@ that live nowhere else.
   `site/js/passphrase_gate.js`; change one and you must change the other.
 - `serve_auth_local` — serve the SPA locally with the auth hooks injected; see
   "Local Setup" above.
+
+**Finalization (operator, delivery to Amruta)**
+- `roles` — who the operator is, from `roles.yaml`. Identity is the numeric
+  GitHub id, never the login: a login can be renamed and re-registered.
+- `amruta_package` — builds `talks/{id}/_for_Amruta/` (double-spaced
+  transcripts, `{video_slug}_{lang}.srt`) and the Gmail compose link; also
+  records a delivery in `meta.yaml`. Other languages ship only if edited
+  after the talk's first subtitle build. E-mail addresses come from the
+  `AMRUTA_EMAIL_TO` / `AMRUTA_EMAIL_CC` repo variables.
+- `talk_operator` — drives a talk's `Operator:` issue (`op:*` labels) from
+  translator sync-PR and issue events; run by `talk-operator.yml`. Labels
+  are the state; the bot sets `review:approved` itself when it closes
+  `Review:`, because GITHUB_TOKEN changes fire no other workflow.
 
 **Run by workflows, rarely by hand**
 `builder_data`, `fake_llm`, `verify_snapshot`, `workflow_validation_cli`, and:

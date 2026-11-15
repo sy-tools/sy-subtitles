@@ -1,0 +1,221 @@
+name: Talk Operator
+
+# Drives a talk's `Operator: {talk_id}` issue (tools/talk_operator.py):
+# translator sync PR ready → op:review, merged → op:qa, the operator adds
+# op:qa-passed → Amruta package committed → op:ready, the operator closes the
+# issue after sending the e-mail → delivery recorded in meta.yaml.
+#
+# pull_request_target, not pull_request: the job needs the `main` environment
+# and runs only base-branch code — it never checks out the PR head.
+#
+# Issue edits use GITHUB_TOKEN on purpose: they fire no further workflow, so
+# the bot's own label changes cannot loop back into this file. That is also
+# why the status job regenerates review-status.json explicitly.
+
+on:
+  pull_request_target:
+    types: [opened, ready_for_review, closed]
+  issues:
+    types: [labeled, closed]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  pr:
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'sync/') &&
+      github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    concurrency:
+      group: talk-operator-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Update the Operator issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ACTION: ${{ github.event.action }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ "$ACTION" = "closed" ]; then
+            [ "$MERGED" = "true" ] || { echo "closed without merge — nothing to do"; exit 0; }
+            python -m tools.talk_operator pr-merged --branch "$BRANCH" --pr "$PR"
+          else
+            python -m tools.talk_operator pr-ready --branch "$BRANCH" --pr "$PR"
+          fi
+
+  qa:
+    if: >-
+      github.event_name == 'issues' && github.event.action == 'labeled' &&
+      github.event.label.name == 'op:qa-passed' &&
+      contains(github.event.issue.labels.*.name, 'talk-operator')
+    runs-on: ubuntu-latest
+    environment: main
+    env:
+      BOT_APP_READY: ${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
+    concurrency:
+      group: talk-operator-issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
+      - name: Mint bot App token
+        id: bot-token
+        if: env.BOT_APP_READY == 'true'
+        continue-on-error: true
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: steps.bot-token.outputs.token == ''
+        run: echo "::warning::No bot App token, so the package PR is opened with GITHUB_TOKEN and its CI waits for a person; the job then fails at the merge wait and the operator re-adds op:qa-passed after merging it"
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ steps.bot-token.outputs.token || github.token }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Check the talk and the stage
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: ${{ github.event.issue.title }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          TALK="${TITLE#Operator: }"
+          python -m tools.workflow_validation_cli --talk-id "$TALK"
+          echo "talk=$TALK" >> "$GITHUB_OUTPUT"
+          echo "decision=$(python -m tools.talk_operator qa-passed --issue "$ISSUE")" >> "$GITHUB_OUTPUT"
+      - name: Build the Amruta package
+        if: steps.gate.outputs.decision == 'package'
+        env:
+          TALK: ${{ steps.gate.outputs.talk }}
+          REPO: ${{ github.repository }}
+          AMRUTA_EMAIL_TO: ${{ vars.AMRUTA_EMAIL_TO }}
+          AMRUTA_EMAIL_CC: ${{ vars.AMRUTA_EMAIL_CC }}
+        run: python -m tools.amruta_package build --talk "$TALK" --comment-out "$RUNNER_TEMP/comment.md" --repo-slug "$REPO"
+      - name: Commit the package via PR
+        if: steps.gate.outputs.decision == 'package'
+        env:
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
+          BOT_PR_WAIT_MERGE_SECONDS: '600'
+          TALK: ${{ steps.gate.outputs.talk }}
+        run: |
+          .github/scripts/bot-pr.sh bot/amruta-package "Amruta package: $TALK" "talks/$TALK/_for_Amruta"
+      - name: Post the e-mail link
+        if: steps.gate.outputs.decision == 'package'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: python -m tools.talk_operator packaged --issue "$ISSUE" --comment-file "$RUNNER_TEMP/comment.md"
+      - name: Report a failed packaging run
+        if: failure() && steps.gate.outputs.decision == 'package'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$ISSUE" --body "Packaging did not finish: $RUN_URL — fix the cause (or merge the package PR), then remove and re-add \`op:qa-passed\`."
+
+  deliver:
+    if: >-
+      github.event_name == 'issues' && github.event.action == 'closed' &&
+      contains(github.event.issue.labels.*.name, 'talk-operator')
+    runs-on: ubuntu-latest
+    environment: main
+    env:
+      BOT_APP_READY: ${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
+    concurrency:
+      group: talk-operator-issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - name: Mint bot App token
+        id: bot-token
+        if: env.BOT_APP_READY == 'true'
+        continue-on-error: true
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: steps.bot-token.outputs.token == ''
+        run: echo "::warning::No bot App token, so the delivery-record PR is opened with GITHUB_TOKEN and its CI waits for a person to approve it"
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          # Full history: in a shallow clone the one commit is a grafted root
+          # that "touches" every path, so the package-commit lookup would
+          # always answer HEAD.
+          fetch-depth: 0
+          token: ${{ steps.bot-token.outputs.token || github.token }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Check the talk and the stage
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: ${{ github.event.issue.title }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: |
+          TALK="${TITLE#Operator: }"
+          python -m tools.workflow_validation_cli --talk-id "$TALK"
+          echo "talk=$TALK" >> "$GITHUB_OUTPUT"
+          echo "decision=$(python -m tools.talk_operator closed --issue "$ISSUE")" >> "$GITHUB_OUTPUT"
+      - name: Record the delivery
+        if: steps.gate.outputs.decision == 'deliver'
+        env:
+          TALK: ${{ steps.gate.outputs.talk }}
+        run: |
+          COMMIT=$(git log -1 --format=%H -- "talks/$TALK/_for_Amruta")
+          [ -n "$COMMIT" ] || { echo "::error::no _for_Amruta commit on main for $TALK"; exit 1; }
+          python -m tools.amruta_package mark-delivered --talk "$TALK" --date "$(date -u +%F)" --commit "$COMMIT"
+      - name: Commit the delivery record via PR
+        if: steps.gate.outputs.decision == 'deliver'
+        env:
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
+          TALK: ${{ steps.gate.outputs.talk }}
+        run: |
+          .github/scripts/bot-pr.sh bot/amruta-delivery "Record Amruta delivery: $TALK" "talks/$TALK/meta.yaml"
+      # Labelled only after the record is committed: `closed` acts only from
+      # op:ready, so labelling first would leave a failed run no way to retry.
+      - name: Mark the issue delivered
+        if: steps.gate.outputs.decision == 'deliver'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+        run: python -m tools.talk_operator delivered --issue "$ISSUE"
+
+  status:
+    needs: [pr, qa, deliver]
+    if: >-
+      always() && !cancelled() && (
+      needs.pr.result == 'success' || needs.qa.result == 'success' ||
+      needs.deliver.result == 'success')
+    uses: ./.github/workflows/sync-review-status.yml
+    secrets: inherit
