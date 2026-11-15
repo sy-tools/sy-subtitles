@@ -285,6 +285,10 @@ that live nowhere else.
 - `serve_auth_local` — serve the SPA locally with the auth hooks injected; see
   "Local Setup" above.
 
+**Finalization (operator, delivery to Amruta)**
+- `roles` — who the operator is, from `roles.yaml`. Identity is the numeric
+  GitHub id, never the login: a login can be renamed and re-registered.
+
 **Run by workflows, rarely by hand**
 `builder_data`, `fake_llm`, `verify_snapshot`, `workflow_validation_cli`, and:
 - `render_gate` — blocks until a detached burn encode passes a percentage. Each

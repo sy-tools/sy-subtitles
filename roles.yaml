@@ -1,0 +1,6 @@
+# Who holds which role. Matched by numeric GitHub user id: a login can be
+# renamed and then re-registered by someone else. `login` is for display
+# and as the assignee of operator issues.
+operators:
+- login: SlavaSubotskiy
+  id: 11644864
