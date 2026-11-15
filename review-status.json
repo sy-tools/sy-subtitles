@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-13T18:38:46.178247+00:00",
+  "updated_at": "2026-11-14T19:56:28.620916+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -687,10 +687,16 @@
       "updated_at": "2026-11-10T00:14:39Z"
     },
     "1997-05-25_Adi-Shakti-Puja-Respect-the-Mother-Earth-Why-are-we-in-Sahaja-Yoga": {
-      "status": "in-progress",
+      "status": "approved",
       "reviewer": "IrynaFilSY",
       "issue_number": 1234,
-      "updated_at": "2026-11-13T12:08:43Z"
+      "updated_at": "2026-11-14T19:56:12Z"
+    },
+    "1999-05-09_Sahasrara-Puja-Our-Awareness-has-to-become-Paramchaitanya": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1249,
+      "updated_at": "2026-11-14T18:40:33Z"
     }
   }
 }
