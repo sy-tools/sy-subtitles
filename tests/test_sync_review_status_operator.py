@@ -51,6 +51,8 @@ def _run(sync, monkeypatch, issues):
 @pytest.mark.parametrize(
     ("labels", "stage"),
     [
+        (["op:pipeline"], "pipeline"),
+        (["op:translator"], "translator"),
         (["op:review"], "review"),
         (["op:qa"], "qa"),
         (["op:qa", "op:qa-passed"], "qa"),
@@ -113,3 +115,9 @@ def test_fetch_asks_for_both_issue_labels(sync, monkeypatch):
     monkeypatch.setattr(sync.subprocess, "run", fake_run)
     sync.fetch_issues()
     assert "label:talk-review,talk-operator" in seen["cmd"]
+
+
+def test_a_talk_with_only_an_operator_issue_gets_its_stage(sync, monkeypatch):
+    entry = _run(sync, monkeypatch, [_operator(["op:pipeline"])])[TALK]
+    assert entry["operator_stage"] == "pipeline"
+    assert entry["issue_number"] is None

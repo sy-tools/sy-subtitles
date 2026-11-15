@@ -41,3 +41,11 @@ def test_guard_skips_runs_that_spend_no_tokens():
     for step in ("translate", "review", "build"):
         assert f"inputs.{step} != false" in cond
     assert "whisper" not in cond
+
+
+def test_guard_reads_roles_yaml_from_main_not_from_the_dispatched_ref():
+    _, guard = _guard_step()
+    run = guard["run"]
+    assert "git fetch" in run and "origin main" in run
+    assert "FETCH_HEAD:roles.yaml" in run
+    assert '--roles "$RUNNER_TEMP/roles.yaml"' in run

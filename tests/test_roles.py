@@ -85,3 +85,15 @@ def test_cli_may_spend_llm_exits_by_permission(user_id, code):
     assert result.returncode == code
     if code:
         assert "llm: true" in result.stdout + result.stderr
+
+
+def test_cli_may_spend_llm_reads_the_roles_file_it_is_given(tmp_path):
+    f = tmp_path / "roles.yaml"
+    f.write_text("operators:\n- login: X\n  id: 11644864\n", encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, "-m", "tools.roles", "may-spend-llm", "--user-id", "11644864", "--roles", str(f)],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 1

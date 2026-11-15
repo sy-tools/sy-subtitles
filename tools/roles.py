@@ -59,12 +59,13 @@ def main(argv: list[str] | None = None) -> None:
     who = spend.add_mutually_exclusive_group(required=True)
     who.add_argument("--login", help="GitHub login, resolved to its numeric id through `gh api`")
     who.add_argument("--user-id", type=int, help="numeric GitHub user id")
+    spend.add_argument("--roles", type=Path, default=ROLES_FILE, help="roles.yaml to read (default: the repo's)")
     args = parser.parse_args(argv)
     if args.cmd == "operator-login":
         print(operator_login())
         return
     user_id = args.user_id if args.user_id is not None else _user_id(args.login)
-    if not may_spend_llm(user_id):
+    if not may_spend_llm(user_id, args.roles):
         who = args.login or user_id
         print(
             f"::error::{who} may not start a run that spends Claude tokens: "
