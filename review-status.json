@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-15T18:01:03.754188+00:00",
+  "updated_at": "2026-11-15T19:23:37.913669+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -748,6 +748,15 @@
       "reviewer": null,
       "issue_number": 1249,
       "updated_at": "2026-11-14T18:40:33Z"
+    },
+    "1977-11-01_You-all-are-Shri-Kalki": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-15T19:23:21Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1293
     }
   }
 }
