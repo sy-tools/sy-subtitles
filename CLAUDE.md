@@ -288,6 +288,11 @@ that live nowhere else.
 **Finalization (operator, delivery to Amruta)**
 - `roles` — who the operator is, from `roles.yaml`. Identity is the numeric
   GitHub id, never the login: a login can be renamed and re-registered.
+- `amruta_package` — builds `talks/{id}/_for_Amruta/` (double-spaced
+  transcripts, `{video_slug}_{lang}.srt`) and the Gmail compose link; also
+  records a delivery in `meta.yaml`. Other languages ship only if edited
+  after the talk's first subtitle build. E-mail addresses come from the
+  `AMRUTA_EMAIL_TO` / `AMRUTA_EMAIL_CC` repo variables.
 
 **Run by workflows, rarely by hand**
 `builder_data`, `fake_llm`, `verify_snapshot`, `workflow_validation_cli`, and:
