@@ -14,6 +14,9 @@ var PREFS = {
   theme: { key: 'sy_theme', values: ['auto', 'dark', 'light'], fallback: 'auto' },
   expert: { key: 'sy_expert_mode', bool: true, fallback: false },
   typoHints: { key: 'sy_typo_hints', bool: true, fallback: false },
+  // On by default for operators (index.html shows it only to them), so turning
+  // it off has to be stored as an explicit "0".
+  operator: { key: 'sy_operator_mode', bool: true, fallback: true },
 };
 
 // The stored value, or the preference's fallback when nothing valid is stored.
@@ -23,8 +26,9 @@ function readPref(storage, name) {
   var spec = PREFS[name];
   var raw = storage.getItem(spec.key);
   // Expert mode shipped as `getItem('sy_expert_mode') === '1'`, so every user
-  // who turned it off has a literal "0" stored. Only "1" is on.
-  if (spec.bool) return raw === '1';
+  // who turned it off has a literal "0" stored. "1" is on, "0" is off, and
+  // anything else (absent included) is the fallback.
+  if (spec.bool) return raw === '1' ? true : raw === '0' ? false : spec.fallback;
   return spec.values.indexOf(raw) === -1 ? spec.fallback : raw;
 }
 
@@ -48,7 +52,7 @@ function writePref(storage, name, value) {
   }
   // Booleans go in as the "1" index.html already compares against; String(true)
   // would leave the preference reading as off however often it is switched on.
-  storage.setItem(spec.key, spec.bool ? '1' : value);
+  storage.setItem(spec.key, spec.bool ? (value ? '1' : '0') : value);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
