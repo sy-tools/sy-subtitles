@@ -4,6 +4,8 @@ from tools import talk_operator as op
 
 TALK = "1987-04-19_Easter-Puja-Materialism"
 BRANCH = f"sync/IrynaFilSY/{TALK}--transcript-uk"
+OPERATOR_ID = 11644864  # SlavaSubotskiy in roles.yaml
+TRANSLATOR_ID = 424242  # anyone else with triage access
 
 
 class FakeGh:
@@ -150,12 +152,12 @@ def test_pr_merged_creates_issue_if_missing():
 
 def test_qa_passed_in_qa_packages():
     gh = FakeGh([_operator_issue(7, ["op:qa", "op:qa-passed"])])
-    assert op.on_qa_passed(gh, 7) is True
+    assert op.on_qa_passed(gh, 7, OPERATOR_ID) is True
 
 
 def test_qa_passed_while_in_review_does_not_package():
     gh = FakeGh([_operator_issue(7, ["op:review", "op:qa-passed"])])
-    assert op.on_qa_passed(gh, 7) is False
+    assert op.on_qa_passed(gh, 7, OPERATOR_ID) is False
     assert "op:qa-passed" not in gh.issues[7]["labels"]
     assert any(c[0] == "comment" for c in gh.calls)
 
@@ -169,7 +171,7 @@ def test_packaged_sets_ready_and_posts_comment():
 
 def test_closed_from_ready_asks_for_delivery_record_without_labelling_yet():
     gh = FakeGh([_operator_issue(7, ["op:ready"], state="CLOSED")])
-    assert op.on_closed(gh, 7) is True
+    assert op.on_closed(gh, 7, OPERATOR_ID) is True
     assert gh.issues[7]["labels"] == {"talk-operator", "op:ready"}
 
 
@@ -193,5 +195,26 @@ def test_pr_event_for_unknown_talk_is_ignored(handler):
 
 def test_closed_from_qa_records_nothing():
     gh = FakeGh([_operator_issue(7, ["op:qa"], state="CLOSED")])
-    assert op.on_closed(gh, 7) is False
+    assert op.on_closed(gh, 7, OPERATOR_ID) is False
+    assert gh.calls == []
+
+
+def test_qa_passed_by_a_non_operator_is_undone():
+    gh = FakeGh([_operator_issue(7, ["op:qa", "op:qa-passed"])])
+    assert op.on_qa_passed(gh, 7, TRANSLATOR_ID) is False
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:qa"}
+    assert any(c[0] == "comment" and "operator" in c[2] for c in gh.calls)
+
+
+def test_close_at_ready_by_a_non_operator_reopens_and_records_nothing():
+    gh = FakeGh([_operator_issue(7, ["op:ready"], state="CLOSED")])
+    assert op.on_closed(gh, 7, TRANSLATOR_ID) is False
+    assert gh.issues[7]["state"] == "OPEN"
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:ready"}
+    assert any(c[0] == "comment" and "operator" in c[2] for c in gh.calls)
+
+
+def test_close_elsewhere_by_a_non_operator_is_left_alone():
+    gh = FakeGh([_operator_issue(7, ["op:delivered"], state="CLOSED")])
+    assert op.on_closed(gh, 7, TRANSLATOR_ID) is False
     assert gh.calls == []

@@ -430,3 +430,9 @@ fires no other workflow — so the bot sets `review:approved` itself and its
 `status` job calls `sync-review-status.yml` explicitly. `review-status.json`
 keeps `status` as the translator's state (the SPA reads it) and adds
 `operator_stage`, `operator`, `operator_issue` when an `Operator:` issue exists.
+
+Only an operator acts: anyone with triage access (translators push their sync
+branches here, so they have it) can add `op:qa-passed` or close the issue, so
+the workflow checks the event's sender id against `roles.yaml`. A non-operator's
+`op:qa-passed` is removed, and a non-operator's close at `op:ready` is reopened;
+neither packages nor records anything.

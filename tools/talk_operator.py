@@ -26,7 +26,7 @@ import re
 import subprocess
 from pathlib import Path
 
-from tools.roles import operator_login
+from tools.roles import is_operator, operator_login
 from tools.workflow_validation import TALK_ID_RE
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -142,8 +142,14 @@ def on_pr_merged(gh, branch: str, pr_number: int, talk_exists=talk_exists) -> No
     _approve_review(gh, talk_id)
 
 
-def on_qa_passed(gh, issue_number: int) -> bool:
+def on_qa_passed(gh, issue_number: int, sender_id: int) -> bool:
+    # Labels are open to anyone with triage access, translators included;
+    # only an operator from roles.yaml may pass QA.
     issue = gh.get_issue(issue_number)
+    if not is_operator(sender_id):
+        gh.edit_labels(issue_number, set(), {QA_PASSED})
+        gh.comment(issue_number, f"`{QA_PASSED}` removed: only an operator listed in roles.yaml can pass QA.")
+        return False
     if "op:qa" in issue["labels"]:
         return True
     gh.edit_labels(issue_number, set(), {QA_PASSED})
@@ -157,8 +163,17 @@ def on_packaged(gh, issue_number: int, comment_md: str) -> None:
     gh.comment(issue_number, comment_md)
 
 
-def on_closed(gh, issue_number: int) -> bool:
-    return next_labels(gh.get_issue(issue_number)["labels"], "closed") is not None
+def on_closed(gh, issue_number: int, sender_id: int) -> bool:
+    if next_labels(gh.get_issue(issue_number)["labels"], "closed") is None:
+        return False
+    if not is_operator(sender_id):
+        gh.reopen(issue_number)
+        gh.comment(
+            issue_number,
+            "Reopened: only an operator listed in roles.yaml can record the delivery by closing this issue.",
+        )
+        return False
+    return True
 
 
 def on_delivered(gh, issue_number: int) -> None:
@@ -244,6 +259,10 @@ def main(argv: list[str] | None = None) -> None:
     for name in ("qa-passed", "closed", "delivered"):
         p = sub.add_parser(name, help=f"handle an Operator: issue event ({name})")
         p.add_argument("--issue", type=int, required=True)
+        if name != "delivered":
+            p.add_argument(
+                "--sender-id", type=int, required=True, help="numeric id of the user who labelled or closed the issue"
+            )
     p = sub.add_parser("packaged", help="mark the package committed and post the e-mail comment")
     p.add_argument("--issue", type=int, required=True)
     p.add_argument("--comment-file", required=True, help="markdown written by amruta_package --comment-out")
@@ -255,11 +274,11 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "pr-merged":
         on_pr_merged(gh, args.branch, args.pr)
     elif args.cmd == "qa-passed":
-        print("package" if on_qa_passed(gh, args.issue) else "skip")
+        print("package" if on_qa_passed(gh, args.issue, args.sender_id) else "skip")
     elif args.cmd == "packaged":
         on_packaged(gh, args.issue, Path(args.comment_file).read_text(encoding="utf-8"))
     elif args.cmd == "closed":
-        print("deliver" if on_closed(gh, args.issue) else "skip")
+        print("deliver" if on_closed(gh, args.issue, args.sender_id) else "skip")
     elif args.cmd == "delivered":
         on_delivered(gh, args.issue)
 

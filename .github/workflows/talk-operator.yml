@@ -99,11 +99,12 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TITLE: ${{ github.event.issue.title }}
           ISSUE: ${{ github.event.issue.number }}
+          SENDER_ID: ${{ github.event.sender.id }}
         run: |
           TALK="${TITLE#Operator: }"
           python -m tools.workflow_validation_cli --talk-id "$TALK"
           echo "talk=$TALK" >> "$GITHUB_OUTPUT"
-          echo "decision=$(python -m tools.talk_operator qa-passed --issue "$ISSUE")" >> "$GITHUB_OUTPUT"
+          echo "decision=$(python -m tools.talk_operator qa-passed --issue "$ISSUE" --sender-id "$SENDER_ID")" >> "$GITHUB_OUTPUT"
       - name: Build the Amruta package
         if: steps.gate.outputs.decision == 'package'
         env:
@@ -181,11 +182,12 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TITLE: ${{ github.event.issue.title }}
           ISSUE: ${{ github.event.issue.number }}
+          SENDER_ID: ${{ github.event.sender.id }}
         run: |
           TALK="${TITLE#Operator: }"
           python -m tools.workflow_validation_cli --talk-id "$TALK"
           echo "talk=$TALK" >> "$GITHUB_OUTPUT"
-          echo "decision=$(python -m tools.talk_operator closed --issue "$ISSUE")" >> "$GITHUB_OUTPUT"
+          echo "decision=$(python -m tools.talk_operator closed --issue "$ISSUE" --sender-id "$SENDER_ID")" >> "$GITHUB_OUTPUT"
       - name: Record the delivery
         if: steps.gate.outputs.decision == 'deliver'
         env:

@@ -49,6 +49,13 @@ def test_issue_jobs_only_for_operator_issues():
     assert "github.event.action == 'closed'" in jobs["deliver"]["if"]
 
 
+def test_issue_jobs_pass_the_sender_id_to_the_gate():
+    for name, cmd in (("qa", "talk_operator qa-passed"), ("deliver", "talk_operator closed")):
+        gate = next(s for s in _op()["jobs"][name]["steps"] if s.get("id") == "gate")
+        assert gate["env"].get("SENDER_ID") == "${{ github.event.sender.id }}", name
+        assert f'{cmd} --issue "$ISSUE" --sender-id "$SENDER_ID"' in gate["run"], name
+
+
 def test_issue_title_is_validated_before_use():
     for name in ("qa", "deliver"):
         run = _run_text(_op()["jobs"][name])
