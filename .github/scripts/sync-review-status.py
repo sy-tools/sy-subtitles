@@ -24,7 +24,14 @@ GATE_LABEL = "talk-review"
 TITLE_PREFIX = "Review: "
 OPERATOR_LABEL = "talk-operator"
 OPERATOR_PREFIX = "Operator: "
-OPERATOR_STAGES = (("op:delivered", "delivered"), ("op:ready", "ready"), ("op:qa", "qa"), ("op:review", "review"))
+OPERATOR_STAGES = (
+    ("op:delivered", "delivered"),
+    ("op:ready", "ready"),
+    ("op:qa", "qa"),
+    ("op:review", "review"),
+    ("op:translator", "translator"),
+    ("op:pipeline", "pipeline"),
+)
 
 
 def load_existing() -> dict:

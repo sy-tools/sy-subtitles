@@ -13,7 +13,7 @@
 // 'mine' = talks whose review-status reviewer is the signed-in GitHub login;
 // only meaningful when signed in, harmless (matches nothing) otherwise.
 var INDEX_FILTERS = ['all', 'needs-review', 'in-review', 'pending', 'approved', 'mine',
-  'op-all', 'op-review', 'op-qa', 'op-ready', 'op-delivered'];
+  'op-all', 'op-new', 'op-pipeline', 'op-translator', 'op-review', 'op-qa', 'op-ready', 'op-delivered'];
 
 function _params(search) {
   try {

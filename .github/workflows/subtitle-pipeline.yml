@@ -159,20 +159,25 @@ jobs:
         with:
           fetch-depth: 2
 
+      - name: Install pyyaml
+        run: pip install pyyaml
+
       # Every job needs discover, so a refusal here stops the run before any
-      # Claude call. Anyone with write access can dispatch; only the people on
-      # PIPELINE_LLM_ACTORS may spend the tokens. triggering_actor (not actor)
-      # so a re-run is judged by whoever pressed "Re-run". Whisper-only runs
-      # and dry runs spend no tokens and stay open to every writer.
+      # Claude call. Anyone with write access can dispatch; only an operator
+      # flagged `llm: true` in roles.yaml may spend the tokens, matched by
+      # numeric id. triggering_actor (not actor) so a re-run is judged by
+      # whoever pressed "Re-run". Whisper-only runs and dry runs spend no
+      # tokens and stay open to every writer. roles.yaml is read from main:
+      # from the dispatched ref, any writer could grant themselves the flag.
       - name: Authorize Claude token spend
         if: ${{ !inputs.dry_run && (inputs.translate != false || inputs.review != false || inputs.build != false) }}
         env:
+          GH_TOKEN: ${{ github.token }}
           LLM_ACTOR: ${{ github.triggering_actor }}
-          LLM_ACTORS_ALLOWED: ${{ vars.PIPELINE_LLM_ACTORS || 'SlavaSubotskiy' }}
-        run: python -m tools.workflow_validation_cli --llm-actor "$LLM_ACTOR" --llm-actors-allowed "$LLM_ACTORS_ALLOWED"
-
-      - name: Install pyyaml
-        run: pip install pyyaml
+        run: |
+          git fetch --depth=1 origin main
+          git show FETCH_HEAD:roles.yaml > "$RUNNER_TEMP/roles.yaml"
+          python -m tools.roles may-spend-llm --login "$LLM_ACTOR" --roles "$RUNNER_TEMP/roles.yaml"
 
       - name: Find talks, videos, and pending whisper
         id: find
@@ -1301,6 +1306,16 @@ jobs:
           ISSUEEOF
           )"
           fi
+
+      # The talk is now the translator's. Talks added before the pre-phase
+      # get their Operator issue here (tools/talk_operator.py).
+      - name: Move the Operator issue to the translator
+        if: success() && needs.build-timecodes.result == 'success' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
+        run: python -m tools.talk_operator review-created --talk "$TALK_ID"
 
   sync-status:
     needs: commit

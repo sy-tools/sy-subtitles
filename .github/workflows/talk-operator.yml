@@ -1,7 +1,8 @@
 name: Talk Operator
 
 # Drives a talk's `Operator: {talk_id}` issue (tools/talk_operator.py):
-# translator sync PR ready → op:review, merged → op:qa, the operator adds
+# a new talk's meta.yaml on main → op:pipeline (subtitle-pipeline.yml moves
+# it to op:translator when it opens `Review:`), translator sync PR ready → op:review, merged → op:qa, the operator adds
 # op:qa-passed → Amruta package committed → op:ready, the operator closes the
 # issue after sending the e-mail → delivery recorded in meta.yaml.
 #
@@ -13,6 +14,10 @@ name: Talk Operator
 # why the status job regenerates review-status.json explicitly.
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'talks/*/meta.yaml'
   pull_request_target:
     types: [opened, ready_for_review, closed]
   issues:
@@ -24,6 +29,41 @@ permissions:
   pull-requests: write
 
 jobs:
+  # A push, not the add-talk PR: talks also arrive as a hand push
+  # (tools.download + git push), and this covers both.
+  added:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    # No concurrency group: GitHub keeps one pending run per group and cancels
+    # the older one, and a cancelled push's talks would never get an issue.
+    # Two pushes cannot add the same talk, and find_issue reads the REST list.
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Open an Operator issue for each new talk
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          # The first push of a branch has no `before` commit; nothing to diff.
+          if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            echo "no previous commit to diff against — nothing to do"; exit 0
+          fi
+          # --no-renames: a renamed folder is no new talk. A folder that is not a
+          # talk id is skipped, not allowed to stop the others.
+          git diff --name-only --no-renames --diff-filter=A "$BEFORE" "$AFTER" -- 'talks/*/meta.yaml' | while read -r path; do
+            TALK=$(basename "$(dirname "$path")")
+            python -m tools.workflow_validation_cli --talk-id "$TALK" || continue
+            python -m tools.talk_operator talk-added --talk "$TALK"
+          done
+
   pr:
     if: >-
       github.event_name == 'pull_request_target' &&
@@ -214,9 +254,10 @@ jobs:
         run: python -m tools.talk_operator delivered --issue "$ISSUE"
 
   status:
-    needs: [pr, qa, deliver]
+    needs: [added, pr, qa, deliver]
     if: >-
       always() && !cancelled() && (
+      needs.added.result == 'success' ||
       needs.pr.result == 'success' || needs.qa.result == 'success' ||
       needs.deliver.result == 'success')
     uses: ./.github/workflows/sync-review-status.yml

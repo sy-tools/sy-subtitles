@@ -1952,8 +1952,13 @@ class TestReviewStatus:
         pg.close()
         ctx.close()
 
-    def test_approved_badge(self, server, page, browser):
-        """Talk with approved status should show green badge (visible in expert mode)."""
+    @pytest.mark.parametrize(
+        ("operator_stage", "chip", "badge_text"),
+        [("delivered", "approved", "Sent to Amruta"), (None, "pending", "")],
+    )
+    def test_approved_badge(self, server, page, browser, operator_stage, chip, badge_text):
+        """Expert mode: a delivered talk is under Sent to Amruta with the green
+        badge; approved by the translator but not sent is still in progress."""
         ctx = browser.new_context()
         pg = ctx.new_page()
         approved_status = {
@@ -1965,6 +1970,7 @@ class TestReviewStatus:
                     "reviewer": "YogiReviewer",
                     "issue_number": 42,
                     "updated_at": "2026-04-01T00:00:00Z",
+                    "operator_stage": operator_stage,
                 },
             },
         }
@@ -1995,12 +2001,14 @@ class TestReviewStatus:
         )
         pg.goto(f"{server}/index.html")
         # Expert mode default filter is 'pending'; switch to 'approved' to see approved talks
-        pg.wait_for_selector(".stat-card[data-filter='approved']", timeout=10000)
-        pg.click(".stat-card[data-filter='approved']")
+        pg.wait_for_selector(f".stat-card[data-filter='{chip}']", timeout=10000)
+        if chip != "pending":
+            pg.click(f".stat-card[data-filter='{chip}']")
         pg.wait_for_selector(".talk-item", timeout=10000)
-        badge = pg.locator(".review-badge.approved")
-        assert badge.count() >= 1
-        assert "approved" in badge.first.text_content()
+        if badge_text:
+            badge = pg.locator(".review-badge.approved")
+            assert badge.count() >= 1
+            assert badge_text in badge.first.text_content()
         pg.close()
         ctx.close()
 

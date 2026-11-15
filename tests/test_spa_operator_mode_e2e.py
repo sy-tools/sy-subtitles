@@ -14,7 +14,8 @@ OPERATOR_ID = 11644864
 QA_TALK = "2001-01-01_Test-Talk"
 READY_TALK = "2002-02-02_Ready-Talk"
 GMAIL = "https://mail.google.com/mail/?view=cm&fs=1&to=help%40amruta.org&su=Transcript"
-ROLES = f"operators:\n- login: SlavaSubotskiy\n  id: {OPERATOR_ID}\n"
+ROLES = f"operators:\n- login: SlavaSubotskiy\n  id: {OPERATOR_ID}\n  llm: true\n"
+NEW_TALK = "2003-03-03_New-Talk"
 
 TREE = {
     "sha": "op1",
@@ -26,6 +27,7 @@ TREE = {
         {"path": f"talks/{READY_TALK}/transcript_uk.txt", "type": "blob"},
         {"path": f"talks/{READY_TALK}/_for_Amruta/Test-Video_uk.srt", "type": "blob"},
         {"path": f"talks/{READY_TALK}/_for_Amruta/transcript_uk.txt", "type": "blob"},
+        {"path": f"talks/{NEW_TALK}/meta.yaml", "type": "blob"},
     ],
 }
 
@@ -122,7 +124,16 @@ def test_operator_sees_stage_chips_and_the_switch(server, browser):  # noqa: F81
     pg.goto(f"{server}{SPA_URL}")
     pg.wait_for_selector(".stat-card[data-filter='op-all']", timeout=10000)
     filters = pg.eval_on_selector_all(".stat-card", "els => els.map(e => e.dataset.filter)")
-    assert filters == ["op-all", "op-review", "op-qa", "op-ready", "op-delivered"]
+    assert filters == [
+        "op-all",
+        "op-new",
+        "op-pipeline",
+        "op-translator",
+        "op-review",
+        "op-qa",
+        "op-ready",
+        "op-delivered",
+    ]
     assert pg.evaluate("!document.getElementById('prefs-operator-row').hidden")
     assert pg.evaluate("!document.getElementById('operator-flag').hidden")
     assert _card(pg, QA_TALK).count() == 1 and _card(pg, READY_TALK).count() == 1
@@ -282,4 +293,72 @@ def test_package_files_appear_once_the_bot_has_packaged_the_talk(server, browser
     pg.route("**/api.github.com/repos/**/git/trees/**", lambda r: _json(r, 200, tree))
     pg.clock.run_for(31000)
     _card(pg, QA_TALK).locator(".op-file-btn", has_text="transcript_uk.txt").wait_for(timeout=5000)
+    ctx.close()
+
+
+def _chip(pg, f):
+    return pg.locator(f".stat-card[data-filter='{f}'] .num").text_content()
+
+
+def test_a_talk_without_artifacts_is_new_and_offers_run_pipeline(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".stat-card[data-filter='op-new']", timeout=10000)
+    assert _chip(pg, "op-new") == "1"
+    assert _chip(pg, "op-all") == "3"
+    _card(pg, NEW_TALK).locator(".op-run-btn").wait_for(timeout=5000)
+    assert _card(pg, QA_TALK).locator(".op-run-btn").count() == 0
+    ctx.close()
+
+
+def test_an_operator_without_the_llm_flag_gets_no_run_pipeline(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR, roles=ROLES.replace("  llm: true\n", ""))
+    pg.goto(f"{server}{SPA_URL}")
+    _card(pg, NEW_TALK).wait_for(timeout=10000)
+    assert _card(pg, NEW_TALK).locator(".op-run-btn").count() == 0
+    ctx.close()
+
+
+def test_expert_chips_for_everyone_else(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], {"login": "IrynaFilSY", "avatar_url": "icon.png", "id": 5})
+    pg.add_init_script(
+        "localStorage.setItem('sy_expert_mode', '1'); localStorage.setItem('sy_filter_expert', 'pending');"
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".stat-card[data-filter='approved']", timeout=10000)
+    filters = pg.eval_on_selector_all(".stat-card", "els => els.map(e => e.dataset.filter)")
+    assert filters[:5] == ["all", "pending", "needs-review", "in-review", "approved"]
+    assert _chip(pg, "pending") == "3"
+    assert _chip(pg, "approved") == "0"
+    assert _card(pg, QA_TALK).count() == 1 and _card(pg, NEW_TALK).count() == 1
+    assert _card(pg, QA_TALK).locator(".op-qa-btn").count() == 0
+    ctx.close()
+
+
+def test_operator_mode_makes_the_expert_switch_inactive(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".stat-card[data-filter='op-all']", timeout=10000)
+    assert pg.evaluate("document.getElementById('prefs-expert').disabled")
+    assert pg.evaluate("document.getElementById('prefs-expert').checked")
+    pg.evaluate("SPA.toggleOperator()")
+    pg.wait_for_selector(".stat-card[data-filter='needs-review']", timeout=5000)
+    assert not pg.evaluate("document.getElementById('prefs-expert').disabled")
+    assert not pg.evaluate("document.getElementById('prefs-expert').checked")
+    ctx.close()
+
+
+def test_expert_card_of_an_approved_talk_without_operator_stage(server, browser):  # noqa: F811
+    status = json.loads(json.dumps(STATUS))
+    status["talks"][NEW_TALK] = {"status": "approved", "reviewer": None, "issue_number": 77}
+    ctx, pg = _page(browser, [], {"login": "IrynaFilSY", "avatar_url": "icon.png", "id": 5})
+    pg.route("**/raw.githubusercontent.com/**/review-status.json", lambda r: _json(r, 200, status))
+    pg.add_init_script(
+        "localStorage.setItem('sy_expert_mode', '1'); localStorage.setItem('sy_filter_expert', 'pending');"
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    card = _card(pg, NEW_TALK)
+    card.wait_for(timeout=10000)
+    assert card.locator(".review-badge").text_content().strip() != ""
+    assert card.locator(".take-review-btn").count() == 0
     ctx.close()

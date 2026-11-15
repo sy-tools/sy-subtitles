@@ -21,7 +21,8 @@ def _run_text(job):
 
 def test_operator_workflow_triggers():
     on = _op()["on"]
-    assert set(on) == {"pull_request_target", "issues"}
+    assert set(on) == {"pull_request_target", "issues", "push"}
+    assert on["push"] == {"branches": ["main"], "paths": ["talks/*/meta.yaml"]}
     assert on["pull_request_target"]["types"] == ["opened", "ready_for_review", "closed"]
     assert on["issues"]["types"] == ["labeled", "closed"]
 
@@ -112,7 +113,8 @@ def test_status_job_reuses_sync_review_status():
     job = _op()["jobs"]["status"]
     assert job["uses"] == "./.github/workflows/sync-review-status.yml"
     assert job.get("secrets") == "inherit"
-    assert set(job["needs"]) == {"pr", "qa", "deliver"}
+    assert set(job["needs"]) == {"added", "pr", "qa", "deliver"}
+    assert "needs.added.result == 'success'" in job["if"]
     assert "success" in job["if"] and "always()" in job["if"]
 
 
@@ -137,3 +139,41 @@ def test_unassigned_reset_requires_in_progress():
 def test_sync_job_accepts_op_labels():
     cond = _load("sync-review-status.yml")["jobs"]["sync"]["if"]
     assert "'op:'" in cond
+
+
+def test_added_job_opens_an_issue_for_each_new_meta_yaml():
+    job = _op()["jobs"]["added"]
+    assert job["if"] == "github.event_name == 'push'"
+    run = _run_text(job)
+    assert "--diff-filter=A" in run
+    assert "${{ github.event.before }}" in str(job) or "$BEFORE" in run
+    assert "python -m tools.talk_operator talk-added --talk" in run
+    assert "workflow_validation_cli --talk-id" in run
+    checkout = next(s for s in job["steps"] if str(s.get("uses", "")).startswith("actions/checkout"))
+    assert checkout["with"]["fetch-depth"] == 0
+
+
+def _pipeline_commit_steps():
+    return _load("subtitle-pipeline.yml")["jobs"]["commit"]["steps"]
+
+
+def test_pipeline_review_step_moves_the_operator_issue():
+    steps = _pipeline_commit_steps()
+    names = [s.get("name") for s in steps]
+    review = names.index("Create review tracking issue")
+    move = names.index("Move the Operator issue to the translator")
+    assert move == review + 1
+    step = steps[move]
+    assert step["if"] == steps[review]["if"]
+    assert "python -m tools.talk_operator review-created --talk" in step["run"]
+    assert step["env"]["GH_REPO"] == "${{ github.repository }}"
+
+
+def test_added_job_has_no_shared_concurrency_group_that_would_drop_pending_pushes():
+    assert "concurrency" not in _op()["jobs"]["added"]
+
+
+def test_added_job_skips_a_bad_folder_and_ignores_renames():
+    run = _run_text(_op()["jobs"]["added"])
+    assert "--no-renames" in run
+    assert "|| continue" in run

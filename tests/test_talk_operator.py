@@ -46,6 +46,9 @@ class FakeGh:
     def open_sync_prs(self, talk_id):
         return [p for p in self.open_prs if op.talk_id_from_branch(p["headRefName"]) == talk_id]
 
+    def titles(self, label):
+        return {i["title"] for i in self.issues.values() if label in i["labels"]}
+
 
 def _operator_issue(number, labels, state="OPEN"):
     return {"number": number, "title": f"Operator: {TALK}", "state": state, "labels": ["talk-operator", *labels]}
@@ -218,3 +221,94 @@ def test_close_elsewhere_by_a_non_operator_is_left_alone():
     gh = FakeGh([_operator_issue(7, ["op:delivered"], state="CLOSED")])
     assert op.on_closed(gh, 7, TRANSLATOR_ID) is False
     assert gh.calls == []
+
+
+# --- pre-phase: the issue from the moment a talk is added -----------------
+
+
+def test_next_labels_review_created_moves_the_pipeline_to_the_translator():
+    assert op.next_labels({"op:pipeline"}, "review-created") == ({"op:translator"}, {"op:pipeline"})
+
+
+@pytest.mark.parametrize("stage", ["op:translator", "op:review", "op:qa", "op:ready", "op:delivered"])
+def test_next_labels_review_created_later_changes_nothing(stage):
+    assert op.next_labels({stage}, "review-created") is None
+
+
+@pytest.mark.parametrize("stage", ["op:pipeline", "op:translator"])
+def test_next_labels_pr_ready_leaves_the_pre_phase(stage):
+    assert op.next_labels({stage}, "pr-ready") == ({"op:review"}, {stage})
+
+
+def test_next_labels_pr_merged_without_a_ready_event_leaves_the_translator():
+    assert op.next_labels({"op:translator"}, "pr-merged") == ({"op:qa"}, {"op:translator"})
+
+
+def test_talk_added_creates_the_issue_at_pipeline():
+    gh = FakeGh()
+    op.on_talk_added(gh, TALK, talk_exists=lambda t: True)
+    (call,) = gh.calls
+    assert call[:4] == ("create", f"Operator: {TALK}", ("op:pipeline", "talk-operator"), "SlavaSubotskiy")
+
+
+@pytest.mark.parametrize("state", ["OPEN", "CLOSED"])
+def test_talk_added_twice_creates_nothing(state):
+    gh = FakeGh([_operator_issue(5, ["op:delivered"], state=state)])
+    op.on_talk_added(gh, TALK, talk_exists=lambda t: True)
+    assert gh.calls == []
+
+
+def test_talk_added_for_an_unknown_talk_is_ignored():
+    gh = FakeGh()
+    op.on_talk_added(gh, TALK, talk_exists=lambda t: False)
+    assert gh.calls == []
+
+
+def test_review_created_moves_pipeline_to_translator():
+    gh = FakeGh([_operator_issue(5, ["op:pipeline"])])
+    op.on_review_created(gh, TALK, talk_exists=lambda t: True)
+    assert gh.issues[5]["labels"] == {"talk-operator", "op:translator"}
+
+
+def test_review_created_without_an_issue_creates_it_at_translator():
+    gh = FakeGh()
+    op.on_review_created(gh, TALK, talk_exists=lambda t: True)
+    (call,) = gh.calls
+    assert call[:3] == ("create", f"Operator: {TALK}", ("op:translator", "talk-operator"))
+
+
+@pytest.mark.parametrize("stage", ["op:qa", "op:ready", "op:delivered"])
+def test_a_rebuild_past_the_translator_changes_no_operator_label(stage):
+    gh = FakeGh([_operator_issue(5, [stage], state="CLOSED" if stage == "op:delivered" else "OPEN")])
+    op.on_review_created(gh, TALK, talk_exists=lambda t: True)
+    assert gh.calls == []
+
+
+def test_migration_lists_only_talks_without_review_or_operator_issue():
+    other = "1977-11-01_You-all-are-Shri-Kalki"
+    reviewed = "1980-03-23_Birthday-Puja"
+    gh = FakeGh(
+        [_review_issue(), {"number": 6, "title": f"Review: {reviewed}", "state": "OPEN", "labels": ["talk-review"]}]
+    )
+    assert op.migrate_pipeline(gh, [TALK, other, reviewed], apply=False) == [other]
+    assert gh.calls == []
+
+
+def test_migration_apply_creates_issues_at_pipeline():
+    other = "1977-11-01_You-all-are-Shri-Kalki"
+    gh = FakeGh()
+    assert op.migrate_pipeline(gh, [other], apply=True) == [other]
+    assert gh.calls[0][:3] == ("create", f"Operator: {other}", ("op:pipeline", "talk-operator"))
+
+
+def test_migration_skips_folders_that_are_not_talk_ids():
+    gh = FakeGh()
+    assert op.migrate_pipeline(gh, ["_SAHAJ_TIMES_PODCAST_S.3_E.15", TALK], apply=False) == [TALK]
+
+
+def test_review_created_for_an_older_talk_says_the_pipeline_is_done():
+    gh = FakeGh()
+    op.on_review_created(gh, TALK, talk_exists=lambda t: True)
+    body = gh.calls[0][4]
+    assert "subtitles are built" in body
+    assert "- [ ] Run" not in body

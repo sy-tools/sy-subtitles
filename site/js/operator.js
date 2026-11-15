@@ -6,10 +6,14 @@
 // issue; sync-review-status.py derives `operator_stage` from them into
 // review-status.json. Nothing here keeps a second copy of that state.
 
-// sync-review-status.py OPERATOR_STAGES: op:review|qa|ready|delivered.
-var OPERATOR_STAGES = ['review', 'qa', 'ready', 'delivered'];
-var OPERATOR_FILTERS = ['op-all', 'op-review', 'op-qa', 'op-ready', 'op-delivered'];
-var OPEN_STAGES = ['review', 'qa', 'ready'];
+// sync-review-status.py OPERATOR_STAGES: op:pipeline|translator|review|qa|ready|delivered.
+var OPERATOR_STAGES = ['pipeline', 'translator', 'review', 'qa', 'ready', 'delivered'];
+// The operator chips. new/pipeline are read from the artifacts, not labels.
+var OPERATOR_STEPS = ['new', 'pipeline', 'translator', 'review', 'qa', 'ready', 'delivered'];
+var OPERATOR_FILTERS = ['op-all'].concat(OPERATOR_STEPS.map(function (s) { return 'op-' + s; }));
+// The operator's own work: neither the translator's nor already sent.
+var OPEN_STAGES = ['new', 'pipeline', 'review', 'qa', 'ready'];
+var HANDED_BACK = ['review', 'qa', 'ready'];
 
 // The bot posts the e-mail link; only its comment is trusted (anyone with
 // triage access can comment, translators included).
@@ -24,6 +28,13 @@ function isOperator(roles, viewerId) {
   return roles.operators.some(function (o) { return !!o && o.id === viewerId; });
 }
 
+// Same rule as tools/roles.py may_spend_llm; the pipeline's own guard is the
+// real gate, this only decides whether to offer the button.
+function maySpendLlm(roles, viewerId) {
+  if (typeof viewerId !== 'number' || !roles || !Array.isArray(roles.operators)) return false;
+  return roles.operators.some(function (o) { return !!o && o.id === viewerId && o.llm === true; });
+}
+
 function operatorStageOf(entry) {
   var s = entry && entry.operator_stage;
   return OPERATOR_STAGES.indexOf(s) === -1 ? null : s;
@@ -36,13 +47,49 @@ function matchesOperatorFilter(stage, filter) {
 }
 
 function countOperatorStages(stages) {
-  var c = { all: 0, review: 0, qa: 0, ready: 0, delivered: 0 };
+  var c = { all: 0 };
+  OPERATOR_STEPS.forEach(function (s) { c[s] = 0; });
   (stages || []).forEach(function (s) {
-    if (OPERATOR_STAGES.indexOf(s) === -1) return;
+    if (OPERATOR_STEPS.indexOf(s) === -1) return;
     c[s]++;
     if (OPEN_STAGES.indexOf(s) !== -1) c.all++;
   });
   return c;
+}
+
+// The pipeline is done when its last artifacts exist: the Ukrainian
+// transcript and, for a talk with video, every video's subtitles.
+// `stages` is getPipelineStages() (js/pipeline_stages.js).
+function pipelineDone(stages) {
+  return !!stages.translated && (stages.nVideos === 0 || !!stages.srt);
+}
+
+function anyArtifact(stages) {
+  return stages.nWhisper > 0 || !!stages.translated || !!stages.reviewed || stages.nSrt > 0;
+}
+
+// Expert chips: who has the talk, in words without the operator in them.
+function talkPhase(entry, stages) {
+  var stage = operatorStageOf(entry);
+  var status = entry && entry.status;
+  if (stage === 'delivered') return 'sent';
+  if (status === 'in-progress') return 'in-review';
+  if (HANDED_BACK.indexOf(stage) !== -1 || status === 'approved') return 'operator';
+  if (!pipelineDone(stages)) return 'operator';
+  if (entry && entry.issue_number && status === 'pending') return 'needs-review';
+  return 'operator';
+}
+
+// Operator chips. Talks without an Operator issue get a step the same way, so
+// existing talks need no issue to be placed.
+function operatorStep(entry, stages) {
+  var stage = operatorStageOf(entry);
+  var status = entry && entry.status;
+  if (HANDED_BACK.indexOf(stage) !== -1 || stage === 'delivered') return stage;
+  if (status === 'in-progress') return 'translator';
+  if (status === 'approved') return null;
+  if (pipelineDone(stages)) return entry && entry.issue_number ? 'translator' : 'pipeline';
+  return anyArtifact(stages) ? 'pipeline' : 'new';
 }
 
 // Newest bot "Ready for Amruta" comment wins: re-adding op:qa-passed re-runs
@@ -79,10 +126,14 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     OPERATOR_FILTERS: OPERATOR_FILTERS,
     isOperator: isOperator,
+    maySpendLlm: maySpendLlm,
     operatorStageOf: operatorStageOf,
     matchesOperatorFilter: matchesOperatorFilter,
     countOperatorStages: countOperatorStages,
     gmailLinkFromComments: gmailLinkFromComments,
+    pipelineDone: pipelineDone,
+    talkPhase: talkPhase,
+    operatorStep: operatorStep,
     packageFiles: packageFiles,
   };
 }
