@@ -3185,6 +3185,7 @@ function renderIndex(el) {
 
     var opStep = operatorStep(st, stages);
     var phase = talkPhase(st, stages);
+    var reviewStatusOf = status;  // the translator's own state, for review-only controls
     if (expertMode && !opMode) status = EXPERT_PHASE_STATUS[phase];
     // Filter by status
     if (opMode) {
@@ -3241,7 +3242,7 @@ function renderIndex(el) {
     // "Take for review" — signed-in reviewers claim an unassigned talk right
     // from the card (id is bound via addEventListener below, not inline HTML).
     var takeBtn = '';
-    if (authLogin && actions.review && status !== 'approved' && !(st && st.reviewer)) {
+    if (authLogin && actions.review && reviewStatusOf !== 'approved' && !(st && st.reviewer)) {
       takeBtn = '<button class="btn btn--sm btn--ghost take-review-btn">' + esc(t('btn.take_review')) + '</button>';
     }
     // Expert mode: badge every card that has my PRs/issues (any filter),
@@ -3268,8 +3269,8 @@ function renderIndex(el) {
         + '<span class="pipe-run-slot" data-pipe-talk="' + esc(tk.id) + '">' + pipelineRunChip(tk.id) + '</span>'
       : ' <a href="' + safeHref('https://github.com/' + REPO + '/actions/workflows/subtitle-pipeline.yml') + '" target="_blank" class="expert-only expert-btn" style="display:none;" title="' + esc(t('expert.copy_and_run')) + '">&#x25B6; pipeline</a>';
     // A talk the operator holds shows which step it is at, in expert view too.
-    var statusBadge = (opMode || (expertMode && (phase === 'operator' || phase === 'sent')))
-      ? renderOperatorBadge(opStep, st) : renderStatusBadge(status, st);
+    var statusBadge = opStep && (opMode || (expertMode && (phase === 'operator' || phase === 'sent')))
+      ? renderOperatorBadge(opStep, st) : renderStatusBadge(reviewStatusOf, st);
     if (opMode) takeBtn = '';
     div.dataset.talkId = tk.id;
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'

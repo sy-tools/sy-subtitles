@@ -34,9 +34,9 @@ jobs:
   added:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
-    concurrency:
-      group: talk-operator-added
-      cancel-in-progress: false
+    # No concurrency group: GitHub keeps one pending run per group and cancels
+    # the older one, and a cancelled push's talks would never get an issue.
+    # Two pushes cannot add the same talk, and find_issue reads the REST list.
     steps:
       - uses: actions/checkout@v7
         with:
@@ -52,13 +52,15 @@ jobs:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
         run: |
-          # A new branch or a force push has no usable `before`; nothing to diff.
+          # The first push of a branch has no `before` commit; nothing to diff.
           if ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
             echo "no previous commit to diff against — nothing to do"; exit 0
           fi
-          git diff --name-only --diff-filter=A "$BEFORE" "$AFTER" -- 'talks/*/meta.yaml' | while read -r path; do
+          # --no-renames: a renamed folder is no new talk. A folder that is not a
+          # talk id is skipped, not allowed to stop the others.
+          git diff --name-only --no-renames --diff-filter=A "$BEFORE" "$AFTER" -- 'talks/*/meta.yaml' | while read -r path; do
             TALK=$(basename "$(dirname "$path")")
-            python -m tools.workflow_validation_cli --talk-id "$TALK"
+            python -m tools.workflow_validation_cli --talk-id "$TALK" || continue
             python -m tools.talk_operator talk-added --talk "$TALK"
           done
 

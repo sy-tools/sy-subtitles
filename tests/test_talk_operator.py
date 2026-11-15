@@ -299,3 +299,16 @@ def test_migration_apply_creates_issues_at_pipeline():
     gh = FakeGh()
     assert op.migrate_pipeline(gh, [other], apply=True) == [other]
     assert gh.calls[0][:3] == ("create", f"Operator: {other}", ("op:pipeline", "talk-operator"))
+
+
+def test_migration_skips_folders_that_are_not_talk_ids():
+    gh = FakeGh()
+    assert op.migrate_pipeline(gh, ["_SAHAJ_TIMES_PODCAST_S.3_E.15", TALK], apply=False) == [TALK]
+
+
+def test_review_created_for_an_older_talk_says_the_pipeline_is_done():
+    gh = FakeGh()
+    op.on_review_created(gh, TALK, talk_exists=lambda t: True)
+    body = gh.calls[0][4]
+    assert "subtitles are built" in body
+    assert "- [ ] Run" not in body

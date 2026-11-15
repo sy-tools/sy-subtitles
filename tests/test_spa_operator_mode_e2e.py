@@ -346,3 +346,19 @@ def test_operator_mode_makes_the_expert_switch_inactive(server, browser):  # noq
     assert not pg.evaluate("document.getElementById('prefs-expert').disabled")
     assert not pg.evaluate("document.getElementById('prefs-expert').checked")
     ctx.close()
+
+
+def test_expert_card_of_an_approved_talk_without_operator_stage(server, browser):  # noqa: F811
+    status = json.loads(json.dumps(STATUS))
+    status["talks"][NEW_TALK] = {"status": "approved", "reviewer": None, "issue_number": 77}
+    ctx, pg = _page(browser, [], {"login": "IrynaFilSY", "avatar_url": "icon.png", "id": 5})
+    pg.route("**/raw.githubusercontent.com/**/review-status.json", lambda r: _json(r, 200, status))
+    pg.add_init_script(
+        "localStorage.setItem('sy_expert_mode', '1'); localStorage.setItem('sy_filter_expert', 'pending');"
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    card = _card(pg, NEW_TALK)
+    card.wait_for(timeout=10000)
+    assert card.locator(".review-badge").text_content().strip() != ""
+    assert card.locator(".take-review-btn").count() == 0
+    ctx.close()

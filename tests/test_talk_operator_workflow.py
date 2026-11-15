@@ -167,3 +167,13 @@ def test_pipeline_review_step_moves_the_operator_issue():
     assert step["if"] == steps[review]["if"]
     assert "python -m tools.talk_operator review-created --talk" in step["run"]
     assert step["env"]["GH_REPO"] == "${{ github.repository }}"
+
+
+def test_added_job_has_no_shared_concurrency_group_that_would_drop_pending_pushes():
+    assert "concurrency" not in _op()["jobs"]["added"]
+
+
+def test_added_job_skips_a_bad_folder_and_ignores_renames():
+    run = _run_text(_op()["jobs"]["added"])
+    assert "--no-renames" in run
+    assert "|| continue" in run

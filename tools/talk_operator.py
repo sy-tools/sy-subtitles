@@ -110,6 +110,14 @@ def _new_talk_body(talk_id: str) -> str:
     )
 
 
+def _translator_body(talk_id: str) -> str:
+    return (
+        f"Operator work on `{talk_id}`.\n\n"
+        "The subtitle pipeline is done: subtitles are built and the `Review:` issue is open.\n"
+        "This issue moves to `op:review` when the translator's sync PR is ready.\n"
+    )
+
+
 def _create(gh, talk_id: str, stage: str, body: str) -> int:
     return gh.create_issue(operator_title(talk_id), body, [OPERATOR_LABEL, stage], operator_login())
 
@@ -128,7 +136,7 @@ def on_review_created(gh, talk_id: str, talk_exists=talk_exists) -> None:
         return
     issue = gh.find_issue(operator_title(talk_id), OPERATOR_LABEL)
     if issue is None:
-        _create(gh, talk_id, "op:translator", _new_talk_body(talk_id))
+        _create(gh, talk_id, "op:translator", _translator_body(talk_id))
         return
     _apply(gh, issue, next_labels(issue["labels"], "review-created"))
 
@@ -138,7 +146,11 @@ def migrate_pipeline(gh, talk_ids: list[str], apply: bool) -> list[str]:
     `Operator:` issue; with apply, open one at op:pipeline for each."""
     reviewed = gh.titles(REVIEW_LABEL)
     operated = gh.titles(OPERATOR_LABEL)
-    waiting = [t for t in talk_ids if f"Review: {t}" not in reviewed and operator_title(t) not in operated]
+    waiting = [
+        t
+        for t in talk_ids
+        if TALK_ID_RE.fullmatch(t) and f"Review: {t}" not in reviewed and operator_title(t) not in operated
+    ]
     if apply:
         for t in waiting:
             _create(gh, t, "op:pipeline", _new_talk_body(t))
