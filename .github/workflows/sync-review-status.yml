@@ -18,8 +18,11 @@ jobs:
   # PR to merge.
   labels:
     runs-on: ubuntu-latest
+    # Only the translator's `Review:` issues: an `Operator:` issue closing means
+    # delivery (talk-operator.yml), never `review:approved`.
     if: >
-      github.event_name == 'issues' && (
+      github.event_name == 'issues' &&
+      contains(github.event.issue.labels.*.name, 'talk-review') && (
         github.event.action == 'assigned' ||
         github.event.action == 'unassigned' ||
         github.event.action == 'closed' ||
@@ -37,7 +40,8 @@ jobs:
             gh issue edit "$ISSUE" --remove-label "review:pending" --add-label "review:in-progress"
           elif [ "$ACTION" = "unassigned" ]; then
             ASSIGNEES=$(gh issue view "$ISSUE" --json assignees --jq '.assignees | length')
-            if [ "$ASSIGNEES" = "0" ]; then
+            IN_PROGRESS=$(gh issue view "$ISSUE" --json labels --jq '[.labels[].name] | index("review:in-progress") != null')
+            if [ "$ASSIGNEES" = "0" ] && [ "$IN_PROGRESS" = "true" ]; then
               gh issue edit "$ISSUE" --remove-label "review:in-progress" --add-label "review:pending"
             fi
           elif [ "$ACTION" = "closed" ]; then
@@ -71,7 +75,9 @@ jobs:
       !cancelled() && (
       github.event_name != 'issues' ||
       contains(join(github.event.issue.labels.*.name, ','), 'review:') ||
-      startsWith(github.event.label.name, 'review:'))
+      startsWith(github.event.label.name, 'review:') ||
+      contains(join(github.event.issue.labels.*.name, ','), 'op:') ||
+      startsWith(github.event.label.name, 'op:'))
     steps:
       # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
       - name: Mint bot App token

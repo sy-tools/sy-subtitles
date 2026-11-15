@@ -68,6 +68,7 @@ kept in lockstep with `.github/workflows/` by `tests/test_claude_md_lockstep.py`
 - `new-talk.yml` — bootstrap a talk from an add-talk PR
 - `pipeline-matrix-dryrun.yml` — replay the pipeline against snapshots
 - `golden-talks.yml` — full-corpus pytest, on demand
+- `talk-operator.yml` — operator issue lifecycle: QA, Amruta package, delivery record
 <!-- workflow-index:end -->
 
 `ci.yml`'s **`gate`** job is the ONE required check on `main`. It is always
