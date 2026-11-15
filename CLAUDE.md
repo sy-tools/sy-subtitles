@@ -293,6 +293,10 @@ that live nowhere else.
   records a delivery in `meta.yaml`. Other languages ship only if edited
   after the talk's first subtitle build. E-mail addresses come from the
   `AMRUTA_EMAIL_TO` / `AMRUTA_EMAIL_CC` repo variables.
+- `talk_operator` — drives a talk's `Operator:` issue (`op:*` labels) from
+  translator sync-PR and issue events; run by `talk-operator.yml`. Labels
+  are the state; the bot sets `review:approved` itself when it closes
+  `Review:`, because GITHUB_TOKEN changes fire no other workflow.
 
 **Run by workflows, rarely by hand**
 `builder_data`, `fake_llm`, `verify_snapshot`, `workflow_validation_cli`, and:
