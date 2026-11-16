@@ -167,7 +167,15 @@ def resync(primary_uk_path: str, primary_en_path: str, secondary_en_path: str, o
             dropped_outside += 1
             continue
         new_start = _remap(b["start_ms"], anchors)
-        new_end = _remap(b["end_ms"], anchors)
+        end_ms = b["end_ms"]
+        # Anchors are word STARTS, so a block whose own words are anchored still
+        # ends past the last anchor by its final word plus builder padding —
+        # often beyond the tolerance. Clamp that tail rather than drop the block.
+        # The head has no such bias, and a block starting after the last anchor
+        # is content the secondary lacks: both stay subject to the tolerance.
+        if b["start_ms"] <= covered_end:
+            end_ms = min(end_ms, covered_end + _EDGE_EXTRAPOLATION_MS)
+        new_end = _remap(end_ms, anchors)
         if new_start is None or new_end is None:
             dropped_unmapped += 1
             continue
