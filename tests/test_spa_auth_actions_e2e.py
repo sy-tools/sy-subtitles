@@ -845,18 +845,9 @@ def test_expert_pipeline_button_dispatches_from_a_form_drawn_from_the_workflow(s
     pg.click(".pipe-run-btn")
     pg.wait_for_selector(".sy-modal .pipe-form", timeout=5000)
     names = pg.eval_on_selector_all(".sy-modal [data-pipe-input]", "els => els.map(e => e.dataset.pipeInput)")
-    assert names == [
-        "whisper",
-        "translate",
-        "review",
-        "build",
-        "timing_source",
-        "dry_run",
-        "model",
-        "build_model",
-        "oauth_token",
-    ]
-    other_model = yaml.safe_load(PIPELINE_YML)[True]["workflow_dispatch"]["inputs"]["model"]["options"][1]
+    dispatch_inputs = yaml.safe_load(PIPELINE_YML)[True]["workflow_dispatch"]["inputs"]
+    assert names == [name for name in dispatch_inputs if name != "talk_id"]
+    other_model = dispatch_inputs["model"]["options"][1]
     pg.select_option(".sy-modal [data-pipe-input='model']", other_model)
     pg.uncheck(".sy-modal [data-pipe-input='translate']")
     pg.click(".sy-modal-btn.primary")
@@ -868,6 +859,7 @@ def test_expert_pipeline_button_dispatches_from_a_form_drawn_from_the_workflow(s
     assert sent["talk_id"] == "2001-01-01_Test-Talk"
     assert sent["model"] == other_model
     assert sent["translate"] == "false" and sent["whisper"] == "true"
+    assert sent["review_issue"] == "true"
     assert pg.get_attribute(".pipe-run", "href") == RUN_URL
     ctx.close()
 

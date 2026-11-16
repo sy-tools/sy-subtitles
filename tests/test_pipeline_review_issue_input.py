@@ -1,0 +1,118 @@
+"""The Review:/Operator: issue steps behind the `review_issue` checkbox.
+
+A run that built the subtitles creates the Review: issue or resets it to
+review:pending, as before. A run that built nothing (subtitles landed by
+hand after a failed build) may still open a missing issue, but must never
+reset an existing one: that would wipe a real review status on every
+whisper- or translate-only run, the checkbox being on by default. A failed
+build announces nothing.
+"""
+
+import os
+import stat
+import subprocess
+from pathlib import Path
+
+import pytest
+import yaml
+
+WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "subtitle-pipeline.yml"
+TALK = "2000-01-01_Talk"
+
+
+def _wf() -> dict:
+    return yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))
+
+
+def _commit_step(name: str) -> dict:
+    for step in _wf()["jobs"]["commit"]["steps"]:
+        if step.get("name") == name:
+            return step
+    raise AssertionError(f"step {name!r} not found in the commit job")
+
+
+@pytest.mark.parametrize("trigger", ["workflow_dispatch", "workflow_call"])
+def test_review_issue_checkbox_is_on_by_default(trigger: str) -> None:
+    spec = _wf()[True][trigger]["inputs"]["review_issue"]
+    assert spec["type"] == "boolean"
+    assert spec["default"] is True
+
+
+def _gate(tmp_path: Path, *, wanted: str, build: str, subtitles: bool) -> str:
+    if subtitles:
+        final = tmp_path / "talks" / TALK / "Video" / "final"
+        final.mkdir(parents=True)
+        (final / "uk.srt").write_text("1\n", encoding="utf-8")
+    out = tmp_path / "github_output"
+    out.write_text("", encoding="utf-8")
+    step = _commit_step("Decide review issue")
+    env = {**os.environ, "TALK_ID": TALK, "WANTED": wanted, "BUILD_RESULT": build, "GITHUB_OUTPUT": str(out)}
+    subprocess.run(["bash", "-e", "-c", step["run"]], cwd=tmp_path, env=env, check=True)
+    return dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").split())["mode"]
+
+
+@pytest.mark.parametrize(
+    ("wanted", "build", "subtitles", "mode"),
+    [
+        ("true", "success", True, "rebuilt"),
+        ("", "success", True, "rebuilt"),
+        ("true", "skipped", True, "existing"),
+        ("true", "skipped", False, "none"),
+        ("true", "failure", True, "none"),
+        ("false", "success", True, "none"),
+        ("false", "skipped", True, "none"),
+    ],
+)
+def test_gate_decides_from_checkbox_build_and_subtitles(
+    tmp_path: Path, wanted: str, build: str, subtitles: bool, mode: str
+) -> None:
+    assert _gate(tmp_path, wanted=wanted, build=build, subtitles=subtitles) == mode
+
+
+@pytest.mark.parametrize("name", ["Create review tracking issue", "Move the Operator issue to the translator"])
+def test_issue_steps_follow_the_gate_and_stay_on_main(name: str) -> None:
+    cond = _commit_step(name)["if"]
+    assert "steps.review-gate.outputs.mode != 'none'" in cond
+    assert "github.ref_name == 'main'" in cond
+
+
+def _review_step(tmp_path: Path, *, mode: str, existing: str) -> list[str]:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    log = tmp_path / "gh.log"
+    gh = bin_dir / "gh"
+    gh.write_text(
+        f'#!/bin/bash\necho "$*" >> "{log}"\n'
+        f'if [ "$1 $2" = "issue list" ]; then echo "{existing}"; fi\n'
+        'if [ "$1 $2" = "issue view" ]; then echo 0; fi\n',
+        encoding="utf-8",
+    )
+    gh.chmod(gh.stat().st_mode | stat.S_IEXEC)
+    (tmp_path / "talks" / TALK).mkdir(parents=True)
+    (tmp_path / "talks" / TALK / "meta.yaml").write_text("title: T\n", encoding="utf-8")
+    env = {
+        **os.environ,
+        "PATH": f"{bin_dir}:{os.environ['PATH']}",
+        "TALK_ID": TALK,
+        "REPO": "o/r",
+        "OWNER": "o",
+        "MODE": mode,
+    }
+    step = _commit_step("Create review tracking issue")
+    subprocess.run(["bash", "-e", "-c", step["run"]], cwd=tmp_path, env=env, check=True)
+    return log.read_text(encoding="utf-8").splitlines()
+
+
+def test_run_without_build_leaves_an_existing_review_issue_alone(tmp_path: Path) -> None:
+    calls = _review_step(tmp_path, mode="existing", existing="42")
+    assert not [c for c in calls if c.startswith(("issue edit", "issue reopen", "issue create"))]
+
+
+def test_run_without_build_opens_a_missing_review_issue(tmp_path: Path) -> None:
+    calls = _review_step(tmp_path, mode="existing", existing="")
+    assert [c for c in calls if c.startswith("issue create")]
+
+
+def test_rebuild_still_resets_an_existing_review_issue(tmp_path: Path) -> None:
+    calls = _review_step(tmp_path, mode="rebuilt", existing="42")
+    assert [c for c in calls if c.startswith("issue edit 42")]
