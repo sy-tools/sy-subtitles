@@ -182,3 +182,42 @@ def test_append_delivery_creates_then_appends(tmp_path):
         {"date": "2026-11-15", "commit": "abc123"},
         {"date": "2026-12-01", "commit": "def456"},
     ]
+
+
+# A letter has no video and never gets a final/uk.srt, so its baseline is the
+# commit that first landed its Ukrainian transcript.
+LETTER = "1979-01-01_Letter"
+LETTER_META = "title: Letter\ndate: '1979-01-01'\namruta_url: https://www.amruta.org/1979/01/01/marathi-letter-1979/\n"
+
+
+@pytest.fixture
+def letter(tmp_path):
+    _git(tmp_path, "init", "-q")
+    talk = tmp_path / "talks" / LETTER
+    _write(talk / "meta.yaml", LETTER_META)
+    _write(talk / "transcript_en.txt", EN)
+    _commit(tmp_path, "add letter")
+    _write(talk / "transcript_uk.txt", UK)
+    _commit(tmp_path, "Translate letter")
+    return tmp_path
+
+
+def test_letter_packages_its_uk_transcript_only(letter):
+    files = ap.package_files(letter, LETTER)
+    assert set(files) == {"transcript_uk.txt"}
+    assert files["transcript_uk.txt"].endswith("Перший абзац.\n\nДругий абзац.\n")
+
+
+def test_letter_ships_the_english_transcript_once_it_is_edited_after_translation(letter):
+    _write(letter / "talks" / LETTER / "transcript_en.txt", EN.replace("fine", "good"))
+    _commit(letter, "Fix EN")
+    assert set(ap.package_files(letter, LETTER)) == {"transcript_uk.txt", "transcript_en.txt"}
+
+
+def test_letter_without_a_uk_transcript_is_refused(tmp_path):
+    _git(tmp_path, "init", "-q")
+    _write(tmp_path / "talks" / LETTER / "meta.yaml", LETTER_META)
+    _write(tmp_path / "talks" / LETTER / "transcript_en.txt", EN)
+    _commit(tmp_path, "add letter")
+    with pytest.raises(ap.PackageError, match="transcript_uk.txt"):
+        ap.package_files(tmp_path, LETTER)
