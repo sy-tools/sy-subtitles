@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const {
   isOperator, operatorStageOf, OPERATOR_FILTERS, matchesOperatorFilter,
   countOperatorStages, gmailLinkFromComments, packageFiles,
-  pipelineDone, talkPhase, operatorStep, maySpendLlm,
+  pipelineDone, talkPhase, operatorStep, maySpendLlm, restoreWaiting,
 } = require('../site/js/operator');
 
 const ROLES = { operators: [{ login: 'SlavaSubotskiy', id: 11644864 }] };
@@ -177,5 +177,33 @@ describe('maySpendLlm', () => {
     assert.strictEqual(maySpendLlm(roles, 3), false);
     assert.strictEqual(maySpendLlm(roles, '1'), false);
     assert.strictEqual(maySpendLlm(null, 1), false);
+  });
+});
+
+describe('restoreWaiting', () => {
+  const MAX = 15 * 60 * 1000;
+  const NOW = 1_800_000_000_000;
+  it('keeps a wait that is still within the bot window', () => {
+    const stored = { [TALK]: { stage: 'qa', since: NOW - 60_000, issue: 1278 } };
+    assert.deepStrictEqual(restoreWaiting(stored, NOW, MAX), stored);
+  });
+  it('drops a wait older than the window, as the live poll would', () => {
+    const stored = { [TALK]: { stage: 'qa', since: NOW - MAX - 1, issue: 1278 } };
+    assert.deepStrictEqual(restoreWaiting(stored, NOW, MAX), {});
+  });
+  it('drops malformed entries and survives a missing or corrupt store', () => {
+    const stored = {
+      a: { stage: 'qa', since: 'yesterday', issue: 1 },
+      b: { stage: 'nope', since: NOW, issue: 2 },
+      c: { stage: 'ready', since: NOW, issue: '3' },
+      d: null,
+    };
+    assert.deepStrictEqual(restoreWaiting(stored, NOW, MAX), {});
+    assert.deepStrictEqual(restoreWaiting(null, NOW, MAX), {});
+    assert.deepStrictEqual(restoreWaiting([1, 2], NOW, MAX), {});
+  });
+  it('drops a wait stamped in the future (a clock moved back cannot pin it forever)', () => {
+    const stored = { [TALK]: { stage: 'ready', since: NOW + 60_000, issue: 1300 } };
+    assert.deepStrictEqual(restoreWaiting(stored, NOW, MAX), {});
   });
 });
