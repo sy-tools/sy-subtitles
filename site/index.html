@@ -1015,6 +1015,13 @@ function getBranchFromURL() {
 }
 var BRANCH = getBranchFromURL();
 var RAW = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH;
+var RAW_ROOT = 'https://raw.githubusercontent.com/' + REPO;
+// Content that has a blob sha in the manifest is read at the manifest's commit
+// (js/manifest_fetch.js rawFileUrl): the branch URL can be answered from a CDN
+// copy older than the push, whatever query it carries.
+function rawPin(path, blobSha) {
+  return rawFileUrl(RAW_ROOT, manifest && manifest.commitSha, BRANCH, path, blobSha);
+}
 var API = 'https://api.github.com/repos/' + REPO;
 var PAGES_BASE = location.pathname.replace(/\/[^/]*$/, '');
 
@@ -2549,7 +2556,7 @@ function loadSubtitleLang(lang) {
   if (!s) return Promise.resolve(false);
   var shaKey = s.videoSlug + '/' + lang;
   var sha = (s.talk && s.talk._srtSha && s.talk._srtSha[shaKey]) || '';
-  var url = RAW + '/talks/' + s.talkId + '/' + s.videoSlug + '/final/' + lang + '.srt' + (sha ? '?v=' + sha.substring(0, 8) : '');
+  var url = rawPin('talks/' + s.talkId + '/' + s.videoSlug + '/final/' + lang + '.srt', sha);
   return fetch(url)
     .then(function(r) {
       if (!r.ok) throw new Error('SRT fetch failed: HTTP ' + r.status);
@@ -2728,7 +2735,10 @@ function loadManifest() {
         var m = buildManifest(data.tree);
         m.etag = etag;
         m.lastModified = lastMod || '';
-        m.treeSha = (data.sha || '').substring(0, 7);
+        // For a branch name the Trees API answers with the COMMIT sha, which is
+        // what raw URLs can be pinned to.
+        m.commitSha = data.sha || '';
+        m.treeSha = m.commitSha.substring(0, 7);
         m.timestamp = Date.now();
         m._schema = CACHE_SCHEMA;
         return computeShellVersion(data.tree, window.crypto && window.crypto.subtle)
@@ -2968,7 +2978,7 @@ function renderStats() {
 var REVIEW_STATUS_CACHE_KEY = 'sy_review_status__' + BRANCH;
 function loadReviewStatus() {
   var sha = (manifest && manifest._reviewSha) || '';
-  var url = RAW + '/review-status.json' + (sha ? '?v=' + sha.substring(0, 8) : '');
+  var url = rawPin('review-status.json', sha);
   // On any failure (offline / rate-limited refresh / HTTP error) fall back to the
   // current or last-persisted statuses instead of an empty set — empties zero the
   // whole index (filters + stat counts key off review status). reviewStatusFallback
@@ -7385,8 +7395,8 @@ function showReview(talkId) {
 
   var leftSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.leftLang]) || '';
   var rightSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.rightLang]) || '';
-  var leftUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.leftLang + '.txt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
-  var rightUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.rightLang + '.txt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
+  var leftUrl = rawPin('talks/' + talkId + '/transcript_' + reviewState.leftLang + '.txt', leftSha);
+  var rightUrl = rawPin('talks/' + talkId + '/transcript_' + reviewState.rightLang + '.txt', rightSha);
 
   // Stale-fetch guard: navigating away (or switching mode/lang) before this
   // resolves must not let the late response render into the new view or save
@@ -7493,8 +7503,7 @@ SPA.openTranscriptVideo = function(videoSlug) {
   var langs = (talk._srtLangs && talk._srtLangs[videoSlug]) || ['uk'];
   var srtLang = langs.indexOf('uk') !== -1 ? 'uk' : langs[0];
   var sha = (talk._srtSha && talk._srtSha[videoSlug + '/' + srtLang]) || '';
-  var url = RAW + '/talks/' + reviewState.talkId + '/' + videoSlug + '/final/' + srtLang + '.srt' +
-    (sha ? '?v=' + sha.substring(0, 8) : '');
+  var url = rawPin('talks/' + reviewState.talkId + '/' + videoSlug + '/final/' + srtLang + '.srt', sha);
   var loadToken = bumpLoadToken(reviewState);
   fetch(url).then(function(r) { return r.ok ? r.text() : ''; }).then(function(text) {
     if (!isCurrentLoad(reviewState, loadToken)) return;
@@ -7576,8 +7585,8 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     var talk = reviewState.talk;
     var leftSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.leftLang]) || '';
     var rightSha = (talk && talk._transcriptSha && talk._transcriptSha[reviewState.rightLang]) || '';
-    var leftUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.leftLang + '.txt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
-    var rightUrl = RAW + '/talks/' + talkId + '/transcript_' + reviewState.rightLang + '.txt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
+    var leftUrl = rawPin('talks/' + talkId + '/transcript_' + reviewState.leftLang + '.txt', leftSha);
+    var rightUrl = rawPin('talks/' + talkId + '/transcript_' + reviewState.rightLang + '.txt', rightSha);
     var tToken = bumpLoadToken(reviewState);
     Promise.all([
       fetch(leftUrl).then(function(r) { return r.ok ? r.text() : ''; }),
@@ -7635,8 +7644,8 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   ensureEditSync();   // re-key: <video>-<rightLang> SRT target
   var leftSha = (talk && talk._srcSrtSha && talk._srcSrtSha[videoSlug + '/' + leftLang]) || '';
   var rightSha = (talk && talk._srtSha && talk._srtSha[videoSlug + '/' + rightLang]) || '';
-  var enUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
-  var ukUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
+  var enUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt', leftSha);
+  var ukUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt', rightSha);
 
   var srtToken = bumpLoadToken(reviewState);
   Promise.all([
@@ -9355,8 +9364,8 @@ SPA.switchSrtLang = function(side, lang) {
   var rightLang = side === 'right' ? lang : (reviewState.srtRightLang);
   var leftSha = (talk && talk._srcSrtSha && talk._srcSrtSha[videoSlug + '/' + leftLang]) || '';
   var rightSha = (talk && talk._srtSha && talk._srtSha[videoSlug + '/' + rightLang]) || '';
-  var enUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt' + (leftSha ? '?v=' + leftSha.substring(0, 8) : '');
-  var ukUrl = RAW + '/talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt' + (rightSha ? '?v=' + rightSha.substring(0, 8) : '');
+  var enUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt', leftSha);
+  var ukUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt', rightSha);
 
   var loadToken = bumpLoadToken(reviewState);
   Promise.all([
