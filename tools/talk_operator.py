@@ -32,6 +32,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import yaml
+
 from tools.roles import is_operator, operator_login
 from tools.video_roles import RoleError
 from tools.video_roles import text_only as _talk_dir_text_only
@@ -59,10 +61,14 @@ def talk_exists(talk_id: str) -> bool:
 
 
 def talk_text_only(talk_id: str) -> bool:
-    """A letter: no counted video, so the issue copy speaks of the transcript."""
+    """A letter: no counted video, so the issue copy speaks of the transcript.
+
+    Only the wording depends on it, so a meta.yaml that cannot be read or
+    parsed falls back to the video copy rather than failing the handler.
+    """
     try:
         return _talk_dir_text_only(ROOT / "talks" / talk_id)
-    except (RoleError, OSError, ValueError):
+    except (RoleError, OSError, ValueError, TypeError, yaml.YAMLError):
         return False
 
 

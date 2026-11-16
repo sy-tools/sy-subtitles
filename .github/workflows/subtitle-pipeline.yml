@@ -1344,7 +1344,11 @@ jobs:
           # edit. GitHub Pages host is the lowercased owner.
           OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
           SPA_BASE="https://${OWNER_LC}.github.io/${REPO#*/}"
-          EXISTING=$(gh issue list --search "Review: $TALK_ID in:title" --json number --jq '.[0].number')
+          # `in:title` search is tokenised, not exact: `1979-01-01_Letter` also
+          # finds `Review: 1979-01-01_Letter-Human-Chitta-has-many-illusions`.
+          # Keep only the issue whose title is exactly this talk's.
+          EXISTING=$(gh issue list --search "Review: $TALK_ID in:title" --json number,title \
+            | jq -r --arg t "Review: $TALK_ID" '[.[] | select(.title == $t)][0].number // empty')
           if [ -n "$EXISTING" ] && [ "$MODE" != "rebuilt" ]; then
             echo "Review issue #$EXISTING already exists and this run built nothing — leaving its status"
           elif [ -n "$EXISTING" ]; then

@@ -8,6 +8,7 @@ whisper- or translate-only run, the checkbox being on by default. A failed
 build announces nothing.
 """
 
+import json
 import os
 import stat
 import subprocess
@@ -128,14 +129,22 @@ def test_issue_steps_follow_the_gate_and_stay_on_main(name: str) -> None:
     assert "github.ref_name == 'main'" in cond
 
 
-def _review_step(tmp_path: Path, *, mode: str, existing: str, text_only: str = "false") -> list[str]:
+def _review_step(
+    tmp_path: Path, *, mode: str, existing: str, text_only: str = "false", listed: list | None = None
+) -> list[str]:
+    """Run the issue step under a stub gh. `existing` is the number of an
+    issue titled exactly `Review: {TALK}`; `listed` overrides the whole search
+    result, which GitHub tokenises — it is not an exact title match."""
+    if listed is None:
+        listed = [{"number": int(existing), "title": f"Review: {TALK}"}] if existing else []
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     log = tmp_path / "gh.log"
+    (tmp_path / "listed.json").write_text(json.dumps(listed), encoding="utf-8")
     gh = bin_dir / "gh"
     gh.write_text(
         f'#!/bin/bash\necho "$*" >> "{log}"\n'
-        f'if [ "$1 $2" = "issue list" ]; then echo "{existing}"; fi\n'
+        f'if [ "$1 $2" = "issue list" ]; then cat "{tmp_path / "listed.json"}"; fi\n'
         'if [ "$1 $2" = "issue view" ]; then echo 0; fi\n',
         encoding="utf-8",
     )
@@ -180,3 +189,23 @@ def test_a_text_only_issue_asks_to_read_the_translation_not_watch_a_video(tmp_pa
     calls = " ".join(_review_step(tmp_path, mode="rebuilt", existing="", text_only="true"))
     assert "Read the transcript side by side with the English" in calls
     assert "video" not in calls.lower()
+
+
+def test_the_review_issue_is_matched_by_its_exact_title(tmp_path: Path) -> None:
+    """`in:title` search is tokenised: for `1979-01-01_Letter` it also finds
+    `Review: 1979-01-01_Letter-Human-Chitta-has-many-illusions`, and taking
+    the first hit would reset that other letter's issue."""
+    listed = [
+        {"number": 726, "title": f"Review: {TALK}-Longer-Sibling"},
+        {"number": 325, "title": f"Review: {TALK}"},
+    ]
+    calls = _review_step(tmp_path, mode="rebuilt", existing="", listed=listed)
+    assert [c for c in calls if c.startswith("issue edit 325")]
+    assert not [c for c in calls if "726" in c]
+
+
+def test_only_a_longer_sibling_found_means_no_issue_yet(tmp_path: Path) -> None:
+    listed = [{"number": 726, "title": f"Review: {TALK}-Longer-Sibling"}]
+    calls = _review_step(tmp_path, mode="rebuilt", existing="", listed=listed)
+    assert [c for c in calls if c.startswith("issue create")]
+    assert not [c for c in calls if "726" in c]

@@ -375,3 +375,13 @@ def test_talk_text_only_reads_the_talk_folder(tmp_path, monkeypatch):
     monkeypatch.setattr(op, "ROOT", tmp_path)
     assert op.talk_text_only(LETTER) is True
     assert op.talk_text_only("2000-01-01_Missing") is False
+
+
+@pytest.mark.parametrize("meta", ["title: [unclosed\n", "title: T\nvideos:\n"])
+def test_talk_text_only_treats_a_broken_meta_as_a_video_talk(tmp_path, monkeypatch, meta):
+    """The issue copy is not worth crashing the operator bot over: before
+    the text-only check the handlers never parsed meta.yaml at all."""
+    (tmp_path / "talks" / LETTER).mkdir(parents=True)
+    (tmp_path / "talks" / LETTER / "meta.yaml").write_text(meta, encoding="utf-8")
+    monkeypatch.setattr(op, "ROOT", tmp_path)
+    assert op.talk_text_only(LETTER) is False
