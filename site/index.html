@@ -3551,19 +3551,8 @@ function openPipelineDialog(talkId, stages) {
 // ============================================================
 // PIPELINE VIEW
 // ============================================================
-// getPipelineStages() is provided by js/pipeline_stages.js (loaded in <head>).
+// getPipelineStages() and getOverallStatus() are provided by js/pipeline_stages.js (loaded in <head>).
 
-function getOverallStatus(stages, reviewSt) {
-  if (reviewSt && reviewSt.status === 'approved') return 'approved';
-  if (reviewSt && reviewSt.status === 'in-progress') return 'in-review';
-  // Subtitles + review issue are the required artefacts. The Ukrainian
-  // transcript and the review_report (proofreading) are optional: if the
-  // SRTs are built and an issue exists, reviewers can start work from
-  // the SRT alone. A missing transcript or report is a quality-of-life
-  // gap, not a blocker.
-  if (stages.srt && stages.hasIssue) return 'ready-for-review';
-  return 'in-progress';
-}
 
 function renderStatusBadge(status, reviewSt) {
   var labels = {

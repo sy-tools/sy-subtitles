@@ -6,7 +6,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 
-const { getPipelineStages } = require('../site/js/pipeline_stages');
+const { getPipelineStages, getOverallStatus } = require('../site/js/pipeline_stages');
 
 function talk(videos, whisperSlugs) {
   return { videos: videos, _whisperSlugs: whisperSlugs, hasUk: true, hasReviewReport: true };
@@ -53,5 +53,54 @@ describe('getPipelineStages: ignored videos', () => {
     assert.strictEqual(s.whisper, false);
     assert.strictEqual(s.srt, false);
     assert.strictEqual(s.srtProgress, '0');
+  });
+});
+
+// A text-only talk (a letter) has no counted video: no whisper, no subtitles,
+// and its transcript alone is what goes to review.
+describe('getPipelineStages: text-only talks', () => {
+  it('a talk without videos is text-only', () => {
+    assert.strictEqual(getPipelineStages(talk(undefined, []), null).textOnly, true);
+    assert.strictEqual(getPipelineStages(talk([], []), null).textOnly, true);
+  });
+
+  it('a talk whose every video is ignored is text-only', () => {
+    var s = getPipelineStages(talk([{ slug: 'A', sync: 'ignored', hasSrt: false }], []), null);
+    assert.strictEqual(s.textOnly, true);
+  });
+
+  it('a talk with a counted video is not text-only', () => {
+    var s = getPipelineStages(talk([{ slug: 'A', hasSrt: false }], []), null);
+    assert.strictEqual(s.textOnly, false);
+  });
+});
+
+describe('getOverallStatus', () => {
+  var ISSUE = { status: 'pending', issue_number: 325 };
+  function letter(hasUk) { return { videos: [], _whisperSlugs: [], hasUk: hasUk, hasReviewReport: true }; }
+
+  it('a translated letter with a Review: issue needs review', () => {
+    assert.strictEqual(getOverallStatus(getPipelineStages(letter(true), ISSUE), ISSUE), 'ready-for-review');
+  });
+
+  it('a letter without a Review: issue is still in progress', () => {
+    assert.strictEqual(getOverallStatus(getPipelineStages(letter(true), null), null), 'in-progress');
+  });
+
+  it('an untranslated letter is in progress even with an issue', () => {
+    assert.strictEqual(getOverallStatus(getPipelineStages(letter(false), ISSUE), ISSUE), 'in-progress');
+  });
+
+  it('a video talk still needs its subtitles', () => {
+    var tk = talk([{ slug: 'A', hasSrt: false }], ['A']);
+    assert.strictEqual(getOverallStatus(getPipelineStages(tk, ISSUE), ISSUE), 'in-progress');
+    tk = talk([{ slug: 'A', hasSrt: true }], ['A']);
+    assert.strictEqual(getOverallStatus(getPipelineStages(tk, ISSUE), ISSUE), 'ready-for-review');
+  });
+
+  it('the review status outranks the artefacts', () => {
+    var s = getPipelineStages(letter(true), ISSUE);
+    assert.strictEqual(getOverallStatus(s, { status: 'approved' }), 'approved');
+    assert.strictEqual(getOverallStatus(s, { status: 'in-progress' }), 'in-review');
   });
 });
