@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tools.video_roles import RoleError, derived_slugs, primary_slug, resolve_roles
+from tools.video_roles import RoleError, derived_slugs, primary_slug, resolve_roles, text_only
 
 
 def _talk(tmp_path, meta: dict, srt_slugs=()):
@@ -217,3 +217,45 @@ def test_declared_ignored_tolerates_a_talk_without_meta(tmp_path):
     from tools.video_roles import declared_ignored_slugs
 
     assert declared_ignored_slugs(tmp_path / "missing") == set()
+
+
+# A text-only talk (a letter) has no video left once the declared-ignored ones
+# are dropped. The pipeline skips the build for it and every SPA surface shows
+# only the transcript, so this is the one place that answers the question.
+
+
+def test_text_only_without_a_videos_key(tmp_path):
+    assert text_only(_talk(tmp_path, {"title": "Letter"})) is True
+
+
+def test_text_only_with_an_empty_videos_list(tmp_path):
+    assert text_only(_talk(tmp_path, {"title": "Letter", "videos": []})) is True
+
+
+def test_text_only_when_every_video_is_declared_ignored(tmp_path):
+    meta = {"videos": [{"slug": "Intro", "sync": "ignored"}, {"slug": "Music", "sync": "ignored"}]}
+    assert text_only(_talk(tmp_path, meta)) is True
+
+
+def test_a_talk_with_one_video_is_not_text_only(tmp_path):
+    assert text_only(_talk(tmp_path, {"videos": [{"slug": "Talk"}]})) is False
+
+
+def test_a_talk_with_videos_but_no_primary_is_not_text_only(tmp_path):
+    """Undeclared videos are a broken sync model, not a letter: the build
+    must keep failing on them, so this must neither answer True nor raise."""
+    meta = {"videos": [{"slug": "Talk"}, {"slug": "Short"}]}
+    assert text_only(_talk(tmp_path, meta)) is False
+
+
+def test_cli_prints_text_only(tmp_path):
+    letter = _talk(tmp_path / "a", {"title": "Letter"})
+    talk = _talk(tmp_path / "b", {"videos": [{"slug": "Talk"}]})
+    for path, expected in ((letter, "true"), (talk, "false")):
+        out = subprocess.run(
+            [sys.executable, "-m", "tools.video_roles", "--talk-dir", str(path), "--text-only"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert out.stdout.strip() == expected
