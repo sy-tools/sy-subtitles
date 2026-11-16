@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus/Easter-Puja-London-DP-RAW/final/uk.srt
+  Transcript: talks/1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus/transcript_uk.txt
+  EN SRT: talks/1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus/Easter-Puja-London-DP-RAW/source/en.srt
+  SRT blocks: 2197
+  EN SRT blocks: 2194
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:09,460 — 03:04:14,499
+  SRT range:       00:00:09,460 — 03:04:16,499
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 2197
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 2197
+  CPS: avg=11.1, median=11.2, max=26.1
+  CPS > target: 275 (12.5%)
+  CPS > hard max: 2 (0.1%)
+  CPL: avg=47.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 3
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #1007: CPS=26.1 (38ch/1.5s) "ви справді не можете цього заперечити."
+    #1008: CPS=20.4 (63ch/3.1s) "По-друге, ви відчуваєте прохолоду, що виходить із вашої голо..."
+    #366: CPS=20.0 (26ch/1.3s) "Шрі Матаджі: Це добра річ."
+    #397: CPS=20.0 (27ch/1.4s) "Йоґ: Він був там єпископом."
+    #398: CPS=20.0 (28ch/1.4s) "Шрі Матаджі: І який він був?"
+    #399: CPS=20.0 (35ch/1.8s) "Йоґ: Я тоді не був із ним знайомий,"
+    #973: CPS=20.0 (55ch/2.8s) "справжній факт у тому, і я мушу це сказати... Йоґ: Так."
+    #997: CPS=20.0 (78ch/3.9s) "Інтерв’юер: Але, знаєте, є багато інших, які кажуть точнісін..."
+    #998: CPS=20.0 (50ch/2.5s) "Тоді яка різниця між вами й, скажімо, Раджа Йоґою?"
+    #999: CPS=20.0 (28ch/1.4s) "Вони ж теж не беруть грошей."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 2197
+  EN SRT blocks: 2194
+  Ratio UK/EN: 1.00 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [FAIL] CPS ≤ 20.0
+
+  Avg CPS: 11.1 (target ≤15.0)
+  CPS > 15.0: 275 blocks
+  CPS > 20.0: 2 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 3 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: FAILED
