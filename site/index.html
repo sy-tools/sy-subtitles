@@ -8709,10 +8709,20 @@ function ghWriteUser() {
 var operatorRoles = null;      // parsed roles.yaml, null = nobody is operator
 var operatorRolesPromise = null;
 var operatorMailLinks = {};    // issue number → Gmail URL | null (none) | 'loading'
-var operatorWaiting = {};      // talkId → { stage, since, issue }
 var operatorPollTimer = null;
 var OPERATOR_POLL_MS = 30 * 1000;
 var OPERATOR_WAIT_MAX_MS = 15 * 60 * 1000;
+var OPERATOR_WAIT_KEY = 'sy_operator_waiting__' + BRANCH;
+var operatorWaiting = (function() {   // talkId → { stage, since, issue }
+  var stored = null;
+  try { stored = JSON.parse(localStorage.getItem(OPERATOR_WAIT_KEY)); } catch (e) {}
+  return restoreWaiting(stored, Date.now(), OPERATOR_WAIT_MAX_MS);
+})();
+if (Object.keys(operatorWaiting).length) operatorPollTimer = setInterval(pollOperatorStatus, OPERATOR_POLL_MS);
+
+function saveOperatorWaiting() {
+  try { localStorage.setItem(OPERATOR_WAIT_KEY, JSON.stringify(operatorWaiting)); } catch (e) {}
+}
 var OPERATOR_STAGE_CHIPS = [
   { filter: 'op-all', key: 'all', label: 'op.chip_all', cls: 'info' },
   { filter: 'op-new', key: 'new', label: 'op.chip_new', cls: 'info' },
@@ -8968,16 +8978,30 @@ function downloadAllPackageFiles(talkId, names) {
 
 function markOperatorWaiting(talkId, stage, issue) {
   operatorWaiting[talkId] = { stage: stage, since: Date.now(), issue: issue };
+  saveOperatorWaiting();
   delete operatorMailLinks[issue];
   renderIndex(document.getElementById('index-content'));
   if (!operatorPollTimer) operatorPollTimer = setInterval(pollOperatorStatus, OPERATOR_POLL_MS);
 }
 
 // The bot needs from about a minute (close) to over ten (QA passed waits for
-// its package PR to merge). raw.githubusercontent caches, hence the buster.
+// its package PR to merge). Read through the API: raw.githubusercontent's CDN
+// keys its cache on the path alone, so no query string busts it and the bot's
+// status could stay invisible for up to five more minutes.
+function fetchFreshReviewStatus() {
+  var token = getAuthToken();
+  if (!token) {
+    return fetch(RAW + '/review-status.json')
+      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); });
+  }
+  return getFileContent(API, token, 'review-status.json', BRANCH).then(function(file) {
+    if (!file) throw new Error('review-status.json not found on ' + BRANCH);
+    return JSON.parse(file.content);
+  });
+}
+
 function pollOperatorStatus() {
-  fetch(RAW + '/review-status.json?t=' + Date.now())
-    .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
+  fetchFreshReviewStatus()
     .then(function(data) {
       reviewStatus = data;
       try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
@@ -8997,6 +9021,7 @@ function pollOperatorStatus() {
           showToast(t('op.bot_slow').replace('{n}', w.issue), 6000);
         }
       });
+      saveOperatorWaiting();
       if (!Object.keys(operatorWaiting).length) { clearInterval(operatorPollTimer); operatorPollTimer = null; }
       // The package files are read from the tree, which predates the bot's
       // package commit; without a fresh one the card would offer the e-mail
