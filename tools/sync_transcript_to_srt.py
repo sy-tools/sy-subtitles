@@ -53,6 +53,9 @@ def find_paragraph_blocks(srt_blocks: list, para_blocks: list) -> list | None:
     return None
 
 
+_AMBIGUOUS = -2
+
+
 def _locate_fragment(old_paras: list, p_idx: int, frag_lo: int, frag_hi: int, srt_blocks: list) -> tuple | None:
     """(block_index, char_offset) of paragraph p_idx's fragment [frag_lo, frag_hi).
 
@@ -98,8 +101,9 @@ def _align_transcript_to_blocks(old_paras: list[str], srt_blocks: list) -> dict:
     a given transcript word ended up in.
 
     Returns a dict with `starts` (global word index where each paragraph
-    begins), `words` (each paragraph's word matches), and `word_block`
-    (global word index -> block index, for matched words only).
+    begins), `words` (each paragraph's word matches), `word_block` (global
+    word index -> block index, for matched words only) and `word_char`
+    (global word index -> that word's start offset inside its block).
     """
     para_words = [list(re.finditer(r"\S+", para)) for para in old_paras]
     starts, total = [], 0
@@ -108,20 +112,46 @@ def _align_transcript_to_blocks(old_paras: list[str], srt_blocks: list) -> dict:
         total += len(words)
 
     block_of: list[int] = []
+    char_of: list[int] = []
     block_words: list[str] = []
     for bi, block in enumerate(srt_blocks):
-        words = re.findall(r"\S+", block["text"])
-        block_words += words
-        block_of += [bi] * len(words)
+        for m in re.finditer(r"\S+", block["text"]):
+            block_words.append(m.group())
+            block_of.append(bi)
+            char_of.append(m.start())
 
     flat = [m.group() for words in para_words for m in words]
     word_block: dict[int, int] = {}
+    word_char: dict[int, int] = {}
     if flat and block_words:
         matcher = difflib.SequenceMatcher(None, flat, block_words, autojunk=False)
         for a, b, size in matcher.get_matching_blocks():
             for k in range(size):
                 word_block[a + k] = block_of[b + k]
-    return {"starts": starts, "words": para_words, "word_block": word_block}
+                word_char[a + k] = char_of[b + k]
+    return {"starts": starts, "words": para_words, "word_block": word_block, "word_char": word_char}
+
+
+def _offset_by_alignment(align: dict, p_idx: int, frag_lo: int, frag_hi: int, block_index: int) -> int | None:
+    """Where in block `block_index` the fragment should start, or None.
+
+    Measured from the nearest word the alignment matched into that block, so
+    a fragment the block holds more than once — a common stem, « і » — lands
+    on the occurrence that was edited, not on the first one. The caller must
+    still check the text actually sits there.
+    """
+    words = align["words"][p_idx]
+    if not words:
+        return None
+    touched = [k for k, m in enumerate(words) if m.start() < frag_hi and m.end() > frag_lo]
+    centre = touched[0] if touched else 0
+    start = align["starts"][p_idx]
+    for step in range(len(words)):
+        for k in (centre - step, centre + step):
+            g = start + k
+            if 0 <= k < len(words) and align["word_block"].get(g) == block_index:
+                return align["word_char"][g] + (frag_lo - words[k].start())
+    return None
 
 
 def _locate_by_alignment(align: dict, p_idx: int, frag_lo: int, frag_hi: int) -> int | None:
@@ -255,9 +285,30 @@ def _resolve_edits(
     # island searching for the same fragment resolves to the first occurrence,
     # and the last edit silently overwrites the earlier ones.
     claimed: dict[int, int] = {}
+    index_of = {id(b): i for i, b in enumerate(srt_blocks)}
 
-    def place(block: dict, offset_from: int = 0) -> int:
-        return block["text"].find(old_frag, max(offset_from, claimed.get(id(block), 0)))
+    def place(block: dict) -> int:
+        """Offset of this island inside `block`; -1 if absent, _AMBIGUOUS if
+        the block holds it more than once and the alignment cannot say which."""
+        nonlocal align
+        text, lo = block["text"], claimed.get(id(block), 0)
+        if align is None:
+            align = _align_transcript_to_blocks(old_paras, srt_blocks)
+        expected = _offset_by_alignment(align, p_idx, frag_lo, frag_lo + len(old_frag), index_of[id(block)])
+        if expected is not None and expected >= lo and text[expected : expected + len(old_frag)] == old_frag:
+            return expected
+        first = text.find(old_frag, lo)
+        if first != -1 and text.find(old_frag, first + 1) != -1:
+            return _AMBIGUOUS
+        return first
+
+    def ambiguous() -> dict:
+        return {
+            "error": (
+                f"P{p_idx + 1}: «{old_frag[:60]}» occurs more than once in its block and no anchor "
+                "says which — run the full subtitle pipeline to rebuild"
+            )
+        }
 
     align: dict | None = None
     folded_blocks: tuple[str, list[int]] | None = None
@@ -276,6 +327,8 @@ def _resolve_edits(
                     # Offset arithmetic thrown off by whitespace variance —
                     # still the right block.
                     offset = place(block)
+                    if offset == _AMBIGUOUS:
+                        return [], ambiguous()
                     if offset == -1:
                         block = None
             if block is None:
@@ -288,6 +341,8 @@ def _resolve_edits(
                         if not 0 <= cand < len(srt_blocks):
                             continue
                         offset = place(srt_blocks[cand])
+                        if offset == _AMBIGUOUS:
+                            return [], ambiguous()
                         if offset != -1:
                             block = srt_blocks[cand]
                             break
@@ -375,6 +430,8 @@ def _resolve_edits(
                         )
                     }
                 block, offset = hits[0], place(hits[0])
+                if offset == _AMBIGUOUS:
+                    return [], ambiguous()
                 if offset == -1:
                     # The block holds the fragment, but only before what an
                     # earlier island already claimed — there is nowhere left
