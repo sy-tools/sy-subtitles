@@ -161,6 +161,10 @@ jobs:
       # matrix.talk_id) from download names and break commit ("Artifact not
       # found"). Empty when the run was triggered without a talk_id input.
       talk_id: ${{ steps.find.outputs.talk_id }}
+      # 'true' for a talk with no counted video (a letter): it has no whisper
+      # and no primary, so there is no build — only the transcript ships to
+      # review. Always 'false' for a run without a talk_id input.
+      text_only: ${{ steps.find.outputs.text_only }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -194,7 +198,7 @@ jobs:
           python3 << 'PYEOF'
           import json, os, subprocess, yaml
 
-          from tools.video_roles import declared_ignored_slugs
+          from tools.video_roles import declared_ignored_slugs, text_only
           from tools.workflow_validation import (
               InvalidWorkflowInput,
               die,
@@ -271,6 +275,9 @@ jobs:
           talk_matrix = json.dumps({"include": [{"talk_id": t} for t in sorted(talk_ids)]})
           whisper_matrix = json.dumps({"include": [{"talk_id": t} for t in sorted(whisper_talk_ids)]})
           needs_whisper = "true" if whisper_talk_ids else "false"
+          is_text_only = bool(talk_id_input) and talk_id_input in talk_ids and text_only(f"talks/{talk_id_input}")
+          if is_text_only:
+              print(f"TEXT-ONLY: {talk_id_input} has no video — the build is skipped")
 
           print(f"\nTalks: {len(talk_ids)}, Videos: {len(video_includes)}, Talks needing whisper: {len(whisper_talk_ids)}")
 
@@ -280,6 +287,7 @@ jobs:
               f.write(f"whisper_matrix={whisper_matrix}\n")
               f.write(f"needs_whisper={needs_whisper}\n")
               f.write(f"talk_id={talk_id_input}\n")
+              f.write(f"text_only={'true' if is_text_only else 'false'}\n")
           PYEOF
 
   # Run Whisper for talks that don't have whisper.json yet
@@ -577,6 +585,7 @@ jobs:
       !cancelled() &&
       inputs.build != false &&
       needs.discover.result == 'success' &&
+      needs.discover.outputs.text_only != 'true' &&
       (needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'skipped') &&
       (needs.whisper.result == 'success' || needs.whisper.result == 'skipped')
     runs-on: ubuntu-latest
@@ -1284,6 +1293,9 @@ jobs:
       #       existing — no build this run, but the talk already has subtitles
       #       (landed by hand after a failed build): open a missing issue only;
       #       none — checkbox off, failed build, or nothing to review.
+      # A text-only talk (a letter) never builds: its translation stands in
+      # for the build — made this run is `rebuilt`, already on disk is
+      # `existing`, failed or missing is `none`.
       # A failed build announces nothing: resetting the issue to review:pending
       # would wipe the real review status without shipping anything to review.
       - name: Decide review issue
@@ -1291,10 +1303,21 @@ jobs:
         env:
           WANTED: ${{ inputs.review_issue }}
           BUILD_RESULT: ${{ needs.build-timecodes.result }}
+          TRANSLATE_RESULT: ${{ needs.translate-and-review.result }}
+          TEXT_ONLY: ${{ needs.discover.outputs.text_only }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
           MODE=none
-          if [ "$WANTED" != "false" ]; then
+          if [ "$WANTED" != "false" ] && [ "$TEXT_ONLY" = "true" ]; then
+            # A letter has no build; its transcript is what ships to review.
+            if [ -f "talks/${TALK_ID}/transcript_uk.txt" ]; then
+              if [ "$TRANSLATE_RESULT" = "success" ]; then
+                MODE=rebuilt
+              elif [ "$TRANSLATE_RESULT" = "skipped" ]; then
+                MODE=existing
+              fi
+            fi
+          elif [ "$WANTED" != "false" ]; then
             if [ "$BUILD_RESULT" = "success" ]; then
               MODE=rebuilt
             elif [ "$BUILD_RESULT" = "skipped" ] && compgen -G "talks/${TALK_ID}/*/final/uk.srt" > /dev/null; then
@@ -1315,6 +1338,7 @@ jobs:
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
           MODE: ${{ steps.review-gate.outputs.mode }}
+          TEXT_ONLY: ${{ needs.discover.outputs.text_only }}
         run: |
           # Derive the Pages base from the repo context so a transfer needs no
           # edit. GitHub Pages host is the lowercased owner.
@@ -1340,6 +1364,11 @@ jobs:
             gh issue reopen "$EXISTING"
             gh issue edit "$EXISTING" --remove-label "$DROP_LABELS" --add-label "$NEXT_LABEL,talk-review"
           else
+            if [ "$TEXT_ONLY" = "true" ]; then
+              READ_STEP="Read the transcript side by side with the English, review the translation"
+            else
+              READ_STEP="Watch the video with subtitles, review the translation"
+            fi
             META_TITLE=$(python3 -c "import yaml; print(yaml.safe_load(open('talks/$TALK_ID/meta.yaml'))['title'])" 2>/dev/null || echo "$TALK_ID")
             gh issue create \
               --title "Review: $TALK_ID" \
@@ -1356,7 +1385,7 @@ jobs:
           ### How to review
           1. Open the [SPA review page]($SPA_BASE/#/review/$TALK_ID)
           2. Assign yourself to this issue to claim the review
-          3. Watch the video with subtitles, review the translation
+          3. $READ_STEP
           4. Report problems as comments on this issue
           5. When done, add the \`review:approved\` label
           ISSUEEOF
