@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-16T19:09:00.872110+00:00",
+  "updated_at": "2026-11-16T19:10:19.127825+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -739,7 +739,7 @@
       "reviewer": "IrynaFilSY",
       "issue_number": 1234,
       "updated_at": "2026-11-14T19:56:12Z",
-      "operator_stage": "ready",
+      "operator_stage": "delivered",
       "operator": null,
       "operator_issue": 1278
     },
