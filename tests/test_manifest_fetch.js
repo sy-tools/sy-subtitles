@@ -132,10 +132,13 @@ describe('minutesUntilReset', () => {
 describe('rawFileUrl — content is read at the manifest commit, never at the branch', () => {
   const ROOT = 'https://raw.githubusercontent.com/o/r';
   const C = '0123456789abcdef0123456789abcdef01234567';
-  it('pins the commit and tags the blob, so the URL is new whenever the bytes are', () => {
+  it('pins the commit and tags the FULL blob sha, so the tag names the bytes', () => {
+    // The service worker shares this key across commits; a short prefix could be
+    // matched by a crafted blob in another commit (see sw_routing cacheKeyFor).
+    const BLOB = 'ab12cd34ef' + '0'.repeat(30);
     assert.strictEqual(
-      rawFileUrl(ROOT, C, 'main', 'talks/x/final/uk.srt', 'ab12cd34ef'),
-      ROOT + '/' + C + '/talks/x/final/uk.srt?v=ab12cd34',
+      rawFileUrl(ROOT, C, 'main', 'talks/x/final/uk.srt', BLOB),
+      ROOT + '/' + C + '/talks/x/final/uk.srt?v=' + BLOB,
     );
   });
   it('without a known commit reads the branch and claims no version', () => {

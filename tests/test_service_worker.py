@@ -268,8 +268,8 @@ class TestServiceWorkerOffline:
         # some commit WHILE ONLINE — only a cache-first route with that key
         # returns the sentinel instead of going to the network.
         _register_sw(page, server)
-        key = "https://raw.githubusercontent.com/o/r/@/talks/x/uk/final/uk.srt?v=ab12cd34"
-        srt_url = "https://raw.githubusercontent.com/o/r/" + "a" * 40 + "/talks/x/uk/final/uk.srt?v=ab12cd34"
+        key = "https://raw.githubusercontent.com/o/r/@/talks/x/uk/final/uk.srt?v=" + "b" * 40
+        srt_url = "https://raw.githubusercontent.com/o/r/" + "a" * 40 + "/talks/x/uk/final/uk.srt?v=" + "b" * 40
         page.evaluate(
             "async (u) => { const c = await caches.open('sy-subtitles-c21');"
             " await c.put(u, new Response('CACHED-SRT',"

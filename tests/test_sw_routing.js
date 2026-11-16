@@ -152,18 +152,31 @@ describe('pickStrategy — the routing the fetch handler applies', () => {
   });
 });
 
+const B1 = 'b'.repeat(40);
+const B2 = 'b'.repeat(8) + 'c'.repeat(32);
+
 describe('cacheKeyFor — commit-pinned content is cached by blob, not by commit', () => {
-  it('maps the same blob under any commit to one key', () => {
+  it('maps the same full blob sha under any commit to one key', () => {
     // Every commit (a bot status update included) changes the URL of every
     // file; keyed by commit, each would be downloaded again though unchanged.
     assert.strictEqual(
-      cacheKeyFor(pinned(C1, 'talks/x/uk/final/uk.srt', 'ab12cd34')),
-      cacheKeyFor(pinned(C2, 'talks/x/uk/final/uk.srt', 'ab12cd34')),
+      cacheKeyFor(pinned(C1, 'talks/x/uk/final/uk.srt', B1)),
+      cacheKeyFor(pinned(C2, 'talks/x/uk/final/uk.srt', B1)),
     );
   });
   it('keeps different blobs and different paths apart', () => {
-    assert.notStrictEqual(cacheKeyFor(pinned(C1, 'a.srt', 'ab12cd34')), cacheKeyFor(pinned(C1, 'a.srt', 'ffff0000')));
-    assert.notStrictEqual(cacheKeyFor(pinned(C1, 'a.srt', 'ab12cd34')), cacheKeyFor(pinned(C1, 'b.srt', 'ab12cd34')));
+    assert.notStrictEqual(cacheKeyFor(pinned(C1, 'a.srt', B1)), cacheKeyFor(pinned(C1, 'a.srt', B2)));
+    assert.notStrictEqual(cacheKeyFor(pinned(C1, 'a.srt', B1)), cacheKeyFor(pinned(C1, 'b.srt', B1)));
+  });
+  it('shares a key across commits only for a full blob sha', () => {
+    // A short prefix can be matched by a crafted blob (32 bits is brute-forceable)
+    // in a commit raw serves for this repo (a fork's included); sharing the key
+    // would let that commit's bytes answer for the real file later.
+    assert.notStrictEqual(
+      cacheKeyFor(pinned(C1, 'a.srt', 'ab12cd34')),
+      cacheKeyFor(pinned(C2, 'a.srt', 'ab12cd34')),
+    );
+    assert.strictEqual(cacheKeyFor(pinned(C1, 'a.srt', 'ab12cd34')), pinned(C1, 'a.srt', 'ab12cd34'));
   });
   it('leaves every other URL as it is', () => {
     const urls = [

@@ -88,12 +88,18 @@ function isCommitPinnedRaw(url) {
   }
 }
 
-// The cache key of commit-pinned, blob-tagged content drops the commit: the
-// blob sha already names the bytes, and keyed by commit every file would be
-// downloaded again after any commit, a bot status update included.
+// The cache key of commit-pinned content drops the commit when ?v= is a FULL
+// blob sha: that sha names the bytes, and keyed by commit every file would be
+// downloaded again after any commit, a bot status update included. A short
+// prefix keeps the commit: raw serves any commit of the repo's network (a
+// fork's included), and a crafted blob matching 8 hex digits there must not
+// answer for the real file under a shared key.
+var FULL_BLOB_SHA = /^[0-9a-f]{40}$/;
+
 function cacheKeyFor(url) {
-  if (!isCommitPinnedRaw(url) || !hasImmutableVersion(url)) return url;
+  if (!isCommitPinnedRaw(url)) return url;
   var u = new URL(url);
+  if (!FULL_BLOB_SHA.test(u.searchParams.get('v') || '')) return url;
   u.pathname = u.pathname.replace(RAW_COMMIT_PATH, function (m, sha) { return m.replace(sha, '@'); });
   return u.toString();
 }
