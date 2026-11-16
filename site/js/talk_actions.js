@@ -24,7 +24,7 @@ function talkActionVisibility(tk) {
 // an unknown talk (manifest not loaded) is left to the preview's own handling.
 // countedVideos comes from js/pipeline_stages.js, loaded before this file.
 function previewRedirect(tk) {
-  if (!tk || !tk.id) return null;
+  if (!tk || !tk.id || !tk.title) return null;  // meta.yaml not loaded: unknown, not a letter
   var counted = typeof countedVideos === 'function' ? countedVideos : require('./pipeline_stages').countedVideos;
   return counted(tk).length === 0 ? '#/review/' + tk.id : null;
 }

@@ -46,17 +46,21 @@ describe('talkActionVisibility', () => {
 // goes to the transcript review instead of a blank page.
 describe('previewRedirect', () => {
   it('sends a talk without videos to its review', () => {
-    assert.strictEqual(previewRedirect({ id: '1979-01-01_Letter' }), '#/review/1979-01-01_Letter');
-    assert.strictEqual(previewRedirect({ id: '1979-01-01_Letter', videos: [] }), '#/review/1979-01-01_Letter');
+    assert.strictEqual(previewRedirect({ id: '1979-01-01_Letter', title: 'Letter' }), '#/review/1979-01-01_Letter');
+    assert.strictEqual(previewRedirect({ id: '1979-01-01_Letter', title: 'Letter', videos: [] }), '#/review/1979-01-01_Letter');
   });
 
   it('sends a talk whose every video is ignored to its review', () => {
-    var tk = { id: 'T', videos: [video({ sync: 'ignored' })] };
+    var tk = { id: 'T', title: 'T', videos: [video({ sync: 'ignored' })] };
     assert.strictEqual(previewRedirect(tk), '#/review/T');
   });
 
   it('leaves a talk with a video alone, and an unknown talk too', () => {
     assert.strictEqual(previewRedirect({ id: 'T', videos: [video()] }), null);
     assert.strictEqual(previewRedirect(null), null);
+  });
+
+  it('leaves a talk whose meta.yaml has not loaded alone', () => {
+    assert.strictEqual(previewRedirect({ id: 'T', videos: [] }), null);
   });
 });

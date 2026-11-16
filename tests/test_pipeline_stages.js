@@ -9,7 +9,7 @@ const assert = require('node:assert');
 const { getPipelineStages, getOverallStatus } = require('../site/js/pipeline_stages');
 
 function talk(videos, whisperSlugs) {
-  return { videos: videos, _whisperSlugs: whisperSlugs, hasUk: true, hasReviewReport: true };
+  return { title: 'T', videos: videos, _whisperSlugs: whisperSlugs, hasUk: true, hasReviewReport: true };
 }
 
 describe('getPipelineStages: ignored videos', () => {
@@ -69,6 +69,13 @@ describe('getPipelineStages: text-only talks', () => {
     assert.strictEqual(s.textOnly, true);
   });
 
+  it('a talk whose meta.yaml has not loaded yet is not text-only', () => {
+    // buildManifest starts every talk with videos: [] and no title; only a
+    // parsed meta.yaml fills them. Until then the talk is unknown, not a letter.
+    var s = getPipelineStages({ videos: [], _whisperSlugs: [], hasUk: true }, null);
+    assert.strictEqual(s.textOnly, false);
+  });
+
   it('a talk with a counted video is not text-only', () => {
     var s = getPipelineStages(talk([{ slug: 'A', hasSrt: false }], []), null);
     assert.strictEqual(s.textOnly, false);
@@ -77,7 +84,7 @@ describe('getPipelineStages: text-only talks', () => {
 
 describe('getOverallStatus', () => {
   var ISSUE = { status: 'pending', issue_number: 325 };
-  function letter(hasUk) { return { videos: [], _whisperSlugs: [], hasUk: hasUk, hasReviewReport: true }; }
+  function letter(hasUk) { return { title: 'Letter', videos: [], _whisperSlugs: [], hasUk: hasUk, hasReviewReport: true }; }
 
   it('a translated letter with a Review: issue needs review', () => {
     assert.strictEqual(getOverallStatus(getPipelineStages(letter(true), ISSUE), ISSUE), 'ready-for-review');

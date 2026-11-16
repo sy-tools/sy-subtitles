@@ -67,7 +67,9 @@ describe('operator filters', () => {
 const NONE = { translated: false, reviewed: false, srt: false, nVideos: 1, nWhisper: 0, nSrt: 0 };
 const PART = { translated: true, reviewed: false, srt: false, nVideos: 1, nWhisper: 1, nSrt: 0 };
 const DONE = { translated: true, reviewed: true, srt: true, nVideos: 2, nWhisper: 2, nSrt: 2 };
-const TEXT_ONLY = { translated: true, reviewed: true, srt: false, nVideos: 0, nWhisper: 0, nSrt: 0 };
+const TEXT_ONLY = { translated: true, reviewed: true, srt: false, textOnly: true, nVideos: 0, nWhisper: 0, nSrt: 0 };
+// Not hydrated yet: no counted video, but not known to be a letter either.
+const UNKNOWN = { translated: true, reviewed: true, srt: false, textOnly: false, nVideos: 0, nWhisper: 0, nSrt: 0 };
 
 describe('pipelineDone', () => {
   it('is done when the Ukrainian transcript and every video\'s subtitles exist', () => {
@@ -77,6 +79,9 @@ describe('pipelineDone', () => {
   });
   it('a talk without video is done with its transcript', () => {
     assert.strictEqual(pipelineDone(TEXT_ONLY), true);
+  });
+  it('a talk whose meta.yaml has not loaded is not done', () => {
+    assert.strictEqual(pipelineDone(UNKNOWN), false);
   });
 });
 

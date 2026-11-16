@@ -61,7 +61,7 @@ function countOperatorStages(stages) {
 // transcript and, for a talk with video, every video's subtitles.
 // `stages` is getPipelineStages() (js/pipeline_stages.js).
 function pipelineDone(stages) {
-  return !!stages.translated && (stages.nVideos === 0 || !!stages.srt);
+  return !!stages.translated && (!!stages.textOnly || !!stages.srt);
 }
 
 function anyArtifact(stages) {

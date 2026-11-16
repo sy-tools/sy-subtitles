@@ -33,8 +33,10 @@ function getPipelineStages(tk, st) {
     review: st && st.status !== 'pending',
     approved: st && st.status === 'approved',
     // A letter: no counted video, so no whisper and no subtitles to wait for.
-    // The same rule as tools/video_roles.py text_only().
-    textOnly: nVideos === 0,
+    // The same rule as tools/video_roles.py text_only(). Only a talk whose
+    // meta.yaml has loaded (it sets the title) can be one: buildManifest
+    // starts every talk with videos: [], which says nothing yet.
+    textOnly: !!tk.title && nVideos === 0,
     nVideos: nVideos, nWhisper: nWhisper, nSrt: nSrt
   };
 }
