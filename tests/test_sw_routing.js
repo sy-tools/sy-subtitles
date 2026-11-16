@@ -16,7 +16,12 @@ const {
   isNavigation,
   hasImmutableVersion,
   pickStrategy,
+  cacheKeyFor,
 } = require('../site/js/sw_routing');
+
+const C1 = 'a'.repeat(40);
+const C2 = '0123456789abcdef0123456789abcdef01234567';
+const pinned = (c, path, v) => 'https://raw.githubusercontent.com/o/r/' + c + '/' + path + (v ? '?v=' + v : '');
 
 describe('isImmutable — versioned/static assets safe to cache-first', () => {
   it('matches every immutable pattern', () => {
@@ -107,10 +112,19 @@ describe('pickStrategy — the routing the fetch handler applies', () => {
     // raw WITHOUT ?v= (meta.yaml) stays network-first
     assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml'), 'network-first');
   });
-  it('sha-pinned (?v=) raw content is cache-first — instant offline, no redundant refetch', () => {
-    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/uk/final/uk.srt?v=ab12cd34'), 'cache-first');
-    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/transcript_uk.txt?v=deadbee'), 'cache-first');
-    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/review-status.json?v=cafe123'), 'cache-first');
+  it('commit-pinned (?v=) raw content is cache-first — instant offline, no redundant refetch', () => {
+    assert.strictEqual(pickStrategy(pinned(C1, 'talks/x/uk/final/uk.srt', 'ab12cd34')), 'cache-first');
+    assert.strictEqual(pickStrategy(pinned(C1, 'talks/x/transcript_uk.txt', 'deadbee')), 'cache-first');
+    assert.strictEqual(pickStrategy(pinned(C1, 'review-status.json', 'cafe123')), 'cache-first');
+  });
+  it('a ?v= on a BRANCH raw URL is not trusted: the CDN ignores the query', () => {
+    // raw.githubusercontent keys its cache on the path alone, so right after a
+    // push main/x.srt?v=<new blob> still returns the OLD bytes (measured).
+    // Cached as immutable, that old copy would be served for good.
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/uk/final/uk.srt?v=ab12cd34'), 'network-first');
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/review-status.json?v=cafe123'), 'network-first');
+    // a 40-hex segment that is not the ref position does not count
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/' + C1 + '/x.srt?v=ab'), 'network-first');
   });
   it('immutable assets are cache-first', () => {
     assert.strictEqual(pickStrategy('https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'), 'cache-first');
@@ -135,5 +149,42 @@ describe('pickStrategy — the routing the fetch handler applies', () => {
     // isNavigation wins before isImmutable: a hash deep-link is the shell, not an
     // asset, so it must stay network-first.
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/#/icon.png'), 'network-first');
+  });
+});
+
+const B1 = 'b'.repeat(40);
+const B2 = 'b'.repeat(8) + 'c'.repeat(32);
+
+describe('cacheKeyFor — commit-pinned content is cached by blob, not by commit', () => {
+  it('maps the same full blob sha under any commit to one key', () => {
+    // Every commit (a bot status update included) changes the URL of every
+    // file; keyed by commit, each would be downloaded again though unchanged.
+    assert.strictEqual(
+      cacheKeyFor(pinned(C1, 'talks/x/uk/final/uk.srt', B1)),
+      cacheKeyFor(pinned(C2, 'talks/x/uk/final/uk.srt', B1)),
+    );
+  });
+  it('keeps different blobs and different paths apart', () => {
+    assert.notStrictEqual(cacheKeyFor(pinned(C1, 'a.srt', B1)), cacheKeyFor(pinned(C1, 'a.srt', B2)));
+    assert.notStrictEqual(cacheKeyFor(pinned(C1, 'a.srt', B1)), cacheKeyFor(pinned(C1, 'b.srt', B1)));
+  });
+  it('shares a key across commits only for a full blob sha', () => {
+    // A short prefix can be matched by a crafted blob (32 bits is brute-forceable)
+    // in a commit raw serves for this repo (a fork's included); sharing the key
+    // would let that commit's bytes answer for the real file later.
+    assert.notStrictEqual(
+      cacheKeyFor(pinned(C1, 'a.srt', 'ab12cd34')),
+      cacheKeyFor(pinned(C2, 'a.srt', 'ab12cd34')),
+    );
+    assert.strictEqual(cacheKeyFor(pinned(C1, 'a.srt', 'ab12cd34')), pinned(C1, 'a.srt', 'ab12cd34'));
+  });
+  it('leaves every other URL as it is', () => {
+    const urls = [
+      'https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml',
+      pinned(C1, 'talks/x/meta.yaml'),
+      'https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js',
+      'not a url',
+    ];
+    urls.forEach((u) => assert.strictEqual(cacheKeyFor(u), u));
   });
 });

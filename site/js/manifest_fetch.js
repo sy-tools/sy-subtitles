@@ -68,6 +68,18 @@ function minutesUntilReset(rlReset, nowMs) {
   return Math.ceil(ms / 60000);
 }
 
+// The URL a file is READ from. At the manifest's commit when it is known (a
+// full sha): that path is new with every commit, so the raw CDN cannot answer
+// it with a copy cached before the push, and the ?v=<full blob sha> lets the
+// service worker cache it once per content (sw_routing cacheKeyFor: a short
+// prefix would not be safe to share across commits). Without a commit
+// the branch is read with no version: its CDN copy may lag a push by minutes,
+// and tagged as a version it would be cached as if it were current.
+function rawFileUrl(rawRoot, commit, branch, path, blobSha) {
+  if (!/^[0-9a-f]{40}$/.test(commit || '')) return rawRoot + '/' + branch + '/' + path;
+  return rawRoot + '/' + commit + '/' + path + (blobSha ? '?v=' + blobSha : '');
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     rateLimitInfo: rateLimitInfo,
@@ -75,5 +87,6 @@ if (typeof module !== 'undefined' && module.exports) {
     minutesUntilReset: minutesUntilReset,
     reviewStatusFallback: reviewStatusFallback,
     staleNotice: staleNotice,
+    rawFileUrl: rawFileUrl,
   };
 }

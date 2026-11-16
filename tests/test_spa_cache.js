@@ -1168,13 +1168,22 @@ describe('refresh: covers all data sources', () => {
     assert.ok(fnBody[0].includes('Promise.all'), 'refreshManifest should use Promise.all for parallel fetch');
   });
 
-  it('loadReviewStatus uses SHA cache-buster', () => {
+  it('loadReviewStatus reads the file at the manifest commit, tagged by its sha', () => {
     var fs = require('fs');
     var html = fs.readFileSync('site/index.html', 'utf8');
     var fnBody = html.match(/function loadReviewStatus[\s\S]*?^}/m);
     assert.ok(fnBody, 'loadReviewStatus not found');
     assert.ok(fnBody[0].includes('_reviewSha'), 'loadReviewStatus should use _reviewSha');
-    assert.ok(fnBody[0].includes('?v='), 'loadReviewStatus should append ?v= cache-buster');
+    assert.ok(fnBody[0].includes("rawPin('review-status.json'"), 'loadReviewStatus should build its URL with rawPin');
+  });
+
+  it('no versioned raw URL is assembled by hand', () => {
+    // A ?v= on a branch URL is cached by the service worker as immutable while
+    // raw.githubusercontent may still serve the bytes from before the push;
+    // only rawPin (js/manifest_fetch.js rawFileUrl) pins the commit first.
+    var fs = require('fs');
+    var html = fs.readFileSync('site/index.html', 'utf8');
+    assert.ok(!/'\?v='/.test(html), "index.html builds a '?v=' URL itself; use rawPin(path, sha)");
   });
 
   it('review-status.json sha extracted in buildManifest', () => {

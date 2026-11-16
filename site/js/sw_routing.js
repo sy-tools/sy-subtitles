@@ -73,6 +73,37 @@ function hasImmutableVersion(url) {
   }
 }
 
+// raw.githubusercontent keys its CDN cache on the path alone: a query string
+// does not bust it, and for minutes after a push main/<file>?v=<new blob> still
+// returns the OLD bytes. Only a URL whose ref segment is a full commit sha is
+// immutable for real, because the path itself changes with every commit.
+var RAW_COMMIT_PATH = /^\/[^/]+\/[^/]+\/([0-9a-f]{40})\//;
+
+function isCommitPinnedRaw(url) {
+  try {
+    var u = new URL(url);
+    return u.hostname === 'raw.githubusercontent.com' && RAW_COMMIT_PATH.test(u.pathname);
+  } catch (e) {
+    return false;
+  }
+}
+
+// The cache key of commit-pinned content drops the commit when ?v= is a FULL
+// blob sha: that sha names the bytes, and keyed by commit every file would be
+// downloaded again after any commit, a bot status update included. A short
+// prefix keeps the commit: raw serves any commit of the repo's network (a
+// fork's included), and a crafted blob matching 8 hex digits there must not
+// answer for the real file under a shared key.
+var FULL_BLOB_SHA = /^[0-9a-f]{40}$/;
+
+function cacheKeyFor(url) {
+  if (!isCommitPinnedRaw(url)) return url;
+  var u = new URL(url);
+  if (!FULL_BLOB_SHA.test(u.searchParams.get('v') || '')) return url;
+  u.pathname = u.pathname.replace(RAW_COMMIT_PATH, function (m, sha) { return m.replace(sha, '@'); });
+  return u.toString();
+}
+
 // The single source of truth for the fetch handler's branch.
 //  - the GitHub Trees API → network-only: never cached, so offline the app sees a
 //    real failure and shows its cached-manifest + offline badge (checked FIRST).
@@ -89,7 +120,7 @@ function pickStrategy(url) {
   // network-first again and reintroduce the offline-shadowing bug (a cached
   // 200 making the app believe it is online).
   if (isApiHost(url)) return 'network-only';
-  if (hasImmutableVersion(url)) return 'cache-first';
+  if (hasImmutableVersion(url) && (!isApiOrRaw(url) || isCommitPinnedRaw(url))) return 'cache-first';
   if (isNavigation(url) || isApiOrRaw(url)) return 'network-first';
   if (isImmutable(url)) return 'cache-first';
   return 'network-first';
@@ -103,6 +134,8 @@ if (typeof module !== 'undefined' && module.exports) {
     isApiHost: isApiHost,
     isNavigation: isNavigation,
     hasImmutableVersion: hasImmutableVersion,
+    isCommitPinnedRaw: isCommitPinnedRaw,
+    cacheKeyFor: cacheKeyFor,
     pickStrategy: pickStrategy,
   };
 }
