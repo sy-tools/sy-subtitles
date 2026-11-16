@@ -32,9 +32,9 @@
 ============================================================
   Total blocks: 2196
   CPS: avg=11.1, median=11.2, max=20.0
-  CPS > target: 272 (12.4%)
+  CPS > target: 270 (12.3%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=47.0, max=84
+  CPL: avg=46.9, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -76,7 +76,7 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 11.1 (target ≤15.0)
-  CPS > 15.0: 272 blocks
+  CPS > 15.0: 270 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 3 blocks
