@@ -280,6 +280,36 @@ def test_optimize_introduces_no_hard_cps_violation(tmp_path_factory, blocks: lis
         Block(idx=29, start_ms=50998, end_ms=52198, text="A."),
     ]
 )
+# Second counterexample of the same class: Phase 5 leaves two blocks that span
+# 22001ms together (one over the cap); Phase 0 of the next run, the sparse
+# merge, used to join them regardless and Phase 1b re-split the result.
+@example(
+    blocks=[
+        Block(idx=1, start_ms=0, end_ms=1200, text="A A."),
+        Block(idx=2, start_ms=1280, end_ms=2480, text="A."),
+        Block(idx=3, start_ms=2560, end_ms=3760, text="A."),
+        Block(idx=4, start_ms=3840, end_ms=5040, text="A."),
+        Block(idx=5, start_ms=5120, end_ms=6320, text="A."),
+        Block(idx=6, start_ms=6400, end_ms=7600, text="A A."),
+        Block(idx=7, start_ms=7680, end_ms=8880, text="A A."),
+        Block(idx=8, start_ms=8960, end_ms=10160, text="A A."),
+        Block(idx=9, start_ms=10240, end_ms=11440, text="A."),
+        Block(idx=10, start_ms=11520, end_ms=12720, text="A."),
+        Block(idx=11, start_ms=12800, end_ms=14000, text="A."),
+        Block(idx=12, start_ms=14080, end_ms=16543, text="A."),
+        Block(idx=13, start_ms=17043, end_ms=23243, text="A."),
+        Block(idx=14, start_ms=23743, end_ms=25740, text="A A A A A A A A A."),
+        Block(idx=15, start_ms=26240, end_ms=31973, text="A A AAA AAA."),
+        Block(
+            idx=16,
+            start_ms=32473,
+            end_ms=36301,
+            text="A A AAA AAA AAA AAAA AAAAA AAAAA AAAAAAA AAAAAAA AAAAAAA AAAAAAAA.",
+        ),
+        Block(idx=17, start_ms=36801, end_ms=38001, text="A."),
+        Block(idx=18, start_ms=38081, end_ms=39281, text="A."),
+    ]
+)
 @settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 def test_optimize_is_idempotent(tmp_path_factory, blocks: list[Block]) -> None:
     """optimize(optimize(X)) == optimize(X) — the output is a fixed point."""
