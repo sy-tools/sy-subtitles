@@ -3,6 +3,10 @@ date: '1997-05-25'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1997/05/25/shri-adi-shakti-puja-1997/
 language: en
+subtitle_omit:
+- (Шрі Матаджі усміхається)
+- (Вона виправляє Себе)
+- '[мікрофон]'
 videos:
 - slug: Adi-Shakti-Puja-Impressions
   title: Adi Shakti Puja Impressions
