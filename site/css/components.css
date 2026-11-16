@@ -255,6 +255,11 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 .review-badge.approved { background: var(--primary-bg); color: var(--accent-green); border: 1px solid var(--primary-border); }
 .review-badge.ready-for-review { background: var(--issue-bg); color: var(--accent-orange); border: 1px solid var(--border2); }
 .review-badge.in-progress { background: var(--bg3); color: var(--fg5); border: 1px solid var(--border2); }
+/* Text-only talk (a letter): sits after the date, says "no video here". */
+.talk-kind { display: inline-block; margin-left: var(--space-2); padding: 0 var(--space-2);
+  border-radius: var(--radius-pill); border: 1px solid var(--border2); background: var(--bg3);
+  color: var(--fg5); font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; vertical-align: middle; }
 .ai-tag { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 10px; background: var(--bg3); color: var(--fg6); border: 1px solid var(--border2); margin-left: 4px; }
 .expert-btn { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; background: var(--bg3); color: var(--fg5); border: 1px solid var(--border2); text-decoration: none; margin-left: 6px; }
 .expert-btn:hover { background: var(--bg4); color: var(--link); }

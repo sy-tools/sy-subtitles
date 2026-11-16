@@ -19,6 +19,16 @@ function talkActionVisibility(tk) {
   };
 }
 
+// A preview link to a text-only talk (a letter: no counted video) has no
+// player to open, so it lands on the transcript review. null = no redirect;
+// an unknown talk (manifest not loaded) is left to the preview's own handling.
+// countedVideos comes from js/pipeline_stages.js, loaded before this file.
+function previewRedirect(tk) {
+  if (!tk || !tk.id) return null;
+  var counted = typeof countedVideos === 'function' ? countedVideos : require('./pipeline_stages').countedVideos;
+  return counted(tk).length === 0 ? '#/review/' + tk.id : null;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { talkActionVisibility: talkActionVisibility };
+  module.exports = { talkActionVisibility: talkActionVisibility, previewRedirect: previewRedirect };
 }
