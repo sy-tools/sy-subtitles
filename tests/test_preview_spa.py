@@ -7750,6 +7750,92 @@ class TestFooterBuildStamp:
         assert sw <= cw, f"document is {sw}px wide in a {cw}px window"
 
 
+class TestRefreshReadsStatusesOfTheNewTree:
+    """↻ after a bot commit must show that commit's review statuses. The
+    statuses are read pinned to the manifest's commit, so they must be read
+    from the tree the refresh fetched, not the one the page had before it:
+    pinned to the old commit they are the old bytes for good, however often
+    ↻ is pressed."""
+
+    OLD_COMMIT = "1" * 40
+    NEW_COMMIT = "2" * 40
+    TALK = "2001-01-01_Test-Talk"
+
+    def _tree(self, commit, review_blob):
+        return {
+            "sha": commit,
+            "tree": MOCK_TREE["tree"] + [{"path": "review-status.json", "type": "blob", "sha": review_blob}],
+        }
+
+    def _status(self, status):
+        talk = {**MOCK_REVIEW_STATUS["talks"][self.TALK], "status": status, "reviewer": "IrynaFilSY"}
+        return {**MOCK_REVIEW_STATUS, "talks": {self.TALK: talk}}
+
+    def test_refresh_shows_the_status_committed_after_page_load(self, server, page):
+        tree = {"now": self._tree(self.OLD_COMMIT, "a" * 40)}
+        page.route(
+            "**/api.github.com/**/git/trees/**",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                headers={"ETag": '"' + tree["now"]["sha"] + '"'},
+                body=json.dumps(tree["now"]),
+            ),
+        )
+        page.route(
+            "**/raw.githubusercontent.com/**/review-status.json*",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(self._status("in-progress" if self.NEW_COMMIT in route.request.url else "pending")),
+            ),
+        )
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+
+        tree["now"] = self._tree(self.NEW_COMMIT, "b" * 40)
+        page.evaluate("() => SPA.refreshManifest()")
+        page.wait_for_function(
+            "() => document.getElementById('last-updated').textContent !== t('freshness.refreshing')", timeout=5000
+        )
+        status = page.evaluate("t => reviewStatus.talks[t].status", self.TALK)
+        assert status == "in-progress", "↻ read review-status.json at the commit the page loaded with"
+
+
+class TestUpdatedLabelIsTheCommitDate:
+    """GitHub's Last-Modified on the Trees API does not follow the tree: it
+    stayed on one date across every commit after it."""
+
+    COMMIT = "3" * 40
+
+    def test_label_counts_from_the_head_commit_not_last_modified(self, server, page):
+        import datetime
+
+        tree = {**MOCK_TREE, "sha": self.COMMIT}
+        committed = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=5, seconds=10)
+        page.route(
+            "**/api.github.com/**/git/trees/**",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                headers={"ETag": '"commit-date"', "Last-Modified": "Thu, 12 Nov 2026 16:39:27 GMT"},
+                body=json.dumps(tree),
+            ),
+        )
+        page.route(
+            f"**/api.github.com/**/git/commits/{self.COMMIT}",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"sha": self.COMMIT, "committer": {"date": committed.strftime("%Y-%m-%dT%H:%M:%SZ")}}),
+            ),
+        )
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        page.wait_for_function("() => /\\d/.test(document.getElementById('last-updated').textContent)", timeout=5000)
+        assert page.locator("#last-updated").text_content() == "Updated: 5 min ago"
+
+
 class TestShellUpdateDetection:
     """Refresh (↻) compares the stamped shell version with a fingerprint of the
     live tree and reloads once when they differ."""
