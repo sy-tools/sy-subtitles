@@ -131,7 +131,7 @@ function makeSyncBranchName(login, talkId, target) {
 // fields may include title/body/labels/assignees. Returns number+url+node_id.
 function createIssue(api, token, fields, fetchImpl) {
   return ghJson(api + '/issues', token, { method: 'POST', body: fields }, fetchImpl)
-    .then(function (r) { return { number: r.number, html_url: r.html_url, node_id: r.node_id }; });
+    .then(function (r) { return { number: r.number, html_url: r.html_url, node_id: r.node_id, assignees: r.assignees || [] }; });
 }
 
 // GET /issues/<n> → the fields marker-sync needs for the pull/merge step.
@@ -251,6 +251,10 @@ function passQa(api, token, number, fetchImpl) {
 function addAssignees(api, token, issueNumber, logins, fetchImpl) {
   return ghJson(api + '/issues/' + issueNumber + '/assignees', token,
     { method: 'POST', body: { assignees: logins } }, fetchImpl);
+}
+
+function issueHasAssignee(issue, login) {
+  return ((issue && issue.assignees) || []).some(function (a) { return a && a.login === login; });
 }
 
 function getBranchHeadSha(api, token, branch, fetchImpl) {
@@ -522,6 +526,7 @@ if (typeof module !== 'undefined' && module.exports) {
     listIssuesByCreator: listIssuesByCreator,
     ensureLabel: ensureLabel,
     addAssignees: addAssignees,
+    issueHasAssignee: issueHasAssignee,
     getBranchHeadSha: getBranchHeadSha,
     createRef: createRef,
     getFileSha: getFileSha,
