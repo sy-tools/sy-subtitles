@@ -118,7 +118,7 @@ describe('passQa', () => {
 // Write-path additions (issues / branches / contents / pulls)
 // ---------------------------------------------------------------------------
 const {
-  utf8ToBase64, makeBranchName, createIssue, addAssignees,
+  utf8ToBase64, makeBranchName, createIssue, addAssignees, issueHasAssignee,
   getBranchHeadSha, createRef, getFileSha, putFile, createPull, submitFilesPr,
   isIntegrationAccessError,
 } = require('../site/js/github_api');
@@ -180,10 +180,12 @@ describe('createIssue', () => {
   it('POSTs title/body/labels/assignees with auth and returns number+url', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'POST', match: '/issues', status: 201,
-      payload: { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42' } }], calls);
+      payload: { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42',
+        assignees: [{ login: 'slava' }] } }], calls);
     const res = await createIssue(API, 'gho_x',
       { title: 'Review: t', body: 'b', labels: ['talk-review'], assignees: ['slava'] }, f);
-    assert.deepStrictEqual(res, { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42' });
+    assert.deepStrictEqual(res, { number: 42, html_url: 'https://github.com/x/issues/42', node_id: 'I_42',
+      assignees: [{ login: 'slava' }] });
     assert.strictEqual(calls[0].url, API + '/issues');
     assert.strictEqual(calls[0].headers.Authorization, 'Bearer gho_x');
     assert.deepStrictEqual(calls[0].body,
@@ -205,6 +207,14 @@ describe('addAssignees', () => {
     await addAssignees(API, 'gho_x', 7, ['slava'], f);
     assert.strictEqual(calls[0].url, API + '/issues/7/assignees');
     assert.deepStrictEqual(calls[0].body, { assignees: ['slava'] });
+  });
+});
+
+describe('issueHasAssignee', () => {
+  it('is true only when the login is among the returned assignees', () => {
+    assert.strictEqual(issueHasAssignee({ assignees: [{ login: 'iryna' }] }, 'iryna'), true);
+    assert.strictEqual(issueHasAssignee({ number: 311, assignees: [] }, 'iryna'), false);
+    assert.strictEqual(issueHasAssignee({ number: 311 }, 'iryna'), false);
   });
 });
 
@@ -275,13 +285,13 @@ const {
 } = require('../site/js/github_api');
 
 describe('issue sync primitives (marker sync)', () => {
-  it('createIssue passes labels and plucks number/url/node_id', async () => {
+  it('createIssue passes labels and plucks number/url/node_id/assignees', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'POST', match: '/issues', status: 201,
       payload: { number: 3, html_url: 'u', node_id: 'I_3' } }], calls);
     const r = await createIssue(API, 'gho_x', { title: 't', body: 'b', labels: ['markers'] }, f);
     assert.deepStrictEqual(calls[0].body.labels, ['markers']);
-    assert.deepStrictEqual(r, { number: 3, html_url: 'u', node_id: 'I_3' });
+    assert.deepStrictEqual(r, { number: 3, html_url: 'u', node_id: 'I_3', assignees: [] });
   });
   it('getIssue reads number/state/body/node_id', async () => {
     const f = routerFetch([{ method: 'GET', match: '/issues/5', status: 200,
