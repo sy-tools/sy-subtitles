@@ -255,7 +255,7 @@ textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 .review-badge.approved { background: var(--primary-bg); color: var(--accent-green); border: 1px solid var(--primary-border); }
 .review-badge.ready-for-review { background: var(--issue-bg); color: var(--accent-orange); border: 1px solid var(--border2); }
 .review-badge.in-progress { background: var(--bg3); color: var(--fg5); border: 1px solid var(--border2); }
-/* Text-only talk (a letter): sits after the date, says "no video here". */
+/* Text-only talk (no counted video): sits after the date, says "no video here". */
 .talk-kind { display: inline-block; margin-left: var(--space-2); padding: 0 var(--space-2);
   border-radius: var(--radius-pill); border: 1px solid var(--border2); background: var(--bg3);
   color: var(--fg5); font-family: var(--f-mono); font-size: 10px; letter-spacing: 0.08em;

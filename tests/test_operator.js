@@ -68,7 +68,7 @@ const NONE = { translated: false, reviewed: false, srt: false, nVideos: 1, nWhis
 const PART = { translated: true, reviewed: false, srt: false, nVideos: 1, nWhisper: 1, nSrt: 0 };
 const DONE = { translated: true, reviewed: true, srt: true, nVideos: 2, nWhisper: 2, nSrt: 2 };
 const TEXT_ONLY = { translated: true, reviewed: true, srt: false, textOnly: true, nVideos: 0, nWhisper: 0, nSrt: 0 };
-// Not hydrated yet: no counted video, but not known to be a letter either.
+// Not hydrated yet: no counted video, but not known to be text-only either.
 const UNKNOWN = { translated: true, reviewed: true, srt: false, textOnly: false, nVideos: 0, nWhisper: 0, nSrt: 0 };
 
 describe('pipelineDone', () => {

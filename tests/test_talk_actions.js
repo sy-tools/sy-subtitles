@@ -42,12 +42,12 @@ describe('talkActionVisibility', () => {
   });
 });
 
-// A preview link to a text-only talk (a letter) has no player to open: it
+// A preview link to a text-only talk has no player to open: it
 // goes to the transcript review instead of a blank page.
 describe('previewRedirect', () => {
   it('sends a talk without videos to its review', () => {
-    assert.strictEqual(previewRedirect({ id: '1979-01-01_Letter', title: 'Letter' }), '#/review/1979-01-01_Letter');
-    assert.strictEqual(previewRedirect({ id: '1979-01-01_Letter', title: 'Letter', videos: [] }), '#/review/1979-01-01_Letter');
+    assert.strictEqual(previewRedirect({ id: '2001-02-03_Text-Only-Talk', title: 'Text-only talk' }), '#/review/2001-02-03_Text-Only-Talk');
+    assert.strictEqual(previewRedirect({ id: '2001-02-03_Text-Only-Talk', title: 'Text-only talk', videos: [] }), '#/review/2001-02-03_Text-Only-Talk');
   });
 
   it('sends a talk whose every video is ignored to its review', () => {

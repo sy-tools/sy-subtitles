@@ -56,7 +56,7 @@ describe('getPipelineStages: ignored videos', () => {
   });
 });
 
-// A text-only talk (a letter) has no counted video: no whisper, no subtitles,
+// A text-only talk has no counted video: no whisper, no subtitles,
 // and its transcript alone is what goes to review.
 describe('getPipelineStages: text-only talks', () => {
   it('a talk without videos is text-only', () => {
@@ -71,7 +71,7 @@ describe('getPipelineStages: text-only talks', () => {
 
   it('a talk whose meta.yaml has not loaded yet is not text-only', () => {
     // buildManifest starts every talk with videos: [] and no title; only a
-    // parsed meta.yaml fills them. Until then the talk is unknown, not a letter.
+    // parsed meta.yaml fills them. Until then the talk is unknown, not text-only.
     var s = getPipelineStages({ videos: [], _whisperSlugs: [], hasUk: true }, null);
     assert.strictEqual(s.textOnly, false);
   });
@@ -84,18 +84,18 @@ describe('getPipelineStages: text-only talks', () => {
 
 describe('getOverallStatus', () => {
   var ISSUE = { status: 'pending', issue_number: 325 };
-  function letter(hasUk) { return { title: 'Letter', videos: [], _whisperSlugs: [], hasUk: hasUk, hasReviewReport: true }; }
+  function textOnlyTalk(hasUk) { return { title: 'Text-only talk', videos: [], _whisperSlugs: [], hasUk: hasUk, hasReviewReport: true }; }
 
-  it('a translated letter with a Review: issue needs review', () => {
-    assert.strictEqual(getOverallStatus(getPipelineStages(letter(true), ISSUE), ISSUE), 'ready-for-review');
+  it('a translated text-only talk with a Review: issue needs review', () => {
+    assert.strictEqual(getOverallStatus(getPipelineStages(textOnlyTalk(true), ISSUE), ISSUE), 'ready-for-review');
   });
 
-  it('a letter without a Review: issue is still in progress', () => {
-    assert.strictEqual(getOverallStatus(getPipelineStages(letter(true), null), null), 'in-progress');
+  it('a text-only talk without a Review: issue is still in progress', () => {
+    assert.strictEqual(getOverallStatus(getPipelineStages(textOnlyTalk(true), null), null), 'in-progress');
   });
 
-  it('an untranslated letter is in progress even with an issue', () => {
-    assert.strictEqual(getOverallStatus(getPipelineStages(letter(false), ISSUE), ISSUE), 'in-progress');
+  it('an untranslated text-only talk is in progress even with an issue', () => {
+    assert.strictEqual(getOverallStatus(getPipelineStages(textOnlyTalk(false), ISSUE), ISSUE), 'in-progress');
   });
 
   it('a video talk still needs its subtitles', () => {
@@ -106,7 +106,7 @@ describe('getOverallStatus', () => {
   });
 
   it('the review status outranks the artefacts', () => {
-    var s = getPipelineStages(letter(true), ISSUE);
+    var s = getPipelineStages(textOnlyTalk(true), ISSUE);
     assert.strictEqual(getOverallStatus(s, { status: 'approved' }), 'approved');
     assert.strictEqual(getOverallStatus(s, { status: 'in-progress' }), 'in-review');
   });
