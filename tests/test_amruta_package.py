@@ -184,40 +184,42 @@ def test_append_delivery_creates_then_appends(tmp_path):
     ]
 
 
-# A letter has no video and never gets a final/uk.srt, so its baseline is the
+# A text-only talk has no video and never gets a final/uk.srt, so its baseline is the
 # commit that first landed its Ukrainian transcript.
-LETTER = "1979-01-01_Letter"
-LETTER_META = "title: Letter\ndate: '1979-01-01'\namruta_url: https://www.amruta.org/1979/01/01/marathi-letter-1979/\n"
+TEXT_ONLY_TALK = "2001-02-03_Text-Only-Talk"
+TEXT_ONLY_META = (
+    "title: Text-only talk\ndate: '2001-02-03'\namruta_url: https://www.amruta.org/2001/02/03/text-only-talk/\n"
+)
 
 
 @pytest.fixture
-def letter(tmp_path):
+def text_only_talk(tmp_path):
     _git(tmp_path, "init", "-q")
-    talk = tmp_path / "talks" / LETTER
-    _write(talk / "meta.yaml", LETTER_META)
+    talk = tmp_path / "talks" / TEXT_ONLY_TALK
+    _write(talk / "meta.yaml", TEXT_ONLY_META)
     _write(talk / "transcript_en.txt", EN)
-    _commit(tmp_path, "add letter")
+    _commit(tmp_path, "add text-only talk")
     _write(talk / "transcript_uk.txt", UK)
-    _commit(tmp_path, "Translate letter")
+    _commit(tmp_path, "Translate text-only talk")
     return tmp_path
 
 
-def test_letter_packages_its_uk_transcript_only(letter):
-    files = ap.package_files(letter, LETTER)
+def test_text_only_talk_packages_its_uk_transcript_only(text_only_talk):
+    files = ap.package_files(text_only_talk, TEXT_ONLY_TALK)
     assert set(files) == {"transcript_uk.txt"}
     assert files["transcript_uk.txt"].endswith("Перший абзац.\n\nДругий абзац.\n")
 
 
-def test_letter_ships_the_english_transcript_once_it_is_edited_after_translation(letter):
-    _write(letter / "talks" / LETTER / "transcript_en.txt", EN.replace("fine", "good"))
-    _commit(letter, "Fix EN")
-    assert set(ap.package_files(letter, LETTER)) == {"transcript_uk.txt", "transcript_en.txt"}
+def test_text_only_talk_ships_the_english_transcript_once_it_is_edited_after_translation(text_only_talk):
+    _write(text_only_talk / "talks" / TEXT_ONLY_TALK / "transcript_en.txt", EN.replace("fine", "good"))
+    _commit(text_only_talk, "Fix EN")
+    assert set(ap.package_files(text_only_talk, TEXT_ONLY_TALK)) == {"transcript_uk.txt", "transcript_en.txt"}
 
 
-def test_letter_without_a_uk_transcript_is_refused(tmp_path):
+def test_text_only_talk_without_a_uk_transcript_is_refused(tmp_path):
     _git(tmp_path, "init", "-q")
-    _write(tmp_path / "talks" / LETTER / "meta.yaml", LETTER_META)
-    _write(tmp_path / "talks" / LETTER / "transcript_en.txt", EN)
-    _commit(tmp_path, "add letter")
+    _write(tmp_path / "talks" / TEXT_ONLY_TALK / "meta.yaml", TEXT_ONLY_META)
+    _write(tmp_path / "talks" / TEXT_ONLY_TALK / "transcript_en.txt", EN)
+    _commit(tmp_path, "add text-only talk")
     with pytest.raises(ap.PackageError, match="transcript_uk.txt"):
-        ap.package_files(tmp_path, LETTER)
+        ap.package_files(tmp_path, TEXT_ONLY_TALK)

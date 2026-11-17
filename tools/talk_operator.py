@@ -61,7 +61,7 @@ def talk_exists(talk_id: str) -> bool:
 
 
 def talk_text_only(talk_id: str) -> bool:
-    """A letter: no counted video, so the issue copy speaks of the transcript.
+    """A text-only talk: no counted video, so the issue copy speaks of the transcript.
 
     Only the wording depends on it, so a meta.yaml that cannot be read or
     parsed falls back to the video copy rather than failing the handler.

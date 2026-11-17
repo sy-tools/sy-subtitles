@@ -54,7 +54,7 @@ def resolve_roles(talk_dir: str | Path) -> dict[str, str]:
     talk_dir = Path(talk_dir)
     videos = _load_videos(talk_dir)
     if not videos:
-        # Letters and other text-only talks. Nothing to disambiguate, so
+        # Text-only talks (no video at all). Nothing to disambiguate, so
         # nothing to declare; callers needing a primary fail below.
         return {}
 
@@ -133,7 +133,7 @@ def declared_ignored_slugs(talk_dir: str | Path) -> set[str]:
 def text_only(talk_dir: str | Path) -> bool:
     """True when the talk has no video left once the declared-ignored are dropped.
 
-    Letters carry a transcript and nothing else: no whisper, no subtitles, and
+    A text-only talk carries a transcript and nothing else: no whisper, no subtitles, and
     a review of the transcript alone. A video counts unless meta.yaml says
     `sync: ignored` in so many words — the same rule as whisper discovery —
     so a talk whose videos merely lack a declaration is NOT text-only: its
