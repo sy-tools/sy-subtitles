@@ -1,0 +1,198 @@
+// Review statuses computed live from the GitHub Issues API, for a signed-in
+// user. review-status.json is rebuilt from the same issues by a workflow that
+// lands minutes after a label changes; this reads the issues themselves.
+//
+// applyIssues is the JS twin of apply_issues in
+// .github/scripts/sync-review-status.py — change one and you must change the
+// other. tests/fixtures/review_status_mapping.json runs through both.
+//
+// Single source: loaded via <script src="js/review_status_live.js"> in
+// site/index.html AND required by the Node test suite — no inline mirror.
+
+var GATE_LABEL = 'talk-review';
+var TITLE_PREFIX = 'Review: ';
+var OPERATOR_LABEL = 'talk-operator';
+var OPERATOR_PREFIX = 'Operator: ';
+var OPERATOR_STAGE_LABELS = [
+  ['op:delivered', 'delivered'],
+  ['op:ready', 'ready'],
+  ['op:qa', 'qa'],
+  ['op:review', 'review'],
+  ['op:translator', 'translator'],
+  ['op:pipeline', 'pipeline'],
+];
+
+// The one place the REST issue shape (labels[].name, assignees[].login,
+// updated_at) becomes the `gh issue list --json` shape the Python script reads
+// (updatedAt), so both mappings consume the same rows. Everything else — the
+// body above all — is dropped: these rows are cached in localStorage.
+function normalizeRestIssue(r) {
+  return {
+    number: r.number,
+    title: r.title || '',
+    labels: (r.labels || []).map(function (l) { return { name: typeof l === 'string' ? l : l.name }; }),
+    assignees: (r.assignees || []).map(function (a) { return { login: a.login }; }),
+    updatedAt: r.updated_at || '',
+  };
+}
+
+// An issue carrying both labels arrives in both per-label lists.
+function mergeIssueLists(lists) {
+  var seen = {}, out = [];
+  lists.forEach(function (list) {
+    (list || []).forEach(function (issue) {
+      if (seen[issue.number]) return;
+      seen[issue.number] = true;
+      out.push(issue);
+    });
+  });
+  return out;
+}
+
+function labelNames(issue) {
+  return (issue.labels || []).map(function (l) { return l.name; });
+}
+
+function firstAssignee(issue) {
+  var a = issue.assignees || [];
+  return a.length ? a[0].login : null;
+}
+
+function statusFromLabels(labels) {
+  if (labels.indexOf('review:approved') !== -1) return 'approved';
+  if (labels.indexOf('review:in-progress') !== -1) return 'in-progress';
+  return 'pending';
+}
+
+function operatorStage(labels) {
+  for (var i = 0; i < OPERATOR_STAGE_LABELS.length; i++) {
+    if (labels.indexOf(OPERATOR_STAGE_LABELS[i][0]) !== -1) return OPERATOR_STAGE_LABELS[i][1];
+  }
+  return null;
+}
+
+// Freshest activity wins (updatedAt is ISO-8601 Z, so it sorts as text); the
+// higher number breaks a tie. Never the order the API listed them in.
+function liveIssue(group) {
+  return group.reduce(function (best, issue) {
+    var a = issue.updatedAt || '', b = best.updatedAt || '';
+    return (a > b || (a === b && issue.number > best.number)) ? issue : best;
+  });
+}
+
+// baseTalks: the `talks` of review-status.json — entries no issue covers are
+// kept. talkIds: the talks that exist (manifest ids), standing in for the
+// script's talks/ directory check. Returns a new object; nothing is mutated.
+function applyIssues(baseTalks, issues, talkIds) {
+  var talks = {};
+  Object.keys(baseTalks || {}).forEach(function (id) {
+    talks[id] = Object.assign({}, baseTalks[id]);
+  });
+  var known = {};
+  (talkIds || []).forEach(function (id) { known[id] = true; });
+
+  var byTalk = {}, byTalkOperator = {};
+  function group(map, talkId, issue) {
+    if (!Object.prototype.hasOwnProperty.call(map, talkId)) map[talkId] = [];
+    map[talkId].push(issue);
+  }
+  (issues || []).forEach(function (issue) {
+    var title = issue.title || '';
+    if (title.indexOf(OPERATOR_PREFIX) === 0 && labelNames(issue).indexOf(OPERATOR_LABEL) !== -1) {
+      group(byTalkOperator, title.slice(OPERATOR_PREFIX.length).trim(), issue);
+      return;
+    }
+    if (title.indexOf(TITLE_PREFIX) !== 0) return;
+    var talkId = title.slice(TITLE_PREFIX.length).trim();
+    if (talkId) group(byTalk, talkId, issue);
+  });
+
+  Object.keys(byTalk).forEach(function (talkId) {
+    var winner = liveIssue(byTalk[talkId]);
+    talks[talkId] = {
+      status: statusFromLabels(labelNames(winner)),
+      reviewer: firstAssignee(winner),
+      issue_number: winner.number,
+      updated_at: winner.updatedAt,
+    };
+  });
+
+  Object.keys(byTalkOperator).forEach(function (talkId) {
+    if (!known[talkId]) return;
+    var winner = liveIssue(byTalkOperator[talkId]);
+    if (!Object.prototype.hasOwnProperty.call(talks, talkId)) {
+      talks[talkId] = { status: 'pending', reviewer: null, issue_number: null, updated_at: winner.updatedAt };
+    }
+    talks[talkId].operator_stage = operatorStage(labelNames(winner));
+    talks[talkId].operator = firstAssignee(winner);
+    talks[talkId].operator_issue = winner.number;
+  });
+
+  return talks;
+}
+
+function overlayReviewStatus(reviewStatus, issues, talkIds) {
+  var out = Object.assign({}, reviewStatus || {});
+  out.talks = applyIssues((reviewStatus && reviewStatus.talks) || {}, issues, talkIds);
+  return out;
+}
+
+// Taking a talk assigns the reviewer at once, but `review:in-progress` is put
+// on by a workflow a minute later. In between GitHub truthfully says "pending,
+// assigned" — and the card the reviewer just saw turn "in review" would turn
+// back. So the SPA's own claim (`entry`, made at `since`) outlives the overlay
+// until GitHub agrees, disagrees (another reviewer, or none), or maxAgeMs runs
+// out. claims: { talkId: { entry, since } }. Returns new { talks, claims }.
+function holdClaims(talks, claims, nowMs, maxAgeMs) {
+  var outTalks = Object.assign({}, talks), kept = {};
+  Object.keys(claims || {}).forEach(function (id) {
+    var claim = claims[id], live = outTalks[id];
+    if (nowMs - claim.since > maxAgeMs) return;
+    if (live && (live.status !== 'pending' || live.reviewer !== claim.entry.reviewer)) return;
+    outTalks[id] = Object.assign({}, live, claim.entry);
+    kept[id] = claim;
+  });
+  return { talks: outTalks, claims: kept };
+}
+
+function liveIssuesCacheKey(branch, label) {
+  return 'sy_live_issues__' + branch + '__' + label;
+}
+
+// Every issue behind the statuses, in the gh CLI shape. One query per label:
+// `labels=a,b` means BOTH, and the two kinds of issue carry one each.
+//
+// opts: { api, token, branch, storage, fetchImpl }. Rejects if either query
+// does — half the issues would overlay as "the other half is gone".
+function fetchLiveIssues(opts) {
+  var list = typeof listIssuesByLabelConditional === 'function'
+    ? listIssuesByLabelConditional
+    : require('./github_api').listIssuesByLabelConditional;
+  var storage = opts.storage;
+  function one(label) {
+    var key = liveIssuesCacheKey(opts.branch, label);
+    var cached = null;
+    try { cached = JSON.parse(storage.getItem(key)); } catch (e) { cached = null; }
+    return list(opts.api, opts.token, label, { cached: cached, mapRow: normalizeRestIssue }, opts.fetchImpl)
+      .then(function (res) {
+        try { storage.setItem(key, JSON.stringify({ pages: res.pages })); } catch (e) { /* quota: refetch next time */ }
+        return res.rows;
+      });
+  }
+  return Promise.all([one(GATE_LABEL), one(OPERATOR_LABEL)]).then(mergeIssueLists);
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    GATE_LABEL: GATE_LABEL,
+    OPERATOR_LABEL: OPERATOR_LABEL,
+    OPERATOR_STAGE_LABELS: OPERATOR_STAGE_LABELS,
+    normalizeRestIssue: normalizeRestIssue,
+    mergeIssueLists: mergeIssueLists,
+    applyIssues: applyIssues,
+    overlayReviewStatus: overlayReviewStatus,
+    holdClaims: holdClaims,
+    liveIssuesCacheKey: liveIssuesCacheKey,
+    fetchLiveIssues: fetchLiveIssues,
+  };
+}

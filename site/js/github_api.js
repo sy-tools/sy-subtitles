@@ -180,6 +180,67 @@ function listIssuesByLabel(api, token, label, fetchImpl) {
   return fetchPage(1, []);
 }
 
+// listIssuesByLabel for a caller that asks again and again: every page is a
+// conditional request, and GitHub does not count a 304 against the rate limit.
+//
+// opts.cached is the `{ pages }` a previous call resolved with; opts.mapRow
+// trims a row to what the caller keeps, so the cache never holds issue bodies.
+// Pull requests are dropped: the Issues list API returns them too.
+//
+// ETags are per page, hence a cache per page — under the default
+// newest-created-first order a change to an old issue leaves page 1's ETag as
+// it was. Pages are walked through the Link header, whose URLs GitHub is free
+// to phrase as /repositories/<id>/…; a link is followed only within the API
+// origin, because the token travels with the request.
+//
+// Rejects with Error{status, headerGet} — headerGet feeds rateLimitInfo
+// (js/manifest_fetch.js).
+function listIssuesByLabelConditional(api, token, label, opts, fetchImpl) {
+  var f = fetchImpl || fetch;
+  var PER_PAGE = 100, MAX_PAGES = 20;
+  var mapRow = (opts && opts.mapRow) || function (r) { return r; };
+  var cachedPages = (opts && opts.cached && Array.isArray(opts.cached.pages)) ? opts.cached.pages : [];
+  var origin = api.split('/').slice(0, 3).join('/') + '/';
+  function nextLink(header) {
+    var m = /<([^>]+)>\s*;\s*rel="next"/.exec(header || '');
+    return m && m[1].indexOf(origin) === 0 ? m[1] : null;
+  }
+  function fetchPage(url, pages) {
+    var known = cachedPages[pages.length];
+    if (!known || known.url !== url || !known.etag || !Array.isArray(known.rows)) known = null;
+    var headers = authHeaders(token);
+    if (known) headers['If-None-Match'] = known.etag;
+    return f(url, { headers: headers }).then(function (r) {
+      if (r.status === 304 && known) return known;
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (body) {
+          var e = new Error((body && body.message) || ('HTTP ' + r.status));
+          e.status = r.status;
+          e.headerGet = function (name) { return r.headers.get(name); };
+          throw e;
+        });
+      }
+      return r.json().then(function (list) {
+        var rows = (Array.isArray(list) ? list : [])
+          .filter(function (row) { return !row.pull_request; })
+          .map(mapRow);
+        return { url: url, etag: r.headers.get('ETag') || '', rows: rows,
+          next: nextLink(r.headers.get('Link')) };
+      });
+    }).then(function (page) {
+      pages.push(page);
+      if (page.next && pages.length < MAX_PAGES) return fetchPage(page.next, pages);
+      return pages;
+    });
+  }
+  var first = api + '/issues?labels=' + encodeURIComponent(label) + '&state=all&per_page=' + PER_PAGE;
+  return fetchPage(first, []).then(function (pages) {
+    var rows = [];
+    pages.forEach(function (p) { rows = rows.concat(p.rows); });
+    return { rows: rows, pages: pages };
+  });
+}
+
 // GET /issues?creator=<login>&state=all — the Issues LIST API returns both
 // issues and PRs (PR rows carry a pull_request key, merged_at when merged).
 // One paged query serves the "my work" mine-filter in both normal and expert
@@ -523,6 +584,7 @@ if (typeof module !== 'undefined' && module.exports) {
     updateIssue: updateIssue,
     setIssueState: setIssueState,
     listIssuesByLabel: listIssuesByLabel,
+    listIssuesByLabelConditional: listIssuesByLabelConditional,
     listIssuesByCreator: listIssuesByCreator,
     ensureLabel: ensureLabel,
     addAssignees: addAssignees,
