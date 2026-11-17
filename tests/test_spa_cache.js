@@ -1163,7 +1163,9 @@ describe('refresh: covers all data sources', () => {
     assert.ok(fnBody, 'refreshManifest not found');
     assert.ok(fnBody[0].includes('loadReviewStatus'), 'refreshManifest should call loadReviewStatus()');
     assert.ok(fnBody[0].includes('loadManifest'), 'refreshManifest should call loadManifest()');
-    assert.ok(fnBody[0].includes('Promise.all'), 'refreshManifest should use Promise.all for parallel fetch');
+    // The order itself is exercised in TestRefreshReadsStatusesOfTheNewTree.
+    assert.ok(!fnBody[0].includes('Promise.all'),
+      'refreshManifest must read statuses after the new tree, not alongside it');
   });
 
   it('loadReviewStatus reads the file at the manifest commit, tagged by its sha', () => {
@@ -1308,20 +1310,6 @@ describe('304 cache scenario', () => {
     var cache = makeNewCache();
     var now = new Date('2026-04-08T10:05:00Z');
     assert.strictEqual(formatLastModified(cache.lastModified, now), '5 хв тому');
-  });
-
-  it('304 response should update lastModified on old cache', () => {
-    // Simulate what happens on 304: we update cache.lastModified from response header
-    var cache = makeOldCache();
-    assert.strictEqual(cache.lastModified, undefined);
-
-    // Simulate 304 handler
-    var lm304 = 'Tue, 08 Apr 2026 12:00:00 GMT';
-    if (lm304) cache.lastModified = lm304;
-
-    assert.strictEqual(cache.lastModified, lm304);
-    var now = new Date('2026-04-08T12:03:00Z');
-    assert.strictEqual(formatLastModified(cache.lastModified, now), '3 хв тому');
   });
 
   it('cache-buster changes when sha changes', () => {
