@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-16T21:54:41.781204+00:00",
+  "updated_at": "2026-11-17T06:14:19.001658+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -585,10 +585,10 @@
       "updated_at": "2026-07-04T21:34:18Z"
     },
     "1979-01-01_Letter-Human-Chitta-has-many-illusions": {
-      "status": "in-progress",
-      "reviewer": "SlavaSubotskiy",
+      "status": "pending",
+      "reviewer": null,
       "issue_number": 726,
-      "updated_at": "2026-07-12T20:22:41Z"
+      "updated_at": "2026-11-17T06:14:01Z"
     },
     "2000-07-23_Guru-Puja-Shraddha": {
       "status": "approved",
