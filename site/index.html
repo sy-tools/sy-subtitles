@@ -33,6 +33,7 @@
 <script src="js/vimeo_codec.js"></script>
 <script src="js/end_freeze.js"></script>
 <script src="js/cursor_idle.js"></script>
+<script src="js/preview_keys.js"></script>
 <script src="js/touch_fs_chrome.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/pipeline_stages.js"></script>
@@ -639,6 +640,7 @@
     <div id="fs-subs-resize" class="fs-subs-resize"></div>
     <button id="fs-exit" type="button" class="fs-exit" data-i18n-title="preview.fs_exit" data-i18n-aria-label="preview.fs_exit"
             aria-label="Exit fullscreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+    <div id="fs-capture-dot" class="fs-capture-dot" aria-hidden="true"></div>
     <div id="subtitle-overlay"></div>
     <div class="controls">
       <span id="time-display">00:00:00</span>
@@ -4183,20 +4185,41 @@ SPA.switchPreviewVideo = function(newSlug) {
   location.hash = '#/preview/' + previewState.talkId + '/' + newSlug;
 };
 
+// In fullscreen the list is out of sight, so a mark or an edit is only
+// recorded: the talk plays on, nothing takes focus, and the capture dot shows
+// that the key was heard. The comment or the new wording is written afterwards.
+function previewIsFullscreen() {
+  return document.getElementById('view-preview').classList.contains('fs-mode');
+}
+
+var fsCaptureTimer = null;
+function flashFsCaptureDot() {
+  var dot = document.getElementById('fs-capture-dot');
+  if (!dot) return;
+  dot.removeAttribute('data-flash');
+  void dot.offsetWidth;  // restart the animation on a quick second press
+  dot.setAttribute('data-flash', '');
+  clearTimeout(fsCaptureTimer);
+  fsCaptureTimer = setTimeout(function() { dot.removeAttribute('data-flash'); }, 1200);
+}
+
 SPA.addMarkOrEdit = function() {
-  if (previewState.mode === 'edit') SPA.addEdit();
-  else SPA.addMarker();
+  var inBackground = previewIsFullscreen();
+  if (previewState.mode === 'edit') SPA.addEdit({ inBackground: inBackground });
+  else SPA.addMarker({ inBackground: inBackground });
 };
 
-SPA.addMarker = function() {
+SPA.addMarker = function(opts) {
+  var inBackground = !!(opts && opts.inBackground);
   var tSec = previewState.currentTime;
   var text = previewState.lastText || '(no subtitle)';
   previewState.markers.push({ time: tSec, tc: fmtTime(tSec), text: text, comment: '' });
-  if (previewState.player) previewState.player.pause();
+  if (previewState.player && !inBackground) previewState.player.pause();
   savePreviewState();
   markerNotifySoon();
   renderMarkers();
   updateClearBtn();
+  if (inBackground) { flashFsCaptureDot(); return; }
   var inputs = document.querySelectorAll('.marker-item .comment');
   if (inputs.length) inputs[inputs.length - 1].focus();
 };
@@ -4378,6 +4401,17 @@ var fsCursorIdle = (function() {
   }
   function reclaimFocus() {
     if (playerHasFocus()) document.activeElement.blur();
+    paintKeysAway();
+  }
+  // While the player holds the keyboard the page hears no key at all, so a
+  // mark pressed then would be lost without a trace: the capture dot shows a
+  // faint ring for as long as that lasts.
+  var captureDot = document.getElementById('fs-capture-dot');
+  function paintKeysAway() {
+    if (!captureDot) return;
+    var away = view.classList.contains('fs-mode') && playerHasFocus();
+    if (away) captureDot.setAttribute('data-keys-away', '');
+    else captureDot.removeAttribute('data-keys-away');
   }
   function box() {
     return videoBox(shield.getBoundingClientRect(), view.style.getPropertyValue('--preview-aspect'));
@@ -4433,6 +4467,7 @@ var fsCursorIdle = (function() {
       idle.exit();
       shield.dataset.state = 'off';
     }
+    paintKeysAway();
   }
   new MutationObserver(follow).observe(view, { attributes: true, attributeFilter: ['class'] });
   if (hover && hover.addEventListener) hover.addEventListener('change', follow);
@@ -4457,8 +4492,13 @@ var fsCursorIdle = (function() {
   // menus open. Focus leaving the window for another app does not count.
   window.addEventListener('blur', function() {
     var since = Date.now();
-    setTimeout(function() { if (playerHasFocus()) idle.focusedIntoPlayer(since); }, FS_FOCUS_SETTLE_MS);
+    paintKeysAway();
+    setTimeout(function() {
+      if (playerHasFocus()) idle.focusedIntoPlayer(since);
+      paintKeysAway();
+    }, FS_FOCUS_SETTLE_MS);
   });
+  window.addEventListener('focus', paintKeysAway);
   function playerEvent() {
     idle.playerEvent();
     // A button, a menu choice, the keyboard or the SPA's own pause: whatever
@@ -4989,12 +5029,44 @@ document.addEventListener('mouseout', function(e) {
 // can actually see, and a hidden cell yields no rectangles to be over.
 window.addEventListener('hashchange', refreshTypoTip);
 
+// The list is rebuilt whenever the marker sync merges (seconds after a mark,
+// while its comment is still being typed), so a comment field that had focus
+// gets it back, caret and all, on the rebuilt row of the same marker.
+function captureMarkerCommentFocus(list) {
+  var el = document.activeElement;
+  if (!el || !list.contains(el) || !el.classList.contains('comment')) return null;
+  return { key: el.dataset.markerKey, start: el.selectionStart, end: el.selectionEnd };
+}
+
+function restoreMarkerCommentFocus(list, focus) {
+  if (!focus) return;
+  var inputs = list.querySelectorAll('.marker-item .comment');
+  for (var i = 0; i < inputs.length; i++) {
+    if (inputs[i].dataset.markerKey !== focus.key) continue;
+    inputs[i].focus();
+    try { inputs[i].setSelectionRange(focus.start, focus.end); } catch (_) {}
+    return;
+  }
+}
+
+// Removing the focused field fires blur, and a blur flushes the sync, whose
+// merge rebuilds the list again: with a comment being typed that loops into a
+// push every couple of seconds. A rebuild is not the reviewer leaving the field.
+var markerListRebuilding = false;
+
 function renderMarkers() {
   var list = document.getElementById('marker-list');
   var count = document.getElementById('marker-count');
   if (previewState.mode === 'marker') count.textContent = previewState.markers.length;
   if (!list) return;
-  while (list.firstChild) list.removeChild(list.firstChild);
+  var focus = captureMarkerCommentFocus(list);
+  markerListRebuilding = true;
+  try {
+    while (list.firstChild) list.removeChild(list.firstChild);
+  } finally {
+    markerListRebuilding = false;
+  }
+  var keysSeen = {};
   previewState.markers.forEach(function(m, i) {
     var li = document.createElement('li');
     li.className = 'marker-item';
@@ -5016,7 +5088,14 @@ function renderMarkers() {
     input.type = 'text';
     input.placeholder = 'comment...';
     input.value = m.comment || '';
-    input.addEventListener('change', function() { SPA.updateMarkerComment(i, input.value); });
+    // Two marks taken at one moment (the player is paused after a mark) share
+    // a time, so the key also counts which of them this is.
+    var timeKey = String(m.time) + '|' + m.tc;
+    keysSeen[timeKey] = (keysSeen[timeKey] || 0) + 1;
+    input.dataset.markerKey = timeKey + '#' + keysSeen[timeKey];
+    // Stored on every keystroke, not on change: a rebuild of the list in the
+    // middle of typing redraws the field from the stored comment.
+    input.addEventListener('input', function() { SPA.updateMarkerComment(i, input.value); });
     input.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') { input.blur(); SPA.resumePlayer(); }
     });
@@ -5030,6 +5109,7 @@ function renderMarkers() {
     li.appendChild(rowBottom);
     list.appendChild(li);
   });
+  restoreMarkerCommentFocus(list, focus);
 }
 
 function renderEditList() {
@@ -5083,7 +5163,8 @@ function renderEditList() {
   });
 }
 
-SPA.addEdit = function() {
+SPA.addEdit = function(opts) {
+  var inBackground = !!(opts && opts.inBackground);
   var blocks = previewState.subtitles || [];
   if (!blocks.length) { showToast(t('error.srt')); return; }
   var ms = Math.round((previewState.currentTime || 0) * 1000);
@@ -5092,7 +5173,7 @@ SPA.addEdit = function() {
   var lang = previewState.srtLang || 'uk';
   if (!previewState.edits) previewState.edits = {};
   if (!previewState.edits[lang]) previewState.edits[lang] = {};
-  if (previewState.player) previewState.player.pause();
+  if (previewState.player && !inBackground) previewState.player.pause();
   if (previewState.edits[lang][idx] === undefined) {
     previewState.edits[lang][idx] = blocks[idx].text;
     savePreviewState();
@@ -5100,6 +5181,7 @@ SPA.addEdit = function() {
     renderEditList();
     updateClearBtn();
   }
+  if (inBackground) { flashFsCaptureDot(); return; }
   var row = document.querySelector('.edit-item[data-idx="' + idx + '"] .edited');
   if (row) {
     row.focus();
@@ -7316,8 +7398,10 @@ document.addEventListener('keydown', function(e) {
   // these surfaces — the player's other buttons deliberately leave Space to the
   // video.
   if (e.target && e.target.closest && e.target.closest('.prefs, .float-panel, .export-pop')) return;
-  if (e.key === 'f' || e.key === 'F') { SPA.toggleFullscreen(); return; }
-  if (e.key === 'm' || e.key === 'M') { SPA.addMarkOrEdit(); return; }
+  if (isFullscreenKey(e)) { SPA.toggleFullscreen(); return; }
+  // preventDefault: the handler moves focus into the new comment field, and
+  // the press would otherwise go on to type its own letter there.
+  if (isMarkKey(e)) { e.preventDefault(); SPA.addMarkOrEdit(); return; }
   if (e.key === 'ArrowLeft') { e.preventDefault(); SPA.seek(-5); return; }
   if (e.key === 'ArrowRight') { e.preventDefault(); SPA.seek(5); return; }
   if (e.key === ' ') { e.preventDefault(); SPA.togglePlay(); return; }
@@ -8511,6 +8595,7 @@ document.addEventListener('blur', function(e) {
   if (!e.target) return;
   var el = e.target;
   var tag = el.tagName;
+  if (markerListRebuilding) return;
   if (el.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA') {
     if (editSync) editSync.flushSoon();
     if (markerSync) markerSync.flushSoon();
