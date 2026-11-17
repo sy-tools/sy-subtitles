@@ -43,6 +43,7 @@
 <script src="js/passphrase_gate.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
+<script src="js/meta_batch.js"></script>
 <script src="js/edit_sync.js"></script>
 <script src="js/marker_sync.js"></script>
 <script src="js/sync_status_view.js"></script>
@@ -2744,6 +2745,7 @@ function loadManifest() {
       var etag = r.headers.get('ETag');
       return r.json().then(function(data) {
         var m = buildManifest(data.tree);
+        reuseHydratedMeta(m.talks, cache && cache.talks, metaShaIndex(data.tree));
         m.etag = etag;
         // For a branch name the Trees API answers with the COMMIT sha, which is
         // what raw URLs can be pinned to.
@@ -2791,52 +2793,42 @@ function fetchCommitDate(sha, headers) {
     .catch(function() { return ''; });
 }
 
-// Fetch meta.yaml for any talk still missing its title, re-sync hasSrt and
+// Read meta.yaml for any talk still missing its title, re-sync hasSrt and
 // persist. Runs for freshly-built and 304-revalidated manifests. The stale/
 // offline fallbacks bypass it: their per-talk meta refetches would also fail, and
 // the cached manifest they return is already hydrated.
+// The reading itself is js/meta_batch.js (Node-tested): one GraphQL request per
+// batch when signed in, a raw fetch per talk otherwise or when that fails.
 function hydrateManifestMeta(m) {
-  var fetches = [];
-  m.talks.forEach(function(t) {
-    if (!t.title) {
-      fetches.push(
-        fetch(RAW + '/talks/' + t.id + '/meta.yaml')
-          .then(function(r) { return r.ok ? r.text() : ''; })
-          .then(function(text) {
-            if (!text) return;
-            try {
-              var meta = jsyaml.load(text);
-              t.title = meta.title || t.id;
-              t.date = String(meta.date || t.id.substring(0, 10));
-              t.amrutaUrl = meta.amruta_url || '';
-              t.videos = (meta.videos || []).map(function(v) {
-                // Links are stored obfuscated as video_ref (js/vimeo_codec.js).
-                // Decode here at the read edge so the rest of the SPA keeps
-                // working with a plaintext vimeo_url in memory.
-                var vimeoUrl = '';
-                if (v.video_ref) {
-                  try { vimeoUrl = decodeVideoRef(v.video_ref); }
-                  catch (e) { console.warn('bad video_ref for ' + t.id, e); }
-                }
-                // `sync` is kept so the pipeline view can leave a declared-ignored
-                // video out of its counts (js/pipeline_stages.js).
-                return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl, sync: v.sync || '' };
-              });
-              // Mark which videos have SRT
-              var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
-              t.videos.forEach(function(v) {
-                v.hasSrt = srtSet.indexOf(v.slug) !== -1;
-              });
-            } catch(e) { console.warn('YAML parse error for ' + t.id, e); }
-          })
-          // Keep one talk's transient fetch failure from rejecting Promise.all and
-          // throwing away the whole (already-persisted) refresh — degrade to "no
-          // title" for that talk instead.
-          .catch(function(e) { console.warn('meta.yaml load failed for ' + t.id, e); })
-      );
-    }
-  });
-  return Promise.all(fetches).then(function() {
+  var repo = REPO.split('/');
+  return hydrateTalkMeta(m.talks, {
+    token: getAuthToken(),
+    owner: repo[0],
+    name: repo[1],
+    // The tree's own commit, so the blobs read are the ones the tree lists.
+    ref: m.commitSha || BRANCH,
+    graphql: function(token, query, variables) { return ghGraphql(token, query, variables); },
+    // Pinned to the commit for the same reason as rawPin: a branch URL can be
+    // answered from a CDN copy older than the push, and that copy would then
+    // be kept for as long as the blob sha stays the same.
+    fetchRaw: function(talk) {
+      return fetch(rawFileUrl(RAW_ROOT, m.commitSha, BRANCH, 'talks/' + talk.id + '/meta.yaml', talk._metaSha))
+        .then(function(r) { return r.ok ? r.text() : ''; });
+    },
+    apply: function(talk, text) {
+      return applyMetaText(talk, text, {
+        parseYaml: jsyaml.load,
+        decodeVideoRef: decodeVideoRef,
+        warn: console.warn.bind(console),
+      });
+    },
+    warn: console.warn.bind(console),
+    onUnauthorized: function() {
+      clearAuth();
+      updateAuthUI();
+      showToast(t('auth.expired'));
+    },
+  }).then(function() {
     // Always sync hasSrt from _srtSlugs (covers both fresh and cached)
     m.talks.forEach(function(t) {
       var srtSet = Array.isArray(t._srtSlugs) ? t._srtSlugs : [];
