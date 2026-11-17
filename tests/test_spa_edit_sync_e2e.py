@@ -34,6 +34,7 @@ import http.server
 import json
 import threading
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 
@@ -1074,7 +1075,9 @@ def _open_index_recording_meta_reads(browser, server, signed_in):
     def on_request(req):
         if req.url.endswith("/graphql") and "object(expression" in (req.post_data or ""):
             reads["graphql"].append(req)
-        elif "raw.githubusercontent.com" in req.url and req.url.split("?")[0].endswith("/meta.yaml"):
+        elif urlparse(req.url).hostname == "raw.githubusercontent.com" and urlparse(req.url).path.endswith(
+            "/meta.yaml"
+        ):
             reads["raw"].append(req)
 
     pg.on("request", on_request)
