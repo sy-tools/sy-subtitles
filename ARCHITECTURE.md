@@ -325,6 +325,13 @@ Data sources (zero backend):
 - GitHub Trees API → talk discovery (1 API call, cached with ETag)
 - `raw.githubusercontent.com` → meta.yaml, SRT, transcripts
 - `review-status.json` → review badges (static file, no API cost)
+- GitHub Issues API → the same badges, live, for a signed-in session
+  (`site/js/review_status_live.js`). The file trails a label change by the
+  minutes its workflow and the raw CDN take; the issues do not. The file stays
+  the base: it is all an anonymous visitor reads, and what is shown when the API
+  fails. The issue → status mapping exists twice (that module and
+  `.github/scripts/sync-review-status.py`), held together by
+  `tests/fixtures/review_status_mapping.json`, which both test suites run.
 - `localStorage` → markers, edits, preferences, cache
 
 ### Burned videos in the preview

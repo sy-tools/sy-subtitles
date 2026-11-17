@@ -43,6 +43,7 @@
 <script src="js/passphrase_gate.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
+<script src="js/review_status_live.js"></script>
 <script src="js/edit_sync.js"></script>
 <script src="js/marker_sync.js"></script>
 <script src="js/sync_status_view.js"></script>
@@ -3024,6 +3025,54 @@ function loadReviewStatus() {
     .catch(onFail);
 }
 
+// Signed in, the statuses are overlaid with what the Issues API says right now
+// (js/review_status_live.js): review-status.json trails a label change by the
+// minutes its workflow and the raw CDN take. The file stays the base — it is
+// all an anonymous visitor has, and what remains when this fails.
+//
+// Never rejects. Resolves { ok, changed }: ok = GitHub answered, changed = the
+// statuses on screen are no longer the ones this call started from.
+var REVIEW_CLAIM_HOLD_MS = 10 * 60 * 1000;
+var reviewClaims = {};            // talkId → { entry, since }, see holdClaims
+var liveStatusBlockedUntil = 0;   // epoch ms; a rate limit says when to ask again
+function refreshLiveReviewStatus() {
+  var token = getAuthToken();
+  if (!token || !manifest || !reviewStatus || Date.now() < liveStatusBlockedUntil) {
+    return Promise.resolve({ ok: false, changed: false });
+  }
+  return fetchLiveIssues({ api: API, token: token, branch: BRANCH, storage: localStorage })
+    .then(function(issues) {
+      var before = JSON.stringify(reviewStatus.talks || {});
+      var ids = manifest.talks.map(function(tk) { return tk.id; });
+      var live = overlayReviewStatus(reviewStatus, issues, ids);
+      var held = holdClaims(live.talks, reviewClaims, Date.now(), REVIEW_CLAIM_HOLD_MS);
+      live.talks = held.talks;
+      reviewClaims = held.claims;
+      reviewStatus = live;
+      return { ok: true, changed: JSON.stringify(live.talks) !== before };
+    })
+    .catch(function(err) {
+      if (err && err.status === 401 && getAuthToken() === token) {
+        // Revoked/invalid token — the same exit loadManifest takes.
+        clearAuth();
+        updateAuthUI();
+        showToast(t('auth.expired'));
+      }
+      var info = rateLimitInfo(err && err.status, err && err.headerGet);
+      if (info.rateLimited) liveStatusBlockedUntil = info.rlReset ? info.rlReset * 1000 : Date.now() + 60 * 1000;
+      console.warn('[SPA] live review status unavailable, keeping review-status.json:', err);
+      return { ok: false, changed: false };
+    });
+}
+
+function repaintIndexOnLiveStatus() {
+  return refreshLiveReviewStatus().then(function(res) {
+    if (!res.changed) return;
+    renderStats();
+    renderIndex(document.getElementById('index-content'));
+  });
+}
+
 // ============================================================
 // INDEX VIEW
 // ============================================================
@@ -3136,7 +3185,7 @@ function showIndex() {
   var statusEl = document.getElementById('index-status');
   var contentEl = document.getElementById('index-content');
 
-  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); maybeStaleToast(); statusEl.hidden = true; loadMyWork(); return; }
+  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); maybeStaleToast(); statusEl.hidden = true; loadMyWork(); repaintIndexOnLiveStatus(); return; }
 
   // `outcome` is null on success, { msg } on failure: it travels through the
   // loader because the screen may not be free to change the moment the data
@@ -3155,6 +3204,7 @@ function showIndex() {
         playContentEnter();
         maybeStaleToast();
         loadMyWork();
+        repaintIndexOnLiveStatus();
       });
     }
   });
@@ -9039,12 +9089,20 @@ function fetchFreshReviewStatus() {
   });
 }
 
-function pollOperatorStatus() {
-  fetchFreshReviewStatus()
-    .then(function(data) {
+// The labels themselves when GitHub will show them — the bot's move is visible
+// the moment it is made — and the file it eventually lands in otherwise.
+function refreshStatusForOperatorPoll() {
+  return refreshLiveReviewStatus().then(function(res) {
+    if (res.ok) return;
+    return fetchFreshReviewStatus().then(function(data) {
       reviewStatus = data;
       try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
-    })
+    });
+  });
+}
+
+function pollOperatorStatus() {
+  refreshStatusForOperatorPoll()
     .catch(function(err) { console.warn('[SPA] operator status poll failed:', err); })
     .then(function() {
       var talks = (reviewStatus && reviewStatus.talks) || {};
@@ -9237,6 +9295,7 @@ SPA.takeForReview = function(talkId) {
       issue_number: issueNumber,
       updated_at: new Date().toISOString()
     };
+    reviewClaims[talkId] = { entry: Object.assign({}, reviewStatus.talks[talkId]), since: Date.now() };
     renderStats();
     renderIndex(document.getElementById('index-content'));
     showToast(t('review.taken'));
@@ -9584,7 +9643,7 @@ SPA.refreshManifest = function() {
   // pinned to the previous one they would be that commit's bytes for good.
   loadManifest().then(function(m) {
     manifest = m;
-    return loadReviewStatus().then(function() { return m; });
+    return loadReviewStatus().then(refreshLiveReviewStatus).then(function() { return m; });
   }).then(function(m) {
     // Auto-reload if the app shell (index.html or any js/*.js) changed in repo.
     // Guard against a reload loop: if APP_SHELL_VERSION is still stale after a
