@@ -1,4 +1,4 @@
-"""A text-only talk (a letter) runs the pipeline without a build.
+"""A text-only talk (no counted video) runs the pipeline without a build.
 
 It has no video, so there is no whisper and no primary for `prepare-build`
 to resolve — which used to fail the run red on "no video declares
@@ -24,7 +24,7 @@ def _find_step() -> dict:
     return next(s for s in _wf()["jobs"]["discover"]["steps"] if s.get("id") == "find")
 
 
-def _discover(tmp_path: Path, meta: dict, talk_id: str = "1979-01-01_Letter") -> dict:
+def _discover(tmp_path: Path, meta: dict, talk_id: str = "2001-02-03_Text-Only-Talk") -> dict:
     talk = tmp_path / "talks" / talk_id
     talk.mkdir(parents=True)
     (talk / "meta.yaml").write_text(yaml.safe_dump(meta), encoding="utf-8")
@@ -45,8 +45,8 @@ def test_discover_exposes_text_only() -> None:
     assert outputs["text_only"] == "${{ steps.find.outputs.text_only }}"
 
 
-def test_discover_marks_a_letter_text_only(tmp_path: Path) -> None:
-    assert _discover(tmp_path, {"title": "Letter"})["text_only"] == "true"
+def test_discover_marks_a_talk_without_videos_text_only(tmp_path: Path) -> None:
+    assert _discover(tmp_path, {"title": "Text-only talk"})["text_only"] == "true"
 
 
 def test_discover_does_not_mark_a_video_talk_text_only(tmp_path: Path) -> None:

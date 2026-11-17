@@ -32,10 +32,28 @@ function getPipelineStages(tk, st) {
     hasIssue: !!(st && st.issue_number),
     review: st && st.status !== 'pending',
     approved: st && st.status === 'approved',
+    // Text-only: no counted video, so no whisper and no subtitles to wait for.
+    // The same rule as tools/video_roles.py text_only(). Only a talk whose
+    // meta.yaml has loaded (it sets the title) can be one: buildManifest
+    // starts every talk with videos: [], which says nothing yet.
+    textOnly: !!tk.title && nVideos === 0,
     nVideos: nVideos, nWhisper: nWhisper, nSrt: nSrt
   };
 }
 
+// The card's status in normal mode. Subtitles + review issue are the required
+// artefacts. The Ukrainian transcript and the review_report (proofreading)
+// are optional for a video talk: if the SRTs are built and an issue exists,
+// reviewers can start work from the SRT alone. A text-only talk has no SRT,
+// so its translated transcript is what the review needs.
+function getOverallStatus(stages, reviewSt) {
+  if (reviewSt && reviewSt.status === 'approved') return 'approved';
+  if (reviewSt && reviewSt.status === 'in-progress') return 'in-review';
+  var built = stages.textOnly ? !!stages.translated : stages.srt;
+  if (built && stages.hasIssue) return 'ready-for-review';
+  return 'in-progress';
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getPipelineStages: getPipelineStages };
+  module.exports = { getPipelineStages: getPipelineStages, getOverallStatus: getOverallStatus, countedVideos: countedVideos };
 }

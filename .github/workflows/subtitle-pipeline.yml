@@ -161,7 +161,7 @@ jobs:
       # matrix.talk_id) from download names and break commit ("Artifact not
       # found"). Empty when the run was triggered without a talk_id input.
       talk_id: ${{ steps.find.outputs.talk_id }}
-      # 'true' for a talk with no counted video (a letter): it has no whisper
+      # 'true' for a talk with no counted video (text-only): it has no whisper
       # and no primary, so there is no build — only the transcript ships to
       # review. Always 'false' for a run without a talk_id input.
       text_only: ${{ steps.find.outputs.text_only }}
@@ -1293,7 +1293,7 @@ jobs:
       #       existing — no build this run, but the talk already has subtitles
       #       (landed by hand after a failed build): open a missing issue only;
       #       none — checkbox off, failed build, or nothing to review.
-      # A text-only talk (a letter) never builds: its translation stands in
+      # A text-only talk never builds: its translation stands in
       # for the build — made this run is `rebuilt`, already on disk is
       # `existing`, failed or missing is `none`.
       # A failed build announces nothing: resetting the issue to review:pending
@@ -1309,7 +1309,7 @@ jobs:
         run: |
           MODE=none
           if [ "$WANTED" != "false" ] && [ "$TEXT_ONLY" = "true" ]; then
-            # A letter has no build; its transcript is what ships to review.
+            # A text-only talk has no build; its transcript is what ships to review.
             if [ -f "talks/${TALK_ID}/transcript_uk.txt" ]; then
               if [ "$TRANSLATE_RESULT" = "success" ]; then
                 MODE=rebuilt

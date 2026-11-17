@@ -3094,13 +3094,9 @@ describe('Pipeline: getPipelineStages', () => {
   });
 });
 
-// Overall status for compact card view
-function getOverallStatus(stages, reviewSt) {
-  if (reviewSt && reviewSt.status === 'approved') return 'approved';
-  if (reviewSt && reviewSt.status === 'in-progress') return 'in-review';
-  if (stages.srt && stages.translated && stages.hasIssue) return 'ready-for-review';
-  return 'in-progress';
-}
+// Overall status for compact card view — the module itself, not a copy: the
+// inline copy that used to live here had already drifted from the app.
+var getOverallStatus = require('../site/js/pipeline_stages').getOverallStatus;
 
 describe('Pipeline: getOverallStatus', () => {
   it('approved', () => {
@@ -3260,8 +3256,9 @@ describe('Pipeline: manifest tracking', () => {
     assert.ok(css.includes('.review-badge.approved'));
   });
 
-  it('getOverallStatus function exists', () => {
-    assert.ok(html.includes('function getOverallStatus'));
+  it('getOverallStatus comes from js/pipeline_stages.js, with no inline copy', () => {
+    assert.ok(html.includes('<script src="js/pipeline_stages.js'));
+    assert.ok(!html.includes('function getOverallStatus'));
   });
 });
 

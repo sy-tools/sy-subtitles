@@ -91,7 +91,7 @@ def test_gate_decides_from_checkbox_build_and_subtitles(
     assert _gate(tmp_path, wanted=wanted, build=build, subtitles=subtitles) == mode
 
 
-# A text-only talk (a letter) has no build at all — build-timecodes is always
+# A text-only talk has no build at all — build-timecodes is always
 # skipped for it — so the transcript is what ships to review. A translation
 # made this run resets the issue like a rebuild; one already on disk only opens
 # a missing issue; a failed translation announces nothing.
@@ -194,7 +194,7 @@ def test_a_text_only_issue_asks_to_read_the_translation_not_watch_a_video(tmp_pa
 def test_the_review_issue_is_matched_by_its_exact_title(tmp_path: Path) -> None:
     """`in:title` search is tokenised: for `1979-01-01_Letter` it also finds
     `Review: 1979-01-01_Letter-Human-Chitta-has-many-illusions`, and taking
-    the first hit would reset that other letter's issue."""
+    the first hit would reset that other talk's issue."""
     listed = [
         {"number": 726, "title": f"Review: {TALK}-Longer-Sibling"},
         {"number": 325, "title": f"Review: {TALK}"},

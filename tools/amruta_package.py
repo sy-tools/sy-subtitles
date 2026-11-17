@@ -58,10 +58,13 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 def build_baseline(repo: Path, talk_id: str) -> str:
-    # A text-only talk (a letter) is never built: its translation landing is
+    # A text-only talk is never built: its translation landing is
     # what "the first build" means for it.
     if text_only(Path(repo) / "talks" / talk_id):
-        target, missing = f"talks/{talk_id}/transcript_uk.txt", "a transcript_uk.txt — the letter was never translated"
+        target, missing = (
+            f"talks/{talk_id}/transcript_uk.txt",
+            "a transcript_uk.txt — the text-only talk was never translated",
+        )
     else:
         target, missing = f"talks/{talk_id}/*/final/uk.srt", "a final/uk.srt — the talk was never built"
     out = _git(repo, "log", "--diff-filter=A", "--reverse", "--format=%H", "--", target)
