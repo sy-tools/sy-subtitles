@@ -221,10 +221,19 @@ def _wire(pg, calls, review_status, tree=None):
         lambda r: r.fulfill(status=200, content_type="text/html", body="<html></html>"),
     )
     # Write endpoints — registered last so they shadow the generic API mock.
-    pg.route("**/api.github.com/repos/**/issues/42/assignees", h(201, {"number": 42}))
+    pg.route(
+        "**/api.github.com/repos/**/issues/42/assignees", h(201, {"number": 42, "assignees": [{"login": "tester"}]})
+    )
     pg.route(
         "**/api.github.com/repos/**/issues",
-        h(201, {"number": 77, "html_url": "https://github.com/sy-tools/sy-subtitles/issues/77"}),
+        h(
+            201,
+            {
+                "number": 77,
+                "html_url": "https://github.com/sy-tools/sy-subtitles/issues/77",
+                "assignees": [{"login": "tester"}],
+            },
+        ),
     )
     pg.route("**/api.github.com/repos/**/git/ref/heads/main", h(200, {"object": {"sha": "base1"}}))
     pg.route("**/api.github.com/repos/**/git/refs", h(201, {}))
@@ -394,7 +403,7 @@ def test_take_for_review_picks_the_freshest_of_duplicate_issues(server, browser)
     )
     pg.route(
         "**/api.github.com/repos/**/issues/57/assignees",
-        _record(calls)(201, {"number": 57}),
+        _record(calls)(201, {"number": 57, "assignees": [{"login": "tester"}]}),
     )
     pg.goto(f"{server}{SPA_URL}")
     pg.wait_for_selector(".take-review-btn", timeout=10000)
@@ -489,6 +498,30 @@ def test_take_for_review_failure_recovers_the_button(server, browser):
     pg.click(".take-review-btn")
     pg.wait_for_function("document.getElementById('toast').classList.contains('show')", timeout=5000)
     assert "GitHub App" in pg.locator("#toast").text_content()
+    pg.wait_for_function(
+        "document.querySelector('.take-review-btn') && !document.querySelector('.take-review-btn').disabled",
+        timeout=5000,
+    )
+    ctx.close()
+
+
+def test_take_for_review_ignored_by_github_is_not_reported_as_taken(server, browser):
+    """GitHub answers 201 Created to an assignment it dropped, with the
+    reviewer missing from the issue's assignees: the claim did not happen."""
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED)
+    pg.route(
+        "**/api.github.com/repos/**/issues/42/assignees",
+        lambda r: r.fulfill(
+            status=201, content_type="application/json", body=json.dumps({"number": 42, "assignees": []})
+        ),
+    )
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    pg.click(".take-review-btn")
+    pg.wait_for_function("document.getElementById('toast').classList.contains('show')", timeout=5000)
+    assert pg.locator("#toast").text_content() == pg.evaluate("t('review.take_ignored')")
+    assert pg.evaluate("reviewStatus.talks['2001-01-01_Test-Talk'].reviewer") is None
     pg.wait_for_function(
         "document.querySelector('.take-review-btn') && !document.querySelector('.take-review-btn').disabled",
         timeout=5000,
@@ -845,18 +878,9 @@ def test_expert_pipeline_button_dispatches_from_a_form_drawn_from_the_workflow(s
     pg.click(".pipe-run-btn")
     pg.wait_for_selector(".sy-modal .pipe-form", timeout=5000)
     names = pg.eval_on_selector_all(".sy-modal [data-pipe-input]", "els => els.map(e => e.dataset.pipeInput)")
-    assert names == [
-        "whisper",
-        "translate",
-        "review",
-        "build",
-        "timing_source",
-        "dry_run",
-        "model",
-        "build_model",
-        "oauth_token",
-    ]
-    other_model = yaml.safe_load(PIPELINE_YML)[True]["workflow_dispatch"]["inputs"]["model"]["options"][1]
+    dispatch_inputs = yaml.safe_load(PIPELINE_YML)[True]["workflow_dispatch"]["inputs"]
+    assert names == [name for name in dispatch_inputs if name != "talk_id"]
+    other_model = dispatch_inputs["model"]["options"][1]
     pg.select_option(".sy-modal [data-pipe-input='model']", other_model)
     pg.uncheck(".sy-modal [data-pipe-input='translate']")
     pg.click(".sy-modal-btn.primary")
@@ -868,6 +892,7 @@ def test_expert_pipeline_button_dispatches_from_a_form_drawn_from_the_workflow(s
     assert sent["talk_id"] == "2001-01-01_Test-Talk"
     assert sent["model"] == other_model
     assert sent["translate"] == "false" and sent["whisper"] == "true"
+    assert sent["review_issue"] == "true"
     assert pg.get_attribute(".pipe-run", "href") == RUN_URL
     ctx.close()
 

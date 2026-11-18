@@ -639,10 +639,8 @@ describe('Fullscreen mode', () => {
   });
 
   it('F key handler calls toggleFullscreen', () => {
-    // The keyboard handler should check for 'f' or 'F' key
-    assert.ok(html.includes("'f'") || html.includes("'F'") || html.includes('"f"') || html.includes('"F"'),
-      'F key not found in keyboard handler');
-    assert.ok(html.includes('toggleFullscreen'), 'toggleFullscreen not referenced from keyboard handler');
+    assert.ok(/if \(isFullscreenKey\(e\)\) \{ SPA\.toggleFullscreen\(\);/.test(html),
+      'the keyboard handler must toggle fullscreen on isFullscreenKey (js/preview_keys.js)');
   });
 
   it('fullscreenchange listener exists', () => {
@@ -1165,16 +1163,27 @@ describe('refresh: covers all data sources', () => {
     assert.ok(fnBody, 'refreshManifest not found');
     assert.ok(fnBody[0].includes('loadReviewStatus'), 'refreshManifest should call loadReviewStatus()');
     assert.ok(fnBody[0].includes('loadManifest'), 'refreshManifest should call loadManifest()');
-    assert.ok(fnBody[0].includes('Promise.all'), 'refreshManifest should use Promise.all for parallel fetch');
+    // The order itself is exercised in TestRefreshReadsStatusesOfTheNewTree.
+    assert.ok(!fnBody[0].includes('Promise.all'),
+      'refreshManifest must read statuses after the new tree, not alongside it');
   });
 
-  it('loadReviewStatus uses SHA cache-buster', () => {
+  it('loadReviewStatus reads the file at the manifest commit, tagged by its sha', () => {
     var fs = require('fs');
     var html = fs.readFileSync('site/index.html', 'utf8');
     var fnBody = html.match(/function loadReviewStatus[\s\S]*?^}/m);
     assert.ok(fnBody, 'loadReviewStatus not found');
     assert.ok(fnBody[0].includes('_reviewSha'), 'loadReviewStatus should use _reviewSha');
-    assert.ok(fnBody[0].includes('?v='), 'loadReviewStatus should append ?v= cache-buster');
+    assert.ok(fnBody[0].includes("rawPin('review-status.json'"), 'loadReviewStatus should build its URL with rawPin');
+  });
+
+  it('no versioned raw URL is assembled by hand', () => {
+    // A ?v= on a branch URL is cached by the service worker as immutable while
+    // raw.githubusercontent may still serve the bytes from before the push;
+    // only rawPin (js/manifest_fetch.js rawFileUrl) pins the commit first.
+    var fs = require('fs');
+    var html = fs.readFileSync('site/index.html', 'utf8');
+    assert.ok(!/'\?v='/.test(html), "index.html builds a '?v=' URL itself; use rawPin(path, sha)");
   });
 
   it('review-status.json sha extracted in buildManifest', () => {
@@ -1301,20 +1310,6 @@ describe('304 cache scenario', () => {
     var cache = makeNewCache();
     var now = new Date('2026-04-08T10:05:00Z');
     assert.strictEqual(formatLastModified(cache.lastModified, now), '5 хв тому');
-  });
-
-  it('304 response should update lastModified on old cache', () => {
-    // Simulate what happens on 304: we update cache.lastModified from response header
-    var cache = makeOldCache();
-    assert.strictEqual(cache.lastModified, undefined);
-
-    // Simulate 304 handler
-    var lm304 = 'Tue, 08 Apr 2026 12:00:00 GMT';
-    if (lm304) cache.lastModified = lm304;
-
-    assert.strictEqual(cache.lastModified, lm304);
-    var now = new Date('2026-04-08T12:03:00Z');
-    assert.strictEqual(formatLastModified(cache.lastModified, now), '3 хв тому');
   });
 
   it('cache-buster changes when sha changes', () => {
@@ -3085,13 +3080,9 @@ describe('Pipeline: getPipelineStages', () => {
   });
 });
 
-// Overall status for compact card view
-function getOverallStatus(stages, reviewSt) {
-  if (reviewSt && reviewSt.status === 'approved') return 'approved';
-  if (reviewSt && reviewSt.status === 'in-progress') return 'in-review';
-  if (stages.srt && stages.translated && stages.hasIssue) return 'ready-for-review';
-  return 'in-progress';
-}
+// Overall status for compact card view — the module itself, not a copy: the
+// inline copy that used to live here had already drifted from the app.
+var getOverallStatus = require('../site/js/pipeline_stages').getOverallStatus;
 
 describe('Pipeline: getOverallStatus', () => {
   it('approved', () => {
@@ -3251,8 +3242,9 @@ describe('Pipeline: manifest tracking', () => {
     assert.ok(css.includes('.review-badge.approved'));
   });
 
-  it('getOverallStatus function exists', () => {
-    assert.ok(html.includes('function getOverallStatus'));
+  it('getOverallStatus comes from js/pipeline_stages.js, with no inline copy', () => {
+    assert.ok(html.includes('<script src="js/pipeline_stages.js'));
+    assert.ok(!html.includes('function getOverallStatus'));
   });
 });
 

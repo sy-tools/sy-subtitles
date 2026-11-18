@@ -1,7 +1,7 @@
 // Service Worker for SPA caching
 // Browser detects changes by comparing sw.js byte-for-byte.
 // CACHE_VERSION: bump when cache format changes or to force purge.
-var CACHE_VERSION = 20;
+var CACHE_VERSION = 21;
 var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 
 // Routing predicates (isImmutable / isApiOrRaw / isNavigation / pickStrategy) are
@@ -49,6 +49,7 @@ var SHELL_ASSETS = [
   'js/vimeo_codec.js',
   'js/end_freeze.js',
   'js/cursor_idle.js',
+  'js/preview_keys.js',
   'js/touch_fs_chrome.js',
   'js/add_talk_data.js',
   'js/pipeline_stages.js',
@@ -164,12 +165,13 @@ function networkFirst(request) {
 
 // Strategy: cache-first with network fallback
 function cacheFirst(request) {
-  return caches.match(request).then(function(cached) {
+  var key = cacheKeyFor(request.url);
+  return caches.match(key).then(function(cached) {
     if (cached) return cached;
     return fetch(request).then(function(response) {
       if (response.ok) {
         var clone = response.clone();
-        caches.open(CACHE_NAME).then(function(c) { c.put(request, clone); });
+        caches.open(CACHE_NAME).then(function(c) { c.put(key, clone); });
       }
       return response;
     });

@@ -312,3 +312,76 @@ def test_review_created_for_an_older_talk_says_the_pipeline_is_done():
     body = gh.calls[0][4]
     assert "subtitles are built" in body
     assert "- [ ] Run" not in body
+
+
+# A text-only talk has no video and no subtitles: the operator
+# reads the transcript instead of watching anything, and the pipeline builds
+# a translation, not subtitles.
+TEXT_ONLY_TALK = "2001-02-03_Text-Only-Talk"
+TEXT_ONLY_BRANCH = f"sync/IrynaFilSY/{TEXT_ONLY_TALK}--transcript-uk"
+
+
+def _text_only(_talk_id):
+    return True
+
+
+def test_text_only_qa_checklist_reads_the_transcript():
+    body = op._issue_body(TEXT_ONLY_TALK, 7, text_only=True)
+    assert "- [ ] Transcript read in full against the English" in body
+    assert "video" not in body.lower()
+    assert "subtitle" not in body.lower()
+    assert "op:qa-passed" in body
+
+
+def test_text_only_new_talk_body_builds_no_subtitles():
+    body = op._new_talk_body(TEXT_ONLY_TALK, text_only=True)
+    assert "- [ ] Translation and review built" in body
+    assert "whisper" not in body.lower()
+    assert "subtitle" not in body.lower().replace("subtitle-pipeline.yml", "")
+
+
+def test_text_only_translator_body_mentions_the_translation():
+    body = op._translator_body(TEXT_ONLY_TALK, text_only=True)
+    assert "the translation is done" in body
+    assert "subtitles" not in body
+
+
+def test_pr_ready_on_a_text_only_talk_creates_the_text_only_issue():
+    gh = FakeGh()
+    op.on_pr_ready(gh, TEXT_ONLY_BRANCH, 7, talk_exists=lambda _: True, text_only=_text_only)
+    body = gh.calls[0][4]
+    assert "Transcript read in full" in body
+
+
+def test_pr_merged_on_a_text_only_talk_creates_the_text_only_issue():
+    gh = FakeGh()
+    op.on_pr_merged(gh, TEXT_ONLY_BRANCH, 7, talk_exists=lambda _: True, text_only=_text_only)
+    body = next(c for c in gh.calls if c[0] == "create")[4]
+    assert "Transcript read in full" in body
+
+
+def test_talk_added_and_review_created_use_the_text_only_copy():
+    gh = FakeGh()
+    op.on_talk_added(gh, TEXT_ONLY_TALK, talk_exists=lambda _: True, text_only=_text_only)
+    assert "Translation and review built" in gh.calls[0][4]
+    gh = FakeGh()
+    op.on_review_created(gh, TEXT_ONLY_TALK, talk_exists=lambda _: True, text_only=_text_only)
+    assert "the translation is done" in gh.calls[0][4]
+
+
+def test_talk_text_only_reads_the_talk_folder(tmp_path, monkeypatch):
+    (tmp_path / "talks" / TEXT_ONLY_TALK).mkdir(parents=True)
+    (tmp_path / "talks" / TEXT_ONLY_TALK / "meta.yaml").write_text("title: Text-only talk\n", encoding="utf-8")
+    monkeypatch.setattr(op, "ROOT", tmp_path)
+    assert op.talk_text_only(TEXT_ONLY_TALK) is True
+    assert op.talk_text_only("2000-01-01_Missing") is False
+
+
+@pytest.mark.parametrize("meta", ["title: [unclosed\n", "title: T\nvideos:\n"])
+def test_talk_text_only_treats_a_broken_meta_as_a_video_talk(tmp_path, monkeypatch, meta):
+    """The issue copy is not worth crashing the operator bot over: before
+    the text-only check the handlers never parsed meta.yaml at all."""
+    (tmp_path / "talks" / TEXT_ONLY_TALK).mkdir(parents=True)
+    (tmp_path / "talks" / TEXT_ONLY_TALK / "meta.yaml").write_text(meta, encoding="utf-8")
+    monkeypatch.setattr(op, "ROOT", tmp_path)
+    assert op.talk_text_only(TEXT_ONLY_TALK) is False

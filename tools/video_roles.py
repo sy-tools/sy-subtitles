@@ -54,7 +54,7 @@ def resolve_roles(talk_dir: str | Path) -> dict[str, str]:
     talk_dir = Path(talk_dir)
     videos = _load_videos(talk_dir)
     if not videos:
-        # Letters and other text-only talks. Nothing to disambiguate, so
+        # Text-only talks (no video at all). Nothing to disambiguate, so
         # nothing to declare; callers needing a primary fail below.
         return {}
 
@@ -130,11 +130,34 @@ def declared_ignored_slugs(talk_dir: str | Path) -> set[str]:
     return {v["slug"] for v in videos if v.get("sync") == "ignored"}
 
 
+def text_only(talk_dir: str | Path) -> bool:
+    """True when the talk has no video left once the declared-ignored are dropped.
+
+    A text-only talk carries a transcript and nothing else: no whisper, no subtitles, and
+    a review of the transcript alone. A video counts unless meta.yaml says
+    `sync: ignored` in so many words — the same rule as whisper discovery —
+    so a talk whose videos merely lack a declaration is NOT text-only: its
+    build must keep failing on the missing primary.
+    """
+    talk_dir = Path(talk_dir)
+    videos = _load_videos(talk_dir)
+    ignored = declared_ignored_slugs(talk_dir)
+    return not [v for v in videos if v["slug"] not in ignored]
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description="Resolve a talk's subtitle sync roles")
     p.add_argument("--talk-dir", required=True)
     p.add_argument("--role", choices=ROLES, help="Print only slugs with this role")
+    p.add_argument("--text-only", action="store_true", help="Print true/false: the talk has no counted video")
     args = p.parse_args()
+    if args.text_only:
+        try:
+            print("true" if text_only(args.talk_dir) else "false")
+        except RoleError as exc:
+            print(f"::error::{exc}", file=sys.stderr)
+            sys.exit(1)
+        return
     try:
         roles = resolve_roles(args.talk_dir)
     except RoleError as exc:

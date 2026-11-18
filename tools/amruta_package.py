@@ -26,7 +26,7 @@ from urllib.parse import quote, urlencode
 import yaml
 
 from tools.text_normalize import fix_text
-from tools.video_roles import declared_ignored_slugs
+from tools.video_roles import declared_ignored_slugs, text_only
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_DIR = "_for_Amruta"
@@ -58,10 +58,19 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess:
 
 
 def build_baseline(repo: Path, talk_id: str) -> str:
-    out = _git(repo, "log", "--diff-filter=A", "--reverse", "--format=%H", "--", f"talks/{talk_id}/*/final/uk.srt")
+    # A text-only talk is never built: its translation landing is
+    # what "the first build" means for it.
+    if text_only(Path(repo) / "talks" / talk_id):
+        target, missing = (
+            f"talks/{talk_id}/transcript_uk.txt",
+            "a transcript_uk.txt — the text-only talk was never translated",
+        )
+    else:
+        target, missing = f"talks/{talk_id}/*/final/uk.srt", "a final/uk.srt — the talk was never built"
+    out = _git(repo, "log", "--diff-filter=A", "--reverse", "--format=%H", "--", target)
     shas = out.stdout.split()
     if out.returncode != 0 or not shas:
-        raise PackageError(f"{talk_id}: no commit ever added a final/uk.srt — the talk was never built")
+        raise PackageError(f"{talk_id}: no commit ever added {missing}")
     return shas[0]
 
 

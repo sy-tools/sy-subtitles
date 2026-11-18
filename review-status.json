@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-15T19:24:44.815958+00:00",
+  "updated_at": "2026-11-17T17:00:27.935245+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -585,10 +585,10 @@
       "updated_at": "2026-07-04T21:34:18Z"
     },
     "1979-01-01_Letter-Human-Chitta-has-many-illusions": {
-      "status": "in-progress",
-      "reviewer": "SlavaSubotskiy",
+      "status": "pending",
+      "reviewer": null,
       "issue_number": 726,
-      "updated_at": "2026-07-12T20:22:41Z"
+      "updated_at": "2026-11-17T06:14:01Z"
     },
     "2000-07-23_Guru-Puja-Shraddha": {
       "status": "approved",
@@ -687,10 +687,10 @@
       "updated_at": "2026-11-06T23:02:06Z"
     },
     "1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
       "issue_number": 1182,
-      "updated_at": "2026-11-02T11:33:11Z"
+      "updated_at": "2026-11-17T06:17:34Z"
     },
     "1979-11-18_How-to-go-beyond-the-ego-and-know-yourself-Meditation": {
       "status": "pending",
@@ -739,15 +739,18 @@
       "reviewer": "IrynaFilSY",
       "issue_number": 1234,
       "updated_at": "2026-11-14T19:56:12Z",
-      "operator_stage": "qa",
+      "operator_stage": "delivered",
       "operator": null,
       "operator_issue": 1278
     },
     "1999-05-09_Sahasrara-Puja-Our-Awareness-has-to-become-Paramchaitanya": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
       "issue_number": 1249,
-      "updated_at": "2026-11-14T18:40:33Z"
+      "updated_at": "2026-11-17T17:00:07Z",
+      "operator_stage": "review",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1335
     },
     "1977-11-01_You-all-are-Shri-Kalki": {
       "status": "pending",
@@ -757,6 +760,15 @@
       "operator_stage": "pipeline",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1293
+    },
+    "1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1319,
+      "updated_at": "2026-11-16T21:53:21Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1320
     }
   }
 }

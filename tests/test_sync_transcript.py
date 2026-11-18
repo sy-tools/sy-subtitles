@@ -627,6 +627,13 @@ class TestResolveEditsEdgeCases:
         assert err is not None
         assert "ambiguous" in err["error"]
 
+    def test_an_unanchorable_fragment_appearing_twice_in_one_block_is_refused(self):
+        blocks = [{"text": "ххх ВВВ ууу ВВВ"}]
+        edits, err = _resolve_edits(["ААА ВВВ."], ["ААА ССС."], [0], blocks)
+        assert edits == []
+        assert err is not None
+        assert "more than once in its block" in err["error"]
+
 
 class TestParagraphScopedFallback:
     """When the SRT's word stream has drifted from the transcript's — true of
@@ -875,6 +882,31 @@ class TestAlignedLocation:
         assert srt[0]["text"] == "Спокій, і радість тут!", "the first occurrence must not move"
         assert srt[1]["text"] == "Любов, й мудрість там!"
         assert srt[2]["text"] == "Сила, і терпіння скрізь!", "the last occurrence must not move"
+
+    def test_a_fragment_repeated_inside_its_own_block_is_spliced_at_the_edited_word(self, tmp_path):
+        """The island is a stem («розумі») the block holds twice; validation
+        cannot tell a splice into the wrong word from the right one."""
+        talk = tmp_path / "talks" / "test"
+        video = talk / "Video" / "final"
+        video.mkdir(parents=True)
+        (video / "uk.srt").write_text(
+            """1
+00:00:01,000 --> 00:00:05,000
+Але ми не розуміємо цінності розуміння цієї Матері Землі!
+""",
+            encoding="utf-8",
+        )
+        old = HEADER + "Але ми не розуміємо цінності розуміння цієї Матері Землі.\n\nДругий абзац.\n"
+        (talk / "transcript_uk_old.txt").write_text(old, encoding="utf-8")
+        new = HEADER + "Але ми не розуміємо цінності усвідомлення цієї Матері Землі.\n\nДругий абзац.\n"
+        new_path = talk / "new.txt"
+        new_path.write_text(new, encoding="utf-8")
+
+        result = sync_transcript(str(talk), "Video", str(talk / "transcript_uk_old.txt"), str(new_path))
+        assert not result.get("error"), result.get("error")
+
+        srt = parse_srt(str(talk / "Video" / "final" / "uk.srt"))
+        assert srt[0]["text"] == "Але ми не розуміємо цінності усвідомлення цієї Матері Землі!"
 
 
 class TestFindDiffIslands:

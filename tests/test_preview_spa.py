@@ -973,6 +973,173 @@ class TestMarkers:
         assert display != "none"
 
 
+class TestPreviewMarkHotkeys:
+    MARKERS_JS = "JSON.parse(localStorage.getItem('preview_2001-01-01_Test-Talk_Test-Video') || '{}').markers || []"
+
+    def _goto(self, server, page, mode="marker"):
+        _goto_preview_video(page, server)
+        page.click(f'.preview-mode-toggle [data-mode="{mode}"]')
+        page.wait_for_timeout(50)
+        page.evaluate("window._vimeoPlayer._setTime(2)")
+        page.wait_for_timeout(200)
+
+    def _enter_fs(self, page):
+        page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
+        page.wait_for_timeout(50)
+
+    # Playwright's keyboard knows only the US layout; a Ukrainian-layout press
+    # is dispatched as the event the browser would send for it.
+    UK_LAYOUT_CODES = {"ь": "KeyM", "м": "KeyV", "а": "KeyF"}
+
+    def _press(self, page, key):
+        if key not in self.UK_LAYOUT_CODES:
+            page.keyboard.press(key)
+            return
+        page.evaluate(
+            "([key, code]) => (document.activeElement || document.body).dispatchEvent("
+            "new KeyboardEvent('keydown', {key, code, bubbles: true, cancelable: true}))",
+            [key, self.UK_LAYOUT_CODES[key]],
+        )
+
+    def test_mark_key_does_not_type_itself_into_the_comment(self, server, page):
+        self._goto(server, page)
+        page.keyboard.press("m")
+        page.wait_for_timeout(100)
+        assert page.evaluate("document.activeElement.className") == "comment"
+        assert page.locator(".marker-item .comment").first.input_value() == ""
+
+    @pytest.mark.parametrize("key", ["ь", "м", "v", "M"])
+    def test_mark_key_in_either_layout_takes_a_mark(self, server, page, key):
+        self._goto(server, page)
+        self._press(page, key)
+        page.wait_for_timeout(100)
+        assert len(page.evaluate(self.MARKERS_JS)) == 1
+        assert page.locator(".marker-item .comment").first.input_value() == ""
+
+    def test_paste_shortcut_takes_no_mark(self, server, page):
+        self._goto(server, page)
+        page.keyboard.press("ControlOrMeta+v")
+        page.wait_for_timeout(100)
+        assert page.evaluate(self.MARKERS_JS) == []
+
+    def test_edit_key_in_ukrainian_layout_opens_an_edit_without_typing(self, server, page):
+        self._goto(server, page, mode="edit")
+        self._press(page, "ь")
+        page.wait_for_timeout(100)
+        assert page.locator(".edit-item").count() == 1
+        assert page.locator(".edit-item .edited").first.inner_text().strip() == "Перший субтитр"
+
+    def test_marker_list_rerender_keeps_focus_and_typed_comment(self, server, page):
+        # A sync round trip re-renders the list (setMarkers) while the comment
+        # is still being typed.
+        self._goto(server, page)
+        page.keyboard.press("m")
+        page.keyboard.type("abc")
+        page.evaluate("renderMarkers()")
+        assert page.evaluate("document.activeElement.className") == "comment"
+        assert page.locator(".marker-item .comment").first.input_value() == "abc"
+        page.keyboard.type("d")
+        assert page.locator(".marker-item .comment").first.input_value() == "abcd"
+
+    def test_marker_list_rerender_does_not_flush_the_sync_as_a_blur(self, server, page):
+        self._goto(server, page)
+        page.keyboard.press("m")
+        page.keyboard.type("abc")
+        page.evaluate(
+            "window.__flushes = 0;"
+            "window.markerSync = { flushSoon() { window.__flushes++; }, flush() {}, notifyEdit() {} };"
+        )
+        page.evaluate("renderMarkers()")
+        flushes = page.evaluate("window.__flushes")
+        page.evaluate("window.markerSync = null")
+        assert flushes == 0
+
+    def test_marker_list_rerender_refocuses_the_same_of_two_simultaneous_marks(self, server, page):
+        self._goto(server, page)
+        page.click("#btn-mark")
+        page.click("#btn-mark")
+        page.locator(".marker-item .comment").nth(1).click()
+        page.keyboard.type("two")
+        page.evaluate("renderMarkers()")
+        page.keyboard.type("!")
+        values = [c.input_value() for c in page.locator(".marker-item .comment").all()]
+        assert values == ["", "two!"]
+
+    def test_fullscreen_mark_records_without_pausing_or_focusing(self, server, page):
+        self._goto(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        self._enter_fs(page)
+        page.keyboard.press("m")
+        page.wait_for_timeout(100)
+        assert len(page.evaluate(self.MARKERS_JS)) == 1
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert page.evaluate("document.activeElement.tagName") != "INPUT"
+
+    def test_fullscreen_edit_records_without_pausing_or_focusing(self, server, page):
+        self._goto(server, page, mode="edit")
+        page.evaluate("window._vimeoPlayer.play()")
+        self._enter_fs(page)
+        page.keyboard.press("m")
+        page.wait_for_timeout(100)
+        assert page.locator(".edit-item").count() == 1
+        assert page.evaluate("window._vimeoPlayer._paused") is False
+        assert page.evaluate("document.activeElement.isContentEditable") is False
+
+    def test_fullscreen_capture_flashes_the_faint_dot(self, server, page):
+        self._goto(server, page)
+        self._enter_fs(page)
+        dot = page.locator("#fs-capture-dot")
+        assert dot.get_attribute("data-flash") is None
+        page.keyboard.press("m")
+        assert dot.get_attribute("data-flash") is not None
+        assert dot.is_visible()
+        opacity = float(page.evaluate("getComputedStyle(document.getElementById('fs-capture-dot')).opacity"))
+        assert opacity <= 0.6
+
+    @pytest.mark.parametrize("key", ["f", "а"])
+    def test_fullscreen_key_in_either_layout_toggles_fullscreen(self, server, page, key):
+        self._goto(server, page)
+        self._press(page, key)
+        page.wait_for_timeout(100)
+        assert page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
+
+    def _focus_player_frame(self, page):
+        # The mock player is a div; a click into the real one leaves focus on
+        # a control inside its frame, which a same-origin frame can stand for.
+        page.evaluate("""() => new Promise((resolve) => {
+            var frame = document.createElement('iframe');
+            frame.srcdoc = '<button>play</button>';
+            frame.onload = () => { frame.contentDocument.querySelector('button').focus(); resolve(); };
+            document.querySelector('#view-preview .video-wrap').appendChild(frame);
+        })""")
+        page.wait_for_timeout(400)
+
+    def test_capture_dot_rings_while_the_keys_are_the_players(self, server, page):
+        self._goto(server, page)
+        self._enter_fs(page)
+        dot = page.locator("#fs-capture-dot")
+        assert dot.get_attribute("data-keys-away") is None
+        self._focus_player_frame(page)
+        assert dot.get_attribute("data-keys-away") is not None
+        assert dot.is_visible()
+        page.evaluate("document.activeElement.blur()")
+        page.wait_for_timeout(100)
+        assert dot.get_attribute("data-keys-away") is None
+
+    def test_capture_dot_ring_leaves_with_fullscreen(self, server, page):
+        self._goto(server, page)
+        self._enter_fs(page)
+        self._focus_player_frame(page)
+        page.evaluate("document.getElementById('view-preview').classList.remove('fs-mode')")
+        page.wait_for_timeout(100)
+        assert page.locator("#fs-capture-dot").get_attribute("data-keys-away") is None
+
+    def test_capture_dot_stays_hidden_outside_fullscreen(self, server, page):
+        self._goto(server, page)
+        page.keyboard.press("m")
+        assert page.locator("#fs-capture-dot").is_hidden()
+
+
 class TestFullscreenMode:
     """Fullscreen preview mode tests.
 
@@ -1227,18 +1394,15 @@ class TestFullscreenMode:
         page.wait_for_timeout(200)
         assert page.evaluate("window._fsCalled") is True
 
-    def test_f_key_guarded_by_input_check(self, server, page):
-        """Keyboard handler should check for INPUT/TEXTAREA before F key."""
+    def test_f_typed_in_a_comment_does_not_toggle_fullscreen(self, server, page):
         self._goto_preview(server, page)
-        # Verify the keyboard handler has INPUT guard before F key handling
-        # by inspecting the actual JS source order
-        guard_ok = page.evaluate("""() => {
-            var src = document.documentElement.outerHTML;
-            var guardPos = src.indexOf("e.target.tagName === 'INPUT'");
-            var fKeyPos = src.indexOf("'f' || e.key === 'F'");
-            return guardPos > 0 && fKeyPos > 0 && guardPos < fKeyPos;
-        }""")
-        assert guard_ok, "INPUT guard must appear before F key handler"
+        page.click('.preview-mode-toggle [data-mode="marker"]')
+        page.click("#btn-mark")
+        comment = page.locator(".marker-item .comment").first
+        comment.click()
+        page.keyboard.type("fа")
+        assert not page.evaluate("document.getElementById('view-preview').classList.contains('fs-mode')")
+        assert comment.input_value() == "fа"
 
     def test_fullscreen_button_has_title(self, server, page):
         """Fullscreen button should have a title/tooltip."""
@@ -7748,6 +7912,92 @@ class TestFooterBuildStamp:
         page.evaluate("() => { document.getElementById('footer-version').textContent = 'x'.repeat(500); }")
         sw, cw = page.evaluate("() => [document.documentElement.scrollWidth, document.documentElement.clientWidth]")
         assert sw <= cw, f"document is {sw}px wide in a {cw}px window"
+
+
+class TestRefreshReadsStatusesOfTheNewTree:
+    """↻ after a bot commit must show that commit's review statuses. The
+    statuses are read pinned to the manifest's commit, so they must be read
+    from the tree the refresh fetched, not the one the page had before it:
+    pinned to the old commit they are the old bytes for good, however often
+    ↻ is pressed."""
+
+    OLD_COMMIT = "1" * 40
+    NEW_COMMIT = "2" * 40
+    TALK = "2001-01-01_Test-Talk"
+
+    def _tree(self, commit, review_blob):
+        return {
+            "sha": commit,
+            "tree": MOCK_TREE["tree"] + [{"path": "review-status.json", "type": "blob", "sha": review_blob}],
+        }
+
+    def _status(self, status):
+        talk = {**MOCK_REVIEW_STATUS["talks"][self.TALK], "status": status, "reviewer": "IrynaFilSY"}
+        return {**MOCK_REVIEW_STATUS, "talks": {self.TALK: talk}}
+
+    def test_refresh_shows_the_status_committed_after_page_load(self, server, page):
+        tree = {"now": self._tree(self.OLD_COMMIT, "a" * 40)}
+        page.route(
+            "**/api.github.com/**/git/trees/**",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                headers={"ETag": '"' + tree["now"]["sha"] + '"'},
+                body=json.dumps(tree["now"]),
+            ),
+        )
+        page.route(
+            "**/raw.githubusercontent.com/**/review-status.json*",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(self._status("in-progress" if self.NEW_COMMIT in route.request.url else "pending")),
+            ),
+        )
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+
+        tree["now"] = self._tree(self.NEW_COMMIT, "b" * 40)
+        page.evaluate("() => SPA.refreshManifest()")
+        page.wait_for_function(
+            "() => document.getElementById('last-updated').textContent !== t('freshness.refreshing')", timeout=5000
+        )
+        status = page.evaluate("t => reviewStatus.talks[t].status", self.TALK)
+        assert status == "in-progress", "↻ read review-status.json at the commit the page loaded with"
+
+
+class TestUpdatedLabelIsTheCommitDate:
+    """GitHub's Last-Modified on the Trees API does not follow the tree: it
+    stayed on one date across every commit after it."""
+
+    COMMIT = "3" * 40
+
+    def test_label_counts_from_the_head_commit_not_last_modified(self, server, page):
+        import datetime
+
+        tree = {**MOCK_TREE, "sha": self.COMMIT}
+        committed = datetime.datetime.now(datetime.UTC) - datetime.timedelta(minutes=5, seconds=10)
+        page.route(
+            "**/api.github.com/**/git/trees/**",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                headers={"ETag": '"commit-date"', "Last-Modified": "Thu, 12 Nov 2026 16:39:27 GMT"},
+                body=json.dumps(tree),
+            ),
+        )
+        page.route(
+            f"**/api.github.com/**/git/commits/{self.COMMIT}",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"sha": self.COMMIT, "committer": {"date": committed.strftime("%Y-%m-%dT%H:%M:%SZ")}}),
+            ),
+        )
+        goto_spa(page, server)
+        page.wait_for_selector(".talk-item", timeout=10000)
+        page.wait_for_function("() => /\\d/.test(document.getElementById('last-updated').textContent)", timeout=5000)
+        assert page.locator("#last-updated").text_content() == "Updated: 5 min ago"
 
 
 class TestShellUpdateDetection:

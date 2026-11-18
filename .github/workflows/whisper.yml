@@ -326,5 +326,9 @@ jobs:
       - name: Commit via PR
         env:
           GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
+          # The pipeline's build jobs read whisper.json from main, so this job
+          # must not finish before the PR lands. Without the App token the PR
+          # waits for a person instead; the build's whisper check catches that.
+          BOT_PR_WAIT_MERGE_SECONDS: ${{ steps.bot-token.outputs.token != '' && '600' || '' }}
         run: |
           .github/scripts/bot-pr.sh bot/whisper "Add Whisper data" "talks/*/*/source/whisper.json"

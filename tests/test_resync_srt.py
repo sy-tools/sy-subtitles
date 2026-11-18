@@ -176,6 +176,55 @@ def test_resync_secondary_subset_drops_outside_blocks(tmp_path):
     assert "другий" in out_blocks[0]["text"]
 
 
+def _write_closing_fixture(tmp_path, uk_last_start: str, uk_last_end: str):
+    """Anchors are word STARTS, so the last anchor ("you", 1:00:01.5) sits before
+    the EN block's end (1:00:02), and a padded UK block ends later still."""
+    primary_en = tmp_path / "p.en.srt"
+    secondary_en = tmp_path / "s.en.srt"
+    primary_uk = tmp_path / "p.uk.srt"
+    rows = [
+        (1, _ms(0, 59, 50), _ms(0, 59, 56), "for the emancipation of the whole world"),
+        (2, _ms(1, 0, 0), _ms(1, 0, 2), "may god bless you"),
+    ]
+    _write_srt(primary_en, rows)
+    _write_srt(
+        secondary_en,
+        [
+            (1, _ms(0, 55, 50), _ms(0, 55, 56), "for the emancipation of the whole world"),
+            (2, _ms(0, 56, 0), _ms(0, 56, 2), "may god bless you"),
+        ],
+    )
+    _write_srt(
+        primary_uk,
+        [
+            (1, _ms(0, 59, 50), _ms(0, 59, 56), "для звільнення цілого світу."),
+            (2, uk_last_start, uk_last_end, "Хай Бог благословить вас."),
+        ],
+    )
+    return primary_uk, primary_en, secondary_en
+
+
+def test_resync_keeps_aligned_closing_block_whose_padded_end_overshoots(tmp_path):
+    primary_uk, primary_en, secondary_en = _write_closing_fixture(tmp_path, _ms(1, 0, 0), _ms(1, 0, 4, 500))
+    output = tmp_path / "s.uk.srt"
+
+    resync(str(primary_uk), str(primary_en), str(secondary_en), str(output))
+    out_blocks = parse_srt(str(output))
+
+    assert [b["text"] for b in out_blocks] == ["для звільнення цілого світу.", "Хай Бог благословить вас."]
+    secondary_bless_start = 56 * 60_000
+    assert out_blocks[-1]["start_ms"] == secondary_bless_start
+
+
+def test_resync_still_drops_block_starting_after_last_anchor(tmp_path):
+    primary_uk, primary_en, secondary_en = _write_closing_fixture(tmp_path, _ms(1, 0, 2, 200), _ms(1, 0, 6))
+    output = tmp_path / "s.uk.srt"
+
+    resync(str(primary_uk), str(primary_en), str(secondary_en), str(output))
+
+    assert [b["text"] for b in parse_srt(str(output))] == ["для звільнення цілого світу."]
+
+
 def test_resync_no_alignment_exits(tmp_path):
     """Zero text overlap → process exits non-zero."""
     primary_en = tmp_path / "p.en.srt"

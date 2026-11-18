@@ -51,18 +51,6 @@ def test_commit_job_gates_translation_on_translate_success() -> None:
     assert "TRANSLATE_RESULT" in step, "translation placement is not gated on translate-and-review result"
 
 
-def test_review_issue_requires_built_subtitles() -> None:
-    """The review tracking issue used to be created/reset to review:pending
-    even when build-timecodes failed and the run committed no subtitles —
-    if: success() only covers the commit job's own steps."""
-    text = (WORKFLOWS / "subtitle-pipeline.yml").read_text(encoding="utf-8")
-    start = text.find("- name: Create review tracking issue")
-    assert start != -1, "issue step not found"
-    nxt = text.find("- name: ", start + 1)
-    step = text[start : nxt if nxt != -1 else len(text)]
-    assert "needs.build-timecodes.result == 'success'" in step, "issue step does not require build-timecodes success"
-
-
 def _ci_watched_paths() -> str:
     """The path list the CI lanes are gated on.
 

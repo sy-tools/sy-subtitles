@@ -6,6 +6,7 @@ const {
   minutesUntilReset,
   reviewStatusFallback,
   staleNotice,
+  rawFileUrl,
 } = require('../site/js/manifest_fetch');
 
 // header getter double — case-sensitive exact map (production passes a
@@ -125,5 +126,28 @@ describe('minutesUntilReset', () => {
   it('returns null when there is no reset', () => {
     assert.strictEqual(minutesUntilReset(null, now), null);
     assert.strictEqual(minutesUntilReset(0, now), null);
+  });
+});
+
+describe('rawFileUrl — content is read at the manifest commit, never at the branch', () => {
+  const ROOT = 'https://raw.githubusercontent.com/o/r';
+  const C = '0123456789abcdef0123456789abcdef01234567';
+  it('pins the commit and tags the FULL blob sha, so the tag names the bytes', () => {
+    // The service worker shares this key across commits; a short prefix could be
+    // matched by a crafted blob in another commit (see sw_routing cacheKeyFor).
+    const BLOB = 'ab12cd34ef' + '0'.repeat(30);
+    assert.strictEqual(
+      rawFileUrl(ROOT, C, 'main', 'talks/x/final/uk.srt', BLOB),
+      ROOT + '/' + C + '/talks/x/final/uk.srt?v=' + BLOB,
+    );
+  });
+  it('without a known commit reads the branch and claims no version', () => {
+    // A ?v= on a branch URL would be cached as immutable while the CDN may
+    // still hold the previous bytes under that path.
+    assert.strictEqual(rawFileUrl(ROOT, '', 'main', 'review-status.json', 'ab12cd34'), ROOT + '/main/review-status.json');
+    assert.strictEqual(rawFileUrl(ROOT, 'abc1234', 'main', 'review-status.json', 'ab12cd34'), ROOT + '/main/review-status.json');
+  });
+  it('pins the commit even when the blob sha is unknown', () => {
+    assert.strictEqual(rawFileUrl(ROOT, C, 'main', 'talks/x/transcript_uk.txt', ''), ROOT + '/' + C + '/talks/x/transcript_uk.txt');
   });
 });

@@ -61,7 +61,7 @@ function countOperatorStages(stages) {
 // transcript and, for a talk with video, every video's subtitles.
 // `stages` is getPipelineStages() (js/pipeline_stages.js).
 function pipelineDone(stages) {
-  return !!stages.translated && (stages.nVideos === 0 || !!stages.srt);
+  return !!stages.translated && (!!stages.textOnly || !!stages.srt);
 }
 
 function anyArtifact(stages) {
@@ -122,6 +122,24 @@ function packageFiles(tree, talkId) {
   return names.sort();
 }
 
+// A wait on the bot is stored so it outlives the tab: after a reload the card
+// would otherwise offer the action again while the bot is still running, and
+// a second "QA passed" re-runs the package job. Only waits on the card stages
+// (qa, ready) inside the live poll's window survive; anything else is dropped.
+function restoreWaiting(stored, now, maxMs) {
+  var out = {};
+  if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return out;
+  Object.keys(stored).forEach(function (id) {
+    var w = stored[id];
+    if (!w || (w.stage !== 'qa' && w.stage !== 'ready')) return;
+    if (typeof w.since !== 'number' || typeof w.issue !== 'number') return;
+    var age = now - w.since;
+    if (age < 0 || age > maxMs) return;
+    out[id] = { stage: w.stage, since: w.since, issue: w.issue };
+  });
+  return out;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     OPERATOR_FILTERS: OPERATOR_FILTERS,
@@ -135,5 +153,6 @@ if (typeof module !== 'undefined' && module.exports) {
     talkPhase: talkPhase,
     operatorStep: operatorStep,
     packageFiles: packageFiles,
+    restoreWaiting: restoreWaiting,
   };
 }

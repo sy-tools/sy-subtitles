@@ -1,6 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { talkActionVisibility } = require('../site/js/talk_actions');
+const { talkActionVisibility, previewRedirect } = require('../site/js/talk_actions');
 
 const video = (over) => Object.assign({ slug: 'v1', hasSrt: true, vimeo_url: 'https://vimeo.com/1/a' }, over || {});
 
@@ -39,5 +39,28 @@ describe('talkActionVisibility', () => {
   it('shows nothing for an empty / missing talk', () => {
     assert.deepStrictEqual(talkActionVisibility({}), { preview: false, review: false });
     assert.deepStrictEqual(talkActionVisibility(null), { preview: false, review: false });
+  });
+});
+
+// A preview link to a text-only talk has no player to open: it
+// goes to the transcript review instead of a blank page.
+describe('previewRedirect', () => {
+  it('sends a talk without videos to its review', () => {
+    assert.strictEqual(previewRedirect({ id: '2001-02-03_Text-Only-Talk', title: 'Text-only talk' }), '#/review/2001-02-03_Text-Only-Talk');
+    assert.strictEqual(previewRedirect({ id: '2001-02-03_Text-Only-Talk', title: 'Text-only talk', videos: [] }), '#/review/2001-02-03_Text-Only-Talk');
+  });
+
+  it('sends a talk whose every video is ignored to its review', () => {
+    var tk = { id: 'T', title: 'T', videos: [video({ sync: 'ignored' })] };
+    assert.strictEqual(previewRedirect(tk), '#/review/T');
+  });
+
+  it('leaves a talk with a video alone, and an unknown talk too', () => {
+    assert.strictEqual(previewRedirect({ id: 'T', videos: [video()] }), null);
+    assert.strictEqual(previewRedirect(null), null);
+  });
+
+  it('leaves a talk whose meta.yaml has not loaded alone', () => {
+    assert.strictEqual(previewRedirect({ id: 'T', videos: [] }), null);
   });
 });

@@ -32,7 +32,11 @@ import re
 import subprocess
 from pathlib import Path
 
+import yaml
+
 from tools.roles import is_operator, operator_login
+from tools.video_roles import RoleError
+from tools.video_roles import text_only as _talk_dir_text_only
 from tools.workflow_validation import TALK_ID_RE
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,6 +58,18 @@ def talk_id_from_branch(branch: str) -> str | None:
 
 def talk_exists(talk_id: str) -> bool:
     return (ROOT / "talks" / talk_id / "meta.yaml").is_file()
+
+
+def talk_text_only(talk_id: str) -> bool:
+    """A text-only talk: no counted video, so the issue copy speaks of the transcript.
+
+    Only the wording depends on it, so a meta.yaml that cannot be read or
+    parsed falls back to the video copy rather than failing the handler.
+    """
+    try:
+        return _talk_dir_text_only(ROOT / "talks" / talk_id)
+    except (RoleError, OSError, ValueError, TypeError, yaml.YAMLError):
+        return False
 
 
 def operator_title(talk_id: str) -> str:
@@ -89,31 +105,37 @@ def next_labels(
     raise ValueError(f"unknown event {event!r}")
 
 
-def _issue_body(talk_id: str, pr_number: int) -> str:
+def _issue_body(talk_id: str, pr_number: int, text_only: bool = False) -> str:
+    checks = (
+        "- [ ] Transcript read in full against the English\n\n"
+        if text_only
+        else "- [ ] First video watched in full with subtitles\n- [ ] Other videos: subtitles present and in sync\n\n"
+    )
     return (
         f"Operator work on `{talk_id}`.\n\n"
         f"Translator PR: #{pr_number}\n\n"
         "### QA\n"
-        "- [ ] First video watched in full with subtitles\n"
-        "- [ ] Other videos: subtitles present and in sync\n\n"
+        f"{checks}"
         f"When QA is done, add the label `{QA_PASSED}`.\n"
     )
 
 
-def _new_talk_body(talk_id: str) -> str:
+def _new_talk_body(talk_id: str, text_only: bool = False) -> str:
+    built = "Translation and review built" if text_only else "Whisper, translation, review and subtitles built"
     return (
         f"Operator work on `{talk_id}`.\n\n"
         "### Before the translator\n"
         f"- [ ] Run `subtitle-pipeline.yml` for `{talk_id}` (the SPA's Run pipeline)\n"
-        "- [ ] Whisper, translation, review and subtitles built\n\n"
+        f"- [ ] {built}\n\n"
         "The pipeline moves this issue to `op:translator` when it opens the `Review:` issue.\n"
     )
 
 
-def _translator_body(talk_id: str) -> str:
+def _translator_body(talk_id: str, text_only: bool = False) -> str:
+    done = "the translation is done" if text_only else "subtitles are built"
     return (
         f"Operator work on `{talk_id}`.\n\n"
-        "The subtitle pipeline is done: subtitles are built and the `Review:` issue is open.\n"
+        f"The subtitle pipeline is done: {done} and the `Review:` issue is open.\n"
         "This issue moves to `op:review` when the translator's sync PR is ready.\n"
     )
 
@@ -122,21 +144,21 @@ def _create(gh, talk_id: str, stage: str, body: str) -> int:
     return gh.create_issue(operator_title(talk_id), body, [OPERATOR_LABEL, stage], operator_login())
 
 
-def on_talk_added(gh, talk_id: str, talk_exists=talk_exists) -> None:
+def on_talk_added(gh, talk_id: str, talk_exists=talk_exists, text_only=talk_text_only) -> None:
     if not TALK_ID_RE.fullmatch(talk_id or "") or not talk_exists(talk_id):
         return
     if gh.find_issue(operator_title(talk_id), OPERATOR_LABEL) is None:
-        _create(gh, talk_id, "op:pipeline", _new_talk_body(talk_id))
+        _create(gh, talk_id, "op:pipeline", _new_talk_body(talk_id, text_only(talk_id)))
 
 
-def on_review_created(gh, talk_id: str, talk_exists=talk_exists) -> None:
+def on_review_created(gh, talk_id: str, talk_exists=talk_exists, text_only=talk_text_only) -> None:
     # Existing talks predate the pre-phase: their issue starts here. A rebuild
     # of a talk past the translator is the operator's own act and moves nothing.
     if not TALK_ID_RE.fullmatch(talk_id or "") or not talk_exists(talk_id):
         return
     issue = gh.find_issue(operator_title(talk_id), OPERATOR_LABEL)
     if issue is None:
-        _create(gh, talk_id, "op:translator", _translator_body(talk_id))
+        _create(gh, talk_id, "op:translator", _translator_body(talk_id, text_only(talk_id)))
         return
     _apply(gh, issue, next_labels(issue["labels"], "review-created"))
 
@@ -153,7 +175,7 @@ def migrate_pipeline(gh, talk_ids: list[str], apply: bool) -> list[str]:
     ]
     if apply:
         for t in waiting:
-            _create(gh, t, "op:pipeline", _new_talk_body(t))
+            _create(gh, t, "op:pipeline", _new_talk_body(t, talk_text_only(t)))
     return waiting
 
 
@@ -170,14 +192,17 @@ def _approve_review(gh, talk_id: str) -> None:
         gh.close(review["number"])
 
 
-def on_pr_ready(gh, branch: str, pr_number: int, talk_exists=talk_exists) -> None:
+def on_pr_ready(gh, branch: str, pr_number: int, talk_exists=talk_exists, text_only=talk_text_only) -> None:
     talk_id = talk_id_from_branch(branch)
     if not talk_id or not talk_exists(talk_id):
         return
     issue = gh.find_issue(operator_title(talk_id), OPERATOR_LABEL)
     if issue is None:
         gh.create_issue(
-            operator_title(talk_id), _issue_body(talk_id, pr_number), [OPERATOR_LABEL, "op:review"], operator_login()
+            operator_title(talk_id),
+            _issue_body(talk_id, pr_number, text_only(talk_id)),
+            [OPERATOR_LABEL, "op:review"],
+            operator_login(),
         )
         return
     change = next_labels(issue["labels"], "pr-ready")
@@ -189,7 +214,7 @@ def on_pr_ready(gh, branch: str, pr_number: int, talk_exists=talk_exists) -> Non
     gh.comment(issue["number"], f"Translator PR #{pr_number} is ready for review.")
 
 
-def on_pr_merged(gh, branch: str, pr_number: int, talk_exists=talk_exists) -> None:
+def on_pr_merged(gh, branch: str, pr_number: int, talk_exists=talk_exists, text_only=talk_text_only) -> None:
     talk_id = talk_id_from_branch(branch)
     if not talk_id or not talk_exists(talk_id):
         return
@@ -198,7 +223,10 @@ def on_pr_merged(gh, branch: str, pr_number: int, talk_exists=talk_exists) -> No
     if issue is None:
         stage = "op:review" if others else "op:qa"
         gh.create_issue(
-            operator_title(talk_id), _issue_body(talk_id, pr_number), [OPERATOR_LABEL, stage], operator_login()
+            operator_title(talk_id),
+            _issue_body(talk_id, pr_number, text_only(talk_id)),
+            [OPERATOR_LABEL, stage],
+            operator_login(),
         )
         if stage == "op:qa":
             _approve_review(gh, talk_id)

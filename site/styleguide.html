@@ -359,6 +359,15 @@ The talk is fixed by the card and gets no control.</p>
   </div>
 </div>
 
+<p><code>.talk-kind</code> — a text-only talk: no video, so only the transcript review is offered.</p>
+<div class="talk-item sg-card">
+  <div class="talk-date"><span>1979-01-01 <span class="talk-kind" title="No video — only the transcript is reviewed">Text</span></span> <span class="review-badge ready-for-review">needs review</span></div>
+  <div class="talk-title">Letter: Human Chitta has many illusions</div>
+  <div class="talk-actions">
+    <a href="#" class="review-link">✎ Review translation</a>
+  </div>
+</div>
+
 <h2>Enlightenment marks (signed-in)</h2>
 <p style="color:var(--fg4)">A write-access session carries <code>body.gh-write</code> (toggled by
 <code>updateAuthUI</code>): a 2px <em>dawn thread</em> across the top of the viewport
@@ -541,6 +550,22 @@ corner cannot end fullscreen unseen. White on the picture like the grip.</p>
             background: linear-gradient(to bottom, #5b6b7a 0%, #1c1c1c 100%)">
   <button class="fs-exit" type="button" aria-label="Exit fullscreen"
           style="display: flex; position: absolute; top: 12px; right: 12px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+</div>
+
+<h2>Fullscreen capture dot</h2>
+<p style="color:var(--fg4)">In fullscreen the mark key (M, also &#x42C;, &#x41C; or V) takes a mark or opens
+an edit without pausing the talk; the list is out of sight there, so this faint dot
+(<code>.fs-capture-dot</code>) flashing in the top left and fading over a second is the only sign the key was
+heard. White on the picture like the grip and the exit; it takes no pointer. After a click into Vimeo's own
+controls the keyboard can stay with the player, where the page hears no key at all; for as long as that lasts
+the dot is a faint ring instead (<code>[data-keys-away]</code>), so a mark pressed then is not lost unseen. A
+click on the video gives the keys back.</p>
+<div style="position: relative; height: 64px; border-radius: var(--radius-md);
+            background: linear-gradient(to bottom, #5b6b7a 0%, #1c1c1c 100%)">
+  <div class="fs-capture-dot" aria-hidden="true"
+       style="display: block; position: absolute; top: 16px; left: 16px; opacity: 0.5"></div>
+  <div class="fs-capture-dot" data-keys-away aria-hidden="true"
+       style="display: block; position: absolute; top: 16px; left: 48px"></div>
 </div>
 
 <script src="js/sync_status_view.js"></script>

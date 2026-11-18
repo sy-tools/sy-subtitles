@@ -65,6 +65,10 @@ on:
           - default
           - EXTRA
         default: default
+      review_issue:
+        description: 'Open the Review issue and move the Operator issue (without a build in this run: only if subtitles exist and no Review issue does yet)'
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       talk_id:
@@ -104,6 +108,9 @@ on:
         description: 'Claude account: default = CLAUDE_CODE_OAUTH_TOKEN; any other value X = CLAUDE_CODE_OAUTH_TOKEN_X'
         type: string
         default: default
+      review_issue:
+        type: boolean
+        default: true
 
 # One run per talk (and per kind: real vs dry-run) at a time. Without this,
 # two dispatches for the same talk ran in parallel and opened two bot PRs.
@@ -154,6 +161,10 @@ jobs:
       # matrix.talk_id) from download names and break commit ("Artifact not
       # found"). Empty when the run was triggered without a talk_id input.
       talk_id: ${{ steps.find.outputs.talk_id }}
+      # 'true' for a talk with no counted video (text-only): it has no whisper
+      # and no primary, so there is no build — only the transcript ships to
+      # review. Always 'false' for a run without a talk_id input.
+      text_only: ${{ steps.find.outputs.text_only }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -187,7 +198,7 @@ jobs:
           python3 << 'PYEOF'
           import json, os, subprocess, yaml
 
-          from tools.video_roles import declared_ignored_slugs
+          from tools.video_roles import declared_ignored_slugs, text_only
           from tools.workflow_validation import (
               InvalidWorkflowInput,
               die,
@@ -264,6 +275,9 @@ jobs:
           talk_matrix = json.dumps({"include": [{"talk_id": t} for t in sorted(talk_ids)]})
           whisper_matrix = json.dumps({"include": [{"talk_id": t} for t in sorted(whisper_talk_ids)]})
           needs_whisper = "true" if whisper_talk_ids else "false"
+          is_text_only = bool(talk_id_input) and talk_id_input in talk_ids and text_only(f"talks/{talk_id_input}")
+          if is_text_only:
+              print(f"TEXT-ONLY: {talk_id_input} has no video — the build is skipped")
 
           print(f"\nTalks: {len(talk_ids)}, Videos: {len(video_includes)}, Talks needing whisper: {len(whisper_talk_ids)}")
 
@@ -273,6 +287,7 @@ jobs:
               f.write(f"whisper_matrix={whisper_matrix}\n")
               f.write(f"needs_whisper={needs_whisper}\n")
               f.write(f"talk_id={talk_id_input}\n")
+              f.write(f"text_only={'true' if is_text_only else 'false'}\n")
           PYEOF
 
   # Run Whisper for talks that don't have whisper.json yet
@@ -350,7 +365,7 @@ jobs:
 
       - name: Translate to Ukrainian
         if: inputs.translate != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe  # v1.0.269
+        uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8  # v1.0.275
         with:
           claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -461,7 +476,7 @@ jobs:
 
       - name: Review translation (2+1)
         if: inputs.review != false && inputs.dry_run != true
-        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe  # v1.0.269
+        uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8  # v1.0.275
         with:
           claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
@@ -570,6 +585,7 @@ jobs:
       !cancelled() &&
       inputs.build != false &&
       needs.discover.result == 'success' &&
+      needs.discover.outputs.text_only != 'true' &&
       (needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'skipped') &&
       (needs.whisper.result == 'success' || needs.whisper.result == 'skipped')
     runs-on: ubuntu-latest
@@ -681,7 +697,7 @@ jobs:
 
   # Phase 2: Single builder-agent pass (MODEL_HEAVY) — assign timecodes, build SRT
   build-timecodes:
-    needs: prepare-build
+    needs: [prepare-build, whisper]
     if: ${{ !cancelled() && needs.prepare-build.result == 'success' }}
     environment: ${{ inputs.dry_run && 'dry-run' || 'main' }}
     runs-on: ubuntu-latest
@@ -738,6 +754,31 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
 
+      # A whisper.json committed earlier is in the checkout; one this run made
+      # reaches it through whisper.yml, which waits for its bot PR to merge.
+      # Missing after either means the optimizer (and, in whisper mode, the
+      # builder) would work blind, so fail rather than ship a worse SRT. Only
+      # a run that skipped whisper for a talk that never had it builds without.
+      - name: Check whisper timings
+        env:
+          TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
+          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          WHISPER_RESULT: ${{ needs.whisper.result }}
+          TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
+        run: |
+          WHISPER="talks/${TALK_ID}/${VIDEO_SLUG}/source/whisper.json"
+          if [ -f "${WHISPER}" ]; then
+            echo "Whisper timings: ${WHISPER}"
+          elif [ "${WHISPER_RESULT}" = "success" ]; then
+            echo "::error::${WHISPER} missing although this run's whisper job succeeded — its bot PR has not reached main"
+            exit 1
+          elif [ "${TIMING_SOURCE}" = "whisper" ]; then
+            echo "::error::${WHISPER} missing and whisper is the timing source"
+            exit 1
+          else
+            echo "::warning::${WHISPER} missing and whisper did not run — optimizer runs without speech timings"
+          fi
+
       - name: Prepare timing data
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
@@ -787,7 +828,7 @@ jobs:
 
       - name: Build timecodes (Claude)
         if: inputs.dry_run != true
-        uses: anthropics/claude-code-action@61a9c274fa7110a66dfafc1bbbced03833eb25fe  # v1.0.269
+        uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8  # v1.0.275
         env:
           CLAUDE_CODE_MAX_OUTPUT_TOKENS: "128000"
         with:
@@ -1248,26 +1289,69 @@ jobs:
             "talks/*/*/final/build_manifest.yaml" \
             "site/dict/words_uk.txt"
 
+      # mode: rebuilt — this run built and committed subtitles;
+      #       existing — no build this run, but the talk already has subtitles
+      #       (landed by hand after a failed build): open a missing issue only;
+      #       none — checkbox off, failed build, or nothing to review.
+      # A text-only talk never builds: its translation stands in
+      # for the build — made this run is `rebuilt`, already on disk is
+      # `existing`, failed or missing is `none`.
+      # A failed build announces nothing: resetting the issue to review:pending
+      # would wipe the real review status without shipping anything to review.
+      - name: Decide review issue
+        id: review-gate
+        env:
+          WANTED: ${{ inputs.review_issue }}
+          BUILD_RESULT: ${{ needs.build-timecodes.result }}
+          TRANSLATE_RESULT: ${{ needs.translate-and-review.result }}
+          TEXT_ONLY: ${{ needs.discover.outputs.text_only }}
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
+        run: |
+          MODE=none
+          if [ "$WANTED" != "false" ] && [ "$TEXT_ONLY" = "true" ]; then
+            # A text-only talk has no build; its transcript is what ships to review.
+            if [ -f "talks/${TALK_ID}/transcript_uk.txt" ]; then
+              if [ "$TRANSLATE_RESULT" = "success" ]; then
+                MODE=rebuilt
+              elif [ "$TRANSLATE_RESULT" = "skipped" ]; then
+                MODE=existing
+              fi
+            fi
+          elif [ "$WANTED" != "false" ]; then
+            if [ "$BUILD_RESULT" = "success" ]; then
+              MODE=rebuilt
+            elif [ "$BUILD_RESULT" = "skipped" ] && compgen -G "talks/${TALK_ID}/*/final/uk.srt" > /dev/null; then
+              MODE=existing
+            fi
+          fi
+          echo "Review issue mode: $MODE"
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+
       - name: Create review tracking issue
-        # Only when subtitles were actually built and committed this run —
-        # resetting the issue to review:pending after a failed build would
-        # wipe the real review status without shipping anything to review.
-        # And only on main: a run dispatched from a feature branch commits to
-        # that branch (bot-pr.sh), so nothing is on main to announce, and
-        # resetting an approved issue would wipe a real review status.
-        if: success() && needs.build-timecodes.result == 'success' && github.ref_name == 'main'
+        # Only on main: a run dispatched from a feature branch commits to that
+        # branch (bot-pr.sh), so nothing is on main to announce, and resetting
+        # an approved issue would wipe a real review status.
+        if: success() && steps.review-gate.outputs.mode != 'none' && github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
           REPO: ${{ github.repository }}
           OWNER: ${{ github.repository_owner }}
+          MODE: ${{ steps.review-gate.outputs.mode }}
+          TEXT_ONLY: ${{ needs.discover.outputs.text_only }}
         run: |
           # Derive the Pages base from the repo context so a transfer needs no
           # edit. GitHub Pages host is the lowercased owner.
           OWNER_LC=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
           SPA_BASE="https://${OWNER_LC}.github.io/${REPO#*/}"
-          EXISTING=$(gh issue list --search "Review: $TALK_ID in:title" --json number --jq '.[0].number')
-          if [ -n "$EXISTING" ]; then
+          # `in:title` search is tokenised, not exact: `1979-01-01_Letter` also
+          # finds `Review: 1979-01-01_Letter-Human-Chitta-has-many-illusions`.
+          # Keep only the issue whose title is exactly this talk's.
+          EXISTING=$(gh issue list --search "Review: $TALK_ID in:title" --json number,title \
+            | jq -r --arg t "Review: $TALK_ID" '[.[] | select(.title == $t)][0].number // empty')
+          if [ -n "$EXISTING" ] && [ "$MODE" != "rebuilt" ]; then
+            echo "Review issue #$EXISTING already exists and this run built nothing — leaving its status"
+          elif [ -n "$EXISTING" ]; then
             # A rebuild invalidates an approval, but never a claim: an
             # assigned issue stays review:in-progress. Resetting it to
             # review:pending left the assignee in place while the SPA
@@ -1284,6 +1368,11 @@ jobs:
             gh issue reopen "$EXISTING"
             gh issue edit "$EXISTING" --remove-label "$DROP_LABELS" --add-label "$NEXT_LABEL,talk-review"
           else
+            if [ "$TEXT_ONLY" = "true" ]; then
+              READ_STEP="Read the transcript side by side with the English, review the translation"
+            else
+              READ_STEP="Watch the video with subtitles, review the translation"
+            fi
             META_TITLE=$(python3 -c "import yaml; print(yaml.safe_load(open('talks/$TALK_ID/meta.yaml'))['title'])" 2>/dev/null || echo "$TALK_ID")
             gh issue create \
               --title "Review: $TALK_ID" \
@@ -1300,7 +1389,7 @@ jobs:
           ### How to review
           1. Open the [SPA review page]($SPA_BASE/#/review/$TALK_ID)
           2. Assign yourself to this issue to claim the review
-          3. Watch the video with subtitles, review the translation
+          3. $READ_STEP
           4. Report problems as comments on this issue
           5. When done, add the \`review:approved\` label
           ISSUEEOF
@@ -1310,7 +1399,7 @@ jobs:
       # The talk is now the translator's. Talks added before the pre-phase
       # get their Operator issue here (tools/talk_operator.py).
       - name: Move the Operator issue to the translator
-        if: success() && needs.build-timecodes.result == 'success' && github.ref_name == 'main'
+        if: success() && steps.review-gate.outputs.mode != 'none' && github.ref_name == 'main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}

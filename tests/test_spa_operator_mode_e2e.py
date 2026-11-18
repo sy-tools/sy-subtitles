@@ -2,6 +2,7 @@
 (QA passed, package files, Open e-mail, Sent — close). GitHub is mocked with
 page.route on top of the signed-in wiring of test_spa_auth_actions_e2e."""
 
+import base64
 import json
 
 import pytest
@@ -289,10 +290,31 @@ def test_package_files_appear_once_the_bot_has_packaged_the_talk(server, browser
         "sha": "op2",
         "tree": TREE["tree"] + [{"path": f"talks/{QA_TALK}/_for_Amruta/transcript_uk.txt", "type": "blob"}],
     }
-    pg.route("**/raw.githubusercontent.com/**/review-status.json*", lambda r: _json(r, 200, packaged))
+    # raw.githubusercontent keeps serving the old file (its CDN ignores the
+    # query string, so a cache buster does not help); only the API is fresh.
+    pg.route("**/api.github.com/repos/**/contents/review-status.json*", lambda r: _json(r, 200, _contents(packaged)))
     pg.route("**/api.github.com/repos/**/git/trees/**", lambda r: _json(r, 200, tree))
     pg.clock.run_for(31000)
     _card(pg, QA_TALK).locator(".op-file-btn", has_text="transcript_uk.txt").wait_for(timeout=5000)
+    ctx.close()
+
+
+def _contents(payload):
+    raw = json.dumps(payload).encode()
+    return {"content": base64.b64encode(raw).decode(), "encoding": "base64", "sha": "rs2"}
+
+
+def test_a_wait_on_the_bot_survives_a_reload(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR)
+    pg.goto(f"{server}{SPA_URL}")
+    btn = _card(pg, QA_TALK).locator(".op-qa-btn")
+    btn.wait_for(timeout=10000)
+    btn.click()
+    _card(pg, QA_TALK).locator(".op-waiting").wait_for(timeout=5000)
+
+    pg.reload()
+    _card(pg, QA_TALK).locator(".op-waiting").wait_for(timeout=10000)
+    assert _card(pg, QA_TALK).locator(".op-qa-btn").count() == 0
     ctx.close()
 
 
