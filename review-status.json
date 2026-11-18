@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-18T06:38:19.121523+00:00",
+  "updated_at": "2026-11-18T06:43:35.889821+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -744,10 +744,10 @@
       "operator_issue": 1278
     },
     "1999-05-09_Sahasrara-Puja-Our-Awareness-has-to-become-Paramchaitanya": {
-      "status": "approved",
-      "reviewer": "IrynaFilSY",
-      "issue_number": 1249,
-      "updated_at": "2026-11-18T06:38:01Z",
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1348,
+      "updated_at": "2026-11-18T06:43:16Z",
       "operator_stage": "qa",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1335
