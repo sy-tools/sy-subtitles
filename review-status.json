@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-18T06:43:35.889821+00:00",
+  "updated_at": "2026-11-18T14:47:52.173191+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -345,10 +345,10 @@
       "updated_at": "2026-07-17T13:13:59Z"
     },
     "1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
       "issue_number": 311,
-      "updated_at": "2026-07-17T14:17:10Z"
+      "updated_at": "2026-11-18T14:47:34Z"
     },
     "1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware": {
       "status": "pending",
