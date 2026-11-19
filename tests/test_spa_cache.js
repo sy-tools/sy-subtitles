@@ -639,10 +639,8 @@ describe('Fullscreen mode', () => {
   });
 
   it('F key handler calls toggleFullscreen', () => {
-    // The keyboard handler should check for 'f' or 'F' key
-    assert.ok(html.includes("'f'") || html.includes("'F'") || html.includes('"f"') || html.includes('"F"'),
-      'F key not found in keyboard handler');
-    assert.ok(html.includes('toggleFullscreen'), 'toggleFullscreen not referenced from keyboard handler');
+    assert.ok(/if \(isFullscreenKey\(e\)\) \{ SPA\.toggleFullscreen\(\);/.test(html),
+      'the keyboard handler must toggle fullscreen on isFullscreenKey (js/preview_keys.js)');
   });
 
   it('fullscreenchange listener exists', () => {

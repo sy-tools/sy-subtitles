@@ -675,12 +675,13 @@ jobs:
           VIDEO_SLUG: ${{ steps.prepare.outputs.video_slug }}
         run: |
           if [ "$TIMING_SOURCE_INPUT" = "auto" ] || [ -z "$TIMING_SOURCE_INPUT" ]; then
-            if [ -f "talks/${TALK_ID}/${VIDEO_SLUG}/source/en.srt" ]; then
+            EN_SRT=$(python -c "import sys; from tools.srt_utils import timing_en_srt; print(timing_en_srt(sys.argv[1]) or '')" "talks/${TALK_ID}/${VIDEO_SLUG}")
+            if [ -n "$EN_SRT" ]; then
               RESOLVED=en-srt
             else
               RESOLVED=whisper
             fi
-            echo "auto → $RESOLVED (en.srt $( [ "$RESOLVED" = "en-srt" ] && echo present || echo missing ))"
+            echo "auto → $RESOLVED (${EN_SRT:-no en.srt})"
           else
             RESOLVED="$TIMING_SOURCE_INPUT"
             echo "explicit → $RESOLVED"
@@ -998,7 +999,7 @@ jobs:
         # files are identical-text-different-timing, or word-level re-alignment
         # (resync_srt) when the secondary covers a SUBSET of the primary's
         # content (e.g. only the English speech portion of a puja). This needs
-        # source/en.srt on BOTH the primary and the secondary; a secondary
+        # an EN SRT on BOTH the primary and the secondary; a secondary
         # without en.srt (raw recording, no English subtitles) is skipped, not
         # a failure. See tools/build_secondary_srts.py.
         env:
@@ -1049,7 +1050,12 @@ jobs:
             #   en-srt mode  → --en-srt       (EN SRT blocks)
             ANCHOR_FLAG=""
             if [ "${{ needs.prepare-build.outputs.timing_source }}" = "en-srt" ]; then
-              ANCHOR_FLAG="--en-srt ${VIDEO}/source/en.srt"
+              EN_SRT=$(python -c "import sys; from tools.srt_utils import timing_en_srt; print(timing_en_srt(sys.argv[1]) or '')" "${VIDEO}")
+              # A derived video without English subtitles has no anchor; it
+              # runs with --skip-time-check, so none is needed.
+              if [ -n "$EN_SRT" ]; then
+                ANCHOR_FLAG="--en-srt ${EN_SRT}"
+              fi
             else
               ANCHOR_FLAG="--whisper-json ${VIDEO}/source/whisper.json"
             fi

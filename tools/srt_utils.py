@@ -2,6 +2,7 @@
 
 import json
 import re
+from pathlib import Path
 
 from .config import OptimizeConfig
 
@@ -22,6 +23,21 @@ def ms_to_time(ms):
     s = ms // 1000
     ms %= 1000
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
+
+def timing_en_srt(video_dir):
+    """The EN SRT a build is timed from, or None when the video has none.
+
+    source/en.srt is the file as downloaded and is never edited; a corrected
+    English (re-timed to the speech, or built where none was published) lives in
+    final/en.srt. That corrected file is the one delivered and shown, so it is
+    also the one the Ukrainian has to follow.
+    """
+    for rel in ("final/en.srt", "source/en.srt"):
+        path = Path(video_dir) / rel
+        if path.is_file():
+            return path
+    return None
 
 
 def parse_srt(filepath):
