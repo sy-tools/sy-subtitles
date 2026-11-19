@@ -105,11 +105,10 @@ function reuseHydratedMeta(talks, cachedTalks, shaIndex, commitPinned) {
 function applyMetaText(talk, text, deps) {
   if (!text) return false;
   try {
+    // Assigned last: an empty title marks "not hydrated", so a throw midway
+    // must not leave a titled, half-filled talk to be reused by sha.
     var meta = deps.parseYaml(text);
-    talk.title = meta.title || talk.id;
-    talk.date = String(meta.date || talk.id.substring(0, 10));
-    talk.amrutaUrl = meta.amruta_url || '';
-    talk.videos = (meta.videos || []).map(function (v) {
+    var videos = (meta.videos || []).map(function (v) {
       // Links are stored obfuscated as video_ref (js/vimeo_codec.js). Decode
       // here at the read edge so the rest of the SPA keeps working with a
       // plaintext vimeo_url in memory.
@@ -123,7 +122,13 @@ function applyMetaText(talk, text, deps) {
       return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl, sync: v.sync || '' };
     });
     var srtSet = Array.isArray(talk._srtSlugs) ? talk._srtSlugs : [];
-    talk.videos.forEach(function (v) { v.hasSrt = srtSet.indexOf(v.slug) !== -1; });
+    videos.forEach(function (v) { v.hasSrt = srtSet.indexOf(v.slug) !== -1; });
+    var date = String(meta.date || talk.id.substring(0, 10));
+    var amrutaUrl = meta.amruta_url || '';
+    talk.date = date;
+    talk.amrutaUrl = amrutaUrl;
+    talk.videos = videos;
+    talk.title = meta.title || talk.id;
     return true;
   } catch (e) {
     deps.warn('YAML parse error for ' + talk.id, e);
@@ -175,7 +180,8 @@ function hydrateTalkMeta(talks, opts) {
       }, function (e) {
         if (e && e.status === 401 && !unauthorizedReported) {
           unauthorizedReported = true;
-          if (opts.onUnauthorized) opts.onUnauthorized();
+          try { if (opts.onUnauthorized) opts.onUnauthorized(); }
+          catch (hookErr) { warn('onUnauthorized hook failed', hookErr); }
         }
         warn('meta.yaml batch failed, reading per talk', e);
         return chunk;

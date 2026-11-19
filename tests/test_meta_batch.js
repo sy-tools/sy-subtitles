@@ -264,6 +264,14 @@ describe('applyMetaText', () => {
     assert.strictEqual(t.title, '');
     assert.strictEqual(warned.length, 1);
   });
+  it('a meta.yaml that throws midway leaves the talk untouched, not half-filled', () => {
+    const t = talk('x');
+    const ok = applyMetaText(t, JSON.stringify({ title: 'T', date: '2001-01-01', videos: [null] }), deps);
+    assert.strictEqual(ok, false);
+    assert.strictEqual(t.title, '', 'an untitled talk is the "not hydrated" marker; a title here would be reused by sha');
+    assert.strictEqual(t.date, '');
+    assert.deepStrictEqual(t.videos, []);
+  });
 });
 
 describe('hydrateTalkMeta', () => {
@@ -292,6 +300,16 @@ describe('hydrateTalkMeta', () => {
     }, over || {});
     return { calls: calls, opts: opts };
   }
+
+  it('never rejects, even when the onUnauthorized hook itself throws', async () => {
+    const e = env({
+      graphql: function () { const err = new Error('HTTP 401'); err.status = 401; return Promise.reject(err); },
+      onUnauthorized: function () { throw new Error('ui broke'); },
+    });
+    const talks = [talk('a')];
+    await hydrateTalkMeta(talks, e.opts);
+    assert.strictEqual(talks[0].title, 'R-a', 'the raw fallback still ran');
+  });
 
   it('signed in: reads every untitled talk through chunked GraphQL, no raw fetch', async () => {
     const e = env();
