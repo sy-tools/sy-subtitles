@@ -143,16 +143,37 @@ function overlayReviewStatus(reviewStatus, issues, talkIds) {
 // back. So the SPA's own claim (`entry`, made at `since`) outlives the overlay
 // until GitHub agrees, disagrees (another reviewer, or none), or maxAgeMs runs
 // out. claims: { talkId: { entry, since } }. Returns new { talks, claims }.
-function holdClaims(talks, claims, nowMs, maxAgeMs) {
+//
+// requestStartedMs is when the request behind `talks` was sent. GitHub can only
+// disagree with a claim it was asked about afterwards: a request sent before
+// the claim truthfully answers "unassigned" after it, and that is not news.
+// Sent in the claim's own millisecond the order is unknown, so the claim stays.
+// Omitted, every answer is taken as newer than every claim.
+function holdClaims(talks, claims, nowMs, maxAgeMs, requestStartedMs) {
   var outTalks = Object.assign({}, talks), kept = {};
   Object.keys(claims || {}).forEach(function (id) {
     var claim = claims[id], live = outTalks[id];
     if (nowMs - claim.since > maxAgeMs) return;
-    if (live && (live.status !== 'pending' || live.reviewer !== claim.entry.reviewer)) return;
+    var answerPredatesClaim = requestStartedMs != null && requestStartedMs <= claim.since;
+    var disagrees = live && (live.status !== 'pending' || live.reviewer !== claim.entry.reviewer);
+    if (disagrees && !answerPredatesClaim) return;
     outTalks[id] = Object.assign({}, live, claim.entry);
     kept[id] = claim;
   });
   return { talks: outTalks, claims: kept };
+}
+
+// Callers arriving while run() is in flight share its promise; the first one
+// after it settles starts a new call.
+function singleFlight(run) {
+  var inFlight = null;
+  return function () {
+    if (inFlight) return inFlight;
+    var mine = inFlight = new Promise(function (resolve) { resolve(run()); });
+    var clear = function () { if (inFlight === mine) inFlight = null; };
+    mine.then(clear, clear);
+    return mine;
+  };
 }
 
 function liveIssuesCacheKey(branch, label) {
@@ -192,6 +213,7 @@ if (typeof module !== 'undefined' && module.exports) {
     applyIssues: applyIssues,
     overlayReviewStatus: overlayReviewStatus,
     holdClaims: holdClaims,
+    singleFlight: singleFlight,
     liveIssuesCacheKey: liveIssuesCacheKey,
     fetchLiveIssues: fetchLiveIssues,
   };

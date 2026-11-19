@@ -3031,21 +3031,23 @@ function loadReviewStatus() {
 // all an anonymous visitor has, and what remains when this fails.
 //
 // Never rejects. Resolves { ok, changed }: ok = GitHub answered, changed = the
-// statuses on screen are no longer the ones this call started from.
+// statuses on screen are no longer the ones this call started from. Callers
+// that overlap share one request (singleFlight) and so one answer.
 var REVIEW_CLAIM_HOLD_MS = 10 * 60 * 1000;
 var reviewClaims = {};            // talkId → { entry, since }, see holdClaims
 var liveStatusBlockedUntil = 0;   // epoch ms; a rate limit says when to ask again
-function refreshLiveReviewStatus() {
+var refreshLiveReviewStatus = singleFlight(function() {
   var token = getAuthToken();
   if (!token || !manifest || !reviewStatus || Date.now() < liveStatusBlockedUntil) {
     return Promise.resolve({ ok: false, changed: false });
   }
+  var requestStartedMs = Date.now();
   return fetchLiveIssues({ api: API, token: token, branch: BRANCH, storage: localStorage })
     .then(function(issues) {
       var before = JSON.stringify(reviewStatus.talks || {});
       var ids = manifest.talks.map(function(tk) { return tk.id; });
       var live = overlayReviewStatus(reviewStatus, issues, ids);
-      var held = holdClaims(live.talks, reviewClaims, Date.now(), REVIEW_CLAIM_HOLD_MS);
+      var held = holdClaims(live.talks, reviewClaims, Date.now(), REVIEW_CLAIM_HOLD_MS, requestStartedMs);
       live.talks = held.talks;
       reviewClaims = held.claims;
       reviewStatus = live;
@@ -3058,14 +3060,19 @@ function refreshLiveReviewStatus() {
         updateAuthUI();
         showToast(t('auth.expired'));
       }
+      // Primary limit only; a secondary one (403 + Retry-After) is simply retried on the next trigger.
       var info = rateLimitInfo(err && err.status, err && err.headerGet);
       if (info.rateLimited) liveStatusBlockedUntil = info.rlReset ? info.rlReset * 1000 : Date.now() + 60 * 1000;
       console.warn('[SPA] live review status unavailable, keeping review-status.json:', err);
       return { ok: false, changed: false };
     });
-}
+});
 
+// True only while SPA.refreshManifest paints the answer it has just awaited:
+// showIndex asking again there would be the same question twice in a row.
+var liveStatusJustRefreshed = false;
 function repaintIndexOnLiveStatus() {
+  if (liveStatusJustRefreshed) return Promise.resolve();
   return refreshLiveReviewStatus().then(function(res) {
     if (!res.changed) return;
     renderStats();
@@ -9641,7 +9648,7 @@ SPA.refreshManifest = function() {
   if (cache) { delete cache.etag; localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); }
   // Statuses only after the new tree: they are read pinned to its commit, and
   // pinned to the previous one they would be that commit's bytes for good.
-  loadManifest().then(function(m) {
+  return loadManifest().then(function(m) {
     manifest = m;
     return loadReviewStatus().then(refreshLiveReviewStatus).then(function() { return m; });
   }).then(function(m) {
@@ -9667,7 +9674,8 @@ SPA.refreshManifest = function() {
     // one-time toast + un-dismiss the pill BEFORE route() (which runs the guarded
     // maybeStaleToast + updateStaleIndicator), so the signal fires once per click.
     if (m && m._stale) { _staleToastShown = false; _staleDismissed = false; }
-    route();
+    liveStatusJustRefreshed = true;
+    try { route(); } finally { liveStatusJustRefreshed = false; }
     updateFooter();
     if (el) {
       if (m && m._stale) {

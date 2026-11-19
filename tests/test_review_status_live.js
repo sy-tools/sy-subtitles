@@ -11,6 +11,7 @@ const {
   mergeIssueLists,
   overlayReviewStatus,
   holdClaims,
+  singleFlight,
   liveIssuesCacheKey,
   fetchLiveIssues,
   OPERATOR_STAGE_LABELS,
@@ -43,11 +44,93 @@ describe('applyIssues — shared fixture with sync-review-status.py', () => {
   });
 });
 
+function indexPastLiteral(src, i) {
+  const quote = src[i];
+  let inClass = false;
+  for (i++; i < src.length; i++) {
+    if (src[i] === '\\') i++;
+    else if (quote === '/' && src[i] === '[') inClass = true;
+    else if (quote === '/' && src[i] === ']') inClass = false;
+    else if (src[i] === quote && !inClass) break;
+    else if (src[i] === '\n' && quote !== '`') break;
+  }
+  return i + 1;
+}
+
+// The names one `var` / `let` / `const` list declares; `i` is just past the
+// keyword. Initialisers are skipped by bracket depth, so a comma inside a call,
+// a literal or a function body does not start a declarator.
+function declaratorNames(src, i) {
+  const names = [];
+  let depth = 0, expectName = true, prev = '';
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '/' && src[i + 1] === '/') { i = src.indexOf('\n', i); if (i < 0) break; continue; }
+    if (c === '/' && src[i + 1] === '*') { i = src.indexOf('*/', i + 2); if (i < 0) break; i += 2; continue; }
+    const regexStart = c === '/' && '=(,:[!&|?{};'.indexOf(prev) !== -1;
+    if (c === '"' || c === "'" || c === '`' || regexStart) { i = indexPastLiteral(src, i); prev = c; continue; }
+    if (c === '\n') {
+      const listGoesOn = depth > 0 || prev === ',' || prev === '=' || /^\s*,/.test(src.slice(i + 1));
+      if (!listGoesOn) break;
+      i++; continue;
+    }
+    if (/\s/.test(c)) { i++; continue; }
+    if (depth === 0 && c === ';') break;
+    if (depth === 0 && expectName) {
+      expectName = false;
+      const id = /^[A-Za-z_$][\w$]*/.exec(src.slice(i));
+      if (id) { names.push(id[0]); i += id[0].length; prev = 'a'; continue; }
+    }
+    if ('([{'.indexOf(c) !== -1) depth++;
+    else if (')]}'.indexOf(c) !== -1) { if (depth === 0) break; depth--; }
+    else if (depth === 0 && c === ',') expectName = true;
+    prev = c; i++;
+  }
+  return names;
+}
+
+// Every name a classic script adds to the scope all classic scripts share. A
+// declaration counts when its keyword starts a line — how this codebase writes
+// top-level code. Destructuring declarations are not read.
+function topLevelNames(src) {
+  const names = [];
+  const fnOrClass = /^(?:async[ \t]+)?function\*?[ \t]+([A-Za-z_$][\w$]*)|^class[ \t]+([A-Za-z_$][\w$]*)/gm;
+  for (const m of src.matchAll(fnOrClass)) names.push(m[1] || m[2]);
+  for (const m of src.matchAll(/^(?:var|let|const)[ \t]+/gm)) {
+    names.push(...declaratorNames(src, m.index + m[0].length));
+  }
+  return names;
+}
+
 describe('shared global scope', () => {
+  it('reads every form of top-level declaration', () => {
+    const src = [
+      'var a, b = f(1, [2, 3]), c;',
+      'var d = { x: 1, y: "p, q; r" },',
+      '    e = /[,;"]/.test(s), f',
+      'let g = 1, h',
+      'const i = `t, ${u}; v`; var notOnOwnLine = 1;',
+      'class K extends Base {}',
+      'async function m() { var inner1, inner2; }',
+      'function* n() {}',
+      'function o() {',
+      '  var nested = 1, alsoNested;',
+      '  function nestedFn() {}',
+      '}',
+      'var p = function () { return 1, 2; }, q = 3;',
+      'var r // trailing, comment; here',
+      'var s = 1 /* a, b; c */, t = 2;',
+    ].join('\n');
+    assert.deepStrictEqual(topLevelNames(src),
+      ['K', 'm', 'n', 'o', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'p', 'q', 'r', 's', 't']);
+  });
+
   it('declares no top-level name another classic script also declares', () => {
-    const topLevel = (src) => Array.from(src.matchAll(/^(?:var|function|const|let)\s+([A-Za-z_$][\w$]*)/gm)).map((m) => m[1]);
+    const topLevel = topLevelNames;
+    assert.ok(topLevel(fs.readFileSync(path.join(ROOT, 'site', 'index.html'), 'utf8')).length > 300, 'parsed index.html');
     const jsDir = path.join(ROOT, 'site', 'js');
     const mine = new Set(topLevel(fs.readFileSync(path.join(jsDir, 'review_status_live.js'), 'utf8')));
+    assert.ok(mine.has('holdClaims') && mine.has('GATE_LABEL'), 'parsed the module');
     const html = fs.readFileSync(path.join(ROOT, 'site', 'index.html'), 'utf8');
     const loaded = Array.from(html.matchAll(/<script src="js\/([\w.]+)"><\/script>/g)).map((m) => m[1])
       .filter((f) => f !== 'review_status_live.js');
@@ -136,6 +219,43 @@ describe('holdClaims — a just-taken talk stays "in review" until its label cat
   });
   it('holds a claim whose talk has no live entry yet', () => {
     assert.strictEqual(holdClaims({}, claim(1000), 2000, MAX).talks.t1.status, 'in-progress');
+  });
+  it('a response to a request sent before the claim cannot release it', () => {
+    const out = holdClaims(live({ reviewer: null }), claim(1000), 2000, MAX, 900);
+    assert.strictEqual(out.talks.t1.status, 'in-progress');
+    assert.strictEqual(out.talks.t1.reviewer, 'me');
+    assert.deepStrictEqual(Object.keys(out.claims), ['t1']);
+    assert.strictEqual(holdClaims(live({ reviewer: 'other' }), claim(1000), 2000, MAX, 1000).talks.t1.status,
+      'in-progress', 'sent in the very millisecond of the claim: order unknown, so held');
+  });
+  it('a response to a request sent after the claim releases it as before', () => {
+    const out = holdClaims(live({ reviewer: null }), claim(1000), 2000, MAX, 1001);
+    assert.strictEqual(out.talks.t1.status, 'pending');
+    assert.deepStrictEqual(out.claims, {});
+  });
+  it('the hold window still ends a claim that no later response settled', () => {
+    const out = holdClaims(live({ reviewer: null }), claim(1000), 1000 + MAX + 1, MAX, 900);
+    assert.strictEqual(out.talks.t1.status, 'pending');
+    assert.deepStrictEqual(out.claims, {});
+  });
+});
+
+describe('singleFlight — concurrent callers share one request', () => {
+  it('runs once while a call is in flight and hands every caller its result', async () => {
+    let runs = 0, release;
+    const shared = singleFlight(() => { runs++; return new Promise((res) => { release = res; }); });
+    const a = shared(), b = shared();
+    assert.strictEqual(a, b);
+    assert.strictEqual(runs, 1);
+    release('done');
+    assert.strictEqual(await a, 'done');
+  });
+  it('runs again once the previous call has settled, also after a rejection', async () => {
+    let runs = 0;
+    const shared = singleFlight(() => { runs++; return runs === 1 ? Promise.reject(new Error('x')) : Promise.resolve(runs); });
+    await assert.rejects(shared());
+    assert.strictEqual(await shared(), 2);
+    assert.strictEqual(await shared(), 3);
   });
 });
 

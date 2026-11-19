@@ -4,6 +4,7 @@ GitHub is mocked with page.route on top of test_spa_auth_actions_e2e's wiring.
 """
 
 import json
+import time
 
 import pytest
 
@@ -121,26 +122,180 @@ def test_a_reload_revalidates_with_the_etag_and_a_304_still_overlays(server, bro
     ctx.close()
 
 
-def test_a_taken_talk_stays_in_review_while_github_has_the_assignee_but_not_the_label(server, browser):  # noqa: F811
-    seen = []
-    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
-    assigned_not_yet_labelled = [_issue(["talk-review"], ["tester"])]
-    state = {"rows": [_issue(["talk-review"])]}
+UNCLAIMED = [_issue(["talk-review"])]
+OPERATOR_AT_REVIEW = [_issue(["talk-operator", "op:review"], number=43, title=f"Operator: {TALK}")]
 
+
+def _serve_current_issue_state(pg, state, seen):
     def handle(route):
         seen.append(route.request.url)
-        rows = state["rows"] if "labels=talk-review" in route.request.url else []
+        rows = state["review"] if "labels=talk-review" in route.request.url else state.get("operator", [])
         route.fulfill(status=200, content_type="application/json", body=json.dumps(rows))
 
     pg.route(ISSUES_BY_LABEL, handle)
-    pg.goto(f"{server}{SPA_URL}")
+
+
+def _wait_for_requests(pg, requests, count):
+    for _ in range(100):
+        if len(requests) >= count:
+            break
+        pg.wait_for_timeout(50)
+    assert len(requests) == count
+
+
+def _take_the_talk(pg, base_url):
+    pg.goto(f"{base_url}{SPA_URL}")
     pg.wait_for_selector(".take-review-btn", timeout=10000)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"], "the load's own live request has settled"
     pg.click(".take-review-btn")
     _wait_in_review(pg, 1)
-    state["rows"] = assigned_not_yet_labelled
-    before = len(seen)
+
+
+def _status_entry(pg):
+    return pg.evaluate(f"reviewStatus.talks['{TALK}']")
+
+
+def test_a_taken_talk_stays_in_review_while_github_has_the_assignee_but_not_the_label(server, browser):  # noqa: F811
+    seen = []
+    state = {"review": UNCLAIMED}
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _serve_current_issue_state(pg, state, seen)
+    _take_the_talk(pg, server)
+
+    state["review"] = [_issue(["talk-review"], ["tester"])]
+    state["operator"] = OPERATOR_AT_REVIEW
+    del seen[:]
     pg.evaluate("SPA.refreshManifest()")
-    pg.wait_for_timeout(1000)
-    assert len(seen) > before, "the refresh asked GitHub again"
+
+    assert len(seen) == 2, "the refresh asked GitHub again"
+    entry = _status_entry(pg)
+    assert entry["operator_stage"] == "review", "the live answer was applied"
+    assert entry["status"] == "in-progress"
+    assert entry["reviewer"] == "tester"
     assert _in_review_count(pg) == "1"
+    assert pg.locator(".take-review-btn").count() == 0
+    ctx.close()
+
+
+@pytest.mark.parametrize("assignees", [[], ["someone-else"]], ids=["nobody", "another-reviewer"])
+def test_a_taken_talk_goes_back_to_pending_when_github_names_no_or_another_reviewer(server, browser, assignees):  # noqa: F811
+    seen = []
+    state = {"review": UNCLAIMED}
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _serve_current_issue_state(pg, state, seen)
+    _take_the_talk(pg, server)
+
+    state["review"] = [_issue(["talk-review"], assignees)]
+    del seen[:]
+    pg.evaluate("SPA.refreshManifest()")
+
+    assert len(seen) == 2, "the refresh asked GitHub again"
+    entry = _status_entry(pg)
+    assert entry["status"] == "pending"
+    assert entry["reviewer"] == (assignees[0] if assignees else None)
+    assert pg.evaluate("Object.keys(reviewClaims)") == []
+    assert _in_review_count(pg) == "0"
+    assert pg.locator(".take-review-btn").count() == (0 if assignees else 1)
+    ctx.close()
+
+
+def test_an_answer_to_a_request_sent_before_the_talk_was_taken_does_not_undo_the_claim(server, browser):  # noqa: F811
+    held = []
+    gate = {"hold": False}
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+
+    def answer(route):
+        rows = UNCLAIMED if "labels=talk-review" in route.request.url else []
+        route.fulfill(status=200, content_type="application/json", body=json.dumps(rows))
+
+    pg.route(ISSUES_BY_LABEL, lambda route: held.append(route) if gate["hold"] else answer(route))
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"]
+
+    gate["hold"] = True
+    pg.evaluate("window.__sentBeforeTheClaim = refreshLiveReviewStatus().then(JSON.stringify); undefined")
+    _wait_for_requests(pg, held, 2)
+
+    pg.click(".take-review-btn")
+    _wait_in_review(pg, 1)
+    for route in held:
+        answer(route)
+    assert json.loads(pg.evaluate("window.__sentBeforeTheClaim"))["ok"], "the held answer was applied"
+
+    assert _status_entry(pg)["status"] == "in-progress"
+    assert _in_review_count(pg) == "1"
+    assert pg.locator(".take-review-btn").count() == 0
+    ctx.close()
+
+
+def test_a_manual_refresh_asks_the_issues_api_once(server, browser):  # noqa: F811
+    seen = []
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _serve_issues(pg, seen, CLAIMED_ON_GITHUB)
+    pg.goto(f"{server}{SPA_URL}")
+    _wait_in_review(pg, 1)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"]
+    pg.evaluate(
+        "window.__liveFetches = 0;"
+        "var realFetchLiveIssues = fetchLiveIssues;"
+        "fetchLiveIssues = function (opts) { window.__liveFetches++; return realFetchLiveIssues(opts); }; undefined"
+    )
+    pg.evaluate("SPA.refreshManifest()")
+    assert pg.evaluate("window.__liveFetches") == 1
+    assert _in_review_count(pg) == "1"
+    ctx.close()
+
+
+def test_callers_arriving_while_a_live_request_is_in_flight_share_it(server, browser):  # noqa: F811
+    seen = []
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _serve_issues(pg, seen, CLAIMED_ON_GITHUB)
+    pg.goto(f"{server}{SPA_URL}")
+    _wait_in_review(pg, 1)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"]
+    del seen[:]
+    results = pg.evaluate(
+        "Promise.all([refreshLiveReviewStatus(), repaintIndexOnLiveStatus(), refreshLiveReviewStatus()])"
+    )
+    assert results[0]["ok"] and results[2]["ok"]
+    assert len(seen) == 2, "one request per label, not per caller"
+    ctx.close()
+
+
+def test_a_primary_rate_limit_stops_live_requests_until_its_reset(server, browser):  # noqa: F811
+    seen = []
+    reset_s = int(time.time()) + 600
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    pg.clock.install()
+
+    def rate_limited(route):
+        seen.append(route.request.url)
+        route.fulfill(
+            status=403,
+            content_type="application/json",
+            headers={
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": str(reset_s),
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Expose-Headers": "X-RateLimit-Remaining, X-RateLimit-Reset",
+            },
+            body=json.dumps({"message": "API rate limit exceeded"}),
+        )
+
+    pg.route(ISSUES_BY_LABEL, rate_limited)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    pg.wait_for_function("liveStatusBlockedUntil > 0", timeout=10000)
+    assert pg.evaluate("liveStatusBlockedUntil") == reset_s * 1000
+    _wait_for_requests(pg, seen, 2)
+    del seen[:]
+
+    assert pg.evaluate("refreshLiveReviewStatus()") == {"ok": False, "changed": False}
+    assert seen == [], "no request while the limit stands"
+    assert pg.evaluate("localStorage.getItem('sy_gh_token')") == "gho_e2e"
+
+    pg.clock.fast_forward(601_000)
+    pg.evaluate("refreshLiveReviewStatus()")
+    assert len(seen) == 2, "asked again once the reset has passed"
     ctx.close()
