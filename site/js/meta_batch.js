@@ -36,8 +36,12 @@ function metaBatchQuery(owner, name, ref, talkIds) {
   return { query: query, variables: variables, aliases: aliases };
 }
 
-// { talkId: yamlText | null }. null is GitHub's definite "no such text blob at
-// that ref"; a truncated blob gets NO key, because its text is not the file.
+// { talkId: yamlText }, holding only the talks whose whole text came back. A
+// truncated blob gets NO key, because its text is not the file. Neither does a
+// null (or textless) object: every talk asked for comes from a tree that lists
+// its meta.yaml, so "no such blob" says something about the read, not the file
+// — a ref GraphQL cannot resolve answers all-null with no `errors`. The caller
+// reads the keyless talks another way.
 // Throws on a reply that answers nothing, including one that carries errors
 // beside partial data: a half-answered chunk is re-read whole.
 function parseMetaBatch(body, aliases) {
@@ -49,8 +53,8 @@ function parseMetaBatch(body, aliases) {
   var out = {};
   Object.keys(aliases).forEach(function (alias) {
     var blob = repo[alias];
-    if (blob && blob.isTruncated) return;
-    out[aliases[alias]] = blob && typeof blob.text === 'string' ? blob.text : null;
+    if (!blob || blob.isTruncated || typeof blob.text !== 'string') return;
+    out[aliases[alias]] = blob.text;
   });
   return out;
 }
@@ -69,13 +73,19 @@ function metaShaIndex(tree) {
 // the cached manifest was hydrated from needs no fetch: same sha, same file.
 // A cached title is what marks a talk as hydrated — the cache is persisted
 // with the new sha BEFORE its meta arrives, so the sha alone proves nothing.
+// commitPinned says whether this manifest's raw reads are pinned to a commit
+// (js/manifest_fetch.js isCommitSha). When they are not, the text comes from
+// the branch URL, whose CDN copy may predate the push: no sha is recorded, or
+// that old text would be reused for as long as the blob stays the same.
+// The fields copied are the ones applyMetaText sets; a test holds the two
+// together.
 // Returns how many talks were reused.
-function reuseHydratedMeta(talks, cachedTalks, shaIndex) {
+function reuseHydratedMeta(talks, cachedTalks, shaIndex, commitPinned) {
   var cachedById = {};
   (cachedTalks || []).forEach(function (c) { cachedById[c.id] = c; });
   var reused = 0;
   talks.forEach(function (t) {
-    t._metaSha = shaIndex[t.id] || '';
+    t._metaSha = (commitPinned && shaIndex[t.id]) || '';
     var c = cachedById[t.id];
     if (!c || !c.title || !t._metaSha || c._metaSha !== t._metaSha) return;
     t.title = c.title;
@@ -88,6 +98,10 @@ function reuseHydratedMeta(talks, cachedTalks, shaIndex) {
 }
 
 // deps: { parseYaml, decodeVideoRef, warn }. Returns whether the talk was filled.
+// What this sets is persisted in the manifest cache and copied forward by
+// reuseHydratedMeta. Changing the mapping (a new field, a new meaning for an
+// old one) requires bumping CACHE_SCHEMA in site/index.html: a talk whose
+// meta.yaml did not change is never read again, so it would keep the old shape.
 function applyMetaText(talk, text, deps) {
   if (!text) return false;
   try {
@@ -120,7 +134,8 @@ function applyMetaText(talk, text, deps) {
 // Fill every untitled talk. Signed in (opts.token): chunked GraphQL, and any
 // chunk that fails is re-read talk by talk over opts.fetchRaw. Anonymous: raw
 // only. Never rejects — a talk that cannot be read stays untitled, the rest
-// of the index still renders.
+// of the index still renders. That covers opts.apply throwing too (the YAML
+// parser failing to load, say), on either path.
 //
 // opts: { token, owner, name, ref, graphql(token, query, variables),
 //         fetchRaw(talk) -> Promise<text>, apply(talk, text),
@@ -150,8 +165,11 @@ function hydrateTalkMeta(talks, opts) {
       .then(function (texts) {
         var unanswered = [];
         chunk.forEach(function (t) {
-          if (!Object.prototype.hasOwnProperty.call(texts, t.id)) unanswered.push(t);
-          else opts.apply(t, texts[t.id]);
+          if (!Object.prototype.hasOwnProperty.call(texts, t.id)) { unanswered.push(t); return; }
+          // Not sent to raw: the text WAS the file, and the same bytes read
+          // again would fail the same way.
+          try { opts.apply(t, texts[t.id]); }
+          catch (e) { warn('meta.yaml apply failed for ' + t.id, e); }
         });
         return unanswered;
       }, function (e) {

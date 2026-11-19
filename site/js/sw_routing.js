@@ -60,11 +60,13 @@ function isNavigation(url) {
   return url.endsWith('/') || url.endsWith('/index.html') || url.indexOf('sy-subtitles/#') !== -1;
 }
 
-// Subtitle/transcript content is fetched with a ?v=<blob sha> cache-buster
-// (final/<lang>.srt, transcript_<lang>.txt, source/<lang>.srt, review-status.json):
-// the URL is content-addressed, so its bytes never change. A non-empty v param
-// marks such an immutable-by-URL resource. meta.yaml (no ?v=) and the Trees API
-// (?recursive=1) carry no v and stay network-first.
+// Repo content is fetched with a ?v=<blob sha> tag (final/<lang>.srt,
+// transcript_<lang>.txt, source/<lang>.srt, review-status.json, and each talk's
+// meta.yaml): the URL is content-addressed, so its bytes never change. A
+// non-empty v param marks such an immutable-by-URL resource. The Trees API
+// (?recursive=1) carries no v, and neither does a file read from the branch
+// because the manifest commit is unknown (js/manifest_fetch.js rawFileUrl):
+// those stay network-first.
 function hasImmutableVersion(url) {
   try {
     return !!new URL(url).searchParams.get('v');
@@ -110,8 +112,9 @@ function cacheKeyFor(url) {
 //  - sha-pinned content (?v=) → cache-first: instant offline + zero redundant
 //    refetch; a new build changes the sha → the URL, so a cache miss on the new
 //    key still fetches fresh. Wins over the raw network-first.
-//  - navigation + raw (meta.yaml etc.) → network-first (prefer fresh, fall back
-//    to cache offline).
+//  - navigation + raw without a version or not pinned to a commit (a branch
+//    read, meta.yaml's included) → network-first (prefer fresh, fall back to
+//    cache offline).
 //  - truly-immutable CDN/static assets → cache-first.
 //  - everything else (app js/css, the Vimeo iframe) → network-first.
 function pickStrategy(url) {
