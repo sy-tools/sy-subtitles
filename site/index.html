@@ -1046,7 +1046,10 @@ function ghExchangeUrl() { return window.__SY_GH_EXCHANGE_URL || APP_GH_EXCHANGE
 // ============================================================
 // Cache — schema versioned, auto-migrates on format change
 // ============================================================
-var CACHE_SCHEMA = 6; // bump when cache format changes
+// Bump when the cache format changes. That includes the talk fields
+// applyMetaText (js/meta_batch.js) fills from meta.yaml: a talk whose meta.yaml
+// blob is unchanged is reused from this cache and never read again.
+var CACHE_SCHEMA = 6;
 var CACHE_KEY = 'sy_tree_cache__' + BRANCH;
 (function() {
   try {
@@ -2748,11 +2751,12 @@ function loadManifest() {
       var etag = r.headers.get('ETag');
       return r.json().then(function(data) {
         var m = buildManifest(data.tree);
-        reuseHydratedMeta(m.talks, cache && cache.talks, metaShaIndex(data.tree));
         m.etag = etag;
         // For a branch name the Trees API answers with the COMMIT sha, which is
         // what raw URLs can be pinned to.
         m.commitSha = data.sha || '';
+        // After commitSha: a meta sha is recorded only for a commit-pinned read.
+        reuseHydratedMeta(m.talks, cache && cache.talks, metaShaIndex(data.tree), isCommitSha(m.commitSha));
         m.treeSha = m.commitSha.substring(0, 7);
         m.timestamp = Date.now();
         m._schema = CACHE_SCHEMA;

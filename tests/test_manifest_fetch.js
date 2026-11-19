@@ -7,6 +7,7 @@ const {
   reviewStatusFallback,
   staleNotice,
   rawFileUrl,
+  isCommitSha,
 } = require('../site/js/manifest_fetch');
 
 // header getter double — case-sensitive exact map (production passes a
@@ -149,5 +150,21 @@ describe('rawFileUrl — content is read at the manifest commit, never at the br
   });
   it('pins the commit even when the blob sha is unknown', () => {
     assert.strictEqual(rawFileUrl(ROOT, C, 'main', 'talks/x/transcript_uk.txt', ''), ROOT + '/' + C + '/talks/x/transcript_uk.txt');
+  });
+});
+
+describe('isCommitSha — whether a read can be pinned', () => {
+  const C = '0123456789abcdef0123456789abcdef01234567';
+  it('accepts a full lowercase sha only', () => {
+    assert.strictEqual(isCommitSha(C), true);
+    ['', null, undefined, 'main', 'abc1234', C.toUpperCase(), C + '0'].forEach(function (c) {
+      assert.strictEqual(isCommitSha(c), false, String(c));
+    });
+  });
+  it('agrees with rawFileUrl about which reads are pinned', () => {
+    ['', 'main', 'abc1234', C].forEach(function (c) {
+      const url = rawFileUrl('https://raw.githubusercontent.com/o/r', c, 'main', 'x.txt', 'b'.repeat(40));
+      assert.strictEqual(url.indexOf('/main/') === -1, isCommitSha(c), String(c));
+    });
   });
 });

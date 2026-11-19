@@ -96,12 +96,15 @@ describe('parseMetaBatch', () => {
     assert.deepStrictEqual(out, { a: 'title: A', b: 'title: B' });
   });
 
-  it('answers null for a missing blob, a non-blob and a binary blob', () => {
+  it('leaves a missing blob, a non-blob and a binary blob unanswered', () => {
+    // Every talk asked for comes from a tree that lists its meta.yaml, so "no
+    // such blob" is not an answer about the file: an unresolvable ref replies
+    // all-null with no errors. Only real text counts as answered.
     const out = parseMetaBatch({ data: { repository: {
       m0: null, m1: {}, m2: { text: null, isTruncated: false }, m3: { text: 'ok', isTruncated: false },
       m4: { text: '', isTruncated: false },
     } } }, aliases);
-    assert.deepStrictEqual(out, { a: null, b: null, c: null, d: 'ok', e: '' });
+    assert.deepStrictEqual(out, { d: 'ok', e: '' });
   });
 
   it('leaves a truncated blob unanswered, so the caller reads it another way', () => {
@@ -146,7 +149,7 @@ describe('reuseHydratedMeta', () => {
 
   it('keeps the hydrated fields of a talk whose meta.yaml sha did not change', () => {
     const talks = [talk('same')];
-    const n = reuseHydratedMeta(talks, cached, { same: 's1' });
+    const n = reuseHydratedMeta(talks, cached, { same: 's1' }, true);
     assert.strictEqual(n, 1);
     assert.strictEqual(talks[0].title, 'Same');
     assert.strictEqual(talks[0].date, '1990-01-01');
@@ -157,27 +160,60 @@ describe('reuseHydratedMeta', () => {
 
   it('leaves a talk untitled when its sha changed, was never hydrated, or was never recorded', () => {
     const talks = [talk('changed'), talk('failed'), talk('legacy'), talk('brand-new')];
-    const n = reuseHydratedMeta(talks, cached, { changed: 'new', failed: 's3', legacy: 's4', 'brand-new': 's5' });
+    const n = reuseHydratedMeta(talks, cached, { changed: 'new', failed: 's3', legacy: 's4', 'brand-new': 's5' }, true);
     assert.strictEqual(n, 0);
     talks.forEach(function (t) { assert.strictEqual(t.title, '', t.id); });
   });
 
   it('stamps every talk with its current meta sha, reused or not', () => {
     const talks = [talk('same'), talk('changed'), talk('unknown')];
-    reuseHydratedMeta(talks, cached, { same: 's1', changed: 'new' });
+    reuseHydratedMeta(talks, cached, { same: 's1', changed: 'new' }, true);
     assert.deepStrictEqual(talks.map(function (t) { return t._metaSha; }), ['s1', 'new', '']);
   });
 
   it('never reuses on an empty sha', () => {
     const talks = [talk('x')];
-    reuseHydratedMeta(talks, [talk('x', { title: 'X', _metaSha: '' })], {});
+    reuseHydratedMeta(talks, [talk('x', { title: 'X', _metaSha: '' })], {}, true);
     assert.strictEqual(talks[0].title, '');
   });
 
   it('works with no cache at all', () => {
     const talks = [talk('x')];
-    assert.strictEqual(reuseHydratedMeta(talks, null, { x: 's' }), 0);
+    assert.strictEqual(reuseHydratedMeta(talks, null, { x: 's' }, true), 0);
     assert.strictEqual(talks[0]._metaSha, 's');
+  });
+
+  it('records no sha and reuses nothing when the read is not pinned to a commit', () => {
+    // Without a commit the raw read goes to the branch URL, whose CDN copy may
+    // predate the push. Stamped with the new blob sha, that old text would be
+    // reused for as long as the sha stays the same.
+    [false, undefined].forEach(function (pinned) {
+      const talks = [talk('same'), talk('changed')];
+      assert.strictEqual(reuseHydratedMeta(talks, cached, { same: 's1', changed: 'new' }, pinned), 0);
+      assert.deepStrictEqual(talks.map(function (t) { return t._metaSha; }), ['', '']);
+      assert.deepStrictEqual(talks.map(function (t) { return t.title; }), ['', '']);
+    });
+  });
+
+  it('carries every field applyMetaText sets, so a new one cannot silently drop', () => {
+    const text = JSON.stringify({
+      title: 'T', date: '1990-01-01', amruta_url: 'https://amruta',
+      videos: [{ slug: 'v1', title: 'One', video_ref: 'REF', sync: 'ignored' }, { slug: 'v2' }],
+    });
+    const blank = talk('x', { _srtSlugs: ['v1'] });
+    const hydrated = talk('x', { _srtSlugs: ['v1'] });
+    assert.strictEqual(applyMetaText(hydrated, text, deps), true);
+    const set = Object.keys(hydrated).filter(function (k) {
+      try { assert.deepStrictEqual(hydrated[k], blank[k]); return false; } catch (e) { return true; }
+    });
+    assert.ok(set.length >= 4, 'the meta text changes the talk: ' + set.join(', '));
+
+    hydrated._metaSha = 's1';
+    const fresh = talk('x', { _srtSlugs: ['v1'] });
+    assert.strictEqual(reuseHydratedMeta([fresh], [JSON.parse(JSON.stringify(hydrated))], { x: 's1' }, true), 1);
+    set.forEach(function (k) {
+      assert.deepStrictEqual(fresh[k], hydrated[k], 'reuseHydratedMeta must carry "' + k + '"');
+    });
   });
 });
 
@@ -228,6 +264,14 @@ describe('applyMetaText', () => {
     assert.strictEqual(t.title, '');
     assert.strictEqual(warned.length, 1);
   });
+  it('a meta.yaml that throws midway leaves the talk untouched, not half-filled', () => {
+    const t = talk('x');
+    const ok = applyMetaText(t, JSON.stringify({ title: 'T', date: '2001-01-01', videos: [null] }), deps);
+    assert.strictEqual(ok, false);
+    assert.strictEqual(t.title, '', 'an untitled talk is the "not hydrated" marker; a title here would be reused by sha');
+    assert.strictEqual(t.date, '');
+    assert.deepStrictEqual(t.videos, []);
+  });
 });
 
 describe('hydrateTalkMeta', () => {
@@ -256,6 +300,16 @@ describe('hydrateTalkMeta', () => {
     }, over || {});
     return { calls: calls, opts: opts };
   }
+
+  it('never rejects, even when the onUnauthorized hook itself throws', async () => {
+    const e = env({
+      graphql: function () { const err = new Error('HTTP 401'); err.status = 401; return Promise.reject(err); },
+      onUnauthorized: function () { throw new Error('ui broke'); },
+    });
+    const talks = [talk('a')];
+    await hydrateTalkMeta(talks, e.opts);
+    assert.strictEqual(talks[0].title, 'R-a', 'the raw fallback still ran');
+  });
 
   it('signed in: reads every untitled talk through chunked GraphQL, no raw fetch', async () => {
     const e = env();
@@ -327,14 +381,57 @@ describe('hydrateTalkMeta', () => {
     assert.deepStrictEqual(talks.map(function (t) { return t.title; }), ['R-a', 'R-b', 'R-c']);
   });
 
-  it('a blob GitHub says is missing is not asked for again over raw', async () => {
+  it('a blob GitHub says is missing is read over raw instead', async () => {
     const e = env({
       graphql: function () { return Promise.resolve({ data: { repository: { m0: null, m1: { text: '{"title":"B"}' } } } }); },
     });
     const talks = [talk('a'), talk('b')];
     await hydrateTalkMeta(talks, e.opts);
+    assert.deepStrictEqual(e.calls.raw, ['a']);
+    assert.deepStrictEqual(talks.map(function (t) { return t.title; }), ['R-a', 'B']);
+  });
+
+  it('an all-null reply (a ref GraphQL cannot resolve yet) is read over raw', async () => {
+    const e = env({
+      graphql: function () { return Promise.resolve({ data: { repository: { m0: null, m1: null } } }); },
+    });
+    const talks = [talk('a'), talk('b')];
+    await hydrateTalkMeta(talks, e.opts);
+    assert.deepStrictEqual(e.calls.raw.sort(), ['a', 'b']);
+    assert.deepStrictEqual(talks.map(function (t) { return t.title; }), ['R-a', 'R-b']);
+  });
+
+  it('a blob missing from GraphQL and from raw leaves the talk untitled', async () => {
+    const raw = [];
+    const e = env({
+      graphql: function () { return Promise.resolve({ data: { repository: { m0: null } } }); },
+      // What the app's fetchRaw answers on a 404.
+      fetchRaw: function (t) { raw.push(t.id); return Promise.resolve(''); },
+    });
+    const talks = [talk('a')];
+    await hydrateTalkMeta(talks, e.opts);
+    assert.deepStrictEqual(raw, ['a']);
+    assert.strictEqual(talks[0].title, '');
+  });
+
+  it('an apply that throws on the GraphQL path is not fatal and is not re-read over raw', async () => {
+    // E.g. the YAML parser never loaded: the text WAS the file, so reading the
+    // same bytes again cannot help, and one talk must not reject the index.
+    const warned = [];
+    const e = env({
+      batchSize: 10,
+      apply: function (t, text) {
+        if (t.id === 'a') throw new ReferenceError('jsyaml is not defined');
+        return applyMetaText(t, text, deps);
+      },
+      warn: function (m) { warned.push(m); },
+    });
+    const talks = [talk('a'), talk('b')];
+    await hydrateTalkMeta(talks, e.opts);
+    assert.deepStrictEqual(talks.map(function (t) { return t.title; }), ['', 'G-b']);
     assert.deepStrictEqual(e.calls.raw, []);
-    assert.deepStrictEqual(talks.map(function (t) { return t.title; }), ['', 'B']);
+    assert.strictEqual(warned.length, 1);
+    assert.match(warned[0], /\ba\b/);
   });
 
   it('a truncated blob is read over raw instead', async () => {
@@ -393,7 +490,12 @@ describe('meta batch wiring', () => {
 
   it('a fresh tree reuses hydrated meta by blob sha before fetching anything', () => {
     assert.ok(fnBody('loadManifest')
-      .includes('reuseHydratedMeta(m.talks, cache && cache.talks, metaShaIndex(data.tree))'));
+      .includes('reuseHydratedMeta(m.talks, cache && cache.talks, metaShaIndex(data.tree), isCommitSha(m.commitSha))'));
+  });
+
+  it('the commit is known before reuse decides whether a sha may be recorded', () => {
+    const body = fnBody('loadManifest');
+    assert.ok(body.indexOf('m.commitSha = ') > -1 && body.indexOf('m.commitSha = ') < body.indexOf('reuseHydratedMeta('));
   });
 
   it('a dead token found while hydrating is handled the way loadManifest handles it', () => {

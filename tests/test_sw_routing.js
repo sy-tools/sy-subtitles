@@ -80,8 +80,14 @@ describe('hasImmutableVersion — sha-pinned (?v=) content is immutable by URL',
     assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/talks/x/transcript_uk.txt?v=deadbee'), true);
     assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/review-status.json?v=cafe123'), true);
   });
-  it('is false when there is no v param (meta.yaml, the Trees API, the shell)', () => {
+  it('detects the full blob sha the app tags a commit-pinned meta.yaml with', () => {
+    assert.strictEqual(hasImmutableVersion(pinned(C1, 'talks/x/meta.yaml', 'b'.repeat(40))), true);
+  });
+  it('is false when there is no v param (a branch-read meta.yaml, the Trees API, the shell)', () => {
+    // meta.yaml carries no ?v= only when the manifest commit is unknown and the
+    // branch is read (js/manifest_fetch.js rawFileUrl), or its blob sha is.
     assert.strictEqual(hasImmutableVersion('https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml'), false);
+    assert.strictEqual(hasImmutableVersion(pinned(C1, 'talks/x/meta.yaml')), false);
     // the Trees API uses ?recursive=1, never ?v= — must stay network-first
     assert.strictEqual(hasImmutableVersion('https://api.github.com/git/trees/main?recursive=1'), false);
     assert.strictEqual(hasImmutableVersion('https://sy-tools.github.io/sy-subtitles/index.html'), false);
@@ -106,11 +112,20 @@ describe('pickStrategy — the routing the fetch handler applies', () => {
   it('the Trees API is network-only (never cached, so offline is detectable)', () => {
     assert.strictEqual(pickStrategy('https://api.github.com/git/trees/main?recursive=1'), 'network-only');
   });
-  it('navigation and raw (meta.yaml) are network-first', () => {
+  it('navigation and unversioned raw are network-first', () => {
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/'), 'network-first');
     assert.strictEqual(pickStrategy('https://sy-tools.github.io/sy-subtitles/index.html'), 'network-first');
-    // raw WITHOUT ?v= (meta.yaml) stays network-first
+    // The branch form: what meta.yaml is read from when the manifest commit is
+    // unknown. Its CDN copy may lag a push, so it must keep revalidating.
     assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/talks/x/meta.yaml'), 'network-first');
+    // Pinned to a commit but with no blob sha to name the bytes: no ?v=.
+    assert.strictEqual(pickStrategy(pinned(C1, 'talks/x/meta.yaml')), 'network-first');
+  });
+  it('meta.yaml as the app reads it — commit-pinned, ?v=<full blob sha> — is cache-first', () => {
+    const blob = 'b'.repeat(40);
+    assert.strictEqual(pickStrategy(pinned(C1, 'talks/x/meta.yaml', blob)), 'cache-first');
+    // ...and cached once per content, not once per commit.
+    assert.strictEqual(cacheKeyFor(pinned(C1, 'talks/x/meta.yaml', blob)), cacheKeyFor(pinned(C2, 'talks/x/meta.yaml', blob)));
   });
   it('commit-pinned (?v=) raw content is cache-first — instant offline, no redundant refetch', () => {
     assert.strictEqual(pickStrategy(pinned(C1, 'talks/x/uk/final/uk.srt', 'ab12cd34')), 'cache-first');
