@@ -60,6 +60,7 @@ var SHELL_ASSETS = [
   'js/passphrase_gate.js',
   'js/github_auth.js',
   'js/github_api.js',
+  'js/review_status_live.js',
   'js/meta_batch.js',
   'js/edit_sync.js',
   'js/marker_sync.js',

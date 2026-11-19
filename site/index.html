@@ -44,6 +44,7 @@
 <script src="js/passphrase_gate.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
+<script src="js/review_status_live.js"></script>
 <script src="js/meta_batch.js"></script>
 <script src="js/edit_sync.js"></script>
 <script src="js/marker_sync.js"></script>
@@ -3018,6 +3019,65 @@ function loadReviewStatus() {
     .catch(onFail);
 }
 
+// Signed in, the statuses are overlaid with what the Issues API says right now
+// (js/review_status_live.js): review-status.json trails a label change by the
+// minutes its workflow and the raw CDN take. The file stays the base — it is
+// all an anonymous visitor has, and what remains when this fails.
+//
+// Never rejects. Resolves { ok, changed }: ok = GitHub answered, changed = the
+// statuses on screen are no longer the ones this call started from. Callers
+// that overlap share one request (singleFlight) and so one answer.
+var REVIEW_CLAIM_HOLD_MS = 10 * 60 * 1000;
+var reviewClaims = {};            // talkId → { entry, since }, see holdClaims
+var liveStatusBlockedUntil = 0;   // epoch ms; a rate limit says when to ask again
+var refreshLiveReviewStatus = singleFlight(function() {
+  var token = getAuthToken();
+  if (!token || !manifest || !reviewStatus || Date.now() < liveStatusBlockedUntil) {
+    return Promise.resolve({ ok: false, changed: false });
+  }
+  var requestStartedMs = Date.now();
+  return fetchLiveIssues({ api: API, token: token, branch: BRANCH, storage: localStorage })
+    .then(function(issues) {
+      var before = JSON.stringify(reviewStatus.talks || {});
+      var ids = manifest.talks.map(function(tk) { return tk.id; });
+      var live = overlayReviewStatus(reviewStatus, issues, ids);
+      var held = holdClaims(live.talks, reviewClaims, Date.now(), REVIEW_CLAIM_HOLD_MS, requestStartedMs);
+      live.talks = held.talks;
+      reviewClaims = held.claims;
+      reviewStatus = live;
+      return { ok: true, changed: JSON.stringify(live.talks) !== before };
+    })
+    .catch(function(err) {
+      if (err && err.status === 401 && getAuthToken() === token) {
+        // Revoked/invalid token — the same exit loadManifest takes.
+        clearAuth();
+        updateAuthUI();
+        showToast(t('auth.expired'));
+      }
+      // Primary limit only; a secondary one (403 + Retry-After) is simply retried on the next trigger.
+      var info = rateLimitInfo(err && err.status, err && err.headerGet);
+      if (info.rateLimited) liveStatusBlockedUntil = info.rlReset ? info.rlReset * 1000 : Date.now() + 60 * 1000;
+      console.warn('[SPA] live review status unavailable, keeping review-status.json:', err);
+      return { ok: false, changed: false };
+    });
+});
+
+// True only while SPA.refreshManifest paints the answer it has just awaited:
+// showIndex asking again there would be the same question twice in a row.
+var liveStatusJustRefreshed = false;
+function repaintIndexOnLiveStatus() {
+  if (liveStatusJustRefreshed) return Promise.resolve();
+  return refreshLiveReviewStatus().then(function(res) {
+    if (!res.changed) return;
+    renderStats();
+    renderIndex(document.getElementById('index-content'));
+  }).catch(function(err) {
+    // Nobody awaits this on the showIndex paths: unlogged, a render that
+    // throws would surface only as an unhandled rejection.
+    console.error('[SPA] live status repaint failed:', err);
+  });
+}
+
 // ============================================================
 // INDEX VIEW
 // ============================================================
@@ -3130,7 +3190,7 @@ function showIndex() {
   var statusEl = document.getElementById('index-status');
   var contentEl = document.getElementById('index-content');
 
-  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); maybeStaleToast(); statusEl.hidden = true; loadMyWork(); return; }
+  if (manifest && reviewStatus) { updateLastModifiedUI(); renderStats(); renderIndex(contentEl); maybeStaleToast(); statusEl.hidden = true; loadMyWork(); repaintIndexOnLiveStatus(); return; }
 
   // `outcome` is null on success, { msg } on failure: it travels through the
   // loader because the screen may not be free to change the moment the data
@@ -3149,6 +3209,7 @@ function showIndex() {
         playContentEnter();
         maybeStaleToast();
         loadMyWork();
+        repaintIndexOnLiveStatus();
       });
     }
   });
@@ -3271,7 +3332,8 @@ function renderIndex(el) {
     // from the card (id is bound via addEventListener below, not inline HTML).
     var takeBtn = '';
     if (authLogin && actions.review && reviewStatusOf !== 'approved' && !(st && st.reviewer)) {
-      takeBtn = '<button class="btn btn--sm btn--ghost take-review-btn">' + esc(t('btn.take_review')) + '</button>';
+      // Busy comes from state, not from the node: a repaint mid-claim builds a new button.
+      takeBtn = '<button class="btn btn--sm btn--ghost take-review-btn"' + (claimsInFlight[tk.id] ? ' disabled' : '') + '>' + esc(t('btn.take_review')) + '</button>';
     }
     // Expert mode: badge every card that has my PRs/issues (any filter),
     // right-aligned in the actions row. Links go to GitHub.
@@ -3313,10 +3375,8 @@ function renderIndex(el) {
     var takeEl = div.querySelector('.take-review-btn');
     if (takeEl) takeEl.addEventListener('click', function(e) {
       e.stopPropagation();
-      takeEl.disabled = true;
-      // Success re-renders the index (this button is replaced); on failure
-      // the re-enable makes the card claimable again.
-      SPA.takeForReview(tk.id).then(function() { takeEl.disabled = false; });
+      // takeForReview owns the button's busy state — see claimsInFlight.
+      SPA.takeForReview(tk.id);
     });
 
     // Copy the talk id on expert-button click (id comes from the closure, never
@@ -9116,12 +9176,20 @@ function fetchFreshReviewStatus() {
   });
 }
 
-function pollOperatorStatus() {
-  fetchFreshReviewStatus()
-    .then(function(data) {
+// The labels themselves when GitHub will show them — the bot's move is visible
+// the moment it is made — and the file it eventually lands in otherwise.
+function refreshStatusForOperatorPoll() {
+  return refreshLiveReviewStatus().then(function(res) {
+    if (res.ok) return;
+    return fetchFreshReviewStatus().then(function(data) {
       reviewStatus = data;
       try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
-    })
+    });
+  });
+}
+
+function pollOperatorStatus() {
+  refreshStatusForOperatorPoll()
     .catch(function(err) { console.warn('[SPA] operator status poll failed:', err); })
     .then(function() {
       var talks = (reviewStatus && reviewStatus.talks) || {};
@@ -9301,9 +9369,39 @@ var WRITE_RECHECK_MS = 30 * 60 * 1000;
 // loses to the stale one and drops the reviewer (#957 vs #954). The cached
 // review-status is therefore only a fast path; when it carries no issue number
 // we ask GitHub (list API, immediately consistent) before creating anything.
+// talkId → the promise of a claim that has not settled yet. The index is
+// rebuilt under a claim (a live status answer, a filter click), so "busy"
+// cannot live on the button: the rebuilt one would be clickable again, and a
+// second click on the create-issue path is a second `Review:` issue (#957).
+// renderIndex disables the button for these talks; a second call joins the
+// first instead of sending anything.
+var claimsInFlight = {};
+function setTakeButtonBusy(talkId, busy) {
+  document.querySelectorAll('#index-content .talk-item').forEach(function(card) {
+    if (card.dataset.talkId !== talkId) return;
+    var btn = card.querySelector('.take-review-btn');
+    if (btn) btn.disabled = busy;
+  });
+}
 SPA.takeForReview = function(talkId) {
+  if (claimsInFlight[talkId]) return claimsInFlight[talkId];
   var user = ghWriteUser(), token = getAuthToken();
   if (!user || !token) return Promise.resolve();
+  // Success has already re-rendered the index without this button; after a
+  // failure, freeing it makes the card claimable again.
+  var release = function() {
+    delete claimsInFlight[talkId];
+    setTakeButtonBusy(talkId, false);
+  };
+  var attempt = sendReviewClaim(talkId, user, token);
+  claimsInFlight[talkId] = attempt;
+  setTakeButtonBusy(talkId, true);
+  attempt.then(release, release);
+  return attempt;
+};
+// Resolves when the claim attempt is over, never rejects (errors are reported
+// via ghWriteError, not rethrown).
+function sendReviewClaim(talkId, user, token) {
   var st = (reviewStatus && reviewStatus.talks && reviewStatus.talks[talkId]) || null;
   var done = function(issueNumber) {
     if (!reviewStatus) reviewStatus = { talks: {} };
@@ -9314,13 +9412,11 @@ SPA.takeForReview = function(talkId) {
       issue_number: issueNumber,
       updated_at: new Date().toISOString()
     };
+    reviewClaims[talkId] = { entry: Object.assign({}, reviewStatus.talks[talkId]), since: Date.now() };
     renderStats();
     renderIndex(document.getElementById('index-content'));
     showToast(t('review.taken'));
   };
-  // Returns a promise that settles when the claim attempt is over (errors are
-  // reported via ghWriteError, not rethrown) — the card's click handler
-  // re-enables its button on it, so a failure never leaves a dead button.
   // GitHub answers 201 to an assignment it dropped; only the reviewer in the
   // returned assignees means the talk is theirs.
   var settle = function(issue, issueNumber) {
@@ -9347,7 +9443,7 @@ SPA.takeForReview = function(talkId) {
       assignees: [user.login]
     }).then(function(res) { settle(res, res.number); });
   }).catch(ghWriteError);
-};
+}
 
 SPA.ghLogin = function() {
   var state = makeAuthState();
@@ -9659,9 +9755,9 @@ SPA.refreshManifest = function() {
   if (cache) { delete cache.etag; localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); }
   // Statuses only after the new tree: they are read pinned to its commit, and
   // pinned to the previous one they would be that commit's bytes for good.
-  loadManifest().then(function(m) {
+  return loadManifest().then(function(m) {
     manifest = m;
-    return loadReviewStatus().then(function() { return m; });
+    return loadReviewStatus().then(refreshLiveReviewStatus).then(function() { return m; });
   }).then(function(m) {
     // Auto-reload if the app shell (index.html or any js/*.js) changed in repo.
     // Guard against a reload loop: if APP_SHELL_VERSION is still stale after a
@@ -9685,7 +9781,8 @@ SPA.refreshManifest = function() {
     // one-time toast + un-dismiss the pill BEFORE route() (which runs the guarded
     // maybeStaleToast + updateStaleIndicator), so the signal fires once per click.
     if (m && m._stale) { _staleToastShown = false; _staleDismissed = false; }
-    route();
+    liveStatusJustRefreshed = true;
+    try { route(); } finally { liveStatusJustRefreshed = false; }
     updateFooter();
     if (el) {
       if (m && m._stale) {

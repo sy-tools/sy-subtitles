@@ -1,0 +1,113 @@
+{
+  "_comment": "Shared drift guard: .github/scripts/sync-review-status.py (apply_issues) and site/js/review_status_live.js (applyIssues) must both turn `issues` (gh CLI shape) + `base` + `talk_ids` into `expected`. Exercised by tests/test_review_status_mapping_fixture.py and tests/test_review_status_live.js.",
+  "cases": [
+    {
+      "name": "review status priority: approved beats in-progress beats pending",
+      "base": {},
+      "talk_ids": ["t-approved", "t-progress", "t-pending", "t-both"],
+      "issues": [
+        {"number": 1, "title": "Review: t-approved", "labels": [{"name": "talk-review"}, {"name": "review:approved"}], "assignees": [{"login": "alice"}, {"login": "bob"}], "updatedAt": "2026-11-01T10:00:00Z"},
+        {"number": 2, "title": "Review: t-progress", "labels": [{"name": "talk-review"}, {"name": "review:in-progress"}], "assignees": [{"login": "bob"}], "updatedAt": "2026-11-02T10:00:00Z"},
+        {"number": 3, "title": "Review: t-pending", "labels": [{"name": "talk-review"}], "assignees": [], "updatedAt": "2026-11-03T10:00:00Z"},
+        {"number": 4, "title": "Review: t-both", "labels": [{"name": "review:in-progress"}, {"name": "talk-review"}, {"name": "review:approved"}], "assignees": [], "updatedAt": "2026-11-04T10:00:00Z"}
+      ],
+      "expected": {
+        "t-approved": {"status": "approved", "reviewer": "alice", "issue_number": 1, "updated_at": "2026-11-01T10:00:00Z"},
+        "t-progress": {"status": "in-progress", "reviewer": "bob", "issue_number": 2, "updated_at": "2026-11-02T10:00:00Z"},
+        "t-pending": {"status": "pending", "reviewer": null, "issue_number": 3, "updated_at": "2026-11-03T10:00:00Z"},
+        "t-both": {"status": "approved", "reviewer": null, "issue_number": 4, "updated_at": "2026-11-04T10:00:00Z"}
+      }
+    },
+    {
+      "name": "duplicate review issues: freshest activity wins, higher number breaks a tie, list order is irrelevant",
+      "base": {},
+      "talk_ids": ["t-fresh", "t-tie"],
+      "issues": [
+        {"number": 30, "title": "Review: t-fresh", "labels": [{"name": "talk-review"}], "assignees": [], "updatedAt": "2026-11-01T10:00:00Z"},
+        {"number": 10, "title": "Review: t-fresh", "labels": [{"name": "talk-review"}, {"name": "review:approved"}], "assignees": [{"login": "alice"}], "updatedAt": "2026-11-05T10:00:00Z"},
+        {"number": 20, "title": "Review: t-fresh", "labels": [{"name": "talk-review"}, {"name": "review:in-progress"}], "assignees": [], "updatedAt": "2026-11-03T10:00:00Z"},
+        {"number": 41, "title": "Review: t-tie", "labels": [{"name": "talk-review"}, {"name": "review:in-progress"}], "assignees": [{"login": "bob"}], "updatedAt": "2026-11-02T10:00:00Z"},
+        {"number": 42, "title": "Review: t-tie", "labels": [{"name": "talk-review"}, {"name": "review:approved"}], "assignees": [], "updatedAt": "2026-11-02T10:00:00Z"},
+        {"number": 40, "title": "Review: t-tie", "labels": [{"name": "talk-review"}], "assignees": [], "updatedAt": "2026-11-02T10:00:00Z"}
+      ],
+      "expected": {
+        "t-fresh": {"status": "approved", "reviewer": "alice", "issue_number": 10, "updated_at": "2026-11-05T10:00:00Z"},
+        "t-tie": {"status": "approved", "reviewer": null, "issue_number": 42, "updated_at": "2026-11-02T10:00:00Z"}
+      }
+    },
+    {
+      "name": "operator stage for every label, in OPERATOR_STAGES priority order",
+      "base": {},
+      "talk_ids": ["t-pipeline", "t-translator", "t-review", "t-qa", "t-ready", "t-delivered", "t-multi", "t-none"],
+      "issues": [
+        {"number": 101, "title": "Operator: t-pipeline", "labels": [{"name": "talk-operator"}, {"name": "op:pipeline"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 102, "title": "Operator: t-translator", "labels": [{"name": "talk-operator"}, {"name": "op:translator"}, {"name": "op:pipeline"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 103, "title": "Operator: t-review", "labels": [{"name": "talk-operator"}, {"name": "op:translator"}, {"name": "op:review"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 104, "title": "Operator: t-qa", "labels": [{"name": "talk-operator"}, {"name": "op:qa"}, {"name": "op:qa-passed"}, {"name": "op:review"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 105, "title": "Operator: t-ready", "labels": [{"name": "talk-operator"}, {"name": "op:qa"}, {"name": "op:ready"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 106, "title": "Operator: t-delivered", "labels": [{"name": "op:ready"}, {"name": "talk-operator"}, {"name": "op:delivered"}], "assignees": [{"login": "op"}, {"login": "other"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 107, "title": "Operator: t-multi", "labels": [{"name": "op:pipeline"}, {"name": "op:translator"}, {"name": "op:review"}, {"name": "op:qa"}, {"name": "op:ready"}, {"name": "op:delivered"}, {"name": "talk-operator"}], "assignees": [], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 108, "title": "Operator: t-none", "labels": [{"name": "talk-operator"}, {"name": "op:qa-passed"}], "assignees": [], "updatedAt": "2026-11-11T10:00:00Z"}
+      ],
+      "expected": {
+        "t-pipeline": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-10T10:00:00Z", "operator_stage": "pipeline", "operator": "op", "operator_issue": 101},
+        "t-translator": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-10T10:00:00Z", "operator_stage": "translator", "operator": "op", "operator_issue": 102},
+        "t-review": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-10T10:00:00Z", "operator_stage": "review", "operator": "op", "operator_issue": 103},
+        "t-qa": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-10T10:00:00Z", "operator_stage": "qa", "operator": "op", "operator_issue": 104},
+        "t-ready": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-10T10:00:00Z", "operator_stage": "ready", "operator": "op", "operator_issue": 105},
+        "t-delivered": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-10T10:00:00Z", "operator_stage": "delivered", "operator": "op", "operator_issue": 106},
+        "t-multi": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-10T10:00:00Z", "operator_stage": "delivered", "operator": null, "operator_issue": 107},
+        "t-none": {"status": "pending", "reviewer": null, "issue_number": null, "updated_at": "2026-11-11T10:00:00Z", "operator_stage": null, "operator": null, "operator_issue": 108}
+      }
+    },
+    {
+      "name": "operator issue joins the review entry; duplicates resolve by activity; a talk not in the manifest is skipped",
+      "base": {},
+      "talk_ids": ["t-joined"],
+      "issues": [
+        {"number": 201, "title": "Operator: t-joined", "labels": [{"name": "talk-operator"}, {"name": "op:qa"}], "assignees": [{"login": "old-op"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 200, "title": "Operator: t-joined", "labels": [{"name": "talk-operator"}, {"name": "op:ready"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-12T10:00:00Z"},
+        {"number": 50, "title": "Review: t-joined", "labels": [{"name": "talk-review"}, {"name": "review:approved"}], "assignees": [{"login": "alice"}], "updatedAt": "2026-11-09T10:00:00Z"},
+        {"number": 202, "title": "Operator: t-gone", "labels": [{"name": "talk-operator"}, {"name": "op:qa"}], "assignees": [], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 51, "title": "Review: t-not-in-manifest", "labels": [{"name": "talk-review"}], "assignees": [], "updatedAt": "2026-11-09T10:00:00Z"}
+      ],
+      "expected": {
+        "t-joined": {"status": "approved", "reviewer": "alice", "issue_number": 50, "updated_at": "2026-11-09T10:00:00Z", "operator_stage": "ready", "operator": "op", "operator_issue": 200},
+        "t-not-in-manifest": {"status": "pending", "reviewer": null, "issue_number": 51, "updated_at": "2026-11-09T10:00:00Z"}
+      }
+    },
+    {
+      "name": "overlay: base entries survive unless an issue covers them; a review issue replaces the whole entry; an operator issue amends it",
+      "base": {
+        "t-manual": {"status": "approved", "reviewer": "carol", "issue_number": null, "updated_at": "2026-01-01T00:00:00Z"},
+        "t-replaced": {"status": "pending", "reviewer": null, "issue_number": 60, "updated_at": "2026-01-01T00:00:00Z", "operator_stage": "qa", "operator": "op", "operator_issue": 300},
+        "t-amended": {"status": "approved", "reviewer": "carol", "issue_number": 61, "updated_at": "2026-01-02T00:00:00Z", "operator_stage": "qa", "operator": "old-op", "operator_issue": 301}
+      },
+      "talk_ids": ["t-manual", "t-replaced", "t-amended"],
+      "issues": [
+        {"number": 60, "title": "Review: t-replaced", "labels": [{"name": "talk-review"}, {"name": "review:in-progress"}], "assignees": [{"login": "bob"}], "updatedAt": "2026-11-09T10:00:00Z"},
+        {"number": 301, "title": "Operator: t-amended", "labels": [{"name": "talk-operator"}, {"name": "op:delivered"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-12T10:00:00Z"}
+      ],
+      "expected": {
+        "t-manual": {"status": "approved", "reviewer": "carol", "issue_number": null, "updated_at": "2026-01-01T00:00:00Z"},
+        "t-replaced": {"status": "in-progress", "reviewer": "bob", "issue_number": 60, "updated_at": "2026-11-09T10:00:00Z"},
+        "t-amended": {"status": "approved", "reviewer": "carol", "issue_number": 61, "updated_at": "2026-01-02T00:00:00Z", "operator_stage": "delivered", "operator": "op", "operator_issue": 301}
+      }
+    },
+    {
+      "name": "titles: surrounding whitespace is trimmed; foreign titles are skipped; an Operator title without the operator label is not an operator issue",
+      "base": {},
+      "talk_ids": ["t-space", "t-mislabelled"],
+      "issues": [
+        {"number": 70, "title": "Review:   t-space  ", "labels": [{"name": "talk-review"}], "assignees": [], "updatedAt": "2026-11-09T10:00:00Z"},
+        {"number": 71, "title": "Operator:  t-space ", "labels": [{"name": "talk-operator"}, {"name": "op:review"}], "assignees": [{"login": "op"}], "updatedAt": "2026-11-10T10:00:00Z"},
+        {"number": 72, "title": "Something else entirely", "labels": [{"name": "talk-review"}], "assignees": [], "updatedAt": "2026-11-09T10:00:00Z"},
+        {"number": 73, "title": "Operator: t-mislabelled", "labels": [{"name": "talk-review"}], "assignees": [], "updatedAt": "2026-11-09T10:00:00Z"},
+        {"number": 74, "title": "review: t-space", "labels": [{"name": "talk-review"}, {"name": "review:approved"}], "assignees": [], "updatedAt": "2026-11-15T10:00:00Z"}
+      ],
+      "expected": {
+        "t-space": {"status": "pending", "reviewer": null, "issue_number": 70, "updated_at": "2026-11-09T10:00:00Z", "operator_stage": "review", "operator": "op", "operator_issue": 71}
+      }
+    }
+  ]
+}

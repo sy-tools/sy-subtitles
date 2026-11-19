@@ -904,3 +904,79 @@ describe('pipeline dispatch primitives', () => {
     assert.strictEqual(r, text);
   });
 });
+
+const { listIssuesByLabelConditional } = require('../site/js/github_api');
+
+describe('listIssuesByLabelConditional', () => {
+  const PAGE1 = API + '/issues?labels=talk-review&state=all&per_page=100';
+  const PAGE2 = 'https://api.github.com/repositories/1/issues?labels=talk-review&state=all&per_page=100&page=2';
+
+  function pagedFetch(pages, calls) {
+    return async (url, init) => {
+      const headers = (init && init.headers) || {};
+      calls.push({ url, headers });
+      const p = pages[url];
+      if (!p) throw new Error('unexpected url ' + url);
+      if (p.status && p.status !== 200) {
+        return { ok: false, status: p.status, headers: { get: (n) => (p.headers || {})[n] || null },
+          json: async () => ({ message: p.message || 'err' }) };
+      }
+      if (headers['If-None-Match'] && headers['If-None-Match'] === p.etag) {
+        return { ok: false, status: 304, headers: { get: () => null }, json: async () => { throw new Error('304 has no body'); } };
+      }
+      const h = { ETag: p.etag, Link: p.next ? '<' + PAGE1 + '>; rel="prev", <' + p.next + '>; rel="next"' : null };
+      return { ok: true, status: 200, headers: { get: (n) => h[n] || null }, json: async () => p.rows };
+    };
+  }
+  const twoPages = () => ({
+    [PAGE1]: { etag: '"a"', next: PAGE2, rows: [{ number: 1, title: 'A' }, { number: 2, title: 'PR', pull_request: {} }] },
+    [PAGE2]: { etag: '"b"', rows: [{ number: 3, title: 'C' }] },
+  });
+  const pick = (r) => ({ n: r.number });
+
+  it('follows the Link header, drops pull requests and maps rows', async () => {
+    const calls = [];
+    const res = await listIssuesByLabelConditional(API, 'gho_x', 'talk-review', { mapRow: pick }, pagedFetch(twoPages(), calls));
+    assert.deepStrictEqual(calls.map((c) => c.url), [PAGE1, PAGE2]);
+    assert.strictEqual(calls[0].headers.Authorization, 'Bearer gho_x');
+    assert.deepStrictEqual(res.rows, [{ n: 1 }, { n: 3 }]);
+    assert.deepStrictEqual(res.pages.map((p) => p.etag), ['"a"', '"b"']);
+  });
+
+  it('replays each page\'s ETag; a 304 reuses that page\'s rows and its next link', async () => {
+    const first = await listIssuesByLabelConditional(API, 'gho_x', 'talk-review', { mapRow: pick }, pagedFetch(twoPages(), []));
+    const world = twoPages();
+    world[PAGE2] = { etag: '"b2"', rows: [{ number: 4, title: 'D' }] };
+    const calls = [];
+    const res = await listIssuesByLabelConditional(API, 'gho_x', 'talk-review',
+      { mapRow: pick, cached: { pages: first.pages } }, pagedFetch(world, calls));
+    assert.deepStrictEqual(calls.map((c) => c.headers['If-None-Match']), ['"a"', '"b"']);
+    assert.deepStrictEqual(res.rows, [{ n: 1 }, { n: 4 }], 'page 1 from cache, page 2 fresh');
+    assert.deepStrictEqual(res.pages.map((p) => p.etag), ['"a"', '"b2"']);
+  });
+
+  it('does not send a cached ETag for a different URL', async () => {
+    const calls = [];
+    await listIssuesByLabelConditional(API, 'gho_x', 'talk-review',
+      { mapRow: pick, cached: { pages: [{ url: API + '/issues?labels=other', etag: '"z"', rows: [], next: null }] } },
+      pagedFetch(twoPages(), calls));
+    assert.strictEqual(calls[0].headers['If-None-Match'], undefined);
+  });
+
+  it('never follows a next link that leaves the API origin (the token rides along)', async () => {
+    const world = twoPages();
+    world[PAGE1].next = 'https://evil.example/issues?page=2';
+    const calls = [];
+    const res = await listIssuesByLabelConditional(API, 'gho_x', 'talk-review', { mapRow: pick }, pagedFetch(world, calls));
+    assert.strictEqual(calls.length, 1);
+    assert.deepStrictEqual(res.rows, [{ n: 1 }]);
+  });
+
+  it('rejects with status and a header getter so the caller can classify a rate limit', async () => {
+    const world = { [PAGE1]: { status: 403, message: 'API rate limit exceeded',
+      headers: { 'X-RateLimit-Remaining': '0', 'X-RateLimit-Reset': '1700000000' } } };
+    await assert.rejects(
+      listIssuesByLabelConditional(API, 'gho_x', 'talk-review', { mapRow: pick }, pagedFetch(world, [])),
+      (e) => e.status === 403 && e.headerGet('X-RateLimit-Remaining') === '0' && /rate limit/.test(e.message));
+  });
+});

@@ -16,6 +16,7 @@ Requires GH_TOKEN in env (for `gh issue list`).
 import json
 import subprocess
 import sys
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -94,10 +95,17 @@ def issue_rank(issue: dict) -> tuple[str, int]:
     return (issue.get("updatedAt") or "", issue["number"])
 
 
-def main() -> int:
-    talks = load_existing()
-    issues = fetch_issues()
+def talk_dir_exists(talk_id: str) -> bool:
+    return (Path("talks") / talk_id).is_dir()
 
+
+def apply_issues(talks: dict, issues: list[dict], talk_exists: Callable[[str], bool] = talk_dir_exists) -> dict:
+    """Overlay the statuses `issues` describe onto `talks`, in place.
+
+    The mapping itself, free of `gh` and of the working directory, because it
+    has a twin: site/js/review_status_live.js computes the same statuses in the
+    SPA. tests/fixtures/review_status_mapping.json holds both to one answer.
+    """
     # Group first: a talk can carry more than one `talk-review` issue (the
     # pipeline creates one; the SPA's "take for review" creates another when its
     # cached review-status has no issue number yet). One of them must win, and
@@ -139,7 +147,7 @@ def main() -> int:
         }
 
     for talk_id, group in by_talk_operator.items():
-        if not (Path("talks") / talk_id).is_dir():
+        if not talk_exists(talk_id):
             print(f"warning: `Operator: {talk_id}` names no talk in talks/ — skipping", file=sys.stderr)
             continue
         winner = max(group, key=issue_rank)
@@ -152,6 +160,14 @@ def main() -> int:
         entry["operator_stage"] = operator_stage(labels)
         entry["operator"] = assignees[0] if assignees else None
         entry["operator_issue"] = winner["number"]
+
+    return talks
+
+
+def main() -> int:
+    talks = load_existing()
+    issues = fetch_issues()
+    apply_issues(talks, issues)
 
     output = {
         "version": 1,

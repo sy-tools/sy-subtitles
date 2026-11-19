@@ -274,26 +274,53 @@ def test_operator_mode_is_there_when_the_index_is_reached_from_another_view(serv
     ctx.close()
 
 
-def test_package_files_appear_once_the_bot_has_packaged_the_talk(server, browser):  # noqa: F811
-    calls = []
-    ctx, pg = _page(browser, calls, OPERATOR)
+PACKAGED_TREE = {
+    "sha": "op2",
+    "tree": TREE["tree"] + [{"path": f"talks/{QA_TALK}/_for_Amruta/transcript_uk.txt", "type": "blob"}],
+}
+OPERATOR_ISSUES = "**/api.github.com/repos/**/issues?labels=talk-operator*"
+
+
+def _wait_on_the_bot_after_qa_passed(pg, base_url):
     pg.clock.install()
-    pg.goto(f"{server}{SPA_URL}")
+    pg.goto(f"{base_url}{SPA_URL}")
     btn = _card(pg, QA_TALK).locator(".op-qa-btn")
     btn.wait_for(timeout=10000)
     btn.click()
     _card(pg, QA_TALK).locator(".op-waiting").wait_for(timeout=5000)
 
+
+def test_package_files_appear_once_the_bot_has_labelled_the_issue_ready(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR)
+    _wait_on_the_bot_after_qa_passed(pg, server)
+
+    # review-status.json — raw and through the API alike — still says "qa":
+    # the bot has only just put op:ready on the issue.
+    ready_issue = {
+        "number": 1279,
+        "title": f"Operator: {QA_TALK}",
+        "labels": [{"name": "talk-operator"}, {"name": "op:ready"}],
+        "assignees": [{"login": "SlavaSubotskiy"}],
+        "updated_at": "2026-11-18T10:00:00Z",
+    }
+    pg.route(OPERATOR_ISSUES, lambda r: _json(r, 200, [ready_issue]))
+    pg.route("**/api.github.com/repos/**/git/trees/**", lambda r: _json(r, 200, PACKAGED_TREE))
+    pg.clock.run_for(31000)
+    _card(pg, QA_TALK).locator(".op-file-btn", has_text="transcript_uk.txt").wait_for(timeout=5000)
+    ctx.close()
+
+
+def test_package_files_appear_from_the_status_file_when_the_issues_api_fails(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR)
+    pg.route(OPERATOR_ISSUES, lambda r: _json(r, 500, {"message": "boom"}))
+    _wait_on_the_bot_after_qa_passed(pg, server)
+
     packaged = json.loads(json.dumps(STATUS))
     packaged["talks"][QA_TALK]["operator_stage"] = "ready"
-    tree = {
-        "sha": "op2",
-        "tree": TREE["tree"] + [{"path": f"talks/{QA_TALK}/_for_Amruta/transcript_uk.txt", "type": "blob"}],
-    }
     # raw.githubusercontent keeps serving the old file (its CDN ignores the
     # query string, so a cache buster does not help); only the API is fresh.
     pg.route("**/api.github.com/repos/**/contents/review-status.json*", lambda r: _json(r, 200, _contents(packaged)))
-    pg.route("**/api.github.com/repos/**/git/trees/**", lambda r: _json(r, 200, tree))
+    pg.route("**/api.github.com/repos/**/git/trees/**", lambda r: _json(r, 200, PACKAGED_TREE))
     pg.clock.run_for(31000)
     _card(pg, QA_TALK).locator(".op-file-btn", has_text="transcript_uk.txt").wait_for(timeout=5000)
     ctx.close()
