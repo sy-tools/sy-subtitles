@@ -34,6 +34,7 @@ import http.server
 import json
 import threading
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 
@@ -305,8 +306,22 @@ def _wire(pg, calls, review_status, sync_opts):
         # reply. Always record for the assertions.
         req = route.request
         body = json.loads(req.post_data) if req.post_data else None
-        calls.append({"method": req.method, "url": req.url, "body": body})
         query = (body or {}).get("query", "")
+        if "object(expression" in query:
+            # The index's meta.yaml batch (js/meta_batch.js) is a read, so it
+            # stays out of `calls`, which the tests read as the write log.
+            blobs = {
+                alias: {"text": SAMPLE_META, "isTruncated": False}
+                for alias in body["variables"]
+                if alias not in ("owner", "name")
+            }
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"data": {"repository": blobs}}),
+            )
+            return
+        calls.append({"method": req.method, "url": req.url, "body": body})
         if "convertPullRequestToDraft" in query:
             data = {"convertPullRequestToDraft": {"pullRequest": {"isDraft": True}}}
         else:
@@ -1065,4 +1080,48 @@ def test_cloud_chip_dom_contract(server, browser):
     assert result["synced"]["textW"] < 2
     # idle hides the whole chip.
     assert result["idle"]["display"] == "none"
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# Index meta.yaml hydration: one GraphQL batch signed in, raw fetches otherwise.
+# ---------------------------------------------------------------------------
+
+
+def _open_index_recording_meta_reads(browser, server, signed_in):
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=signed_in)
+    reads = {"graphql": [], "raw": []}
+
+    def on_request(req):
+        if req.url.endswith("/graphql") and "object(expression" in (req.post_data or ""):
+            reads["graphql"].append(req)
+        elif urlparse(req.url).hostname == "raw.githubusercontent.com" and urlparse(req.url).path.endswith(
+            "/meta.yaml"
+        ):
+            reads["raw"].append(req)
+
+    pg.on("request", on_request)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_function(
+        "document.body.innerText.indexOf('Test Talk: Subtitle Preview') !== -1",
+        timeout=10000,
+    )
+    return ctx, reads
+
+
+def test_signed_in_index_reads_meta_in_one_graphql_batch(server, browser):
+    ctx, reads = _open_index_recording_meta_reads(browser, server, signed_in=True)
+    assert len(reads["graphql"]) == 1
+    batch = json.loads(reads["graphql"][0].post_data)
+    assert batch["variables"]["m0"].endswith(f":talks/{TALK_ID}/meta.yaml")
+    assert reads["graphql"][0].headers["authorization"] == "Bearer gho_e2e"
+    assert reads["raw"] == []
+    ctx.close()
+
+
+def test_signed_out_index_reads_meta_over_raw_without_credentials(server, browser):
+    ctx, reads = _open_index_recording_meta_reads(browser, server, signed_in=False)
+    assert reads["graphql"] == []
+    assert len(reads["raw"]) == 1
+    assert "authorization" not in reads["raw"][0].headers
     ctx.close()
