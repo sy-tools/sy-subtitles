@@ -1050,8 +1050,12 @@ jobs:
             #   en-srt mode  → --en-srt       (EN SRT blocks)
             ANCHOR_FLAG=""
             if [ "${{ needs.prepare-build.outputs.timing_source }}" = "en-srt" ]; then
-              EN_SRT=$(python -c "import sys; from tools.srt_utils import timing_en_srt; print(timing_en_srt(sys.argv[1]))" "${VIDEO}")
-              ANCHOR_FLAG="--en-srt ${EN_SRT}"
+              EN_SRT=$(python -c "import sys; from tools.srt_utils import timing_en_srt; print(timing_en_srt(sys.argv[1]) or '')" "${VIDEO}")
+              # A derived video without English subtitles has no anchor; it
+              # runs with --skip-time-check, so none is needed.
+              if [ -n "$EN_SRT" ]; then
+                ANCHOR_FLAG="--en-srt ${EN_SRT}"
+              fi
             else
               ANCHOR_FLAG="--whisper-json ${VIDEO}/source/whisper.json"
             fi

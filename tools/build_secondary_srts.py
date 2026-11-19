@@ -107,7 +107,17 @@ def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None)
             continue
 
         final_dir.mkdir(parents=True, exist_ok=True)
-        offset = detect_offset(str(primary_en), str(secondary_en))
+        # A corrected final/en.srt keeps the text and cue count of the download
+        # beside it, and detect_offset reads only the first cues — so a mixed
+        # pair can pass as a constant shift and the correction would be lost.
+        mixed = primary_en.parent.name != secondary_en.parent.name
+        if mixed:
+            print(
+                f"WARNING {slug}: bridging {primary_slug}/{primary_en.parent.name}/en.srt with "
+                f"{slug}/{secondary_en.parent.name}/en.srt — one of the pair is a correction; resyncing",
+                file=sys.stderr,
+            )
+        offset = None if mixed else detect_offset(str(primary_en), str(secondary_en))
         if offset is not None:
             print(f"=== {slug}: constant offset {offset}ms → offset_srt apply", file=sys.stderr)
             apply_offset(str(primary_uk), offset, str(out))

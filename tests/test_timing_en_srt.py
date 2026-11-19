@@ -10,9 +10,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 from tests.srt_helpers import write_srt_ms
@@ -50,6 +53,15 @@ def test_a_final_en_srt_alone_is_enough(tmp_path):
 def test_no_en_srt_at_all_resolves_to_none(tmp_path):
     (tmp_path / "source").mkdir()
     assert timing_en_srt(tmp_path) is None
+
+
+def test_prepare_timing_without_an_en_srt_names_the_video(tmp_path):
+    (tmp_path / "talk" / "video1" / "source").mkdir(parents=True)
+
+    with pytest.raises(FileNotFoundError, match="video1"):
+        cmd_prepare_timing(
+            argparse.Namespace(talk_dir=str(tmp_path / "talk"), video_slug="video1", timing_source="en-srt")
+        )
 
 
 def test_prepare_timing_reads_the_corrected_final_en_srt(tmp_path):
@@ -93,15 +105,35 @@ def _two_video_talk(tmp_path: Path) -> Path:
 
 def test_the_secondary_bridge_uses_the_final_en_srts(tmp_path):
     talk = _two_video_talk(tmp_path)
-    drifting = _blocks(_EN, offset_ms=5000, jitter=900)
-    _write(talk / "vid1" / "source" / "en.srt", _blocks(_EN))
-    _write(talk / "vid2" / "source" / "en.srt", drifting)
+    drifting = _blocks(_EN, jitter=900)
+    _write(talk / "vid1" / "source" / "en.srt", drifting)
+    _write(talk / "vid2" / "source" / "en.srt", _blocks(_EN, offset_ms=5000))
     _write(talk / "vid1" / "final" / "en.srt", _blocks(_EN))
     _write(talk / "vid2" / "final" / "en.srt", _blocks(_EN, offset_ms=7000))
 
     [result] = build_secondary_srts(talk, "vid1")
 
     assert result["mode"] == "secondary-offset"
+
+
+def _late_drift(texts, offset_ms):
+    """A constant shift for the first ten cues (all detect_offset inspects), then 4 s more."""
+    return [
+        (s + (4000 if i >= 10 else 0), e + (4000 if i >= 10 else 0), t)
+        for i, (s, e, t) in enumerate(_blocks(texts, offset_ms))
+    ]
+
+
+def test_a_mixed_pair_is_resynced_not_offset(tmp_path, capsys):
+    talk = _two_video_talk(tmp_path)
+    _write(talk / "vid1" / "source" / "en.srt", _blocks(_EN))
+    _write(talk / "vid2" / "source" / "en.srt", _blocks(_EN, offset_ms=7000))
+    _write(talk / "vid2" / "final" / "en.srt", _late_drift(_EN, offset_ms=7000))
+
+    [result] = build_secondary_srts(talk, "vid1")
+
+    assert result["mode"] == "secondary-resync"
+    assert "final/en.srt" in capsys.readouterr().err
 
 
 def test_a_secondary_with_only_a_final_en_srt_is_built(tmp_path):
@@ -138,6 +170,58 @@ def test_the_sync_shadow_carries_the_final_en_srt(tmp_path, monkeypatch):
     shadow = shadow_talk("talks/1990-01-01_Some-Talk", tmp_path / "tmp")
 
     assert (shadow / "Video1" / "final" / "en.srt").is_file(), "the shadowed validate would read source/en.srt"
+
+
+def _step(job: str, name: str) -> str:
+    steps = yaml.safe_load(PIPELINE.read_text(encoding="utf-8"))["jobs"][job]["steps"]
+    return next(st for st in steps if st.get("name") == name)["run"]
+
+
+def _run_step(tmp_path: Path, script: str, env: dict) -> dict:
+    out = tmp_path / "github_output"
+    out.write_text("", encoding="utf-8")
+    full_env = {**os.environ, **env, "GITHUB_OUTPUT": str(out), "PYTHONPATH": str(ROOT)}
+    subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=full_env, check=True, capture_output=True)
+    return dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").splitlines() if "=" in line)
+
+
+@pytest.mark.parametrize(
+    ("files", "expected"),
+    [(["final/en.srt"], "en-srt"), (["source/en.srt"], "en-srt"), ([], "whisper")],
+)
+def test_auto_timing_resolution(tmp_path, files, expected):
+    video = tmp_path / "talks" / "T" / "V"
+    (video / "source").mkdir(parents=True)
+    for rel in files:
+        _write(video / rel, [(0, 1000, "Line.")])
+
+    out = _run_step(
+        tmp_path,
+        _step("prepare-build", "Resolve timing source"),
+        {"TIMING_SOURCE_INPUT": "auto", "TALK_ID": "T", "VIDEO_SLUG": "V"},
+    )
+
+    assert out["timing_source"] == expected
+
+
+def test_validation_anchors_on_the_final_en_srt_and_skips_a_video_without_one(tmp_path):
+    talk = tmp_path / "talks" / "T"
+    meta = {"videos": [{"slug": "P", "sync": "primary"}, {"slug": "D", "sync": "derived"}]}
+    (talk / "P").mkdir(parents=True)
+    (talk / "meta.yaml").write_text(yaml.safe_dump(meta), encoding="utf-8")
+    (talk / "transcript_uk.txt").write_text("Рядок.\n", encoding="utf-8")
+    _write(talk / "P" / "source" / "en.srt", [(0, 1000, "Line.")])
+    _write(talk / "P" / "final" / "en.srt", [(100, 1100, "Line.")])
+    for slug in ("P", "D"):
+        _write(talk / slug / "final" / "uk.srt", [(100, 1100, "Рядок.")])
+    script = _step("build-timecodes", "Validate subtitles").replace(
+        "${{ needs.prepare-build.outputs.timing_source }}", "en-srt"
+    )
+
+    _run_step(tmp_path, script, {"TALK_ID": "T", "VIDEO_SLUG": "P"})
+
+    assert "EN SRT: talks/T/P/final/en.srt" in (talk / "P" / "final" / "report.txt").read_text(encoding="utf-8")
+    assert "None" not in (talk / "D" / "final" / "report.txt").read_text(encoding="utf-8")
 
 
 def test_the_pipeline_never_names_source_en_srt_as_the_timing_file():

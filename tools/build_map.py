@@ -86,7 +86,10 @@ def cmd_prepare_timing(args):
     if timing_source == "en-srt":
         from .srt_utils import parse_srt, timing_en_srt
 
-        en_srt = parse_srt(str(timing_en_srt(video)))
+        en_srt_path = timing_en_srt(video)
+        if en_srt_path is None:
+            raise FileNotFoundError(f"{video}: en-srt timing needs final/en.srt or source/en.srt; neither exists")
+        en_srt = parse_srt(str(en_srt_path))
         data = {
             "source": "en-srt",
             "blocks": [{"n": b["idx"], "s": b["start_ms"], "e": b["end_ms"], "t": b["text"]} for b in en_srt],
