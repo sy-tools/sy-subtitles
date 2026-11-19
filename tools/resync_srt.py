@@ -12,10 +12,11 @@ Produce:
 Only UK blocks whose primary timestamps fall inside the aligned region are
 emitted; everything outside (content not present in secondary) is dropped.
 
-Usage:
+Usage (each EN SRT is the video's timing file, srt_utils.timing_en_srt:
+final/en.srt when there is one, else source/en.srt):
     python -m tools.resync_srt \\
         --primary-uk primary/final/uk.srt \\
-        --primary-en primary/source/en.srt \\
+        --primary-en primary/final/en.srt \\
         --secondary-en secondary/source/en.srt \\
         --output secondary/final/uk.srt
 """

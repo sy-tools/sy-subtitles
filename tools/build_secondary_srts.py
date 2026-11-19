@@ -6,11 +6,12 @@ the *primary* (built by the LLM from the transcript); the videos declared
 their own timeline. Roles come from tools.video_roles, so this is not
 "everything that is not the primary" — ``independent`` and ``ignored`` videos
 are never built here. The bridge between the two timelines is built from matched words in
-the two ``source/en.srt`` files — a constant time offset when the recordings
+the two EN SRTs (``srt_utils.timing_en_srt``: the corrected ``final/en.srt`` when
+there is one, else ``source/en.srt``) — a constant time offset when the recordings
 differ only by a head/tail shift (``offset_srt``), or a word-level warp when one
 covers a subset of the other (``resync_srt``).
 
-The derivation therefore needs ``source/en.srt`` on BOTH the primary and the
+The derivation therefore needs an EN SRT on BOTH the primary and the
 secondary, regardless of the talk's ``timing_source``. A secondary without
 ``en.srt`` (a raw recording with no English subtitles — e.g. a yogi-intro or a
 silent havan) simply has nothing to derive from and is **skipped**, not treated
@@ -37,6 +38,7 @@ import yaml
 
 from .offset_srt import apply_offset, detect_offset
 from .resync_srt import resync
+from .srt_utils import timing_en_srt
 from .video_roles import RoleError, resolve_roles
 from .video_roles import primary_slug as resolve_primary
 
@@ -57,6 +59,16 @@ def _write_manifest(path: Path, mode: str, primary_slug: str, run_id) -> None:
     }
     with open(path, "w", encoding="utf-8") as f:
         yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
+
+
+def _corrects_download(video_dir: Path) -> bool:
+    """True when final/en.srt is a correction of a downloaded source/en.srt.
+
+    A final/en.srt with no download beside it, or a byte-identical copy of
+    one, times the video exactly as a download would.
+    """
+    final, source = video_dir / "final" / "en.srt", video_dir / "source" / "en.srt"
+    return final.is_file() and source.is_file() and final.read_bytes() != source.read_bytes()
 
 
 def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None) -> list[dict]:
@@ -81,7 +93,7 @@ def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None)
         # the one video that should have been built and report success.
         raise RoleError(f"{talk_dir.name}: --primary-slug {primary_slug} contradicts meta.yaml's {declared}")
     primary_slug = declared
-    primary_en = talk_dir / primary_slug / "source" / "en.srt"
+    primary_en = timing_en_srt(talk_dir / primary_slug)
     primary_uk = talk_dir / primary_slug / "final" / "uk.srt"
 
     results: list[dict] = []
@@ -89,23 +101,37 @@ def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None)
         if slug == primary_slug or roles.get(slug) != "derived":
             continue
 
-        secondary_en = talk_dir / slug / "source" / "en.srt"
+        secondary_en = timing_en_srt(talk_dir / slug)
         final_dir = talk_dir / slug / "final"
         out = final_dir / "uk.srt"
 
-        if not primary_en.exists():
-            reason = f"primary {primary_slug} has no source/en.srt — no bridge to derive from"
+        if primary_en is None:
+            reason = f"primary {primary_slug} has no en.srt — no bridge to derive from"
             print(f"SKIP {slug}: {reason}", file=sys.stderr)
             results.append({"slug": slug, "status": "skipped", "mode": None, "reason": reason})
             continue
-        if not secondary_en.exists():
-            reason = "no source/en.srt (raw recording, no English subtitles)"
+        if secondary_en is None:
+            reason = "no en.srt (raw recording, no English subtitles)"
             print(f"SKIP {slug}: {reason}", file=sys.stderr)
             results.append({"slug": slug, "status": "skipped", "mode": None, "reason": reason})
             continue
 
         final_dir.mkdir(parents=True, exist_ok=True)
-        offset = detect_offset(str(primary_en), str(secondary_en))
+        # A corrected final/en.srt keeps the text and cue count of the download
+        # beside it, and detect_offset reads only the first cues — so a pair
+        # where only one side is corrected can pass as a constant shift and
+        # the correction would be lost.
+        primary_fixed = _corrects_download(talk_dir / primary_slug)
+        mixed = primary_fixed != _corrects_download(talk_dir / slug)
+        if mixed:
+            fixed, raw = (primary_slug, slug) if primary_fixed else (slug, primary_slug)
+            print(
+                f"::warning::{talk_dir.name}/{slug}: {fixed} times from a corrected final/en.srt, "
+                f"{raw} from its download; resyncing, so {slug} follows its own "
+                f"{'corrected' if fixed == slug else 'uncorrected'} EN timeline",
+                file=sys.stderr,
+            )
+        offset = None if mixed else detect_offset(str(primary_en), str(secondary_en))
         if offset is not None:
             print(f"=== {slug}: constant offset {offset}ms → offset_srt apply", file=sys.stderr)
             apply_offset(str(primary_uk), offset, str(out))

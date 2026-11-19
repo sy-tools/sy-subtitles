@@ -18,10 +18,12 @@ from pathlib import Path
 # burned-in mp4 (close to a gigabyte in the largest talk), and nothing in
 # the sync reads it. Talk-level files first, then per-video ones.
 SHADOW_TALK_FILES = ("meta.yaml", "transcript_uk.txt")
-# source/en.srt is read, never written: validate_subtitles resolves it from
-# the UK SRT it is handed, so a shadow without it silently drops
-# compare_block_count — the last text guard on an en-srt primary.
-SHADOW_VIDEO_FILES = ("final/uk.srt", "final/build_manifest.yaml", "source/en.srt")
+# The EN SRTs are read, never written: validate_subtitles resolves one from
+# the UK SRT it is handed (final/en.srt before source/en.srt), so a shadow
+# missing it silently drops compare_block_count — the last text guard on an
+# en-srt primary — or checks against the downloaded file instead of the
+# corrected one.
+SHADOW_VIDEO_FILES = ("final/uk.srt", "final/build_manifest.yaml", "source/en.srt", "final/en.srt")
 
 
 @dataclass
