@@ -220,6 +220,8 @@ def _wire(pg, calls, review_status, sync_opts):
       stale_issue_bodies: a list the test may append to at any time; each single-issue
                           GET consumes one entry and answers with THAT body instead of
                           the issue's current one (a read that lags our own write)
+      issue_state:        set by the first _wire and reused by later ones, so that every
+                          tab wired with the same sync_opts talks to ONE markers issue
     """
     state = {"conflicted": False}
 
@@ -336,7 +338,7 @@ def _wire(pg, calls, review_status, sync_opts):
     pg.route("**/api.github.com/graphql", graphql)
 
     # Issue endpoints for marker-sync (create / list / get / patch) + labels.
-    issue_state = {"issue": None, "next": 900}
+    issue_state = sync_opts.setdefault("issue_state", {"issue": None, "next": 900})
 
     def labels(route):
         route.fulfill(status=201, content_type="application/json", body=json.dumps({}))
@@ -431,6 +433,10 @@ def _wire(pg, calls, review_status, sync_opts):
 
 def _page(browser, calls, review_status, sync_opts=None, signed_in=True):
     ctx = browser.new_context()
+    return ctx, _tab(ctx, calls, review_status, sync_opts, signed_in)
+
+
+def _tab(ctx, calls, review_status, sync_opts=None, signed_in=True):
     pg = ctx.new_page()
     _wire(pg, calls, review_status, sync_opts or {})
     pg.add_init_script(
@@ -446,7 +452,7 @@ def _page(browser, calls, review_status, sync_opts=None, signed_in=True):
         "window.__spa_auto_info_confirm = true;"
         "window.__opened = []; window.open = function(u){ window.__opened.push(u); };"
     )
-    return ctx, pg
+    return pg
 
 
 # --- helpers on the running page ------------------------------------------
@@ -1042,6 +1048,55 @@ def test_deleted_markers_stay_deleted_when_github_answers_with_an_old_body(serve
     assert pg.evaluate("window.previewState.markers.map((m) => m.text)") == ["Sub three"]
     assert pg.locator(".marker-item").count() == 1
     assert _written_marker_texts() == ["Sub three"]
+    ctx.close()
+
+
+def test_marker_deleted_in_one_tab_leaves_the_other_tab_and_is_not_written_back(server, browser):
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    ctx, first_tab = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+
+    def _open_marker_mode(pg):
+        _open_preview_marker(pg, server)
+        pg.evaluate("SPA.setPreviewMode('marker')")
+        pg.wait_for_function("() => window.markerSync", timeout=10000)
+
+    def _sync(pg):
+        pg.evaluate("window.markerSync.flush({ force: true })")
+
+    def _marker_texts(pg):
+        return pg.evaluate("window.previewState.markers.map((m) => m.text)")
+
+    def _last_written_marker_texts():
+        writes = [c for c in calls if "/issues" in c["url"] and c["method"] in ("POST", "PATCH")]
+        return first_tab.evaluate("(body) => parseMarkersBlock(body).map((m) => m.text)", writes[-1]["body"]["body"])
+
+    _open_marker_mode(first_tab)
+    for seconds, text in ((3, "Sub one"), (6, "Sub two"), (9, "Sub three")):
+        first_tab.evaluate(
+            """([time, text]) => {
+                window.previewState.currentTime = time;
+                window.previewState.lastText = text;
+                SPA.addMarker();
+            }""",
+            [seconds, text],
+        )
+    _sync(first_tab)
+
+    second_tab = _tab(ctx, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+    _open_marker_mode(second_tab)
+    second_tab.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+    assert _marker_texts(second_tab) == ["Sub one", "Sub two", "Sub three"]
+
+    first_tab.evaluate("SPA.removeMarker(0)")
+    _sync(first_tab)
+    assert _last_written_marker_texts() == ["Sub two", "Sub three"]
+
+    second_tab.wait_for_function("() => window.previewState.markers.length === 2", timeout=5000)
+    assert _marker_texts(second_tab) == ["Sub two", "Sub three"]
+    assert second_tab.locator(".marker-item").count() == 2
+    _sync(second_tab)
+    assert _last_written_marker_texts() == ["Sub two", "Sub three"]
     ctx.close()
 
 

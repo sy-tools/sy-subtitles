@@ -58,6 +58,39 @@ function getViewer(token, fetchImpl) {
 // browser may answer from its HTTP cache with the body from before the write.
 var BYPASS_HTTP_CACHE = { cache: 'no-store' };
 
+// Run `start(fetchWithSignal)` — one request, or a few in sequence — under a
+// deadline. The race is what rejects (TimeoutError); the abort only frees the
+// connection, and only for a fetch that honours the signal. Whatever the
+// abandoned request answers later is ignored.
+//
+// opts: { timeoutMs, what, fetchImpl, setTimeoutFn, clearTimeoutFn }.
+function withDeadline(start, opts) {
+  var setT = opts.setTimeoutFn || setTimeout;
+  var clearT = opts.clearTimeoutFn || clearTimeout;
+  var controller = typeof AbortController === 'function' ? new AbortController() : null;
+  var fetchWithSignal = function (url, init) {
+    var withSignal = Object.assign({}, init);
+    if (controller) withSignal.signal = controller.signal;
+    return (opts.fetchImpl || fetch)(url, withSignal);
+  };
+  var timer = null;
+  var timedOut = new Promise(function (resolve, reject) {
+    timer = setT(function () {
+      var e = new Error((opts.what || 'request') + ': no answer in ' + opts.timeoutMs + ' ms');
+      e.name = 'TimeoutError';
+      reject(e);
+      if (controller) controller.abort();
+    }, opts.timeoutMs);
+  });
+  var stopTimer = function () { clearT(timer); };
+  var answered = Promise.race([
+    new Promise(function (resolve) { resolve(start(fetchWithSignal)); }),
+    timedOut,
+  ]);
+  answered.then(stopTimer, stopTimer);
+  return answered;
+}
+
 // Shared JSON request: auth + JSON body + uniform Error{status, message}.
 function ghJson(url, token, opts, fetchImpl) {
   var f = fetchImpl || fetch;
@@ -577,6 +610,7 @@ if (typeof module !== 'undefined' && module.exports) {
     authHeaders: authHeaders,
     exchangeCode: exchangeCode,
     getViewer: getViewer,
+    withDeadline: withDeadline,
     listIssueComments: listIssueComments,
     passQa: passQa,
     getRepoPermissions: getRepoPermissions,

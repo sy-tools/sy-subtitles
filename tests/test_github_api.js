@@ -998,3 +998,49 @@ describe('listIssuesByLabelConditional', () => {
       (e) => e.status === 403 && e.headerGet('X-RateLimit-Remaining') === '0' && /rate limit/.test(e.message));
   });
 });
+
+describe('withDeadline', () => {
+  const { withDeadline } = require('../site/js/github_api');
+  function manualTimer() {
+    const t = { fire: null, cleared: false, ms: null };
+    t.set = (fn, ms) => { t.fire = fn; t.ms = ms; return 1; };
+    t.clear = () => { t.cleared = true; };
+    return t;
+  }
+  const opts = (timer, extra) => Object.assign(
+    { timeoutMs: 7000, what: 'thing', setTimeoutFn: timer.set, clearTimeoutFn: timer.clear }, extra);
+
+  it('resolves with the answer and stops the timer', async () => {
+    const timer = manualTimer();
+    assert.strictEqual(await withDeadline(async () => 'answer', opts(timer)), 'answer');
+    assert.strictEqual(timer.ms, 7000);
+    assert.strictEqual(timer.cleared, true);
+  });
+
+  it('rejects with a TimeoutError naming the request, and aborts the fetch it handed out', async () => {
+    const timer = manualTimer();
+    let signal = null;
+    const pending = withDeadline(
+      (f) => f('https://x.example/', { method: 'GET' }),
+      opts(timer, { fetchImpl: (url, init) => { signal = init.signal; return new Promise(() => {}); } }));
+    timer.fire();
+    await assert.rejects(pending, (e) => e.name === 'TimeoutError' && e.message === 'thing: no answer in 7000 ms');
+    assert.strictEqual(signal.aborted, true);
+  });
+
+  it('passes the request init through next to the signal', async () => {
+    let seen = null;
+    await withDeadline(
+      (f) => f('u', { method: 'PATCH', cache: 'no-store' }),
+      opts(manualTimer(), { fetchImpl: async (url, init) => { seen = init; return 1; } }));
+    assert.strictEqual(seen.method, 'PATCH');
+    assert.strictEqual(seen.cache, 'no-store');
+    assert.ok(seen.signal);
+  });
+
+  it('a start that throws rejects, and still stops the timer', async () => {
+    const timer = manualTimer();
+    await assert.rejects(withDeadline(() => { throw new Error('sync boom'); }, opts(timer)), /sync boom/);
+    assert.strictEqual(timer.cleared, true);
+  });
+});

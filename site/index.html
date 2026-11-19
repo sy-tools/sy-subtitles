@@ -8668,6 +8668,12 @@ window.addEventListener('pagehide', function() {
   if (editSync) editSync.flush({ keepalive: true });
   if (markerSync) markerSync.flush({ keepalive: true });
 });
+// `storage` fires only in the OTHER tabs. A marker deleted there has to leave
+// this tab now, not at its next sync: until then this tab shows it, and saves
+// it back into the preview state both tabs load from.
+window.addEventListener('storage', function(e) {
+  if (markerSync && e.key === markerMetaKey(markerSync.talkId, markerSync.videoSlug)) markerSync.storageChanged();
+});
 
 // A revert/clear is a deliberate "undo", so sync it on the fast blur cadence
 // (1.5s) instead of the 15s typing debounce — the PR (or, when the last edit
