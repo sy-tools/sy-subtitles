@@ -13,6 +13,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -133,7 +134,18 @@ def test_a_mixed_pair_is_resynced_not_offset(tmp_path, capsys):
     [result] = build_secondary_srts(talk, "vid1")
 
     assert result["mode"] == "secondary-resync"
-    assert "final/en.srt" in capsys.readouterr().err
+    assert "::warning::" in capsys.readouterr().err
+
+
+def test_a_final_en_srt_identical_to_its_download_is_not_a_correction(tmp_path):
+    talk = _two_video_talk(tmp_path)
+    _write(talk / "vid1" / "source" / "en.srt", _blocks(_EN))
+    _write(talk / "vid2" / "source" / "en.srt", _blocks(_EN, offset_ms=7000))
+    _write(talk / "vid2" / "final" / "en.srt", _blocks(_EN, offset_ms=7000))
+
+    [result] = build_secondary_srts(talk, "vid1")
+
+    assert result["mode"] == "secondary-offset"
 
 
 def test_a_secondary_with_only_a_final_en_srt_is_built(tmp_path):
@@ -180,7 +192,8 @@ def _step(job: str, name: str) -> str:
 def _run_step(tmp_path: Path, script: str, env: dict) -> dict:
     out = tmp_path / "github_output"
     out.write_text("", encoding="utf-8")
-    full_env = {**os.environ, **env, "GITHUB_OUTPUT": str(out), "PYTHONPATH": str(ROOT)}
+    path = f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}"
+    full_env = {**os.environ, **env, "GITHUB_OUTPUT": str(out), "PYTHONPATH": str(ROOT), "PATH": path}
     subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=full_env, check=True, capture_output=True)
     return dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").splitlines() if "=" in line)
 

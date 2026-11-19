@@ -61,6 +61,16 @@ def _write_manifest(path: Path, mode: str, primary_slug: str, run_id) -> None:
         yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
 
 
+def _corrects_download(video_dir: Path) -> bool:
+    """True when final/en.srt is a correction of a downloaded source/en.srt.
+
+    A final/en.srt with no download beside it, or a byte-identical copy of
+    one, times the video exactly as a download would.
+    """
+    final, source = video_dir / "final" / "en.srt", video_dir / "source" / "en.srt"
+    return final.is_file() and source.is_file() and final.read_bytes() != source.read_bytes()
+
+
 def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None) -> list[dict]:
     """Derive a UK SRT for every DERIVED video that can have one.
 
@@ -108,13 +118,17 @@ def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None)
 
         final_dir.mkdir(parents=True, exist_ok=True)
         # A corrected final/en.srt keeps the text and cue count of the download
-        # beside it, and detect_offset reads only the first cues — so a mixed
-        # pair can pass as a constant shift and the correction would be lost.
-        mixed = primary_en.parent.name != secondary_en.parent.name
+        # beside it, and detect_offset reads only the first cues — so a pair
+        # where only one side is corrected can pass as a constant shift and
+        # the correction would be lost.
+        primary_fixed = _corrects_download(talk_dir / primary_slug)
+        mixed = primary_fixed != _corrects_download(talk_dir / slug)
         if mixed:
+            fixed, raw = (primary_slug, slug) if primary_fixed else (slug, primary_slug)
             print(
-                f"WARNING {slug}: bridging {primary_slug}/{primary_en.parent.name}/en.srt with "
-                f"{slug}/{secondary_en.parent.name}/en.srt — one of the pair is a correction; resyncing",
+                f"::warning::{talk_dir.name}/{slug}: {fixed} times from a corrected final/en.srt, "
+                f"{raw} from its download; resyncing, so {slug} follows its own "
+                f"{'corrected' if fixed == slug else 'uncorrected'} EN timeline",
                 file=sys.stderr,
             )
         offset = None if mixed else detect_offset(str(primary_en), str(secondary_en))
