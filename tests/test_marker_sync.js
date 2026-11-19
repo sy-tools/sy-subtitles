@@ -393,3 +393,323 @@ describe('marker_sync engine', () => {
     assert.strictEqual(parseMarkersBlock(body).some((m) => m.text === 'EVIL'), false);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Deleted markers must STAY deleted. Issues have no CAS token, so a read that
+// follows our own write can still return the body from before it (replica lag,
+// an HTTP cache, a GET that raced the PATCH). The harness below models GitHub
+// as "what the server really holds" plus a queue of lagging read results.
+// ---------------------------------------------------------------------------
+const TOMBSTONE_TTL_MS = require('../site/js/marker_sync').TOMBSTONE_TTL_MS;
+
+function lagHarness(initial, over) {
+  over = over || {};
+  const h = {
+    live: initial.slice(),
+    server: { number: 7, title: TITLE, state: 'open', node_id: 'I7', html_url: 'u7',
+      body: buildIssueBody(initial, 'V') },
+    staleReads: [],          // bodies the NEXT getIssue calls return instead of the truth
+    getGate: null,           // when set, the next getIssue waits on it (answer fixed at request time)
+    failNextUpdate: false,
+    clock: 1770000000000,
+    calls: [],
+  };
+  h.serverTimes = () => parseMarkersBlock(h.server.body).map((m) => m.time);
+  h.liveTimes = () => h.live.map((m) => m.time);
+  h.staleNext = (markers) => h.staleReads.push(buildIssueBody(markers, 'V'));
+  h.remove = (time) => { h.live = h.live.filter((m) => m.time !== time); h.engine.notifyEdit(); };
+  h.add = (m) => { h.live = h.live.concat([m]); h.engine.notifyEdit(); };
+  // Another device writes the issue directly.
+  h.otherDeviceWrites = (markers) => { h.server.body = buildIssueBody(markers, 'V'); h.server.state = 'open'; };
+  const gh = {
+    ensureLabel: async () => null,
+    listIssuesByLabel: async () => [h.server],
+    getIssue: async () => {
+      h.calls.push('get');
+      const body = h.staleReads.length ? h.staleReads.shift() : h.server.body;
+      const snap = { number: 7, state: h.server.state, body, node_id: 'I7' };
+      if (h.getGate) { const g = h.getGate; h.getGate = null; await g; }
+      return snap;
+    },
+    createIssue: async () => { throw new Error('unexpected create'); },
+    updateIssue: async (a, t, n, fields) => {
+      h.calls.push('update');
+      if (over.onUpdate) over.onUpdate(h);
+      if (h.failNextUpdate) { h.failNextUpdate = false; const e = new Error('boom'); e.status = 502; throw e; }
+      if (fields.body !== undefined) h.server.body = fields.body;
+      if (fields.state) h.server.state = fields.state;
+      return h.server;
+    },
+  };
+  const timers = timerHarness();
+  h.storage = memStorage(over.storage || {});
+  h.meta = () => JSON.parse(h.storage.getItem(META_KEY));
+  h.engine = createMarkerSyncEngine({
+    api: API, token: 'x', talkId: TALK, videoSlug: VIDEO, heading: 'V',
+    getMarkers: () => h.live,
+    setMarkers: (m) => { h.live = m; },   // aliases, exactly like the SPA
+    storage: h.storage, gh, now: () => h.clock,
+    setTimeoutFn: timers.set.bind(timers), clearTimeoutFn: timers.clear.bind(timers),
+    isOffline: () => false, onStatus: () => {},
+  });
+  return h;
+}
+const deferred = () => { let resolve; const p = new Promise((r) => { resolve = r; }); return { p, resolve }; };
+const tick = () => new Promise((r) => setImmediate(r));
+
+describe('marker_sync: a synced deletion survives a stale read', () => {
+  const ALL = [M(1, 'a'), M(2, 'b'), M(3, 'c')];
+
+  it('flush: a stale read after a synced deletion does not resurrect it', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    assert.deepStrictEqual(h.serverTimes(), [2, 3]);
+    h.remove(2);
+    h.staleNext(ALL);                       // GitHub answers with the body from before both writes
+    await h.engine.flush();
+    assert.deepStrictEqual(h.liveTimes(), [3], 'the UI must not get the deleted markers back');
+    assert.deepStrictEqual(h.serverTimes(), [3], 'and they must not be written back to the issue');
+  });
+
+  it('pull: a stale read after a synced deletion does not resurrect it', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    h.staleNext(ALL);
+    await h.engine.pull(true);
+    assert.deepStrictEqual(h.liveTimes(), [2, 3]);
+    await h.engine.flush();                 // whatever the pull armed
+    assert.deepStrictEqual(h.liveTimes(), [2, 3]);
+    assert.deepStrictEqual(h.serverTimes(), [2, 3]);
+  });
+
+  it('pull: a GET that started before the deletion was written cannot bring it back', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    const gate = deferred();
+    h.getGate = gate.p;
+    const pulling = h.engine.pull(true);    // its GET is on the wire, answer = [1,2,3]
+    await tick();
+    h.remove(1);
+    const flushing = h.engine.flush();
+    await tick();
+    gate.resolve();
+    await pulling; await flushing; await h.engine.flush();
+    assert.deepStrictEqual(h.liveTimes(), [2, 3]);
+    assert.deepStrictEqual(h.serverTimes(), [2, 3]);
+  });
+
+  it('pull waits for an in-flight flush instead of reading around its write', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.calls.length = 0;
+    h.remove(1);
+    const flushing = h.engine.flush();
+    const pulling = h.engine.pull(true);    // asked for while the flush is in flight
+    await flushing; await pulling;
+    assert.deepStrictEqual(h.calls, ['get', 'update', 'get'],
+      "the pull's GET must come after the flush's PATCH");
+  });
+
+  it('flush waits for an in-flight pull', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.calls.length = 0;
+    const gate = deferred();
+    h.getGate = gate.p;
+    const pulling = h.engine.pull(true);
+    await tick();
+    h.remove(1);
+    const flushing = h.engine.flush();
+    await tick();
+    assert.deepStrictEqual(h.calls, ['get'], 'the flush must not start while the pull is unresolved');
+    gate.resolve();
+    await pulling; await flushing;
+    assert.deepStrictEqual(h.calls, ['get', 'get', 'update']);
+  });
+
+  it('several deletions in a row with alternating fresh and stale reads', async () => {
+    const five = [M(1, 'a'), M(2, 'b'), M(3, 'c'), M(4, 'd'), M(5, 'e')];
+    const h = lagHarness(five);
+    await h.engine.attach();
+    const history = [five];
+    for (const t of [1, 2, 3, 4]) {
+      h.remove(t);
+      // Odd steps read the truth, even steps read some earlier body.
+      if (t % 2 === 0) h.staleNext(history[history.length - 2]);
+      await h.engine.flush();
+      history.push(parseMarkersBlock(h.server.body));
+      const want = [1, 2, 3, 4, 5].filter((x) => x > t);
+      assert.deepStrictEqual(h.liveTimes(), want, 'UI after deleting ' + t);
+      assert.deepStrictEqual(h.serverTimes(), want, 'issue after deleting ' + t);
+      h.staleNext(five);                    // and a lagging focus-pull in between
+      await h.engine.pull(true);
+      assert.deepStrictEqual(h.liveTimes(), want, 'UI after the pull that followed deleting ' + t);
+    }
+  });
+
+  it('a fresh read followed by a stale one does not flip-flop', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    await h.engine.pull(true);              // fresh: [2,3]
+    h.staleNext(ALL);
+    await h.engine.pull(true);              // stale: [1,2,3]
+    await h.engine.flush();
+    assert.deepStrictEqual(h.liveTimes(), [2, 3]);
+    assert.deepStrictEqual(h.serverTimes(), [2, 3]);
+  });
+
+  it('a deletion made while the flush is reading is not overwritten by the merge', async () => {
+    // The SPA flushes ~1.5s after an action; the next delete routinely lands
+    // while that flush is between its GET and its PATCH.
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1);
+    const gate = deferred();
+    h.getGate = gate.p;
+    const flushing = h.engine.flush();
+    await tick();
+    h.remove(2);
+    gate.resolve();
+    await flushing;
+    assert.deepStrictEqual(h.liveTimes(), [3], 'the merge must not put marker 2 back in the UI');
+    assert.deepStrictEqual(h.serverTimes(), [3], 'the same PATCH carries the mid-read deletion');
+    assert.strictEqual(h.engine.getInfo().dirty, false, 'nothing is left to push');
+  });
+
+  it('a marker added while the flush is reading is not dropped by the merge', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1);
+    const gate = deferred();
+    h.getGate = gate.p;
+    const flushing = h.engine.flush();
+    await tick();
+    h.add(M(4, 'd'));
+    gate.resolve();
+    await flushing;
+    assert.deepStrictEqual(h.liveTimes(), [2, 3, 4]);
+  });
+
+  it('an edit made during the PATCH still leaves the engine dirty', async () => {
+    const h = lagHarness(ALL, { onUpdate: (hh) => { if (!hh.did) { hh.did = true; hh.remove(2); } } });
+    await h.engine.attach();
+    h.remove(1);
+    await h.engine.flush();
+    assert.strictEqual(h.engine.getInfo().dirty, true);
+    await h.engine.flush();
+    assert.deepStrictEqual(h.serverTimes(), [3]);
+  });
+
+  it('a deletion whose PATCH failed is not forgotten', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1);
+    h.failNextUpdate = true;
+    await h.engine.flush();
+    assert.strictEqual(h.engine.getInfo().status, 'error');
+    assert.deepStrictEqual(h.serverTimes(), [1, 2, 3], 'the write did not land');
+    await h.engine.flush({ force: true });  // the remote genuinely still has marker 1
+    assert.deepStrictEqual(h.liveTimes(), [2, 3]);
+    assert.deepStrictEqual(h.serverTimes(), [2, 3]);
+  });
+
+  it('an unwritten deletion does not expire, however long the write takes', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1);
+    h.failNextUpdate = true;
+    await h.engine.flush();
+    h.clock += 10 * TOMBSTONE_TTL_MS;       // offline for hours
+    await h.engine.pull(true);
+    await h.engine.flush({ force: true });
+    assert.deepStrictEqual(h.liveTimes(), [2, 3]);
+    assert.deepStrictEqual(h.serverTimes(), [2, 3]);
+  });
+
+  it('deleting a marker a stale pull had missed still deletes it', async () => {
+    // The pull used to make base := the remote it read, so a lagging read that
+    // lacked a local marker dropped it from base — and a later deletion of that
+    // marker was then invisible to the merge.
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.staleNext([M(1, 'a'), M(2, 'b')]);    // read lacks marker 3
+    await h.engine.pull(true);
+    assert.deepStrictEqual(h.liveTimes(), [1, 2, 3]);
+    h.remove(3);
+    await h.engine.flush();                 // fresh read: the remote has marker 3
+    assert.deepStrictEqual(h.liveTimes(), [1, 2]);
+    assert.deepStrictEqual(h.serverTimes(), [1, 2]);
+  });
+
+  it('a tombstone expires: the identity can come back from another device later', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    h.clock += TOMBSTONE_TTL_MS - 1000;
+    h.staleNext(ALL);
+    await h.engine.pull(true);
+    assert.deepStrictEqual(h.liveTimes(), [2, 3], 'still protected just inside the TTL');
+    await h.engine.flush();
+    h.clock += TOMBSTONE_TTL_MS + 1000;     // well past the TTL, whichever write it counts from
+    h.otherDeviceWrites(ALL);               // another device really re-added marker 1
+    await h.engine.pull(true);
+    assert.deepStrictEqual(h.liveTimes(), [1, 2, 3]);
+    assert.deepStrictEqual(h.meta().tombstones, {});
+  });
+
+  it('the user can re-add a deleted identity, and that drops its tombstone', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    assert.deepStrictEqual(Object.keys(h.meta().tombstones), ['1|a']);
+    h.add(M(1, 'a'));
+    h.staleNext([M(2, 'b'), M(3, 'c')]);
+    await h.engine.flush();
+    assert.deepStrictEqual(h.liveTimes().sort(), [1, 2, 3]);
+    assert.deepStrictEqual(h.serverTimes(), [1, 2, 3]);
+    assert.deepStrictEqual(h.meta().tombstones, {});
+  });
+
+  it('tombstones survive a reload (persisted in meta)', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    const h2 = lagHarness([M(2, 'b'), M(3, 'c')], { storage: h.storage._store });
+    h2.server.body = h.server.body;
+    h2.staleNext(ALL);
+    await h2.engine.attach();
+    assert.deepStrictEqual(h2.liveTimes(), [2, 3]);
+  });
+
+  it('a genuine addition by another device still arrives (flush and pull)', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    h.otherDeviceWrites([M(2, 'b'), M(3, 'c'), M(8, 'theirs')]);
+    await h.engine.pull(true);
+    assert.deepStrictEqual(h.liveTimes(), [2, 3, 8]);
+    h.otherDeviceWrites([M(2, 'b'), M(3, 'c'), M(8, 'theirs'), M(9, 'theirs too')]);
+    h.remove(2);
+    await h.engine.flush();
+    assert.deepStrictEqual(h.liveTimes(), [3, 8, 9]);
+    assert.deepStrictEqual(h.serverTimes(), [3, 8, 9]);
+  });
+
+  it('a comment edit is not reverted by a stale read (local wins on content)', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.live[0].comment = 'my note'; h.engine.notifyEdit();
+    await h.engine.flush();
+    assert.strictEqual(parseMarkersBlock(h.server.body)[0].comment, 'my note');
+    h.staleNext(ALL);                       // the body from before the comment
+    await h.engine.pull(true);
+    assert.strictEqual(h.live[0].comment, 'my note');
+    h.staleNext(ALL);
+    h.live[1].comment = 'second'; h.engine.notifyEdit();
+    await h.engine.flush();
+    assert.deepStrictEqual(parseMarkersBlock(h.server.body).map((m) => m.comment), ['my note', 'second', '']);
+  });
+});

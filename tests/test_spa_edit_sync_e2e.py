@@ -215,6 +215,11 @@ def _wire(pg, calls, review_status, sync_opts):
       put_conflict_once: first PUT -> 409, then a GET returns conflict_entries
       conflict_entries:  the remote doc served after the 409 (CAS merge input)
       conflict_sha:      sha for the conflict doc (default "shaRemote")
+
+    and the markers issue endpoint:
+      stale_issue_bodies: a list the test may append to at any time; each single-issue
+                          GET consumes one entry and answers with THAT body instead of
+                          the issue's current one (a read that lags our own write)
     """
     state = {"conflicted": False}
 
@@ -347,7 +352,11 @@ def _wire(pg, calls, review_status, sync_opts):
             route.fulfill(status=200, content_type="application/json", body=json.dumps(rows))
             return
         if method == "GET":  # single issue
-            route.fulfill(status=200, content_type="application/json", body=json.dumps(issue_state["issue"] or {}))
+            served = issue_state["issue"] or {}
+            stale_bodies = sync_opts.get("stale_issue_bodies")
+            if stale_bodies:
+                served = dict(served, body=stale_bodies.pop(0))
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(served))
             return
         body = json.loads(req.post_data) if req.post_data else {}
         calls.append({"method": method, "url": url, "body": body})
@@ -949,6 +958,58 @@ def test_signed_in_marker_creates_issue_then_closes_when_emptied(server, browser
         pg.wait_for_timeout(100)
     assert _closed(), "emptying the markers must close the issue"
     pg.wait_for_selector("#marker-chip", state="hidden", timeout=5000)
+    ctx.close()
+
+
+def test_deleted_markers_stay_deleted_when_github_answers_with_an_old_body(server, browser):
+    calls = []
+    stale_issue_bodies = []
+    ctx, pg = _page(
+        browser,
+        calls,
+        REVIEW_STATUS_UNASSIGNED,
+        {"get_mode": "404", "stale_issue_bodies": stale_issue_bodies},
+        signed_in=True,
+    )
+    _open_preview_marker(pg, server)
+    pg.evaluate("SPA.setPreviewMode('marker')")
+    pg.wait_for_function("() => window.markerSync", timeout=10000)
+
+    def _sync():
+        pg.evaluate("window.markerSync.flush({ force: true })")
+
+    def _issue_writes():
+        return [c for c in calls if "/issues" in c["url"] and c["method"] in ("POST", "PATCH")]
+
+    def _written_marker_texts():
+        return pg.evaluate("(body) => parseMarkersBlock(body).map((m) => m.text)", _issue_writes()[-1]["body"]["body"])
+
+    for seconds, text in ((3, "Sub one"), (6, "Sub two"), (9, "Sub three")):
+        # One evaluate: the preview's own tick rewrites lastText between two.
+        pg.evaluate(
+            """([time, text]) => {
+                window.previewState.currentTime = time;
+                window.previewState.lastText = text;
+                SPA.addMarker();
+            }""",
+            [seconds, text],
+        )
+    _sync()
+    assert _written_marker_texts() == ["Sub one", "Sub two", "Sub three"]
+    body_with_all_three = _issue_writes()[-1]["body"]["body"]
+
+    pg.evaluate("SPA.removeMarker(0)")
+    _sync()
+    assert _written_marker_texts() == ["Sub two", "Sub three"]
+
+    stale_issue_bodies.append(body_with_all_three)
+    pg.evaluate("SPA.removeMarker(0)")
+    _sync()
+
+    assert not stale_issue_bodies, "the flush must have consumed the lagging read"
+    assert pg.evaluate("window.previewState.markers.map((m) => m.text)") == ["Sub three"]
+    assert pg.locator(".marker-item").count() == 1
+    assert _written_marker_texts() == ["Sub three"]
     ctx.close()
 
 

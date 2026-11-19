@@ -680,7 +680,14 @@ function createSyncEngine(opts) {
     var t = now();
     if (!force && t - lastPullAt < PULL_THROTTLE_MS) return Promise.resolve();
     lastPullAt = t;
+    var shaAtRequest = meta.sha;
     return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
+      // A push (or a teardown) moved the base while this GET was out, so the
+      // response cannot be ordered against it: it may be the file from BEFORE
+      // our own write, and merging that against the new base reads as "the
+      // remote reverted everything we just pushed". Drop it; the next pull asks
+      // again.
+      if (meta.sha !== shaAtRequest) { lastPullAt = 0; return; }
       if (!file) {
         // No remote state yet (the sync branch/file has not been created). If we
         // already hold un-synced local edits — e.g. the user re-opened a page

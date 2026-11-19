@@ -53,6 +53,11 @@ function getViewer(token, fetchImpl) {
 // the module never guesses the repo. fetchImpl is injectable for tests.
 // ---------------------------------------------------------------------------
 
+// For a GET whose result is merged against a write this client may have just
+// made. GitHub serves those with `Cache-Control: private, max-age=60`, so the
+// browser may answer from its HTTP cache with the body from before the write.
+var BYPASS_HTTP_CACHE = { cache: 'no-store' };
+
 // Shared JSON request: auth + JSON body + uniform Error{status, message}.
 function ghJson(url, token, opts, fetchImpl) {
   var f = fetchImpl || fetch;
@@ -64,6 +69,7 @@ function ghJson(url, token, opts, fetchImpl) {
   // keepalive lets a final sync flush survive the page being torn down
   // (pagehide) — the browser finishes the request after the document dies.
   if (opts && opts.keepalive) init.keepalive = true;
+  if (opts && opts.cache) init.cache = opts.cache;
   return f(url, init).then(function (r) {
     return r.json().catch(function () { return {}; }).then(function (body) {
       if (!r.ok) {
@@ -136,7 +142,7 @@ function createIssue(api, token, fields, fetchImpl) {
 
 // GET /issues/<n> → the fields marker-sync needs for the pull/merge step.
 function getIssue(api, token, number, fetchImpl) {
-  return ghJson(api + '/issues/' + number, token, null, fetchImpl).then(function (r) {
+  return ghJson(api + '/issues/' + number, token, BYPASS_HTTP_CACHE, fetchImpl).then(function (r) {
     return { number: r.number, state: r.state, body: r.body || '', node_id: r.node_id };
   });
 }
@@ -354,7 +360,7 @@ function putFile(api, token, opts, fetchImpl) {
 // GET /contents/<path>?ref=<ref> → {content (decoded UTF-8), sha}, or null
 // when the path/ref does not exist yet (the sync branch's 404 = "no sync").
 function getFileContent(api, token, path, ref, fetchImpl) {
-  return ghJson(api + '/contents/' + path + '?ref=' + ref, token, null, fetchImpl)
+  return ghJson(api + '/contents/' + path + '?ref=' + ref, token, BYPASS_HTTP_CACHE, fetchImpl)
     .then(function (r) { return { content: base64ToUtf8(r.content), sha: r.sha }; })
     .catch(function (e) {
       if (e.status === 404) return null;

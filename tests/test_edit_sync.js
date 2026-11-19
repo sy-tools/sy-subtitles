@@ -1044,6 +1044,28 @@ describe('engine: pull', () => {
     const gets = gh.calls.filter((c) => c[0] === 'getFileContent');
     assert.strictEqual(gets.length, 1);
   });
+  it('drops a response whose GET was overtaken by our own push', async () => {
+    const { engine, gh, storage, applied } = makeEngine();
+    localEdit(storage, 1, 'перша');
+    engine.notifyEdit();
+    await engine.flush();
+    const realGet = gh.getFileContent;
+    let release;
+    const held = new Promise((r) => { release = r; });
+    gh.getFileContent = async (...args) => { const file = await realGet(...args); await held; return file; };
+    const pulling = engine.pull(true);
+    gh.getFileContent = realGet;
+    localEdit(storage, 1, 'друга');
+    engine.notifyEdit();
+    await engine.flush();
+    release();
+    await pulling;
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[1], 'друга',
+      'the pre-push body must not overwrite the edit that was pushed after it');
+    assert.deepStrictEqual(applied, []);
+    await engine.pull(true);
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[1], 'друга');
+  });
 });
 
 describe('engine: offline + auth failures', () => {

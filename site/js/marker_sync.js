@@ -75,7 +75,8 @@ function parseMarkersBlock(body) {
   } catch (e) { return []; }
 }
 
-// ADDITIVE 3-way merge for markers: `local ∪ (remote \ base)`, keyed by identity.
+// ADDITIVE 3-way merge for markers: `local ∪ (remote \ base \ tombstones)`,
+// keyed by identity.
 //
 // Issues expose NO CAS token (unlike edit_sync's Contents-API sha), so a remote
 // read can be stale, empty or partial (GitHub eventual consistency, a truncated
@@ -84,7 +85,8 @@ function parseMarkersBlock(body) {
 // wiped users' markers on flaky networks. So:
 //   - every LOCAL marker is kept (a stale/empty remote can't remove it);
 //   - a remote marker is added only when its identity is NOT already local AND
-//     was NOT locally deleted (present in `base`, absent from `local`);
+//     was NOT locally deleted (present in `base`, absent from `local`, or
+//     carrying a tombstone — see TOMBSTONE_TTL_MS);
 //   - on a same-identity content conflict LOCAL wins (mirrors edit_sync).
 // Deletions therefore propagate ONLY from an explicit local removal; a marker
 // another device deleted lingers until this device removes it too — a
@@ -92,15 +94,15 @@ function parseMarkersBlock(body) {
 // Result is sorted by time for a stable issue body. `changedVsRemote` (merged
 // set differs from remote by identity+content) arms a push so the remote
 // converges — re-adding local-only markers and healing a stale read.
-function mergeMarkersInfo(base, local, remote) {
-  base = base || []; local = local || []; remote = remote || [];
+function mergeMarkersInfo(base, local, remote, tombstones) {
+  base = base || []; local = local || []; remote = remote || []; tombstones = tombstones || {};
   var localIds = {}, baseIds = {};
   local.forEach(function (m) { localIds[markerIdentity(m)] = true; });
   base.forEach(function (m) { baseIds[markerIdentity(m)] = true; });
   var out = local.slice();
   remote.forEach(function (m) {
     var id = markerIdentity(m);
-    if (localIds[id] || baseIds[id]) return;   // already local, or locally deleted
+    if (localIds[id] || baseIds[id] || hasOwn(tombstones, id)) return;   // already local, or locally deleted
     out.push(m);
   });
   out.sort(function (a, b) { return (a.time || 0) - (b.time || 0); });
@@ -112,9 +114,27 @@ function mergeMarkersInfo(base, local, remote) {
   Object.keys(ids).forEach(function (k) { if (remoteMap[k] !== outMap[k]) changed = true; });
   return { markers: out, changedVsRemote: changed };
 }
-function mergeMarkers(base, local, remote) {
-  return mergeMarkersInfo(base, local, remote).markers;
+function mergeMarkers(base, local, remote, tombstones) {
+  return mergeMarkersInfo(base, local, remote, tombstones).markers;
 }
+
+function hasOwn(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
+
+// `base` alone cannot remember a deletion: once the deletion is synced, base
+// moves on and no longer holds the marker, so a later read that still shows it
+// (replica lag, a cached response, a GET that raced our PATCH) is
+// indistinguishable from another device adding it — and the marker came back,
+// in the UI and in the issue. A tombstone is the memory base lacks.
+//
+// The TTL runs from the write that carried the deletion, not from the click: an
+// unwritten deletion (value TOMBSTONE_UNWRITTEN) never expires, because until
+// it is written the remote GENUINELY still holds the marker. Ten minutes is
+// far above anything a lagging read spans (seconds of replica lag; GitHub
+// serves GET /issues/N with `max-age=60`), and short enough that the cost
+// stays small: while a tombstone lives, the same time+text marker re-added on
+// ANOTHER device is removed again by this one.
+var TOMBSTONE_TTL_MS = 10 * 60 * 1000;
+var TOMBSTONE_UNWRITTEN = 0;
 
 // The engine — DI-driven, mirrors edit_sync.js createSyncEngine (timers,
 // inflight serialization, disposed guard, status callback). Targets a GitHub
@@ -141,8 +161,9 @@ function createMarkerSyncEngine(opts) {
 
   var meta = null;
   try { meta = JSON.parse(storage.getItem(metaKey)); } catch (e) { /* corrupt -> fresh */ }
-  if (!meta) meta = { number: null, url: null, nodeId: null, base: [] };
+  if (!meta) meta = { number: null, url: null, nodeId: null, base: [], tombstones: {} };
   if (!Array.isArray(meta.base)) meta.base = [];
+  if (!meta.tombstones || typeof meta.tombstones !== 'object' || Array.isArray(meta.tombstones)) meta.tombstones = {};
 
   var status = 'idle', lastError = null, dirty = false, editSeq = 0;
   var debounceId = null, coalesceId = null, inflight = null, disposed = false, lastPullAt = 0;
@@ -152,6 +173,41 @@ function createMarkerSyncEngine(opts) {
   }
   function setStatus(s, err) { status = s; lastError = err || null; onStatus(s, info()); }
   function saveMeta() { storage.setItem(metaKey, JSON.stringify(meta)); }
+
+  // Only LOCAL state moves a tombstone: a deletion creates it, the user adding
+  // the identity back drops it. A remote read never clears one — a fresh read
+  // followed by a stale one would otherwise flip-flop.
+  function recordLocalDeletions(local) {
+    var localIds = {}, t = now();
+    local.forEach(function (m) { localIds[markerIdentity(m)] = true; });
+    meta.base.forEach(function (m) {
+      var id = markerIdentity(m);
+      if (!localIds[id]) meta.tombstones[id] = TOMBSTONE_UNWRITTEN;
+    });
+    Object.keys(meta.tombstones).forEach(function (id) {
+      var writtenAt = meta.tombstones[id];
+      var expired = writtenAt !== TOMBSTONE_UNWRITTEN && Math.abs(t - writtenAt) > TOMBSTONE_TTL_MS;
+      if (localIds[id] || expired) delete meta.tombstones[id];
+    });
+  }
+  function markDeletionsWritten() {
+    var t = now();
+    Object.keys(meta.tombstones).forEach(function (id) {
+      if (meta.tombstones[id] === TOMBSTONE_UNWRITTEN) meta.tombstones[id] = t;
+    });
+  }
+  // What this device has merged becomes base, so that ANY marker it later
+  // removes is seen as a local deletion — including one the remote read lacked.
+  function mergeRemote(remote) {
+    var local = getMarkers() || [];
+    recordLocalDeletions(local);
+    var info = mergeMarkersInfo(meta.base, local, remote, meta.tombstones);
+    setMarkers(info.markers);
+    // Snapshot: setMarkers made `info.markers` the SPA's live array; an in-place
+    // edit or splice would otherwise mutate base too and corrupt the merge.
+    meta.base = snapshotMarkers(info.markers);
+    return info;
+  }
 
   function armDebounce() {
     if (debounceId !== null) clearT(debounceId);
@@ -170,11 +226,17 @@ function createMarkerSyncEngine(opts) {
     coalesceId = setT(function () { coalesceId = null; flush(); }, COALESCE_MS);
   }
 
+  // Flushes AND pulls share one lane. A pull reading around an in-flight flush
+  // gets the body from before the flush's PATCH and merges it after base moved.
+  function serialised(work) {
+    inflight = work().then(function () { inflight = null; }, function () { inflight = null; });
+    return inflight;
+  }
+
   function flush(fopts) {
     if (disposed || (!dirty && !(fopts && fopts.force))) return Promise.resolve();
     if (inflight) return inflight.then(function () { return flush(fopts); });
-    inflight = doFlush(fopts).then(function () { inflight = null; }, function () { inflight = null; });
-    return inflight;
+    return serialised(function () { return doFlush(fopts); });
   }
 
   function fail(e) {
@@ -212,7 +274,9 @@ function createMarkerSyncEngine(opts) {
           meta.number = issue.number; meta.url = issue.html_url; meta.nodeId = issue.node_id;
           // Snapshot: `local` aliases the SPA's live markers array; a later
           // in-place edit or splice would otherwise mutate base too.
-          meta.base = snapshotMarkers(local); saveMeta();
+          recordLocalDeletions(local);
+          meta.base = snapshotMarkers(local);
+          markDeletionsWritten(); saveMeta();
           if (editSeq === seqAtStart) clearDirty();
           setStatus('synced');
         });
@@ -222,18 +286,18 @@ function createMarkerSyncEngine(opts) {
         // A closed issue carries no active markers; reading its (possibly stale)
         // body would resurrect just-deleted markers (C1). Treat closed as empty.
         var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
-        var merged = mergeMarkers(meta.base, local, remote);
-        setMarkers(merged);
-        // Snapshot: setMarkers made `merged` the SPA's live array; an in-place
-        // edit or splice would otherwise mutate base too and corrupt the merge.
-        meta.base = snapshotMarkers(merged);
+        // The merge reads the markers as they are NOW, not as they were when the
+        // flush began: setMarkers replaces the live array, so a merge of the
+        // earlier copy would undo whatever the user did while the GET was out.
+        seqAtStart = editSeq;
+        var merged = mergeRemote(remote).markers;
         if (!merged.length) {
           // Teardown: clear the marker block AND close in one PATCH, so a later
           // reopen/pull cannot resurrect the deleted markers from a stale body (C1).
           return gh.updateIssue(api, token, row.number,
             { body: buildIssueBody([], heading), state: 'closed' }, fetchImpl).then(function () {
             if (disposed) return;
-            saveMeta();
+            markDeletionsWritten(); saveMeta();
             if (editSeq === seqAtStart) { clearDirty(); setStatus('idle'); }
             else { setStatus('pending'); }  // a mid-teardown re-add re-syncs; never a lying idle
           });
@@ -244,7 +308,7 @@ function createMarkerSyncEngine(opts) {
         return gh.updateIssue(api, token, row.number,
           { body: buildIssueBody(merged, heading), state: 'open' }, fetchImpl).then(function () {
           if (disposed) return;
-          saveMeta();
+          markDeletionsWritten(); saveMeta();
           if (editSeq === seqAtStart) clearDirty();
           setStatus('synced');
         });
@@ -254,14 +318,19 @@ function createMarkerSyncEngine(opts) {
 
   // Adopt the remote issue's markers on open (another device may have synced).
   // Additive merge keeps ALL local markers (a stale/empty read can't delete
-  // one) and adds genuinely-new remote markers; base becomes the REMOTE so a
-  // later local removal still deletes, and `changedVsRemote` arms a push for any
-  // local-only markers so this device converges instead of stranding them (C2).
+  // one) and adds genuinely-new remote markers; `changedVsRemote` arms a push
+  // for any local-only markers so this device converges instead of stranding
+  // them (C2).
   function pull(force) {
     if (disposed) return Promise.resolve();
+    if (inflight) return inflight.then(function () { return pull(force); });
     var t = now();
     if (!force && t - lastPullAt < PULL_THROTTLE_MS) return Promise.resolve();
     lastPullAt = t;
+    return serialised(doPull);
+  }
+
+  function doPull() {
     return resolveIssue().then(function (row) {
       if (disposed) return;
       if (!row) {
@@ -280,9 +349,8 @@ function createMarkerSyncEngine(opts) {
         // Closed == no active markers (C1): never seed a resurrection from a
         // stale body.
         var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
-        var info = mergeMarkersInfo(meta.base, getMarkers() || [], remote);
-        setMarkers(info.markers);
-        meta.base = snapshotMarkers(remote); saveMeta();  // base := REMOTE snapshot
+        var info = mergeRemote(remote);
+        saveMeta();
         if (info.changedVsRemote) {
           // Local still differs from the remote — schedule a push (do not report
           // `synced`, which would leave local-only markers stranded).
@@ -328,6 +396,7 @@ var _api = {
   buildIssueBody: buildIssueBody,
   parseMarkersBlock: parseMarkersBlock,
   mergeMarkers: mergeMarkers,
+  TOMBSTONE_TTL_MS: TOMBSTONE_TTL_MS,
 };
 if (typeof module !== 'undefined' && module.exports) module.exports = _api;
 else Object.keys(_api).forEach(function (k) { window[k] = _api[k]; });
