@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-17T17:00:27.935245+00:00",
+  "updated_at": "2026-11-18T16:16:42.505274+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -345,10 +345,10 @@
       "updated_at": "2026-07-17T13:13:59Z"
     },
     "1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
       "issue_number": 311,
-      "updated_at": "2026-07-17T14:17:10Z"
+      "updated_at": "2026-11-18T14:47:34Z"
     },
     "1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware": {
       "status": "pending",
@@ -746,9 +746,9 @@
     "1999-05-09_Sahasrara-Puja-Our-Awareness-has-to-become-Paramchaitanya": {
       "status": "in-progress",
       "reviewer": "IrynaFilSY",
-      "issue_number": 1249,
-      "updated_at": "2026-11-17T17:00:07Z",
-      "operator_stage": "review",
+      "issue_number": 1348,
+      "updated_at": "2026-11-18T15:05:28Z",
+      "operator_stage": "qa",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1335
     },
@@ -762,10 +762,10 @@
       "operator_issue": 1293
     },
     "1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
       "issue_number": 1319,
-      "updated_at": "2026-11-16T21:53:21Z",
+      "updated_at": "2026-11-18T14:48:01Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1320

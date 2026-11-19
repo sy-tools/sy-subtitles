@@ -952,6 +952,26 @@ def test_signed_in_marker_creates_issue_then_closes_when_emptied(server, browser
     ctx.close()
 
 
+def test_marker_comment_keeps_focus_through_the_sync_round_trip(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
+    _open_preview_marker(pg, server)
+    pg.evaluate("SPA.setPreviewMode('marker')")
+    pg.wait_for_function("() => window.markerSync", timeout=10000)
+    pg.evaluate("window.previewState.currentTime = 3; window.previewState.lastText = 'Sub one';")
+    pg.evaluate("SPA.addMarker()")
+    pg.keyboard.type("before sync")
+    pg.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+    pg.evaluate("window.markerSync.flush({ force: true })")
+    pg.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+    pg.keyboard.type(", after")
+
+    comment = pg.locator(".marker-item .comment").first
+    assert pg.evaluate("document.activeElement.className") == "comment"
+    assert comment.input_value() == "before sync, after"
+    ctx.close()
+
+
 # ---------------------------------------------------------------------------
 # 10. Preview chip hygiene: one chip per mode, and marker actions never touch
 #     the edit engine (regressions the user reported live).
