@@ -38,7 +38,7 @@ import yaml
 
 from .offset_srt import apply_offset, detect_offset
 from .resync_srt import resync
-from .srt_utils import timing_en_srt
+from .srt_utils import parse_srt, timing_en_srt
 from .video_roles import RoleError, resolve_roles
 from .video_roles import primary_slug as resolve_primary
 
@@ -62,13 +62,24 @@ def _write_manifest(path: Path, mode: str, primary_slug: str, run_id) -> None:
 
 
 def _corrects_download(video_dir: Path) -> bool:
-    """True when final/en.srt is a correction of a downloaded source/en.srt.
+    """True when final/en.srt re-times a downloaded source/en.srt.
 
-    A final/en.srt with no download beside it, or a byte-identical copy of
-    one, times the video exactly as a download would.
+    A final/en.srt with no download beside it, a byte-identical copy of one,
+    or one that moves every cue by the same amount (a download published
+    against another cut of the video) keeps the download's cue-to-cue
+    timing, so a constant offset between the two videos still holds.
     """
     final, source = video_dir / "final" / "en.srt", video_dir / "source" / "en.srt"
-    return final.is_file() and source.is_file() and final.read_bytes() != source.read_bytes()
+    if not (final.is_file() and source.is_file()):
+        return False
+    fixed, raw = parse_srt(str(final)), parse_srt(str(source))
+    if len(fixed) != len(raw):
+        return True
+    pairs = list(zip(fixed, raw, strict=True))
+    if any(f["text"] != r["text"] for f, r in pairs):
+        return True
+    shifts = {f["start_ms"] - r["start_ms"] for f, r in pairs} | {f["end_ms"] - r["end_ms"] for f, r in pairs}
+    return len(shifts) != 1
 
 
 def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None) -> list[dict]:

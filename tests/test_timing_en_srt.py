@@ -108,7 +108,7 @@ def test_the_secondary_bridge_uses_the_final_en_srts(tmp_path):
     talk = _two_video_talk(tmp_path)
     drifting = _blocks(_EN, jitter=900)
     _write(talk / "vid1" / "source" / "en.srt", drifting)
-    _write(talk / "vid2" / "source" / "en.srt", _blocks(_EN, offset_ms=5000))
+    _write(talk / "vid2" / "source" / "en.srt", _blocks(_EN, offset_ms=5000, jitter=900))
     _write(talk / "vid1" / "final" / "en.srt", _blocks(_EN))
     _write(talk / "vid2" / "final" / "en.srt", _blocks(_EN, offset_ms=7000))
 
@@ -135,6 +135,17 @@ def test_a_mixed_pair_is_resynced_not_offset(tmp_path, capsys):
 
     assert result["mode"] == "secondary-resync"
     assert "::warning::" in capsys.readouterr().err
+
+
+def test_a_final_en_srt_that_only_shifts_its_download_is_not_a_correction(tmp_path):
+    talk = _two_video_talk(tmp_path)
+    _write(talk / "vid1" / "source" / "en.srt", _blocks(_EN))
+    _write(talk / "vid1" / "final" / "en.srt", _blocks(_EN, offset_ms=200_000))
+    _write(talk / "vid2" / "source" / "en.srt", _blocks(_EN, offset_ms=207_000))
+
+    [result] = build_secondary_srts(talk, "vid1")
+
+    assert result["mode"] == "secondary-offset"
 
 
 def test_a_final_en_srt_identical_to_its_download_is_not_a_correction(tmp_path):
