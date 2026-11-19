@@ -857,6 +857,38 @@ def test_reverting_the_last_edit_tears_down_the_pr(server, browser):
     ctx.close()
 
 
+def test_torn_down_edits_stay_gone_when_github_still_serves_the_old_state_file(server, browser):
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    _open_review(pg, server)
+    _edit_first_review_cell(pg, " SYNCED123")
+    _wait_chip_synced(pg)
+    state_file_before_teardown = decode_put_doc(_review_sync_puts(calls)[-1])
+
+    pg.evaluate("SPA.revertEdit(0)")
+    for _ in range(60):
+        if [c for c in calls if c["method"] == "DELETE" and f"/git/refs/heads/{SYNC_BRANCH}" in c["url"]]:
+            break
+        pg.wait_for_timeout(100)
+    pg.wait_for_selector("#sync-chip", state="hidden", timeout=5000)
+
+    sync_opts.update(get_mode="doc", doc_entries=state_file_before_teardown["entries"], doc_sha="shaP1")
+
+    def _is_state_file_read(response):
+        return response.request.method == "GET" and "/contents/.review-sync/" in response.url
+
+    with pg.expect_response(_is_state_file_read, timeout=10000):
+        pg.reload()
+    pg.wait_for_function("document.querySelectorAll('.cell.uk .cell-text').length > 0", timeout=10000)
+    pg.wait_for_timeout(500)
+
+    assert "SYNCED123" not in pg.locator(".cell.uk .cell-text").first.inner_text()
+    assert pg.locator("#sync-chip").is_hidden(), "nothing is on GitHub, so nothing may read as synced"
+    assert len(_review_sync_puts(calls)) == 1, "the torn-down state must not be pushed back"
+    ctx.close()
+
+
 def test_preview_edit_syncs_to_video_scoped_target(server, browser):
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
