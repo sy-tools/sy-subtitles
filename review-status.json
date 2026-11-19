@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-18T16:16:42.505274+00:00",
+  "updated_at": "2026-11-19T07:55:21.206439+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -294,7 +294,10 @@
       "status": "in-progress",
       "reviewer": "anastasijka-prog",
       "issue_number": 276,
-      "updated_at": "2026-10-01T13:18:00Z"
+      "updated_at": "2026-10-01T13:18:00Z",
+      "operator_stage": "review",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1354
     },
     "1983-09-17_Shri-Ekadasha-Rudra-Puja-We-have-to-drop-out-many-things": {
       "status": "pending",
@@ -690,7 +693,10 @@
       "status": "in-progress",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 1182,
-      "updated_at": "2026-11-17T06:17:34Z"
+      "updated_at": "2026-11-19T07:55:00Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1362
     },
     "1979-11-18_How-to-go-beyond-the-ego-and-know-yourself-Meditation": {
       "status": "pending",
