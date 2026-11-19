@@ -180,27 +180,55 @@ function liveIssuesCacheKey(branch, label) {
   return 'sy_live_issues__' + branch + '__' + label;
 }
 
+// A connection that stalls never settles on its own, and everything waiting on
+// the statuses (singleFlight's callers, a manual refresh before it repaints)
+// would wait with it.
+var LIVE_ISSUES_TIMEOUT_MS = 15000;
+
 // Every issue behind the statuses, in the gh CLI shape. One query per label:
 // `labels=a,b` means BOTH, and the two kinds of issue carry one each.
 //
-// opts: { api, token, branch, storage, fetchImpl }. Rejects if either query
-// does — half the issues would overlay as "the other half is gone".
+// opts: { api, token, branch, storage, fetchImpl, timeoutMs }. Rejects if
+// either query does — half the issues would overlay as "the other half is
+// gone" — and, with a TimeoutError, if the whole read (headers AND bodies,
+// every page) outlasts timeoutMs; the requests still open are aborted.
 function fetchLiveIssues(opts) {
   var list = typeof listIssuesByLabelConditional === 'function'
     ? listIssuesByLabelConditional
     : require('./github_api').listIssuesByLabelConditional;
   var storage = opts.storage;
+  var timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : LIVE_ISSUES_TIMEOUT_MS;
+  var controller = typeof AbortController === 'function' ? new AbortController() : null;
+  var fetchWithSignal = function (url, init) {
+    var withSignal = Object.assign({}, init);
+    if (controller) withSignal.signal = controller.signal;
+    return (opts.fetchImpl || fetch)(url, withSignal);
+  };
   function one(label) {
     var key = liveIssuesCacheKey(opts.branch, label);
     var cached = null;
     try { cached = JSON.parse(storage.getItem(key)); } catch (e) { cached = null; }
-    return list(opts.api, opts.token, label, { cached: cached, mapRow: normalizeRestIssue }, opts.fetchImpl)
+    return list(opts.api, opts.token, label, { cached: cached, mapRow: normalizeRestIssue }, fetchWithSignal)
       .then(function (res) {
         try { storage.setItem(key, JSON.stringify({ pages: res.pages })); } catch (e) { /* quota: refetch next time */ }
         return res.rows;
       });
   }
-  return Promise.all([one(GATE_LABEL), one(OPERATOR_LABEL)]).then(mergeIssueLists);
+  var timer = null;
+  // The race, not the abort, is what rejects: an abort only reaches a request
+  // whose fetch honours the signal.
+  var timedOut = new Promise(function (resolve, reject) {
+    timer = setTimeout(function () {
+      var e = new Error('live issues: no answer in ' + timeoutMs + ' ms');
+      e.name = 'TimeoutError';
+      reject(e);
+      if (controller) controller.abort();
+    }, timeoutMs);
+  });
+  var stopTimer = function () { clearTimeout(timer); };
+  var read = Promise.race([Promise.all([one(GATE_LABEL), one(OPERATOR_LABEL)]), timedOut]);
+  read.then(stopTimer, stopTimer);
+  return read.then(mergeIssueLists);
 }
 
 if (typeof module !== 'undefined' && module.exports) {
@@ -216,5 +244,6 @@ if (typeof module !== 'undefined' && module.exports) {
     singleFlight: singleFlight,
     liveIssuesCacheKey: liveIssuesCacheKey,
     fetchLiveIssues: fetchLiveIssues,
+    LIVE_ISSUES_TIMEOUT_MS: LIVE_ISSUES_TIMEOUT_MS,
   };
 }

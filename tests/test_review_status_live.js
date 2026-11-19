@@ -14,6 +14,7 @@ const {
   singleFlight,
   liveIssuesCacheKey,
   fetchLiveIssues,
+  LIVE_ISSUES_TIMEOUT_MS,
   OPERATOR_STAGE_LABELS,
   GATE_LABEL,
   OPERATOR_LABEL,
@@ -365,5 +366,73 @@ describe('fetchLiveIssues', () => {
     await assert.rejects(
       fetchLiveIssues({ api: API, token: 'gho_x', branch: 'main', storage: memStorage(), fetchImpl: labelFetch(w, []) }),
       (e) => e.status === 401);
+  });
+});
+
+describe('fetchLiveIssues — a request that never answers', () => {
+  const flush = () => new Promise((res) => setImmediate(res));
+  const hungFetch = (signals) => (url, init) => { signals.push(init && init.signal); return new Promise(() => {}); };
+
+  it('gives up after 15 seconds by default', () => {
+    assert.strictEqual(LIVE_ISSUES_TIMEOUT_MS, 15000);
+  });
+
+  it('rejects once the timeout passes — not before — and aborts the requests', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    let outcome = 'pending';
+    const p = fetchLiveIssues({ api: API, token: 'gho_x', branch: 'main', storage: memStorage(),
+      fetchImpl: hungFetch(signals), timeoutMs: 15000 });
+    p.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
+
+    t.mock.timers.tick(14999);
+    await flush();
+    assert.strictEqual(outcome, 'pending');
+    assert.ok(signals.length === 2 && signals.every((s) => s && !s.aborted));
+
+    t.mock.timers.tick(1);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError' && e.status === undefined);
+    assert.ok(signals.every((s) => s.aborted), 'the hung requests were aborted');
+  });
+
+  it('a body that never arrives times out too', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const headersOnly = async () => ({ ok: true, status: 200, headers: { get: () => null },
+      json: () => new Promise(() => {}) });
+    const p = fetchLiveIssues({ api: API, token: 'gho_x', branch: 'main', storage: memStorage(),
+      fetchImpl: headersOnly, timeoutMs: 15000 });
+    await flush();
+    t.mock.timers.tick(15000);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError');
+  });
+
+  it('singleFlight lets go of a timed-out request: the next caller starts a new one', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let fetchImpl = hungFetch([]);
+    const shared = singleFlight(() => fetchLiveIssues({ api: API, token: 'gho_x', branch: 'main',
+      storage: memStorage(), fetchImpl, timeoutMs: 15000 }));
+    const first = shared();
+    assert.strictEqual(shared(), first, 'still one request while it hangs');
+    t.mock.timers.tick(15000);
+    await assert.rejects(first);
+
+    const w = { 'talk-review': { etag: 'W/"r1"', rows: [rest(1, 'Review: t1', ['talk-review'], '2026-11-01T10:00:00Z')] },
+      'talk-operator': { etag: 'W/"o1"', rows: [] } };
+    fetchImpl = labelFetch(w, []);
+    const second = shared();
+    assert.notStrictEqual(second, first);
+    assert.strictEqual((await second).length, 1);
+  });
+
+  it('an answer in time leaves no timer behind', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const w = { 'talk-review': { etag: 'W/"r1"', rows: [] }, 'talk-operator': { etag: 'W/"o1"', rows: [] } };
+    const signals = [];
+    const answered = labelFetch(w, []);
+    const issues = await fetchLiveIssues({ api: API, token: 'gho_x', branch: 'main', storage: memStorage(),
+      fetchImpl: (url, init) => { signals.push(init.signal); return answered(url, init); }, timeoutMs: 15000 });
+    assert.deepStrictEqual(issues, []);
+    t.mock.timers.tick(60000);
+    assert.ok(signals.every((s) => !s.aborted), 'the timeout was cancelled, nothing is aborted later');
   });
 });

@@ -299,3 +299,102 @@ def test_a_primary_rate_limit_stops_live_requests_until_its_reset(server, browse
     pg.evaluate("refreshLiveReviewStatus()")
     assert len(seen) == 2, "asked again once the reset has passed"
     ctx.close()
+
+
+def test_returning_to_the_index_after_a_manual_refresh_asks_the_issues_api_again(server, browser):  # noqa: F811
+    seen = []
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _serve_issues(pg, seen, CLAIMED_ON_GITHUB)
+    pg.goto(f"{server}{SPA_URL}")
+    _wait_in_review(pg, 1)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"]
+
+    del seen[:]
+    pg.evaluate("SPA.refreshManifest()")
+    assert len(seen) == 2, "the refresh itself asked once"
+
+    del seen[:]
+    pg.evaluate("showIndex()")
+    _wait_for_requests(pg, seen, 2)
+    ctx.close()
+
+
+def _hold_the_claim(pg, posts, held):
+    def hold(route):
+        posts.append(route.request.url)
+        held.append(route)
+
+    pg.route("**/api.github.com/repos/**/issues/42/assignees", hold)
+
+
+def _repaint_while_the_claim_is_in_flight(pg, base_url, state, posts):
+    """Click "take", then let a live answer rebuild the cards under the POST."""
+    pg.goto(f"{base_url}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"], "the load's own live request has settled"
+    pg.click(".take-review-btn")
+    _wait_for_requests(pg, posts, 1)
+
+    pg.evaluate("document.querySelector('.take-review-btn').dataset.beforeRepaint = '1'")
+    state["operator"] = OPERATOR_AT_REVIEW
+    pg.evaluate("repaintIndexOnLiveStatus()")
+    assert pg.evaluate("document.querySelector('.take-review-btn').dataset.beforeRepaint") is None, (
+        "the repaint rebuilt the card"
+    )
+
+
+def test_a_live_repaint_keeps_the_take_button_busy_while_the_claim_is_in_flight(server, browser):  # noqa: F811
+    posts, held = [], []
+    state = {"review": UNCLAIMED}
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _serve_current_issue_state(pg, state, [])
+    _hold_the_claim(pg, posts, held)
+    _repaint_while_the_claim_is_in_flight(pg, server, state, posts)
+
+    assert pg.evaluate("document.querySelector('.take-review-btn').disabled") is True
+    pg.evaluate("document.querySelector('.take-review-btn').click()")
+    pg.evaluate(f"SPA.takeForReview('{TALK}'); undefined")
+    pg.wait_for_timeout(300)
+    assert len(posts) == 1, "a second click sends no second claim"
+
+    held[0].fulfill(
+        status=201, content_type="application/json", body=json.dumps({"number": 42, "assignees": [{"login": "tester"}]})
+    )
+    _wait_in_review(pg, 1)
+    assert pg.locator(".take-review-btn").count() == 0
+    assert pg.evaluate("Object.keys(claimsInFlight)") == []
+    ctx.close()
+
+
+def test_a_failed_claim_frees_the_take_button_a_live_repaint_rebuilt(server, browser):  # noqa: F811
+    posts, held = [], []
+    state = {"review": UNCLAIMED}
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    _serve_current_issue_state(pg, state, [])
+    _hold_the_claim(pg, posts, held)
+    _repaint_while_the_claim_is_in_flight(pg, server, state, posts)
+
+    held[0].fulfill(status=403, content_type="application/json", body=json.dumps({"message": "nope"}))
+    pg.wait_for_function(
+        "document.querySelector('.take-review-btn') && !document.querySelector('.take-review-btn').disabled",
+        timeout=5000,
+    )
+    assert pg.evaluate("Object.keys(claimsInFlight)") == []
+    ctx.close()
+
+
+def test_a_repaint_that_throws_is_logged_not_left_as_an_unhandled_rejection(server, browser):  # noqa: F811
+    logged = []
+    state = {"review": UNCLAIMED}
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    pg.on("console", lambda msg: logged.append(msg.text))
+    _serve_current_issue_state(pg, state, [])
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"]
+
+    state["operator"] = OPERATOR_AT_REVIEW
+    pg.evaluate("renderIndex = function () { throw new Error('boom'); }; undefined")
+    assert pg.evaluate("repaintIndexOnLiveStatus().then(function () { return 'settled'; })") == "settled"
+    assert any("live status repaint failed" in line for line in logged)
+    ctx.close()
