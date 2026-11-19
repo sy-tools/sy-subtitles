@@ -6,11 +6,12 @@ the *primary* (built by the LLM from the transcript); the videos declared
 their own timeline. Roles come from tools.video_roles, so this is not
 "everything that is not the primary" — ``independent`` and ``ignored`` videos
 are never built here. The bridge between the two timelines is built from matched words in
-the two ``source/en.srt`` files — a constant time offset when the recordings
+the two EN SRTs (``srt_utils.timing_en_srt``: the corrected ``final/en.srt`` when
+there is one, else ``source/en.srt``) — a constant time offset when the recordings
 differ only by a head/tail shift (``offset_srt``), or a word-level warp when one
 covers a subset of the other (``resync_srt``).
 
-The derivation therefore needs ``source/en.srt`` on BOTH the primary and the
+The derivation therefore needs an EN SRT on BOTH the primary and the
 secondary, regardless of the talk's ``timing_source``. A secondary without
 ``en.srt`` (a raw recording with no English subtitles — e.g. a yogi-intro or a
 silent havan) simply has nothing to derive from and is **skipped**, not treated
@@ -37,6 +38,7 @@ import yaml
 
 from .offset_srt import apply_offset, detect_offset
 from .resync_srt import resync
+from .srt_utils import timing_en_srt
 from .video_roles import RoleError, resolve_roles
 from .video_roles import primary_slug as resolve_primary
 
@@ -81,7 +83,7 @@ def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None)
         # the one video that should have been built and report success.
         raise RoleError(f"{talk_dir.name}: --primary-slug {primary_slug} contradicts meta.yaml's {declared}")
     primary_slug = declared
-    primary_en = talk_dir / primary_slug / "source" / "en.srt"
+    primary_en = timing_en_srt(talk_dir / primary_slug)
     primary_uk = talk_dir / primary_slug / "final" / "uk.srt"
 
     results: list[dict] = []
@@ -89,17 +91,17 @@ def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None)
         if slug == primary_slug or roles.get(slug) != "derived":
             continue
 
-        secondary_en = talk_dir / slug / "source" / "en.srt"
+        secondary_en = timing_en_srt(talk_dir / slug)
         final_dir = talk_dir / slug / "final"
         out = final_dir / "uk.srt"
 
-        if not primary_en.exists():
-            reason = f"primary {primary_slug} has no source/en.srt — no bridge to derive from"
+        if primary_en is None:
+            reason = f"primary {primary_slug} has no en.srt — no bridge to derive from"
             print(f"SKIP {slug}: {reason}", file=sys.stderr)
             results.append({"slug": slug, "status": "skipped", "mode": None, "reason": reason})
             continue
-        if not secondary_en.exists():
-            reason = "no source/en.srt (raw recording, no English subtitles)"
+        if secondary_en is None:
+            reason = "no en.srt (raw recording, no English subtitles)"
             print(f"SKIP {slug}: {reason}", file=sys.stderr)
             results.append({"slug": slug, "status": "skipped", "mode": None, "reason": reason})
             continue

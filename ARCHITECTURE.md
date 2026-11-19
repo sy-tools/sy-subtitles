@@ -48,7 +48,7 @@ sy-subtitles/
 │       ├── review_report.md        # AI review report
 │       └── {video_slug}/
 │           ├── source/
-│           │   ├── en.srt          # English subtitles (from Vimeo)
+│           │   ├── en.srt          # English subtitles as downloaded — never edited
 │           │   └── whisper.json    # Word-level timestamps
 │           ├── work/               # Build intermediates (gitignored + timecodes.txt)
 │           │   ├── uk_blocks.json  # Split Ukrainian text blocks
@@ -56,6 +56,8 @@ sy-subtitles/
 │           │   └── timecodes.txt   # LLM output: #N | start | end per block
 │           └── final/
 │               ├── uk.srt          # Final Ukrainian subtitles
+│               ├── en.srt          # Corrected English (optional); when present it,
+│                                  #   not source/en.srt, times the build (srt_utils.timing_en_srt)
 │               └── report.txt      # Validation report
 ├── glossary/                       # Translation knowledge base
 │   ├── terms_lookup.yaml           # 374 EN→UK terms
@@ -141,7 +143,7 @@ one subtitled (or lone) video is `primary` and every other video is
 built yet resolves to `ignored`, so it is never built and never synced.
 Declare the roles as soon as a talk gains a second video. Rules of thumb: the full
 recording is `primary` and the `Talk` cut is `derived`; a video without
-`source/en.srt` cannot be `primary`, since resyncing needs an EN bridge on
+an EN SRT (`final/en.srt` or `source/en.srt`) cannot be `primary`, since resyncing needs an EN bridge on
 both sides.
 
 ## Workflows

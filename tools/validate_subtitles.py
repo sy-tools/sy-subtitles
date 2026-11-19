@@ -28,6 +28,7 @@ from .srt_utils import (
     load_whisper_json,
     ms_to_time,
     parse_srt,
+    timing_en_srt,
 )
 from .text_segmentation import load_transcript
 
@@ -359,8 +360,8 @@ def manifest_validate_flags(srt_path) -> dict:
         # by the builder agent (no EN counterpart), so text preservation is replaced by
         # a block-count sanity against the EN SRT.
         flags["skip_text_check"] = True
-        en_srt = srt_path.parent.parent / "source" / "en.srt"
-        if en_srt.is_file():
+        en_srt = timing_en_srt(srt_path.parent.parent)
+        if en_srt is not None:
             flags["en_srt_path"] = str(en_srt)
             flags["compare_block_count"] = True
         return flags
