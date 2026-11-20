@@ -5,7 +5,7 @@
   Transcript: talks/1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis/transcript_uk.txt
   EN SRT: talks/1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis/Diwali-Puja/final/en.srt
   SRT blocks: 557
-  EN SRT blocks: 557
+  EN SRT blocks: 553
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
 
@@ -31,8 +31,8 @@
   SUBTITLE STATISTICS
 ============================================================
   Total blocks: 557
-  CPS: avg=10.8, median=11.0, max=19.0
-  CPS > target: 62 (11.1%)
+  CPS: avg=10.8, median=11.1, max=19.5
+  CPS > target: 57 (10.2%)
   CPS > hard max: 0 (0.0%)
   CPL: avg=49.9, max=84
   CPL > max: 0 (0.0%)
@@ -44,23 +44,23 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
+    #317: CPS=19.5 (58ch/3.0s) "– «Ні, ні, ні, я не можу залишити Сахаджа Йоґу». – «Чому?»"
+    #555: CPS=19.1 (55ch/2.9s) "намагайтеся бути там, де відбуваються колективні події."
     #446: CPS=19.0 (27ch/1.4s) "Будь ласка, не надсилайте»."
-    #554: CPS=16.7 (71ch/4.2s) "Щоразу, коли це можливо, намагайтеся відвідувати все, що є к..."
-    #555: CPS=16.3 (55ch/3.4s) "намагайтеся бути там, де відбуваються колективні події."
-    #455: CPS=15.6 (73ch/4.7s) "Щойно Я поїду до Індії, Я знаю, що в Індії це займе зовсім н..."
-    #445: CPS=15.3 (83ch/5.4s) "Просто надсилайте Мені «Рідерз Дайджест», дуже вам дякую. Я ..."
+    #445: CPS=15.4 (83ch/5.4s) "Просто надсилайте Мені «Рідерз Дайджест», дуже вам дякую. Я ..."
     #497: CPS=15.2 (14ch/0.9s) "У чому справа?"
-    #442: CPS=15.2 (31ch/2.0s) "Але вони продовжують надсилати."
+    #488: CPS=15.2 (68ch/4.5s) "Вона сказала: «Ні, сер, ми бачимо – ми завжди ходимо й зустр..."
+    #212: CPS=15.1 (30ch/2.0s) "Замість цього вони співчували."
     #482: CPS=15.1 (79ch/5.2s) "Мого брата – і вона була дуже милою: «Я хочу зустрітися з ва..."
-    #340: CPS=15.1 (84ch/5.6s) "Звісно, Я не хочу, щоб ви змінювали свій одяг, – але ви може..."
     #479: CPS=15.0 (79ch/5.2s) "Мій брат розповідав Мені, що одна жінка від цього Муктананди..."
+    #487: CPS=15.0 (19ch/1.3s) "Чим ви займаєтеся?»"
 
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
   UK SRT blocks: 557
-  EN SRT blocks: 557
-  Ratio UK/EN: 1.00 (max allowed 2.0)
+  EN SRT blocks: 553
+  Ratio UK/EN: 1.01 (max allowed 2.0)
   Block count: OK
 
 ============================================================
@@ -76,7 +76,7 @@
   [PASS] CPS ≤ 20.0
 
   Avg CPS: 10.8 (target ≤15.0)
-  CPS > 15.0: 62 blocks
+  CPS > 15.0: 57 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 3 blocks
