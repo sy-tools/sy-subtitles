@@ -301,6 +301,13 @@ function createSyncEngine(opts) {
   var COALESCE_MS = 1500;    // push shortly after a field blur
   var PULL_THROTTLE_MS = 60000;
   var MAX_PUT_ATTEMPTS = 3;
+  // How long a torn-down state file is refused after the teardown. It has to
+  // outlast every layer that can still serve the deleted file: GitHub sends
+  // the Contents API with `max-age=60`, and its read replicas trail a write by
+  // seconds. Five times the longest of those — and no longer, because inside
+  // this window a doc another device writes with a clock running behind ours
+  // is refused too (see isTornDown).
+  var TOMBSTONE_TTL_MS = 5 * 60 * 1000;
 
   // Base meta = last synced doc + CAS sha + PR coordinates; survives reloads.
   var meta = null;
@@ -347,7 +354,11 @@ function createSyncEngine(opts) {
       prDraft: meta.prDraft, branch: branch, dirty: dirty, error: lastError };
   }
   function setStatus(s, err) { status = s; lastError = err || null; onStatus(s, info()); }
-  function saveMeta() { storage.setItem(syncBaseKey(talkId, target), JSON.stringify(meta)); }
+  function saveMeta() {
+    // `orphaned` describes edits with no base; any base that is saved ends it.
+    if (meta.sha !== null) delete meta.orphaned;
+    storage.setItem(syncBaseKey(talkId, target), JSON.stringify(meta));
+  }
 
   function parseRemote(file) {
     var doc = null;
@@ -355,8 +366,56 @@ function createSyncEngine(opts) {
     return {
       entries: (doc && doc.entries) || {},
       revision: (doc && doc.revision) || 0,
+      writtenAt: Date.parse(doc && doc.updatedAt),
       sha: file.sha,
     };
+  }
+
+  // The tombstone a teardown left, while it is still in force. A timestamp
+  // from the future (the clock was set back since) is as unusable as an old
+  // one: honouring it would keep the guard up for an unbounded time.
+  function liveTombstone() {
+    var t = meta.tombstone;
+    if (!t) return null;
+    var age = now() - t.at;
+    if (age >= 0 && age < TOMBSTONE_TTL_MS) return t;
+    delete meta.tombstone;
+    saveMeta();
+    return null;
+  }
+
+  // Is this the state file our own teardown deleted, served again by a cache
+  // or a replica that has not caught up? The exact sha is the certain case.
+  // An OLDER push of the same file carries another sha, so it is recognised by
+  // revision — but revision alone would also refuse a device that re-created
+  // the branch from scratch, since that restarts at 1. What separates the two
+  // is when the doc was written: before the teardown, or after it.
+  function isTornDown(remote) {
+    var t = liveTombstone();
+    if (!t) return false;
+    if (remote.sha === t.sha) return true;
+    return remote.revision <= t.revision && !(remote.writtenAt > t.at);
+  }
+
+  var TORN_DOWN = {};
+
+  // Every read that would ADOPT the remote state goes through one of these
+  // two, so no path can merge a torn-down file back in.
+  function readRemoteOrTornDown() {
+    return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
+      if (!file) return null;
+      var remote = parseRemote(file);
+      // The file we are based on is never a ghost, whatever the tombstone says.
+      if (remote.sha !== meta.sha && isTornDown(remote)) return TORN_DOWN;
+      return remote;
+    });
+  }
+
+  // For a caller about to write: a torn-down file is simply no file.
+  function readRemote() {
+    return readRemoteOrTornDown().then(function (remote) {
+      return remote === TORN_DOWN ? null : remote;
+    });
   }
 
   function armDebounce() {
@@ -366,6 +425,9 @@ function createSyncEngine(opts) {
 
   function notifyEdit() {
     if (disposed) return;
+    // A real edit ends the wait an orphaned base imposes (markOrphanedIfBranchGone) —
+    // in storage too, so that a page closed before the push still pushes it.
+    if (meta.orphaned) { delete meta.orphaned; saveMeta(); }
     dirty = true;
     editSeq += 1;
     armDebounce();
@@ -396,8 +458,10 @@ function createSyncEngine(opts) {
   // Reset to a pristine, un-synced base — a later edit lazily re-creates the
   // branch/PR from scratch. Reassigns the closure's meta so every reader sees it.
   function resetBase() {
+    var tombstone = meta.tombstone;
     meta = { doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null,
       prDraft: null, fileShas: {}, branch: branch };
+    if (tombstone) meta.tombstone = tombstone;
     saveMeta();
   }
 
@@ -447,6 +511,9 @@ function createSyncEngine(opts) {
         .then(function () { return gh.deleteRef(api, token, branch, fetchImpl); })
         .then(function () {
           if (disposed) return;
+          if (meta.sha !== null) {
+            meta.tombstone = { sha: meta.sha, revision: meta.revision || 0, at: now() };
+          }
           resetBase();
           if (editSeq === seqAtStart) {
             clearDirty();
@@ -502,8 +569,8 @@ function createSyncEngine(opts) {
     // the sync branch already holds, re-attach its PR, or create the branch.
     function ensureRemoteBase() {
       if (meta.sha !== null) return Promise.resolve();
-      return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
-        if (file) { integrateRemote(parseRemote(file)); return; }
+      return readRemote().then(function (remote) {
+        if (remote) { integrateRemote(remote); return; }
         // A known PR means the branch exists and the state file was removed
         // by a finalize — the push below simply recreates it.
         if (meta.prNumber) return;
@@ -598,8 +665,8 @@ function createSyncEngine(opts) {
         // CAS: someone else wrote the file since our base sha. Refresh, merge,
         // retry — the sha is the lock, the merge preserves both sides.
         if (e && e.status === 409 && attempt < MAX_PUT_ATTEMPTS) {
-          return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
-            if (file) integrateRemote(parseRemote(file));
+          return readRemote().then(function (remote) {
+            if (remote) integrateRemote(remote);
             else meta.sha = null;
             return push();
           });
@@ -675,32 +742,79 @@ function createSyncEngine(opts) {
     });
   }
 
+  // The base says these local edits are synced, yet the state file is not
+  // there. Two things look like that and they call for opposite answers, so
+  // ask which one it is:
+  //  - the branch still exists: a finalize on another device removed the state
+  //    file and left the PR submitted. Pushing now would drag it back to draft;
+  //  - the branch is gone (PR closed + branch deleted, here or elsewhere). The
+  //    edits are then on no branch at all, and the merge in pull() would read
+  //    "base == local, remote absent" as nothing to do — leaving edits on
+  //    screen under a hidden chip. So the base is wiped and the chip says "not
+  //    synced". But nothing is pushed for it: the branch may be gone because a
+  //    maintainer closed the PR, or because it was MERGED and this device
+  //    still holds the edits — and opening a page must not reopen the one or
+  //    propose the other again. `orphaned` holds the push back, across reloads,
+  //    until the user edits (notifyEdit) or asks for a sync (a forced flush).
+  function markOrphanedIfBranchGone() {
+    var shaAtProbe = meta.sha;
+    return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
+      if (!e || e.status !== 404) throw e;
+      // A push re-created the branch while the probe was out: its base stands.
+      if (disposed || meta.sha !== shaAtProbe) return;
+      resetBase();
+      meta.orphaned = true;
+      saveMeta();
+      setStatus('pending');
+    });
+  }
+
   function pull(force) {
     if (disposed) return Promise.resolve();
     var t = now();
     if (!force && t - lastPullAt < PULL_THROTTLE_MS) return Promise.resolve();
     lastPullAt = t;
-    return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
-      if (!file) {
+    var shaAtRequest = meta.sha;
+    return readRemoteOrTornDown().then(function (remote) {
+      // A push (or a teardown) moved the base while this GET was out, so the
+      // response cannot be ordered against it: it may be the file from BEFORE
+      // our own write, and merging that against the new base reads as "the
+      // remote reverted everything we just pushed". Drop it; the next pull asks
+      // again.
+      if (meta.sha !== shaAtRequest) { lastPullAt = 0; return; }
+      if (remote === TORN_DOWN) {
+        // With no base it is plainly "no file". With a base — the branch was
+        // re-created after the teardown — the stale read says nothing about
+        // the file we now hold, absence included: acting on it would probe for
+        // a deleted branch and could reset a base that is perfectly alive.
+        if (meta.sha !== null) return;
+        remote = null;
+      }
+      if (!remote) {
         // No remote state yet (the sync branch/file has not been created). If we
         // already hold un-synced local edits — e.g. the user re-opened a page
         // they had edited in a previous session and never typed again, so no
         // notifyEdit() fires — arm a push so the first sync still creates the
         // branch + state file + draft PR instead of waiting for a fresh edit.
         var pending = mergeSyncDocs(meta.doc || {}, collect(), {});
+        if (pending.changedVsRemote && meta.orphaned) {
+          setStatus('pending');
+          return;
+        }
         if (pending.changedVsRemote) {
           dirty = true;
           editSeq += 1;
           armDebounce();
           setStatus('pending');
+          return;
         }
+        if (meta.sha !== null && Object.keys(collect()).length) return markOrphanedIfBranchGone();
         return;
       }
-      if (file.sha === meta.sha) {
+      if (remote.sha === meta.sha) {
         if (!dirty && !finalizing && status !== 'synced') setStatus('synced');
         return;
       }
-      var remote = parseRemote(file);
       var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
       var changedKeys = apply(merged.entries);
       if (changedKeys.length) onRemoteApplied(changedKeys);

@@ -324,7 +324,15 @@ function ghStub(over) {
       }
       return gh._stateFile;
     },
-    getBranchHeadSha: async (api, token, branch) => { record('getBranchHeadSha', [branch]); return 'head1'; },
+    getBranchHeadSha: async (api, token, branch) => {
+      record('getBranchHeadSha', [branch]);
+      // Only the sync branch can be the deleted one; the base branch is always there.
+      if (branchGone && branch !== 'main') { const e = new Error('Not Found'); e.status = 404; throw e; }
+      if (over.branchProbeStatus && branch !== 'main') {
+        const e = new Error('probe failed'); e.status = over.branchProbeStatus; throw e;
+      }
+      return 'head1';
+    },
     createRef: async (api, token, name, sha) => {
       record('createRef', [name, sha]);
       if (over.refExists) { const e = new Error('Reference already exists'); e.status = 422; throw e; }
@@ -342,7 +350,7 @@ function ghStub(over) {
         const spec = over.putFails[putCount - 1];
         if (spec) { const e = new Error(spec.message || 'fail'); e.status = spec.status; throw e; }
       }
-      const sha = 'sha_after_put' + putCount;
+      const sha = 'sha_after_put' + (over.shaTag || '') + putCount;
       if (opts.path.indexOf('.review-sync/') === 0) {
         gh._stateFile = { content: opts.content, sha };
       }
@@ -680,6 +688,357 @@ describe('engine: teardown on full revert', () => {
     assert.strictEqual(after.prNumber, 77);
     assert.strictEqual(after.status, 'synced');
     assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 2); // branch recreated
+  });
+});
+
+describe('engine: teardown tombstone (a torn-down state file stays gone)', () => {
+  const T0 = 1770000000000;
+  const TTL_MS = 5 * 60 * 1000;
+
+  // Sync three edits, then revert them all: PR closed, branch deleted. Returns
+  // the state file exactly as it stood on the branch right before the teardown —
+  // what a cache or a lagging replica keeps serving afterwards.
+  async function syncThenTearDown(engineOver) {
+    const ctx = makeEngine({}, {}, engineOver);
+    localEdit(ctx.storage, 1, 'one');
+    localEdit(ctx.storage, 2, 'two');
+    localEdit(ctx.storage, 3, 'three');
+    ctx.engine.notifyEdit();
+    await ctx.engine.flush();
+    const tornDown = ctx.gh._stateFile;
+    assert.ok(tornDown, 'the state file was pushed');
+    ctx.storage.removeItem(RKEY);
+    ctx.engine.notifyEdit();
+    await ctx.engine.flush();
+    assert.strictEqual(ctx.engine.getInfo().status, 'idle');
+    assert.strictEqual(ctx.gh.calls.filter((c) => c[0] === 'deleteRef').length, 1);
+    return Object.assign(ctx, { tornDown });
+  }
+
+  // A page reload: a brand-new engine over the SAME storage.
+  function reopen(storage, over, engineOver) {
+    const ctx = makeEngine(over, {}, Object.assign({ storage }, engineOver || {}));
+    ctx.storage = storage;
+    return ctx;
+  }
+
+  it('attach after teardown does not restore the edits from a stale read', async () => {
+    const { engine, gh, storage, applied, statuses, tornDown } = await syncThenTearDown();
+    gh._stateFile = tornDown;                    // the GET still answers with the old file
+    statuses.length = 0;
+    await engine.attach();
+    assert.strictEqual(storage.getItem(RKEY), null, 'the reverted edits must stay reverted');
+    assert.deepStrictEqual(applied, []);
+    assert.ok(!statuses.includes('synced'), 'nothing exists on GitHub — never "synced"');
+    assert.strictEqual(engine.getInfo().status, 'idle');
+    assert.strictEqual(JSON.parse(storage.getItem(syncBaseKey(TALK))).sha, null);
+  });
+
+  it('survives a reload: a lagging replica serving the torn-down sha is ignored', async () => {
+    const first = await syncThenTearDown();
+    const { engine, storage, applied, statuses } = reopen(first.storage, { remote: first.tornDown });
+    await engine.attach();
+    assert.strictEqual(storage.getItem(RKEY), null);
+    assert.deepStrictEqual(applied, []);
+    assert.ok(!statuses.includes('synced'));
+    assert.strictEqual(engine.getInfo().status, 'idle');
+  });
+
+  it('the exact torn-down sha is refused even when the doc claims a later time', async () => {
+    let clock = T0 + 10000;                      // the doc is stamped 10s "after"...
+    const first = await (async () => {
+      const ctx = makeEngine({}, {}, { now: () => clock });
+      localEdit(ctx.storage, 1, 'one');
+      ctx.engine.notifyEdit();
+      await ctx.engine.flush();
+      const tornDown = ctx.gh._stateFile;
+      clock = T0;                                // ...the teardown that deleted it
+      ctx.storage.removeItem(RKEY);
+      ctx.engine.notifyEdit();
+      await ctx.engine.flush();
+      return Object.assign(ctx, { tornDown });
+    })();
+    const { engine, storage } = reopen(first.storage, { remote: first.tornDown }, { now: () => T0 + 1000 });
+    await engine.attach();
+    assert.strictEqual(storage.getItem(RKEY), null);
+    assert.strictEqual(engine.getInfo().status, 'idle');
+  });
+
+  it('an OLDER revision of the torn-down file (different sha) is ignored too', async () => {
+    const first = await syncThenTearDown();
+    // The replica is behind the last push: another sha, a lower revision,
+    // written before the teardown.
+    const older = {
+      content: JSON.stringify(makeSyncDoc(TALK,
+        { [RKEY]: { marks: {}, edits: { 1: 'one', 2: 'two', 3: 'three', 4: 'four' } } },
+        0, 'client1', new Date(T0 - 60000).toISOString())),
+      sha: 'sha_older_revision',
+    };
+    const { engine, storage, statuses } = reopen(first.storage, { remote: older });
+    await engine.attach();
+    assert.strictEqual(storage.getItem(RKEY), null);
+    assert.ok(!statuses.includes('synced'));
+  });
+
+  it('a NEW doc from another device after the teardown is adopted', async () => {
+    const first = await syncThenTearDown();
+    // Another device re-created the branch from scratch: revision restarts at 1
+    // (not above the torn-down one), but it was written after the teardown.
+    const fresh = {
+      content: JSON.stringify(makeSyncDoc(TALK,
+        { [RKEY]: { marks: {}, edits: { 7: 'from phone' } } },
+        1, 'phone', new Date(T0 + 30000).toISOString())),
+      sha: 'sha_from_phone',
+    };
+    const { engine, storage, applied } = reopen(first.storage, { remote: fresh },
+      { now: () => T0 + 60000 });
+    await engine.attach();
+    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 7: 'from phone' });
+    assert.strictEqual(applied.length, 1);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+
+  it('a doc with a HIGHER revision is adopted whatever its clock says', async () => {
+    const first = await syncThenTearDown();
+    const fresh = {
+      content: JSON.stringify(makeSyncDoc(TALK,
+        { [RKEY]: { marks: {}, edits: { 7: 'from phone' } } },
+        9, 'phone', new Date(T0 - 3600000).toISOString())),   // that device's clock is an hour behind
+      sha: 'sha_from_phone',
+    };
+    const { engine, storage } = reopen(first.storage, { remote: fresh });
+    await engine.attach();
+    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 7: 'from phone' });
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+
+  it('a local re-edit after teardown re-creates from scratch despite a stale read', async () => {
+    const first = await syncThenTearDown();
+    let stale = true;
+    const ctx = reopen(first.storage, { shaTag: '_recreated' });
+    const realGet = ctx.gh.getFileContent;
+    ctx.gh.getFileContent = async (...args) => {
+      const real = await realGet(...args);
+      return stale ? first.tornDown : real;
+    };
+    const { engine, gh, storage } = ctx;
+    await engine.attach();
+    localEdit(storage, 5, 'new');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 1, 'branch re-created');
+    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createPull').length, 1, 'fresh PR opened');
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, { 5: 'new' },
+      'only the new edit is pushed — the torn-down ones are not merged back in');
+    const statePut = gh.calls.find((c) => c[0] === 'putFile' && c[1].indexOf('.review-sync/') === 0);
+    assert.strictEqual(statePut[2], null, 'created without a sha, not as an update of the ghost');
+    assert.strictEqual(engine.getInfo().status, 'synced');
+
+    // The replica is STILL behind on the next pull: it must not roll us back.
+    await engine.pull(true);
+    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 5: 'new' });
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(JSON.parse(storage.getItem(syncBaseKey(TALK))).sha, 'sha_after_put_recreated1');
+    assert.deepStrictEqual(gh.calls.filter((c) => c[0] === 'getBranchHeadSha' && c[1] !== 'main'), [],
+      'a stale read is no evidence that the re-created branch is gone');
+
+    // ...and once it catches up the real file reads as in sync.
+    stale = false;
+    await engine.pull(true);
+    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 5: 'new' });
+    assert.strictEqual(engine.getInfo().status, 'synced');
+
+    const reloaded = reopen(storage, { remote: gh._stateFile });
+    await reloaded.engine.attach();
+    assert.strictEqual(reloaded.engine.getInfo().status, 'synced',
+      'our own re-created file is the base, not a ghost, though the tombstone still lives');
+  });
+
+  it('a CAS conflict after teardown does not merge the torn-down file back in', async () => {
+    const first = await syncThenTearDown();
+    const { engine, gh, storage } = reopen(first.storage,
+      { remote: first.tornDown, putFails: [{ status: 409 }] });
+    localEdit(storage, 5, 'new');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, { 5: 'new' });
+    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 5: 'new' });
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+
+  it('the tombstone expires: it is a bounded guard, not a permanent block', async () => {
+    const first = await syncThenTearDown();
+    const justBefore = reopen(first.storage, { remote: first.tornDown }, { now: () => T0 + TTL_MS - 1 });
+    await justBefore.engine.attach();
+    assert.strictEqual(first.storage.getItem(RKEY), null, 'still guarded inside the TTL');
+
+    const after = reopen(first.storage, { remote: first.tornDown }, { now: () => T0 + TTL_MS });
+    await after.engine.attach();
+    assert.deepStrictEqual(JSON.parse(first.storage.getItem(RKEY)).edits, { 1: 'one', 2: 'two', 3: 'three' },
+      'past the TTL a file that is still there is taken at face value');
+    assert.strictEqual(JSON.parse(first.storage.getItem(syncBaseKey(TALK))).tombstone, undefined,
+      'the expired tombstone is dropped from storage');
+  });
+
+  it('a tombstone from a clock that has since moved backwards does not live forever', async () => {
+    const first = await syncThenTearDown();
+    const { engine, storage } = reopen(first.storage, { remote: first.tornDown },
+      { now: () => T0 - 24 * 3600 * 1000 });
+    await engine.attach();
+    assert.ok(storage.getItem(RKEY), 'an unusable timestamp cannot keep the guard up');
+  });
+});
+
+describe('engine: pull finds no state file while the base says "synced"', () => {
+  const ENTRY = { marks: {}, edits: { 1: 'one', 2: 'two', 3: 'three' } };
+  // What a client holds when its edits are all "synced" (base == local) against
+  // a state file that is no longer there.
+  function seeded(metaOver) {
+    return {
+      [RKEY]: JSON.stringify(ENTRY),
+      [syncBaseKey(TALK)]: JSON.stringify(Object.assign({
+        doc: { [RKEY]: ENTRY }, sha: 'sha_gone', revision: 3,
+        prNumber: null, prUrl: null, nodeId: null, prDraft: null, fileShas: {}, branch: BRANCH_NAME,
+      }, metaOver || {})),
+    };
+  }
+
+  const WRITES = ['createRef', 'putFile', 'createPull'];
+  const writes = (gh) => gh.calls.filter((c) => WRITES.includes(c[0])).map((c) => c[0]);
+  const base = (storage) => JSON.parse(storage.getItem(syncBaseKey(TALK)));
+
+  it('branch gone: the edits show as not synced, and opening the page pushes nothing', async () => {
+    const { engine, gh, storage, timers } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits, 'the edits are kept');
+    assert.strictEqual(engine.getInfo().status, 'pending', 'edits on screen must show a chip, and not a synced one');
+    assert.strictEqual(base(storage).sha, null, 'the stale base is wiped');
+    assert.deepStrictEqual(base(storage).doc, {});
+    assert.strictEqual(engine.getInfo().dirty, false);
+    assert.deepStrictEqual(timers.delays(), [], 'no push is armed');
+    assert.deepStrictEqual(writes(gh), []);
+  });
+
+  it('branch gone: none of the automatic triggers re-creates the branch or the PR', async () => {
+    const { engine, gh, timers } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    await engine.flush();                        // `online`
+    await engine.flush({ keepalive: true });     // tab hidden, pagehide
+    engine.flushSoon();                          // a field losing focus
+    await engine.pull(true);                     // the tab focused again
+    await engine.pull(true);
+    timers.fire(60000);
+    await settle();
+    assert.deepStrictEqual(writes(gh), []);
+    assert.strictEqual(engine.getInfo().status, 'pending');
+  });
+
+  it('branch gone: opening the page again later still pushes nothing', async () => {
+    const first = makeEngine({ branchGone: true }, seeded());
+    await first.engine.attach();
+    await first.engine.destroy();
+    const { engine, gh, timers } = makeEngine({ branchGone: true }, {}, { storage: first.storage });
+    await engine.attach();
+    assert.deepStrictEqual(timers.delays(), []);
+    assert.deepStrictEqual(writes(gh), []);
+    assert.strictEqual(engine.getInfo().status, 'pending');
+  });
+
+  it('branch gone: the next real edit re-creates the branch and a draft PR with ALL the edits', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    localEdit(storage, 4, 'four');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, Object.assign({ 4: 'four' }, ENTRY.edits));
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(engine.getInfo().prNumber, 77);
+  });
+
+  it('branch gone: an edit the page closed on before its push is pushed on the next open', async () => {
+    const first = makeEngine({ branchGone: true }, seeded());
+    await first.engine.attach();
+    localEdit(first.storage, 4, 'four');
+    first.engine.notifyEdit();
+    await first.engine.destroy();
+    const { engine, gh, timers } = makeEngine({ branchGone: true }, {}, { storage: first.storage });
+    await engine.attach();
+    assert.strictEqual(timers.delays().length, 1, 'a push is armed');
+    await engine.flush();
+    assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
+  });
+
+  it('branch gone: "sync now" is the user asking, and it pushes', async () => {
+    const { engine, gh } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    await engine.flush({ force: true });
+    assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, ENTRY.edits);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+
+  it('branch gone, then the branch is back with the state file: it is merged as usual', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    const fresh = makeEngine({ remote: remoteDoc({ 1: 'one', 2: 'two', 3: 'three' }, 1, 'sha_back') },
+      {}, { storage });
+    await fresh.engine.attach();
+    assert.strictEqual(fresh.engine.getInfo().status, 'synced');
+    assert.strictEqual(base(storage).sha, 'sha_back');
+    assert.strictEqual(base(storage).orphaned, undefined);
+    assert.deepStrictEqual(writes(gh).concat(writes(fresh.gh)), []);
+  });
+
+  it('branch gone with a cached PR: the dead PR coordinates are dropped, nothing is pushed', async () => {
+    const { engine, gh } = makeEngine({ branchGone: true },
+      seeded({ prNumber: 12, prUrl: 'https://github.com/x/pull/12', nodeId: 'PR_n12', prDraft: true }));
+    await engine.attach();
+    assert.strictEqual(engine.getInfo().status, 'pending');
+    assert.strictEqual(engine.getInfo().prNumber, null);
+    assert.deepStrictEqual(writes(gh), []);
+  });
+
+  it('a "branch gone" answer that arrives after a push re-created the branch does not wipe the new base', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true }, seeded());
+    const probeAnswer = (() => { let release; const p = new Promise((r) => { release = r; }); return { p, release }; })();
+    const realProbe = gh.getBranchHeadSha;
+    gh.getBranchHeadSha = async (api, token, branch) => {
+      if (branch === 'main') return realProbe(api, token, branch);
+      await probeAnswer.p;                       // asked while the branch was gone, answered late
+      const e = new Error('Not Found'); e.status = 404; throw e;
+    };
+    const pulling = engine.pull(true);
+    await settle();
+    localEdit(storage, 4, 'four');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    const pushed = base(storage);
+    probeAnswer.release();
+    await pulling;
+    assert.deepStrictEqual(base(storage), pushed, 'the base of the push stands');
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(engine.getInfo().prNumber, 77);
+  });
+
+  it('branch alive (finalized on another device): nothing is re-pushed', async () => {
+    // The state file is removed by a finalize; the branch and its PR live on.
+    // Re-pushing here would drag a submitted PR back to draft.
+    const { engine, gh, storage, timers } = makeEngine({},
+      seeded({ prNumber: 12, prUrl: 'https://github.com/x/pull/12', nodeId: 'PR_n12', prDraft: false }));
+    await engine.attach();
+    assert.strictEqual(engine.getInfo().status, 'ready');
+    assert.deepStrictEqual(timers.delays(), [], 'no push armed');
+    assert.strictEqual(gh.puts.length, 0);
+    assert.strictEqual(JSON.parse(storage.getItem(syncBaseKey(TALK))).sha, 'sha_gone', 'base untouched');
+  });
+
+  it('a failed branch probe changes nothing (the next pull asks again)', async () => {
+    const { engine, storage, timers } = makeEngine({ branchProbeStatus: 500 }, seeded());
+    await engine.attach();
+    assert.deepStrictEqual(timers.delays(), []);
+    assert.strictEqual(JSON.parse(storage.getItem(syncBaseKey(TALK))).sha, 'sha_gone');
   });
 });
 
@@ -1043,6 +1402,28 @@ describe('engine: pull', () => {
     await engine.pull();
     const gets = gh.calls.filter((c) => c[0] === 'getFileContent');
     assert.strictEqual(gets.length, 1);
+  });
+  it('drops a response whose GET was overtaken by our own push', async () => {
+    const { engine, gh, storage, applied } = makeEngine();
+    localEdit(storage, 1, 'перша');
+    engine.notifyEdit();
+    await engine.flush();
+    const realGet = gh.getFileContent;
+    let release;
+    const held = new Promise((r) => { release = r; });
+    gh.getFileContent = async (...args) => { const file = await realGet(...args); await held; return file; };
+    const pulling = engine.pull(true);
+    gh.getFileContent = realGet;
+    localEdit(storage, 1, 'друга');
+    engine.notifyEdit();
+    await engine.flush();
+    release();
+    await pulling;
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[1], 'друга',
+      'the pre-push body must not overwrite the edit that was pushed after it');
+    assert.deepStrictEqual(applied, []);
+    await engine.pull(true);
+    assert.strictEqual(JSON.parse(storage.getItem(RKEY)).edits[1], 'друга');
   });
 });
 

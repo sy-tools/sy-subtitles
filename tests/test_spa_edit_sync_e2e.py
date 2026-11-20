@@ -215,6 +215,13 @@ def _wire(pg, calls, review_status, sync_opts):
       put_conflict_once: first PUT -> 409, then a GET returns conflict_entries
       conflict_entries:  the remote doc served after the 409 (CAS merge input)
       conflict_sha:      sha for the conflict doc (default "shaRemote")
+
+    and the markers issue endpoint:
+      stale_issue_bodies: a list the test may append to at any time; each single-issue
+                          GET consumes one entry and answers with THAT body instead of
+                          the issue's current one (a read that lags our own write)
+      issue_state:        set by the first _wire and reused by later ones, so that every
+                          tab wired with the same sync_opts talks to ONE markers issue
     """
     state = {"conflicted": False}
 
@@ -331,7 +338,7 @@ def _wire(pg, calls, review_status, sync_opts):
     pg.route("**/api.github.com/graphql", graphql)
 
     # Issue endpoints for marker-sync (create / list / get / patch) + labels.
-    issue_state = {"issue": None, "next": 900}
+    issue_state = sync_opts.setdefault("issue_state", {"issue": None, "next": 900})
 
     def labels(route):
         route.fulfill(status=201, content_type="application/json", body=json.dumps({}))
@@ -347,7 +354,11 @@ def _wire(pg, calls, review_status, sync_opts):
             route.fulfill(status=200, content_type="application/json", body=json.dumps(rows))
             return
         if method == "GET":  # single issue
-            route.fulfill(status=200, content_type="application/json", body=json.dumps(issue_state["issue"] or {}))
+            served = issue_state["issue"] or {}
+            stale_bodies = sync_opts.get("stale_issue_bodies")
+            if stale_bodies:
+                served = dict(served, body=stale_bodies.pop(0))
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(served))
             return
         body = json.loads(req.post_data) if req.post_data else {}
         calls.append({"method": method, "url": url, "body": body})
@@ -422,6 +433,10 @@ def _wire(pg, calls, review_status, sync_opts):
 
 def _page(browser, calls, review_status, sync_opts=None, signed_in=True):
     ctx = browser.new_context()
+    return ctx, _tab(ctx, calls, review_status, sync_opts, signed_in)
+
+
+def _tab(ctx, calls, review_status, sync_opts=None, signed_in=True):
     pg = ctx.new_page()
     _wire(pg, calls, review_status, sync_opts or {})
     pg.add_init_script(
@@ -437,7 +452,7 @@ def _page(browser, calls, review_status, sync_opts=None, signed_in=True):
         "window.__spa_auto_info_confirm = true;"
         "window.__opened = []; window.open = function(u){ window.__opened.push(u); };"
     )
-    return ctx, pg
+    return pg
 
 
 # --- helpers on the running page ------------------------------------------
@@ -848,6 +863,38 @@ def test_reverting_the_last_edit_tears_down_the_pr(server, browser):
     ctx.close()
 
 
+def test_torn_down_edits_stay_gone_when_github_still_serves_the_old_state_file(server, browser):
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    _open_review(pg, server)
+    _edit_first_review_cell(pg, " SYNCED123")
+    _wait_chip_synced(pg)
+    state_file_before_teardown = decode_put_doc(_review_sync_puts(calls)[-1])
+
+    pg.evaluate("SPA.revertEdit(0)")
+    for _ in range(60):
+        if [c for c in calls if c["method"] == "DELETE" and f"/git/refs/heads/{SYNC_BRANCH}" in c["url"]]:
+            break
+        pg.wait_for_timeout(100)
+    pg.wait_for_selector("#sync-chip", state="hidden", timeout=5000)
+
+    sync_opts.update(get_mode="doc", doc_entries=state_file_before_teardown["entries"], doc_sha="shaP1")
+
+    def _is_state_file_read(response):
+        return response.request.method == "GET" and "/contents/.review-sync/" in response.url
+
+    with pg.expect_response(_is_state_file_read, timeout=10000):
+        pg.reload()
+    pg.wait_for_function("document.querySelectorAll('.cell.uk .cell-text').length > 0", timeout=10000)
+    pg.wait_for_timeout(500)
+
+    assert "SYNCED123" not in pg.locator(".cell.uk .cell-text").first.inner_text()
+    assert pg.locator("#sync-chip").is_hidden(), "nothing is on GitHub, so nothing may read as synced"
+    assert len(_review_sync_puts(calls)) == 1, "the torn-down state must not be pushed back"
+    ctx.close()
+
+
 def test_preview_edit_syncs_to_video_scoped_target(server, browser):
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
@@ -949,6 +996,188 @@ def test_signed_in_marker_creates_issue_then_closes_when_emptied(server, browser
         pg.wait_for_timeout(100)
     assert _closed(), "emptying the markers must close the issue"
     pg.wait_for_selector("#marker-chip", state="hidden", timeout=5000)
+    ctx.close()
+
+
+def test_deleted_markers_stay_deleted_when_github_answers_with_an_old_body(server, browser):
+    calls = []
+    stale_issue_bodies = []
+    ctx, pg = _page(
+        browser,
+        calls,
+        REVIEW_STATUS_UNASSIGNED,
+        {"get_mode": "404", "stale_issue_bodies": stale_issue_bodies},
+        signed_in=True,
+    )
+    _open_preview_marker(pg, server)
+    pg.evaluate("SPA.setPreviewMode('marker')")
+    pg.wait_for_function("() => window.markerSync", timeout=10000)
+
+    def _sync():
+        pg.evaluate("window.markerSync.flush({ force: true })")
+
+    def _issue_writes():
+        return [c for c in calls if "/issues" in c["url"] and c["method"] in ("POST", "PATCH")]
+
+    def _written_marker_texts():
+        return pg.evaluate("(body) => parseMarkersBlock(body).map((m) => m.text)", _issue_writes()[-1]["body"]["body"])
+
+    for seconds, text in ((3, "Sub one"), (6, "Sub two"), (9, "Sub three")):
+        # One evaluate: the preview's own tick rewrites lastText between two.
+        pg.evaluate(
+            """([time, text]) => {
+                window.previewState.currentTime = time;
+                window.previewState.lastText = text;
+                SPA.addMarker();
+            }""",
+            [seconds, text],
+        )
+    _sync()
+    assert _written_marker_texts() == ["Sub one", "Sub two", "Sub three"]
+    body_with_all_three = _issue_writes()[-1]["body"]["body"]
+
+    pg.evaluate("SPA.removeMarker(0)")
+    _sync()
+    assert _written_marker_texts() == ["Sub two", "Sub three"]
+
+    stale_issue_bodies.append(body_with_all_three)
+    pg.evaluate("SPA.removeMarker(0)")
+    _sync()
+
+    assert not stale_issue_bodies, "the flush must have consumed the lagging read"
+    assert pg.evaluate("window.previewState.markers.map((m) => m.text)") == ["Sub three"]
+    assert pg.locator(".marker-item").count() == 1
+    assert _written_marker_texts() == ["Sub three"]
+    ctx.close()
+
+
+def test_marker_deleted_in_one_tab_leaves_the_other_tab_and_is_not_written_back(server, browser):
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    ctx, first_tab = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+
+    def _open_marker_mode(pg):
+        _open_preview_marker(pg, server)
+        pg.evaluate("SPA.setPreviewMode('marker')")
+        pg.wait_for_function("() => window.markerSync", timeout=10000)
+
+    def _sync(pg):
+        pg.evaluate("window.markerSync.flush({ force: true })")
+
+    def _marker_texts(pg):
+        return pg.evaluate("window.previewState.markers.map((m) => m.text)")
+
+    def _last_written_marker_texts():
+        writes = [c for c in calls if "/issues" in c["url"] and c["method"] in ("POST", "PATCH")]
+        return first_tab.evaluate("(body) => parseMarkersBlock(body).map((m) => m.text)", writes[-1]["body"]["body"])
+
+    _open_marker_mode(first_tab)
+    for seconds, text in ((3, "Sub one"), (6, "Sub two"), (9, "Sub three")):
+        first_tab.evaluate(
+            """([time, text]) => {
+                window.previewState.currentTime = time;
+                window.previewState.lastText = text;
+                SPA.addMarker();
+            }""",
+            [seconds, text],
+        )
+    _sync(first_tab)
+
+    second_tab = _tab(ctx, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+    _open_marker_mode(second_tab)
+    second_tab.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+    assert _marker_texts(second_tab) == ["Sub one", "Sub two", "Sub three"]
+
+    first_tab.evaluate("SPA.removeMarker(0)")
+    _sync(first_tab)
+    assert _last_written_marker_texts() == ["Sub two", "Sub three"]
+
+    second_tab.wait_for_function("() => window.previewState.markers.length === 2", timeout=5000)
+    assert _marker_texts(second_tab) == ["Sub two", "Sub three"]
+    assert second_tab.locator(".marker-item").count() == 2
+    _sync(second_tab)
+    assert _last_written_marker_texts() == ["Sub two", "Sub three"]
+    ctx.close()
+
+
+def test_two_tabs_stop_exchanging_storage_events(server, browser):
+    """Two tabs of one talk must not answer each other's `storage` events for ever.
+
+    Each tab keeps its own base of merged markers, so the tabs differ as soon as one
+    of them syncs something the other has not pulled. A `storage` listener that
+    answers such an event with a write of its own turns that difference into a loop
+    of thousands of events a second. Whatever the tabs hold, the events have to stop.
+    """
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    count_marker_storage_events = """
+        window.__markerStorageEvents = 0;
+        window.addEventListener('storage', function (e) {
+            if (e.key && e.key.indexOf('sy_marker_') === 0) window.__markerStorageEvents += 1;
+        });
+    """
+    ctx, first_tab = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+    first_tab.add_init_script(count_marker_storage_events)
+
+    def _open_marker_mode(pg):
+        _open_preview_marker(pg, server)
+        pg.evaluate("SPA.setPreviewMode('marker')")
+        pg.wait_for_function("() => window.markerSync", timeout=10000)
+
+    def _add(pg, seconds, text):
+        pg.evaluate(
+            """([time, text]) => {
+                window.previewState.currentTime = time;
+                window.previewState.lastText = text;
+                SPA.addMarker();
+            }""",
+            [seconds, text],
+        )
+
+    def _sync(pg):
+        pg.evaluate("window.markerSync.flush({ force: true })")
+        pg.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+
+    def _events():
+        return [pg.evaluate("window.__markerStorageEvents") for pg in (first_tab, second_tab)]
+
+    def _assert_quiet(after):
+        # A loop runs at thousands of events a second; half a second tells them apart.
+        first_tab.wait_for_timeout(300)
+        seen = _events()
+        first_tab.wait_for_timeout(500)
+        assert _events() == seen, f"the tabs are still exchanging storage events {after}"
+        assert sum(seen) < 40, f"{seen} storage events {after}: far more than the handful an action costs"
+
+    _open_marker_mode(first_tab)
+    _add(first_tab, 3, "Sub one")
+    _add(first_tab, 6, "Sub two")
+    _sync(first_tab)
+
+    second_tab = _tab(ctx, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+    second_tab.add_init_script(count_marker_storage_events)
+    _open_marker_mode(second_tab)
+    second_tab.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+    _assert_quiet("after the second tab opened")
+
+    # The first tab syncs a marker the second has not pulled: their bases differ now.
+    _add(first_tab, 9, "Sub three")
+    _sync(first_tab)
+    _assert_quiet("after one tab synced a marker the other has not pulled")
+
+    # The same marker with a different comment in each tab: a conflict neither gives up.
+    first_tab.evaluate("window.previewState.markers[0].comment = 'from the first tab'; markerNotify();")
+    second_tab.evaluate("window.previewState.markers[0].comment = 'from the second tab'; markerNotify();")
+    _sync(first_tab)
+    _sync(second_tab)
+    _assert_quiet("after a comment conflict")
+
+    first_tab.evaluate("SPA.removeMarker(1)")
+    second_tab.wait_for_function("() => window.previewState.markers.every((m) => m.text !== 'Sub two')", timeout=5000)
+    _assert_quiet("after a deletion")
+    _sync(first_tab)
+    _sync(second_tab)
+    _assert_quiet("after both tabs synced the deletion")
     ctx.close()
 
 

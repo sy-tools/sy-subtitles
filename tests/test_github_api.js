@@ -300,6 +300,24 @@ describe('issue sync primitives (marker sync)', () => {
     assert.deepStrictEqual(await getIssue(API, 'gho_x', 5, f),
       { number: 5, state: 'open', body: 'B', node_id: 'I_5' });
   });
+  it('getIssue bypasses the HTTP cache', async () => {
+    let seenInit = null;
+    const f = async (url, init) => { seenInit = init; return new Response('{}', { status: 200 }); };
+    await getIssue(API, 'gho_x', 5, f);
+    assert.strictEqual(seenInit.cache, 'no-store');
+  });
+  it('getFileContent bypasses the HTTP cache', async () => {
+    let seenInit = null;
+    const f = async (url, init) => { seenInit = init; return new Response('{"content":"","sha":"s"}', { status: 200 }); };
+    await getFileContent(API, 'gho_x', '.review-sync/t.json', 'sync/u/t', f);
+    assert.strictEqual(seenInit.cache, 'no-store');
+  });
+  it('other requests leave the cache mode alone', async () => {
+    let seenInit = null;
+    const f = async (url, init) => { seenInit = init; return new Response('{}', { status: 200 }); };
+    await updateIssue(API, 'gho_x', 5, { body: 'b' }, f);
+    assert.ok(!('cache' in seenInit));
+  });
   it('updateIssue PATCHes the given fields', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'PATCH', match: '/issues/5', status: 200,
