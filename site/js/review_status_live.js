@@ -180,9 +180,8 @@ function liveIssuesCacheKey(branch, label) {
   return 'sy_live_issues__' + branch + '__' + label;
 }
 
-// A connection that stalls never settles on its own, and everything waiting on
-// the statuses (singleFlight's callers, a manual refresh before it repaints)
-// would wait with it.
+// Everything waiting on the statuses (singleFlight's callers, a manual refresh
+// before it repaints) waits on this read, so it is bounded: see withDeadline.
 var LIVE_ISSUES_TIMEOUT_MS = 15000;
 
 // Every issue behind the statuses, in the gh CLI shape. One query per label:
@@ -193,42 +192,27 @@ var LIVE_ISSUES_TIMEOUT_MS = 15000;
 // gone" — and, with a TimeoutError, if the whole read (headers AND bodies,
 // every page) outlasts timeoutMs; the requests still open are aborted.
 function fetchLiveIssues(opts) {
-  var list = typeof listIssuesByLabelConditional === 'function'
-    ? listIssuesByLabelConditional
-    : require('./github_api').listIssuesByLabelConditional;
+  var gh = typeof withDeadline === 'function'
+    ? { listIssuesByLabelConditional: listIssuesByLabelConditional, withDeadline: withDeadline }
+    : require('./github_api');
   var storage = opts.storage;
-  var timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : LIVE_ISSUES_TIMEOUT_MS;
-  var controller = typeof AbortController === 'function' ? new AbortController() : null;
-  var fetchWithSignal = function (url, init) {
-    var withSignal = Object.assign({}, init);
-    if (controller) withSignal.signal = controller.signal;
-    return (opts.fetchImpl || fetch)(url, withSignal);
-  };
-  function one(label) {
+  function one(label, fetchWithSignal) {
     var key = liveIssuesCacheKey(opts.branch, label);
     var cached = null;
     try { cached = JSON.parse(storage.getItem(key)); } catch (e) { cached = null; }
-    return list(opts.api, opts.token, label, { cached: cached, mapRow: normalizeRestIssue }, fetchWithSignal)
+    return gh.listIssuesByLabelConditional(opts.api, opts.token, label, { cached: cached, mapRow: normalizeRestIssue }, fetchWithSignal)
       .then(function (res) {
         try { storage.setItem(key, JSON.stringify({ pages: res.pages })); } catch (e) { /* quota: refetch next time */ }
         return res.rows;
       });
   }
-  var timer = null;
-  // The race, not the abort, is what rejects: an abort only reaches a request
-  // whose fetch honours the signal.
-  var timedOut = new Promise(function (resolve, reject) {
-    timer = setTimeout(function () {
-      var e = new Error('live issues: no answer in ' + timeoutMs + ' ms');
-      e.name = 'TimeoutError';
-      reject(e);
-      if (controller) controller.abort();
-    }, timeoutMs);
-  });
-  var stopTimer = function () { clearTimeout(timer); };
-  var read = Promise.race([Promise.all([one(GATE_LABEL), one(OPERATOR_LABEL)]), timedOut]);
-  read.then(stopTimer, stopTimer);
-  return read.then(mergeIssueLists);
+  return gh.withDeadline(function (fetchWithSignal) {
+    return Promise.all([one(GATE_LABEL, fetchWithSignal), one(OPERATOR_LABEL, fetchWithSignal)]);
+  }, {
+    timeoutMs: opts.timeoutMs != null ? opts.timeoutMs : LIVE_ISSUES_TIMEOUT_MS,
+    what: 'live issues',
+    fetchImpl: opts.fetchImpl,
+  }).then(mergeIssueLists);
 }
 
 if (typeof module !== 'undefined' && module.exports) {

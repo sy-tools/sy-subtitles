@@ -76,6 +76,56 @@ function ghJson(url, token, opts, fetchImpl) {
   });
 }
 
+// GitHub ends a request it has spent 10 seconds on with an error of its own;
+// past that plus slack for the network, no answer is coming.
+var GH_REQUEST_TIMEOUT_MS = 15000;
+
+// A connection that stalls never settles on its own, and neither does whatever
+// waits on it. run(fetchWithSignal) does the work — any number of requests —
+// through the fetch it is handed; the returned promise settles as run's does,
+// or rejects with a TimeoutError once ALL of it (headers and bodies) has
+// outlasted the deadline, aborting what is still open.
+//
+// A timed-out write is not a failed write: GitHub may have applied it.
+//
+// opts: { timeoutMs, what, fetchImpl } — `what` names the work in the message.
+// GitHub sends reads with `Cache-Control: private, max-age=60`, and a write to
+// another URL does not invalidate them, so a read that decides whether to create
+// something must skip the HTTP cache or it can miss what was just created.
+function freshFetch(fetchImpl) {
+  return function (url, init) {
+    var f = fetchImpl || fetch;
+    return f(url, Object.assign({}, init, { cache: 'no-store' }));
+  };
+}
+
+function withDeadline(run, opts) {
+  opts = opts || {};
+  var timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : GH_REQUEST_TIMEOUT_MS;
+  var controller = typeof AbortController === 'function' ? new AbortController() : null;
+  var fetchWithSignal = function (url, init) {
+    var withSignal = Object.assign({}, init);
+    if (controller) withSignal.signal = controller.signal;
+    return (opts.fetchImpl || fetch)(url, withSignal);
+  };
+  var timer = null;
+  // The race, not the abort, is what rejects: an abort only reaches a request
+  // whose fetch honours the signal.
+  var timedOut = new Promise(function (resolve, reject) {
+    timer = setTimeout(function () {
+      var e = new Error((opts.what || 'GitHub') + ': no answer in ' + timeoutMs + ' ms');
+      e.name = 'TimeoutError';
+      reject(e);
+      if (controller) controller.abort();
+    }, timeoutMs);
+  });
+  var stopTimer = function () { clearTimeout(timer); };
+  var work = new Promise(function (resolve) { resolve(run(fetchWithSignal)); });
+  var raced = Promise.race([work, timedOut]);
+  raced.then(stopTimer, stopTimer);
+  return raced;
+}
+
 // GET the repo root and report the viewer's effective write right. With a
 // user-to-server token, permissions reflects the USER — push=false means
 // "not added to the repo" (read-only mode), regardless of the App's own
@@ -574,6 +624,9 @@ if (typeof module !== 'undefined' && module.exports) {
     listIssueComments: listIssueComments,
     passQa: passQa,
     getRepoPermissions: getRepoPermissions,
+    withDeadline: withDeadline,
+    freshFetch: freshFetch,
+    GH_REQUEST_TIMEOUT_MS: GH_REQUEST_TIMEOUT_MS,
     isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,
     base64ToUtf8: base64ToUtf8,
