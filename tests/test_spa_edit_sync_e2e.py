@@ -1083,6 +1083,84 @@ def test_review_srt_edit_equal_to_the_loaded_srt_is_retired(server, browser):
     ctx.close()
 
 
+def _main_now_reads_as_the_synced_edit(pg, sync_opts, calls, block_text):
+    (edit_text,) = _stored(pg, CANON_KEY).values()
+    sync_opts.update(get_mode="doc", doc_entries=_video_state_docs(calls)[-1]["entries"], doc_sha="shaP1")
+    pg.route(
+        "**/raw.githubusercontent.com/**/uk.srt",
+        lambda r: r.fulfill(status=200, content_type="text/plain", body=SAMPLE_UK_SRT.replace(block_text, edit_text)),
+    )
+
+
+def _wait_for_an_armed_push(pg):
+    pg.wait_for_function("() => window.editSync && window.editSync.getInfo().dirty === true", timeout=5000)
+
+
+def test_preview_rereading_an_srt_that_now_holds_a_synced_edit_arms_its_withdrawal_from_the_pr(server, browser):
+    """No focus or visibility event follows, so nothing else would start the push
+    that takes the retired edit off the draft PR."""
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    _open_preview_in_edit_mode(pg, server)
+    _edit_preview_block_at(pg, 7, " NEWEDIT")
+    _wait_chip_synced(pg)
+    _main_now_reads_as_the_synced_edit(pg, sync_opts, calls, BLOCK1)
+
+    assert pg.evaluate("loadSubtitleLang('uk')") is True
+
+    assert _stored(pg, CANON_KEY) is None
+    _wait_for_an_armed_push(pg)
+    ctx.close()
+
+
+def test_review_srt_rereading_an_srt_that_now_holds_a_synced_edit_arms_its_withdrawal_from_the_pr(server, browser):
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    _open_review(pg, server)
+    pg.evaluate(f"SPA.switchReviewMode('srt', '{VIDEO_SLUG}')")
+    pg.wait_for_function("(window.reviewState.ukBlocks || []).length > 0", timeout=10000)
+    _edit_first_review_cell(pg, " NEWEDIT")
+    _wait_chip_synced(pg)
+    _main_now_reads_as_the_synced_edit(pg, sync_opts, calls, BLOCK0)
+
+    pg.evaluate(f"SPA.switchReviewMode('srt', '{VIDEO_SLUG}')")
+
+    pg.wait_for_function("k => localStorage.getItem(k) === null", arg=CANON_KEY, timeout=10000)
+    _wait_for_an_armed_push(pg)
+    ctx.close()
+
+
+def test_finalize_refused_over_an_unpushed_file_is_explained_in_the_ui_language(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
+    _open_review(pg, server)
+    _edit_first_review_cell(pg, " ONE")
+    _wait_chip_synced(pg)
+
+    def transcript_put_is_down(route):
+        if route.request.method == "PUT":
+            route.fulfill(status=502, content_type="application/json", body=json.dumps({"message": "Bad Gateway"}))
+        else:
+            route.fallback()
+
+    pg.route("**/api.github.com/repos/**/contents/talks/**", transcript_put_is_down)
+    _edit_first_review_cell(pg, " TWO")
+    pg.wait_for_function("() => window.editSync.getInfo().status === 'error'", timeout=10000)
+
+    pg.evaluate("SPA.syncFinalize()")
+
+    pg.wait_for_function(
+        "document.getElementById('toast').classList.contains('show')"
+        " && document.getElementById('toast').textContent === t('sync.file_not_pushed')",
+        timeout=10000,
+    )
+    assert pg.evaluate("t('sync.file_not_pushed')") != "sync.file_not_pushed"
+    assert not [c for c in calls if "markPullRequestReadyForReview" in json.dumps(c["body"] or {})]
+    ctx.close()
+
+
 def test_an_edit_row_just_opened_survives_the_preview_reloading_the_same_srt(server, browser):
     """SPA.addEdit opens a row holding the block's own text. The preview re-reads
     the SRT on a route() re-entry (a manifest refresh) — here by the same loader,

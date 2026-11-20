@@ -52,6 +52,10 @@ describe('sync targets (file-scoped)', () => {
     assert.ok(!tgt.filter('srt_edits_' + TALK + '_video1_uk'));
     assert.ok(!tgt.filter('preview_' + TALK + '_video1'));
   });
+  it('each target names the one file its PR commits', () => {
+    assert.strictEqual(srtSyncTarget(TALK, 'video1', 'uk').filePath, 'talks/' + TALK + '/video1/final/uk.srt');
+    assert.strictEqual(transcriptSyncTarget(TALK, 'hi').filePath, 'talks/' + TALK + '/transcript_hi.txt');
+  });
 });
 
 describe('collectSyncEntries', () => {
@@ -1581,6 +1585,206 @@ describe('engine: an edit counts as landed only once its file was pushed', () =>
     assert.strictEqual(engine.getInfo().prDraft, true);
   });
 
+  function twoDevicesOnOneBranch() {
+    const gh = ghStub({});
+    const put = gh.putFile;
+    const net = { fileDown: false, conflictOnce: false };
+    gh.putFile = async (api, token, opts) => {
+      if (net.fileDown && opts.path === FILE) { const e = new Error('Bad Gateway'); e.status = 502; throw e; }
+      if (net.conflictOnce && opts.path !== FILE) {
+        net.conflictOnce = false;
+        const e = new Error('conflict'); e.status = 409; throw e;
+      }
+      return put(api, token, opts);
+    };
+    const device = (clientId) => makeEngine({}, null, { gh, buildFiles: files, clientId });
+    return { net, device };
+  }
+
+  async function xPushedByAThenRemovedByB() {
+    const shared = twoDevicesOnOneBranch();
+    const A = shared.device('deviceA');
+    const B = shared.device('deviceB');
+    localEdit(A.storage, 1, 'x');
+    A.engine.notifyEdit();
+    await A.engine.flush();
+    assert.deepStrictEqual(base(A.storage).filesDoc[RKEY].edits, { 1: 'x' }, 'A pushed X with its file');
+    await B.engine.attach();
+    assert.deepStrictEqual(edits(B.storage), { 1: 'x' }, 'B adopted X');
+    B.storage.setItem(RKEY, JSON.stringify({ marks: {}, edits: { 2: 'y' } }));
+    B.engine.notifyEdit();
+    await B.engine.flush();
+    return { A, net: shared.net };
+  }
+
+  it('an edit another device removed, typed again here with no file behind it, is not landed by the merge', async () => {
+    const { A, net } = await xPushedByAThenRemovedByB();
+    await A.engine.pull(true);
+    assert.deepStrictEqual(edits(A.storage), { 2: 'y' }, 'X left A with the pull');
+
+    localEdit(A.storage, 1, 'x');
+    A.engine.notifyEdit();
+    net.fileDown = true;
+    await A.engine.flush();
+    assert.strictEqual(A.engine.getInfo().status, 'error');
+    assert.deepStrictEqual(base(A.storage).doc[RKEY].edits, { 1: 'x', 2: 'y' }, 'the state file did go up');
+    await A.engine.destroy();
+
+    const { storage } = await reopenedAfterMerge(A.storage);
+    assert.deepStrictEqual(edits(storage), { 1: 'x', 2: 'y' },
+      'the file on the branch is B\'s, without X; and Y was only ever adopted here');
+  });
+
+  it('the same removal met as a CAS conflict ends the file confirmation too', async () => {
+    const { A, net } = await xPushedByAThenRemovedByB();
+    localEdit(A.storage, 3, 'z');
+    A.engine.notifyEdit();
+    net.conflictOnce = true;
+    net.fileDown = true;
+    await A.engine.flush();
+    assert.deepStrictEqual(edits(A.storage), { 2: 'y', 3: 'z' }, 'X left A with the merge');
+
+    localEdit(A.storage, 1, 'x');
+    A.engine.notifyEdit();
+    await A.engine.flush();
+    assert.deepStrictEqual(base(A.storage).doc[RKEY].edits, { 1: 'x', 2: 'y', 3: 'z' });
+    await A.engine.destroy();
+
+    const { storage } = await reopenedAfterMerge(A.storage);
+    assert.deepStrictEqual(edits(storage), { 1: 'x', 2: 'y', 3: 'z' });
+  });
+
+  it('what a later device still carries keeps its file confirmation', async () => {
+    const shared = twoDevicesOnOneBranch();
+    const A = shared.device('deviceA');
+    const B = shared.device('deviceB');
+    localEdit(A.storage, 1, 'x');
+    A.engine.notifyEdit();
+    await A.engine.flush();
+    await B.engine.attach();
+    localEdit(B.storage, 2, 'y');
+    B.engine.notifyEdit();
+    await B.engine.flush();
+    await A.engine.pull(true);
+    assert.deepStrictEqual(base(A.storage).filesDoc[RKEY].edits, { 1: 'x' },
+      'X is still in the doc, and A\'s own file push carried it; Y is B\'s');
+    await A.engine.destroy();
+
+    const { storage } = await reopenedAfterMerge(A.storage);
+    assert.deepStrictEqual(edits(storage), { 2: 'y' });
+  });
+
+  const OPEN_PR = { number: 77, html_url: 'https://github.com/x/pull/77', node_id: 'PR_n77', draft: true };
+
+  it('a doc adopted on a pull confirms no file: the merge leaves its edits', async () => {
+    const first = makeEngine({ remote: remoteDoc({ 4: 'theirs' }), existingPr: OPEN_PR }, null,
+      { buildFiles: files });
+    await first.engine.attach();
+    assert.deepStrictEqual(edits(first.storage), { 4: 'theirs' });
+    assert.strictEqual(base(first.storage).prNumber, 77);
+    await first.engine.destroy();
+    const { storage } = await reopenedAfterMerge(first.storage);
+    assert.deepStrictEqual(edits(storage), { 4: 'theirs' });
+  });
+
+  it('a doc adopted on the way to a push confirms no file either', async () => {
+    const first = makeEngine({ remote: remoteDoc({ 4: 'theirs' }), putFails: [null, { status: 502 }] }, {
+      [syncBaseKey(TALK)]: JSON.stringify({
+        doc: {}, sha: null, revision: 0, prNumber: 77, prUrl: 'u', nodeId: 'n',
+        prDraft: true, fileShas: {}, branch: BRANCH_NAME,
+      }),
+    }, { buildFiles: files });
+    localEdit(first.storage, 1, 'x');
+    first.engine.notifyEdit();
+    await first.engine.flush();
+    assert.deepStrictEqual(base(first.storage).doc[RKEY].edits, { 1: 'x', 4: 'theirs' });
+    assert.strictEqual(first.engine.getInfo().status, 'error', 'the file PUT failed');
+    await first.engine.destroy();
+    const { storage } = await reopenedAfterMerge(first.storage);
+    assert.deepStrictEqual(edits(storage), { 1: 'x', 4: 'theirs' });
+  });
+
+  it('an edit typed while the file PUT was out is not covered by that file', async () => {
+    const first = makeEngine({}, null, { buildFiles: files });
+    const put = first.gh.putFile;
+    let filePutNo = 0;
+    first.gh.putFile = async (api, token, opts) => {
+      if (opts.path === FILE) {
+        filePutNo += 1;
+        if (filePutNo === 1) { localEdit(first.storage, 2, 'y'); first.engine.notifyEdit(); }
+        if (filePutNo === 2) { const e = new Error('Bad Gateway'); e.status = 502; throw e; }
+      }
+      return put(api, token, opts);
+    };
+    localEdit(first.storage, 1, 'x');
+    first.engine.notifyEdit();
+    await first.engine.flush();
+    await first.engine.flush();
+    assert.deepStrictEqual(base(first.storage).doc[RKEY].edits, { 1: 'x', 2: 'y' }, 'the state file has both');
+    assert.strictEqual(filePutNo, 2);
+    await first.engine.destroy();
+    const { storage } = await reopenedAfterMerge(first.storage);
+    assert.deepStrictEqual(edits(storage), { 2: 'y' }, 'the file that went up was built before Y existed');
+  });
+
+  it('a file built for another target is not pushed and covers nothing', async () => {
+    const other = 'talks/' + TALK + '/video1/final/uk.srt';
+    const first = makeEngine({}, null,
+      { buildFiles: () => [{ path: other, content: 'ANOTHER VIEW' }], filePath: FILE });
+    localEdit(first.storage, 1, 'x');
+    first.engine.notifyEdit();
+    await first.engine.flush();
+    assert.deepStrictEqual(first.gh.calls.filter((c) => c[0] === 'putFile' && c[1] === other), [],
+      'another target\'s file does not belong on this branch');
+    assert.strictEqual(base(first.storage).filesPending, true);
+    assert.strictEqual(base(first.storage).filesDoc, undefined);
+    assert.strictEqual(first.engine.getInfo().status, 'pending');
+    await first.engine.destroy();
+    const { storage } = await reopenedAfterMerge(first.storage);
+    assert.deepStrictEqual(edits(storage), { 1: 'x' });
+  });
+
+  it('the target\'s own file, built beside a foreign one, is the only one pushed', async () => {
+    const other = 'talks/' + TALK + '/video1/final/uk.srt';
+    const { engine, gh, storage } = makeEngine({}, null, {
+      buildFiles: () => [{ path: other, content: 'ANOTHER VIEW' }, { path: FILE, content: 'WHOLE FILE' }],
+      filePath: FILE,
+    });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(filePuts(gh).length, 1);
+    assert.deepStrictEqual(gh.calls.filter((c) => c[0] === 'putFile' && c[1] === other), []);
+    assert.deepStrictEqual(base(storage).filesDoc, base(storage).doc);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+
+  it('an orphaned base is held back on open even when it still says a file is owed', async () => {
+    // Reachable only through a stored base (no engine path leaves `orphaned`
+    // beside `filesPending`), but opening a page must never re-open a PR.
+    const ENTRY = { marks: {}, edits: { 1: 'x' } };
+    const { engine, gh, timers } = makeEngine({}, {
+      [RKEY]: JSON.stringify(ENTRY),
+      [syncBaseKey(TALK)]: JSON.stringify({
+        doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null,
+        prDraft: null, fileShas: {}, branch: BRANCH_NAME, orphaned: true, filesPending: true,
+      }),
+    }, { buildFiles: files });
+    await engine.attach();
+    timers.fire(15000);
+    await settle();
+    assert.deepStrictEqual(gh.calls.filter((c) => c[0] === 'putFile' || c[0] === 'createRef'), []);
+    assert.strictEqual(engine.getInfo().status, 'pending');
+  });
+
+  it('the finalize refusal carries a stable code for the UI to translate', async () => {
+    const { engine, storage } = makeEngine({}, null, { buildFiles: () => [] });
+    localEdit(storage, 1, 'x');
+    engine.notifyEdit();
+    await engine.flush();
+    await assert.rejects(engine.finalize(), (e) => e.code === 'file-not-pushed');
+  });
+
   it('an engine with no files to build (markers) keeps the plain rule', async () => {
     const { engine, storage } = makeEngine();
     localEdit(storage, 1, 'x');
@@ -2156,6 +2360,10 @@ describe('index.html wiring', () => {
   const fs = require('node:fs');
   const path = require('node:path');
   const html = fs.readFileSync(path.join(__dirname, '..', 'site', 'index.html'), 'utf8');
+
+  it('tells the sync engine which file its target commits', () => {
+    assert.match(html, /filePath:\s*tgt\.filePath/);
+  });
 
   it('passes sanitizeInvisible into the sync engine', () => {
     assert.match(html, /sanitize:\s*sanitizeInvisible/);

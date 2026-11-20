@@ -42,6 +42,7 @@ function srtSyncTarget(talkId, videoSlug, lang) {
   var suffix = '_' + lang;
   return {
     slug: videoSlug + '-' + lang,
+    filePath: 'talks/' + talkId + '/' + videoSlug + '/final/' + lang + '.srt',
     filter: function (key) {
       if (key === canon || key === held) return true;
       return key.indexOf(legacyPrefix) === 0 && key.slice(-suffix.length) === suffix;
@@ -56,6 +57,7 @@ function transcriptSyncTarget(talkId, lang) {
     // quirk); the slug carries the active lang so the branch/file are named
     // for the transcript actually being committed.
     slug: 'transcript-' + lang,
+    filePath: 'talks/' + talkId + '/transcript_' + lang + '.txt',
     filter: function (key) { return key === reviewKey; },
   };
 }
@@ -316,6 +318,15 @@ function dropLandedItems(baseEntries, localEntries, pushedEntries) {
   return withoutEndedPlaceholders(unflattenDoc(out));
 }
 
+// The items of `entries` that `otherEntries` holds too, with the same value.
+function itemsAlsoIn(entries, otherEntries) {
+  var ef = flattenDoc(entries || {});
+  var other = flattenDoc(otherEntries || {});
+  var out = {};
+  Object.keys(ef).forEach(function (k) { if (ef[k] === other[k]) out[k] = ef[k]; });
+  return unflattenDoc(out);
+}
+
 function makeSyncDoc(talkId, entries, revision, client, nowIso) {
   return {
     version: 1,
@@ -326,6 +337,9 @@ function makeSyncDoc(talkId, entries, revision, client, nowIso) {
     entries: entries,
   };
 }
+
+// `code` of the error finalize() rejects with while the file is still owed.
+var FILE_NOT_PUSHED = 'file-not-pushed';
 
 // ---------------------------------------------------------------------------
 // Sync engine: debounce, compare-and-swap pushes, draft-PR bootstrap, pulls.
@@ -381,9 +395,14 @@ function createSyncEngine(opts) {
   // kept in the base for it, both about THIS device's own pushes:
   //   filesPending — a doc went up and its file has not followed yet;
   //   filesDoc     — the last doc whose file is confirmed on the branch.
-  // A doc adopted from another device moves neither: whether that device got
-  // its file up is not something its state file says.
+  // A doc adopted from another device confirms nothing: whether that device
+  // got its file up is not something its state file says. It can only END a
+  // confirmation — an item it no longer carries left the branch's file with
+  // that device's push, so ours no longer stands behind it (see adoptBase).
   var commitsFiles = typeof opts.buildFiles === 'function';
+  // The one file this engine's target commits. buildFiles rebuilds whichever
+  // view is open, and only this path is the file the target's PR merges.
+  var filePath = opts.filePath || null;
   function fileOwed() { return commitsFiles && !!meta.filesPending; }
   // Where a flush or a pull comes to rest when nothing else is due.
   function settledStatus() { return fileOwed() ? 'pending' : 'synced'; }
@@ -425,6 +444,14 @@ function createSyncEngine(opts) {
     // `orphaned` describes edits with no base; any base that is saved ends it.
     if (meta.sha !== null) delete meta.orphaned;
     storage.setItem(syncBaseKey(talkId, target), JSON.stringify(meta));
+  }
+
+  // Every path that takes the remote doc as the new base goes through here.
+  function adoptBase(remote) {
+    meta.doc = remote.entries;
+    meta.sha = remote.sha;
+    meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+    if (meta.filesDoc) meta.filesDoc = itemsAlsoIn(meta.filesDoc, remote.entries);
   }
 
   function parseRemote(file) {
@@ -556,9 +583,7 @@ function createSyncEngine(opts) {
         var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
         var changedKeys = apply(merged.entries);
         if (changedKeys.length) onRemoteApplied(changedKeys);
-        meta.doc = remote.entries;
-        meta.sha = remote.sha;
-        meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+        adoptBase(remote);
         saveMeta();
         if (Object.keys(merged.entries).length) {
           // A concurrent device's edits survive on the remote — don't tear the
@@ -626,9 +651,7 @@ function createSyncEngine(opts) {
       var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
       var changedKeys = apply(merged.entries);
       if (changedKeys.length) onRemoteApplied(changedKeys);
-      meta.doc = remote.entries;
-      meta.sha = remote.sha;
-      meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+      adoptBase(remote);
       local = merged.entries;
     }
 
@@ -687,11 +710,14 @@ function createSyncEngine(opts) {
       var covered = local;
       // Invisible characters ONLY: `content` is a whole rebuilt file, and the
       // field-level rule would collapse its newlines and destroy the SRT.
-      var files = (buildFiles() || []).map(function (f) {
+      var files = (buildFiles() || []).filter(function (f) {
+        return !filePath || f.path === filePath;
+      }).map(function (f) {
         return sanitize ? { path: f.path, content: sanitize(f.content) } : f;
       });
       // Nothing to build means the view's data is not loaded (or the rebuild
-      // threw) — not that the file is up to date. It stays owed.
+      // threw, or the open view is another target's) — not that the file is
+      // up to date. It stays owed.
       if (!files.length) return Promise.resolve();
       var chain = Promise.resolve();
       files.forEach(function (file) {
@@ -969,9 +995,7 @@ function createSyncEngine(opts) {
       var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
       var changedKeys = apply(merged.entries);
       if (changedKeys.length) onRemoteApplied(changedKeys);
-      meta.doc = remote.entries;
-      meta.sha = remote.sha;
-      meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+      adoptBase(remote);
       saveMeta();
       if (merged.changedVsRemote) {
         // Local still differs (dirty edits or a merge the remote lacks) —
@@ -1058,7 +1082,11 @@ function createSyncEngine(opts) {
       // Ready-for-review is an invitation to merge, and the merge takes the
       // files. The state file — the only other copy on the branch — is about
       // to be deleted.
-      if (fileOwed()) throw new Error('the edited file is not on the sync branch yet');
+      if (fileOwed()) {
+        var owed = new Error('the edited file is not on the sync branch yet');
+        owed.code = FILE_NOT_PUSHED;
+        throw owed;
+      }
       return gh.getFileContent(api, token, path, branch, fetchImpl);
     }).then(function (file) {
       if (file) {
@@ -1125,6 +1153,7 @@ if (typeof module !== 'undefined' && module.exports) {
     mergeSyncDocs: mergeSyncDocs,
     dropLandedItems: dropLandedItems,
     makeSyncDoc: makeSyncDoc,
+    FILE_NOT_PUSHED: FILE_NOT_PUSHED,
     createSyncEngine: createSyncEngine,
   };
 }
