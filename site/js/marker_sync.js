@@ -4,9 +4,10 @@
 // but targets an ISSUE (create / update-body / close / reopen) instead of a
 // branch/PR. The issue body carries a human marker table plus a hidden
 // <!-- sy-markers: base64 --> block holding the structured markers, so a 3-way
-// merge needs no separate file. Re-attach is one deterministic path: a
-// `markers`-labelled issue titled "Markers: <talkId> / <videoSlug>", resolved
-// via the immediately-consistent list API (no stored-number, no Search).
+// merge needs no separate file. Re-attach is by title: a `markers`-labelled
+// issue titled "Markers: <talkId> / <videoSlug>", found through the list API
+// (no Search). A number this device already knows is trusted before a list
+// that does not show the issue — see the engine's issueForWrite/issueForRead.
 var MARKER_LABEL = 'markers';
 
 // Marker identity: a marker is the same one across devices/reads when its time
@@ -22,6 +23,14 @@ function snapshotMarkers(arr) {
 
 function markerIssueTitle(talkId, videoSlug) { return 'Markers: ' + talkId + ' / ' + videoSlug; }
 function markerMetaKey(talkId, videoSlug) { return 'sy_marker_issue_' + talkId + '_' + videoSlug; }
+// Tombstones live under their OWN key. The meta key also carries `base`, which
+// is each tab's own view of what it has merged: two tabs legitimately hold
+// different bases, so a key that holds a base can never be a value the tabs
+// agree on — and a `storage` listener on it that answers with a write of its
+// own is a loop (two tabs traded ~15k events a second, for good). The
+// tombstone map is the one thing all tabs of a talk must share, so it is the
+// one thing the `storage` listener watches.
+function markerTombstoneKey(talkId, videoSlug) { return 'sy_marker_tombstones_' + talkId + '_' + videoSlug; }
 
 function b64encode(s) {
   return (typeof Buffer !== 'undefined')
@@ -164,6 +173,17 @@ function sanitiseTombstones(raw) {
   return out;
 }
 
+// Canonical text of a tombstone map: sorted, so that two tabs holding the same
+// tombstones produce the same string whatever order they recorded them in.
+// "Did anything change" is decided on this string and on nothing else.
+function serialiseTombstones(stones) {
+  var out = {};
+  Object.keys(stones).sort().forEach(function (id) {
+    out[id] = { deletedAt: stones[id].deletedAt, writtenAt: stones[id].writtenAt };
+  });
+  return JSON.stringify(out);
+}
+
 function identitySet(markers) {
   var ids = {};
   markers.forEach(function (m) { ids[markerIdentity(m)] = true; });
@@ -195,6 +215,7 @@ function createMarkerSyncEngine(opts) {
 
   var title = markerIssueTitle(talkId, videoSlug);
   var metaKey = markerMetaKey(talkId, videoSlug);
+  var stoneKey = markerTombstoneKey(talkId, videoSlug);
   var heading = opts.heading || videoSlug;
 
   var DEBOUNCE_MS = 15000, COALESCE_MS = 1500, PULL_THROTTLE_MS = 60000;
@@ -205,11 +226,20 @@ function createMarkerSyncEngine(opts) {
       return (stored && typeof stored === 'object') ? stored : null;
     } catch (e) { return null; }   // corrupt -> as if absent
   }
-  var meta = readStoredMeta() || { number: null, url: null, nodeId: null, base: [], tombstones: {} };
+  var meta = readStoredMeta() || { number: null, url: null, nodeId: null, base: [] };
   if (!Array.isArray(meta.base)) meta.base = [];
-  meta.tombstones = sanitiseTombstones(meta.tombstones);
-  // Identities another tab tombstoned while this tab still shows the marker.
-  var deletedElsewhere = {};
+  // null = the key is absent (never written, or storage emptied under the page).
+  function readStoredTombstones() {
+    var raw = storage.getItem(stoneKey);
+    if (raw === null || raw === undefined) return null;
+    try { return sanitiseTombstones(JSON.parse(raw)); } catch (e) { return {}; }   // corrupt -> empty
+  }
+  // This tab's copy of the shared map. After every step that touches it, it
+  // equals what is stored (see saveTombstones).
+  var stones = readStoredTombstones() || {};
+  // Identities another tab tombstoned while this tab still shows the marker,
+  // and identities whose tombstone another tab released.
+  var deletedElsewhere = {}, releasedElsewhere = {};
 
   var status = 'idle', lastError = null, dirty = false, editSeq = 0;
   var debounceId = null, coalesceId = null, inflight = null, disposed = false, lastPullAt = 0;
@@ -218,32 +248,54 @@ function createMarkerSyncEngine(opts) {
     return { status: status, issueNumber: meta.number, issueUrl: meta.url, dirty: dirty, error: lastError };
   }
   function setStatus(s, err) { status = s; lastError = err || null; onStatus(s, info()); }
-  function saveMeta() { storage.setItem(metaKey, JSON.stringify(meta)); }
+  // Both saves write ONLY when the stored text would change. A write another
+  // tab did not need is not free: it fires a `storage` event there, and an
+  // event answered with a write is how two tabs end up talking for ever.
+  function saveMeta() {
+    var next = JSON.stringify(meta);
+    if (storage.getItem(metaKey) !== next) storage.setItem(metaKey, next);
+  }
+  function saveTombstones() {
+    var next = serialiseTombstones(stones), stored = storage.getItem(stoneKey);
+    if (stored === next) return;
+    if ((stored === null || stored === undefined) && next === '{}') return;   // absent == empty
+    storage.setItem(stoneKey, next);
+  }
 
-  // Every tab of the talk writes the same meta key, and each holds its own
-  // copy. For tombstones the STORED map is the truth and the copy only a cache:
-  // this tab changes them and saves in one synchronous step, so wherever the
-  // two differ, another tab did it. Call this before every such step — a save
+  // Every tab of the talk shares the tombstone key, and each holds its own
+  // copy. The STORED map is the truth and the copy only a cache: this tab
+  // changes its copy and saves in one synchronous step, so wherever the two
+  // differ, another tab did it. Call this before every such step — a save
   // from the cache alone would erase the other tab's tombstones.
   //   - stored, not cached: the other tab deleted the marker. If this tab
   //     merged that marker (it is in base) and still shows it, it has to go;
   //     if it is not in base, the user added it HERE, and that add stands.
   //   - cached, not stored: the other tab released it (re-add, expiry).
   function adoptStoredTombstones() {
-    var stored = readStoredMeta();
-    if (!stored) return;
-    var theirs = sanitiseTombstones(stored.tombstones), baseIds = identitySet(meta.base);
+    var theirs = readStoredTombstones();
+    if (!theirs) return;
+    var baseIds = identitySet(meta.base);
     Object.keys(theirs).forEach(function (id) {
-      if (!hasOwn(meta.tombstones, id) && baseIds[id]) deletedElsewhere[id] = true;
+      if (!hasOwn(stones, id) && baseIds[id]) deletedElsewhere[id] = true;
     });
-    meta.tombstones = theirs;
+    Object.keys(stones).forEach(function (id) {
+      if (!hasOwn(theirs, id)) releasedElsewhere[id] = true;
+    });
+    stones = theirs;
   }
 
-  // Bring the tombstones up to date with storage and with `local`, and return
-  // `local` without the markers another tab deleted. Only LOCAL state moves a
-  // tombstone: a deletion creates it, the user adding the identity back drops
-  // it. A remote read never clears one — a fresh read followed by a stale one
-  // would otherwise flip-flop.
+  // Bring the tombstones up to date with storage and with `local`, store them
+  // if that changed them, and return `local` without the markers another tab
+  // deleted. Only LOCAL state moves a tombstone: a deletion creates it, the
+  // user adding the identity back drops it. A remote read never clears one — a
+  // fresh read followed by a stale one would otherwise flip-flop.
+  //
+  // Two tabs can disagree about one identity: this tab holds it in base and
+  // not in the list (a deletion), the other holds it in the list and not in
+  // base (the user put it back there). Each would undo the other's tombstone
+  // on every `storage` event. The re-add is the later act and it wins: a
+  // tombstone another tab released takes the marker out of THIS tab's base, so
+  // this tab stops reading its absence as a deletion to record.
   function settleTombstones(local) {
     adoptStoredTombstones();
     var t = now();
@@ -255,20 +307,26 @@ function createMarkerSyncEngine(opts) {
       // tab's write: unwritten until this tab writes without it.
       meta.base = meta.base.filter(function (m) { return !hasOwn(deletedElsewhere, markerIdentity(m)); });
       Object.keys(deletedElsewhere).forEach(function (id) {
-        if (hasOwn(meta.tombstones, id)) meta.tombstones[id].writtenAt = TOMBSTONE_UNWRITTEN;
+        if (hasOwn(stones, id)) stones[id].writtenAt = TOMBSTONE_UNWRITTEN;
       });
     }
     deletedElsewhere = {};
     var localIds = identitySet(kept);
+    meta.base = meta.base.filter(function (m) {
+      var id = markerIdentity(m);
+      return localIds[id] || !hasOwn(releasedElsewhere, id);
+    });
+    releasedElsewhere = {};
     meta.base.forEach(function (m) {
       var id = markerIdentity(m);
       if (localIds[id]) return;
-      var known = hasOwn(meta.tombstones, id) ? meta.tombstones[id].deletedAt : t;
-      meta.tombstones[id] = { deletedAt: known, writtenAt: TOMBSTONE_UNWRITTEN };
+      var known = hasOwn(stones, id) ? stones[id].deletedAt : t;
+      stones[id] = { deletedAt: known, writtenAt: TOMBSTONE_UNWRITTEN };
     });
-    Object.keys(meta.tombstones).forEach(function (id) {
-      if (localIds[id] || tombstoneExpired(meta.tombstones[id], t)) delete meta.tombstones[id];
+    Object.keys(stones).forEach(function (id) {
+      if (localIds[id] || tombstoneExpired(stones[id], t)) delete stones[id];
     });
+    saveTombstones();
     return kept;
   }
   // `carried` = the tombstones that existed when the written body was built.
@@ -278,25 +336,38 @@ function createMarkerSyncEngine(opts) {
     adoptStoredTombstones();
     var t = now();
     carried.forEach(function (id) {
-      if (hasOwn(meta.tombstones, id) && meta.tombstones[id].writtenAt === TOMBSTONE_UNWRITTEN) {
-        meta.tombstones[id].writtenAt = t;
+      if (hasOwn(stones, id) && stones[id].writtenAt === TOMBSTONE_UNWRITTEN) {
+        stones[id].writtenAt = t;
       }
     });
+    saveTombstones();
     saveMeta();
   }
   function armPush() {
     dirty = true; editSeq += 1; armDebounce();
   }
-  // Drop, now and without a request, the markers another tab deleted. The SPA
-  // calls it on the `storage` event for the meta key; the engine calls it after
-  // a write, when the other tab's deletion arrived while the PATCH was out.
+  // Settle the tombstones against the list as it is NOW, without a request:
+  // record a deletion this tab just made (so the other tabs learn of it at
+  // once, not at this tab's next flush) and drop the markers another tab
+  // deleted. It writes storage only if that changed something — it runs on
+  // every `storage` event for the tombstone key, and must fall silent.
+  function settleNow() {
+    var local = getMarkers() || [];
+    var baseBefore = JSON.stringify(meta.base);
+    var kept = settleTombstones(local);
+    // Not "if the stored meta differs": it holds whichever tab's base was
+    // saved last, so it differs from this tab's most of the time.
+    if (JSON.stringify(meta.base) !== baseBefore) saveMeta();
+    if (kept.length === local.length) return false;
+    setMarkers(kept);
+    return true;
+  }
+  // The SPA calls it on the `storage` event for the tombstone key; the engine
+  // calls it after a write, when the other tab's deletion arrived while the
+  // PATCH was out.
   function storageChanged() {
     if (disposed) return;
-    var local = getMarkers() || [];
-    var kept = settleTombstones(local);
-    saveMeta();
-    if (kept.length === local.length) return;
-    setMarkers(kept);
+    if (!settleNow()) return;
     armPush();
     if (status === 'synced' || status === 'idle' || status === 'pending') setStatus('pending');
   }
@@ -307,13 +378,13 @@ function createMarkerSyncEngine(opts) {
   // deleted in between look like one this device never had.
   function mergeRemote(remote) {
     var local = settleTombstones(getMarkers() || []);
-    var info = mergeMarkersInfo(meta.base, local, remote, meta.tombstones);
+    var info = mergeMarkersInfo(meta.base, local, remote, stones);
     setMarkers(info.markers);
     // Snapshot: setMarkers made `info.markers` the SPA's live array; an in-place
     // edit or splice would otherwise mutate base too and corrupt the merge.
     meta.base = snapshotMarkers(info.markers);
     saveMeta();
-    info.carried = Object.keys(meta.tombstones);
+    info.carried = Object.keys(stones);
     return info;
   }
 
@@ -325,6 +396,7 @@ function createMarkerSyncEngine(opts) {
 
   function notifyEdit() {
     if (disposed) return;
+    settleNow();
     dirty = true; editSeq += 1; armDebounce();
     if (status === 'synced' || status === 'idle' || status === 'pending') setStatus('pending');
   }
@@ -357,19 +429,56 @@ function createMarkerSyncEngine(opts) {
   function request(start) {
     return deadline(start, {
       timeoutMs: MARKER_REQUEST_TIMEOUT_MS, what: 'markers', fetchImpl: fetchImpl,
-      setTimeoutFn: setT, clearTimeoutFn: clearT,
     });
   }
 
-  // Single deterministic re-attach: list the markers-labelled issues (list API
-  // is immediately consistent) and exact-match the deterministic title.
-  function resolveIssue() {
+  // Re-attach by title: list the markers-labelled issues and exact-match the
+  // deterministic title. GitHub's list shows a new issue at once; a BROWSER
+  // need not — the list is served `max-age=60`, and from its HTTP cache a
+  // browser answers "no such issue" for a minute after this client created
+  // one. So the list is fetched past that cache (github_api), and an empty
+  // list is still never the last word on an issue whose number is known.
+  function findByTitle() {
     return request(function (f) { return gh.listIssuesByLabel(api, token, MARKER_LABEL, f); }).then(function (rows) {
       var found = (rows || []).filter(function (r) { return r.title === title; })[0] || null;
       if (found) {
         meta.number = found.number; meta.nodeId = found.node_id; meta.url = found.html_url || meta.url;
       }
       return found;
+    });
+  }
+  function fetchIssue(number) {
+    return request(function (f) { return gh.getIssue(api, token, number, f); });
+  }
+  // The issue this device last wrote, or null once GitHub says it is gone
+  // (deleted: 404/410) — and then the number is forgotten.
+  function fetchKnownIssue() {
+    return fetchIssue(meta.number).catch(function (e) {
+      if (!e || (e.status !== 404 && e.status !== 410)) throw e;
+      return null;
+    }).then(function (iss) {
+      if (!iss) { meta.number = null; meta.url = null; meta.nodeId = null; }
+      return iss;
+    });
+  }
+  function fetchByTitle() {
+    return findByTitle().then(function (row) { return row ? fetchIssue(row.number) : null; });
+  }
+  // Both resolve to the issue as GitHub holds it now, or null: there is none.
+  //
+  // A write goes to the number this device knows, without asking the list: a
+  // flush is what CREATES an issue when it finds none, so it must not depend on
+  // a list that can miss one. A read asks the list first — if two issues carry
+  // the title (two devices each created one), every device settles on the
+  // same one there — and falls back on the known number.
+  function issueForWrite() {
+    if (!meta.number) return fetchByTitle();
+    return fetchKnownIssue().then(function (iss) { return iss || fetchByTitle(); });
+  }
+  function issueForRead() {
+    return findByTitle().then(function (row) {
+      if (row) return fetchIssue(row.number);
+      return meta.number ? fetchKnownIssue() : null;
     });
   }
 
@@ -379,30 +488,27 @@ function createMarkerSyncEngine(opts) {
   function doFlush(fopts) {
     var seqAtStart;
     setStatus('syncing');
-    return resolveIssue().then(function (row) {
+    return issueForWrite().then(function (iss) {
       if (disposed) return;
-      if (!row) return createFromLocal();
-      return request(function (f) { return gh.getIssue(api, token, row.number, f); }).then(function (iss) {
+      if (!iss) return createFromLocal();
+      // A closed issue carries no active markers; reading its (possibly stale)
+      // body would resurrect just-deleted markers (C1). Treat closed as empty.
+      var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
+      seqAtStart = editSeq;
+      var info = mergeRemote(remote), merged = info.markers;
+      // Empty = teardown: clear the marker block AND close in one PATCH, so a
+      // later reopen/pull cannot resurrect the deleted markers from a stale
+      // body (C1). Otherwise reopen (if closed) AND write the body in ONE
+      // PATCH — a separate reopen then body write leaves a cross-device window
+      // where a concurrent teardown strands the body on a closed issue.
+      var fields = { body: buildIssueBody(merged, heading), state: merged.length ? 'open' : 'closed' };
+      return request(function (f) { return gh.updateIssue(api, token, meta.number, fields, f); }).then(function () {
         if (disposed) return;
-        // A closed issue carries no active markers; reading its (possibly stale)
-        // body would resurrect just-deleted markers (C1). Treat closed as empty.
-        var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
-        seqAtStart = editSeq;
-        var info = mergeRemote(remote), merged = info.markers;
-        // Empty = teardown: clear the marker block AND close in one PATCH, so a
-        // later reopen/pull cannot resurrect the deleted markers from a stale
-        // body (C1). Otherwise reopen (if closed) AND write the body in ONE
-        // PATCH — a separate reopen then body write leaves a cross-device window
-        // where a concurrent teardown strands the body on a closed issue.
-        var fields = { body: buildIssueBody(merged, heading), state: merged.length ? 'open' : 'closed' };
-        return request(function (f) { return gh.updateIssue(api, token, row.number, fields, f); }).then(function () {
-          if (disposed) return;
-          markDeletionsWritten(info.carried);
-          if (editSeq === seqAtStart) { clearDirty(); setStatus(merged.length ? 'synced' : 'idle'); }
-          // A mid-teardown re-add re-syncs; never a lying idle.
-          else setStatus(merged.length ? 'synced' : 'pending');
-          storageChanged();
-        });
+        markDeletionsWritten(info.carried);
+        if (editSeq === seqAtStart) { clearDirty(); setStatus(merged.length ? 'synced' : 'idle'); }
+        // A mid-teardown re-add re-syncs; never a lying idle.
+        else setStatus(merged.length ? 'synced' : 'pending');
+        storageChanged();
       });
     }).catch(fail);
   }
@@ -416,7 +522,7 @@ function createMarkerSyncEngine(opts) {
     if (!local.length) { clearDirty(); setStatus('idle'); return; }
     // Snapshot NOW: `local` may be the SPA's live array, which a splice during
     // the request changes in place — base must be what the issue was given.
-    var sent = snapshotMarkers(local), carried = Object.keys(meta.tombstones);
+    var sent = snapshotMarkers(local), carried = Object.keys(stones);
     return request(function (f) { return gh.ensureLabel(api, token, MARKER_LABEL, f); }).then(function () {
       return request(function (f) {
         return gh.createIssue(api, token,
@@ -448,9 +554,9 @@ function createMarkerSyncEngine(opts) {
   }
 
   function doPull() {
-    return resolveIssue().then(function (row) {
+    return issueForRead().then(function (iss) {
       if (disposed) return;
-      if (!row) {
+      if (!iss) {
         // No markers issue yet. If we already hold local markers that predate
         // this engine (page re-opened with markers from a previous session and
         // no fresh action, so no notifyEdit fires), arm a push so the first sync
@@ -459,20 +565,17 @@ function createMarkerSyncEngine(opts) {
         if (info0.changedVsRemote) { armPush(); setStatus('pending'); }
         return;
       }
-      return request(function (f) { return gh.getIssue(api, token, row.number, f); }).then(function (iss) {
-        if (disposed) return;
-        // Closed == no active markers (C1): never seed a resurrection from a
-        // stale body.
-        var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
-        var info = mergeRemote(remote);
-        if (info.changedVsRemote) {
-          // Local still differs from the remote — schedule a push (do not report
-          // `synced`, which would leave local-only markers stranded).
-          armPush(); setStatus('pending');
-        } else if (!dirty) {
-          setStatus(remote.length ? 'synced' : 'idle');
-        }
-      });
+      // Closed == no active markers (C1): never seed a resurrection from a
+      // stale body.
+      var remote = (iss.state === 'closed') ? [] : parseMarkersBlock(iss.body);
+      var info = mergeRemote(remote);
+      if (info.changedVsRemote) {
+        // Local still differs from the remote — schedule a push (do not report
+        // `synced`, which would leave local-only markers stranded).
+        armPush(); setStatus('pending');
+      } else if (!dirty) {
+        setStatus(remote.length ? 'synced' : 'idle');
+      }
     }).catch(function () { /* transient pull failures are silent */ });
   }
 
@@ -507,6 +610,7 @@ var _api = {
   createMarkerSyncEngine: createMarkerSyncEngine,
   markerIssueTitle: markerIssueTitle,
   markerMetaKey: markerMetaKey,
+  markerTombstoneKey: markerTombstoneKey,
   renderMarkersTable: renderMarkersTable,
   buildIssueBody: buildIssueBody,
   parseMarkersBlock: parseMarkersBlock,

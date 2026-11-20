@@ -58,39 +58,6 @@ function getViewer(token, fetchImpl) {
 // browser may answer from its HTTP cache with the body from before the write.
 var BYPASS_HTTP_CACHE = { cache: 'no-store' };
 
-// Run `start(fetchWithSignal)` — one request, or a few in sequence — under a
-// deadline. The race is what rejects (TimeoutError); the abort only frees the
-// connection, and only for a fetch that honours the signal. Whatever the
-// abandoned request answers later is ignored.
-//
-// opts: { timeoutMs, what, fetchImpl, setTimeoutFn, clearTimeoutFn }.
-function withDeadline(start, opts) {
-  var setT = opts.setTimeoutFn || setTimeout;
-  var clearT = opts.clearTimeoutFn || clearTimeout;
-  var controller = typeof AbortController === 'function' ? new AbortController() : null;
-  var fetchWithSignal = function (url, init) {
-    var withSignal = Object.assign({}, init);
-    if (controller) withSignal.signal = controller.signal;
-    return (opts.fetchImpl || fetch)(url, withSignal);
-  };
-  var timer = null;
-  var timedOut = new Promise(function (resolve, reject) {
-    timer = setT(function () {
-      var e = new Error((opts.what || 'request') + ': no answer in ' + opts.timeoutMs + ' ms');
-      e.name = 'TimeoutError';
-      reject(e);
-      if (controller) controller.abort();
-    }, opts.timeoutMs);
-  });
-  var stopTimer = function () { clearT(timer); };
-  var answered = Promise.race([
-    new Promise(function (resolve) { resolve(start(fetchWithSignal)); }),
-    timedOut,
-  ]);
-  answered.then(stopTimer, stopTimer);
-  return answered;
-}
-
 // Shared JSON request: auth + JSON body + uniform Error{status, message}.
 function ghJson(url, token, opts, fetchImpl) {
   var f = fetchImpl || fetch;
@@ -113,6 +80,46 @@ function ghJson(url, token, opts, fetchImpl) {
       return body;
     });
   });
+}
+
+// GitHub ends a request it has spent 10 seconds on with an error of its own;
+// past that plus slack for the network, no answer is coming.
+var GH_REQUEST_TIMEOUT_MS = 15000;
+
+// A connection that stalls never settles on its own, and neither does whatever
+// waits on it. run(fetchWithSignal) does the work — any number of requests —
+// through the fetch it is handed; the returned promise settles as run's does,
+// or rejects with a TimeoutError once ALL of it (headers and bodies) has
+// outlasted the deadline, aborting what is still open.
+//
+// A timed-out write is not a failed write: GitHub may have applied it.
+//
+// opts: { timeoutMs, what, fetchImpl } — `what` names the work in the message.
+function withDeadline(run, opts) {
+  opts = opts || {};
+  var timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : GH_REQUEST_TIMEOUT_MS;
+  var controller = typeof AbortController === 'function' ? new AbortController() : null;
+  var fetchWithSignal = function (url, init) {
+    var withSignal = Object.assign({}, init);
+    if (controller) withSignal.signal = controller.signal;
+    return (opts.fetchImpl || fetch)(url, withSignal);
+  };
+  var timer = null;
+  // The race, not the abort, is what rejects: an abort only reaches a request
+  // whose fetch honours the signal.
+  var timedOut = new Promise(function (resolve, reject) {
+    timer = setTimeout(function () {
+      var e = new Error((opts.what || 'GitHub') + ': no answer in ' + timeoutMs + ' ms');
+      e.name = 'TimeoutError';
+      reject(e);
+      if (controller) controller.abort();
+    }, timeoutMs);
+  });
+  var stopTimer = function () { clearTimeout(timer); };
+  var work = new Promise(function (resolve) { resolve(run(fetchWithSignal)); });
+  var raced = Promise.race([work, timedOut]);
+  raced.then(stopTimer, stopTimer);
+  return raced;
 }
 
 // GET the repo root and report the viewer's effective write right. With a
@@ -192,8 +199,11 @@ function setIssueState(api, token, number, state, fetchImpl) {
 }
 
 // GET /issues?labels=<label>&state=all — the LIST API is immediately consistent
-// (a just-created issue is present at once), unlike the search index. This is the
-// sole deterministic re-attach mechanism for marker-sync (matched by title).
+// (a just-created issue is present at once), unlike the search index. That is
+// true of GitHub, not of the browser: the list is served `max-age=60`, and a
+// copy cached before a create says "no such issue" for a minute after it.
+// Every caller lists in order to decide whether to CREATE (the markers issue,
+// a talk's review issue), so the list always goes past the HTTP cache.
 // Teardown CLOSES (not deletes) issues, so the labelled set grows unbounded over
 // the corpus; page through until a short page so an older talk's issue past the
 // first 100 is still found (else re-attach would create a duplicate). Capped at
@@ -209,7 +219,7 @@ function listIssuesByLabel(api, token, label, fetchImpl) {
       html_url: r.html_url, body: r.body || '', updated_at: r.updated_at || '' };
   }
   function fetchPage(page, acc) {
-    return ghJson(base + '&page=' + page, token, null, fetchImpl).then(function (list) {
+    return ghJson(base + '&page=' + page, token, BYPASS_HTTP_CACHE, fetchImpl).then(function (list) {
       var rows = list || [];
       acc = acc.concat(rows.map(mapRow));
       if (rows.length === PER_PAGE && page < MAX_PAGES) return fetchPage(page + 1, acc);
@@ -610,10 +620,11 @@ if (typeof module !== 'undefined' && module.exports) {
     authHeaders: authHeaders,
     exchangeCode: exchangeCode,
     getViewer: getViewer,
-    withDeadline: withDeadline,
     listIssueComments: listIssueComments,
     passQa: passQa,
     getRepoPermissions: getRepoPermissions,
+    withDeadline: withDeadline,
+    GH_REQUEST_TIMEOUT_MS: GH_REQUEST_TIMEOUT_MS,
     isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,
     base64ToUtf8: base64ToUtf8,

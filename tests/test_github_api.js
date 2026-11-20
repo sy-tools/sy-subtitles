@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { authHeaders, exchangeCode, getViewer, listIssueComments, passQa } = require('../site/js/github_api');
+const { authHeaders, exchangeCode, getViewer, listIssueComments, passQa,
+  withDeadline, GH_REQUEST_TIMEOUT_MS } = require('../site/js/github_api');
 
 // Statuses the Fetch spec forbids a body on; Response throws otherwise.
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
@@ -360,6 +361,18 @@ describe('issue sync primitives (marker sync)', () => {
     assert.strictEqual(rows.length, 101, 'both pages are merged');
     assert.strictEqual(rows[100].title, 'LAST');
     assert.strictEqual(calls.length, 2, 'stops after the short second page');
+  });
+  it('listIssuesByLabel bypasses the HTTP cache on every page', async () => {
+    // Its callers list to decide whether to CREATE an issue; a list cached from
+    // before a create (GitHub: max-age=60) would have them create a second one.
+    const full = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, title: 'T' + (i + 1) }));
+    const inits = [];
+    const f = async (url, init) => {
+      inits.push(init);
+      return new Response(JSON.stringify(/&page=1$/.test(url) ? full : []), { status: 200 });
+    };
+    await listIssuesByLabel(API, 'gho_x', 'markers', f);
+    assert.deepStrictEqual(inits.map((init) => init.cache), ['no-store', 'no-store']);
   });
   it('ensureLabel POSTs and tolerates a 422 already-exists', async () => {
     const f422 = routerFetch([{ method: 'POST', match: '/labels', status: 422,
@@ -1000,47 +1013,95 @@ describe('listIssuesByLabelConditional', () => {
 });
 
 describe('withDeadline', () => {
-  const { withDeadline } = require('../site/js/github_api');
-  function manualTimer() {
-    const t = { fire: null, cleared: false, ms: null };
-    t.set = (fn, ms) => { t.fire = fn; t.ms = ms; return 1; };
-    t.clear = () => { t.cleared = true; };
-    return t;
+  const flush = () => new Promise((res) => setImmediate(res));
+  const hung = (signals) => (url, init) => { signals.push(init && init.signal); return new Promise(() => {}); };
+
+  function addAssigneesWithin(timeoutMs, fetchImpl) {
+    return withDeadline((f) => addAssignees('https://api.github.com/repos/o/r', 'gho_x', 42, ['tester'], f),
+      { timeoutMs, fetchImpl });
   }
-  const opts = (timer, extra) => Object.assign(
-    { timeoutMs: 7000, what: 'thing', setTimeoutFn: timer.set, clearTimeoutFn: timer.clear }, extra);
 
-  it('resolves with the answer and stops the timer', async () => {
-    const timer = manualTimer();
-    assert.strictEqual(await withDeadline(async () => 'answer', opts(timer)), 'answer');
-    assert.strictEqual(timer.ms, 7000);
-    assert.strictEqual(timer.cleared, true);
+  it('gives up after 15 seconds by default', async (t) => {
+    assert.strictEqual(GH_REQUEST_TIMEOUT_MS, 15000);
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let outcome = 'pending';
+    const p = withDeadline((f) => f('https://api.example/x', {}), { fetchImpl: hung([]) });
+    p.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
+    t.mock.timers.tick(14999);
+    await flush();
+    assert.strictEqual(outcome, 'pending');
+    t.mock.timers.tick(1);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError');
   });
 
-  it('rejects with a TimeoutError naming the request, and aborts the fetch it handed out', async () => {
-    const timer = manualTimer();
-    let signal = null;
-    const pending = withDeadline(
-      (f) => f('https://x.example/', { method: 'GET' }),
-      opts(timer, { fetchImpl: (url, init) => { signal = init.signal; return new Promise(() => {}); } }));
-    timer.fire();
-    await assert.rejects(pending, (e) => e.name === 'TimeoutError' && e.message === 'thing: no answer in 7000 ms');
-    assert.strictEqual(signal.aborted, true);
+  it('rejects at the deadline — not before — with a TimeoutError naming the work, and aborts the request', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    let outcome = 'pending';
+    const p = withDeadline((f) => f('https://api.example/x', { method: 'POST' }),
+      { timeoutMs: 500, what: 'claim', fetchImpl: hung(signals) });
+    p.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
+
+    t.mock.timers.tick(499);
+    await flush();
+    assert.strictEqual(outcome, 'pending');
+    assert.ok(signals.length === 1 && signals[0] && !signals[0].aborted);
+
+    t.mock.timers.tick(1);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError' && e.status === undefined
+      && e.message === 'claim: no answer in 500 ms');
+    assert.ok(signals[0].aborted, 'the hung request was aborted');
   });
 
-  it('passes the request init through next to the signal', async () => {
-    let seen = null;
-    await withDeadline(
-      (f) => f('u', { method: 'PATCH', cache: 'no-store' }),
-      opts(manualTimer(), { fetchImpl: async (url, init) => { seen = init; return 1; } }));
-    assert.strictEqual(seen.method, 'PATCH');
-    assert.strictEqual(seen.cache, 'no-store');
-    assert.ok(seen.signal);
+  it('hands the init through to the fetch with the signal added, and leaves the original alone', async () => {
+    const seen = [];
+    const init = { method: 'POST', headers: { A: 'b' } };
+    await withDeadline((f) => f('https://api.example/x', init),
+      { timeoutMs: 500, fetchImpl: async (url, i) => { seen.push([url, i]); return 'ok'; } });
+    assert.strictEqual(seen[0][0], 'https://api.example/x');
+    assert.strictEqual(seen[0][1].method, 'POST');
+    assert.deepStrictEqual(seen[0][1].headers, { A: 'b' });
+    assert.ok(seen[0][1].signal);
+    assert.strictEqual(init.signal, undefined);
   });
 
-  it('a start that throws rejects, and still stops the timer', async () => {
-    const timer = manualTimer();
-    await assert.rejects(withDeadline(() => { throw new Error('sync boom'); }, opts(timer)), /sync boom/);
-    assert.strictEqual(timer.cleared, true);
+  it('a body that never arrives times out too', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const headersOnly = async () => ({ ok: true, status: 201, json: () => new Promise(() => {}) });
+    const p = addAssigneesWithin(500, headersOnly);
+    await flush();
+    t.mock.timers.tick(500);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError');
+  });
+
+  it('an answer in time resolves with it and leaves no timer behind', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    const answered = fetchDouble(201, { number: 42, assignees: [{ login: 'tester' }] });
+    const issue = await addAssigneesWithin(500, (url, init) => { signals.push(init.signal); return answered(url, init); });
+    assert.deepStrictEqual(issue.assignees, [{ login: 'tester' }]);
+    t.mock.timers.tick(60000);
+    assert.ok(signals.length === 1 && !signals[0].aborted, 'the timer was cleared: nothing is aborted later');
+  });
+
+  it('a failure in time rejects with the request\'s own error and clears the timer', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    const refused = fetchDouble(403, { message: 'nope' });
+    await assert.rejects(
+      addAssigneesWithin(500, (url, init) => { signals.push(init.signal); return refused(url, init); }),
+      (e) => e.status === 403 && e.message === 'nope');
+    t.mock.timers.tick(60000);
+    assert.ok(signals.length === 1 && !signals[0].aborted);
+  });
+
+  it('work that throws before it returns a promise rejects with that error', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    const p = withDeadline((f) => { f('https://api.example/x', {}); throw new Error('boom'); },
+      { timeoutMs: 500, fetchImpl: hung(signals) });
+    await assert.rejects(p, /boom/);
+    t.mock.timers.tick(60000);
+    assert.ok(!signals[0].aborted, 'the timer was cleared');
   });
 });

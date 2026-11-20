@@ -1,7 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const {
-  markerIssueTitle, markerMetaKey, renderMarkersTable,
+  markerIssueTitle, markerMetaKey, markerTombstoneKey, renderMarkersTable,
   buildIssueBody, parseMarkersBlock, mergeMarkers, MARKER_LABEL,
   createMarkerSyncEngine,
 } = require('../site/js/marker_sync');
@@ -14,6 +14,7 @@ const TALK = '1977_T';
 const VIDEO = 'V1';
 const TITLE = markerIssueTitle(TALK, VIDEO);
 const META_KEY = markerMetaKey(TALK, VIDEO);
+const STONE_KEY = markerTombstoneKey(TALK, VIDEO);
 
 function memStorage(init) {
   const store = Object.assign({}, init);
@@ -443,6 +444,7 @@ function lagHarness(initial, over) {
     },
     getIssue: async () => {
       h.calls.push('get');
+      if (!h.server.exists) { const e = new Error('Not Found'); e.status = 404; throw e; }
       const body = h.staleReads.length ? h.staleReads.shift() : h.server.body;
       const snap = { number: 7, state: h.server.state, body, node_id: 'I7' };
       if (h.getGate) { const g = h.getGate; h.getGate = null; await g; }
@@ -468,8 +470,9 @@ function lagHarness(initial, over) {
   };
   const timers = timerHarness();
   h.timers = timers;
-  h.storage = tab ? tab.storage : memStorage(over.storage || {});
+  h.storage = over.storageView || (tab ? tab.storage : memStorage(over.storage || {}));
   h.meta = () => JSON.parse(h.storage.getItem(META_KEY));
+  h.stones = () => JSON.parse(h.storage.getItem(STONE_KEY) || '{}');
   h.engine = createMarkerSyncEngine({
     api: API, token: 'x', talkId: TALK, videoSlug: VIDEO, heading: 'V',
     getMarkers: () => h.live,
@@ -683,23 +686,23 @@ describe('marker_sync: a synced deletion survives a stale read', () => {
     h.otherDeviceWrites(ALL);               // another device really re-added marker 1
     await h.engine.pull(true);
     assert.deepStrictEqual(h.liveTimes(), [1, 2, 3]);
-    assert.deepStrictEqual(h.meta().tombstones, {});
+    assert.deepStrictEqual(h.stones(), {});
   });
 
   it('the user can re-add a deleted identity, and that drops its tombstone', async () => {
     const h = lagHarness(ALL);
     await h.engine.attach();
     h.remove(1); await h.engine.flush();
-    assert.deepStrictEqual(Object.keys(h.meta().tombstones), ['1|a']);
+    assert.deepStrictEqual(Object.keys(h.stones()), ['1|a']);
     h.add(M(1, 'a'));
     h.staleNext([M(2, 'b'), M(3, 'c')]);
     await h.engine.flush();
     assert.deepStrictEqual(h.liveTimes().sort(), [1, 2, 3]);
     assert.deepStrictEqual(h.serverTimes(), [1, 2, 3]);
-    assert.deepStrictEqual(h.meta().tombstones, {});
+    assert.deepStrictEqual(h.stones(), {});
   });
 
-  it('tombstones survive a reload (persisted in meta)', async () => {
+  it('tombstones survive a reload (persisted under their own key)', async () => {
     const h = lagHarness(ALL);
     await h.engine.attach();
     h.remove(1); await h.engine.flush();
@@ -812,7 +815,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     await b.engine.flush();
     assert.deepStrictEqual(b.liveTimes(), [2, 3, 4], 'tab B drops the marker tab A deleted');
     assert.deepStrictEqual(b.serverTimes(), [2, 3, 4], 'and does not write it back');
-    assert.deepStrictEqual(Object.keys(b.meta().tombstones), ['1|a'],
+    assert.deepStrictEqual(Object.keys(b.stones()), ['1|a'],
       "tab B's save keeps tab A's tombstone");
   });
 
@@ -840,7 +843,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
   it('the first flush of the other tab honours it when the issue does not exist yet', async () => {
     const { a, b } = await twoTabs(ALL, { noIssue: true });
     a.server.exists = false;
-    a.live.splice(0, 1); a.engine.storageChanged();   // tab A's deletion, recorded, not yet synced
+    a.remove(1);                             // tab A's deletion, not yet synced
     b.engine.notifyEdit();
     await b.engine.flush();
     assert.ok(b.calls.includes('create'));
@@ -858,11 +861,11 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     assert.strictEqual(b.engine.getInfo().dirty, true,
       "a PATCH of this tab's may have written the marker back; the next flush settles it");
     assert.strictEqual(b.engine.getInfo().status, 'pending');
-    assert.strictEqual(b.meta().tombstones['1|a'].writtenAt, 0,
+    assert.strictEqual(b.stones()['1|a'].writtenAt, 0,
       'until this tab has written without the marker, the deletion counts as unwritten');
     await b.engine.flush();
     assert.deepStrictEqual(b.serverTimes(), [2, 3]);
-    assert.strictEqual(b.meta().tombstones['1|a'].writtenAt, b.clock);
+    assert.strictEqual(b.stones()['1|a'].writtenAt, b.clock);
   });
 
   it('storageChanged with nothing to drop changes nothing', async () => {
@@ -888,7 +891,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
       if (done) return;
       done = true;
       // Tab A deletes and records it between tab B's merge and the end of its PATCH.
-      a.live.splice(0, 1); a.engine.storageChanged();
+      a.remove(1);
     } });
     a = tabA;
     b.add(M(4, 'd'));
@@ -896,12 +899,12 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     assert.deepStrictEqual(a.liveTimes(), [2, 3]);
     assert.deepStrictEqual(b.liveTimes(), [2, 3, 4], 'tab B dropped it as soon as its write finished');
     assert.deepStrictEqual(b.serverTimes(), [1, 2, 3, 4]);
-    assert.strictEqual(b.meta().tombstones['1|a'].writtenAt, 0,
+    assert.strictEqual(b.stones()['1|a'].writtenAt, 0,
       "tab B's PATCH still carried marker 1: its deletion is not written yet");
     assert.strictEqual(b.engine.getInfo().dirty, true);
     await b.engine.flush();
     assert.deepStrictEqual(b.serverTimes(), [2, 3, 4]);
-    assert.strictEqual(b.meta().tombstones['1|a'].writtenAt, b.clock);
+    assert.strictEqual(b.stones()['1|a'].writtenAt, b.clock);
   });
 
   it('a deletion that reaches this tab while its PATCH is out is not stamped by that PATCH', async () => {
@@ -909,7 +912,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     const tabs = await twoTabs(ALL, { onUpdate: () => {
       if (done) return;
       done = true;
-      a.live.splice(0, 1); a.engine.storageChanged();
+      a.remove(1);
       b.engine.storageChanged();             // the `storage` event, delivered at once
     } });
     a = tabs.a; b = tabs.b;
@@ -917,13 +920,13 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     await b.engine.flush();
     assert.deepStrictEqual(b.liveTimes(), [2, 3, 4]);
     assert.deepStrictEqual(b.serverTimes(), [1, 2, 3, 4], 'the PATCH that was out still carried marker 1');
-    assert.strictEqual(b.meta().tombstones['1|a'].writtenAt, 0);
+    assert.strictEqual(b.stones()['1|a'].writtenAt, 0);
   });
 
   it('a deletion the other tab makes while this tab is creating the issue is honoured after it', async () => {
     let a = null;
     const { a: tabA, b } = await twoTabs(ALL, { noIssue: true, onCreate: () => {
-      a.live.splice(0, 1); a.engine.storageChanged();
+      a.remove(1);
     } });
     a = tabA;
     a.server.exists = false;
@@ -931,7 +934,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     await b.engine.flush();
     assert.deepStrictEqual(b.serverTimes(), [1, 2, 3]);
     assert.deepStrictEqual(b.liveTimes(), [2, 3]);
-    assert.strictEqual(b.meta().tombstones['1|a'].writtenAt, 0, 'the issue was created WITH marker 1');
+    assert.strictEqual(b.stones()['1|a'].writtenAt, 0, 'the issue was created WITH marker 1');
     await b.engine.flush();
     assert.deepStrictEqual(b.serverTimes(), [2, 3]);
   });
@@ -939,7 +942,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
   it('a deletion that reaches this tab while it creates the issue is not stamped by the create', async () => {
     let a = null, b = null;
     const tabs = await twoTabs(ALL, { noIssue: true, onCreate: () => {
-      a.live.splice(0, 1); a.engine.storageChanged();
+      a.remove(1);
       b.engine.storageChanged();
     } });
     a = tabs.a; b = tabs.b;
@@ -947,7 +950,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     b.engine.notifyEdit();
     await b.engine.flush();
     assert.deepStrictEqual(b.serverTimes(), [1, 2, 3]);
-    assert.strictEqual(b.meta().tombstones['1|a'].writtenAt, 0);
+    assert.strictEqual(b.stones()['1|a'].writtenAt, 0);
   });
 
   it('a marker this tab ADDED is not taken for the one the other tab deleted', async () => {
@@ -958,7 +961,7 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     await b.engine.flush();
     assert.deepStrictEqual(b.liveTimes(), [1, 2, 3]);
     assert.deepStrictEqual(b.serverTimes(), [1, 2, 3]);
-    assert.deepStrictEqual(b.meta().tombstones, {}, 'the re-add releases the tombstone for both tabs');
+    assert.deepStrictEqual(b.stones(), {}, 'the re-add releases the tombstone for both tabs');
   });
 
   it('a tombstone the other tab released is released here as well', async () => {
@@ -977,10 +980,10 @@ describe('marker_sync: two tabs on one talk share the tombstones', () => {
     const { a, b } = await twoTabs();
     a.remove(1); await a.engine.flush();
     b.engine.storageChanged(); await b.engine.flush();
-    const stamp = b.meta().tombstones['1|a'];
+    const stamp = b.stones()['1|a'];
     a.clock += 5000;
     a.add(M(4, 'd')); await a.engine.flush();
-    assert.deepStrictEqual(a.meta().tombstones['1|a'], stamp);
+    assert.deepStrictEqual(a.stones()['1|a'], stamp);
   });
 });
 
@@ -993,7 +996,7 @@ describe('marker_sync: tombstone bookkeeping', () => {
     await h.engine.attach();
     h.clearAll(); await h.engine.flush();
     assert.strictEqual(h.server.state, 'closed');
-    const stamps = h.meta().tombstones;
+    const stamps = h.stones();
     assert.deepStrictEqual(Object.keys(stamps).sort(), ['1|a', '2|b', '3|c']);
     Object.keys(stamps).forEach((id) => assert.strictEqual(stamps[id].writtenAt, h.clock, id));
     // Stamped, so they expire: another device can bring the identity back.
@@ -1006,38 +1009,38 @@ describe('marker_sync: tombstone bookkeeping', () => {
   it('creating the issue records and stamps a deletion the stored base still held', async () => {
     // The issue is gone (deleted on github.com) while this device still has a
     // base from it; marker 1 was removed since.
-    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: ALL, tombstones: {} }) };
+    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: ALL }) };
     const h = lagHarness([M(2, 'b'), M(3, 'c')], { noIssue: true, storage: stored });
     h.engine.notifyEdit();
     await h.engine.flush();
     assert.ok(h.calls.includes('create'));
-    assert.deepStrictEqual(h.meta().tombstones, { '1|a': { deletedAt: h.clock, writtenAt: h.clock } });
+    assert.deepStrictEqual(h.stones(), { '1|a': { deletedAt: h.clock, writtenAt: h.clock } });
     assert.deepStrictEqual(h.meta().base.map((m) => m.time), [2, 3]);
   });
 
   it('a deletion keeps its date while the write that carries it keeps failing', async () => {
-    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: ALL, tombstones: {} }) };
+    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: ALL }) };
     const h = lagHarness([M(2, 'b'), M(3, 'c')], { noIssue: true, storage: stored });
     const deletedAt = h.clock;
     h.engine.notifyEdit();
     h.failNextCreate = true;
     await h.engine.flush();
-    assert.deepStrictEqual(h.meta().tombstones, { '1|a': { deletedAt, writtenAt: 0 } });
+    assert.deepStrictEqual(h.stones(), { '1|a': { deletedAt, writtenAt: 0 } });
     h.clock += 60000;
     h.failNextCreate = true;
     await h.engine.flush({ force: true });
-    assert.deepStrictEqual(h.meta().tombstones, { '1|a': { deletedAt, writtenAt: 0 } },
+    assert.deepStrictEqual(h.stones(), { '1|a': { deletedAt, writtenAt: 0 } },
       'a retry must not restart the bound on an unwritten deletion');
   });
 
   it('creating the issue with a re-added identity releases its tombstone', async () => {
-    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [],
-      tombstones: { '1|a': { deletedAt: T0, writtenAt: T0 } } }) };
+    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [] }),
+      [STONE_KEY]: JSON.stringify({ '1|a': { deletedAt: T0, writtenAt: T0 } }) };
     const h = lagHarness(ALL, { noIssue: true, storage: stored });
     h.engine.notifyEdit();
     await h.engine.flush();
     assert.deepStrictEqual(h.serverTimes(), [1, 2, 3]);
-    assert.deepStrictEqual(h.meta().tombstones, {});
+    assert.deepStrictEqual(h.stones(), {});
   });
 
   it('a written tombstone expires when the clock has gone BACKWARDS past the TTL', async () => {
@@ -1049,7 +1052,7 @@ describe('marker_sync: tombstone bookkeeping', () => {
     h.otherDeviceWrites(ALL);
     await h.engine.pull(true);
     assert.deepStrictEqual(h.liveTimes(), [1, 2, 3]);
-    assert.deepStrictEqual(h.meta().tombstones, {});
+    assert.deepStrictEqual(h.stones(), {});
   });
 
   it('an unwritten tombstone is bounded: it expires after TOMBSTONE_UNWRITTEN_MAX_AGE_MS', async () => {
@@ -1060,7 +1063,7 @@ describe('marker_sync: tombstone bookkeeping', () => {
     await h.engine.attach();
     h.remove(1); await h.engine.flush();
     assert.deepStrictEqual(h.serverTimes(), [2, 3], 'the write landed');
-    assert.deepStrictEqual(h.meta().tombstones, { '1|a': { deletedAt: h.clock, writtenAt: 0 } });
+    assert.deepStrictEqual(h.stones(), { '1|a': { deletedAt: h.clock, writtenAt: 0 } });
 
     const h2 = lagHarness([M(2, 'b'), M(3, 'c')], { tabOf: h });   // the page, reloaded
     h2.clock = h.clock + TOMBSTONE_UNWRITTEN_MAX_AGE_MS - 1000;
@@ -1070,7 +1073,7 @@ describe('marker_sync: tombstone bookkeeping', () => {
     h2.clock = h.clock + TOMBSTONE_UNWRITTEN_MAX_AGE_MS + 1000;
     await h2.engine.pull(true);
     assert.deepStrictEqual(h2.liveTimes(), [1, 2, 3], 'past it the identity can come back');
-    assert.deepStrictEqual(h2.meta().tombstones, {});
+    assert.deepStrictEqual(h2.stones(), {});
   });
 
   it('the unwritten bound also holds when the clock has gone backwards', async () => {
@@ -1093,11 +1096,12 @@ describe('marker_sync: tombstone bookkeeping', () => {
     ['null', null], ['an array', ['1|a']], ['a string', 'x'], ['a number', 5],
   ]) {
     it('stored tombstones that are ' + label + ' are replaced by an empty map', async () => {
-      const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: ALL, tombstones: bad }) };
+      const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: ALL }),
+        [STONE_KEY]: JSON.stringify(bad) };
       const h = lagHarness(ALL, { storage: stored });
       await h.engine.attach();
       h.remove(1); await h.engine.flush();
-      assert.deepStrictEqual(h.meta().tombstones, { '1|a': { deletedAt: h.clock, writtenAt: h.clock } });
+      assert.deepStrictEqual(h.stones(), { '1|a': { deletedAt: h.clock, writtenAt: h.clock } });
       // ...and the deletion is really remembered across a reload.
       const h2 = lagHarness([M(2, 'b'), M(3, 'c')], { tabOf: h });
       h2.staleNext(ALL);
@@ -1109,24 +1113,24 @@ describe('marker_sync: tombstone bookkeeping', () => {
   it('a meta from before tombstones works even if storage is emptied under the open page', async () => {
     const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: ALL }) };
     const h = lagHarness(ALL, { storage: stored });
-    h.storage.removeItem(META_KEY);
+    h.storage.removeItem(META_KEY); h.storage.removeItem(STONE_KEY);
     h.remove(1); await h.engine.flush();
     assert.strictEqual(h.engine.getInfo().status, 'synced');
     assert.deepStrictEqual(h.serverTimes(), [2, 3]);
-    assert.deepStrictEqual(Object.keys(h.meta().tombstones), ['1|a']);
+    assert.deepStrictEqual(Object.keys(h.stones()), ['1|a']);
   });
 
   it('malformed tombstone entries are dropped, well-formed ones kept', async () => {
     const good = { deletedAt: T0, writtenAt: T0 };
-    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [M(2, 'b'), M(3, 'c')],
-      tombstones: { '1|a': good, '8|x': T0, '9|y': null, '7|z': { deletedAt: 'soon', writtenAt: 0 },
-        '6|w': { deletedAt: T0 } } }) };
+    const stored = { [META_KEY]: JSON.stringify({ number: 7, url: 'u7', nodeId: 'I7', base: [M(2, 'b'), M(3, 'c')] }),
+      [STONE_KEY]: JSON.stringify({ '1|a': good, '8|x': T0, '9|y': null, '7|z': { deletedAt: 'soon', writtenAt: 0 },
+        '6|w': { deletedAt: T0 } }) };
     const h = lagHarness([M(2, 'b'), M(3, 'c')], { storage: stored });
     h.otherDeviceWrites([M(1, 'a'), M(2, 'b'), M(3, 'c'), M(6, 'w'), M(7, 'z'), M(8, 'x'), M(9, 'y')]);
     await h.engine.attach();
     assert.deepStrictEqual(h.liveTimes(), [2, 3, 6, 7, 8, 9],
       'the valid tombstone holds, the malformed ones do not');
-    assert.deepStrictEqual(h.meta().tombstones, { '1|a': good });
+    assert.deepStrictEqual(h.stones(), { '1|a': good });
   });
 });
 
@@ -1181,8 +1185,15 @@ describe('marker_sync: meta is persisted when the merge happens', () => {
 describe('marker_sync: a request that never answers', () => {
   const ALL = [M(1, 'a'), M(2, 'b'), M(3, 'c')];
   const never = () => new Promise(() => {});
+  // The deadline runs on the real setTimeout (github_api's withDeadline), which
+  // each test replaces; the engine's own timers stay on the harness.
+  const mockDeadline = (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    return () => t.mock.timers.tick(MARKER_REQUEST_TIMEOUT_MS);
+  };
 
-  it('a pull whose GET hangs is given up, and the next flush goes through', async () => {
+  it('a pull whose GET hangs is given up, and the next flush goes through', async (t) => {
+    const deadlinePasses = mockDeadline(t);
     const h = lagHarness(ALL);
     await h.engine.attach();
     h.getGate = never();
@@ -1192,45 +1203,52 @@ describe('marker_sync: a request that never answers', () => {
     const flushing = h.engine.flush();      // queued behind the pull
     await tick();
     assert.deepStrictEqual(h.serverTimes(), [1, 2, 3], 'the lane is held while the GET is out');
-    h.timers.fireAll();                     // the request deadline passes
+    deadlinePasses();
     await pulling; await flushing;
     assert.deepStrictEqual(h.liveTimes(), [2, 3]);
     assert.deepStrictEqual(h.serverTimes(), [2, 3]);
   });
 
-  it('a flush whose request hangs reports an error instead of syncing forever', async () => {
+  it('a flush whose request hangs reports an error instead of syncing forever', async (t) => {
+    const deadlinePasses = mockDeadline(t);
     const h = lagHarness(ALL);
     await h.engine.attach();
     h.live.splice(0, 1);
-    h.listGate = never();
+    h.getGate = never();
     const flushing = h.engine.flush({ force: true });
     await tick();
     assert.strictEqual(h.engine.getInfo().status, 'syncing');
-    h.timers.fireAll();
+    t.mock.timers.tick(MARKER_REQUEST_TIMEOUT_MS - 1);
+    await tick();
+    assert.strictEqual(h.engine.getInfo().status, 'syncing', 'not before the deadline');
+    deadlinePasses();
     await flushing;
     const info = h.engine.getInfo();
     assert.strictEqual(info.status, 'error');
-    assert.match(info.error.message, /no answer in \d+ ms/);
+    assert.strictEqual(info.error.message, 'markers: no answer in ' + MARKER_REQUEST_TIMEOUT_MS + ' ms');
   });
 
-  it('every request carries an abort signal, and the deadline aborts it', async () => {
-    const signals = [];
+  function signalEngine(fetchImpl) {
     const timers = timerHarness();
     const gh = {
       ensureLabel: async () => null,
       listIssuesByLabel: (a, t, l, f) => f('u', { method: 'GET' }).then(() => []),
     };
-    const engine = createMarkerSyncEngine({
+    return createMarkerSyncEngine({
       api: API, token: 'x', talkId: TALK, videoSlug: VIDEO,
-      getMarkers: () => [], setMarkers: () => {}, storage: memStorage({}), gh,
-      fetchImpl: (url, init) => { signals.push(init.signal); return never(); },
+      getMarkers: () => [], setMarkers: () => {}, storage: memStorage({}), gh, fetchImpl,
       setTimeoutFn: timers.set.bind(timers), clearTimeoutFn: timers.clear.bind(timers),
     });
-    const attaching = engine.attach();
+  }
+
+  it('every request carries an abort signal, and the deadline aborts it', async (t) => {
+    const deadlinePasses = mockDeadline(t);
+    const signals = [];
+    const attaching = signalEngine((url, init) => { signals.push(init.signal); return never(); }).attach();
     await tick();
     assert.strictEqual(signals.length, 1);
     assert.strictEqual(signals[0].aborted, false);
-    timers.fireAll();
+    deadlinePasses();
     await attaching;
     assert.strictEqual(signals[0].aborted, true);
   });
@@ -1239,12 +1257,358 @@ describe('marker_sync: a request that never answers', () => {
     assert.ok(MARKER_REQUEST_TIMEOUT_MS >= 20000 && MARKER_REQUEST_TIMEOUT_MS <= 60000);
   });
 
-  it('an answered request leaves no deadline timer behind', async () => {
+  it('an answered request leaves no deadline timer behind', async (t) => {
+    const deadlinePasses = mockDeadline(t);
+    const signals = [];
+    await signalEngine(async (url, init) => { signals.push(init.signal); return []; }).attach();
+    deadlinePasses();
+    assert.ok(signals.length === 1 && !signals[0].aborted, 'the timer was cleared: nothing is aborted later');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// `storage` events. A browser fires one in every OTHER tab whenever a key's
+// value really changes, as a task of its own. The loopback below does that for
+// engines sharing one store, and counts: whatever the tabs hold, the exchange
+// has to stop after a handful of events.
+// ---------------------------------------------------------------------------
+// Events one user action may cost across all tabs before storage is silent.
+const QUIET_AFTER = 8;
+
+function loopback(listenTo) {
+  const store = {};
+  const net = { tabs: [], queue: [] };
+  function view(index) {
+    return {
+      getItem: (k) => (k in store ? store[k] : null),
+      setItem: (k, v) => {
+        v = String(v);
+        const old = k in store ? store[k] : null;
+        store[k] = v;
+        if (old === v) return;
+        net.tabs.forEach((tab, i) => { if (i !== index) net.queue.push({ to: i, key: k }); });
+      },
+      removeItem: (k) => { delete store[k]; },
+    };
+  }
+  net.openTab = (initial, over) => {
+    const first = net.tabs[0] || null;
+    const h = lagHarness(initial, Object.assign({ tabOf: first, storageView: view(net.tabs.length) }, over));
+    // 'tombstones' is the SPA's listener; 'every key' is stricter than the SPA.
+    h.onStorage = (key) => { if (listenTo === 'every key' || key === STONE_KEY) h.engine.storageChanged(); };
+    net.tabs.push(h);
+    return h;
+  };
+  net.settle = (what) => {
+    let n = 0;
+    while (net.queue.length && n <= QUIET_AFTER) {
+      const ev = net.queue.shift();
+      net.tabs[ev.to].onStorage(ev.key);
+      n += 1;
+    }
+    assert.ok(n <= QUIET_AFTER && net.queue.length === 0,
+      what + ': the tabs are still exchanging storage events after ' + n);
+    return n;
+  };
+  return net;
+}
+
+for (const listenTo of ['tombstones', 'every key']) {
+  describe('marker_sync: storage events between tabs fall silent (listener on ' + listenTo + ')', () => {
+    const ALL = [M(1, 'a'), M(2, 'b'), M(3, 'c')];
+    async function twoTabs() {
+      const net = loopback(listenTo);
+      const a = net.openTab(ALL), b = net.openTab(ALL);
+      await a.engine.attach(); await b.engine.attach();
+      net.settle('opening two tabs');
+      return { net, a, b };
+    }
+
+    it('a tab that has not pulled the marker the other tab added and synced', async () => {
+      const { net, a, b } = await twoTabs();
+      a.add(M(4, 'd')); await a.engine.flush();   // tab B's base is now behind tab A's
+      net.settle('after the add');
+      a.remove(2);
+      net.settle('after the deletion');
+      assert.deepStrictEqual(b.liveTimes(), [1, 3], 'tab B dropped the marker on the event alone');
+      await a.engine.flush(); net.settle("after tab A's flush");
+      await b.engine.flush(); net.settle("after tab B's flush");
+      assert.deepStrictEqual(a.serverTimes(), [1, 3, 4]);
+      assert.deepStrictEqual(b.liveTimes(), [1, 3, 4]);
+    });
+
+    it('the same marker carrying a different comment in each tab', async () => {
+      const { net, a, b } = await twoTabs();
+      a.live[0].comment = 'from tab A'; a.engine.notifyEdit(); await a.engine.flush();
+      b.live[0].comment = 'from tab B'; b.engine.notifyEdit();
+      net.settle('after the two comments');
+      a.remove(2);
+      net.settle('after a deletion on top of the conflict');
+      await b.engine.flush(); net.settle("after tab B's flush");
+      await a.engine.flush(); net.settle("after tab A's flush");
+      b.engine.storageChanged(); a.engine.storageChanged();
+      net.settle('after a storage event with nothing new in it');
+      assert.deepStrictEqual(b.liveTimes(), [1, 3]);
+    });
+
+    it('one tab deleted the marker, the other put it back: the re-add stands', async () => {
+      const { net, a, b } = await twoTabs();
+      a.remove(1);
+      net.settle('after the deletion');
+      assert.deepStrictEqual(b.liveTimes(), [2, 3]);
+      b.add(M(1, 'a'));                       // tab A: in base, not listed. Tab B: listed, not in base.
+      net.settle('after the re-add');
+      assert.deepStrictEqual(a.stones(), {}, 'the tombstone is released, and tab A does not record it again');
+      await a.engine.flush(); net.settle("after tab A's flush");
+      await b.engine.flush(); net.settle("after tab B's flush");
+      await a.engine.pull(true); net.settle("after tab A's pull");
+      assert.deepStrictEqual(a.serverTimes(), [1, 2, 3]);
+      assert.deepStrictEqual(a.liveTimes(), [1, 2, 3], 'tab A takes the marker back');
+    });
+
+    it('a storage event that changes nothing writes nothing', async () => {
+      const { net, a, b } = await twoTabs();
+      a.add(M(4, 'd')); await a.engine.flush();
+      a.remove(2); await a.engine.flush();
+      net.settle('after the deletion');
+      const writes = [];
+      const setItem = b.storage.setItem;
+      b.storage.setItem = (k, v) => { writes.push(k); setItem(k, v); };
+      b.engine.storageChanged(); b.engine.storageChanged();
+      assert.deepStrictEqual(writes, []);
+    });
+
+    it('three tabs, every action followed by its events: always quiet, and they converge', async () => {
+      // Deterministic pseudo-random walk (LCG) over adds, deletions, comments,
+      // syncs and time passing in three tabs.
+      let seed = 20261120;
+      const rnd = (n) => { seed = (seed * 1103515245 + 12345) % 2147483648; return Math.floor(seed / 65536) % n; };
+      const net = loopback(listenTo);
+      const tabs = [net.openTab(ALL), net.openTab(ALL), net.openTab(ALL)];
+      for (const tab of tabs) await tab.engine.attach();
+      net.settle('opening three tabs');
+      for (let step = 0; step < 400; step++) {
+        const tab = tabs[rnd(3)], time = 1 + rnd(5), what = 'step ' + step;
+        const at = tab.live.findIndex((m) => m.time === time);
+        switch (rnd(6)) {
+          case 0: if (at < 0) tab.add(M(time, 'm' + time)); break;
+          case 1: if (at >= 0) tab.remove(time); break;
+          case 2: if (at >= 0) { tab.live[at].comment = 'c' + step; tab.engine.notifyEdit(); } break;
+          case 3: await tab.engine.flush(); break;
+          case 4: await tab.engine.pull(true); break;
+          default: tabs.forEach((x) => { x.clock += rnd(4) ? 1000 : TOMBSTONE_TTL_MS; });
+        }
+        net.settle(what);
+      }
+      // The clock moves past every tombstone, then two rounds: the first lets
+      // every tab write what only it holds, the second lets the others read it.
+      tabs.forEach((x) => { x.clock += 2 * TOMBSTONE_TTL_MS; });
+      for (let round = 0; round < 2; round++) {
+        for (const tab of tabs) { await tab.engine.flush({ force: true }); net.settle('final flush'); }
+      }
+      const texts = (h) => h.live.map((m) => m.time + '|' + m.text).join(',');
+      assert.strictEqual(texts(tabs[1]), texts(tabs[0]));
+      assert.strictEqual(texts(tabs[2]), texts(tabs[0]));
+      assert.deepStrictEqual(tabs[0].serverTimes(), tabs[0].liveTimes());
+    });
+  });
+}
+
+describe('marker_sync: what is written under the tombstone key', () => {
+  const ALL = [M(1, 'a'), M(2, 'b'), M(3, 'c')];
+
+  it('a talk with no deletion never gets the key', async () => {
     const h = lagHarness(ALL);
     await h.engine.attach();
-    assert.strictEqual(h.timers.pending(), 0);
-    h.live.splice(0, 1);
-    await h.engine.flush({ force: true });
-    assert.strictEqual(h.timers.pending(), 0);
+    h.add(M(4, 'd')); await h.engine.flush();
+    h.engine.storageChanged();
+    assert.strictEqual(h.storage.getItem(STONE_KEY), null);
+  });
+
+  it('the stored text does not depend on the order the deletions were made in', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(3); h.remove(1);
+    assert.deepStrictEqual(Object.keys(h.stones()), ['1|a', '3|c']);
+  });
+
+  it('the meta key carries no tombstones', async () => {
+    const h = lagHarness(ALL);
+    await h.engine.attach();
+    h.remove(1); await h.engine.flush();
+    assert.deepStrictEqual(Object.keys(h.meta()).sort(), ['base', 'nodeId', 'number', 'url']);
+    assert.deepStrictEqual(Object.keys(h.stones()), ['1|a']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// One issue per talk. GitHub serves the issue list `max-age=60`, so a browser
+// may answer it from its HTTP cache: for a minute after this client created
+// the markers issue, the list it sees can still be the one from before.
+// ---------------------------------------------------------------------------
+function issueWorld(over) {
+  over = over || {};
+  const w = {
+    issues: {}, nextNumber: 50, calls: [], live: (over.local || []).slice(),
+    storage: over.storage || memStorage({}),
+    listed: null,            // when set, what the list answers INSTEAD of the truth
+    getFails: null,          // when set, the status every single-issue GET fails with
+  };
+  w.put = (number, markers, state) => {
+    w.issues[number] = { number, title: TITLE, state: state || 'open', node_id: 'I' + number,
+      html_url: 'u' + number, body: buildIssueBody(markers, 'V') };
+  };
+  w.markersOf = (number) => parseMarkersBlock(w.issues[number].body).map((m) => m.time);
+  w.kinds = () => w.calls.map((c) => c[0]);
+  w.created = () => w.calls.filter((c) => c[0] === 'create').length;
+  const gone = (status) => { const e = new Error('gone'); e.status = status; return e; };
+  const gh = {
+    ensureLabel: async () => null,
+    listIssuesByLabel: async () => {
+      w.calls.push(['list']);
+      if (w.listed) return w.listed;
+      return Object.keys(w.issues).map((n) => w.issues[n]).sort((x, y) => y.number - x.number);
+    },
+    getIssue: async (a, t, number) => {
+      w.calls.push(['get', number]);
+      if (w.getFails) throw gone(w.getFails);
+      if (!w.issues[number]) throw gone(404);
+      return Object.assign({}, w.issues[number]);
+    },
+    createIssue: async (a, t, fields) => {
+      const number = w.nextNumber++;
+      w.calls.push(['create', number]);
+      w.issues[number] = { number, title: fields.title, state: 'open', node_id: 'I' + number,
+        html_url: 'u' + number, body: fields.body };
+      return { number, html_url: 'u' + number, node_id: 'I' + number };
+    },
+    updateIssue: async (a, t, number, fields) => {
+      w.calls.push(['update', number]);
+      Object.assign(w.issues[number], fields);
+      return w.issues[number];
+    },
+  };
+  w.open = () => {
+    const timers = timerHarness();
+    w.engine = createMarkerSyncEngine({
+      api: API, token: 'x', talkId: TALK, videoSlug: VIDEO, heading: 'V',
+      getMarkers: () => w.live, setMarkers: (m) => { w.live = m; },
+      storage: w.storage, gh, now: () => 1770000000000,
+      setTimeoutFn: timers.set.bind(timers), clearTimeoutFn: timers.clear.bind(timers),
+      isOffline: () => false, onStatus: () => {},
+    });
+    return w.engine;
+  };
+  w.add = (m) => { w.live.push(m); w.engine.notifyEdit(); };
+  w.open();
+  return w;
+}
+
+describe('marker_sync: one issue per talk', () => {
+  const CACHED_EMPTY_LIST = [];
+
+  it('a flush right after the create does not create a second issue from a cached empty list', async () => {
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    assert.strictEqual(w.created(), 1);
+    w.listed = CACHED_EMPTY_LIST;
+    w.add(M(2, 'b')); await w.engine.flush();
+    w.add(M(3, 'c')); await w.engine.flush();
+    assert.strictEqual(w.created(), 1, 'still the one issue');
+    assert.deepStrictEqual(w.markersOf(50), [1, 2, 3]);
+  });
+
+  it('nor does the page, reloaded inside that minute', async () => {
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    await w.engine.destroy();
+    w.listed = CACHED_EMPTY_LIST;
+    w.open();
+    await w.engine.attach();
+    w.add(M(2, 'b')); await w.engine.flush();
+    assert.strictEqual(w.created(), 1);
+    assert.deepStrictEqual(w.markersOf(50), [1, 2]);
+    assert.strictEqual(w.engine.getInfo().status, 'synced');
+  });
+
+  it('a flush that knows the number does not ask the list at all', async () => {
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    w.calls.length = 0;
+    w.add(M(2, 'b')); await w.engine.flush();
+    assert.deepStrictEqual(w.calls, [['get', 50], ['update', 50]]);
+  });
+
+  for (const status of [404, 410]) {
+    it('a known issue that is gone (' + status + ') is looked up by title, then created anew', async () => {
+      const w = issueWorld();
+      w.add(M(1, 'a')); await w.engine.flush();
+      delete w.issues[50];
+      w.getFails = status;
+      w.add(M(2, 'b')); await w.engine.flush();
+      assert.deepStrictEqual(w.kinds(), ['list', 'create', 'get', 'list', 'create']);
+      assert.deepStrictEqual(w.markersOf(51), [1, 2]);
+      assert.strictEqual(w.engine.getInfo().issueNumber, 51);
+    });
+  }
+
+  it('a known issue that is gone is forgotten, even when there is nothing to create', async () => {
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    delete w.issues[50];
+    w.live = [];
+    await w.engine.flush({ force: true });
+    assert.strictEqual(w.created(), 1);
+    assert.strictEqual(w.engine.getInfo().issueNumber, null);
+    assert.strictEqual(w.engine.getInfo().issueUrl, null, 'no link to an issue that is not there');
+  });
+
+  it('a known issue that is gone is replaced by the one the list shows under the title', async () => {
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    delete w.issues[50];
+    w.put(77, [M(5, 'e')]);
+    w.add(M(2, 'b')); await w.engine.flush();
+    assert.strictEqual(w.created(), 1, 'nothing new is created');
+    assert.strictEqual(w.engine.getInfo().issueNumber, 77);
+    assert.deepStrictEqual(w.markersOf(77), [1, 2, 5]);
+  });
+
+  it('a known issue that cannot be read is an error, not a reason to create another', async () => {
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    w.getFails = 502;
+    w.listed = CACHED_EMPTY_LIST;
+    w.add(M(2, 'b')); await w.engine.flush();
+    assert.strictEqual(w.created(), 1);
+    assert.strictEqual(w.engine.getInfo().status, 'error');
+    assert.strictEqual(w.engine.getInfo().issueNumber, 50, 'the number is kept for the retry');
+  });
+
+  it('opening the page with a cached empty list still reads the known issue', async () => {
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    await w.engine.destroy();
+    w.put(50, [M(1, 'a'), M(9, 'from another device')]);
+    w.listed = CACHED_EMPTY_LIST;
+    w.open();
+    await w.engine.attach();
+    assert.deepStrictEqual(w.live.map((m) => m.time), [1, 9]);
+    assert.strictEqual(w.engine.getInfo().dirty, false, 'nothing is armed to create an issue');
+    assert.strictEqual(w.engine.getInfo().status, 'synced');
+  });
+
+  it('opening the page settles on the issue the list shows, when two carry the title', async () => {
+    // Two devices each created one. The list puts the newest first, for all of them.
+    const w = issueWorld();
+    w.add(M(1, 'a')); await w.engine.flush();
+    await w.engine.destroy();
+    w.put(60, [M(7, 'theirs')]);
+    w.open();
+    await w.engine.attach();
+    assert.strictEqual(w.engine.getInfo().issueNumber, 60);
+    await w.engine.flush();
+    assert.strictEqual(w.created(), 1);
+    assert.deepStrictEqual(w.markersOf(60), [1, 7]);
   });
 });

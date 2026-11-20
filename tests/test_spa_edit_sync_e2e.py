@@ -1100,6 +1100,87 @@ def test_marker_deleted_in_one_tab_leaves_the_other_tab_and_is_not_written_back(
     ctx.close()
 
 
+def test_two_tabs_stop_exchanging_storage_events(server, browser):
+    """Two tabs of one talk must not answer each other's `storage` events for ever.
+
+    Each tab keeps its own base of merged markers, so the tabs differ as soon as one
+    of them syncs something the other has not pulled. A `storage` listener that
+    answers such an event with a write of its own turns that difference into a loop
+    of thousands of events a second. Whatever the tabs hold, the events have to stop.
+    """
+    calls = []
+    sync_opts = {"get_mode": "404"}
+    count_marker_storage_events = """
+        window.__markerStorageEvents = 0;
+        window.addEventListener('storage', function (e) {
+            if (e.key && e.key.indexOf('sy_marker_') === 0) window.__markerStorageEvents += 1;
+        });
+    """
+    ctx, first_tab = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+    first_tab.add_init_script(count_marker_storage_events)
+
+    def _open_marker_mode(pg):
+        _open_preview_marker(pg, server)
+        pg.evaluate("SPA.setPreviewMode('marker')")
+        pg.wait_for_function("() => window.markerSync", timeout=10000)
+
+    def _add(pg, seconds, text):
+        pg.evaluate(
+            """([time, text]) => {
+                window.previewState.currentTime = time;
+                window.previewState.lastText = text;
+                SPA.addMarker();
+            }""",
+            [seconds, text],
+        )
+
+    def _sync(pg):
+        pg.evaluate("window.markerSync.flush({ force: true })")
+        pg.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+
+    def _events():
+        return [pg.evaluate("window.__markerStorageEvents") for pg in (first_tab, second_tab)]
+
+    def _assert_quiet(after):
+        # A loop runs at thousands of events a second; half a second tells them apart.
+        first_tab.wait_for_timeout(300)
+        seen = _events()
+        first_tab.wait_for_timeout(500)
+        assert _events() == seen, f"the tabs are still exchanging storage events {after}"
+        assert sum(seen) < 40, f"{seen} storage events {after}: far more than the handful an action costs"
+
+    _open_marker_mode(first_tab)
+    _add(first_tab, 3, "Sub one")
+    _add(first_tab, 6, "Sub two")
+    _sync(first_tab)
+
+    second_tab = _tab(ctx, calls, REVIEW_STATUS_UNASSIGNED, sync_opts, signed_in=True)
+    second_tab.add_init_script(count_marker_storage_events)
+    _open_marker_mode(second_tab)
+    second_tab.wait_for_function("() => window.markerSync.getInfo().status === 'synced'", timeout=10000)
+    _assert_quiet("after the second tab opened")
+
+    # The first tab syncs a marker the second has not pulled: their bases differ now.
+    _add(first_tab, 9, "Sub three")
+    _sync(first_tab)
+    _assert_quiet("after one tab synced a marker the other has not pulled")
+
+    # The same marker with a different comment in each tab: a conflict neither gives up.
+    first_tab.evaluate("window.previewState.markers[0].comment = 'from the first tab'; markerNotify();")
+    second_tab.evaluate("window.previewState.markers[0].comment = 'from the second tab'; markerNotify();")
+    _sync(first_tab)
+    _sync(second_tab)
+    _assert_quiet("after a comment conflict")
+
+    first_tab.evaluate("SPA.removeMarker(1)")
+    second_tab.wait_for_function("() => window.previewState.markers.every((m) => m.text !== 'Sub two')", timeout=5000)
+    _assert_quiet("after a deletion")
+    _sync(first_tab)
+    _sync(second_tab)
+    _assert_quiet("after both tabs synced the deletion")
+    ctx.close()
+
+
 def test_marker_comment_keeps_focus_through_the_sync_round_trip(server, browser):
     calls = []
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=True)
