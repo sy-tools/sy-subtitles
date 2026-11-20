@@ -2586,6 +2586,7 @@ function loadSubtitleLang(lang) {
       s.subtitles = parseSRT(text);
       s.srtLang = lang;
       console.log('[SPA] SRT loaded (' + lang + '):', s.subtitles.length, 'blocks');
+      retireLandedPreviewEdits(s, lang, text);
       return true;
     })
     .catch(function(err) {
@@ -7840,6 +7841,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
       reviewState.rowToBlock, localStorage);
     reviewState._legacyEdits = !!(mig && mig.error);
+    retireLandedReviewSrtEdits();
     loadReviewEditsForMode();
 
     renderReview();
@@ -8406,6 +8408,7 @@ function ensureEditSync() {
       deleteFile: deleteFile,
       createPull: createPull,
       findOpenPrByHead: findOpenPrByHead,
+      listPrsByHead: listPrsByHead,
       markPullReady: markPullReady,
       convertPullToDraft: convertPullToDraft,
       closePull: closePull,
@@ -8686,6 +8689,39 @@ function syncRevertSoon() { if (editSync) editSync.flushSoon(); }
 // separate from savePreviewState so marker changes / mode switches don't dirty
 // the edit engine (see savePreviewState).
 function editNotify() { if (editSync) editSync.notifyEdit(); }
+// Storage changed with no edit behind it (landed edits were retired). Not
+// notifyEdit: that is the user's word, and it lifts the hold an orphaned base
+// keeps on pushing. A pull weighs local against base and remote, and arms a
+// push only where one is due.
+function editSyncReconcile() { if (editSync) editSync.pull(true); }
+
+// The preview adds an edit holding the block's own text and waits for typing
+// (SPA.addEdit), which reads exactly like a landed edit. So one file content is
+// swept once: a re-entry onto the same video re-reads the same SRT, and must
+// not close the row the user has just opened.
+function retireLandedPreviewEdits(s, lang, srtText) {
+  if (s !== previewState || !s.edits) return;
+  if (!s._sweptSrt) s._sweptSrt = {};
+  if (s._sweptSrt[lang] === srtText) return;
+  s._sweptSrt[lang] = srtText;
+  var swept = retireLandedEdits(s.edits[lang], s.subtitles);
+  if (!Object.keys(swept.retired).length) return;
+  s.edits[lang] = swept.kept;
+  savePreviewState();
+  editSyncReconcile();
+  updateClearBtn();
+}
+
+function retireLandedReviewSrtEdits() {
+  // A failed migration keeps the edits row-keyed in the legacy store, where
+  // there is no block to compare them with.
+  if (reviewState._legacyEdits) return;
+  var talkId = reviewState.talkId, videoSlug = reviewState.videoSlug, lang = reviewState.srtRightLang;
+  var swept = retireLandedEdits(loadSrtEdits(talkId, videoSlug, lang, localStorage), reviewState.ukBlocks);
+  if (!Object.keys(swept.retired).length) return;
+  saveSrtEdits(talkId, videoSlug, lang, swept.kept, localStorage);
+  editSyncReconcile();
+}
 // Marker equivalents: a discrete add/remove/clear syncs on the fast cadence.
 function markerNotify() { if (markerSync) markerSync.notifyEdit(); }
 function markerNotifySoon() { if (markerSync) { markerSync.notifyEdit(); markerSync.flushSoon(); } }
@@ -9642,6 +9678,7 @@ SPA.switchSrtLang = function(side, lang) {
     var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
       reviewState.rowToBlock, localStorage);
     reviewState._legacyEdits = !!(mig && mig.error);
+    retireLandedReviewSrtEdits();
     // Only the RIGHT (final) lang selects the sync target; re-key on change.
     ensureEditSync();
     loadReviewEditsForMode();

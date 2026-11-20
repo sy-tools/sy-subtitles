@@ -482,6 +482,37 @@ describe('findOpenPrByHead', () => {
   });
 });
 
+describe('listPrsByHead', () => {
+  const { listPrsByHead } = require('../site/js/github_api');
+  it('asks for every state, newest first, and says which were merged', async () => {
+    const calls = [];
+    const f = routerFetch([{ method: 'GET', match: '/pulls?head=', payload: [
+      { number: 9, state: 'closed', merged_at: null, html_url: 'u9' },
+      { number: 7, state: 'closed', merged_at: '2026-11-01T10:00:00Z', html_url: 'u7' },
+    ] }], calls);
+    const res = await listPrsByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f);
+    assert.deepStrictEqual(res, [
+      { number: 9, state: 'closed', merged: false, html_url: 'u9' },
+      { number: 7, state: 'closed', merged: true, html_url: 'u7' },
+    ]);
+    const url = calls[0].url;
+    assert.ok(url.includes('/pulls?head=' + encodeURIComponent('sy-tools:sync/u/t')), url);
+    assert.match(url, /[?&]state=all(&|$)/);
+    assert.match(url, /[?&]sort=created(&|$)/);
+    assert.match(url, /[?&]direction=desc(&|$)/);
+  });
+  it('bypasses the HTTP cache: the answer decides whether local edits are dropped', async () => {
+    let seenInit = null;
+    const f = async (url, init) => { seenInit = init; return new Response('[]', { status: 200 }); };
+    assert.deepStrictEqual(await listPrsByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f), []);
+    assert.strictEqual(seenInit.cache, 'no-store');
+  });
+  it('rejects on an HTTP error instead of reporting "no PR"', async () => {
+    const f = routerFetch([{ method: 'GET', match: '/pulls?head=', status: 500, payload: { message: 'boom' } }], []);
+    await assert.rejects(listPrsByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f));
+  });
+});
+
 describe('markPullReady', () => {
   it('POSTs the GraphQL mutation with the PR node id', async () => {
     const calls = [];

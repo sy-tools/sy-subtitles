@@ -450,6 +450,20 @@ function findOpenPrByHead(api, token, owner, branch, fetchImpl) {
     });
 }
 
+// Every PR ever opened from <owner>:<branch>, newest first, open or not. The
+// sync branch name is deterministic, so one name carries each generation of
+// the PR. Read past the HTTP cache: the caller drops local edits on the
+// strength of `merged`, and a list cached from before the merge would say no.
+function listPrsByHead(api, token, owner, branch, fetchImpl) {
+  return ghJson(api + '/pulls?head=' + encodeURIComponent(owner + ':' + branch)
+    + '&state=all&sort=created&direction=desc', token, null, freshFetch(fetchImpl))
+    .then(function (list) {
+      return (list || []).map(function (r) {
+        return { number: r.number, state: r.state, merged: !!r.merged_at, html_url: r.html_url };
+      });
+    });
+}
+
 // Draft <-> ready transitions are GraphQL-only (REST has no endpoint).
 // Both reject when the reply carries errors.
 function ghGraphql(token, query, variables, fetchImpl) {
@@ -656,6 +670,7 @@ if (typeof module !== 'undefined' && module.exports) {
     putFile: putFile,
     createPull: createPull,
     findOpenPrByHead: findOpenPrByHead,
+    listPrsByHead: listPrsByHead,
     markPullReady: markPullReady,
     convertPullToDraft: convertPullToDraft,
     closePull: closePull,

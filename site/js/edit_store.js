@@ -60,6 +60,22 @@ function saveSrtEdits(talkId, videoSlug, lang, edits, storage) {
   else storage.setItem(key, JSON.stringify(edits));
 }
 
+// An edit is a full replacement text for one block, so once the file itself
+// reads that way the edit proposes nothing — it has landed (its PR merged, or
+// the same text arrived another way). Nothing else ever removes it: this store
+// is per device, and a merge on GitHub does not reach into it. Left alone, it
+// rides along in the next sync PR and overwrites whatever that block has
+// become by then. An index with no block is kept: there is nothing to compare.
+function retireLandedEdits(edits, blocks) {
+  var kept = {}, retired = {};
+  Object.keys(edits || {}).forEach(function (idx) {
+    var block = blocks && blocks[idx];
+    if (block && block.text === edits[idx]) retired[idx] = edits[idx];
+    else kept[idx] = edits[idx];
+  });
+  return { kept: kept, retired: retired };
+}
+
 // Merge a review-SRT view's current row edits into the EXISTING canonical
 // store. Blocks visible as rows in this view are authoritative (edited or,
 // when absent from rowEdits, reverted -> removed); canonical blocks that have
@@ -257,6 +273,7 @@ if (typeof module !== 'undefined' && module.exports) {
     displacedKeyFor: displacedKeyFor,
     loadSrtEdits: loadSrtEdits,
     saveSrtEdits: saveSrtEdits,
+    retireLandedEdits: retireLandedEdits,
     mapRowsToBlockIdx: mapRowsToBlockIdx,
     splitReviewRowEdits: splitReviewRowEdits,
     mergeReviewEditsIntoCanonical: mergeReviewEditsIntoCanonical,

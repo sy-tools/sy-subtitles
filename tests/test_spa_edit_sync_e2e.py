@@ -21,7 +21,9 @@ page.route:
   7. the sync chip's dropdown opens the PR url,
   8. a preview subtitle edit syncs to the VIDEO-scoped target (its own branch/
      state/PR + final/uk.srt), distinct from the transcript target — v3's
-     file-scoped PRs.
+     file-scoped PRs,
+  9. an edit the loaded SRT already contains is retired from the device, and
+     the edits of a MERGED sync PR are cleared instead of being proposed again.
 
 The harness mirrors tests/test_spa_auth_actions_e2e.py: a local http.server
 serves site/ with window.__SY_* injected in <head>, the signed-in session is
@@ -215,6 +217,8 @@ def _wire(pg, calls, review_status, sync_opts):
       put_conflict_once: first PUT -> 409, then a GET returns conflict_entries
       conflict_entries:  the remote doc served after the 409 (CAS merge input)
       conflict_sha:      sha for the conflict doc (default "shaRemote")
+      branch_gone:       the sync branch's head answers 404 (deleted, e.g. by a merge)
+      prs_by_head:       every PR ever opened from the sync branch, newest first
 
     and the markers issue endpoint:
       stale_issue_bodies: a list the test may append to at any time; each single-issue
@@ -281,6 +285,14 @@ def _wire(pg, calls, review_status, sync_opts):
     pg.route("**/api.github.com/repos/**/git/ref/heads/main", _record(calls, 200, {"object": {"sha": "base1"}}))
     pg.route("**/api.github.com/repos/**/git/refs", _record(calls, 201, {}))
 
+    def sync_branch_head(route):
+        if sync_opts.get("branch_gone"):
+            route.fulfill(status=404, content_type="application/json", body=json.dumps({"message": "Not Found"}))
+        else:
+            route.fulfill(status=200, content_type="application/json", body=json.dumps({"object": {"sha": "sync1"}}))
+
+    pg.route("**/api.github.com/repos/**/git/ref/heads/sync/**", sync_branch_head)
+
     def delete_ref(route):
         # DELETE /git/refs/heads/<branch> — teardown drops the sync branch.
         req = route.request
@@ -292,8 +304,10 @@ def _wire(pg, calls, review_status, sync_opts):
     def pulls(route):
         req = route.request
         if req.method == "GET":
-            # findOpenPrByHead — cosmetic re-attach lookup; report none.
-            route.fulfill(status=200, content_type="application/json", body=json.dumps([]))
+            # findOpenPrByHead — cosmetic re-attach lookup; report none. With
+            # state=all it is listPrsByHead: what became of the sync PR.
+            prs = sync_opts.get("prs_by_head", []) if "state=all" in req.url else []
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(prs))
             return
         calls.append(
             {"method": req.method, "url": req.url, "body": json.loads(req.post_data) if req.post_data else None}
@@ -943,6 +957,163 @@ def test_preview_edit_syncs_to_video_scoped_target(server, browser):
     assert real["body"]["branch"] == video_branch
     committed = base64.b64decode(real["body"]["content"]).decode("utf-8")
     assert "PREVIEWSYNC" in committed
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 8b. Edits that have landed on main are retired from the device.
+# ---------------------------------------------------------------------------
+
+VIDEO_TARGET = f"{VIDEO_SLUG}-uk"
+VIDEO_BRANCH = f"sync/{LOGIN}/{TALK_ID}--{VIDEO_TARGET}"
+VIDEO_STATE = f".review-sync/{TALK_ID}/{VIDEO_TARGET}.json"
+VIDEO_BASE_KEY = f"sy_sync_base_{TALK_ID}__{VIDEO_TARGET}"
+CANON_KEY = f"srt_edits_{TALK_ID}_{VIDEO_SLUG}_uk"
+BLOCK0 = "Перший субтитр"
+BLOCK1 = "Другий субтитр"
+
+
+def _seed_once(pg, items):
+    """Seed localStorage on the first load only, so a later write by the app is not undone."""
+    pg.add_init_script(
+        "if (!sessionStorage.getItem('__seeded')) { sessionStorage.setItem('__seeded', '1');"
+        + "".join(f"localStorage.setItem({json.dumps(k)}, {json.dumps(json.dumps(v))});" for k, v in items.items())
+        + "}"
+    )
+
+
+def _open_preview_in_edit_mode(pg, server):
+    pg.goto(f"{server}{SPA_URL}#/preview/{TALK_ID}/{VIDEO_SLUG}")
+    pg.wait_for_selector("#mock-player", state="visible", timeout=10000)
+    pg.wait_for_function(
+        "() => window.previewState && (window.previewState.subtitles || []).length > 0",
+        timeout=10000,
+    )
+    pg.evaluate("SPA.setPreviewMode('edit')")
+
+
+def _stored(pg, key):
+    raw = pg.evaluate("k => localStorage.getItem(k)", key)
+    return json.loads(raw) if raw else None
+
+
+def _edit_preview_block_at(pg, seconds, appended):
+    pg.evaluate(f"window._vimeoPlayer._currentTime = {seconds}; window.previewState.currentTime = {seconds};")
+    pg.evaluate("SPA.addEdit()")
+    cell = pg.locator(".edit-item .edited").last
+    cell.click()
+    cell.press("End")
+    cell.type(appended)
+    cell.press("Tab")
+
+
+def _video_state_docs(calls):
+    return [
+        decode_put_doc(c)
+        for c in _review_sync_puts(calls)
+        if c["url"].split("?")[0].endswith("/contents/" + VIDEO_STATE)
+    ]
+
+
+def _committed_srts(calls):
+    return [
+        base64.b64decode(c["body"]["content"]).decode("utf-8")
+        for c in calls
+        if c["method"] == "PUT" and f"/contents/talks/{TALK_ID}/{VIDEO_SLUG}/final/uk.srt" in c["url"].split("?")[0]
+    ]
+
+
+def test_preview_edit_equal_to_the_loaded_srt_is_retired_and_not_proposed_again(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
+    _seed_once(pg, {CANON_KEY: {"0": BLOCK0}})
+    _open_preview_in_edit_mode(pg, server)
+
+    assert _stored(pg, CANON_KEY) is None, "main already reads this way: the edit has landed"
+    assert pg.locator(".edit-item").count() == 0
+
+    _edit_preview_block_at(pg, 7, " NEWEDIT")
+    _wait_chip_synced(pg)
+
+    assert _video_state_docs(calls)[-1]["entries"] == {CANON_KEY: {"1": BLOCK1 + " NEWEDIT"}}
+    assert len([c for c in calls if c["method"] == "POST" and c["url"].split("?")[0].endswith("/pulls")]) == 1
+    ctx.close()
+
+
+def test_review_srt_edit_equal_to_the_loaded_srt_is_retired(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
+    _seed_once(pg, {CANON_KEY: {"0": BLOCK0, "1": BLOCK1 + " ПРАВКА"}})
+    _open_review(pg, server)
+    pg.evaluate(f"SPA.switchReviewMode('srt', '{VIDEO_SLUG}')")
+    pg.wait_for_function("document.querySelectorAll('.cell.uk.edited').length > 0", timeout=10000)
+
+    assert _stored(pg, CANON_KEY) == {"1": BLOCK1 + " ПРАВКА"}
+    assert pg.locator(".cell.uk.edited").count() == 1
+    ctx.close()
+
+
+def test_an_edit_row_just_opened_survives_the_preview_reloading_the_same_srt(server, browser):
+    """SPA.addEdit opens a row holding the block's own text. The preview re-reads
+    the SRT on a route() re-entry (a manifest refresh) — here by the same loader,
+    because the mock player leaves no iframe for a re-entry to reuse."""
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=False)
+    _open_preview_in_edit_mode(pg, server)
+    pg.evaluate("window._vimeoPlayer._currentTime = 3; window.previewState.currentTime = 3;")
+    pg.evaluate("SPA.addEdit()")
+    assert _stored(pg, CANON_KEY) == {"0": BLOCK0}
+
+    assert pg.evaluate("loadSubtitleLang('uk')") is True
+
+    assert _stored(pg, CANON_KEY) == {"0": BLOCK0}
+    assert pg.locator(".edit-item").count() == 1
+    ctx.close()
+
+
+def test_edits_of_a_merged_pr_are_cleared_and_never_overwrite_what_main_has_now(server, browser):
+    """The device finalized its PR; the PR merged (GitHub deleted the branch) and
+    another reviewer has since rewritten the same block on main."""
+    calls = []
+    landed_then_rewritten = "Перший, правка з цього пристрою"
+    sync_opts = {
+        "get_mode": "404",
+        "branch_gone": True,
+        "prs_by_head": [
+            {"number": PR_NUMBER, "state": "closed", "merged_at": "2026-11-01T10:00:00Z", "html_url": PR_URL}
+        ],
+    }
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    _seed_once(
+        pg,
+        {
+            CANON_KEY: {"0": landed_then_rewritten},
+            VIDEO_BASE_KEY: {
+                "doc": {CANON_KEY: {"0": landed_then_rewritten}},
+                "sha": None,
+                "revision": 2,
+                "prNumber": PR_NUMBER,
+                "prUrl": PR_URL,
+                "nodeId": PR_NODE_ID,
+                "prDraft": False,
+                "fileShas": {},
+                "branch": VIDEO_BRANCH,
+            },
+        },
+    )
+    _open_preview_in_edit_mode(pg, server)
+
+    pg.wait_for_function("k => localStorage.getItem(k) === null", arg=CANON_KEY, timeout=10000)
+    pg.wait_for_function("document.querySelectorAll('.edit-item').length === 0", timeout=5000)
+    assert pg.locator("#sync-chip").is_hidden(), "a merged PR is not one 'in review'"
+    assert calls == [], "opening the page writes nothing"
+
+    _edit_preview_block_at(pg, 7, " NEWEDIT")
+    _wait_chip_synced(pg)
+
+    assert _video_state_docs(calls)[-1]["entries"] == {CANON_KEY: {"1": BLOCK1 + " NEWEDIT"}}
+    committed = _committed_srts(calls)[-1]
+    assert BLOCK0 in committed and landed_then_rewritten not in committed
+    assert not [c for c in calls if "convertPullRequestToDraft" in json.dumps(c["body"] or {})]
     ctx.close()
 
 

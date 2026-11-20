@@ -260,6 +260,22 @@ function mergeSyncDocs(baseEntries, localEntries, remoteEntries) {
   };
 }
 
+// What is left of the local entries once the sync PR has MERGED. An edit equal
+// to the base is one that PR carried, so it is on the base branch now; one that
+// differs was typed after the last sync and has been proposed nowhere. Marks
+// are notes for the reviewer, not file content — no merge lands them.
+function dropLandedItems(baseEntries, localEntries) {
+  var bf = flattenDoc(baseEntries || {});
+  var lf = flattenDoc(localEntries || {});
+  var out = {};
+  Object.keys(lf).forEach(function (k) {
+    var kind = JSON.parse(k)[1];
+    var isEdit = kind === 'blocks' || kind === 'edits';
+    if (!(isEdit && lf[k] === bf[k])) out[k] = lf[k];
+  });
+  return unflattenDoc(out);
+}
+
 function makeSyncDoc(talkId, entries, revision, client, nowIso) {
   return {
     version: 1,
@@ -571,9 +587,18 @@ function createSyncEngine(opts) {
       if (meta.sha !== null) return Promise.resolve();
       return readRemote().then(function (remote) {
         if (remote) { integrateRemote(remote); return; }
-        // A known PR means the branch exists and the state file was removed
-        // by a finalize — the push below simply recreates it.
-        if (meta.prNumber) return;
+        // A known PR with no state file is a finalized one — as long as its
+        // branch is still there, and then the push below simply recreates
+        // the file. A finalized PR is also the kind that gets merged, which
+        // deletes the branch: say so in the words the self-heal reads.
+        if (meta.prNumber) {
+          return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
+            if (!e || e.status !== 404) throw e;
+            var gone = new Error('Branch ' + branch + ' not found');
+            gone.status = 404;
+            throw gone;
+          });
+        }
         return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
           if (pr) {
             // existing PR on the deterministic branch (finalized on another
@@ -726,9 +751,17 @@ function createSyncEngine(opts) {
       // externally or on another device): wipe the stale branch/PR coordinates
       // and re-create the branch, state file and a fresh draft PR. One retry only
       // — `healed` guards against a loop if the re-create somehow 404s again.
+      // A branch gone because its PR MERGED took the base's edits with it: they
+      // are dropped first, so the fresh PR proposes only what is new. A lookup
+      // that fails rejects into the handler below — pushing on a guess would
+      // propose the landed edits again.
       if (isBranchGone(e) && !healed) {
-        resetBase();
-        return doFlush(fopts, true);
+        return syncPrWasMerged().then(function (merged) {
+          if (disposed) return;
+          if (merged) dropLandedLocally();
+          resetBase();
+          return doFlush(fopts, true);
+        });
       }
       throw e;
     }).catch(function (e) {
@@ -751,21 +784,57 @@ function createSyncEngine(opts) {
   //    edits are then on no branch at all, and the merge in pull() would read
   //    "base == local, remote absent" as nothing to do — leaving edits on
   //    screen under a hidden chip. So the base is wiped and the chip says "not
-  //    synced". But nothing is pushed for it: the branch may be gone because a
-  //    maintainer closed the PR, or because it was MERGED and this device
-  //    still holds the edits — and opening a page must not reopen the one or
-  //    propose the other again. `orphaned` holds the push back, across reloads,
-  //    until the user edits (notifyEdit) or asks for a sync (a forced flush).
+  //    synced". But nothing is pushed for it: a maintainer may have closed the
+  //    PR, and opening a page must not reopen it. `orphaned` holds the push
+  //    back, across reloads, until the user edits (notifyEdit) or asks for a
+  //    sync (a forced flush).
+  //    A MERGED PR is the third case, and the base is what tells it apart per
+  //    edit: what equals the base has landed and is dropped here, on the
+  //    device, so that it is never proposed a second time — by then over
+  //    whatever the block has become. Only what was typed since stays held.
   function markOrphanedIfBranchGone() {
     var shaAtProbe = meta.sha;
     return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
       if (!e || e.status !== 404) throw e;
-      // A push re-created the branch while the probe was out: its base stands.
-      if (disposed || meta.sha !== shaAtProbe) return;
-      resetBase();
-      meta.orphaned = true;
-      saveMeta();
-      setStatus('pending');
+      return syncPrWasMerged().then(function (merged) {
+        // A push re-created the branch while we were asking: its base stands.
+        if (disposed || meta.sha !== shaAtProbe) return;
+        var left = merged ? dropLandedLocally() : collect();
+        resetBase();
+        if (!Object.keys(left).length) { clearDirty(); setStatus('idle'); return; }
+        meta.orphaned = true;
+        saveMeta();
+        setStatus('pending');
+      }, function (lookupError) {
+        if (lookupError && lookupError.status === 401) throw lookupError;
+        // Unknown is not "closed": wiping the base now would leave no way to
+        // tell landed from newer once the answer does come. Keep it, so the
+        // next pull asks again — but the edits are on no branch meanwhile,
+        // and the chip has to say so.
+        if (!disposed && meta.sha === shaAtProbe) setStatus('pending');
+      });
+    });
+  }
+
+  function dropLandedLocally() {
+    var left = dropLandedItems(meta.doc, collect());
+    var changedKeys = apply(left);
+    if (changedKeys.length) onRemoteApplied(changedKeys);
+    return left;
+  }
+
+  // Did the PR this base was synced with merge? The deterministic branch name
+  // is shared by every PR generation, so the cached number picks ours; without
+  // one, the newest PR is the one whose end deleted the branch. An engine
+  // wired without the lookup cannot know, and "not merged" keeps every edit.
+  function syncPrWasMerged() {
+    if (!gh.listPrsByHead) return Promise.resolve(false);
+    var known = meta.prNumber;
+    return gh.listPrsByHead(api, token, owner, branch, fetchImpl).then(function (prs) {
+      prs = prs || [];
+      var ours = prs.filter(function (pr) { return pr.number === known; })[0];
+      var pr = known ? ours : prs[0];
+      return !!(pr && pr.merged);
     });
   }
 
@@ -808,11 +877,33 @@ function createSyncEngine(opts) {
           setStatus('pending');
           return;
         }
-        if (meta.sha !== null && Object.keys(collect()).length) return markOrphanedIfBranchGone();
+        // A base that names a state file (sha) or a PR claims a branch. With
+        // no state file on it, check the branch is still there — whether or
+        // not edits remain: a base left pointing at a dead PR keeps the chip
+        // on it and sends the next edit to a branch that does not exist.
+        if (meta.sha !== null || meta.prNumber) return markOrphanedIfBranchGone();
+        // The edits an orphaned base held back can all go without a push —
+        // retired once the file caught up with them. Nothing is un-synced then.
+        if (meta.orphaned && !dirty && !Object.keys(collect()).length) {
+          delete meta.orphaned;
+          saveMeta();
+          setStatus('idle');
+        }
         return;
       }
       if (remote.sha === meta.sha) {
-        if (!dirty && !finalizing && status !== 'synced') setStatus('synced');
+        if (dirty || finalizing) return;
+        // Storage can move away from the base with no notifyEdit behind it —
+        // the SPA retires an edit once the loaded file already has its text.
+        // Nobody would push that, and the PR would go on proposing it.
+        if (mergeSyncDocs(meta.doc || {}, collect(), remote.entries).changedVsRemote) {
+          dirty = true;
+          editSeq += 1;
+          armDebounce();
+          setStatus('pending');
+          return;
+        }
+        if (status !== 'synced') setStatus('synced');
         return;
       }
       var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
@@ -847,7 +938,11 @@ function createSyncEngine(opts) {
     if (disposed) return Promise.resolve();
     return pull(true).then(function () {
       if (meta.prNumber) {
-        if (meta.prDraft === false && !dirty && status !== 'ready') setStatus('ready');
+        // Only over a pull that had nothing to say: 'pending' is its "these
+        // edits are on no branch" and 'error' its revoked token, and a cached
+        // PR answers neither.
+        var quiet = status === 'idle' || status === 'synced';
+        if (meta.prDraft === false && !dirty && quiet) setStatus('ready');
         return;
       }
       return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
@@ -955,6 +1050,7 @@ if (typeof module !== 'undefined' && module.exports) {
     flattenDoc: flattenDoc,
     unflattenDoc: unflattenDoc,
     mergeSyncDocs: mergeSyncDocs,
+    dropLandedItems: dropLandedItems,
     makeSyncDoc: makeSyncDoc,
     createSyncEngine: createSyncEngine,
   };

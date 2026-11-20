@@ -325,3 +325,38 @@ describe('cross-mode consolidation (preview <-> review)', () => {
     assert.strictEqual(b.getItem(backupKeyFor(PREVIEW_KEY)), previewRaw);
   });
 });
+
+describe('retireLandedEdits (an edit whose text the loaded file already has)', () => {
+  const { retireLandedEdits } = require('../site/js/edit_store');
+  const BLOCKS = [{ text: 'нуль' }, { text: 'один' }, { text: 'два' }];
+
+  it('drops the edits equal to the block text and keeps the rest', () => {
+    const res = retireLandedEdits({ 0: 'нуль', 1: 'ОДИН, змінено', 2: 'два' }, BLOCKS);
+    assert.deepStrictEqual(res.kept, { 1: 'ОДИН, змінено' });
+    assert.deepStrictEqual(res.retired, { 0: 'нуль', 2: 'два' });
+  });
+
+  it('compares the exact text: whitespace or case is a real difference', () => {
+    const res = retireLandedEdits({ 0: 'нуль ', 1: 'Один' }, BLOCKS);
+    assert.deepStrictEqual(res.kept, { 0: 'нуль ', 1: 'Один' });
+    assert.deepStrictEqual(res.retired, {});
+  });
+
+  it('keeps an edit whose block is not in the file (nothing to compare it with)', () => {
+    const res = retireLandedEdits({ 7: 'два', 2: 'два' }, BLOCKS);
+    assert.deepStrictEqual(res.kept, { 7: 'два' });
+    assert.deepStrictEqual(res.retired, { 2: 'два' });
+  });
+
+  it('retires nothing when no blocks were loaded (a failed fetch parses to none)', () => {
+    assert.deepStrictEqual(retireLandedEdits({ 0: '' }, []), { kept: { 0: '' }, retired: {} });
+    assert.deepStrictEqual(retireLandedEdits({ 0: 'x' }, null), { kept: { 0: 'x' }, retired: {} });
+  });
+
+  it('does not mutate its input and tolerates no edits', () => {
+    const edits = { 0: 'нуль' };
+    retireLandedEdits(edits, BLOCKS);
+    assert.deepStrictEqual(edits, { 0: 'нуль' });
+    assert.deepStrictEqual(retireLandedEdits(null, BLOCKS), { kept: {}, retired: {} });
+  });
+});
