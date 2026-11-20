@@ -95,6 +95,16 @@ var GH_REQUEST_TIMEOUT_MS = 15000;
 // A timed-out write is not a failed write: GitHub may have applied it.
 //
 // opts: { timeoutMs, what, fetchImpl } — `what` names the work in the message.
+// GitHub sends reads with `Cache-Control: private, max-age=60`, and a write to
+// another URL does not invalidate them, so a read that decides whether to create
+// something must skip the HTTP cache or it can miss what was just created.
+function freshFetch(fetchImpl) {
+  return function (url, init) {
+    var f = fetchImpl || fetch;
+    return f(url, Object.assign({}, init, { cache: 'no-store' }));
+  };
+}
+
 function withDeadline(run, opts) {
   opts = opts || {};
   var timeoutMs = opts.timeoutMs != null ? opts.timeoutMs : GH_REQUEST_TIMEOUT_MS;
@@ -621,6 +631,7 @@ if (typeof module !== 'undefined' && module.exports) {
     passQa: passQa,
     getRepoPermissions: getRepoPermissions,
     withDeadline: withDeadline,
+    freshFetch: freshFetch,
     GH_REQUEST_TIMEOUT_MS: GH_REQUEST_TIMEOUT_MS,
     isIntegrationAccessError: isIntegrationAccessError,
     utf8ToBase64: utf8ToBase64,

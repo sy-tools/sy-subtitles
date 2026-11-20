@@ -212,6 +212,7 @@ function createMarkerSyncEngine(opts) {
   var fetchImpl = opts.fetchImpl;
   var now = opts.now || function () { return Date.now(); };
   var deadline = typeof withDeadline === 'function' ? withDeadline : require('./github_api').withDeadline;
+  var fresh = typeof freshFetch === 'function' ? freshFetch : require('./github_api').freshFetch;
 
   var title = markerIssueTitle(talkId, videoSlug);
   var metaKey = markerMetaKey(talkId, videoSlug);
@@ -438,12 +439,9 @@ function createMarkerSyncEngine(opts) {
   // browser answers "no such issue" for a minute after this client created
   // one. So every page of the list is requested past that cache, and an empty
   // list is still never the last word on an issue whose number is known.
-  function pastHttpCache(f) {
-    return function (url, init) { return f(url, Object.assign({}, init, { cache: 'no-store' })); };
-  }
   function findByTitle() {
     return request(function (f) {
-      return gh.listIssuesByLabel(api, token, MARKER_LABEL, pastHttpCache(f));
+      return gh.listIssuesByLabel(api, token, MARKER_LABEL, fresh(f));
     }).then(function (rows) {
       var found = (rows || []).filter(function (r) { return r.title === title; })[0] || null;
       if (found) {
