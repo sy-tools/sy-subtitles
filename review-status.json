@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-19T18:47:25.854807+00:00",
+  "updated_at": "2026-11-20T07:05:25.420065+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -690,11 +690,11 @@
       "updated_at": "2026-11-06T23:02:06Z"
     },
     "1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis": {
-      "status": "in-progress",
+      "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 1182,
-      "updated_at": "2026-11-19T18:47:05Z",
-      "operator_stage": "translator",
+      "updated_at": "2026-11-20T07:02:01Z",
+      "operator_stage": "ready",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1362
     },
