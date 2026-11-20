@@ -199,11 +199,8 @@ function setIssueState(api, token, number, state, fetchImpl) {
 }
 
 // GET /issues?labels=<label>&state=all — the LIST API is immediately consistent
-// (a just-created issue is present at once), unlike the search index. That is
-// true of GitHub, not of the browser: the list is served `max-age=60`, and a
-// copy cached before a create says "no such issue" for a minute after it.
-// Every caller lists in order to decide whether to CREATE (the markers issue,
-// a talk's review issue), so the list always goes past the HTTP cache.
+// (a just-created issue is present at once), unlike the search index. This is the
+// sole deterministic re-attach mechanism for marker-sync (matched by title).
 // Teardown CLOSES (not deletes) issues, so the labelled set grows unbounded over
 // the corpus; page through until a short page so an older talk's issue past the
 // first 100 is still found (else re-attach would create a duplicate). Capped at
@@ -219,7 +216,7 @@ function listIssuesByLabel(api, token, label, fetchImpl) {
       html_url: r.html_url, body: r.body || '', updated_at: r.updated_at || '' };
   }
   function fetchPage(page, acc) {
-    return ghJson(base + '&page=' + page, token, BYPASS_HTTP_CACHE, fetchImpl).then(function (list) {
+    return ghJson(base + '&page=' + page, token, null, fetchImpl).then(function (list) {
       var rows = list || [];
       acc = acc.concat(rows.map(mapRow));
       if (rows.length === PER_PAGE && page < MAX_PAGES) return fetchPage(page + 1, acc);

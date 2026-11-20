@@ -436,10 +436,15 @@ function createMarkerSyncEngine(opts) {
   // deterministic title. GitHub's list shows a new issue at once; a BROWSER
   // need not — the list is served `max-age=60`, and from its HTTP cache a
   // browser answers "no such issue" for a minute after this client created
-  // one. So the list is fetched past that cache (github_api), and an empty
+  // one. So every page of the list is requested past that cache, and an empty
   // list is still never the last word on an issue whose number is known.
+  function pastHttpCache(f) {
+    return function (url, init) { return f(url, Object.assign({}, init, { cache: 'no-store' })); };
+  }
   function findByTitle() {
-    return request(function (f) { return gh.listIssuesByLabel(api, token, MARKER_LABEL, f); }).then(function (rows) {
+    return request(function (f) {
+      return gh.listIssuesByLabel(api, token, MARKER_LABEL, pastHttpCache(f));
+    }).then(function (rows) {
       var found = (rows || []).filter(function (r) { return r.title === title; })[0] || null;
       if (found) {
         meta.number = found.number; meta.nodeId = found.node_id; meta.url = found.html_url || meta.url;

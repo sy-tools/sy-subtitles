@@ -1253,6 +1253,13 @@ describe('marker_sync: a request that never answers', () => {
     assert.strictEqual(signals[0].aborted, true);
   });
 
+  it('the issue list is requested past the HTTP cache', async () => {
+    const inits = [];
+    const engine = signalEngine(async (url, init) => { inits.push(init); return []; });
+    await engine.attach();
+    assert.deepStrictEqual(inits.map((init) => [init.method, init.cache]), [['GET', 'no-store']]);
+  });
+
   it("the deadline is above GitHub's own request limit, and bounded", () => {
     assert.ok(MARKER_REQUEST_TIMEOUT_MS >= 20000 && MARKER_REQUEST_TIMEOUT_MS <= 60000);
   });

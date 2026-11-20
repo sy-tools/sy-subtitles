@@ -362,18 +362,6 @@ describe('issue sync primitives (marker sync)', () => {
     assert.strictEqual(rows[100].title, 'LAST');
     assert.strictEqual(calls.length, 2, 'stops after the short second page');
   });
-  it('listIssuesByLabel bypasses the HTTP cache on every page', async () => {
-    // Its callers list to decide whether to CREATE an issue; a list cached from
-    // before a create (GitHub: max-age=60) would have them create a second one.
-    const full = Array.from({ length: 100 }, (_, i) => ({ number: i + 1, title: 'T' + (i + 1) }));
-    const inits = [];
-    const f = async (url, init) => {
-      inits.push(init);
-      return new Response(JSON.stringify(/&page=1$/.test(url) ? full : []), { status: 200 });
-    };
-    await listIssuesByLabel(API, 'gho_x', 'markers', f);
-    assert.deepStrictEqual(inits.map((init) => init.cache), ['no-store', 'no-store']);
-  });
   it('ensureLabel POSTs and tolerates a 422 already-exists', async () => {
     const f422 = routerFetch([{ method: 'POST', match: '/labels', status: 422,
       payload: { message: 'already_exists' } }], []);
