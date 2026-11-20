@@ -1,6 +1,7 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const { authHeaders, exchangeCode, getViewer, listIssueComments, passQa } = require('../site/js/github_api');
+const { authHeaders, exchangeCode, getViewer, listIssueComments, passQa,
+  withDeadline, GH_REQUEST_TIMEOUT_MS } = require('../site/js/github_api');
 
 // Statuses the Fetch spec forbids a body on; Response throws otherwise.
 const NULL_BODY_STATUSES = new Set([204, 205, 304]);
@@ -978,5 +979,99 @@ describe('listIssuesByLabelConditional', () => {
     await assert.rejects(
       listIssuesByLabelConditional(API, 'gho_x', 'talk-review', { mapRow: pick }, pagedFetch(world, [])),
       (e) => e.status === 403 && e.headerGet('X-RateLimit-Remaining') === '0' && /rate limit/.test(e.message));
+  });
+});
+
+describe('withDeadline', () => {
+  const flush = () => new Promise((res) => setImmediate(res));
+  const hung = (signals) => (url, init) => { signals.push(init && init.signal); return new Promise(() => {}); };
+
+  function addAssigneesWithin(timeoutMs, fetchImpl) {
+    return withDeadline((f) => addAssignees('https://api.github.com/repos/o/r', 'gho_x', 42, ['tester'], f),
+      { timeoutMs, fetchImpl });
+  }
+
+  it('gives up after 15 seconds by default', async (t) => {
+    assert.strictEqual(GH_REQUEST_TIMEOUT_MS, 15000);
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let outcome = 'pending';
+    const p = withDeadline((f) => f('https://api.example/x', {}), { fetchImpl: hung([]) });
+    p.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
+    t.mock.timers.tick(14999);
+    await flush();
+    assert.strictEqual(outcome, 'pending');
+    t.mock.timers.tick(1);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError');
+  });
+
+  it('rejects at the deadline — not before — with a TimeoutError naming the work, and aborts the request', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    let outcome = 'pending';
+    const p = withDeadline((f) => f('https://api.example/x', { method: 'POST' }),
+      { timeoutMs: 500, what: 'claim', fetchImpl: hung(signals) });
+    p.then(() => { outcome = 'resolved'; }, () => { outcome = 'rejected'; });
+
+    t.mock.timers.tick(499);
+    await flush();
+    assert.strictEqual(outcome, 'pending');
+    assert.ok(signals.length === 1 && signals[0] && !signals[0].aborted);
+
+    t.mock.timers.tick(1);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError' && e.status === undefined
+      && e.message === 'claim: no answer in 500 ms');
+    assert.ok(signals[0].aborted, 'the hung request was aborted');
+  });
+
+  it('hands the init through to the fetch with the signal added, and leaves the original alone', async () => {
+    const seen = [];
+    const init = { method: 'POST', headers: { A: 'b' } };
+    await withDeadline((f) => f('https://api.example/x', init),
+      { timeoutMs: 500, fetchImpl: async (url, i) => { seen.push([url, i]); return 'ok'; } });
+    assert.strictEqual(seen[0][0], 'https://api.example/x');
+    assert.strictEqual(seen[0][1].method, 'POST');
+    assert.deepStrictEqual(seen[0][1].headers, { A: 'b' });
+    assert.ok(seen[0][1].signal);
+    assert.strictEqual(init.signal, undefined);
+  });
+
+  it('a body that never arrives times out too', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const headersOnly = async () => ({ ok: true, status: 201, json: () => new Promise(() => {}) });
+    const p = addAssigneesWithin(500, headersOnly);
+    await flush();
+    t.mock.timers.tick(500);
+    await assert.rejects(p, (e) => e.name === 'TimeoutError');
+  });
+
+  it('an answer in time resolves with it and leaves no timer behind', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    const answered = fetchDouble(201, { number: 42, assignees: [{ login: 'tester' }] });
+    const issue = await addAssigneesWithin(500, (url, init) => { signals.push(init.signal); return answered(url, init); });
+    assert.deepStrictEqual(issue.assignees, [{ login: 'tester' }]);
+    t.mock.timers.tick(60000);
+    assert.ok(signals.length === 1 && !signals[0].aborted, 'the timer was cleared: nothing is aborted later');
+  });
+
+  it('a failure in time rejects with the request\'s own error and clears the timer', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    const refused = fetchDouble(403, { message: 'nope' });
+    await assert.rejects(
+      addAssigneesWithin(500, (url, init) => { signals.push(init.signal); return refused(url, init); }),
+      (e) => e.status === 403 && e.message === 'nope');
+    t.mock.timers.tick(60000);
+    assert.ok(signals.length === 1 && !signals[0].aborted);
+  });
+
+  it('work that throws before it returns a promise rejects with that error', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const signals = [];
+    const p = withDeadline((f) => { f('https://api.example/x', {}); throw new Error('boom'); },
+      { timeoutMs: 500, fetchImpl: hung(signals) });
+    await assert.rejects(p, /boom/);
+    t.mock.timers.tick(60000);
+    assert.ok(!signals[0].aborted, 'the timer was cleared');
   });
 });

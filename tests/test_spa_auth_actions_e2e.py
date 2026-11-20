@@ -63,6 +63,7 @@ MOCK_TREE = {
 }
 
 SECOND_TALK = "2002-02-02_Second-Talk"
+EXPERT_ALL = "localStorage.setItem('sy_expert_mode', '1');localStorage.setItem('sy_filter_expert', 'all');"
 
 TWO_TALK_TREE = {
     "sha": "tree2",
@@ -529,6 +530,123 @@ def test_take_for_review_ignored_by_github_is_not_reported_as_taken(server, brow
     ctx.close()
 
 
+SHORT_CLAIM_DEADLINE = "window.__SY_CLAIM_TIMEOUT_MS = 400;"
+TAKE_BUTTON_IS_FREE = (
+    "document.querySelector('.take-review-btn') && !document.querySelector('.take-review-btn').disabled"
+)
+REVIEW_ISSUES_LIST = "**/api.github.com/repos/**/issues?labels=talk-review*"
+
+
+def _wait_for_timeout_toast(pg):
+    pg.wait_for_function(
+        "document.getElementById('toast').classList.contains('show')"
+        " && document.getElementById('toast').textContent === t('review.take_timeout')",
+        timeout=5000,
+    )
+
+
+def _never_answer(seen):
+    def hold(route):
+        seen.append({"method": route.request.method, "url": route.request.url})
+
+    return hold
+
+
+def test_take_for_review_gives_up_on_an_assignment_github_never_answers(server, browser):
+    posts = []
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED)
+    pg.add_init_script(SHORT_CLAIM_DEADLINE)
+    pg.route("**/api.github.com/repos/**/issues/42/assignees", _never_answer(posts))
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    pg.click(".take-review-btn")
+
+    _wait_for_timeout_toast(pg)
+    pg.wait_for_function(TAKE_BUTTON_IS_FREE, timeout=5000)
+    assert len(posts) == 1
+    assert pg.evaluate("Object.keys(claimsInFlight)") == []
+    assert (
+        pg.evaluate("reviewStatus.talks['2001-01-01_Test-Talk']")
+        == REVIEW_STATUS_UNASSIGNED["talks"]["2001-01-01_Test-Talk"]
+    ), "an unanswered assignment is not a claim"
+    assert pg.evaluate("Object.keys(reviewClaims)") == []
+    ctx.close()
+
+
+def test_take_for_review_gives_up_on_an_issue_list_github_never_answers(server, browser):
+    calls, lists = [], []
+    ctx, pg = _page(browser, calls, {"version": 1, "talks": {}})
+    pg.add_init_script(EXPERT_ALL + SHORT_CLAIM_DEADLINE)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    assert pg.evaluate("refreshLiveReviewStatus()")["ok"], "the live-status reads of the same endpoint are over"
+    pg.route(REVIEW_ISSUES_LIST, _never_answer(lists))
+    pg.click(".take-review-btn")
+
+    _wait_for_timeout_toast(pg)
+    pg.wait_for_function(TAKE_BUTTON_IS_FREE, timeout=5000)
+    assert pg.evaluate("Object.keys(claimsInFlight)") == []
+    assert len(lists) == 1
+    assert not [c for c in calls if c["method"] == "POST"], "nothing is created on an unanswered duplicate check"
+    ctx.close()
+
+
+def test_a_retry_after_a_create_that_timed_out_claims_the_issue_github_did_create(server, browser):
+    """No answer to POST /issues says nothing about whether the issue exists.
+    Here it does: the retry has to find it, not file the talk's second one."""
+    github = {"issues": []}
+    posts = []
+    ctx, pg = _page(browser, [], {"version": 1, "talks": {}})
+    pg.add_init_script(EXPERT_ALL + SHORT_CLAIM_DEADLINE)
+    pg.route(
+        REVIEW_ISSUES_LIST,
+        lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(github["issues"])),
+    )
+
+    def create_but_never_answer(route):
+        req = route.request
+        posts.append({"url": req.url, "body": json.loads(req.post_data)})
+        github["issues"] = [
+            {
+                "number": 77,
+                "title": json.loads(req.post_data)["title"],
+                "state": "open",
+                "updated_at": "2026-11-19T10:00:00Z",
+            }
+        ]
+
+    def assign(route):
+        posts.append({"url": route.request.url, "body": json.loads(route.request.post_data)})
+        route.fulfill(
+            status=201,
+            content_type="application/json",
+            body=json.dumps({"number": 77, "assignees": [{"login": "tester"}]}),
+        )
+
+    pg.route("**/api.github.com/repos/**/issues", create_but_never_answer)
+    pg.route("**/api.github.com/repos/**/issues/77/assignees", assign)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.wait_for_selector(".take-review-btn", timeout=10000)
+    pg.click(".take-review-btn")
+
+    _wait_for_timeout_toast(pg)
+    pg.wait_for_function(TAKE_BUTTON_IS_FREE, timeout=5000)
+    assert [p["url"].rsplit("/repos/sy-tools/sy-subtitles", 1)[1] for p in posts] == ["/issues"]
+    assert pg.evaluate("Object.keys(reviewClaims)") == []
+
+    pg.click(".take-review-btn")
+    pg.wait_for_function(
+        "reviewStatus.talks['2001-01-01_Test-Talk'] && reviewStatus.talks['2001-01-01_Test-Talk'].reviewer === 'tester'",
+        timeout=5000,
+    )
+    assert [p["url"].rsplit("/repos/sy-tools/sy-subtitles", 1)[1] for p in posts] == [
+        "/issues",
+        "/issues/77/assignees",
+    ], "the retry claims the issue the timed-out request created; it does not create another"
+    assert pg.evaluate("reviewStatus.talks['2001-01-01_Test-Talk'].issue_number") == 77
+    ctx.close()
+
+
 def test_signed_in_review_hides_editor_and_has_no_create_pr(server, browser):
     """Edit-sync v2: signed in, background auto-sync replaces the manual flows.
     The Open-in-GitHub-Editor button is data-gh-hide (present but hidden), and
@@ -844,7 +962,6 @@ def test_review_issue_i_created_for_someone_elses_review_is_not_my_work(server, 
 
 
 PIPELINE_YML = (Path(__file__).parent.parent / ".github" / "workflows" / "subtitle-pipeline.yml").read_text()
-EXPERT_ALL = "localStorage.setItem('sy_expert_mode', '1');localStorage.setItem('sy_filter_expert', 'all');"
 RUN_URL = "https://github.com/sy-tools/sy-subtitles/actions/runs/555"
 
 
