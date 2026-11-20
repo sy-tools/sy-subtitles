@@ -23,7 +23,9 @@ page.route:
      state/PR + final/uk.srt), distinct from the transcript target — v3's
      file-scoped PRs,
   9. an edit the loaded SRT already contains is retired from the device, and
-     the edits of a MERGED sync PR are cleared instead of being proposed again.
+     the edits of a MERGED sync PR are cleared instead of being proposed again
+     — unless no file push carried them, or the row is a placeholder nobody has
+     typed into yet.
 
 The harness mirrors tests/test_spa_auth_actions_e2e.py: a local http.server
 serves site/ with window.__SY_* injected in <head>, the signed-in session is
@@ -969,6 +971,7 @@ VIDEO_BRANCH = f"sync/{LOGIN}/{TALK_ID}--{VIDEO_TARGET}"
 VIDEO_STATE = f".review-sync/{TALK_ID}/{VIDEO_TARGET}.json"
 VIDEO_BASE_KEY = f"sy_sync_base_{TALK_ID}__{VIDEO_TARGET}"
 CANON_KEY = f"srt_edits_{TALK_ID}_{VIDEO_SLUG}_uk"
+HELD_KEY = f"srt_placeholders_{TALK_ID}_{VIDEO_SLUG}_uk"
 BLOCK0 = "Перший субтитр"
 BLOCK1 = "Другий субтитр"
 
@@ -1005,6 +1008,33 @@ def _edit_preview_block_at(pg, seconds, appended):
     cell.press("End")
     cell.type(appended)
     cell.press("Tab")
+
+
+def _synced_video_base(doc, files_doc):
+    """The sync base of a device whose PR was finalized. `files_doc` is the doc its
+    last successful SRT push covered; None for a device that never got one up."""
+    base = {
+        "doc": doc,
+        "sha": None,
+        "revision": 2,
+        "prNumber": PR_NUMBER,
+        "prUrl": PR_URL,
+        "nodeId": PR_NODE_ID,
+        "prDraft": False,
+        "fileShas": {},
+        "branch": VIDEO_BRANCH,
+    }
+    if files_doc is not None:
+        base["filesDoc"] = files_doc
+    return base
+
+
+def _wait_for_video_state_push(pg, calls, count, timeout=10000):
+    waited = 0
+    while len(_video_state_docs(calls)) < count and waited < timeout:
+        pg.wait_for_timeout(100)
+        waited += 100
+    assert len(_video_state_docs(calls)) >= count
 
 
 def _video_state_docs(calls):
@@ -1087,17 +1117,9 @@ def test_edits_of_a_merged_pr_are_cleared_and_never_overwrite_what_main_has_now(
         pg,
         {
             CANON_KEY: {"0": landed_then_rewritten},
-            VIDEO_BASE_KEY: {
-                "doc": {CANON_KEY: {"0": landed_then_rewritten}},
-                "sha": None,
-                "revision": 2,
-                "prNumber": PR_NUMBER,
-                "prUrl": PR_URL,
-                "nodeId": PR_NODE_ID,
-                "prDraft": False,
-                "fileShas": {},
-                "branch": VIDEO_BRANCH,
-            },
+            VIDEO_BASE_KEY: _synced_video_base(
+                {CANON_KEY: {"0": landed_then_rewritten}}, files_doc={CANON_KEY: {"0": landed_then_rewritten}}
+            ),
         },
     )
     _open_preview_in_edit_mode(pg, server)
@@ -1114,6 +1136,183 @@ def test_edits_of_a_merged_pr_are_cleared_and_never_overwrite_what_main_has_now(
     committed = _committed_srts(calls)[-1]
     assert BLOCK0 in committed and landed_then_rewritten not in committed
     assert not [c for c in calls if "convertPullRequestToDraft" in json.dumps(c["body"] or {})]
+    ctx.close()
+
+
+def test_edits_of_a_merged_pr_stay_when_no_file_push_ever_carried_them(server, browser):
+    """The state file reached the branch and the SRT did not, so the merge took nothing of these edits."""
+    calls = []
+    never_committed = "Перший, правка без файлу"
+    sync_opts = {
+        "get_mode": "404",
+        "branch_gone": True,
+        "prs_by_head": [
+            {"number": PR_NUMBER, "state": "closed", "merged_at": "2026-11-01T10:00:00Z", "html_url": PR_URL}
+        ],
+    }
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    _seed_once(
+        pg,
+        {
+            CANON_KEY: {"0": never_committed},
+            VIDEO_BASE_KEY: _synced_video_base({CANON_KEY: {"0": never_committed}}, files_doc=None),
+        },
+    )
+    _open_preview_in_edit_mode(pg, server)
+
+    pg.wait_for_function("k => JSON.parse(localStorage.getItem(k)).sha === null", arg=VIDEO_BASE_KEY, timeout=10000)
+    assert _stored(pg, CANON_KEY) == {"0": never_committed}
+    assert pg.locator(".edit-item").count() == 1
+    assert pg.locator("#sync-chip").is_visible(), "an edit on no branch is shown as not synced"
+    assert calls == [], "opening the page writes nothing"
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 8c. A placeholder — an edit row opened and not typed into yet — is not a
+#     landed edit, on this device or on any other.
+# ---------------------------------------------------------------------------
+
+
+def _capture_in_fullscreen_at(pg, seconds):
+    pg.evaluate(f"window._vimeoPlayer._currentTime = {seconds}; window.previewState.currentTime = {seconds};")
+    pg.evaluate(
+        "(() => { const view = document.getElementById('view-preview');"
+        " view.classList.add('fs-mode'); SPA.addMarkOrEdit(); view.classList.remove('fs-mode'); })()"
+    )
+    pg.evaluate("editSync && editSync.flushSoon()")  # no field loses focus here to cut the 15 s debounce short
+
+
+def _reload_preview_in_edit_mode(pg):
+    pg.reload()
+    pg.wait_for_function(
+        "() => window.previewState && (window.previewState.subtitles || []).length > 0",
+        timeout=10000,
+    )
+    pg.evaluate("SPA.setPreviewMode('edit')")
+
+
+def test_a_row_captured_in_fullscreen_survives_a_reload_until_it_is_typed_into(server, browser):
+    calls = []
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
+    _open_preview_in_edit_mode(pg, server)
+    _capture_in_fullscreen_at(pg, 3)
+    _wait_chip_synced(pg)
+    captured = {CANON_KEY: {"0": BLOCK0}, HELD_KEY: {"0": BLOCK0}}
+    assert _video_state_docs(calls)[-1]["entries"] == captured, "the marker travels with the edit"
+    pushes = len(_video_state_docs(calls))
+
+    _reload_preview_in_edit_mode(pg)
+
+    assert _stored(pg, CANON_KEY) == {"0": BLOCK0}
+    assert pg.locator(".edit-item").count() == 1
+    pg.wait_for_timeout(2500)
+    assert len(_video_state_docs(calls)) == pushes, "nothing was retired, so nothing is pushed"
+
+    _edit_preview_block_at(pg, 3, " ДОПИСАНО")
+    pg.wait_for_function("k => localStorage.getItem(k) === null", arg=HELD_KEY, timeout=5000)
+    _wait_for_video_state_push(pg, calls, pushes + 1)
+    assert _video_state_docs(calls)[-1]["entries"] == {CANON_KEY: {"0": BLOCK0 + " ДОПИСАНО"}}
+    ctx.close()
+
+
+def test_a_placeholder_row_is_not_retired_by_the_review_srt_view(server, browser):
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=False)
+    _seed_once(pg, {CANON_KEY: {"0": BLOCK0, "1": BLOCK1}, HELD_KEY: {"0": BLOCK0}})
+    _open_review(pg, server)
+    pg.evaluate(f"SPA.switchReviewMode('srt', '{VIDEO_SLUG}')")
+    pg.wait_for_function("document.querySelectorAll('.cell.uk.edited').length === 1", timeout=10000)
+
+    assert _stored(pg, CANON_KEY) == {"0": BLOCK0}, "block 1 has landed, block 0 is waiting to be typed into"
+    assert _stored(pg, HELD_KEY) == {"0": BLOCK0}
+    ctx.close()
+
+
+def test_a_row_captured_on_another_device_is_not_swept_from_this_one(server, browser):
+    calls = []
+    captured_elsewhere = {CANON_KEY: {"0": BLOCK0}, HELD_KEY: {"0": BLOCK0}}
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "doc", "doc_entries": captured_elsewhere})
+    _open_preview_in_edit_mode(pg, server)
+    pg.wait_for_function("document.querySelectorAll('.edit-item').length === 1", timeout=10000)
+
+    assert pg.evaluate("loadSubtitleLang('uk')") is True
+
+    assert _stored(pg, CANON_KEY) == {"0": BLOCK0}
+    assert _stored(pg, HELD_KEY) == {"0": BLOCK0}
+    assert pg.locator(".edit-item").count() == 1
+    pg.wait_for_timeout(2500)
+    assert not _review_sync_puts(calls), "the capture must not be taken off the other device's PR"
+    ctx.close()
+
+
+# ---------------------------------------------------------------------------
+# 8d. Where the retiring is wired, and where it must hold back.
+# ---------------------------------------------------------------------------
+
+HI_CANON_KEY = f"srt_edits_{TALK_ID}_{VIDEO_SLUG}_hi"
+SAMPLE_HI_SRT = SAMPLE_UK_SRT.replace("Перший субтитр", "पहला उपशीर्षक").replace("Другий субтитр", "दूसरा उपशीर्षक")
+LEGACY_REVIEW_SRT_KEY = f"review_srt_{TALK_ID}_{VIDEO_SLUG}_en_uk"
+LEGACY_PREVIEW_KEY = f"preview_{TALK_ID}_{VIDEO_SLUG}"
+
+
+def _refuse_canonical_store_writes(pg):
+    """What a full localStorage does to the edit-store migration: it fails, and the session stays on the legacy store."""
+    pg.add_init_script(
+        "(() => { const real = Storage.prototype.setItem;"
+        " Storage.prototype.setItem = function (k, v) {"
+        "   if (String(k).indexOf('srt_edits_') === 0) throw new Error('QuotaExceededError');"
+        "   return real.call(this, k, v); }; })();"
+    )
+
+
+def test_switching_the_review_srt_language_retires_the_landed_edits_of_that_language(server, browser):
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=False)
+    pg.route(
+        "**/raw.githubusercontent.com/**/final/hi.srt",
+        lambda r: r.fulfill(status=200, content_type="text/plain", body=SAMPLE_HI_SRT),
+    )
+    _seed_once(pg, {HI_CANON_KEY: {"0": "पहला उपशीर्षक", "1": "दूसरा, संपादित"}})
+    _open_review(pg, server)
+    pg.evaluate(f"SPA.switchReviewMode('srt', '{VIDEO_SLUG}')")
+    pg.wait_for_function("(window.reviewState.ukBlocks || []).length > 0", timeout=10000)
+    assert _stored(pg, HI_CANON_KEY) == {"0": "पहला उपशीर्षक", "1": "दूसरा, संपादित"}, "uk is open, hi is untouched"
+
+    pg.evaluate("SPA.switchSrtLang('right', 'hi')")
+
+    pg.wait_for_function("document.querySelectorAll('.cell.uk.edited').length === 1", timeout=10000)
+    assert _stored(pg, HI_CANON_KEY) == {"1": "दूसरा, संपादित"}
+    ctx.close()
+
+
+def test_review_srt_on_the_legacy_store_retires_nothing(server, browser):
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=False)
+    _seed_once(
+        pg,
+        {
+            CANON_KEY: {"1": BLOCK1},
+            LEGACY_REVIEW_SRT_KEY: {"marks": {}, "edits": {"0": "Перший, рядкова правка"}},
+        },
+    )
+    _refuse_canonical_store_writes(pg)
+    _open_review(pg, server)
+    pg.evaluate(f"SPA.switchReviewMode('srt', '{VIDEO_SLUG}')")
+    pg.wait_for_function("document.querySelectorAll('.cell.uk.edited').length === 1", timeout=10000)
+
+    assert pg.evaluate("window.reviewState._legacyEdits") is True
+    assert _stored(pg, CANON_KEY) == {"1": BLOCK1}
+    assert _stored(pg, LEGACY_REVIEW_SRT_KEY)["edits"] == {"0": "Перший, рядкова правка"}
+    ctx.close()
+
+
+def test_preview_on_the_legacy_store_retires_nothing(server, browser):
+    ctx, pg = _page(browser, [], REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"}, signed_in=False)
+    _seed_once(pg, {LEGACY_PREVIEW_KEY: {"mode": "edit", "markers": [], "edits": {"uk": {"0": BLOCK0}}}})
+    _refuse_canonical_store_writes(pg)
+    _open_preview_in_edit_mode(pg, server)
+
+    assert pg.evaluate("window.previewState._legacyEdits") is True
+    assert _stored(pg, LEGACY_PREVIEW_KEY)["edits"] == {"uk": {"0": BLOCK0}}
+    assert pg.locator(".edit-item").count() == 1
     ctx.close()
 
 

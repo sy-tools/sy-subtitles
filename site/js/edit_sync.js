@@ -37,12 +37,13 @@ function syncBaseKey(talkId, target) {
 // file-scoped sync (still local + in "Copy backup").
 function srtSyncTarget(talkId, videoSlug, lang) {
   var canon = 'srt_edits_' + talkId + '_' + videoSlug + '_' + lang;
+  var held = placeholderKeyOf(canon);
   var legacyPrefix = 'review_srt_' + talkId + '_' + videoSlug + '_';
   var suffix = '_' + lang;
   return {
     slug: videoSlug + '-' + lang,
     filter: function (key) {
-      if (key === canon) return true;
+      if (key === canon || key === held) return true;
       return key.indexOf(legacyPrefix) === 0 && key.slice(-suffix.length) === suffix;
     },
   };
@@ -65,19 +66,46 @@ function isSyncSpaceKey(key, talkId) {
   return key === 'review_' + talkId
     || key.indexOf('review_srt_' + talkId + '_') === 0
     || key.indexOf('preview_' + talkId + '_') === 0
-    || key.indexOf('srt_edits_' + talkId + '_') === 0;
+    || key.indexOf('srt_edits_' + talkId + '_') === 0
+    || key.indexOf('srt_placeholders_' + talkId + '_') === 0;
 }
 
 // Canonical per-block stores (js/edit_store.js) are a bare {blockIdx: text}
 // map, unlike the {marks/markers/edits} wrappers of the other entries.
 function isCanonicalKey(key) { return String(key).indexOf('srt_edits_') === 0; }
 
+// The placeholder markers of a canonical store (js/edit_store.js) have the
+// same bare shape and sync as its sibling entry. They have to travel: a device
+// that adopted a captured row without its marker would see an edit equal to
+// the file, retire it, and push the removal back to the device that made it.
+function isPlaceholderKey(key) { return String(key).indexOf('srt_placeholders_') === 0; }
+function placeholderKeyOf(canonicalKey) {
+  return 'srt_placeholders_' + String(canonicalKey).slice('srt_edits_'.length);
+}
+function isBlockMapKey(key) { return isCanonicalKey(key) || isPlaceholderKey(key); }
+
+// A marker holds only while its edit reads the same (edit_store.js). One that
+// outlived that is noise, and would keep an otherwise empty doc — and so its
+// PR — alive.
+function withoutEndedPlaceholders(entries) {
+  Object.keys(entries).filter(isPlaceholderKey).forEach(function (heldKey) {
+    var edits = entries['srt_edits_' + heldKey.slice('srt_placeholders_'.length)] || {};
+    var held = entries[heldKey], live = {};
+    Object.keys(held).forEach(function (idx) {
+      if (held[idx] === edits[idx]) live[idx] = held[idx];
+    });
+    if (Object.keys(live).length) entries[heldKey] = live;
+    else delete entries[heldKey];
+  });
+  return entries;
+}
+
 // An entry with no marks, no markers and no edits carries nothing worth
 // syncing (e.g. everything was reverted) — treated as absent. `key` selects
 // the entry's shape (canonical block map vs marks/markers/edits wrapper).
 function entryIsEmpty(entry, key) {
   if (!entry) return true;
-  if (isCanonicalKey(key)) return !Object.keys(entry).length;
+  if (isBlockMapKey(key)) return !Object.keys(entry).length;
   if (Object.keys(entry.marks || {}).length) return false;
   if ((entry.markers || []).length) return false;
   var edits = entry.edits || {};
@@ -105,7 +133,7 @@ function collectSyncEntries(talkId, storage, keyFilter) {
     if (entryIsEmpty(parsed, key)) continue;
     entries[key] = parsed;
   }
-  return entries;
+  return withoutEndedPlaceholders(entries);
 }
 
 // Write merged entries back into localStorage; sync-space keys absent from
@@ -150,9 +178,10 @@ function flattenDoc(entries) {
   var flat = {};
   Object.keys(entries || {}).forEach(function (entryKey) {
     var e = entries[entryKey] || {};
-    if (isCanonicalKey(entryKey)) {
+    if (isBlockMapKey(entryKey)) {
+      var kind = isPlaceholderKey(entryKey) ? 'placeholders' : 'blocks';
       Object.keys(e).forEach(function (idx) {
-        flat[JSON.stringify([entryKey, 'blocks', idx])] = JSON.stringify(e[idx]);
+        flat[JSON.stringify([entryKey, kind, idx])] = JSON.stringify(e[idx]);
       });
       return;
     }
@@ -189,7 +218,7 @@ function unflattenDoc(flat) {
     var e = entries[entryKey];
     if (!e) e = entries[entryKey] = { marks: {}, edits: {}, markers: [], blocks: {} };
     var value = JSON.parse(flat[flatKey]);
-    if (kind === 'blocks') {
+    if (kind === 'blocks' || kind === 'placeholders') {
       e.blocks[path[2]] = value;
     } else if (kind === 'marks') {
       e.marks[path[2]] = value;
@@ -215,7 +244,7 @@ function unflattenDoc(flat) {
     // so a byte-different equal doc would cause pointless pushes/re-renders.
     // A merge can leave an entry with no items (every edit deleted) — drop it.
     var isPreview = entryKey.indexOf('preview_') === 0;
-    var norm = isCanonicalKey(entryKey) ? e.blocks
+    var norm = isBlockMapKey(entryKey) ? e.blocks
       : isPreview
         ? { mode: e.mode === undefined ? 'marker' : e.mode, markers: e.markers, edits: e.edits }
         : { marks: e.marks, edits: e.edits };
@@ -264,16 +293,27 @@ function mergeSyncDocs(baseEntries, localEntries, remoteEntries) {
 // to the base is one that PR carried, so it is on the base branch now; one that
 // differs was typed after the last sync and has been proposed nowhere. Marks
 // are notes for the reviewer, not file content — no merge lands them.
-function dropLandedItems(baseEntries, localEntries) {
+// The base is the STATE file, and a PR merges the real files: where the caller
+// commits those (`pushedEntries` given), an edit has landed only if a file push
+// covered it too. The state file can be on the branch with no file behind it.
+function dropLandedItems(baseEntries, localEntries, pushedEntries) {
   var bf = flattenDoc(baseEntries || {});
   var lf = flattenDoc(localEntries || {});
+  var pf = pushedEntries === undefined ? bf : flattenDoc(pushedEntries || {});
   var out = {};
   Object.keys(lf).forEach(function (k) {
     var kind = JSON.parse(k)[1];
     var isEdit = kind === 'blocks' || kind === 'edits';
-    if (!(isEdit && lf[k] === bf[k])) out[k] = lf[k];
+    if (!(isEdit && lf[k] === bf[k] && lf[k] === pf[k]) || isHeld(k)) out[k] = lf[k];
   });
-  return unflattenDoc(out);
+  // A placeholder proposed nothing, so no merge landed it: it stays, waiting
+  // for the typing it was opened for.
+  function isHeld(k) {
+    var p = JSON.parse(k);
+    if (p[1] !== 'blocks') return false;
+    return lf[JSON.stringify([placeholderKeyOf(p[0]), 'placeholders', p[2]])] === lf[k];
+  }
+  return withoutEndedPlaceholders(unflattenDoc(out));
 }
 
 function makeSyncDoc(talkId, entries, revision, client, nowIso) {
@@ -336,6 +376,17 @@ function createSyncEngine(opts) {
   // Rebuilds the real edited files for the currently open view (wiring
   // provides it); their commits make the draft PR diff human-readable.
   var buildFiles = opts.buildFiles || function () { return []; };
+  // An engine that commits real files owes one for every doc it pushes: the
+  // PR merges the files, the state file is deleted before that. Two facts are
+  // kept in the base for it, both about THIS device's own pushes:
+  //   filesPending — a doc went up and its file has not followed yet;
+  //   filesDoc     — the last doc whose file is confirmed on the branch.
+  // A doc adopted from another device moves neither: whether that device got
+  // its file up is not something its state file says.
+  var commitsFiles = typeof opts.buildFiles === 'function';
+  function fileOwed() { return commitsFiles && !!meta.filesPending; }
+  // Where a flush or a pull comes to rest when nothing else is due.
+  function settledStatus() { return fileOwed() ? 'pending' : 'synced'; }
 
   // Last gate before rebuilt file bytes reach GitHub. Collaborators still hold
   // edits containing NBSP in localStorage from before the input fields were
@@ -633,11 +684,15 @@ function createSyncEngine(opts) {
     // sha (409/422) is refreshed once and retried.
     function pushFiles() {
       if (disposed) return Promise.resolve();
+      var covered = local;
       // Invisible characters ONLY: `content` is a whole rebuilt file, and the
       // field-level rule would collapse its newlines and destroy the SRT.
       var files = (buildFiles() || []).map(function (f) {
         return sanitize ? { path: f.path, content: sanitize(f.content) } : f;
       });
+      // Nothing to build means the view's data is not loaded (or the rebuild
+      // threw) — not that the file is up to date. It stays owed.
+      if (!files.length) return Promise.resolve();
       var chain = Promise.resolve();
       files.forEach(function (file) {
         chain = chain.then(function () {
@@ -665,7 +720,11 @@ function createSyncEngine(opts) {
           });
         });
       });
-      return chain;
+      return chain.then(function () {
+        meta.filesDoc = covered;
+        delete meta.filesPending;
+        saveMeta();
+      });
     }
 
     function push() {
@@ -684,6 +743,7 @@ function createSyncEngine(opts) {
         meta.doc = local;
         meta.sha = (res && res.content && res.content.sha) || null;
         meta.revision = revision;
+        if (commitsFiles) meta.filesPending = true;
         if (editSeq === seqAtStart) clearDirty();
         saveMeta();
       }, function (e) {
@@ -731,19 +791,20 @@ function createSyncEngine(opts) {
 
     return ensureRemoteBase().then(function () {
       if (disposed) return;
-      // Same doc as the last push (e.g. an edit typed and reverted): no PUT,
-      // but still make sure the PR exists (its creation may have failed).
+      // Same doc as the last push (e.g. an edit typed and reverted): no state
+      // PUT, but still make sure the PR exists (its creation may have failed)
+      // and that the doc's file went up (its PUT may have failed too).
       var unchanged = meta.sha !== null
         && JSON.stringify(local) === JSON.stringify(meta.doc || {});
-      var step = unchanged
-        ? Promise.resolve()
-        : ensureDraft().then(push).then(pushFiles);
+      var step = !unchanged ? ensureDraft().then(push).then(pushFiles)
+        : fileOwed() ? ensureDraft().then(pushFiles)
+          : Promise.resolve();
       return step.then(ensurePr).then(function () {
         if (disposed) return;
         if (unchanged && editSeq === seqAtStart) clearDirty();
         // A finalize that pre-flushed owns the chip until it is done: 'synced'
         // here would flash a green "done" three requests too early.
-        if (!finalizing) setStatus('synced');
+        if (!finalizing) setStatus(settledStatus());
       });
     }).catch(function (e) {
       if (disposed) return;
@@ -817,24 +878,23 @@ function createSyncEngine(opts) {
   }
 
   function dropLandedLocally() {
-    var left = dropLandedItems(meta.doc, collect());
+    var left = dropLandedItems(meta.doc, collect(), commitsFiles ? (meta.filesDoc || {}) : undefined);
     var changedKeys = apply(left);
     if (changedKeys.length) onRemoteApplied(changedKeys);
     return left;
   }
 
   // Did the PR this base was synced with merge? The deterministic branch name
-  // is shared by every PR generation, so the cached number picks ours; without
-  // one, the newest PR is the one whose end deleted the branch. An engine
-  // wired without the lookup cannot know, and "not merged" keeps every edit.
+  // is shared by every PR generation, so only the cached number picks ours:
+  // without one, the newest PR of the branch may be an earlier generation's,
+  // and its merge says nothing about these edits. An engine wired without the
+  // lookup cannot know either. "Not merged" keeps every edit, held back.
   function syncPrWasMerged() {
-    if (!gh.listPrsByHead) return Promise.resolve(false);
     var known = meta.prNumber;
+    if (!gh.listPrsByHead || !known) return Promise.resolve(false);
     return gh.listPrsByHead(api, token, owner, branch, fetchImpl).then(function (prs) {
-      prs = prs || [];
-      var ours = prs.filter(function (pr) { return pr.number === known; })[0];
-      var pr = known ? ours : prs[0];
-      return !!(pr && pr.merged);
+      var ours = (prs || []).filter(function (pr) { return pr.number === known; })[0];
+      return !!(ours && ours.merged);
     });
   }
 
@@ -903,7 +963,7 @@ function createSyncEngine(opts) {
           setStatus('pending');
           return;
         }
-        if (status !== 'synced') setStatus('synced');
+        if (status !== settledStatus()) setStatus(settledStatus());
         return;
       }
       var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
@@ -921,7 +981,7 @@ function createSyncEngine(opts) {
         armDebounce();
         setStatus('pending');
       } else if (!dirty && !finalizing) {
-        setStatus('synced');
+        setStatus(settledStatus());
       }
     }).catch(function (e) {
       // A rejected promise can carry a falsy reason, so read status defensively.
@@ -937,6 +997,15 @@ function createSyncEngine(opts) {
   function attach() {
     if (disposed) return Promise.resolve();
     return pull(true).then(function () {
+      // A file owed from an earlier session (its PUT failed, or the page closed
+      // between the two PUTs) has no edit coming to push it. Armed once per
+      // page open, not per pull: a view that cannot build the file would spin.
+      if (fileOwed() && meta.sha !== null && !dirty && !disposed) {
+        dirty = true;
+        editSeq += 1;
+        armDebounce();
+        setStatus('pending');
+      }
       if (meta.prNumber) {
         // Only over a pull that had nothing to say: 'pending' is its "these
         // edits are on no branch" and 'error' its revoked token, and a cached
@@ -967,7 +1036,7 @@ function createSyncEngine(opts) {
   // forever). An error already on the chip is a diagnosis — never overwrite it.
   function restingStatus() {
     if (status === 'error') return null;
-    if (dirty) return 'pending';
+    if (dirty || fileOwed()) return 'pending';
     return meta.prDraft === false ? 'ready' : 'synced';
   }
 
@@ -984,8 +1053,12 @@ function createSyncEngine(opts) {
     // be skipped, leaving the chip claiming "synced" for a PR nobody finalized.
     finalizing = true;
     setStatus('syncing');
-    var pre = dirty ? flush() : Promise.resolve();
+    var pre = dirty ? flush() : fileOwed() ? flush({ force: true }) : Promise.resolve();
     return pre.then(function () {
+      // Ready-for-review is an invitation to merge, and the merge takes the
+      // files. The state file — the only other copy on the branch — is about
+      // to be deleted.
+      if (fileOwed()) throw new Error('the edited file is not on the sync branch yet');
       return gh.getFileContent(api, token, path, branch, fetchImpl);
     }).then(function (file) {
       if (file) {

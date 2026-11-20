@@ -2586,7 +2586,7 @@ function loadSubtitleLang(lang) {
       s.subtitles = parseSRT(text);
       s.srtLang = lang;
       console.log('[SPA] SRT loaded (' + lang + '):', s.subtitles.length, 'blocks');
-      retireLandedPreviewEdits(s, lang, text);
+      retireLandedPreviewEdits(s, lang);
       return true;
     })
     .catch(function(err) {
@@ -5236,6 +5236,7 @@ SPA.addEdit = function(opts) {
   if (previewState.edits[lang][idx] === undefined) {
     previewState.edits[lang][idx] = blocks[idx].text;
     savePreviewState();
+    markSrtPlaceholder(previewState.talkId, previewState.videoSlug, lang, idx, blocks[idx].text, localStorage);
     editNotify();
     renderEditList();
     updateClearBtn();
@@ -8695,16 +8696,14 @@ function editNotify() { if (editSync) editSync.notifyEdit(); }
 // push only where one is due.
 function editSyncReconcile() { if (editSync) editSync.pull(true); }
 
-// The preview adds an edit holding the block's own text and waits for typing
-// (SPA.addEdit), which reads exactly like a landed edit. So one file content is
-// swept once: a re-entry onto the same video re-reads the same SRT, and must
-// not close the row the user has just opened.
-function retireLandedPreviewEdits(s, lang, srtText) {
-  if (s !== previewState || !s.edits) return;
-  if (!s._sweptSrt) s._sweptSrt = {};
-  if (s._sweptSrt[lang] === srtText) return;
-  s._sweptSrt[lang] = srtText;
-  var swept = retireLandedEdits(s.edits[lang], s.subtitles);
+// A row SPA.addEdit opened and nobody typed into yet holds the block's own
+// text, which reads exactly like a landed edit: its placeholder marker is what
+// keeps it. A session on the legacy store (the migration failed, so storage is
+// refusing writes) retires nothing — a marker may not have been written either.
+function retireLandedPreviewEdits(s, lang) {
+  if (s !== previewState || !s.edits || s._legacyEdits) return;
+  var swept = retireLandedEdits(s.edits[lang], s.subtitles,
+    loadSrtPlaceholders(s.talkId, s.videoSlug, lang, localStorage));
   if (!Object.keys(swept.retired).length) return;
   s.edits[lang] = swept.kept;
   savePreviewState();
@@ -8717,7 +8716,8 @@ function retireLandedReviewSrtEdits() {
   // there is no block to compare them with.
   if (reviewState._legacyEdits) return;
   var talkId = reviewState.talkId, videoSlug = reviewState.videoSlug, lang = reviewState.srtRightLang;
-  var swept = retireLandedEdits(loadSrtEdits(talkId, videoSlug, lang, localStorage), reviewState.ukBlocks);
+  var swept = retireLandedEdits(loadSrtEdits(talkId, videoSlug, lang, localStorage), reviewState.ukBlocks,
+    loadSrtPlaceholders(talkId, videoSlug, lang, localStorage));
   if (!Object.keys(swept.retired).length) return;
   saveSrtEdits(talkId, videoSlug, lang, swept.kept, localStorage);
   editSyncReconcile();

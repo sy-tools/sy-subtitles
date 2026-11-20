@@ -24,6 +24,17 @@ function srtEditsKey(talkId, videoSlug, lang) {
   return 'srt_edits_' + talkId + '_' + videoSlug + '_' + lang;
 }
 
+// Placeholders: srt_placeholders_<talkId>_<videoSlug>_<lang> -> {blockIdx: text}.
+// The preview opens an edit row holding the block's own text and waits for
+// typing (in fullscreen the row is captured to be worked on later). Such a row
+// reads exactly like an edit that has landed, so it is marked — in a key of its
+// own, leaving the edit store the bare map every reader expects. The marker
+// carries the text it was made for: it holds only while the edit still reads
+// that way, so typing ends it with no cleanup having to run first.
+function srtPlaceholdersKey(talkId, videoSlug, lang) {
+  return 'srt_placeholders_' + talkId + '_' + videoSlug + '_' + lang;
+}
+
 function backupKeyFor(key) { return 'sy_backup_v1_' + key; }
 
 function displacedKeyFor(canonicalKey) {
@@ -58,6 +69,35 @@ function saveSrtEdits(talkId, videoSlug, lang, edits, storage) {
   var key = srtEditsKey(talkId, videoSlug, lang);
   if (!edits || !Object.keys(edits).length) storage.removeItem(key);
   else storage.setItem(key, JSON.stringify(edits));
+  dropEndedPlaceholders(talkId, videoSlug, lang, edits || {}, storage);
+}
+
+function loadSrtPlaceholders(talkId, videoSlug, lang, storage) {
+  return coerceEditMap(readJson(storage, srtPlaceholdersKey(talkId, videoSlug, lang)));
+}
+
+function isPlaceholder(edits, placeholders, idx) {
+  return !!placeholders && typeof placeholders[idx] === 'string' && placeholders[idx] === edits[idx];
+}
+
+// Call AFTER the row's edit is saved: a save drops every marker whose edit is
+// not there to match it.
+function markSrtPlaceholder(talkId, videoSlug, lang, idx, text, storage) {
+  var held = loadSrtPlaceholders(talkId, videoSlug, lang, storage);
+  held[idx] = text;
+  storage.setItem(srtPlaceholdersKey(talkId, videoSlug, lang), JSON.stringify(held));
+}
+
+function dropEndedPlaceholders(talkId, videoSlug, lang, edits, storage) {
+  var key = srtPlaceholdersKey(talkId, videoSlug, lang);
+  if (storage.getItem(key) == null) return;
+  var held = loadSrtPlaceholders(talkId, videoSlug, lang, storage);
+  var live = {};
+  Object.keys(held).forEach(function (idx) {
+    if (isPlaceholder(edits, held, idx)) live[idx] = held[idx];
+  });
+  if (!Object.keys(live).length) storage.removeItem(key);
+  else if (Object.keys(live).length !== Object.keys(held).length) storage.setItem(key, JSON.stringify(live));
 }
 
 // An edit is a full replacement text for one block, so once the file itself
@@ -66,11 +106,13 @@ function saveSrtEdits(talkId, videoSlug, lang, edits, storage) {
 // is per device, and a merge on GitHub does not reach into it. Left alone, it
 // rides along in the next sync PR and overwrites whatever that block has
 // become by then. An index with no block is kept: there is nothing to compare.
-function retireLandedEdits(edits, blocks) {
+// A placeholder is kept too — it never proposed anything, so nothing landed.
+function retireLandedEdits(edits, blocks, placeholders) {
   var kept = {}, retired = {};
   Object.keys(edits || {}).forEach(function (idx) {
     var block = blocks && blocks[idx];
-    if (block && block.text === edits[idx]) retired[idx] = edits[idx];
+    var landed = block && block.text === edits[idx] && !isPlaceholder(edits, placeholders, idx);
+    if (landed) retired[idx] = edits[idx];
     else kept[idx] = edits[idx];
   });
   return { kept: kept, retired: retired };
@@ -273,6 +315,9 @@ if (typeof module !== 'undefined' && module.exports) {
     displacedKeyFor: displacedKeyFor,
     loadSrtEdits: loadSrtEdits,
     saveSrtEdits: saveSrtEdits,
+    srtPlaceholdersKey: srtPlaceholdersKey,
+    loadSrtPlaceholders: loadSrtPlaceholders,
+    markSrtPlaceholder: markSrtPlaceholder,
     retireLandedEdits: retireLandedEdits,
     mapRowsToBlockIdx: mapRowsToBlockIdx,
     splitReviewRowEdits: splitReviewRowEdits,
