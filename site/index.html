@@ -9458,7 +9458,7 @@ function sendReviewClaim(talkId, user, token) {
   };
   if (st && st.issue_number) return claim(st.issue_number).catch(failed);
   return within('list review issues', function(f) {
-    return listIssuesByLabel(API, token, REVIEW_ISSUE_LABEL, f);
+    return listIssuesByLabel(API, token, REVIEW_ISSUE_LABEL, freshFetch(f));
   }).then(function(rows) {
     var existing = pickReviewIssue(rows, talkId);
     if (existing) return claim(existing.number);
