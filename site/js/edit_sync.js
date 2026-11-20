@@ -354,7 +354,11 @@ function createSyncEngine(opts) {
       prDraft: meta.prDraft, branch: branch, dirty: dirty, error: lastError };
   }
   function setStatus(s, err) { status = s; lastError = err || null; onStatus(s, info()); }
-  function saveMeta() { storage.setItem(syncBaseKey(talkId, target), JSON.stringify(meta)); }
+  function saveMeta() {
+    // `orphaned` describes edits with no base; any base that is saved ends it.
+    if (meta.sha !== null) delete meta.orphaned;
+    storage.setItem(syncBaseKey(talkId, target), JSON.stringify(meta));
+  }
 
   function parseRemote(file) {
     var doc = null;
@@ -421,6 +425,9 @@ function createSyncEngine(opts) {
 
   function notifyEdit() {
     if (disposed) return;
+    // A real edit ends the wait an orphaned base imposes (markOrphanedIfBranchGone) —
+    // in storage too, so that a page closed before the push still pushes it.
+    if (meta.orphaned) { delete meta.orphaned; saveMeta(); }
     dirty = true;
     editSeq += 1;
     armDebounce();
@@ -743,18 +750,21 @@ function createSyncEngine(opts) {
   //  - the branch is gone (PR closed + branch deleted, here or elsewhere). The
   //    edits are then on no branch at all, and the merge in pull() would read
   //    "base == local, remote absent" as nothing to do — leaving edits on
-  //    screen under a hidden chip. Nothing proves they were deleted on purpose
-  //    rather than lost with the branch, so they are kept and pushed again from
-  //    a pristine base: the same answer doFlush gives a "Branch not found".
-  function rearmIfBranchGone() {
+  //    screen under a hidden chip. So the base is wiped and the chip says "not
+  //    synced". But nothing is pushed for it: the branch may be gone because a
+  //    maintainer closed the PR, or because it was MERGED and this device
+  //    still holds the edits — and opening a page must not reopen the one or
+  //    propose the other again. `orphaned` holds the push back, across reloads,
+  //    until the user edits (notifyEdit) or asks for a sync (a forced flush).
+  function markOrphanedIfBranchGone() {
     var shaAtProbe = meta.sha;
     return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
       if (!e || e.status !== 404) throw e;
+      // A push re-created the branch while the probe was out: its base stands.
       if (disposed || meta.sha !== shaAtProbe) return;
       resetBase();
-      dirty = true;
-      editSeq += 1;
-      armDebounce();
+      meta.orphaned = true;
+      saveMeta();
       setStatus('pending');
     });
   }
@@ -787,6 +797,10 @@ function createSyncEngine(opts) {
         // notifyEdit() fires — arm a push so the first sync still creates the
         // branch + state file + draft PR instead of waiting for a fresh edit.
         var pending = mergeSyncDocs(meta.doc || {}, collect(), {});
+        if (pending.changedVsRemote && meta.orphaned) {
+          setStatus('pending');
+          return;
+        }
         if (pending.changedVsRemote) {
           dirty = true;
           editSeq += 1;
@@ -794,7 +808,7 @@ function createSyncEngine(opts) {
           setStatus('pending');
           return;
         }
-        if (meta.sha !== null && Object.keys(collect()).length) return rearmIfBranchGone();
+        if (meta.sha !== null && Object.keys(collect()).length) return markOrphanedIfBranchGone();
         return;
       }
       if (remote.sha === meta.sha) {

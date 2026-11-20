@@ -903,28 +903,123 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
     };
   }
 
-  it('branch gone: the local edits are un-synced — re-armed, never left under a hidden chip', async () => {
-    const { engine, gh, storage } = makeEngine({ branchGone: true }, seeded());
+  const WRITES = ['createRef', 'putFile', 'createPull'];
+  const writes = (gh) => gh.calls.filter((c) => WRITES.includes(c[0])).map((c) => c[0]);
+  const base = (storage) => JSON.parse(storage.getItem(syncBaseKey(TALK)));
+
+  it('branch gone: the edits show as not synced, and opening the page pushes nothing', async () => {
+    const { engine, gh, storage, timers } = makeEngine({ branchGone: true }, seeded());
     await engine.attach();
     assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits, 'the edits are kept');
-    assert.strictEqual(engine.getInfo().status, 'pending', 'edits on screen must show a chip');
-    const base = JSON.parse(storage.getItem(syncBaseKey(TALK)));
-    assert.strictEqual(base.sha, null, 'the stale base is wiped');
-    assert.deepStrictEqual(base.doc, {});
+    assert.strictEqual(engine.getInfo().status, 'pending', 'edits on screen must show a chip, and not a synced one');
+    assert.strictEqual(base(storage).sha, null, 'the stale base is wiped');
+    assert.deepStrictEqual(base(storage).doc, {});
+    assert.strictEqual(engine.getInfo().dirty, false);
+    assert.deepStrictEqual(timers.delays(), [], 'no push is armed');
+    assert.deepStrictEqual(writes(gh), []);
+  });
 
+  it('branch gone: none of the automatic triggers re-creates the branch or the PR', async () => {
+    const { engine, gh, timers } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    await engine.flush();                        // `online`
+    await engine.flush({ keepalive: true });     // tab hidden, pagehide
+    engine.flushSoon();                          // a field losing focus
+    await engine.pull(true);                     // the tab focused again
+    await engine.pull(true);
+    timers.fire(60000);
+    await settle();
+    assert.deepStrictEqual(writes(gh), []);
+    assert.strictEqual(engine.getInfo().status, 'pending');
+  });
+
+  it('branch gone: opening the page again later still pushes nothing', async () => {
+    const first = makeEngine({ branchGone: true }, seeded());
+    await first.engine.attach();
+    await first.engine.destroy();
+    const { engine, gh, timers } = makeEngine({ branchGone: true }, {}, { storage: first.storage });
+    await engine.attach();
+    assert.deepStrictEqual(timers.delays(), []);
+    assert.deepStrictEqual(writes(gh), []);
+    assert.strictEqual(engine.getInfo().status, 'pending');
+  });
+
+  it('branch gone: the next real edit re-creates the branch and a draft PR with ALL the edits', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    localEdit(storage, 4, 'four');
+    engine.notifyEdit();
     await engine.flush();
-    assert.strictEqual(gh.calls.filter((c) => c[0] === 'createRef').length, 1);
-    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, ENTRY.edits);
+    assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, Object.assign({ 4: 'four' }, ENTRY.edits));
     assert.strictEqual(engine.getInfo().status, 'synced');
     assert.strictEqual(engine.getInfo().prNumber, 77);
   });
 
-  it('branch gone with a cached PR: same re-arm, the dead PR coordinates are dropped', async () => {
-    const { engine } = makeEngine({ branchGone: true },
+  it('branch gone: an edit the page closed on before its push is pushed on the next open', async () => {
+    const first = makeEngine({ branchGone: true }, seeded());
+    await first.engine.attach();
+    localEdit(first.storage, 4, 'four');
+    first.engine.notifyEdit();
+    await first.engine.destroy();
+    const { engine, gh, timers } = makeEngine({ branchGone: true }, {}, { storage: first.storage });
+    await engine.attach();
+    assert.strictEqual(timers.delays().length, 1, 'a push is armed');
+    await engine.flush();
+    assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
+  });
+
+  it('branch gone: "sync now" is the user asking, and it pushes', async () => {
+    const { engine, gh } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    await engine.flush({ force: true });
+    assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, ENTRY.edits);
+    assert.strictEqual(engine.getInfo().status, 'synced');
+  });
+
+  it('branch gone, then the branch is back with the state file: it is merged as usual', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true }, seeded());
+    await engine.attach();
+    const fresh = makeEngine({ remote: remoteDoc({ 1: 'one', 2: 'two', 3: 'three' }, 1, 'sha_back') },
+      {}, { storage });
+    await fresh.engine.attach();
+    assert.strictEqual(fresh.engine.getInfo().status, 'synced');
+    assert.strictEqual(base(storage).sha, 'sha_back');
+    assert.strictEqual(base(storage).orphaned, undefined);
+    assert.deepStrictEqual(writes(gh).concat(writes(fresh.gh)), []);
+  });
+
+  it('branch gone with a cached PR: the dead PR coordinates are dropped, nothing is pushed', async () => {
+    const { engine, gh } = makeEngine({ branchGone: true },
       seeded({ prNumber: 12, prUrl: 'https://github.com/x/pull/12', nodeId: 'PR_n12', prDraft: true }));
     await engine.attach();
     assert.strictEqual(engine.getInfo().status, 'pending');
     assert.strictEqual(engine.getInfo().prNumber, null);
+    assert.deepStrictEqual(writes(gh), []);
+  });
+
+  it('a "branch gone" answer that arrives after a push re-created the branch does not wipe the new base', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true }, seeded());
+    const probeAnswer = (() => { let release; const p = new Promise((r) => { release = r; }); return { p, release }; })();
+    const realProbe = gh.getBranchHeadSha;
+    gh.getBranchHeadSha = async (api, token, branch) => {
+      if (branch === 'main') return realProbe(api, token, branch);
+      await probeAnswer.p;                       // asked while the branch was gone, answered late
+      const e = new Error('Not Found'); e.status = 404; throw e;
+    };
+    const pulling = engine.pull(true);
+    await settle();
+    localEdit(storage, 4, 'four');
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    const pushed = base(storage);
+    probeAnswer.release();
+    await pulling;
+    assert.deepStrictEqual(base(storage), pushed, 'the base of the push stands');
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.strictEqual(engine.getInfo().prNumber, 77);
   });
 
   it('branch alive (finalized on another device): nothing is re-pushed', async () => {
