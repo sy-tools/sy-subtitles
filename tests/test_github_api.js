@@ -1093,3 +1093,20 @@ describe('withDeadline', () => {
     assert.ok(!signals[0].aborted, 'the timer was cleared');
   });
 });
+
+describe('freshFetch — a read that guards a create must not come from the HTTP cache', () => {
+  const { freshFetch } = require('../site/js/github_api');
+  it('adds cache: no-store and keeps method, headers and signal', async () => {
+    const seen = [];
+    const signal = new AbortController().signal;
+    const f = freshFetch((url, init) => { seen.push({ url, init }); return Promise.resolve('ok'); });
+    const init = { method: 'GET', headers: { Authorization: 'Bearer x' }, signal };
+    assert.strictEqual(await f('u', init), 'ok');
+    assert.deepStrictEqual(seen[0].init, { method: 'GET', headers: { Authorization: 'Bearer x' }, signal, cache: 'no-store' });
+    assert.strictEqual(init.cache, undefined, 'the caller init is not mutated');
+  });
+  it('the review-claim issue list goes through freshFetch', () => {
+    const html = require('fs').readFileSync(require('path').join(__dirname, '..', 'site', 'index.html'), 'utf8');
+    assert.match(html, /listIssuesByLabel\(API, token, REVIEW_ISSUE_LABEL, freshFetch\(f\)\)/);
+  });
+});
