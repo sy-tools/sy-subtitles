@@ -17,3 +17,6 @@ videos:
   title: Diwali Puja
   video_ref: r1AF1GXUUGQBVPWUhaTBlWWlhZV0I
   sync: primary
+amruta_delivery:
+- date: '2026-11-20'
+  commit: 9a47900e9541f867493b472dff13b499d53d9ed2
