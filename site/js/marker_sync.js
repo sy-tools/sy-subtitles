@@ -516,16 +516,24 @@ function createMarkerSyncEngine(opts) {
     }).catch(fail);
   }
 
+  // As in mergeRemote, what the issue is about to be given becomes base BEFORE
+  // the request leaves. The create can land while its answer is never handled
+  // (page closed, engine destroyed): a marker deleted in between is then in the
+  // issue and in no base, and the reopened page would merge it back in as
+  // another device's. If the create fails instead, base runs ahead of an issue
+  // that does not exist — which costs nothing: the retry sends the list as it
+  // is by then, and a marker removed meanwhile only gains a tombstone.
   function createFromLocal() {
     var seqAtStart = editSeq;
     var live = getMarkers() || [];
     var local = settleTombstones(live);
-    saveMeta();
     if (local.length !== live.length) setMarkers(local);
-    if (!local.length) { clearDirty(); setStatus('idle'); return; }
+    if (!local.length) { saveMeta(); clearDirty(); setStatus('idle'); return; }
     // Snapshot NOW: `local` may be the SPA's live array, which a splice during
     // the request changes in place — base must be what the issue was given.
     var sent = snapshotMarkers(local), carried = Object.keys(stones);
+    meta.base = sent;
+    saveMeta();
     return request(function (f) { return gh.ensureLabel(api, token, MARKER_LABEL, f); }).then(function () {
       return request(function (f) {
         return gh.createIssue(api, token,
@@ -534,7 +542,6 @@ function createMarkerSyncEngine(opts) {
     }).then(function (issue) {
       if (disposed) return;
       meta.number = issue.number; meta.url = issue.html_url; meta.nodeId = issue.node_id;
-      meta.base = sent;
       markDeletionsWritten(carried);
       if (editSeq === seqAtStart) clearDirty();
       setStatus('synced');

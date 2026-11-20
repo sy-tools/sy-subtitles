@@ -1180,6 +1180,43 @@ describe('marker_sync: meta is persisted when the merge happens', () => {
     await h2.engine.attach();
     assert.deepStrictEqual(h2.liveTimes(), [2, 3]);
   });
+  it('a marker deleted while the issue is being created stays deleted after the page is closed', async () => {
+    // The create lands WITH marker 1, but the page is gone before the answer
+    // is handled. What was sent has to be base before the request leaves, or
+    // the deletion is recorded nowhere and the reopened page merges it back.
+    const h = lagHarness(ALL, { noIssue: true, onCreate: (hh) => { hh.remove(1); hh.engine.destroy(); } });
+    await h.engine.attach();
+    h.engine.notifyEdit();
+    await h.engine.flush();
+    assert.deepStrictEqual(h.serverTimes(), [1, 2, 3], 'the create landed; the page died before handling it');
+    assert.deepStrictEqual(h.meta().base.map((m) => m.time), [1, 2, 3], 'base is what the issue was given');
+    assert.strictEqual(h.stones()['1|a'].writtenAt, 0, 'the deletion is recorded, and not as written');
+    const h2 = lagHarness(h.live, { tabOf: h });
+    await h2.engine.attach();
+    assert.deepStrictEqual(h2.liveTimes(), [2, 3]);
+    await h2.engine.flush();
+    assert.deepStrictEqual(h2.serverTimes(), [2, 3]);
+  });
+
+  it('a create that failed leaves nothing behind that the retry would lose', async () => {
+    // Base now runs ahead of an issue that does not exist: the retry still
+    // creates it, from the list as it is by then.
+    const h = lagHarness(ALL, { noIssue: true });
+    await h.engine.attach();
+    h.engine.notifyEdit();
+    h.failNextCreate = true;
+    await h.engine.flush();
+    assert.strictEqual(h.server.exists, false);
+    assert.strictEqual(h.engine.getInfo().dirty, true);
+    h.remove(1);
+    await h.engine.destroy();
+    const h2 = lagHarness(h.live, { tabOf: h });
+    await h2.engine.attach();
+    assert.strictEqual(h2.engine.getInfo().dirty, true, 'the reopened page still has an issue to create');
+    await h2.engine.flush();
+    assert.deepStrictEqual(h2.serverTimes(), [2, 3]);
+    assert.deepStrictEqual(h2.liveTimes(), [2, 3]);
+  });
 });
 
 describe('marker_sync: a request that never answers', () => {
