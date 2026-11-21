@@ -304,7 +304,10 @@ function mergeSyncDocs(baseEntries, localEntries, remoteEntries) {
 // had pushed. Everything else stays: an edit the merge did not carry, a mark
 // (a note for the reviewer, never file content), and a placeholder, which
 // proposed nothing.
-function dropEditsInFile(localEntries, editsKey, texts) {
+// `sanitize` is what the push passes the whole file through. Two texts it
+// makes equal produce the same pushed file, so an edit differing from the
+// file only by what it strips (NBSP, zero-width) proposes nothing either.
+function dropEditsInFile(localEntries, editsKey, texts, sanitize) {
   var entries = Object.assign({}, localEntries || {});
   var entry = editsKey && entries[editsKey];
   if (!entry || !texts) return entries;
@@ -312,8 +315,10 @@ function dropEditsInFile(localEntries, editsKey, texts) {
   var edits = canonical ? entry : (entry.edits || {});
   var held = canonical ? (entries[placeholderKeyOf(editsKey)] || {}) : {};
   var kept = {};
+  function asPushed(text) { return sanitize ? sanitize(text) : text; }
   Object.keys(edits).forEach(function (idx) {
-    var inFile = typeof edits[idx] === 'string' && texts[idx] === edits[idx];
+    var inFile = typeof edits[idx] === 'string' && typeof texts[idx] === 'string'
+      && asPushed(texts[idx]) === asPushed(edits[idx]);
     if (!inFile || held[idx] === edits[idx]) kept[idx] = edits[idx];
   });
   var left = canonical ? kept : Object.assign({}, entry, { edits: kept });
@@ -873,24 +878,34 @@ function createSyncEngine(opts) {
   }
 
   function dropLandedLocally(texts) {
-    var left = dropEditsInFile(collect(), editsKey, texts);
+    var left = dropEditsInFile(collect(), editsKey, texts, sanitize);
     var changedKeys = apply(left);
     if (changedKeys.length) onRemoteApplied(changedKeys);
     return left;
   }
 
-  // The PR this base was synced with, if it merged. The deterministic branch
-  // name is shared by every PR generation, so only the cached number picks
-  // ours: without one, the newest PR of the branch may be an earlier
-  // generation's, and its merge says nothing about these edits. An engine
-  // wired without the lookup cannot know either. "Not merged" keeps every
-  // edit, held back.
+  // The PR this base was synced with, if it merged — null if it did not, or
+  // if the cached number cannot be trusted to be that PR.
+  // The deterministic branch name is shared by every PR generation, and the
+  // cached number can be an earlier generation's: a pull adopts the state file
+  // another device pushed for its own, newer PR, and the number stays. The
+  // state this base holds was on the branch that is now gone, so its PR is
+  // the newest one opened from it; an older number says nothing about these
+  // edits. Without a number, or wired without the lookup, nothing is known
+  // either. "Not merged" keeps every edit, held back.
+  // Rejects when the answers cannot both be true: GitHub closes a PR as its
+  // head branch is deleted, so "open" beside a branch that is gone — or a
+  // list that does not reach our PR yet — is a read of an earlier moment,
+  // not a closed PR. The caller treats it as a lookup that failed.
   function mergedSyncPr() {
     var known = meta.prNumber;
     if (!gh.listPrsByHead || !known) return Promise.resolve(null);
     return gh.listPrsByHead(api, token, owner, branch, fetchImpl).then(function (prs) {
-      var ours = (prs || []).filter(function (pr) { return pr.number === known; })[0];
-      return ours && ours.merged ? ours : null;
+      var newest = (prs || []).reduce(function (a, pr) { return !a || pr.number > a.number ? pr : a; }, null);
+      if (newest && newest.number > known) return null;
+      var settled = newest && newest.number === known && (newest.merged || newest.state !== 'open');
+      if (!settled) throw new Error('GitHub has not settled what became of sync PR #' + known);
+      return newest.merged ? newest : null;
     });
   }
 

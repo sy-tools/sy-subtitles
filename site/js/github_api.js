@@ -374,8 +374,12 @@ function issueHasAssignee(issue, login) {
   return ((issue && issue.assignees) || []).some(function (a) { return a && a.login === login; });
 }
 
+// Read past the HTTP cache, for every caller: the answer is either "is this
+// branch still there" — and a cached one keeps a deleted branch alive for a
+// minute, long enough to push to it or to take a merged PR for a live one —
+// or the commit a new branch starts from. Neither is ever asked in a loop.
 function getBranchHeadSha(api, token, branch, fetchImpl) {
-  return ghJson(api + '/git/ref/heads/' + branch, token, null, fetchImpl)
+  return ghJson(api + '/git/ref/heads/' + branch, token, BYPASS_HTTP_CACHE, fetchImpl)
     .then(function (r) { return r.object.sha; });
 }
 

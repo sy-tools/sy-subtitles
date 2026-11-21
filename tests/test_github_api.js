@@ -226,6 +226,15 @@ describe('branch + contents + pull primitives', () => {
       payload: { object: { sha: 'abc123' } } }], calls);
     assert.strictEqual(await getBranchHeadSha(API, 'gho_x', 'main', f), 'abc123');
   });
+  it('getBranchHeadSha bypasses the HTTP cache: a branch deleted a moment ago must not answer "alive"', async () => {
+    let seenInit = null;
+    const f = async (url, init) => {
+      seenInit = init;
+      return new Response(JSON.stringify({ object: { sha: 'abc123' } }), { status: 200 });
+    };
+    await getBranchHeadSha(API, 'gho_x', 'sync/u/t', f);
+    assert.strictEqual(seenInit.cache, 'no-store');
+  });
   it('createRef POSTs refs/heads/<name> with the sha', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'POST', match: '/git/refs', status: 201,

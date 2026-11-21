@@ -107,11 +107,17 @@ function dropEndedPlaceholders(talkId, videoSlug, lang, edits, storage) {
 // rides along in the next sync PR and overwrites whatever that block has
 // become by then. An index with no block is kept: there is nothing to compare.
 // A placeholder is kept too — it never proposed anything, so nothing landed.
+// Both texts are read as a sync push writes them: it strips invisible
+// characters from the whole file, so an edit that differs from the block only
+// by an NBSP or a zero-width character proposes nothing.
 function retireLandedEdits(edits, blocks, placeholders) {
   var kept = {}, retired = {};
+  var asPushed = typeof sanitizeInvisible === 'function'
+    ? sanitizeInvisible : require('./text_sanitize').sanitizeInvisible;
   Object.keys(edits || {}).forEach(function (idx) {
     var block = blocks && blocks[idx];
-    var landed = block && block.text === edits[idx] && !isPlaceholder(edits, placeholders, idx);
+    var landed = block && typeof block.text === 'string' && typeof edits[idx] === 'string'
+      && asPushed(block.text) === asPushed(edits[idx]) && !isPlaceholder(edits, placeholders, idx);
     if (landed) retired[idx] = edits[idx];
     else kept[idx] = edits[idx];
   });

@@ -1391,17 +1391,107 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
 
   it('the PR this device synced with decides, not a later one from the same branch', async () => {
     // The branch name is deterministic, so it carries every PR generation.
-    const laterMerged = [{ number: 15, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' },
+    const laterMerged = [{ number: 15, state: 'closed', merged: true, mergeCommitSha: 'mergesha15' },
       { number: 12, state: 'closed', merged: false, mergeCommitSha: null }];
-    const kept = makeEngine(mergedWith(ALL_LANDED, laterMerged), seeded(cachedPr), FACT);
+    const kept = makeEngine(Object.assign(mergedWith(ALL_LANDED, laterMerged),
+      { commits: { mergesha15: { [FILE]: ALL_LANDED } } }), seeded(cachedPr), FACT);
     await kept.engine.attach();
     assert.deepStrictEqual(edits(kept.storage), ENTRY.edits, '#12 never merged');
+    assert.deepStrictEqual(mergeReads(kept.gh), [], '#15 is not the PR this base names');
+  });
 
+  // The cached number can be an earlier generation's: a pull adopts another
+  // device's state file — which that device pushed for ITS new PR — and the
+  // number stays. Only the newest PR of the branch can be the one the state
+  // just held belonged to, so an older number proves nothing about it.
+  it('a cached PR that is not the newest of the branch says nothing: its merge is not read', async () => {
     const laterClosed = [{ number: 15, state: 'closed', merged: false, mergeCommitSha: null },
       { number: 12, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' }];
-    const cleared = makeEngine(mergedWith(ALL_LANDED, laterClosed), seeded(cachedPr), FACT);
-    await cleared.engine.attach();
-    assert.strictEqual(cleared.storage.getItem(RKEY), null, '#12 merged');
+    const { engine, gh, storage } = makeEngine(mergedWith(ALL_LANDED, laterClosed), seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.deepStrictEqual(edits(storage), ENTRY.edits, 'the edits may be #15\'s, which never merged');
+    assert.deepStrictEqual(mergeReads(gh), []);
+    assert.strictEqual(base(storage).orphaned, true, 'kept and held, like any branch that is simply gone');
+    assert.strictEqual(base(storage).prNumber, null);
+    assert.strictEqual(engine.getInfo().status, 'pending');
+    assert.deepStrictEqual(writes(gh), []);
+  });
+
+  it('a cached PR older than a later MERGED one is not compared with either merge', async () => {
+    const bothMerged = [{ number: 15, state: 'closed', merged: true, mergeCommitSha: 'mergesha15' },
+      { number: 12, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' }];
+    const { engine, gh, storage } = makeEngine(Object.assign(mergedWith(ALL_LANDED, bothMerged),
+      { commits: { mergesha12: { [FILE]: ALL_LANDED }, mergesha15: { [FILE]: ALL_LANDED } } }),
+    seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
+    assert.deepStrictEqual(mergeReads(gh), []);
+  });
+
+  it('a state file adopted from another device\'s NEW PR is not judged by the old PR\'s merge', async () => {
+    // This device synced with #12, which merged. Another device re-created the
+    // branch as #15 and pushed; the pull below adopts that state — the number
+    // stays 12. #15 is then closed without a merge and its branch deleted.
+    let live = remoteDoc({ 1: 'one', 2: 'two', 3: 'three' }, 9, 'sha_of_15');
+    let gone = false;
+    const prs = [{ number: 15, state: 'closed', merged: false, mergeCommitSha: null },
+      { number: 12, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' }];
+    const { engine, gh, storage } = makeEngine(
+      { remote: () => live, prs: prs, commits: { mergesha12: { [FILE]: ALL_LANDED } } }, seeded(cachedPr), FACT);
+    const probe = gh.getBranchHeadSha;
+    gh.getBranchHeadSha = async (api, token, branch) => {
+      if (gone && branch !== 'main') throw Object.assign(new Error('Not Found'), { status: 404 });
+      return probe(api, token, branch);
+    };
+    await engine.attach();
+    assert.strictEqual(base(storage).sha, 'sha_of_15', 'the other device\'s state was adopted');
+    live = null; gone = true;
+    await engine.pull(true);
+    assert.deepStrictEqual(edits(storage), ENTRY.edits, 'nothing #15 proposed ever merged');
+    assert.deepStrictEqual(mergeReads(gh), []);
+  });
+
+  // GitHub closes a PR when its head branch is deleted. "Our PR is open" next
+  // to "its branch is gone" is two reads of different moments, and so is a
+  // list that does not know our PR yet. Neither is "closed".
+  const OPEN = [{ number: 12, state: 'open', merged: false, mergeCommitSha: null }];
+  const unsettled = [
+    ['listed as still open', OPEN],
+    ['missing from an empty list', []],
+    ['missing from a list that ends before it', [{ number: 9, state: 'closed', merged: true, mergeCommitSha: 'mergesha9' }]],
+  ];
+  unsettled.forEach(([what, firstAnswer]) => {
+    it('branch gone, our PR ' + what + ': nothing is dropped or forgotten, the next pull asks again', async () => {
+      let answer = firstAnswer;
+      const { engine, gh, storage, timers } = makeEngine(mergedWith(ALL_LANDED, () => answer), seeded(cachedPr), FACT);
+      await engine.attach();
+      assert.deepStrictEqual(edits(storage), ENTRY.edits);
+      assert.strictEqual(base(storage).sha, 'sha_gone', 'the base stands');
+      assert.strictEqual(base(storage).prNumber, 12, 'the PR number is what finds the merge — keep it');
+      assert.strictEqual(base(storage).orphaned, undefined);
+      assert.strictEqual(engine.getInfo().status, 'pending', 'edits on screen never sit under a hidden chip');
+      assert.deepStrictEqual(timers.delays(), []);
+      assert.deepStrictEqual(writes(gh), []);
+      assert.deepStrictEqual(mergeReads(gh), []);
+      answer = MERGED;
+      await engine.pull(true);
+      assert.strictEqual(storage.getItem(RKEY), null, 'once GitHub agrees with itself, the landed edits go');
+      assert.strictEqual(engine.getInfo().status, 'idle');
+    });
+
+    it('a push that finds the branch gone and our PR ' + what + ' pushes nothing', async () => {
+      const init = seeded(cachedPr);
+      init[RKEY] = JSON.stringify({ marks: {}, edits: Object.assign({ 4: 'four' }, ENTRY.edits) });
+      const { engine, gh, storage, timers } = makeEngine(mergedWith(ALL_LANDED, firstAnswer), init, FACT);
+      await engine.attach();
+      timers.fire(15000);
+      await settle();
+      assert.deepStrictEqual(writes(gh), [], 'a landed edit must not be proposed again on a guess');
+      assert.strictEqual(engine.getInfo().status, 'error');
+      assert.strictEqual(base(storage).prNumber, 12);
+      assert.strictEqual(base(storage).sha, 'sha_gone');
+      assert.deepStrictEqual(edits(storage), Object.assign({ 4: 'four' }, ENTRY.edits));
+    });
   });
 
   it('with no PR number cached, a merged PR of the branch is not taken for this one', async () => {
@@ -1516,6 +1606,98 @@ describe('dropEditsInFile (what a merged PR leaves of the local edits)', () => {
     const local = { [CANON]: { 0: 'a', 1: 'x' } };
     dropEditsInFile(local, CANON, ['a']);
     assert.deepStrictEqual(local, { [CANON]: { 0: 'a', 1: 'x' } });
+  });
+});
+
+describe('dropEditsInFile compares an edit as the push writes it', () => {
+  const { dropEditsInFile } = require('../site/js/edit_sync');
+  const { sanitizeInvisible: clean } = require('../site/js/text_sanitize');
+  const CANON = 'srt_edits_' + TALK + '_video1_uk';
+
+  it('an edit holding NBSP or zero-width characters has landed once the file reads its cleaned text', () => {
+    const local = { [CANON]: { 0: 'one\u00a0two', 1: 'three\u200b', 2: 'fo\u00adur', 3: 'five' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['one two', 'three', 'four', 'FIVE'], clean),
+      { [CANON]: { 3: 'five' } });
+  });
+
+  it('the file is read the same way: characters the push would strip from it are no difference', () => {
+    const local = { [CANON]: { 0: 'one two' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['one\u00a0two'], clean), {});
+  });
+
+  it('what the sanitizer leaves alone is still a difference', () => {
+    const local = { [CANON]: { 0: 'one  two', 1: 'three ' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['one two', 'three'], clean), local);
+  });
+
+  it('with no sanitizer the comparison is the bare one', () => {
+    const local = { [CANON]: { 0: 'one\u00a0two', 1: 'b' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['one two', 'b']), { [CANON]: { 0: 'one\u00a0two' } });
+  });
+
+  it('a placeholder is told by its own stored text, not by the cleaned one', () => {
+    const PH = 'srt_placeholders_' + TALK + '_video1_uk';
+    const local = { [CANON]: { 0: 'one\u00a0two' }, [PH]: { 0: 'one\u00a0two' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['one two'], clean), local);
+  });
+});
+
+// The whole way round, with the SPA's own builder and parser: what is stored
+// -> the file the push builds -> the bytes it sends -> the same file read back
+// at the merge commit -> the stored edit is recognised in it.
+describe('engine: an edit with invisible characters is recognised in the file its own push wrote', () => {
+  const { parseSRT } = require('../site/js/preview_srt_parser');
+  const { applyEditsToSrt } = require('../site/js/preview_state');
+  const { srtEditsKey, loadSrtEdits } = require('../site/js/edit_store');
+  const { sanitizeInvisible: clean } = require('../site/js/text_sanitize');
+  const CANON = srtEditsKey(TALK, 'video1', 'uk');
+  const tgt = srtSyncTarget(TALK, 'video1', 'uk');
+  const BLOCKS = parseSRT('1\n00:00:01,000 --> 00:00:02,000\nнуль\n\n2\n00:00:03,000 --> 00:00:04,000\nодин\n\n'
+    + '3\n00:00:05,000 --> 00:00:06,000\nдва\n\n4\n00:00:07,000 --> 00:00:08,000\nтри\n\n');
+  // index.html syncFileTexts('srt')
+  const srtTexts = (content) => parseSRT(content).map((b) => b.text);
+  const STORED = {
+    0: 'нуль\u00a0і\u202fще',
+    1: '\u200bодин\ufeff, змі\u00adнено',
+    3: 'три, без невидимого',
+  };
+
+  function wired(over, storageInit) {
+    const h = makeEngine(over, storageInit, {
+      target: tgt.slug, entryFilter: tgt.filter, filePath: tgt.filePath, editsKey: tgt.editsKey,
+      parseFile: srtTexts, sanitize: clean,
+      buildFiles: () => [{ path: tgt.filePath,
+        content: applyEditsToSrt(BLOCKS, loadSrtEdits(TALK, 'video1', 'uk', h.storage)) }],
+    });
+    return h;
+  }
+  const dump = (storage) => {
+    const out = {};
+    for (let i = 0; i < storage.length; i++) out[storage.key(i)] = storage.getItem(storage.key(i));
+    return out;
+  };
+
+  it('stored edit -> built file -> sanitized push -> parsed merge commit: every edit has landed', async () => {
+    const first = wired(undefined, { [CANON]: JSON.stringify(STORED) });
+    let pushedFile = null;
+    const put = first.gh.putFile;
+    first.gh.putFile = async (api, token, opts) => {
+      if (opts.path === tgt.filePath) pushedFile = opts.content;
+      return put(api, token, opts);
+    };
+    first.engine.notifyEdit();
+    await first.engine.flush();
+    assert.ok(pushedFile, 'the SRT was pushed');
+    assert.ok(!/[\u00a0\u202f\u200b\ufeff\u00ad]/.test(pushedFile), 'the push sends no invisible characters');
+    assert.deepStrictEqual(JSON.parse(first.storage.getItem(CANON)), STORED, 'the store still holds them');
+
+    // The PR merges exactly what was pushed; the branch is deleted.
+    const later = wired({ branchGone: true,
+      prs: [{ number: 77, state: 'closed', merged: true, mergeCommitSha: 'merge77' }],
+      commits: { merge77: { [tgt.filePath]: pushedFile } } }, dump(first.storage));
+    await later.engine.attach();
+    assert.strictEqual(later.storage.getItem(CANON), null, 'every edit is in the merged file');
+    assert.strictEqual(later.engine.getInfo().status, 'idle');
   });
 });
 

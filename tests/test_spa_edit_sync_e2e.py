@@ -1217,6 +1217,29 @@ def test_edits_of_a_merged_pr_are_cleared_and_never_overwrite_what_main_has_now(
     ctx.close()
 
 
+def test_an_edit_holding_invisible_characters_is_cleared_once_its_cleaned_text_has_merged(server, browser):
+    """The push strips \u00a0 and zero-width characters from the file it commits,
+    so the merge commit holds the cleaned text while the device still stores
+    the edit as it was typed."""
+    calls = []
+    as_stored = "Перший,\u00a0правка з цього\u200b пристрою"
+    as_merged = "Перший, правка з цього пристрою"
+    sync_opts = _pr_merged_with({VIDEO_SRT_PATH: SAMPLE_UK_SRT.replace(BLOCK0, as_merged)})
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    _seed_once(
+        pg,
+        {
+            CANON_KEY: {"0": as_stored},
+            VIDEO_BASE_KEY: _finalized_base({CANON_KEY: {"0": as_stored}}, VIDEO_BRANCH),
+        },
+    )
+    _open_preview_in_edit_mode(pg, server)
+
+    pg.wait_for_function("k => localStorage.getItem(k) === null", arg=CANON_KEY, timeout=10000)
+    assert calls == [], "opening the page writes nothing"
+    ctx.close()
+
+
 def _assert_the_edit_is_kept_and_shown_as_not_synced(pg, calls, edit_text):
     assert _stored(pg, CANON_KEY) == {"0": edit_text}
     assert pg.locator(".edit-item").count() == 1

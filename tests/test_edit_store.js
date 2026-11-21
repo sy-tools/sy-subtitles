@@ -342,6 +342,19 @@ describe('retireLandedEdits (an edit whose text the loaded file already has)', (
     assert.deepStrictEqual(res.retired, {});
   });
 
+  it('reads both sides as the push writes them: invisible characters are no difference', () => {
+    // The push strips them from the whole file, so such an edit proposes nothing.
+    const res = retireLandedEdits({ 0: 'ну\u00adль\u200b', 1: 'один', 2: 'д\u00a0ва' },
+      [{ text: 'нуль' }, { text: 'о\u200bдин' }, { text: 'д ва' }]);
+    assert.deepStrictEqual(res.kept, {});
+    assert.deepStrictEqual(res.retired, { 0: 'ну\u00adль\u200b', 1: 'один', 2: 'д\u00a0ва' });
+  });
+
+  it('a placeholder holding invisible characters is still told by its stored text', () => {
+    const res = retireLandedEdits({ 0: 'д\u00a0ва' }, [{ text: 'д ва' }], { 0: 'д\u00a0ва' });
+    assert.deepStrictEqual(res.kept, { 0: 'д\u00a0ва' });
+  });
+
   it('keeps an edit whose block is not in the file (nothing to compare it with)', () => {
     const res = retireLandedEdits({ 7: 'два', 2: 'два' }, BLOCKS);
     assert.deepStrictEqual(res.kept, { 7: 'два' });
