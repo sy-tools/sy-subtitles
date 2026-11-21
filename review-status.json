@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:08:14.393797+00:00",
+  "updated_at": "2026-11-21T08:09:05.363267+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -345,7 +345,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 279,
-      "updated_at": "2026-07-16T13:26:01Z"
+      "updated_at": "2026-07-16T13:26:01Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1406
     },
     "1986-05-23_The-Spirit-is-the-light": {
       "status": "pending",
@@ -363,7 +366,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 291,
-      "updated_at": "2026-06-04T14:33:34Z"
+      "updated_at": "2026-06-04T14:33:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1408
     },
     "1993-04-26_Shri-Pallas-Athena-Puja-You-have-to-be-sincere-and-honest": {
       "status": "pending",
@@ -453,13 +459,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 358,
-      "updated_at": "2026-07-16T17:16:41Z"
+      "updated_at": "2026-07-16T17:16:41Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1412
     },
     "1982-08-22_Shri-Ganesha-Puja-Innocence-Joy": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 361,
-      "updated_at": "2026-07-16T13:08:14Z"
+      "updated_at": "2026-07-16T13:08:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1409
     },
     "1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit": {
       "status": "pending",
@@ -498,13 +510,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 396,
-      "updated_at": "2026-07-16T15:50:47Z"
+      "updated_at": "2026-07-16T15:50:47Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1410
     },
     "1983-03-04_Devi-Puja-Mother-you-be-in-our-brain": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 399,
-      "updated_at": "2026-07-16T17:47:02Z"
+      "updated_at": "2026-07-16T17:47:02Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1413
     },
     "1978-12-09_Our-Understanding-of-Sahaja-Yoga-Seminar": {
       "status": "pending",
@@ -765,7 +783,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1170,
-      "updated_at": "2026-10-26T21:39:31Z"
+      "updated_at": "2026-10-26T21:39:31Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1411
     },
     "1977-01-01_The-Spirit": {
       "status": "pending",
