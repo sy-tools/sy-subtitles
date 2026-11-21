@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:09:05.363267+00:00",
+  "updated_at": "2026-11-21T08:09:57.619140+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -48,7 +48,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 7,
-      "updated_at": "2026-07-10T22:33:38Z"
+      "updated_at": "2026-07-10T22:33:38Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1414
     },
     "1983-07-24_Guru-Puja-Awakening-The-Principle-Of-Guru": {
       "status": "approved",
@@ -63,7 +66,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 9,
-      "updated_at": "2026-07-11T01:08:28Z"
+      "updated_at": "2026-07-11T01:08:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1418
     },
     "1992-07-19_Guru-Puja": {
       "status": "approved",
@@ -339,7 +345,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 282,
-      "updated_at": "2026-07-16T17:36:40Z"
+      "updated_at": "2026-07-16T17:36:40Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1416
     },
     "1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine": {
       "status": "pending",
@@ -411,7 +420,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 320,
-      "updated_at": "2026-06-14T16:32:51Z"
+      "updated_at": "2026-06-14T16:32:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1419
     },
     "1979-01-01_Letter": {
       "status": "in-progress",
@@ -543,7 +555,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 408,
-      "updated_at": "2026-07-16T21:47:01Z"
+      "updated_at": "2026-07-16T21:47:01Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1420
     },
     "1987-04-19_Easter-Puja-Materialism": {
       "status": "approved",
@@ -624,7 +639,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 493,
-      "updated_at": "2026-07-18T10:56:03Z"
+      "updated_at": "2026-07-18T10:56:03Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1417
     },
     "2000-07-02_Adi-Shakti-Puja-Women-Emotional-Intelligence": {
       "status": "approved",
@@ -759,7 +777,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1187,
-      "updated_at": "2026-11-06T23:02:06Z"
+      "updated_at": "2026-11-06T23:02:06Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1421
     },
     "1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis": {
       "status": "approved",
