@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:09:57.619140+00:00",
+  "updated_at": "2026-11-21T08:10:39.357852+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -132,7 +132,10 @@
       "status": "in-progress",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 70,
-      "updated_at": "2026-04-15T13:20:21Z"
+      "updated_at": "2026-04-15T13:20:21Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1429
     },
     "1982-04-22_All-is-so-Beautifully-Made": {
       "status": "pending",
@@ -363,7 +366,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 285,
-      "updated_at": "2026-06-15T05:08:05Z"
+      "updated_at": "2026-06-15T05:08:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1427
     },
     "1992-09-20_Shri-Vishnumaya-Puja-Stop-Feeling-Guilty": {
       "status": "pending",
@@ -489,19 +495,28 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 364,
-      "updated_at": "2026-07-17T00:23:42Z"
+      "updated_at": "2026-07-17T00:23:42Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1430
     },
     "1985-04-20_Seminar-Mahamaya-Shakti-Morning": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 368,
-      "updated_at": "2026-07-16T21:45:45Z"
+      "updated_at": "2026-07-16T21:45:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1425
     },
     "1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 371,
-      "updated_at": "2026-07-17T07:07:20Z"
+      "updated_at": "2026-07-17T07:07:20Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1431
     },
     "2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state": {
       "status": "pending",
@@ -549,7 +564,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 405,
-      "updated_at": "2026-07-16T18:15:08Z"
+      "updated_at": "2026-07-16T18:15:08Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1426
     },
     "1984-07-10_The-Experience-of-Truth-Part-IV": {
       "status": "pending",
@@ -657,7 +675,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 652,
-      "updated_at": "2026-07-18T04:38:20Z"
+      "updated_at": "2026-07-18T04:38:20Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1428
     },
     "1989-12-17_Devi-Puja-Nothing-to-discuss-in-Sahaja-Yoga": {
       "status": "pending",
@@ -735,7 +756,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1038,
-      "updated_at": "2026-09-05T05:05:58Z"
+      "updated_at": "2026-09-05T05:05:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1423
     },
     "1984-01-15_Shri-Ganesha-Puja-Keep-Your-Maryadas": {
       "status": "approved",
@@ -750,7 +774,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1104,
-      "updated_at": "2026-09-21T21:17:58Z"
+      "updated_at": "2026-09-21T21:17:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1422
     },
     "1991-04-14_Shri-Ganesha-Puja-The-Innate-Maryadas": {
       "status": "pending",
