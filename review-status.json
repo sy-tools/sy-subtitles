@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:15:04.155225+00:00",
+  "updated_at": "2026-11-21T08:15:47.057563+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -192,7 +192,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 155,
-      "updated_at": "2026-07-11T13:35:52Z"
+      "updated_at": "2026-07-11T13:35:52Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1488
     },
     "1989-05-06_Sahasrara-Puja-Jump-Into-the-Ocean-of-Joy": {
       "status": "approved",
@@ -711,7 +714,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 426,
-      "updated_at": "2026-07-17T10:23:44Z"
+      "updated_at": "2026-07-17T10:23:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1485
     },
     "1992-02-29_Mahashivaratri-Puja-You-are-extremely-powerful": {
       "status": "pending",
@@ -735,7 +741,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 435,
-      "updated_at": "2026-07-18T04:15:49Z"
+      "updated_at": "2026-07-18T04:15:49Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1486
     },
     "1988-07-20_How-to-become-a-realized-soul": {
       "status": "in-progress",
