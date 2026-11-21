@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:14:11.236966+00:00",
+  "updated_at": "2026-11-21T08:15:04.155225+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -156,7 +156,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 124,
-      "updated_at": "2026-07-11T10:07:34Z"
+      "updated_at": "2026-07-11T10:07:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1481
     },
     "1979-04-22_Give-up-Misidentifications": {
       "status": "pending",
@@ -312,7 +315,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 244,
-      "updated_at": "2026-07-15T08:10:46Z"
+      "updated_at": "2026-07-15T08:10:46Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1484
     },
     "1982-07-11_From-Heart-to-Sahasrara": {
       "status": "pending",
@@ -453,7 +459,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 308,
-      "updated_at": "2026-07-17T13:13:59Z"
+      "updated_at": "2026-07-17T13:13:59Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1475
     },
     "1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise": {
       "status": "in-progress",
@@ -468,13 +477,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 314,
-      "updated_at": "2026-07-17T17:00:33Z"
+      "updated_at": "2026-07-17T17:00:33Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1477
     },
     "1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 317,
-      "updated_at": "2026-07-17T16:53:56Z"
+      "updated_at": "2026-07-17T16:53:56Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1479
     },
     "1984-05-06_Questions-and-Answers-after-Maha-Sahasrara-Day": {
       "status": "pending",
@@ -498,7 +513,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 338,
-      "updated_at": "2026-07-17T13:19:45Z"
+      "updated_at": "2026-07-17T13:19:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1482
     },
     "1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force": {
       "status": "pending",
@@ -585,7 +603,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 374,
-      "updated_at": "2026-07-17T21:27:53Z"
+      "updated_at": "2026-07-17T21:27:53Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1480
     },
     "1975-03-29_Public-Program-ScienceTrigunatmika": {
       "status": "pending",
@@ -729,7 +750,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 471,
-      "updated_at": "2026-07-17T17:02:48Z"
+      "updated_at": "2026-07-17T17:02:48Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1483
     },
     "1992-05-10_Sahasrara-Puja-The-Will-of-God": {
       "status": "pending",
@@ -780,7 +804,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 676,
-      "updated_at": "2026-07-04T21:34:18Z"
+      "updated_at": "2026-07-04T21:34:18Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1478
     },
     "1979-01-01_Letter-Human-Chitta-has-many-illusions": {
       "status": "pending",
