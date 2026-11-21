@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:13:16.410215+00:00",
+  "updated_at": "2026-11-21T08:14:11.236966+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -180,7 +180,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 137,
-      "updated_at": "2026-07-11T12:20:28Z"
+      "updated_at": "2026-07-11T12:20:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1470
     },
     "2004-05-09_Sahasrara-Puja-Continue-To-Live-A-Life-of-Reality": {
       "status": "pending",
@@ -210,7 +213,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 180,
-      "updated_at": "2026-07-14T07:03:29Z"
+      "updated_at": "2026-07-14T07:03:29Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1467
     },
     "1988-06-18_Seminar-Day-1-Introspection-and-Meditation": {
       "status": "pending",
@@ -234,7 +240,10 @@
       "status": "in-progress",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 197,
-      "updated_at": "2026-06-01T11:51:48Z"
+      "updated_at": "2026-06-01T11:51:48Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1469
     },
     "1990-05-06_Sahasrara-Puja-You-Have-All-Become-Mahayogis-Now": {
       "status": "pending",
@@ -318,7 +327,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 238,
-      "updated_at": "2026-06-16T06:17:51Z"
+      "updated_at": "2026-06-16T06:17:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1468
     },
     "1977-01-27_Seminar-Day-2-Attention-and-Joy": {
       "status": "pending",
@@ -447,7 +459,10 @@
       "status": "in-progress",
       "reviewer": "IrynaFilSY",
       "issue_number": 311,
-      "updated_at": "2026-11-18T14:47:34Z"
+      "updated_at": "2026-11-18T14:47:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1472
     },
     "1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware": {
       "status": "pending",
@@ -498,7 +513,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 344,
-      "updated_at": "2026-07-17T18:49:22Z"
+      "updated_at": "2026-07-17T18:49:22Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1474
     },
     "1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children": {
       "status": "in-progress",
@@ -663,7 +681,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 423,
-      "updated_at": "2026-07-17T21:27:09Z"
+      "updated_at": "2026-07-17T21:27:09Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1471
     },
     "2002-03-21_Birthday-Puja-You-Can-Do-A-Lot": {
       "status": "pending",
@@ -810,7 +831,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 969,
-      "updated_at": "2026-08-13T08:52:35Z"
+      "updated_at": "2026-08-13T08:52:35Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1473
     },
     "1986-09-07_Shri-Ganesha-Puja-Establishing-Shri-Ganesha-Principle": {
       "status": "approved",
@@ -825,7 +849,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1008,
-      "updated_at": "2026-08-28T21:39:14Z"
+      "updated_at": "2026-08-28T21:39:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1464
     },
     "1985-03-17_Birthday-Puja-Our-maryadas": {
       "status": "pending",
@@ -930,7 +957,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1158,
-      "updated_at": "2026-10-19T18:05:45Z"
+      "updated_at": "2026-10-19T18:05:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1466
     },
     "1989-10-08_10th-Day-of-Navaratri-Depth-and-Content": {
       "status": "pending",
