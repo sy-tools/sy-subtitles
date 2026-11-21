@@ -496,13 +496,16 @@ function createSyncEngine(opts) {
   // on. Once a file created anew is adopted they name the PR of the branch
   // that was, and everything addressed to "the PR" — the chip's link, a
   // re-draft, a finalize, the merged-PR check — would go to that one. A lookup
-  // that fails or finds no open PR leaves them as they were.
+  // that fails or finds no open PR leaves them as they were. So does one that
+  // names an earlier PR: numbers only grow, so the PR of a branch created anew
+  // is above the one cached, and a lower number is a read of an earlier moment
+  // (the lookup is cacheable, and a replica can trail even a fresh request).
   function refreshSyncPr() {
     // With no PR cached there is nothing stale: attach() and the push look it up.
     if (disposed || !meta.prNumber) return Promise.resolve();
     var shaAtAsk = meta.sha;
     return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
-      if (disposed || meta.sha !== shaAtAsk || !pr || pr.number === meta.prNumber) return;
+      if (disposed || meta.sha !== shaAtAsk || !pr || !(pr.number > meta.prNumber)) return;
       meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
       meta.prDraft = pr.draft !== false;
       saveMeta();
@@ -885,14 +888,25 @@ function createSyncEngine(opts) {
       // are dropped first, so the fresh PR proposes only what is new. A lookup
       // or a read that fails rejects into the handler below — pushing on a
       // guess would propose the landed edits again.
-      // A PR found closed by the re-draft (ensureDraft) is the same news,
-      // whether or not its branch outlived it.
-      if ((isBranchGone(e) || (e && e.syncPrClosed)) && !healed) {
-        return mergedFileTexts().then(function (texts) {
-          if (disposed) return;
-          if (texts) dropLandedLocally(texts);
-          resetBase();
-          return doFlush(fopts, true);
+      // A PR found merged by the re-draft (ensureDraft) is the same news.
+      // One found closed without a merge is, unless its branch outlived it:
+      // then the state file is still the one this base was pushed to, and
+      // only the PR is forgotten. Wiping the base there would turn an edit
+      // removed here since the last push into one the remote "added".
+      var prClosed = !!(e && e.syncPrClosed);
+      if ((isBranchGone(e) || prClosed) && !healed) {
+        return mergedSyncPr().then(function (mergedPr) {
+          var branchOutlivedPr = !mergedPr && prClosed ? syncBranchExists() : Promise.resolve(false);
+          return branchOutlivedPr.then(function (outlived) {
+            if (disposed) return;
+            if (outlived) { forgetSyncPr(); return doFlush(fopts, true); }
+            return textsAtMergeOf(mergedPr).then(function (texts) {
+              if (disposed) return;
+              if (texts) dropLandedLocally(texts);
+              resetBase();
+              return doFlush(fopts, true);
+            });
+          });
         });
       }
       throw e;
@@ -926,7 +940,11 @@ function createSyncEngine(opts) {
   //    whatever the block has become. Every other edit stays held.
   function markOrphanedIfBranchGone() {
     var shaAtProbe = meta.sha;
-    return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
+    return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {
+      // A branch in place has no PR answer outstanding. A stamp left standing
+      // would let a merge long after give up on its first stale read.
+      if (!disposed && meta.unsettledSince !== undefined) { delete meta.unsettledSince; saveMeta(); }
+    }, function (e) {
       if (!e || e.status !== 404) throw e;
       function holdBack(left) {
         resetBase();
@@ -954,10 +972,26 @@ function createSyncEngine(opts) {
     });
   }
 
+  function syncBranchExists() {
+    return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () { return true; }, function (e) {
+      if (e && e.status === 404) return false;
+      throw e;
+    });
+  }
+
+  // The PR is closed and its branch lives on: the base stays, a push opens a
+  // new PR from the branch.
+  function forgetSyncPr() {
+    meta.prNumber = null; meta.prUrl = null; meta.nodeId = null; meta.prDraft = null;
+    delete meta.unsettledSince;
+    saveMeta();
+  }
+
   // Has the PR of this base gone unsettled (see mergedSyncPr) for longer than
   // a stale read can explain? The first such answer starts the clock, in the
-  // base, so that reloads do not restart it; a base that moves on ends it
-  // (baseMoved). A stamp from the future (the clock was set back since) starts
+  // base, so that reloads do not restart it; a base that moves on (baseMoved),
+  // a branch found in place and an answer that settles end it. A stamp from
+  // the future (the clock was set back since) starts
   // it over, as for the tombstone.
   function unsettledForTooLong() {
     var age = meta.unsettledSince === undefined ? -1 : now() - meta.unsettledSince;
@@ -1028,12 +1062,14 @@ function createSyncEngine(opts) {
   // A failed request rejects. It is not "nothing landed" — the caller must
   // neither clear on it nor forget the PR that finds the merge.
   function mergedFileTexts() {
-    return mergedSyncPr().then(function (pr) {
-      if (!pr || !pr.mergeCommitSha || !filePath || !editsKey || !parseFile) return null;
-      return gh.getFileContent(api, token, filePath, pr.mergeCommitSha, fetchImpl).then(function (file) {
-        if (!file) return null;
-        try { return parseFile(file.content); } catch (e) { return null; }
-      });
+    return mergedSyncPr().then(textsAtMergeOf);
+  }
+
+  function textsAtMergeOf(pr) {
+    if (!pr || !pr.mergeCommitSha || !filePath || !editsKey || !parseFile) return Promise.resolve(null);
+    return gh.getFileContent(api, token, filePath, pr.mergeCommitSha, fetchImpl).then(function (file) {
+      if (!file) return null;
+      try { return parseFile(file.content); } catch (e) { return null; }
     });
   }
 

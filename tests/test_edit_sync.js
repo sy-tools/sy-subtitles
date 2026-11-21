@@ -1833,6 +1833,54 @@ describe('engine: the re-draft finds its PR closed', () => {
     assert.deepStrictEqual(mergeReads(gh), [], 'nothing merged, nothing to read');
   });
 
+  it('closed without a merge, its branch left behind: an edit removed here since is not brought back', async () => {
+    // The state file on the branch still holds edit 2. Read against the base
+    // it was pushed from, its absence here is a deletion; read against an
+    // empty base it would be an edit the remote added.
+    const { engine, gh, storage } = makeEngine(
+      { draftFails: REFUSED, prs: CLOSED, remote: remoteDoc(ENTRY.edits, 3, 'sha_base') },
+      submitted(null, { marks: {}, edits: { 1: 'one', 3: 'three' } }), FACT);
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.deepStrictEqual(edits(storage), { 1: 'one', 3: 'three' });
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, { 1: 'one', 3: 'three' });
+    assert.strictEqual(engine.getInfo().prNumber, 77, 'the closed PR is forgotten, a fresh one opened');
+  });
+
+  it('merged, its branch left behind: what landed still goes — a merge is judged by the merged file', async () => {
+    const { engine, gh, storage } = makeEngine(
+      merged('zero\none\ntwo\nthree', { branchGone: false }), submitted({ sha: null }), FACT);
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.deepStrictEqual(edits(storage), { 4: 'four' });
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, { 4: 'four' });
+    assert.strictEqual(engine.getInfo().prNumber, 77);
+  });
+
+  it('closed without a merge and its branch deleted: every edit is kept, the branch is created anew', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true, draftFails: REFUSED, prs: CLOSED }, submitted(), FACT);
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'synced');
+    assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
+    assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, WITH_NEW.edits);
+    assert.deepStrictEqual(edits(storage), WITH_NEW.edits);
+  });
+
+  it('closed without a merge, and whether its branch is left cannot be learned: nothing is reset or pushed', async () => {
+    const { engine, gh, storage } = makeEngine(
+      { draftFails: REFUSED, prs: CLOSED, branchProbeStatus: 500, remote: remoteDoc(ENTRY.edits, 3, 'sha_base') },
+      submitted(), FACT);
+    engine.notifyEdit();
+    await engine.flush();
+    assert.strictEqual(engine.getInfo().status, 'error');
+    assert.deepStrictEqual(writes(gh), []);
+    assert.strictEqual(base(storage).prNumber, 12);
+    assert.strictEqual(base(storage).sha, 'sha_base');
+  });
+
   it('a later PR of the same branch means ours is closed: the live one is adopted, no merge is read', async () => {
     // One head can hold one open PR, so a higher number says ours is not it —
     // even when the list does not reach back to ours.
@@ -2044,6 +2092,15 @@ describe('engine: a state file that was not built on our base', () => {
     assert.deepStrictEqual(chip.at(-1), ['pending', 15], 'the chip is told of its new link, and keeps its tone');
   });
 
+  it('pull: a lookup that names an earlier PR is a stale answer, and is not adopted', async () => {
+    const earlier = { number: 9, html_url: 'https://github.com/x/pull/9', node_id: 'PR_n9', draft: true };
+    const { engine, storage } = makeEngine(
+      { remote: remoteDoc({ 7: 'seven' }, 1, 'sha_new'), existingPr: earlier }, synced());
+    await engine.pull(true);
+    assert.strictEqual(engine.getInfo().prNumber, 12);
+    assert.strictEqual(base(storage).nodeId, 'PR_n12');
+  });
+
   it('pull: no open PR on the re-created branch — the coordinates stay as they were', async () => {
     const { engine } = makeEngine({ remote: remoteDoc({ 7: 'seven' }, 1, 'sha_new') }, synced());
     await engine.pull(true);
@@ -2182,6 +2239,24 @@ describe('engine: an unsettled PR answer is not waited on for ever', () => {
     await pushed.engine.flush();
     assert.strictEqual(pushed.engine.getInfo().status, 'synced');
     assert.strictEqual(base(pushed.storage).unsettledSince, undefined, 'a state file pushed');
+  });
+
+  it('a branch found in place ends the wait: the unsettled answer was about another moment', async () => {
+    // The state file is gone (a finalize elsewhere) and the branch is there.
+    const init = seeded();
+    init[syncBaseKey(TALK)] = JSON.stringify(Object.assign(JSON.parse(init[syncBaseKey(TALK)]),
+      { unsettledSince: T0 - 10 * MIN }));
+    const { engine, gh, storage } = makeEngine({ prs: OPEN }, init, FACT);
+    await engine.pull(true);
+    assert.strictEqual(base(storage).unsettledSince, undefined);
+    const probe = gh.getBranchHeadSha;
+    gh.getBranchHeadSha = async (api, token, branch) => {
+      if (branch !== 'main') throw Object.assign(new Error('Not Found'), { status: 404 });
+      return probe(api, token, branch);
+    };
+    await engine.pull(true);
+    assert.strictEqual(base(storage).prNumber, 12, 'a first unsettled answer is waited on, not given up on');
+    assert.strictEqual(base(storage).orphaned, undefined);
   });
 
   it('a clock set back does not stretch the wait without bound', async () => {
