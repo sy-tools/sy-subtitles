@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-20T07:17:55.362553+00:00",
+  "updated_at": "2026-11-21T08:06:30.369735+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -447,7 +447,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 385,
-      "updated_at": "2026-07-12T15:50:31Z"
+      "updated_at": "2026-07-12T15:50:31Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1383
     },
     "1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey": {
       "status": "pending",
@@ -714,7 +717,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1165,
-      "updated_at": "2026-10-24T21:37:38Z"
+      "updated_at": "2026-10-24T21:37:38Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1384
     },
     "1993-10-24_10th-Day-of-Navaratri-Reintrospect-Yourself": {
       "status": "pending",
