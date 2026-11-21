@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-07-12_Shri-Bhoomi-Devi-Puja/Bhoomi-Devi-Puja/final/uk.srt
+  Transcript: talks/1982-07-12_Shri-Bhoomi-Devi-Puja/transcript_uk.txt
+  Whisper: talks/1982-07-12_Shri-Bhoomi-Devi-Puja/Bhoomi-Devi-Puja/source/whisper.json
+  SRT blocks: 71
+  Whisper segments: 467
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 1: Text preservation
+============================================================
+  Transcript chars: 3869
+  SRT chars: 3869
+  Exact normalized match: OK
+  Transcript words: 637
+  SRT words: 637
+  Word-level match: OK
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:05,260 — 01:26:48,470
+  SRT range:       00:00:05,260 — 00:07:57,790
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 71
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 71
+  CPS: avg=10.4, median=9.8, max=15.1
+  CPS > target: 1 (1.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.5, max=83
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #20: CPS=15.1 (80ch/5.3s) "Тож природа не може не бути роздратованою через це (Шрі Мата..."
+    #23: CPS=15.0 (58ch/3.9s) "Можливо, вони думають, що Я не знаю, що вчинила ця країна,"
+    #49: CPS=15.0 (52ch/3.5s) "Власне, коли Я вперше приїхала до Англії, Я сказала,"
+    #69: CPS=15.0 (49ch/3.3s) "і тоді все вдасться, Я впевнена, що все вдасться."
+    #53: CPS=15.0 (37ch/2.5s) "Пам’ятаю, ми жили в Олдвічі (Лондон)."
+    #42: CPS=15.0 (71ch/4.7s) "Тож насправді, коли ми гніваємося, насправді ми йдемо проти ..."
+    #29: CPS=15.0 (34ch/2.3s) "Щось треба зробити, треба зробити."
+    #51: CPS=15.0 (34ch/2.3s) "Тоді погода була точнісінько така."
+    #16: CPS=15.0 (50ch/3.3s) "Ці сили ніколи не є вашими друзями, вони руйнівні,"
+    #17: CPS=15.0 (50ch/3.3s) "вони ніколи не можуть бути вашими друзями, тому що"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.4 (target ≤15.0)
+  CPS > 15.0: 1 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
