@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:11:32.486573+00:00",
+  "updated_at": "2026-11-21T08:12:18.485832+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -234,13 +234,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 205,
-      "updated_at": "2026-07-14T07:01:55Z"
+      "updated_at": "2026-07-14T07:01:55Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1443
     },
     "1991-04-06_Bhavasagara-Puja-Meditation-will-protect-you": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 211,
-      "updated_at": "2026-07-15T04:51:50Z"
+      "updated_at": "2026-07-15T04:51:50Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1449
     },
     "1978-10-02_Knots-On-The-Three-Channels": {
       "status": "approved",
@@ -462,7 +468,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 341,
-      "updated_at": "2026-07-17T06:57:05Z"
+      "updated_at": "2026-07-17T06:57:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1447
     },
     "1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya": {
       "status": "pending",
@@ -612,13 +621,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 417,
-      "updated_at": "2026-07-17T14:03:03Z"
+      "updated_at": "2026-07-17T14:03:03Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1451
     },
     "1991-02-16_Mahashivaratri-Puja-Four-Nadis-of-the-Heart": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 420,
-      "updated_at": "2026-07-17T21:35:25Z"
+      "updated_at": "2026-07-17T21:35:25Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1448
     },
     "1997-05-04_Sahasrara-Puja-At-Sahasrara-you-stand-on-Truth-and-go-beyond-Dharma": {
       "status": "pending",
@@ -642,7 +657,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 432,
-      "updated_at": "2026-07-18T14:39:45Z"
+      "updated_at": "2026-07-18T14:39:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1445
     },
     "2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha": {
       "status": "pending",
@@ -807,13 +825,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1114,
-      "updated_at": "2026-09-25T21:19:28Z"
+      "updated_at": "2026-09-25T21:19:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1450
     },
     "1990-06-19_Adi-Kundalini-Puja-The-Advent-Of-Primordial-Kundalini": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 1128,
-      "updated_at": "2026-09-28T21:49:49Z"
+      "updated_at": "2026-09-28T21:49:49Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1446
     },
     "1977-10-31_About-Jesus-Christ": {
       "status": "pending",
