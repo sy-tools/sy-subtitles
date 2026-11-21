@@ -18,9 +18,11 @@ itself instead of relying on the sync-review-status close handler.
     python -m tools.talk_operator talk-added --talk T       # a new meta.yaml on main
     python -m tools.talk_operator review-created --talk T   # the pipeline's Review: step
     python -m tools.talk_operator migrate-pipeline [--apply]
+    python -m tools.talk_operator migrate-translator [--apply]
     python -m tools.talk_operator pr-ready --branch B --pr N
     python -m tools.talk_operator pr-merged --branch B --pr N
     python -m tools.talk_operator qa-passed --issue N      # prints package|skip
+    python -m tools.talk_operator take --issue N           # prints taken|skip
     python -m tools.talk_operator packaged --issue N --comment-file F
     python -m tools.talk_operator closed --issue N         # prints deliver|skip
     python -m tools.talk_operator delivered --issue N      # after the record landed
@@ -30,6 +32,7 @@ import argparse
 import json
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import yaml
@@ -46,6 +49,9 @@ REVIEW_LABEL = "talk-review"
 STAGES = ("op:pipeline", "op:translator", "op:review", "op:qa", "op:ready", "op:delivered")
 PRE_PHASE = {"op:pipeline", "op:translator"}
 QA_PASSED = "op:qa-passed"
+# Trigger label: the operator takes a talk from the translator to QA with no
+# translator PR (the edits landed some other way). The bot removes it.
+TAKE = "op:take"
 SYNC_BRANCH = re.compile(r"^sync/[^/]+/(?P<talk>.+?)--[^/]+$")
 
 
@@ -97,6 +103,10 @@ def next_labels(
     if event == "packaged":
         if QA_PASSED in current:
             return {"op:ready"}, {"op:qa", QA_PASSED}
+        return None
+    if event == "take":
+        if "op:translator" in current:
+            return {"op:qa"}, {"op:translator", TAKE}
         return None
     if event == "closed":
         if "op:ready" in current:
@@ -179,6 +189,32 @@ def migrate_pipeline(gh, talk_ids: list[str], apply: bool) -> list[str]:
     return waiting
 
 
+def migrate_translator(gh, talk_ids: list[str], apply: bool, pause_s: float = 2.0, sleep=time.sleep) -> list[str]:
+    """Talks already at the translator (an open `Review:`) that predate the
+    operator issue; with apply, open one at op:translator for each, the issue
+    on_review_created opens for a new talk. The pause keeps a run of ~100
+    creations under GitHub's secondary limits on content creation."""
+    reviewed = gh.titles(REVIEW_LABEL, state="open")
+    operated = gh.titles(OPERATOR_LABEL)
+    waiting = [
+        t
+        for t in talk_ids
+        if TALK_ID_RE.fullmatch(t) and f"Review: {t}" in reviewed and operator_title(t) not in operated
+    ]
+    if apply:
+        for n, t in enumerate(waiting):
+            if n:
+                sleep(pause_s)
+            # A ready translator PR never fires pr-ready again: start such a
+            # talk where that event would have put it.
+            ready = gh.open_sync_prs(t)
+            if ready:
+                _create(gh, t, "op:review", _issue_body(t, ready[0]["number"], talk_text_only(t)))
+            else:
+                _create(gh, t, "op:translator", _translator_body(t, talk_text_only(t)))
+    return waiting
+
+
 def _apply(gh, issue: dict, change) -> None:
     if change:
         add, remove = change
@@ -251,6 +287,30 @@ def on_qa_passed(gh, issue_number: int, sender_id: int) -> bool:
     gh.edit_labels(issue_number, set(), {QA_PASSED})
     gh.comment(issue_number, f"`{QA_PASSED}` removed: QA can pass only at `op:qa`, after the translator PR is merged.")
     return False
+
+
+def on_take(gh, issue_number: int, sender_id: int) -> bool:
+    # Same trust rule as on_qa_passed: the label is open to anyone with triage
+    # access, so only an operator from roles.yaml may move the stage with it.
+    issue = gh.get_issue(issue_number)
+    if not is_operator(sender_id):
+        gh.edit_labels(issue_number, set(), {TAKE})
+        gh.comment(issue_number, f"`{TAKE}` removed: only an operator listed in roles.yaml can take a talk to QA.")
+        return False
+    change = next_labels(issue["labels"], "take")
+    if change is None:
+        gh.edit_labels(issue_number, set(), {TAKE})
+        gh.comment(issue_number, f"`{TAKE}` removed: a talk can be taken to QA only from `op:translator`.")
+        return False
+    # Review: first: if closing it fails, the issue is still at op:translator
+    # and the operator can simply take again. Both steps are idempotent.
+    _approve_review(gh, issue["title"].removeprefix("Operator: "))
+    _apply(gh, issue, change)
+    gh.comment(
+        issue_number,
+        "Taken to QA by the operator without a translator PR; the `Review:` issue is closed as approved.",
+    )
+    return True
 
 
 def on_packaged(gh, issue_number: int, comment_md: str) -> None:
@@ -340,7 +400,7 @@ class Gh:
     def reopen(self, number: int) -> None:
         self._run("issue", "reopen", str(number))
 
-    def titles(self, label: str) -> set[str]:
+    def titles(self, label: str, state: str = "all") -> set[str]:
         out = self._run(
             "api",
             "-X",
@@ -350,7 +410,7 @@ class Gh:
             "-f",
             f"labels={label}",
             "-f",
-            "state=all",
+            f"state={state}",
             "-f",
             "per_page=100",
             "--jq",
@@ -359,8 +419,14 @@ class Gh:
         return {line for line in out.splitlines() if line.strip()}
 
     def open_sync_prs(self, talk_id: str) -> list[dict]:
-        out = self._run("pr", "list", "--state", "open", "--json", "number,headRefName,isDraft", "--limit", "200")
-        return [p for p in json.loads(out) if not p["isDraft"] and talk_id_from_branch(p["headRefName"]) == talk_id]
+        # Fork PRs never count: same trust rule as the workflow's pr job.
+        fields = "number,headRefName,isDraft,isCrossRepository"
+        out = self._run("pr", "list", "--state", "open", "--json", fields, "--limit", "200")
+        return [
+            p
+            for p in json.loads(out)
+            if not p["isDraft"] and not p["isCrossRepository"] and talk_id_from_branch(p["headRefName"]) == talk_id
+        ]
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -370,7 +436,7 @@ def main(argv: list[str] | None = None) -> None:
         p = sub.add_parser(name, help=f"handle a translator sync PR event ({name})")
         p.add_argument("--branch", required=True, help="PR head branch, sync/{login}/{talk_id}--{target}")
         p.add_argument("--pr", type=int, required=True, help="PR number")
-    for name in ("qa-passed", "closed", "delivered"):
+    for name in ("qa-passed", "take", "closed", "delivered"):
         p = sub.add_parser(name, help=f"handle an Operator: issue event ({name})")
         p.add_argument("--issue", type=int, required=True)
         if name != "delivered":
@@ -381,6 +447,8 @@ def main(argv: list[str] | None = None) -> None:
         p = sub.add_parser(name, help=f"open or move the Operator issue ({name})")
         p.add_argument("--talk", required=True, help="talk id")
     p = sub.add_parser("migrate-pipeline", help="open op:pipeline issues for talks the pipeline has not finished")
+    p.add_argument("--apply", action="store_true", help="create the issues (default: only list them)")
+    p = sub.add_parser("migrate-translator", help="open op:translator issues for talks with an open Review: and none")
     p.add_argument("--apply", action="store_true", help="create the issues (default: only list them)")
     p = sub.add_parser("packaged", help="mark the package committed and post the e-mail comment")
     p.add_argument("--issue", type=int, required=True)
@@ -396,12 +464,18 @@ def main(argv: list[str] | None = None) -> None:
         talks = sorted(p.parent.name for p in (ROOT / "talks").glob("*/meta.yaml"))
         for t in migrate_pipeline(gh, talks, args.apply):
             print(("created " if args.apply else "would create ") + operator_title(t))
+    elif args.cmd == "migrate-translator":
+        talks = sorted(p.parent.name for p in (ROOT / "talks").glob("*/meta.yaml"))
+        for t in migrate_translator(gh, talks, args.apply):
+            print(("created " if args.apply else "would create ") + operator_title(t))
     elif args.cmd == "pr-ready":
         on_pr_ready(gh, args.branch, args.pr)
     elif args.cmd == "pr-merged":
         on_pr_merged(gh, args.branch, args.pr)
     elif args.cmd == "qa-passed":
         print("package" if on_qa_passed(gh, args.issue, args.sender_id) else "skip")
+    elif args.cmd == "take":
+        print("taken" if on_take(gh, args.issue, args.sender_id) else "skip")
     elif args.cmd == "packaged":
         on_packaged(gh, args.issue, Path(args.comment_file).read_text(encoding="utf-8"))
     elif args.cmd == "closed":

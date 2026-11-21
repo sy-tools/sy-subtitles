@@ -17,6 +17,7 @@ READY_TALK = "2002-02-02_Ready-Talk"
 GMAIL = "https://mail.google.com/mail/?view=cm&fs=1&to=help%40amruta.org&su=Transcript"
 ROLES = f"operators:\n- login: SlavaSubotskiy\n  id: {OPERATOR_ID}\n  llm: true\n"
 NEW_TALK = "2003-03-03_New-Talk"
+TRANSLATOR_TALK = "2004-04-04_Translator-Talk"
 
 TREE = {
     "sha": "op1",
@@ -29,6 +30,10 @@ TREE = {
         {"path": f"talks/{READY_TALK}/_for_Amruta/Test-Video_uk.srt", "type": "blob"},
         {"path": f"talks/{READY_TALK}/_for_Amruta/transcript_uk.txt", "type": "blob"},
         {"path": f"talks/{NEW_TALK}/meta.yaml", "type": "blob"},
+        {"path": f"talks/{TRANSLATOR_TALK}/Test-Video/final/uk.srt", "type": "blob"},
+        {"path": f"talks/{TRANSLATOR_TALK}/meta.yaml", "type": "blob"},
+        {"path": f"talks/{TRANSLATOR_TALK}/transcript_en.txt", "type": "blob"},
+        {"path": f"talks/{TRANSLATOR_TALK}/transcript_uk.txt", "type": "blob"},
     ],
 }
 
@@ -50,6 +55,14 @@ STATUS = {
             "operator_stage": "ready",
             "operator": "SlavaSubotskiy",
             "operator_issue": 1300,
+        },
+        TRANSLATOR_TALK: {
+            "status": "in-progress",
+            "reviewer": "IrynaFilSY",
+            "issue_number": 1290,
+            "operator_stage": "translator",
+            "operator": "SlavaSubotskiy",
+            "operator_issue": 1301,
         },
     },
 }
@@ -103,6 +116,11 @@ def _page(browser, calls, user, roles=ROLES):
 
     pg.route("**/api.github.com/repos/**/issues/1279", issue)
     pg.route("**/api.github.com/repos/**/issues/1279/labels", record(200, []))
+    pg.route(
+        "**/api.github.com/repos/**/issues/1301",
+        lambda r: _json(r, 200, {"number": 1301, "state": "open", "labels": [{"name": "op:translator"}]}),
+    )
+    pg.route("**/api.github.com/repos/**/issues/1301/labels", record(200, []))
     pg.route("**/api.github.com/repos/**/issues/1300", record(200, {"number": 1300, "state": "closed"}))
     pg.route("**/api.github.com/repos/**/issues/1300/comments*", lambda r: _json(r, 200, BOT_COMMENTS))
     pg.add_init_script(
@@ -160,6 +178,7 @@ def test_non_operator_sees_no_operator_ui(server, browser):  # noqa: F811
     assert pg.locator(".stat-card[data-filter='op-all']").count() == 0
     assert pg.evaluate("document.getElementById('prefs-operator-row').hidden")
     assert pg.locator(".op-qa-btn").count() == 0
+    assert pg.locator(".op-take-btn").count() == 0
     ctx.close()
 
 
@@ -410,4 +429,30 @@ def test_expert_card_of_an_approved_talk_without_operator_stage(server, browser)
     card.wait_for(timeout=10000)
     assert card.locator(".review-badge").text_content().strip() != ""
     assert card.locator(".take-review-btn").count() == 0
+    ctx.close()
+
+
+def test_take_to_qa_confirms_adds_the_label_and_waits(server, browser):  # noqa: F811
+    calls = []
+    ctx, pg = _page(browser, calls, OPERATOR)
+    pg.goto(f"{server}{SPA_URL}")
+    # "All" is the operator's own work; the translator's talks sit behind their chip.
+    pg.click(".stat-card[data-filter='op-translator']", timeout=10000)
+    _card(pg, TRANSLATOR_TALK).wait_for(timeout=10000)
+    btn = _card(pg, TRANSLATOR_TALK).locator(".op-take-btn")
+    btn.wait_for(timeout=10000)
+    btn.click()
+    pg.wait_for_selector(".sy-modal", timeout=3000)
+    pg.click(".sy-modal-btn:not(.primary):not(.danger)")
+    pg.wait_for_timeout(200)
+    assert not [c for c in calls if c["url"].endswith("/issues/1301/labels")]
+    btn.click()
+    pg.wait_for_selector(".sy-modal", timeout=3000)
+    pg.click(".sy-modal-btn.primary, .sy-modal-btn.danger")
+    pg.wait_for_function(
+        "document.querySelector(\".talk-item[data-talk-id='2004-04-04_Translator-Talk'] .op-waiting\")", timeout=5000
+    )
+    posts = [c for c in calls if c["method"] == "POST" and c["url"].endswith("/issues/1301/labels")]
+    assert posts and posts[0]["body"] == {"labels": ["op:take"]}
+    assert _card(pg, TRANSLATOR_TALK).locator(".op-take-btn").count() == 0
     ctx.close()

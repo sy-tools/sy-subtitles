@@ -122,16 +122,25 @@ function packageFiles(tree, talkId) {
   return names.sort();
 }
 
+// "Take to QA": only on a card the translator holds whose Operator issue
+// exists — the label needs an issue to go on.
+function takeQaOffered(stage, entry) {
+  return stage === 'translator' && operatorStageOf(entry) === 'translator' && !!(entry && entry.operator_issue);
+}
+
 // A wait on the bot is stored so it outlives the tab: after a reload the card
 // would otherwise offer the action again while the bot is still running, and
 // a second "QA passed" re-runs the package job. Only waits on the card stages
-// (qa, ready) inside the live poll's window survive; anything else is dropped.
+// (translator, qa, ready) inside the live poll's window survive; anything
+// else is dropped.
+var WAIT_STAGES = ['translator', 'qa', 'ready'];
+
 function restoreWaiting(stored, now, maxMs) {
   var out = {};
   if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return out;
   Object.keys(stored).forEach(function (id) {
     var w = stored[id];
-    if (!w || (w.stage !== 'qa' && w.stage !== 'ready')) return;
+    if (!w || WAIT_STAGES.indexOf(w.stage) === -1) return;
     if (typeof w.since !== 'number' || typeof w.issue !== 'number') return;
     var age = now - w.since;
     if (age < 0 || age > maxMs) return;
@@ -154,5 +163,6 @@ if (typeof module !== 'undefined' && module.exports) {
     operatorStep: operatorStep,
     packageFiles: packageFiles,
     restoreWaiting: restoreWaiting,
+    takeQaOffered: takeQaOffered,
   };
 }

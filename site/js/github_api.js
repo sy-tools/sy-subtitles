@@ -348,21 +348,31 @@ function listIssueComments(api, token, number, fetchImpl) {
   return fetchPage(1, []);
 }
 
-// QA passed = the op:qa-passed label. Adding a label the issue already carries
-// fires no `labeled` event, and a failed packaging run leaves it in place, so
-// a retry has to take it off first or talk-operator.yml never hears of it.
-function passQa(api, token, number, fetchImpl) {
-  var LABEL = 'op:qa-passed';
+// A trigger label on the Operator issue (op:qa-passed, op:take). Adding a
+// label the issue already carries fires no `labeled` event, and a failed bot
+// run can leave it in place, so a retry takes it off first or
+// talk-operator.yml never hears of it.
+function retriggerLabel(api, token, number, label, fetchImpl) {
   var issueUrl = api + '/issues/' + number;
   return ghJson(issueUrl, token, null, fetchImpl).then(function (issue) {
-    var has = (issue.labels || []).some(function (l) { return (l && l.name) === LABEL; });
+    var has = (issue.labels || []).some(function (l) { return (l && l.name) === label; });
     var cleared = has
-      ? ghJson(issueUrl + '/labels/' + encodeURIComponent(LABEL), token, { method: 'DELETE' }, fetchImpl)
+      ? ghJson(issueUrl + '/labels/' + encodeURIComponent(label), token, { method: 'DELETE' }, fetchImpl)
       : Promise.resolve();
     return cleared.then(function () {
-      return ghJson(issueUrl + '/labels', token, { method: 'POST', body: { labels: [LABEL] } }, fetchImpl);
+      return ghJson(issueUrl + '/labels', token, { method: 'POST', body: { labels: [label] } }, fetchImpl);
     });
   });
+}
+
+// QA passed = the op:qa-passed label; the bot packages for Amruta.
+function passQa(api, token, number, fetchImpl) {
+  return retriggerLabel(api, token, number, 'op:qa-passed', fetchImpl);
+}
+
+// Take to QA = the op:take label; the bot moves op:translator to op:qa.
+function takeToQa(api, token, number, fetchImpl) {
+  return retriggerLabel(api, token, number, 'op:take', fetchImpl);
 }
 
 function addAssignees(api, token, issueNumber, logins, fetchImpl) {
@@ -629,6 +639,7 @@ if (typeof module !== 'undefined' && module.exports) {
     getViewer: getViewer,
     listIssueComments: listIssueComments,
     passQa: passQa,
+    takeToQa: takeToQa,
     getRepoPermissions: getRepoPermissions,
     withDeadline: withDeadline,
     freshFetch: freshFetch,

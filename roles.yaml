@@ -1,6 +1,6 @@
 # Who holds which role. Matched by numeric GitHub user id: a login can be
 # renamed and then re-registered by someone else. `login` is for display
-# and as the assignee of operator issues. Only an operator's op:qa-passed
+# and as the assignee of operator issues. Only an operator's op:take or op:qa-passed
 # label or close of an Operator: issue moves talk-operator.yml forward.
 # `llm: true` lets the operator start subtitle-pipeline.yml runs that spend
 # Claude tokens (whisper-only and dry runs are open to every writer).

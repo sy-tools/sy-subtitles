@@ -115,6 +115,30 @@ describe('passQa', () => {
   });
 });
 
+describe('takeToQa', () => {
+  const { takeToQa } = require('../site/js/github_api');
+  it('adds op:take when the issue does not carry it', async () => {
+    const calls = [];
+    await takeToQa(OP_API, 't', 5, fetchScript([[200, { number: 5, labels: [{ name: 'op:translator' }] }], [200, []]], calls));
+    assert.deepStrictEqual(calls.map((c) => c.method + ' ' + c.url), [
+      'GET ' + OP_API + '/issues/5',
+      'POST ' + OP_API + '/issues/5/labels',
+    ]);
+    assert.deepStrictEqual(JSON.parse(calls[1].body), { labels: ['op:take'] });
+  });
+  it('removes and re-adds a stale op:take, so the bot sees a new labeled event', async () => {
+    const calls = [];
+    await takeToQa(OP_API, 't', 5, fetchScript([
+      [200, { number: 5, labels: [{ name: 'op:translator' }, { name: 'op:take' }] }], [200, []], [200, []],
+    ], calls));
+    assert.deepStrictEqual(calls.map((c) => c.method + ' ' + c.url), [
+      'GET ' + OP_API + '/issues/5',
+      'DELETE ' + OP_API + '/issues/5/labels/op%3Atake',
+      'POST ' + OP_API + '/issues/5/labels',
+    ]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Write-path additions (issues / branches / contents / pulls)
 // ---------------------------------------------------------------------------

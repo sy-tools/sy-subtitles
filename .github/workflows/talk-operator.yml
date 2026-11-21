@@ -4,7 +4,9 @@ name: Talk Operator
 # a new talk's meta.yaml on main → op:pipeline (subtitle-pipeline.yml moves
 # it to op:translator when it opens `Review:`), translator sync PR ready → op:review, merged → op:qa, the operator adds
 # op:qa-passed → Amruta package committed → op:ready, the operator closes the
-# issue after sending the e-mail → delivery recorded in meta.yaml.
+# issue after sending the e-mail → delivery recorded in meta.yaml. A talk
+# whose edits landed without a translator PR: the operator adds op:take
+# at op:translator → op:qa, and Review: is closed as approved.
 #
 # pull_request_target, not pull_request: the job needs the `main` environment
 # and runs only base-branch code — it never checks out the PR head.
@@ -178,6 +180,48 @@ jobs:
         run: |
           gh issue comment "$ISSUE" --body "Packaging did not finish: $RUN_URL — fix the cause (or merge the package PR), then remove and re-add \`op:qa-passed\`."
 
+  # The operator takes a talk to QA with no translator PR: its edits landed
+  # through ordinary PRs, so no sync-PR merge will ever move it. Same trust
+  # rule as qa-passed: talk_operator checks the sender against roles.yaml.
+  take:
+    if: >-
+      github.event_name == 'issues' && github.event.action == 'labeled' &&
+      github.event.label.name == 'op:take' &&
+      contains(github.event.issue.labels.*.name, 'talk-operator')
+    runs-on: ubuntu-latest
+    environment: main
+    concurrency:
+      group: talk-operator-issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Take the talk to QA
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TITLE: ${{ github.event.issue.title }}
+          ISSUE: ${{ github.event.issue.number }}
+          SENDER_ID: ${{ github.event.sender.id }}
+        run: |
+          python -m tools.workflow_validation_cli --talk-id "${TITLE#Operator: }"
+          python -m tools.talk_operator take --issue "$ISSUE" --sender-id "$SENDER_ID"
+      - name: Report a failed take
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$ISSUE" --body "Take to QA did not finish: $RUN_URL — fix the cause, then take again (the SPA clears and re-adds \`op:take\`)."
+
   deliver:
     if: >-
       github.event_name == 'issues' && github.event.action == 'closed' &&
@@ -254,11 +298,12 @@ jobs:
         run: python -m tools.talk_operator delivered --issue "$ISSUE"
 
   status:
-    needs: [added, pr, qa, deliver]
+    needs: [added, pr, qa, take, deliver]
     if: >-
       always() && !cancelled() && (
       needs.added.result == 'success' ||
       needs.pr.result == 'success' || needs.qa.result == 'success' ||
+      needs.take.result == 'success' ||
       needs.deliver.result == 'success')
     uses: ./.github/workflows/sync-review-status.yml
     secrets: inherit

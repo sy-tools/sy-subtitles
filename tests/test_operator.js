@@ -3,7 +3,7 @@ const assert = require('node:assert');
 const {
   isOperator, operatorStageOf, OPERATOR_FILTERS, matchesOperatorFilter,
   countOperatorStages, gmailLinkFromComments, packageFiles,
-  pipelineDone, talkPhase, operatorStep, maySpendLlm, restoreWaiting,
+  pipelineDone, talkPhase, operatorStep, maySpendLlm, restoreWaiting, takeQaOffered,
 } = require('../site/js/operator');
 
 const ROLES = { operators: [{ login: 'SlavaSubotskiy', id: 11644864 }] };
@@ -185,11 +185,29 @@ describe('maySpendLlm', () => {
   });
 });
 
+describe('takeQaOffered', () => {
+  it('offers the take on a translator card that has its Operator issue', () => {
+    assert.strictEqual(takeQaOffered('translator', { operator_stage: 'translator', operator_issue: 5 }), true);
+  });
+  it('does not offer it without an Operator issue (before the backfill)', () => {
+    assert.strictEqual(takeQaOffered('translator', { status: 'pending' }), false);
+    assert.strictEqual(takeQaOffered('translator', null), false);
+  });
+  it('does not offer it at any other stage', () => {
+    assert.strictEqual(takeQaOffered('translator', { operator_stage: 'review', operator_issue: 5 }), false);
+    assert.strictEqual(takeQaOffered('qa', { operator_stage: 'qa', operator_issue: 5 }), false);
+  });
+});
+
 describe('restoreWaiting', () => {
   const MAX = 15 * 60 * 1000;
   const NOW = 1_800_000_000_000;
   it('keeps a wait that is still within the bot window', () => {
     const stored = { [TALK]: { stage: 'qa', since: NOW - 60_000, issue: 1278 } };
+    assert.deepStrictEqual(restoreWaiting(stored, NOW, MAX), stored);
+  });
+  it('keeps a wait for a take from the translator', () => {
+    const stored = { [TALK]: { stage: 'translator', since: NOW - 60_000, issue: 1301 } };
     assert.deepStrictEqual(restoreWaiting(stored, NOW, MAX), stored);
   });
   it('drops a wait older than the window, as the live poll would', () => {

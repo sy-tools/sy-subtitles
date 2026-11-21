@@ -432,7 +432,8 @@ and `subtitle-pipeline.yml` through `tools/talk_operator.py`:
 | `op:pipeline` | a new `talks/*/meta.yaml` lands on `main` (a push, so hand-pushed talks count) |
 | `op:translator` | `subtitle-pipeline.yml` opened `Review:` — all subtitles built; talks added before this stage get their issue here |
 | `op:review` | a translator `sync/{login}/{talk_id}--*` PR leaves draft |
-| `op:qa` | that PR merged and no other ready sync PR is open; the bot also closes `Review:` with `review:approved` |
+| `op:qa` | that PR merged and no other ready sync PR is open, or the operator added `op:take` at `op:translator` (the edits landed without a translator PR); either way the bot also closes `Review:` with `review:approved` |
+| `op:take` | a trigger, not a stage: the operator's "Take to QA" in the SPA; the bot removes it, and from anyone not in `roles.yaml` or at any other stage it changes nothing else |
 | `op:qa-passed` | the operator: QA done |
 | `op:ready` | `tools/amruta_package.py` committed `talks/{id}/_for_Amruta/` and posted the Gmail compose link |
 | `op:delivered` | the operator closed the issue from `op:ready`; `amruta_delivery` (date + package commit) appended to `meta.yaml` |

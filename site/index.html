@@ -1140,6 +1140,10 @@ var I18N = {
     'op.chip_translator': 'У перекладача',
     'op.run_pipeline': 'Запустити пайплайн',
     'op.qa_passed': 'QA пройдено',
+    'op.take_qa': 'Взяти на QA',
+    'op.take_title': 'Взяти на QA без PR перекладача?',
+    'op.take_body': '«{title}» перейде на QA, а Review: буде закрито як схвалене. Відкриті PR перекладача лишаться як є.',
+    'op.take_confirm': 'Взяти на QA',
     'op.download_all': 'Завантажити всі',
     'op.open_mail': 'Відкрити лист',
     'op.mail_loading': 'Шукаю лист…',
@@ -1427,6 +1431,10 @@ var I18N = {
     'op.chip_translator': 'Translator',
     'op.run_pipeline': 'Run pipeline',
     'op.qa_passed': 'QA passed',
+    'op.take_qa': 'Take to QA',
+    'op.take_title': 'Take to QA without a translator PR?',
+    'op.take_body': '“{title}” moves to QA and its Review: issue is closed as approved. Open translator PRs stay as they are.',
+    'op.take_confirm': 'Take to QA',
     'op.download_all': 'Download all',
     'op.open_mail': 'Open e-mail',
     'op.mail_loading': 'Looking for the e-mail…',
@@ -9033,6 +9041,7 @@ function opButton(cls, variant, label) {
 function appendOperatorActions(div, tk, st, stage, stages) {
   if (stage === 'new' || stage === 'pipeline') { appendRunPipeline(div, tk, stages); return; }
   var issue = st && st.operator_issue;
+  if (takeQaOffered(stage, st)) { appendTakeQa(div, tk, issue); return; }
   if (!issue || (stage !== 'qa' && stage !== 'ready')) return;
   var row = document.createElement('div');
   row.className = 'op-actions';
@@ -9086,6 +9095,40 @@ function appendOperatorActions(div, tk, st, stage, stages) {
     });
   });
   row.appendChild(close);
+}
+
+// "Take to QA": the edits landed without a translator PR, so no sync-PR merge
+// will move the talk. The op:take label asks the bot to; it checks the sender
+// against roles.yaml and closes Review: itself.
+function appendTakeQa(div, tk, issue) {
+  var row = document.createElement('div');
+  row.className = 'op-actions';
+  div.appendChild(row);
+  if (operatorWaiting[tk.id]) {
+    var w = document.createElement('span');
+    w.className = 'op-waiting';
+    w.textContent = t('op.waiting');
+    row.appendChild(w);
+    return;
+  }
+  var take = opButton('op-take-btn', 'btn--primary', t('op.take_qa'));
+  take.addEventListener('click', function(e) {
+    e.stopPropagation();
+    SPA.confirm({
+      title: t('op.take_title'),
+      // HTML body, title from meta.yaml: escape it, and replace through a
+      // function so a `$&` in the title is not read as a pattern.
+      body: t('op.take_body').replace('{title}', function() { return esc(tk.title || tk.id); }),
+      confirmLabel: t('op.take_confirm'),
+    }).then(function(ok) {
+      if (!ok) return;
+      take.disabled = true;
+      takeToQa(API, getAuthToken(), issue)
+        .then(function() { markOperatorWaiting(tk.id, 'translator', issue); })
+        .catch(function(err) { take.disabled = false; showToast(t('op.failed').replace('{err}', (err && err.message) || err), 4000); });
+    });
+  });
+  row.appendChild(take);
 }
 
 // The pipeline's own guard decides who may spend tokens; the button is only
