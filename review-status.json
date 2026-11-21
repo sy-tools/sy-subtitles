@@ -1,12 +1,15 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:06:30.369735+00:00",
+  "updated_at": "2026-11-21T08:07:23.824531+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
       "reviewer": "IrynaFilSY",
       "issue_number": 5,
-      "updated_at": "2026-04-15T13:10:05Z"
+      "updated_at": "2026-04-15T13:10:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1392
     },
     "1979-12-10_Christmas-And-Its-Relationship-To-Lord-Jesus-1979-2": {
       "status": "pending",
@@ -135,7 +138,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 118,
-      "updated_at": "2026-07-11T02:48:37Z"
+      "updated_at": "2026-07-11T02:48:37Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1393
     },
     "1988-12-11_Adi-Shakti-Puja-The-steadiness-of-the-mind-is-very-important-for-the-marriages": {
       "status": "pending",
@@ -264,7 +270,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 253,
-      "updated_at": "2026-07-14T09:17:23Z"
+      "updated_at": "2026-07-14T09:17:23Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1385
     },
     "1981-05-24_Subconscious-Supraconscious-and-Our-Correct-Ideals": {
       "status": "in-progress",
@@ -375,7 +384,10 @@
       "status": "in-progress",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 325,
-      "updated_at": "2026-07-12T20:22:21Z"
+      "updated_at": "2026-07-12T20:22:21Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1390
     },
     "2001-05-06_Sahasrara-Puja-To-Break-Sahasrara": {
       "status": "pending",
@@ -405,7 +417,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 354,
-      "updated_at": "2026-07-16T08:33:15Z"
+      "updated_at": "2026-07-16T08:33:15Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1387
     },
     "1983-01-14_Shri-Saraswati-Puja-The-basis-of-all-creativity-is-love": {
       "status": "pending",
@@ -468,7 +483,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 402,
-      "updated_at": "2026-07-16T09:13:36Z"
+      "updated_at": "2026-07-16T09:13:36Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1389
     },
     "1986-05-04_Sahasrara-Puja-Consciousness-and-Evolution": {
       "status": "pending",
@@ -594,7 +612,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 726,
-      "updated_at": "2026-11-17T06:14:01Z"
+      "updated_at": "2026-11-17T06:14:01Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1391
     },
     "2000-07-23_Guru-Puja-Shraddha": {
       "status": "approved",
@@ -684,7 +705,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1196,
-      "updated_at": "2026-11-08T14:11:28Z"
+      "updated_at": "2026-11-08T14:11:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1388
     },
     "1984-09-16_Shri-Ekadasha-Rudra-Puja-Rudra-is-the-destructive-power-of-Shiva": {
       "status": "pending",
@@ -705,7 +729,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1178,
-      "updated_at": "2026-10-30T20:27:27Z"
+      "updated_at": "2026-10-30T20:27:27Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1394
     },
     "1982-12-19_Shri-Mahakali-Puja-Desire-Within-Havan": {
       "status": "pending",
