@@ -452,14 +452,18 @@ function findOpenPrByHead(api, token, owner, branch, fetchImpl) {
 
 // Every PR ever opened from <owner>:<branch>, newest first, open or not. The
 // sync branch name is deterministic, so one name carries each generation of
-// the PR. Read past the HTTP cache: the caller drops local edits on the
-// strength of `merged`, and a list cached from before the merge would say no.
+// the PR. Read past the HTTP cache: a list cached from before the merge would
+// say "not merged". `mergeCommitSha` of a merged PR is the commit the base
+// branch was moved to — merge, squash or rebase alike — so a file read at it
+// is the file as it merged. A PR that never merged names a commit there too
+// (GitHub's test merge, which is on no branch), so it is reported as null.
 function listPrsByHead(api, token, owner, branch, fetchImpl) {
   return ghJson(api + '/pulls?head=' + encodeURIComponent(owner + ':' + branch)
     + '&state=all&sort=created&direction=desc', token, null, freshFetch(fetchImpl))
     .then(function (list) {
       return (list || []).map(function (r) {
-        return { number: r.number, state: r.state, merged: !!r.merged_at, html_url: r.html_url };
+        return { number: r.number, state: r.state, merged: !!r.merged_at,
+          mergeCommitSha: (r.merged_at && r.merge_commit_sha) || null, html_url: r.html_url };
       });
     });
 }

@@ -56,6 +56,16 @@ describe('sync targets (file-scoped)', () => {
     assert.strictEqual(srtSyncTarget(TALK, 'video1', 'uk').filePath, 'talks/' + TALK + '/video1/final/uk.srt');
     assert.strictEqual(transcriptSyncTarget(TALK, 'hi').filePath, 'talks/' + TALK + '/transcript_hi.txt');
   });
+  it('each target names the one entry whose edits are keyed by the file\'s own index', () => {
+    const srt = srtSyncTarget(TALK, 'video1', 'uk');
+    assert.strictEqual(srt.editsKey, 'srt_edits_' + TALK + '_video1_uk');
+    assert.strictEqual(srt.fileKind, 'srt');
+    assert.ok(srt.filter(srt.editsKey));
+    const transcript = transcriptSyncTarget(TALK, 'hi');
+    assert.strictEqual(transcript.editsKey, 'review_' + TALK);
+    assert.strictEqual(transcript.fileKind, 'transcript');
+    assert.ok(transcript.filter(transcript.editsKey));
+  });
 });
 
 describe('collectSyncEntries', () => {
@@ -265,7 +275,7 @@ describe('canonical srt_edits entries (shared preview/review block store)', () =
 });
 
 describe('placeholder markers (srt_placeholders, beside the canonical block store)', () => {
-  const { dropLandedItems, isSyncSpaceKey } = require('../site/js/edit_sync');
+  const { dropEditsInFile, isSyncSpaceKey } = require('../site/js/edit_sync');
   const { srtEditsKey, srtPlaceholdersKey } = require('../site/js/edit_store');
   const CK = srtEditsKey(TALK, 'video1', 'uk');
   const HK = srtPlaceholdersKey(TALK, 'video1', 'uk');
@@ -308,14 +318,14 @@ describe('placeholder markers (srt_placeholders, beside the canonical block stor
   });
 
   it('a merged PR does not land a placeholder: it proposed nothing', () => {
-    const doc = { [CK]: { 4: 'текст', 5: 'правка' }, [HK]: { 4: 'текст' } };
-    assert.deepStrictEqual(dropLandedItems(doc, doc), { [CK]: { 4: 'текст' }, [HK]: { 4: 'текст' } });
+    const local = { [CK]: { 4: 'текст', 5: 'правка' }, [HK]: { 4: 'текст' } };
+    const merged = ['', '', '', '', 'текст', 'правка'];
+    assert.deepStrictEqual(dropEditsInFile(local, CK, merged), { [CK]: { 4: 'текст' }, [HK]: { 4: 'текст' } });
   });
 
   it('a merged PR leaves no marker behind for an edit it landed', () => {
-    const doc = { [CK]: { 5: 'правка' } };
     const local = { [CK]: { 5: 'правка' }, [HK]: { 5: 'як було' } };
-    assert.deepStrictEqual(dropLandedItems(doc, local), {});
+    assert.deepStrictEqual(dropEditsInFile(local, CK, ['', '', '', '', '', 'правка']), {});
   });
 });
 
@@ -376,6 +386,12 @@ function ghStub(over) {
     _stateFile: null,
     getFileContent: async (api, token, path, ref) => {
       record('getFileContent', [path, ref]);
+      if (over.commits && ref in over.commits) {
+        let at = over.commits[ref][path];
+        if (typeof at === 'function') at = at();
+        if (at instanceof Error) throw at;
+        return typeof at === 'string' ? { content: at, sha: 'blob_' + ref } : null;
+      }
       if (branchGone) return null;                 // 404 on a missing branch -> null
       if ('remote' in over) {
         const r = typeof over.remote === 'function' ? over.remote() : over.remote;
@@ -1112,12 +1128,21 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
   });
 
   // --- the branch is gone because its PR was MERGED -------------------------
-  const MERGED = [{ number: 12, state: 'closed', merged: true }];
-  const CLOSED = [{ number: 12, state: 'closed', merged: false }];
+  // What landed is read off the file at the PR's merge commit, edit by edit.
+  const FILE = 'talks/' + TALK + '/transcript_uk.txt';
+  const FACT = { filePath: FILE, editsKey: RKEY, parseFile: (content) => content.split('\n') };
+  const MERGED = [{ number: 12, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' }];
+  // Not merged is decided by `merged` alone, whatever commit the PR names.
+  const CLOSED = [{ number: 12, state: 'closed', merged: false, mergeCommitSha: 'mergesha12' }];
+  const ALL_LANDED = 'zero\none\ntwo\nthree';
   const cachedPr = { prNumber: 12, prUrl: 'https://github.com/x/pull/12', nodeId: 'PR_n12', prDraft: false };
+  const mergedWith = (fileAtMerge, prs) => (
+    { branchGone: true, prs: prs || MERGED, commits: { mergesha12: { [FILE]: fileAtMerge } } });
+  const mergeReads = (gh) => gh.calls.filter((c) => c[0] === 'getFileContent' && c[1] === FILE);
+  const edits = (storage) => JSON.parse(storage.getItem(RKEY)).edits;
 
-  it('merged PR: the edits this device last synced have landed and are cleared', async () => {
-    const { engine, gh, storage, timers, applied } = makeEngine({ branchGone: true, prs: MERGED }, seeded(cachedPr));
+  it('merged PR: every edit the merged file holds has landed and is cleared', async () => {
+    const { engine, gh, storage, timers, applied } = makeEngine(mergedWith(ALL_LANDED), seeded(cachedPr), FACT);
     await engine.attach();
     assert.strictEqual(storage.getItem(RKEY), null, 'nothing is left to propose a second time');
     assert.deepStrictEqual(applied, [[RKEY]], 'the open view is told to re-read its edits');
@@ -1129,16 +1154,113 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
     assert.deepStrictEqual(timers.delays(), []);
     assert.deepStrictEqual(writes(gh), []);
     assert.deepStrictEqual(gh.calls.filter((c) => c[0] === 'listPrsByHead'), [['listPrsByHead', 'sy-tools', BRANCH_NAME]]);
+    assert.deepStrictEqual(mergeReads(gh), [['getFileContent', FILE, 'mergesha12']],
+      'the target\'s own file, as the merge commit has it');
   });
 
-  it('merged PR: edits typed since the last sync are newer work — they alone go into the new PR', async () => {
+  it('merged PR: an edit the merged file does not hold stays, held back — whatever the base says', async () => {
+    // The base claims all three were synced. The file is what merged.
+    const { engine, gh, storage, timers } = makeEngine(mergedWith('zero\none\nTWO, as main has it\nthree'),
+      seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.deepStrictEqual(edits(storage), { 2: 'two' });
+    assert.strictEqual(engine.getInfo().status, 'pending');
+    assert.strictEqual(base(storage).orphaned, true);
+    assert.deepStrictEqual(timers.delays(), [], 'kept, and not pushed for the user');
+    assert.deepStrictEqual(writes(gh), []);
+  });
+
+  it('merged PR: an edit this device never synced is cleared too, once the merged file reads the same', async () => {
+    const init = seeded(Object.assign({ doc: {} }, cachedPr));
+    const { engine, gh, storage, timers } = makeEngine(mergedWith(ALL_LANDED), init, FACT);
+    await engine.attach();
+    assert.strictEqual(timers.delays().length, 1, 'un-synced edits arm a push; the push is what meets the merge');
+    timers.fire(15000);
+    await settle();
+    assert.strictEqual(storage.getItem(RKEY), null);
+    assert.strictEqual(engine.getInfo().status, 'idle');
+    assert.deepStrictEqual(writes(gh), [], 'nothing is left to open a PR for');
+  });
+
+  it('merged PR: the file is compared index by index', async () => {
+    const { engine, storage } = makeEngine(mergedWith('one\ntwo\nthree\nzero'), seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.deepStrictEqual(edits(storage), ENTRY.edits, 'the same texts, each one block away');
+  });
+
+  it('merged PR: the file is not at the merge commit — nothing is cleared, the edits are held back', async () => {
+    const { engine, gh, storage } = makeEngine({ branchGone: true, prs: MERGED, commits: { mergesha12: {} } },
+      seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.deepStrictEqual(mergeReads(gh), [['getFileContent', FILE, 'mergesha12']]);
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
+    assert.strictEqual(engine.getInfo().status, 'pending');
+    assert.strictEqual(base(storage).orphaned, true);
+    assert.strictEqual(base(storage).sha, null, 'a file that is not there will not be there next time either');
+    assert.deepStrictEqual(writes(gh), []);
+  });
+
+  it('merged PR: the merged file cannot be read — nothing is cleared or forgotten, the next pull asks again', async () => {
+    let fileAtMerge = Object.assign(new Error('boom'), { status: 502 });
+    const { engine, gh, storage, timers } = makeEngine(mergedWith(() => fileAtMerge), seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
+    assert.strictEqual(base(storage).prNumber, 12, 'the PR number is what finds the merge — keep it');
+    assert.strictEqual(base(storage).sha, 'sha_gone');
+    assert.strictEqual(engine.getInfo().status, 'pending', 'edits on screen never sit under a hidden chip');
+    assert.deepStrictEqual(timers.delays(), []);
+    assert.deepStrictEqual(writes(gh), []);
+    fileAtMerge = ALL_LANDED;
+    await engine.pull(true);
+    assert.strictEqual(storage.getItem(RKEY), null);
+    assert.strictEqual(engine.getInfo().status, 'idle');
+  });
+
+  it('merged PR: a 401 on the merged file is a revoked token, reported as one', async () => {
+    const denied = Object.assign(new Error('Bad credentials'), { status: 401 });
+    const { engine, storage } = makeEngine(mergedWith(denied), seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.strictEqual(engine.getInfo().status, 'error');
+    assert.strictEqual(engine.getInfo().error.kind, 'auth');
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
+  });
+
+  it('merged PR: a file that cannot be parsed clears nothing', async () => {
+    const broken = Object.assign({}, FACT, { parseFile: () => { throw new Error('not an SRT'); } });
+    const { engine, storage } = makeEngine(mergedWith(ALL_LANDED), seeded(cachedPr), broken);
+    await engine.attach();
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
+    assert.strictEqual(base(storage).orphaned, true);
+  });
+
+  it('merged PR with no merge commit named: there is no file to read, nothing is cleared', async () => {
+    const prs = [{ number: 12, state: 'closed', merged: true, mergeCommitSha: null }];
+    const { engine, gh, storage } = makeEngine(mergedWith(ALL_LANDED, prs), seeded(cachedPr), FACT);
+    await engine.attach();
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
+    assert.deepStrictEqual(mergeReads(gh), []);
+    assert.strictEqual(base(storage).orphaned, true);
+  });
+
+  it('an engine that names no file to check clears nothing on a merge', async () => {
+    for (const missing of ['filePath', 'editsKey', 'parseFile']) {
+      const opts = Object.assign({}, FACT, { [missing]: undefined });
+      const { engine, gh, storage } = makeEngine(mergedWith(ALL_LANDED), seeded(cachedPr), opts);
+      await engine.attach();
+      assert.deepStrictEqual(edits(storage), ENTRY.edits, missing);
+      assert.deepStrictEqual(mergeReads(gh), [], missing);
+      assert.strictEqual(base(storage).orphaned, true, missing);
+    }
+  });
+
+  it('merged PR: edits the merged file lacks are newer work — they alone go into the new PR', async () => {
     const init = seeded(cachedPr);
     init[RKEY] = JSON.stringify({ marks: {}, edits: { 1: 'one', 2: 'two, reworded', 3: 'three', 4: 'four' } });
-    const { engine, gh, storage, timers } = makeEngine({ branchGone: true, prs: MERGED }, init);
+    const { engine, gh, storage, timers } = makeEngine(mergedWith(ALL_LANDED), init, FACT);
     await engine.attach();
     timers.fire(15000);
     await settle();
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 2: 'two, reworded', 4: 'four' });
+    assert.deepStrictEqual(edits(storage), { 2: 'two, reworded', 4: 'four' });
     assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
     assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, { 2: 'two, reworded', 4: 'four' });
     assert.strictEqual(engine.getInfo().status, 'synced');
@@ -1147,25 +1269,40 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
   it('closed PR: a push that finds the branch gone still carries every edit', async () => {
     const init = seeded(cachedPr);
     init[RKEY] = JSON.stringify({ marks: {}, edits: Object.assign({ 4: 'four' }, ENTRY.edits) });
-    const { engine, gh, timers } = makeEngine({ branchGone: true, prs: CLOSED }, init);
+    const { engine, gh, timers } = makeEngine(mergedWith(ALL_LANDED, CLOSED), init, FACT);
     await engine.attach();
     timers.fire(15000);
     await settle();
     assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, Object.assign({ 4: 'four' }, ENTRY.edits));
+    assert.deepStrictEqual(mergeReads(gh), [], 'nothing merged, nothing to read');
   });
 
   it('a push that finds the branch gone and cannot learn why pushes nothing', async () => {
     const init = seeded(cachedPr);
     init[RKEY] = JSON.stringify({ marks: {}, edits: Object.assign({ 4: 'four' }, ENTRY.edits) });
     const boom = Object.assign(new Error('boom'), { status: 500 });
-    const { engine, gh, storage, timers } = makeEngine({ branchGone: true, prs: boom }, init);
+    const { engine, gh, storage, timers } = makeEngine({ branchGone: true, prs: boom }, init, FACT);
     await engine.attach();
     timers.fire(15000);
     await settle();
     assert.deepStrictEqual(writes(gh), [], 'landed edits must not be proposed again on a guess');
     assert.strictEqual(engine.getInfo().status, 'error');
     assert.strictEqual(base(storage).sha, 'sha_gone');
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, Object.assign({ 4: 'four' }, ENTRY.edits));
+    assert.deepStrictEqual(edits(storage), Object.assign({ 4: 'four' }, ENTRY.edits));
+  });
+
+  it('a push that finds its PR merged and cannot read the merged file pushes nothing', async () => {
+    const init = seeded(cachedPr);
+    init[RKEY] = JSON.stringify({ marks: {}, edits: Object.assign({ 4: 'four' }, ENTRY.edits) });
+    const boom = Object.assign(new Error('boom'), { status: 502 });
+    const { engine, gh, storage, timers } = makeEngine(mergedWith(boom), init, FACT);
+    await engine.attach();
+    timers.fire(15000);
+    await settle();
+    assert.deepStrictEqual(writes(gh), [], 'landed edits must not be proposed again on a guess');
+    assert.strictEqual(engine.getInfo().status, 'error');
+    assert.strictEqual(base(storage).prNumber, 12);
+    assert.deepStrictEqual(edits(storage), Object.assign({ 4: 'four' }, ENTRY.edits));
   });
 
   // A finalize removes the state file and forgets its sha, so that device holds
@@ -1174,7 +1311,7 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
   const finalized = Object.assign({ sha: null }, cachedPr);
 
   it('finalized here, then merged: the landed edits are cleared and the chip stops saying "ready"', async () => {
-    const { engine, gh, storage } = makeEngine({ branchGone: true, prs: MERGED }, seeded(finalized));
+    const { engine, gh, storage } = makeEngine(mergedWith(ALL_LANDED), seeded(finalized), FACT);
     await engine.attach();
     assert.strictEqual(storage.getItem(RKEY), null);
     assert.strictEqual(engine.getInfo().status, 'idle');
@@ -1183,30 +1320,31 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
   });
 
   it('finalized here and still open: the PR stays "ready" and nothing is touched', async () => {
-    const { engine, gh, storage } = makeEngine({ prs: MERGED }, seeded(finalized));
+    const { engine, gh, storage } = makeEngine({ prs: MERGED, commits: { mergesha12: { [FILE]: ALL_LANDED } } },
+      seeded(finalized), FACT);
     await engine.attach();
     assert.strictEqual(engine.getInfo().status, 'ready');
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits);
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
     assert.strictEqual(base(storage).prNumber, 12);
     assert.strictEqual(gh.calls.filter((c) => c[0] === 'listPrsByHead').length, 0, 'asked only once the branch is gone');
   });
 
   it('finalized here, then merged: an edit made before any pull opens a new PR with that edit alone', async () => {
-    const { engine, gh, storage } = makeEngine({ branchGone: true, prs: MERGED }, seeded(finalized));
+    const { engine, gh, storage } = makeEngine(mergedWith(ALL_LANDED), seeded(finalized), FACT);
     localEdit(storage, 4, 'four');
     engine.notifyEdit();
     await engine.flush();
     assert.strictEqual(gh.calls.filter((c) => c[0] === 'convertPullToDraft').length, 0, 'a merged PR cannot go back to draft');
     assert.deepStrictEqual(writes(gh), ['createRef', 'putFile', 'createPull']);
     assert.deepStrictEqual(gh.puts.at(-1).entries[RKEY].edits, { 4: 'four' });
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 4: 'four' });
+    assert.deepStrictEqual(edits(storage), { 4: 'four' });
     assert.strictEqual(engine.getInfo().status, 'synced');
   });
 
   it('no local edits left (the SPA retired them) and the branch gone: the dead PR is forgotten', async () => {
     const init = seeded(finalized);
     delete init[RKEY];
-    const { engine, storage } = makeEngine({ branchGone: true, prs: MERGED }, init);
+    const { engine, storage } = makeEngine(mergedWith(ALL_LANDED), init, FACT);
     await engine.attach();
     assert.strictEqual(engine.getInfo().status, 'idle');
     assert.strictEqual(engine.getInfo().prNumber, null);
@@ -1217,16 +1355,16 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
     const withMark = { marks: { 5: 'check this' }, edits: ENTRY.edits };
     const init = seeded(Object.assign({ doc: { [RKEY]: withMark } }, cachedPr));
     init[RKEY] = JSON.stringify(withMark);
-    const { engine, storage } = makeEngine({ branchGone: true, prs: MERGED }, init);
+    const { engine, storage } = makeEngine(mergedWith(ALL_LANDED), init, FACT);
     await engine.attach();
     assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)), { marks: { 5: 'check this' }, edits: {} });
     assert.strictEqual(engine.getInfo().status, 'pending');
   });
 
   it('closed without a merge: the edits are on no branch and stay, as before', async () => {
-    const { engine, gh, storage, timers } = makeEngine({ branchGone: true, prs: CLOSED }, seeded(cachedPr));
+    const { engine, gh, storage, timers } = makeEngine(mergedWith(ALL_LANDED, CLOSED), seeded(cachedPr), FACT);
     await engine.attach();
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits);
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
     assert.strictEqual(engine.getInfo().status, 'pending');
     assert.strictEqual(base(storage).orphaned, true);
     assert.strictEqual(base(storage).sha, null);
@@ -1245,42 +1383,45 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
   });
 
   it('no PR was ever opened from the branch: the edits stay', async () => {
-    const { engine, storage } = makeEngine({ branchGone: true, prs: [] }, seeded());
+    const { engine, storage } = makeEngine(mergedWith(ALL_LANDED, []), seeded(), FACT);
     await engine.attach();
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits);
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
     assert.strictEqual(base(storage).orphaned, true);
   });
 
   it('the PR this device synced with decides, not a later one from the same branch', async () => {
     // The branch name is deterministic, so it carries every PR generation.
-    const laterMerged = [{ number: 15, state: 'closed', merged: true }, { number: 12, state: 'closed', merged: false }];
-    const kept = makeEngine({ branchGone: true, prs: laterMerged }, seeded(cachedPr));
+    const laterMerged = [{ number: 15, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' },
+      { number: 12, state: 'closed', merged: false, mergeCommitSha: null }];
+    const kept = makeEngine(mergedWith(ALL_LANDED, laterMerged), seeded(cachedPr), FACT);
     await kept.engine.attach();
-    assert.deepStrictEqual(JSON.parse(kept.storage.getItem(RKEY)).edits, ENTRY.edits, '#12 never merged');
+    assert.deepStrictEqual(edits(kept.storage), ENTRY.edits, '#12 never merged');
 
-    const laterClosed = [{ number: 15, state: 'closed', merged: false }, { number: 12, state: 'closed', merged: true }];
-    const cleared = makeEngine({ branchGone: true, prs: laterClosed }, seeded(cachedPr));
+    const laterClosed = [{ number: 15, state: 'closed', merged: false, mergeCommitSha: null },
+      { number: 12, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' }];
+    const cleared = makeEngine(mergedWith(ALL_LANDED, laterClosed), seeded(cachedPr), FACT);
     await cleared.engine.attach();
     assert.strictEqual(cleared.storage.getItem(RKEY), null, '#12 merged');
   });
 
   it('with no PR number cached, a merged PR of the branch is not taken for this one', async () => {
-    const prs = [{ number: 15, state: 'closed', merged: true }];
-    const { engine, gh, storage } = makeEngine({ branchGone: true, prs }, seeded());
+    const prs = [{ number: 15, state: 'closed', merged: true, mergeCommitSha: 'mergesha12' }];
+    const { engine, gh, storage } = makeEngine(mergedWith(ALL_LANDED, prs), seeded(), FACT);
     await engine.attach();
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits);
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
     assert.strictEqual(base(storage).orphaned, true, 'kept and held, like any branch that is simply gone');
     assert.strictEqual(engine.getInfo().status, 'pending');
     assert.deepStrictEqual(writes(gh), []);
+    assert.deepStrictEqual(mergeReads(gh), []);
   });
 
   it('a failed PR lookup drops nothing and forgets nothing: the next pull asks again', async () => {
     let answer = Object.assign(new Error('boom'), { status: 500 });
-    const { engine, gh, storage, timers } = makeEngine({ branchGone: true, prs: () => answer }, seeded(cachedPr));
+    const { engine, gh, storage, timers } = makeEngine(mergedWith(ALL_LANDED, () => answer), seeded(cachedPr), FACT);
     await engine.attach();
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits);
-    assert.strictEqual(base(storage).sha, 'sha_gone', 'the base is what tells landed from newer — keep it');
-    assert.deepStrictEqual(base(storage).doc, { [RKEY]: ENTRY });
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
+    assert.strictEqual(base(storage).sha, 'sha_gone');
+    assert.strictEqual(base(storage).prNumber, 12, 'the PR number is what finds the merge — keep it');
     assert.strictEqual(engine.getInfo().status, 'pending', 'edits on screen never sit under a hidden chip');
     assert.deepStrictEqual(timers.delays(), []);
     assert.deepStrictEqual(writes(gh), []);
@@ -1292,22 +1433,25 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
 
   it('a 401 from the PR lookup is a revoked token, reported as one', async () => {
     const denied = Object.assign(new Error('Bad credentials'), { status: 401 });
-    const { engine, storage } = makeEngine({ branchGone: true, prs: denied }, seeded(cachedPr));
+    const { engine, storage } = makeEngine({ branchGone: true, prs: denied }, seeded(cachedPr), FACT);
     await engine.attach();
     assert.strictEqual(engine.getInfo().status, 'error');
     assert.strictEqual(engine.getInfo().error.kind, 'auth');
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, ENTRY.edits);
+    assert.deepStrictEqual(edits(storage), ENTRY.edits);
   });
 
-  it('a "merged" answer that arrives after a push re-created the branch clears nothing', async () => {
-    const { engine, gh, storage } = makeEngine({ branchGone: true, prs: MERGED }, seeded(cachedPr));
+  it('a merged file that arrives after a push re-created the branch touches nothing', async () => {
+    const { engine, gh, storage } = makeEngine(mergedWith(ALL_LANDED), seeded(cachedPr), FACT);
     let release;
     const held = new Promise((r) => { release = r; });
-    const realList = gh.listPrsByHead;
-    gh.listPrsByHead = async (...args) => { await held; return realList(...args); };
+    const realRead = gh.getFileContent;
+    gh.getFileContent = async (api, token, path, ref) => {
+      if (path === FILE) await held;
+      return realRead(api, token, path, ref);
+    };
     const pulling = engine.pull(true);
     await settle();
-    gh.listPrsByHead = realList;                 // the push asks for itself, and is answered
+    gh.getFileContent = realRead;                // the push asks for itself, and is answered
     localEdit(storage, 4, 'four');
     engine.notifyEdit();
     await engine.flush();
@@ -1315,33 +1459,63 @@ describe('engine: pull finds no state file while the base says "synced"', () => 
     assert.deepStrictEqual(pushed.doc[RKEY].edits, { 4: 'four' });
     release();
     await pulling;
-    assert.deepStrictEqual(JSON.parse(storage.getItem(RKEY)).edits, { 4: 'four' },
-      'the edit just pushed equals the new base, and must not be taken for a landed one');
+    assert.deepStrictEqual(edits(storage), { 4: 'four' });
     assert.deepStrictEqual(base(storage), pushed, 'the base of the push stands');
     assert.strictEqual(engine.getInfo().status, 'synced');
   });
 });
 
-describe('dropLandedItems (what a merged PR leaves of the local edits)', () => {
-  const { dropLandedItems } = require('../site/js/edit_sync');
+describe('dropEditsInFile (what a merged PR leaves of the local edits)', () => {
+  const { dropEditsInFile } = require('../site/js/edit_sync');
   const CANON = 'srt_edits_' + TALK + '_video1_uk';
+  const LEGACY = 'review_srt_' + TALK + '_video1_en_uk';
 
-  it('drops the edits equal to the base, keeps the changed and the new', () => {
-    const baseDoc = { [CANON]: { 0: 'a', 1: 'b' }, [RKEY]: { marks: {}, edits: { 3: 'p' } } };
-    const local = { [CANON]: { 0: 'a', 1: 'b2', 2: 'c' }, [RKEY]: { marks: {}, edits: { 3: 'p' } } };
-    assert.deepStrictEqual(dropLandedItems(baseDoc, local), { [CANON]: { 1: 'b2', 2: 'c' } });
+  it('drops an edit only where the merged file reads the same at that index', () => {
+    const local = { [CANON]: { 0: 'a', 1: 'b2', 2: 'c' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['a', 'b', 'c']), { [CANON]: { 1: 'b2' } });
   });
 
-  it('keeps marks even when the base has the same ones', () => {
-    const entry = { marks: { 1: 'm' }, edits: { 1: 'e' } };
-    assert.deepStrictEqual(dropLandedItems({ [RKEY]: entry }, { [RKEY]: entry }),
-      { [RKEY]: { marks: { 1: 'm' }, edits: {} } });
+  it('the same text at another index is not this edit', () => {
+    const local = { [CANON]: { 0: 'b', 1: 'a' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['a', 'b']), local);
   });
 
-  it('with no base nothing has landed', () => {
+  it('an index the merged file does not have is kept', () => {
+    const local = { [CANON]: { 7: 'a' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['a']), local);
+  });
+
+  it('a name every array answers to is not an index', () => {
+    const local = { [CANON]: { length: 1, constructor: 'x' } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['a']), local);
+  });
+
+  it('transcript edits are compared paragraph by paragraph; marks are no file content and stay', () => {
+    const local = { [RKEY]: { marks: { 1: 'm' }, edits: { 1: 'p1', 2: 'p2, reworded' } } };
+    assert.deepStrictEqual(dropEditsInFile(local, RKEY, ['p0', 'p1', 'p2']),
+      { [RKEY]: { marks: { 1: 'm' }, edits: { 2: 'p2, reworded' } } });
+  });
+
+  it('an entry left with nothing is gone', () => {
+    assert.deepStrictEqual(dropEditsInFile({ [RKEY]: { marks: {}, edits: { 1: 'p1' } } }, RKEY, ['p0', 'p1']), {});
+  });
+
+  it('only the named entry is keyed by the file\'s index: row-keyed leftovers are never compared', () => {
+    const local = { [CANON]: { 0: 'a' }, [LEGACY]: { marks: {}, edits: { 0: 'a' } } };
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, ['a']), { [LEGACY]: { marks: {}, edits: { 0: 'a' } } });
+  });
+
+  it('with no file text to compare with, nothing has landed', () => {
     const local = { [CANON]: { 0: 'a' } };
-    assert.deepStrictEqual(dropLandedItems({}, local), local);
-    assert.deepStrictEqual(dropLandedItems(null, local), local);
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, null), local);
+    assert.deepStrictEqual(dropEditsInFile(local, CANON, []), local);
+    assert.deepStrictEqual(dropEditsInFile(local, null, ['a']), local);
+  });
+
+  it('does not touch what it was given', () => {
+    const local = { [CANON]: { 0: 'a', 1: 'x' } };
+    dropEditsInFile(local, CANON, ['a']);
+    assert.deepStrictEqual(local, { [CANON]: { 0: 'a', 1: 'x' } });
   });
 });
 
@@ -1414,384 +1588,94 @@ describe('engine: real-file commits', () => {
   });
 });
 
-describe('engine: an edit counts as landed only once its file was pushed', () => {
+describe('engine: only the target\'s own file is committed', () => {
   const FILE = 'talks/' + TALK + '/transcript_uk.txt';
-  const files = () => [{ path: FILE, content: 'WHOLE FILE' }];
-  const MERGED = [{ number: 77, state: 'closed', merged: true }];
-  const base = (storage) => JSON.parse(storage.getItem(syncBaseKey(TALK)));
-  const filePuts = (gh) => gh.calls.filter((c) => c[0] === 'putFile' && c[1] === FILE);
-  const edits = (storage) => JSON.parse(storage.getItem(RKEY)).edits;
-  const secondFilePutFails = [null, null, null, { status: 502 }];   // state, file, state, file
+  const OTHER = 'talks/' + TALK + '/video1/final/uk.srt';
+  const putsOf = (gh, path) => gh.calls.filter((c) => c[0] === 'putFile' && c[1] === path);
 
-  async function statePushedFileFailed(buildFiles) {
-    const made = makeEngine({ putFails: [null, { status: 502, message: 'Bad Gateway' }] }, null,
-      { buildFiles: buildFiles || files });
-    localEdit(made.storage, 1, 'x');
-    made.engine.notifyEdit();
-    await made.engine.flush();
-    return made;
-  }
-
-  async function reopenedAfterMerge(storage) {
-    const later = makeEngine({ branchGone: true, prs: MERGED }, {}, { storage, buildFiles: files });
-    await later.engine.attach();
-    return Object.assign(later, { storage });
-  }
-
-  it('a failed file PUT is an error, and the base does not claim the file', async () => {
-    const { engine, storage } = await statePushedFileFailed();
-    assert.strictEqual(engine.getInfo().status, 'error');
-    assert.deepStrictEqual(base(storage).doc[RKEY].edits, { 1: 'x' }, 'the state file did go up');
-    assert.strictEqual(base(storage).filesPending, true);
-    assert.strictEqual(base(storage).filesDoc, undefined);
-  });
-
-  it('the retry pushes the file even though the doc is unchanged', async () => {
-    const { engine, gh, storage } = await statePushedFileFailed();
-    await engine.flush({ force: true });
-    assert.strictEqual(filePuts(gh).length, 2, 'the failed PUT and the retried one');
-    assert.strictEqual(gh.puts.length, 1, 'the state file is not written again');
-    assert.strictEqual(engine.getInfo().status, 'synced');
-    assert.strictEqual(base(storage).filesPending, undefined);
-    assert.deepStrictEqual(base(storage).filesDoc, base(storage).doc);
-  });
-
-  it('merged with the file never pushed: the edit is on no branch and stays on the device', async () => {
-    const first = await statePushedFileFailed();
-    await first.engine.destroy();
-    const { engine, storage } = await reopenedAfterMerge(first.storage);
-    assert.deepStrictEqual(edits(storage), { 1: 'x' });
-    assert.strictEqual(engine.getInfo().status, 'pending');
-    assert.strictEqual(base(storage).orphaned, true);
-  });
-
-  it('the reviewer\'s sequence: 502 on the file, a forced flush, then the merge', async () => {
-    const first = await statePushedFileFailed();
-    await first.engine.flush({ force: true });
-    assert.strictEqual(filePuts(first.gh).length, 2, 'the forced flush must push the file');
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.strictEqual(storage.getItem(RKEY), null, 'pushed for real this time, so it did land');
-  });
-
-  it('merged after the file was pushed: the edit has landed and is cleared', async () => {
-    const first = makeEngine({}, null, { buildFiles: files });
-    localEdit(first.storage, 1, 'x');
-    first.engine.notifyEdit();
-    await first.engine.flush();
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.strictEqual(storage.getItem(RKEY), null);
-  });
-
-  it('only the edits a file push covered are cleared by the merge', async () => {
-    const first = makeEngine({ putFails: secondFilePutFails }, null, { buildFiles: files });
-    localEdit(first.storage, 1, 'x');
-    first.engine.notifyEdit();
-    await first.engine.flush();
-    localEdit(first.storage, 2, 'y');
-    first.engine.notifyEdit();
-    await first.engine.flush();
-    assert.strictEqual(first.engine.getInfo().status, 'error');
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.deepStrictEqual(edits(storage), { 2: 'y' });
-  });
-
-  it('no file could be built (the view was not loaded): nothing counts as pushed', async () => {
-    let loaded = false;
-    const build = () => (loaded ? files() : []);
-    const { engine, gh, storage } = makeEngine({}, null, { buildFiles: build });
+  it('a file built for another target is not pushed', async () => {
+    const { engine, gh, storage } = makeEngine({}, null,
+      { buildFiles: () => [{ path: OTHER, content: 'ANOTHER VIEW' }], filePath: FILE });
     localEdit(storage, 1, 'x');
     engine.notifyEdit();
     await engine.flush();
-    assert.strictEqual(gh.puts.length, 1, 'the state file is the backup, and it went up');
-    assert.strictEqual(base(storage).filesPending, true);
-    assert.strictEqual(engine.getInfo().status, 'pending', 'the PR does not carry the edit yet');
-    loaded = true;
-    await engine.flush({ force: true });
-    assert.strictEqual(filePuts(gh).length, 1);
-    assert.strictEqual(engine.getInfo().status, 'synced');
-    assert.strictEqual(base(storage).filesPending, undefined);
-  });
-
-  it('no file could be built, then merged: the edit stays', async () => {
-    const first = makeEngine({}, null, { buildFiles: () => [] });
-    localEdit(first.storage, 1, 'x');
-    first.engine.notifyEdit();
-    await first.engine.flush();
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.deepStrictEqual(edits(storage), { 1: 'x' });
-  });
-
-  it('the page reopened with a file still owed: the push is armed without an edit', async () => {
-    const first = await statePushedFileFailed();
-    await first.engine.destroy();
-    const { engine, gh, timers } = makeEngine({ remote: () => first.gh._stateFile }, {},
-      { storage: first.storage, buildFiles: files });
-    await engine.attach();
-    assert.strictEqual(engine.getInfo().status, 'pending');
-    timers.fire(15000);
-    await settle();
-    assert.strictEqual(filePuts(gh).length, 1);
-    assert.strictEqual(gh.puts.length, 0, 'the doc is unchanged: only the file goes up');
-    assert.strictEqual(engine.getInfo().status, 'synced');
-  });
-
-  it('a pull does not paint "synced" over a file that is still owed', async () => {
-    const { engine } = await statePushedFileFailed();
-    await engine.pull(true);
-    assert.strictEqual(engine.getInfo().status, 'pending');
-  });
-
-  it('an edit adopted from another device was not pushed by this one: the merge leaves it', async () => {
-    const ENTRY = { marks: {}, edits: { 4: 'theirs' } };
-    const { engine, storage } = makeEngine({ branchGone: true, prs: MERGED }, {
-      [RKEY]: JSON.stringify(ENTRY),
-      [syncBaseKey(TALK)]: JSON.stringify({
-        doc: { [RKEY]: ENTRY }, sha: 'sha_gone', revision: 3, prNumber: 77, prUrl: 'u', nodeId: 'n',
-        prDraft: true, fileShas: {}, branch: BRANCH_NAME,
-      }),
-    }, { buildFiles: files });
-    await engine.attach();
-    assert.deepStrictEqual(edits(storage), { 4: 'theirs' });
-  });
-
-  it('finalize pushes a file that is still owed before it flips the PR to ready', async () => {
-    const { engine, gh, storage } = makeEngine({ putFails: secondFilePutFails }, null, { buildFiles: files });
-    localEdit(storage, 1, 'x');
-    engine.notifyEdit();
-    await engine.flush();
-    localEdit(storage, 2, 'y');
-    engine.notifyEdit();
-    await engine.flush();
-    await engine.finalize();
-    const seq = gh.calls.map((c) => (c[0] === 'putFile' ? 'putFile:' + c[1] : c[0]));
-    assert.strictEqual(filePuts(gh).length, 3, 'one pushed, one failed, one pushed by the finalize');
-    assert.ok(seq.lastIndexOf('putFile:' + FILE) < seq.indexOf('markPullReady'));
-    assert.strictEqual(engine.getInfo().status, 'ready');
-  });
-
-  it('finalize refuses to flip the PR to ready while the file cannot be pushed', async () => {
-    const { engine, gh, storage } = makeEngine({}, null, { buildFiles: () => [] });
-    localEdit(storage, 1, 'x');
-    engine.notifyEdit();
-    await engine.flush();
-    await assert.rejects(engine.finalize(), /file/);
-    assert.strictEqual(gh.calls.filter((c) => c[0] === 'markPullReady').length, 0);
-    assert.strictEqual(gh.calls.filter((c) => c[0] === 'deleteFile').length, 0, 'the state file stays');
-    assert.strictEqual(engine.getInfo().status, 'pending');
-    assert.strictEqual(engine.getInfo().prDraft, true);
-  });
-
-  function twoDevicesOnOneBranch() {
-    const gh = ghStub({});
-    const put = gh.putFile;
-    const net = { fileDown: false, conflictOnce: false };
-    gh.putFile = async (api, token, opts) => {
-      if (net.fileDown && opts.path === FILE) { const e = new Error('Bad Gateway'); e.status = 502; throw e; }
-      if (net.conflictOnce && opts.path !== FILE) {
-        net.conflictOnce = false;
-        const e = new Error('conflict'); e.status = 409; throw e;
-      }
-      return put(api, token, opts);
-    };
-    const device = (clientId) => makeEngine({}, null, { gh, buildFiles: files, clientId });
-    return { net, device };
-  }
-
-  async function xPushedByAThenRemovedByB() {
-    const shared = twoDevicesOnOneBranch();
-    const A = shared.device('deviceA');
-    const B = shared.device('deviceB');
-    localEdit(A.storage, 1, 'x');
-    A.engine.notifyEdit();
-    await A.engine.flush();
-    assert.deepStrictEqual(base(A.storage).filesDoc[RKEY].edits, { 1: 'x' }, 'A pushed X with its file');
-    await B.engine.attach();
-    assert.deepStrictEqual(edits(B.storage), { 1: 'x' }, 'B adopted X');
-    B.storage.setItem(RKEY, JSON.stringify({ marks: {}, edits: { 2: 'y' } }));
-    B.engine.notifyEdit();
-    await B.engine.flush();
-    return { A, net: shared.net };
-  }
-
-  it('an edit another device removed, typed again here with no file behind it, is not landed by the merge', async () => {
-    const { A, net } = await xPushedByAThenRemovedByB();
-    await A.engine.pull(true);
-    assert.deepStrictEqual(edits(A.storage), { 2: 'y' }, 'X left A with the pull');
-
-    localEdit(A.storage, 1, 'x');
-    A.engine.notifyEdit();
-    net.fileDown = true;
-    await A.engine.flush();
-    assert.strictEqual(A.engine.getInfo().status, 'error');
-    assert.deepStrictEqual(base(A.storage).doc[RKEY].edits, { 1: 'x', 2: 'y' }, 'the state file did go up');
-    await A.engine.destroy();
-
-    const { storage } = await reopenedAfterMerge(A.storage);
-    assert.deepStrictEqual(edits(storage), { 1: 'x', 2: 'y' },
-      'the file on the branch is B\'s, without X; and Y was only ever adopted here');
-  });
-
-  it('the same removal met as a CAS conflict ends the file confirmation too', async () => {
-    const { A, net } = await xPushedByAThenRemovedByB();
-    localEdit(A.storage, 3, 'z');
-    A.engine.notifyEdit();
-    net.conflictOnce = true;
-    net.fileDown = true;
-    await A.engine.flush();
-    assert.deepStrictEqual(edits(A.storage), { 2: 'y', 3: 'z' }, 'X left A with the merge');
-
-    localEdit(A.storage, 1, 'x');
-    A.engine.notifyEdit();
-    await A.engine.flush();
-    assert.deepStrictEqual(base(A.storage).doc[RKEY].edits, { 1: 'x', 2: 'y', 3: 'z' });
-    await A.engine.destroy();
-
-    const { storage } = await reopenedAfterMerge(A.storage);
-    assert.deepStrictEqual(edits(storage), { 1: 'x', 2: 'y', 3: 'z' });
-  });
-
-  it('what a later device still carries keeps its file confirmation', async () => {
-    const shared = twoDevicesOnOneBranch();
-    const A = shared.device('deviceA');
-    const B = shared.device('deviceB');
-    localEdit(A.storage, 1, 'x');
-    A.engine.notifyEdit();
-    await A.engine.flush();
-    await B.engine.attach();
-    localEdit(B.storage, 2, 'y');
-    B.engine.notifyEdit();
-    await B.engine.flush();
-    await A.engine.pull(true);
-    assert.deepStrictEqual(base(A.storage).filesDoc[RKEY].edits, { 1: 'x' },
-      'X is still in the doc, and A\'s own file push carried it; Y is B\'s');
-    await A.engine.destroy();
-
-    const { storage } = await reopenedAfterMerge(A.storage);
-    assert.deepStrictEqual(edits(storage), { 2: 'y' });
-  });
-
-  const OPEN_PR = { number: 77, html_url: 'https://github.com/x/pull/77', node_id: 'PR_n77', draft: true };
-
-  it('a doc adopted on a pull confirms no file: the merge leaves its edits', async () => {
-    const first = makeEngine({ remote: remoteDoc({ 4: 'theirs' }), existingPr: OPEN_PR }, null,
-      { buildFiles: files });
-    await first.engine.attach();
-    assert.deepStrictEqual(edits(first.storage), { 4: 'theirs' });
-    assert.strictEqual(base(first.storage).prNumber, 77);
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.deepStrictEqual(edits(storage), { 4: 'theirs' });
-  });
-
-  it('a doc adopted on the way to a push confirms no file either', async () => {
-    const first = makeEngine({ remote: remoteDoc({ 4: 'theirs' }), putFails: [null, { status: 502 }] }, {
-      [syncBaseKey(TALK)]: JSON.stringify({
-        doc: {}, sha: null, revision: 0, prNumber: 77, prUrl: 'u', nodeId: 'n',
-        prDraft: true, fileShas: {}, branch: BRANCH_NAME,
-      }),
-    }, { buildFiles: files });
-    localEdit(first.storage, 1, 'x');
-    first.engine.notifyEdit();
-    await first.engine.flush();
-    assert.deepStrictEqual(base(first.storage).doc[RKEY].edits, { 1: 'x', 4: 'theirs' });
-    assert.strictEqual(first.engine.getInfo().status, 'error', 'the file PUT failed');
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.deepStrictEqual(edits(storage), { 1: 'x', 4: 'theirs' });
-  });
-
-  it('an edit typed while the file PUT was out is not covered by that file', async () => {
-    const first = makeEngine({}, null, { buildFiles: files });
-    const put = first.gh.putFile;
-    let filePutNo = 0;
-    first.gh.putFile = async (api, token, opts) => {
-      if (opts.path === FILE) {
-        filePutNo += 1;
-        if (filePutNo === 1) { localEdit(first.storage, 2, 'y'); first.engine.notifyEdit(); }
-        if (filePutNo === 2) { const e = new Error('Bad Gateway'); e.status = 502; throw e; }
-      }
-      return put(api, token, opts);
-    };
-    localEdit(first.storage, 1, 'x');
-    first.engine.notifyEdit();
-    await first.engine.flush();
-    await first.engine.flush();
-    assert.deepStrictEqual(base(first.storage).doc[RKEY].edits, { 1: 'x', 2: 'y' }, 'the state file has both');
-    assert.strictEqual(filePutNo, 2);
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.deepStrictEqual(edits(storage), { 2: 'y' }, 'the file that went up was built before Y existed');
-  });
-
-  it('a file built for another target is not pushed and covers nothing', async () => {
-    const other = 'talks/' + TALK + '/video1/final/uk.srt';
-    const first = makeEngine({}, null,
-      { buildFiles: () => [{ path: other, content: 'ANOTHER VIEW' }], filePath: FILE });
-    localEdit(first.storage, 1, 'x');
-    first.engine.notifyEdit();
-    await first.engine.flush();
-    assert.deepStrictEqual(first.gh.calls.filter((c) => c[0] === 'putFile' && c[1] === other), [],
-      'another target\'s file does not belong on this branch');
-    assert.strictEqual(base(first.storage).filesPending, true);
-    assert.strictEqual(base(first.storage).filesDoc, undefined);
-    assert.strictEqual(first.engine.getInfo().status, 'pending');
-    await first.engine.destroy();
-    const { storage } = await reopenedAfterMerge(first.storage);
-    assert.deepStrictEqual(edits(storage), { 1: 'x' });
+    assert.deepStrictEqual(putsOf(gh, OTHER), [], 'another target\'s file does not belong on this branch');
+    assert.strictEqual(gh.puts.length, 1, 'the state file still goes up');
   });
 
   it('the target\'s own file, built beside a foreign one, is the only one pushed', async () => {
-    const other = 'talks/' + TALK + '/video1/final/uk.srt';
     const { engine, gh, storage } = makeEngine({}, null, {
-      buildFiles: () => [{ path: other, content: 'ANOTHER VIEW' }, { path: FILE, content: 'WHOLE FILE' }],
+      buildFiles: () => [{ path: OTHER, content: 'ANOTHER VIEW' }, { path: FILE, content: 'WHOLE FILE' }],
       filePath: FILE,
     });
     localEdit(storage, 1, 'x');
     engine.notifyEdit();
     await engine.flush();
-    assert.strictEqual(filePuts(gh).length, 1);
-    assert.deepStrictEqual(gh.calls.filter((c) => c[0] === 'putFile' && c[1] === other), []);
-    assert.deepStrictEqual(base(storage).filesDoc, base(storage).doc);
+    assert.strictEqual(putsOf(gh, FILE).length, 1);
+    assert.deepStrictEqual(putsOf(gh, OTHER), []);
     assert.strictEqual(engine.getInfo().status, 'synced');
   });
+});
 
-  it('an orphaned base is held back on open even when it still says a file is owed', async () => {
-    // Reachable only through a stored base (no engine path leaves `orphaned`
-    // beside `filesPending`), but opening a page must never re-open a PR.
-    const ENTRY = { marks: {}, edits: { 1: 'x' } };
-    const { engine, gh, timers } = makeEngine({}, {
-      [RKEY]: JSON.stringify(ENTRY),
-      [syncBaseKey(TALK)]: JSON.stringify({
-        doc: {}, sha: null, revision: 0, prNumber: null, prUrl: null, nodeId: null,
-        prDraft: null, fileShas: {}, branch: BRANCH_NAME, orphaned: true, filesPending: true,
-      }),
-    }, { buildFiles: files });
-    await engine.attach();
-    timers.fire(15000);
-    await settle();
-    assert.deepStrictEqual(gh.calls.filter((c) => c[0] === 'putFile' || c[0] === 'createRef'), []);
+describe('engine: a state file that went up without its file', () => {
+  // The PR merges the files, not the state file, so what landed is read off
+  // the merged file. What this device believes it pushed is not consulted.
+  const FILE = 'talks/' + TALK + '/transcript_uk.txt';
+  const FACT = { filePath: FILE, editsKey: RKEY, parseFile: (content) => content.split('\n') };
+  const base = (storage) => JSON.parse(storage.getItem(syncBaseKey(TALK)));
+
+  async function reopenedAfterMerge(storage, fileAtMerge) {
+    const prs = [{ number: 77, state: 'closed', merged: true, mergeCommitSha: 'mergesha77' }];
+    const later = makeEngine({ branchGone: true, prs, commits: { mergesha77: { [FILE]: fileAtMerge } } }, {},
+      Object.assign({ storage }, FACT));
+    await later.engine.attach();
+    return later;
+  }
+
+  it('the file PUT failed, the PR merged without the edit: the edit stays on the device', async () => {
+    const first = makeEngine({ putFails: [null, { status: 502, message: 'Bad Gateway' }] }, null,
+      Object.assign({ buildFiles: () => [{ path: FILE, content: 'p0\nx' }] }, FACT));
+    localEdit(first.storage, 1, 'x');
+    first.engine.notifyEdit();
+    await first.engine.flush();
+    assert.strictEqual(first.engine.getInfo().status, 'error');
+    assert.deepStrictEqual(base(first.storage).doc[RKEY].edits, { 1: 'x' }, 'the state file did go up');
+    await first.engine.destroy();
+
+    const { engine } = await reopenedAfterMerge(first.storage, 'p0\np1');
+    assert.deepStrictEqual(JSON.parse(first.storage.getItem(RKEY)).edits, { 1: 'x' });
     assert.strictEqual(engine.getInfo().status, 'pending');
+    assert.strictEqual(base(first.storage).orphaned, true);
   });
 
-  it('the finalize refusal carries a stable code for the UI to translate', async () => {
-    const { engine, storage } = makeEngine({}, null, { buildFiles: () => [] });
+  it('the file did go up and merged: the edit is cleared', async () => {
+    const first = makeEngine({}, null, Object.assign({ buildFiles: () => [{ path: FILE, content: 'p0\nx' }] }, FACT));
+    localEdit(first.storage, 1, 'x');
+    first.engine.notifyEdit();
+    await first.engine.flush();
+    await first.engine.destroy();
+    await reopenedAfterMerge(first.storage, 'p0\nx');
+    assert.strictEqual(first.storage.getItem(RKEY), null);
+  });
+
+  it('an edit only ever adopted from another device is cleared by the same reading', async () => {
+    const OPEN_PR = { number: 77, html_url: 'https://github.com/x/pull/77', node_id: 'PR_n77', draft: true };
+    const first = makeEngine({ remote: remoteDoc({ 4: 'theirs' }), existingPr: OPEN_PR }, null, FACT);
+    await first.engine.attach();
+    assert.deepStrictEqual(JSON.parse(first.storage.getItem(RKEY)).edits, { 4: 'theirs' });
+    await first.engine.destroy();
+    await reopenedAfterMerge(first.storage, 'p0\np1\np2\np3\ntheirs');
+    assert.strictEqual(first.storage.getItem(RKEY), null);
+  });
+
+  it('the base keeps no record of which files this device pushed', async () => {
+    const { engine, storage } = makeEngine({}, null,
+      Object.assign({ buildFiles: () => [{ path: FILE, content: 'p0\nx' }] }, FACT));
     localEdit(storage, 1, 'x');
     engine.notifyEdit();
     await engine.flush();
-    await assert.rejects(engine.finalize(), (e) => e.code === 'file-not-pushed');
-  });
-
-  it('an engine with no files to build (markers) keeps the plain rule', async () => {
-    const { engine, storage } = makeEngine();
-    localEdit(storage, 1, 'x');
-    engine.notifyEdit();
-    await engine.flush();
-    assert.strictEqual(engine.getInfo().status, 'synced');
-    assert.strictEqual(base(storage).filesPending, undefined);
+    assert.deepStrictEqual(Object.keys(base(storage)).sort(),
+      ['branch', 'doc', 'fileShas', 'nodeId', 'prDraft', 'prNumber', 'prUrl', 'revision', 'sha']);
   });
 });
 
@@ -2363,6 +2247,11 @@ describe('index.html wiring', () => {
 
   it('tells the sync engine which file its target commits', () => {
     assert.match(html, /filePath:\s*tgt\.filePath/);
+  });
+
+  it('tells the sync engine how to read that file back: the entry it indexes, and its parser', () => {
+    assert.match(html, /editsKey:\s*tgt\.editsKey/);
+    assert.match(html, /parseFile:\s*syncFileTexts\(tgt\.fileKind\)/);
   });
 
   it('passes sanitizeInvisible into the sync engine', () => {

@@ -484,16 +484,17 @@ describe('findOpenPrByHead', () => {
 
 describe('listPrsByHead', () => {
   const { listPrsByHead } = require('../site/js/github_api');
-  it('asks for every state, newest first, and says which were merged', async () => {
+  it('asks for every state, newest first, and says which were merged, and at which commit', async () => {
     const calls = [];
+    // An un-merged PR carries a merge_commit_sha too: GitHub's test merge.
     const f = routerFetch([{ method: 'GET', match: '/pulls?head=', payload: [
-      { number: 9, state: 'closed', merged_at: null, html_url: 'u9' },
-      { number: 7, state: 'closed', merged_at: '2026-11-01T10:00:00Z', html_url: 'u7' },
+      { number: 9, state: 'closed', merged_at: null, merge_commit_sha: 'testmerge9', html_url: 'u9' },
+      { number: 7, state: 'closed', merged_at: '2026-11-01T10:00:00Z', merge_commit_sha: 'merge7', html_url: 'u7' },
     ] }], calls);
     const res = await listPrsByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f);
     assert.deepStrictEqual(res, [
-      { number: 9, state: 'closed', merged: false, html_url: 'u9' },
-      { number: 7, state: 'closed', merged: true, html_url: 'u7' },
+      { number: 9, state: 'closed', merged: false, mergeCommitSha: null, html_url: 'u9' },
+      { number: 7, state: 'closed', merged: true, mergeCommitSha: 'merge7', html_url: 'u7' },
     ]);
     const url = calls[0].url;
     assert.ok(url.includes('/pulls?head=' + encodeURIComponent('sy-tools:sync/u/t')), url);

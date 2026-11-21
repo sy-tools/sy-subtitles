@@ -1286,7 +1286,6 @@ var I18N = {
     'sync.ready': '\u041D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'sync.finalize': '\u0424\u0456\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u2014 \u043D\u0430 \u0440\u0435\u0432\u02BC\u044E',
     'sync.sync_now': '\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0440\u0430\u0437',
-    'sync.file_not_pushed': '\u0424\u0430\u0439\u043B \u0456\u0437 \u043F\u0440\u0430\u0432\u043A\u0430\u043C\u0438 \u0449\u0435 \u043D\u0435 \u043D\u0430 \u0433\u0456\u043B\u0446\u0456 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0430\u0446\u0456\u0457 \u2014 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u00AB\u0421\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u0440\u0430\u0437\u00BB \u0456 \u043F\u043E\u0432\u0442\u043E\u0440\u0456\u0442\u044C',
     'sync.open_pr': '\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043D\u0430 GitHub',
     'sync.copy_backup': '\u0421\u043A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438 \u0440\u0435\u0437\u0435\u0440\u0432\u043D\u0443 \u043A\u043E\u043F\u0456\u044E \u043F\u0440\u0430\u0432\u043E\u043A',
     'sync.backup_copied': '\u041F\u0440\u0430\u0432\u043A\u0438 \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u0432 \u0431\u0443\u0444\u0435\u0440 (JSON)',
@@ -1572,7 +1571,6 @@ var I18N = {
     'sync.ready': 'In review',
     'sync.finalize': 'Finalize — ready for review',
     'sync.sync_now': 'Sync now',
-    'sync.file_not_pushed': 'The edited file is not on the sync branch yet — choose “Sync now”, then try again',
     'sync.open_pr': 'View on GitHub',
     'sync.copy_backup': 'Copy edits backup',
     'sync.backup_copied': 'Edits copied to clipboard (JSON)',
@@ -8420,6 +8418,8 @@ function ensureEditSync() {
     isOffline: isOfflineError,
     buildFiles: buildSyncFiles,
     filePath: tgt.filePath,
+    editsKey: tgt.editsKey,
+    parseFile: syncFileTexts(tgt.fileKind),
     // Invisible characters only -- these are whole rebuilt files.
     sanitize: sanitizeInvisible,
     onStatus: onSyncStatus,
@@ -8430,6 +8430,16 @@ function ensureEditSync() {
   editSync = engine;
   engine.attach();
   renderSyncStatus(engine.getInfo().status, engine.getInfo());
+}
+
+// A sync target's file as the texts its edits are keyed against: an SRT by
+// block, a transcript by paragraph — the parsers the views themselves load
+// the file with, so an index means here what it means in the edit store.
+function syncFileTexts(fileKind) {
+  if (fileKind === 'srt') {
+    return function(content) { return parseSRT(content).map(function(block) { return block.text; }); };
+  }
+  return function(content) { return parseTranscript(content).paragraphs; };
 }
 
 // Tears the engine down and returns a promise that settles once any
@@ -8541,10 +8551,7 @@ SPA.syncFinalize = function() {
   actionLock.run(key, function() {
     return editSync.finalize()
       .then(function(pr) { ghCreatedDialog('pr.finalized', pr); })
-      .catch(function(e) {
-        if (e && e.code === FILE_NOT_PUSHED) { showToast(t('sync.file_not_pushed'), 6000); return; }
-        ghWriteError(e);
-      });
+      .catch(ghWriteError);
   });
 };
 

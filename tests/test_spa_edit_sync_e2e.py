@@ -221,6 +221,9 @@ def _wire(pg, calls, review_status, sync_opts):
       conflict_sha:      sha for the conflict doc (default "shaRemote")
       branch_gone:       the sync branch's head answers 404 (deleted, e.g. by a merge)
       prs_by_head:       every PR ever opened from the sync branch, newest first
+      files_at_commit:   {sha: {repo path: text}} — what the Contents API answers for
+                         ?ref=<sha>; a path the commit lacks is a 404, and an int in
+                         place of the text is the HTTP status of a failed read
 
     and the markers issue endpoint:
       stale_issue_bodies: a list the test may append to at any time; each single-issue
@@ -403,7 +406,21 @@ def _wire(pg, calls, review_status, sync_opts):
     def talks_contents(route):
         req = route.request
         if req.method == "GET":
-            route.fulfill(status=200, content_type="application/json", body=json.dumps({"sha": "blob1"}))
+            path, _, ref = req.url.split("/contents/", 1)[1].partition("?ref=")
+            at_commit = sync_opts.get("files_at_commit", {}).get(ref)
+            if at_commit is None:
+                route.fulfill(status=200, content_type="application/json", body=json.dumps({"sha": "blob1"}))
+                return
+            text = at_commit.get(path, 404)
+            if isinstance(text, int):
+                route.fulfill(status=text, content_type="application/json", body=json.dumps({"message": "failed"}))
+                return
+            content = base64.b64encode(text.encode("utf-8")).decode("ascii")
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"content": content, "sha": "blobAtCommit"}),
+            )
             return
         calls.append(
             {"method": req.method, "url": req.url, "body": json.loads(req.post_data) if req.post_data else None}
@@ -1010,10 +1027,14 @@ def _edit_preview_block_at(pg, seconds, appended):
     cell.press("Tab")
 
 
-def _synced_video_base(doc, files_doc):
-    """The sync base of a device whose PR was finalized. `files_doc` is the doc its
-    last successful SRT push covered; None for a device that never got one up."""
-    base = {
+MERGE_SHA = "mergecommit88"
+VIDEO_SRT_PATH = f"talks/{TALK_ID}/{VIDEO_SLUG}/final/uk.srt"
+TRANSCRIPT_PATH = f"talks/{TALK_ID}/transcript_uk.txt"
+
+
+def _finalized_base(doc, branch):
+    """The sync base of a device whose PR was finalized."""
+    return {
         "doc": doc,
         "sha": None,
         "revision": 2,
@@ -1022,11 +1043,26 @@ def _synced_video_base(doc, files_doc):
         "nodeId": PR_NODE_ID,
         "prDraft": False,
         "fileShas": {},
-        "branch": VIDEO_BRANCH,
+        "branch": branch,
     }
-    if files_doc is not None:
-        base["filesDoc"] = files_doc
-    return base
+
+
+def _pr_merged_with(files):
+    """The sync PR merged and GitHub deleted its branch; `files` is the merge commit."""
+    return {
+        "get_mode": "404",
+        "branch_gone": True,
+        "prs_by_head": [
+            {
+                "number": PR_NUMBER,
+                "state": "closed",
+                "merged_at": "2026-11-01T10:00:00Z",
+                "merge_commit_sha": MERGE_SHA,
+                "html_url": PR_URL,
+            }
+        ],
+        "files_at_commit": {MERGE_SHA: files},
+    }
 
 
 def _wait_for_video_state_push(pg, calls, count, timeout=10000):
@@ -1132,35 +1168,6 @@ def test_review_srt_rereading_an_srt_that_now_holds_a_synced_edit_arms_its_withd
     ctx.close()
 
 
-def test_finalize_refused_over_an_unpushed_file_is_explained_in_the_ui_language(server, browser):
-    calls = []
-    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, {"get_mode": "404"})
-    _open_review(pg, server)
-    _edit_first_review_cell(pg, " ONE")
-    _wait_chip_synced(pg)
-
-    def transcript_put_is_down(route):
-        if route.request.method == "PUT":
-            route.fulfill(status=502, content_type="application/json", body=json.dumps({"message": "Bad Gateway"}))
-        else:
-            route.fallback()
-
-    pg.route("**/api.github.com/repos/**/contents/talks/**", transcript_put_is_down)
-    _edit_first_review_cell(pg, " TWO")
-    pg.wait_for_function("() => window.editSync.getInfo().status === 'error'", timeout=10000)
-
-    pg.evaluate("SPA.syncFinalize()")
-
-    pg.wait_for_function(
-        "document.getElementById('toast').classList.contains('show')"
-        " && document.getElementById('toast').textContent === t('sync.file_not_pushed')",
-        timeout=10000,
-    )
-    assert pg.evaluate("t('sync.file_not_pushed')") != "sync.file_not_pushed"
-    assert not [c for c in calls if "markPullRequestReadyForReview" in json.dumps(c["body"] or {})]
-    ctx.close()
-
-
 def test_an_edit_row_just_opened_survives_the_preview_reloading_the_same_srt(server, browser):
     """SPA.addEdit opens a row holding the block's own text. The preview re-reads
     the SRT on a route() re-entry (a manifest refresh) — here by the same loader,
@@ -1180,24 +1187,17 @@ def test_an_edit_row_just_opened_survives_the_preview_reloading_the_same_srt(ser
 
 def test_edits_of_a_merged_pr_are_cleared_and_never_overwrite_what_main_has_now(server, browser):
     """The device finalized its PR; the PR merged (GitHub deleted the branch) and
-    another reviewer has since rewritten the same block on main."""
+    another reviewer has since rewritten the same block on main — so the SRT the
+    page loads no longer holds the edit, and only the merge commit says it landed."""
     calls = []
     landed_then_rewritten = "Перший, правка з цього пристрою"
-    sync_opts = {
-        "get_mode": "404",
-        "branch_gone": True,
-        "prs_by_head": [
-            {"number": PR_NUMBER, "state": "closed", "merged_at": "2026-11-01T10:00:00Z", "html_url": PR_URL}
-        ],
-    }
+    sync_opts = _pr_merged_with({VIDEO_SRT_PATH: SAMPLE_UK_SRT.replace(BLOCK0, landed_then_rewritten)})
     ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
     _seed_once(
         pg,
         {
             CANON_KEY: {"0": landed_then_rewritten},
-            VIDEO_BASE_KEY: _synced_video_base(
-                {CANON_KEY: {"0": landed_then_rewritten}}, files_doc={CANON_KEY: {"0": landed_then_rewritten}}
-            ),
+            VIDEO_BASE_KEY: _finalized_base({CANON_KEY: {"0": landed_then_rewritten}}, VIDEO_BRANCH),
         },
     )
     _open_preview_in_edit_mode(pg, server)
@@ -1217,31 +1217,67 @@ def test_edits_of_a_merged_pr_are_cleared_and_never_overwrite_what_main_has_now(
     ctx.close()
 
 
-def test_edits_of_a_merged_pr_stay_when_no_file_push_ever_carried_them(server, browser):
-    """The state file reached the branch and the SRT did not, so the merge took nothing of these edits."""
+def _assert_the_edit_is_kept_and_shown_as_not_synced(pg, calls, edit_text):
+    assert _stored(pg, CANON_KEY) == {"0": edit_text}
+    assert pg.locator(".edit-item").count() == 1
+    assert pg.locator("#sync-chip").is_visible(), "an edit on no branch is shown as not synced"
+    assert calls == [], "opening the page writes nothing"
+
+
+def test_edits_of_a_merged_pr_stay_when_the_merged_file_does_not_hold_them(server, browser):
+    """The base says the edit was synced, and it was — as a state file. The SRT
+    that merged reads as before, so the merge took nothing of this edit."""
     calls = []
     never_committed = "Перший, правка без файлу"
-    sync_opts = {
-        "get_mode": "404",
-        "branch_gone": True,
-        "prs_by_head": [
-            {"number": PR_NUMBER, "state": "closed", "merged_at": "2026-11-01T10:00:00Z", "html_url": PR_URL}
-        ],
-    }
-    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, sync_opts)
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, _pr_merged_with({VIDEO_SRT_PATH: SAMPLE_UK_SRT}))
     _seed_once(
         pg,
         {
             CANON_KEY: {"0": never_committed},
-            VIDEO_BASE_KEY: _synced_video_base({CANON_KEY: {"0": never_committed}}, files_doc=None),
+            VIDEO_BASE_KEY: _finalized_base({CANON_KEY: {"0": never_committed}}, VIDEO_BRANCH),
         },
     )
     _open_preview_in_edit_mode(pg, server)
 
-    pg.wait_for_function("k => JSON.parse(localStorage.getItem(k)).sha === null", arg=VIDEO_BASE_KEY, timeout=10000)
-    assert _stored(pg, CANON_KEY) == {"0": never_committed}
-    assert pg.locator(".edit-item").count() == 1
-    assert pg.locator("#sync-chip").is_visible(), "an edit on no branch is shown as not synced"
+    pg.wait_for_function(
+        "k => JSON.parse(localStorage.getItem(k)).orphaned === true", arg=VIDEO_BASE_KEY, timeout=10000
+    )
+    _assert_the_edit_is_kept_and_shown_as_not_synced(pg, calls, never_committed)
+    ctx.close()
+
+
+def test_edits_of_a_merged_pr_stay_while_the_merged_file_cannot_be_read(server, browser):
+    calls = []
+    landed = "Перший, правка з цього пристрою"
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, _pr_merged_with({VIDEO_SRT_PATH: 502}))
+    _seed_once(
+        pg,
+        {
+            CANON_KEY: {"0": landed},
+            VIDEO_BASE_KEY: _finalized_base({CANON_KEY: {"0": landed}}, VIDEO_BRANCH),
+        },
+    )
+    _open_preview_in_edit_mode(pg, server)
+
+    pg.wait_for_function("() => window.editSync && window.editSync.getInfo().status === 'pending'", timeout=10000)
+    _assert_the_edit_is_kept_and_shown_as_not_synced(pg, calls, landed)
+    assert _stored(pg, VIDEO_BASE_KEY)["prNumber"] == PR_NUMBER, "the next pull can still find the merge"
+    ctx.close()
+
+
+def test_transcript_edits_of_a_merged_pr_are_cleared_paragraph_by_paragraph(server, browser):
+    calls = []
+    landed, not_landed = "Перший абзац, правка.", "Другий абзац, правка без файлу."
+    merged_transcript = SAMPLE_UK.replace(PARA0, landed)
+    ctx, pg = _page(browser, calls, REVIEW_STATUS_UNASSIGNED, _pr_merged_with({TRANSCRIPT_PATH: merged_transcript}))
+    entry = review_entry({"0": landed, "1": not_landed})
+    _seed_once(pg, {REVIEW_KEY: entry, SYNC_BASE_KEY: _finalized_base({REVIEW_KEY: entry}, SYNC_BRANCH)})
+    _open_review(pg, server)
+
+    pg.wait_for_function(
+        "k => Object.keys(JSON.parse(localStorage.getItem(k)).edits).length === 1", arg=REVIEW_KEY, timeout=10000
+    )
+    assert _stored(pg, REVIEW_KEY)["edits"] == {"1": not_landed}
     assert calls == [], "opening the page writes nothing"
     ctx.close()
 
