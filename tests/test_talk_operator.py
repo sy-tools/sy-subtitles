@@ -550,3 +550,14 @@ def test_take_that_fails_to_close_review_can_be_retried():
         op.on_take(gh, 7, OPERATOR_ID)
     assert "op:translator" in gh.issues[7]["labels"]
     assert "op:qa" not in gh.issues[7]["labels"]
+
+
+def test_gh_open_sync_prs_ignores_fork_prs(monkeypatch):
+    # Same trust rule as the workflow's pr job: a branch name alone proves
+    # nothing, anyone can open a fork PR from a `sync/...` branch.
+    prs = [
+        {"number": 1, "headRefName": BRANCH, "isDraft": False, "isCrossRepository": False},
+        {"number": 2, "headRefName": BRANCH, "isDraft": False, "isCrossRepository": True},
+    ]
+    monkeypatch.setattr(op.Gh, "_run", lambda self, *args: __import__("json").dumps(prs))
+    assert [p["number"] for p in op.Gh().open_sync_prs(TALK)] == [1]

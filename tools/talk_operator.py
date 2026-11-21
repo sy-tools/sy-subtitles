@@ -419,8 +419,14 @@ class Gh:
         return {line for line in out.splitlines() if line.strip()}
 
     def open_sync_prs(self, talk_id: str) -> list[dict]:
-        out = self._run("pr", "list", "--state", "open", "--json", "number,headRefName,isDraft", "--limit", "200")
-        return [p for p in json.loads(out) if not p["isDraft"] and talk_id_from_branch(p["headRefName"]) == talk_id]
+        # Fork PRs never count: same trust rule as the workflow's pr job.
+        fields = "number,headRefName,isDraft,isCrossRepository"
+        out = self._run("pr", "list", "--state", "open", "--json", fields, "--limit", "200")
+        return [
+            p
+            for p in json.loads(out)
+            if not p["isDraft"] and not p["isCrossRepository"] and talk_id_from_branch(p["headRefName"]) == talk_id
+        ]
 
 
 def main(argv: list[str] | None = None) -> None:
