@@ -122,17 +122,17 @@ function packageFiles(tree, talkId) {
   return names.sort();
 }
 
-// A wait on the bot is stored so it outlives the tab: after a reload the card
-// would otherwise offer the action again while the bot is still running, and
-// a second "QA passed" re-runs the package job. Only waits on the card stages
-// (qa, ready) inside the live poll's window survive; anything else is dropped.
 // "Take to QA": only on a card the translator holds whose Operator issue
 // exists — the label needs an issue to go on.
 function takeQaOffered(stage, entry) {
   return stage === 'translator' && operatorStageOf(entry) === 'translator' && !!(entry && entry.operator_issue);
 }
 
-// The stages an operator action waits on the bot from.
+// A wait on the bot is stored so it outlives the tab: after a reload the card
+// would otherwise offer the action again while the bot is still running, and
+// a second "QA passed" re-runs the package job. Only waits on the card stages
+// (translator, qa, ready) inside the live poll's window survive; anything
+// else is dropped.
 var WAIT_STAGES = ['translator', 'qa', 'ready'];
 
 function restoreWaiting(stored, now, maxMs) {

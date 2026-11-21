@@ -212,6 +212,15 @@ jobs:
         run: |
           python -m tools.workflow_validation_cli --talk-id "${TITLE#Operator: }"
           python -m tools.talk_operator take --issue "$ISSUE" --sender-id "$SENDER_ID"
+      - name: Report a failed take
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE: ${{ github.event.issue.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue comment "$ISSUE" --body "Take to QA did not finish: $RUN_URL — fix the cause, then take again (the SPA clears and re-adds \`op:take\`)."
 
   deliver:
     if: >-

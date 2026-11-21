@@ -183,3 +183,10 @@ def test_added_job_skips_a_bad_folder_and_ignores_renames():
     run = _run_text(_op()["jobs"]["added"])
     assert "--no-renames" in run
     assert "|| continue" in run
+
+
+def test_take_job_reports_a_failed_run_on_the_issue():
+    # Without it the SPA waits out its whole window with nothing on the issue.
+    steps = _op()["jobs"]["take"]["steps"]
+    report = [s for s in steps if "failure()" in str(s.get("if", ""))]
+    assert report and "gh issue comment" in report[0]["run"]

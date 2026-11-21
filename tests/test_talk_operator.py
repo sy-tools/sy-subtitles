@@ -516,3 +516,37 @@ def test_gh_titles_passes_the_state_filter(monkeypatch):
     monkeypatch.setattr(op.Gh, "_run", lambda self, *args: seen.append(args) or "Review: x\n")
     assert op.Gh().titles("talk-review", state="open") == {"Review: x"}
     assert "state=open" in seen[0]
+
+
+def test_migrate_translator_puts_a_talk_with_a_ready_sync_pr_at_review(monkeypatch):
+    # A ready translator PR will never fire pr-ready again, so op:translator
+    # would hide the talk from the operator's review chip until it merges.
+    monkeypatch.setattr(op, "talk_text_only", lambda t: False)
+    ready = {"number": 1085, "headRefName": f"sync/anastasijka-prog/{OTHER}--transcript-uk", "isDraft": False}
+    gh = FakeGh([_review_of(OTHER, 412)], open_prs=[ready])
+    op.migrate_translator(gh, [OTHER], apply=True, sleep=lambda s: None)
+    creates = [c for c in gh.calls if c[0] == "create"]
+    assert creates == [
+        (
+            "create",
+            f"Operator: {OTHER}",
+            ("op:review", "talk-operator"),
+            op.operator_login(),
+            op._issue_body(OTHER, 1085, False),
+        )
+    ]
+
+
+def test_take_that_fails_to_close_review_can_be_retried():
+    # Review: first, labels second: a failed close leaves the issue at
+    # op:translator, so re-adding op:take from the SPA retries the whole take.
+    gh = FakeGh([_operator_issue(7, ["op:translator", "op:take"]), _review_issue()])
+
+    def boom(number, reason="completed"):
+        raise RuntimeError("gh failed")
+
+    gh.close = boom
+    with pytest.raises(RuntimeError):
+        op.on_take(gh, 7, OPERATOR_ID)
+    assert "op:translator" in gh.issues[7]["labels"]
+    assert "op:qa" not in gh.issues[7]["labels"]

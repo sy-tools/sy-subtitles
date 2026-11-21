@@ -18,9 +18,11 @@ itself instead of relying on the sync-review-status close handler.
     python -m tools.talk_operator talk-added --talk T       # a new meta.yaml on main
     python -m tools.talk_operator review-created --talk T   # the pipeline's Review: step
     python -m tools.talk_operator migrate-pipeline [--apply]
+    python -m tools.talk_operator migrate-translator [--apply]
     python -m tools.talk_operator pr-ready --branch B --pr N
     python -m tools.talk_operator pr-merged --branch B --pr N
     python -m tools.talk_operator qa-passed --issue N      # prints package|skip
+    python -m tools.talk_operator take --issue N           # prints taken|skip
     python -m tools.talk_operator packaged --issue N --comment-file F
     python -m tools.talk_operator closed --issue N         # prints deliver|skip
     python -m tools.talk_operator delivered --issue N      # after the record landed
@@ -203,7 +205,13 @@ def migrate_translator(gh, talk_ids: list[str], apply: bool, pause_s: float = 2.
         for n, t in enumerate(waiting):
             if n:
                 sleep(pause_s)
-            _create(gh, t, "op:translator", _translator_body(t, talk_text_only(t)))
+            # A ready translator PR never fires pr-ready again: start such a
+            # talk where that event would have put it.
+            ready = gh.open_sync_prs(t)
+            if ready:
+                _create(gh, t, "op:review", _issue_body(t, ready[0]["number"], talk_text_only(t)))
+            else:
+                _create(gh, t, "op:translator", _translator_body(t, talk_text_only(t)))
     return waiting
 
 
@@ -294,8 +302,10 @@ def on_take(gh, issue_number: int, sender_id: int) -> bool:
         gh.edit_labels(issue_number, set(), {TAKE})
         gh.comment(issue_number, f"`{TAKE}` removed: a talk can be taken to QA only from `op:translator`.")
         return False
-    _apply(gh, issue, change)
+    # Review: first: if closing it fails, the issue is still at op:translator
+    # and the operator can simply take again. Both steps are idempotent.
     _approve_review(gh, issue["title"].removeprefix("Operator: "))
+    _apply(gh, issue, change)
     gh.comment(
         issue_number,
         "Taken to QA by the operator without a translator PR; the `Review:` issue is closed as approved.",
