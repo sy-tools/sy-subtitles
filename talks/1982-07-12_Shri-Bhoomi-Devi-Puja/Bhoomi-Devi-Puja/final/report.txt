@@ -3,19 +3,18 @@
 ============================================================
   SRT: talks/1982-07-12_Shri-Bhoomi-Devi-Puja/Bhoomi-Devi-Puja/final/uk.srt
   Transcript: talks/1982-07-12_Shri-Bhoomi-Devi-Puja/transcript_uk.txt
-  Whisper: talks/1982-07-12_Shri-Bhoomi-Devi-Puja/Bhoomi-Devi-Puja/source/whisper.json
-  SRT blocks: 71
-  Whisper segments: 467
-  (duration hard fail skipped — builder mode)
+  EN SRT: talks/1982-07-12_Shri-Bhoomi-Devi-Puja/Bhoomi-Devi-Puja/final/en.srt
+  SRT blocks: 63
+  EN SRT blocks: 82
 
 ============================================================
   CHECK 1: Text preservation
 ============================================================
-  Transcript chars: 3869
-  SRT chars: 3869
+  Transcript chars: 3402
+  SRT chars: 3402
   Exact normalized match: OK
-  Transcript words: 637
-  SRT words: 637
+  Transcript words: 567
+  SRT words: 567
   Word-level match: OK
 
 ============================================================
@@ -24,26 +23,26 @@
   Overlapping blocks: 0
 
 ============================================================
-  CHECK 3: Time range (vs whisper)
+  CHECK 3: Time range (vs EN SRT)
 ============================================================
-  whisper range: 00:00:05,260 — 01:26:48,470
-  SRT range:       00:00:05,260 — 00:07:57,790
+  EN SRT range: 00:01:48,750 — 00:07:56,996
+  SRT range:       00:01:52,980 — 00:07:57,790
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 71
+  Total blocks: 63
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 71
-  CPS: avg=10.4, median=9.8, max=15.1
-  CPS > target: 1 (1.4%)
+  Total blocks: 63
+  CPS: avg=10.3, median=9.4, max=15.0
+  CPS > target: 0 (0.0%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=53.5, max=83
+  CPL: avg=53.0, max=83
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -53,16 +52,16 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #20: CPS=15.1 (80ch/5.3s) "Тож природа не може не бути роздратованою через це (Шрі Мата..."
-    #23: CPS=15.0 (58ch/3.9s) "Можливо, вони думають, що Я не знаю, що вчинила ця країна,"
-    #49: CPS=15.0 (52ch/3.5s) "Власне, коли Я вперше приїхала до Англії, Я сказала,"
-    #69: CPS=15.0 (49ch/3.3s) "і тоді все вдасться, Я впевнена, що все вдасться."
-    #53: CPS=15.0 (37ch/2.5s) "Пам’ятаю, ми жили в Олдвічі (Лондон)."
-    #42: CPS=15.0 (71ch/4.7s) "Тож насправді, коли ми гніваємося, насправді ми йдемо проти ..."
-    #29: CPS=15.0 (34ch/2.3s) "Щось треба зробити, треба зробити."
-    #51: CPS=15.0 (34ch/2.3s) "Тоді погода була точнісінько така."
-    #16: CPS=15.0 (50ch/3.3s) "Ці сили ніколи не є вашими друзями, вони руйнівні,"
-    #17: CPS=15.0 (50ch/3.3s) "вони ніколи не можуть бути вашими друзями, тому що"
+    #17: CPS=15.0 (58ch/3.9s) "Можливо, вони думають, що Я не знаю, що вчинила ця країна,"
+    #42: CPS=15.0 (52ch/3.5s) "Власне, коли Я вперше приїхала до Англії, Я сказала,"
+    #61: CPS=15.0 (49ch/3.3s) "і тоді все вдасться, Я впевнена, що все вдасться."
+    #46: CPS=15.0 (37ch/2.5s) "Пам’ятаю, ми жили в Олдвічі (Лондон)."
+    #35: CPS=15.0 (71ch/4.7s) "Тож насправді, коли ми гніваємося, насправді ми йдемо проти ..."
+    #23: CPS=15.0 (34ch/2.3s) "Щось треба зробити, треба зробити."
+    #44: CPS=15.0 (34ch/2.3s) "Тоді погода була точнісінько така."
+    #10: CPS=15.0 (50ch/3.3s) "Ці сили ніколи не є вашими друзями, вони руйнівні,"
+    #11: CPS=15.0 (50ch/3.3s) "вони ніколи не можуть бути вашими друзями, тому що"
+    #13: CPS=15.0 (44ch/2.9s) "і вони ніколи не можуть бути вашими друзями."
 
 ============================================================
   SUMMARY
@@ -73,10 +72,12 @@
   [PASS] Sequential numbering
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
+  [PASS] Duration ≥ 1200ms
+  [PASS] Duration ≤ 21000ms
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 10.4 (target ≤15.0)
-  CPS > 15.0: 1 blocks
+  Avg CPS: 10.3 (target ≤15.0)
+  CPS > 15.0: 0 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
