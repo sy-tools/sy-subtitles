@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:15:47.057563+00:00",
+  "updated_at": "2026-11-21T14:58:51.042228+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -324,10 +324,10 @@
       "operator_issue": 1484
     },
     "1982-07-11_From-Heart-to-Sahasrara": {
-      "status": "pending",
-      "reviewer": null,
+      "status": "in-progress",
+      "reviewer": "anastasijka-prog",
       "issue_number": 241,
-      "updated_at": "2026-07-15T00:33:12Z",
+      "updated_at": "2026-11-21T14:58:34Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1405
