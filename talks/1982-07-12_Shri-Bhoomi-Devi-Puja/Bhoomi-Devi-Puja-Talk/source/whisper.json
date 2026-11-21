@@ -1,0 +1,3799 @@
+{
+  "language": "en",
+  "segments": [
+    {
+      "id": 0,
+      "start": 4.18,
+      "end": 12.18,
+      "text": "Today I was telling Rustam that we should do, of course the puja of the Bhoomi because",
+      "words": [
+        {
+          "start": 4.18,
+          "end": 5.54,
+          "word": "Today"
+        },
+        {
+          "start": 5.54,
+          "end": 5.76,
+          "word": "I"
+        },
+        {
+          "start": 5.76,
+          "end": 6.28,
+          "word": "was"
+        },
+        {
+          "start": 6.28,
+          "end": 6.6,
+          "word": "telling"
+        },
+        {
+          "start": 6.6,
+          "end": 7.94,
+          "word": "Rustam"
+        },
+        {
+          "start": 7.94,
+          "end": 8.18,
+          "word": "that"
+        },
+        {
+          "start": 8.18,
+          "end": 8.36,
+          "word": "we"
+        },
+        {
+          "start": 8.36,
+          "end": 8.56,
+          "word": "should"
+        },
+        {
+          "start": 8.56,
+          "end": 8.78,
+          "word": "do,"
+        },
+        {
+          "start": 8.78,
+          "end": 9.06,
+          "word": "of"
+        },
+        {
+          "start": 9.06,
+          "end": 9.26,
+          "word": "course"
+        },
+        {
+          "start": 9.26,
+          "end": 9.48,
+          "word": "the"
+        },
+        {
+          "start": 9.48,
+          "end": 9.84,
+          "word": "puja"
+        },
+        {
+          "start": 9.84,
+          "end": 10.0,
+          "word": "of"
+        },
+        {
+          "start": 10.0,
+          "end": 10.2,
+          "word": "the"
+        },
+        {
+          "start": 10.2,
+          "end": 11.58,
+          "word": "Bhoomi"
+        },
+        {
+          "start": 11.58,
+          "end": 12.18,
+          "word": "because"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "start": 13.03,
+      "end": 14.75,
+      "text": "She's angry actually.",
+      "words": [
+        {
+          "start": 13.03,
+          "end": 13.55,
+          "word": "She's"
+        },
+        {
+          "start": 13.55,
+          "end": 13.85,
+          "word": "angry"
+        },
+        {
+          "start": 13.85,
+          "end": 14.75,
+          "word": "actually."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "start": 17.03,
+      "end": 22.23,
+      "text": "Because she has produced such beautiful scenic beauty in this part",
+      "words": [
+        {
+          "start": 17.03,
+          "end": 17.39,
+          "word": "Because"
+        },
+        {
+          "start": 17.39,
+          "end": 17.49,
+          "word": "she"
+        },
+        {
+          "start": 17.49,
+          "end": 18.63,
+          "word": "has"
+        },
+        {
+          "start": 18.79,
+          "end": 19.23,
+          "word": "produced"
+        },
+        {
+          "start": 19.23,
+          "end": 19.55,
+          "word": "such"
+        },
+        {
+          "start": 19.55,
+          "end": 20.15,
+          "word": "beautiful"
+        },
+        {
+          "start": 20.15,
+          "end": 20.61,
+          "word": "scenic"
+        },
+        {
+          "start": 20.61,
+          "end": 21.11,
+          "word": "beauty"
+        },
+        {
+          "start": 21.11,
+          "end": 21.69,
+          "word": "in"
+        },
+        {
+          "start": 21.69,
+          "end": 21.97,
+          "word": "this"
+        },
+        {
+          "start": 21.97,
+          "end": 22.23,
+          "word": "part"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "start": 22.23,
+      "end": 29.31,
+      "text": "and while people who lived here have not understood",
+      "words": [
+        {
+          "start": 22.23,
+          "end": 22.49,
+          "word": "and"
+        },
+        {
+          "start": 22.49,
+          "end": 24.17,
+          "word": "while"
+        },
+        {
+          "start": 24.42,
+          "end": 25.02,
+          "word": "people"
+        },
+        {
+          "start": 25.02,
+          "end": 25.7,
+          "word": "who"
+        },
+        {
+          "start": 25.7,
+          "end": 25.88,
+          "word": "lived"
+        },
+        {
+          "start": 25.88,
+          "end": 26.74,
+          "word": "here"
+        },
+        {
+          "start": 27.51,
+          "end": 28.47,
+          "word": "have"
+        },
+        {
+          "start": 28.47,
+          "end": 28.81,
+          "word": "not"
+        },
+        {
+          "start": 28.81,
+          "end": 29.31,
+          "word": "understood"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "start": 29.31,
+      "end": 33.55,
+      "text": "the beauty that she has given them and have tried to take to ugly",
+      "words": [
+        {
+          "start": 29.31,
+          "end": 29.45,
+          "word": "the"
+        },
+        {
+          "start": 29.45,
+          "end": 29.79,
+          "word": "beauty"
+        },
+        {
+          "start": 29.79,
+          "end": 30.01,
+          "word": "that"
+        },
+        {
+          "start": 30.01,
+          "end": 30.21,
+          "word": "she"
+        },
+        {
+          "start": 30.21,
+          "end": 30.41,
+          "word": "has"
+        },
+        {
+          "start": 30.41,
+          "end": 30.63,
+          "word": "given"
+        },
+        {
+          "start": 30.63,
+          "end": 30.95,
+          "word": "them"
+        },
+        {
+          "start": 30.95,
+          "end": 31.35,
+          "word": "and"
+        },
+        {
+          "start": 31.35,
+          "end": 31.53,
+          "word": "have"
+        },
+        {
+          "start": 31.53,
+          "end": 31.79,
+          "word": "tried"
+        },
+        {
+          "start": 31.79,
+          "end": 32.05,
+          "word": "to"
+        },
+        {
+          "start": 32.05,
+          "end": 32.25,
+          "word": "take"
+        },
+        {
+          "start": 32.25,
+          "end": 32.97,
+          "word": "to"
+        },
+        {
+          "start": 32.97,
+          "end": 33.55,
+          "word": "ugly"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "start": 34.73,
+      "end": 40.01,
+      "text": "very sinful methods of invoking these satanic",
+      "words": [
+        {
+          "start": 34.73,
+          "end": 35.41,
+          "word": "very"
+        },
+        {
+          "start": 35.41,
+          "end": 36.07,
+          "word": "sinful"
+        },
+        {
+          "start": 36.07,
+          "end": 36.79,
+          "word": "methods"
+        },
+        {
+          "start": 36.79,
+          "end": 37.81,
+          "word": "of"
+        },
+        {
+          "start": 37.81,
+          "end": 38.73,
+          "word": "invoking"
+        },
+        {
+          "start": 38.73,
+          "end": 39.39,
+          "word": "these"
+        },
+        {
+          "start": 39.39,
+          "end": 40.01,
+          "word": "satanic"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "start": 40.01,
+      "end": 43.91,
+      "text": "negative forces. And this is what made her",
+      "words": [
+        {
+          "start": 40.01,
+          "end": 40.55,
+          "word": "negative"
+        },
+        {
+          "start": 40.55,
+          "end": 41.03,
+          "word": "forces."
+        },
+        {
+          "start": 42.35,
+          "end": 42.61,
+          "word": "And"
+        },
+        {
+          "start": 42.61,
+          "end": 42.81,
+          "word": "this"
+        },
+        {
+          "start": 42.81,
+          "end": 43.01,
+          "word": "is"
+        },
+        {
+          "start": 43.01,
+          "end": 43.19,
+          "word": "what"
+        },
+        {
+          "start": 43.19,
+          "end": 43.49,
+          "word": "made"
+        },
+        {
+          "start": 43.49,
+          "end": 43.91,
+          "word": "her"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "start": 43.91,
+      "end": 47.27,
+      "text": "really angry, I felt it other day when we went out",
+      "words": [
+        {
+          "start": 43.91,
+          "end": 44.31,
+          "word": "really"
+        },
+        {
+          "start": 44.31,
+          "end": 44.61,
+          "word": "angry,"
+        },
+        {
+          "start": 44.73,
+          "end": 44.91,
+          "word": "I"
+        },
+        {
+          "start": 44.91,
+          "end": 45.15,
+          "word": "felt"
+        },
+        {
+          "start": 45.15,
+          "end": 45.65,
+          "word": "it"
+        },
+        {
+          "start": 45.65,
+          "end": 45.87,
+          "word": "other"
+        },
+        {
+          "start": 45.87,
+          "end": 46.09,
+          "word": "day"
+        },
+        {
+          "start": 46.09,
+          "end": 46.27,
+          "word": "when"
+        },
+        {
+          "start": 46.27,
+          "end": 46.49,
+          "word": "we"
+        },
+        {
+          "start": 46.49,
+          "end": 46.69,
+          "word": "went"
+        },
+        {
+          "start": 46.69,
+          "end": 47.27,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "start": 52.41,
+      "end": 54.59,
+      "text": "It's done through the ignorance",
+      "words": [
+        {
+          "start": 52.41,
+          "end": 53.09,
+          "word": "It's"
+        },
+        {
+          "start": 53.09,
+          "end": 53.31,
+          "word": "done"
+        },
+        {
+          "start": 53.31,
+          "end": 53.91,
+          "word": "through"
+        },
+        {
+          "start": 53.91,
+          "end": 54.21,
+          "word": "the"
+        },
+        {
+          "start": 54.21,
+          "end": 54.59,
+          "word": "ignorance"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "start": 54.59,
+      "end": 58.7,
+      "text": "people no doubt but still some",
+      "words": [
+        {
+          "start": 54.59,
+          "end": 55.45,
+          "word": "people"
+        },
+        {
+          "start": 55.45,
+          "end": 55.89,
+          "word": "no"
+        },
+        {
+          "start": 55.89,
+          "end": 56.27,
+          "word": "doubt"
+        },
+        {
+          "start": 56.27,
+          "end": 57.15,
+          "word": "but"
+        },
+        {
+          "start": 57.15,
+          "end": 58.19,
+          "word": "still"
+        },
+        {
+          "start": 58.28,
+          "end": 58.7,
+          "word": "some"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "start": 58.7,
+      "end": 65.79,
+      "text": "of them even knowingly are indulging into things like this, is a very serious thing",
+      "words": [
+        {
+          "start": 58.7,
+          "end": 58.76,
+          "word": "of"
+        },
+        {
+          "start": 58.76,
+          "end": 58.98,
+          "word": "them"
+        },
+        {
+          "start": 58.98,
+          "end": 59.5,
+          "word": "even"
+        },
+        {
+          "start": 59.5,
+          "end": 60.26,
+          "word": "knowingly"
+        },
+        {
+          "start": 60.26,
+          "end": 61.34,
+          "word": "are"
+        },
+        {
+          "start": 61.5,
+          "end": 61.98,
+          "word": "indulging"
+        },
+        {
+          "start": 61.98,
+          "end": 62.26,
+          "word": "into"
+        },
+        {
+          "start": 62.26,
+          "end": 62.5,
+          "word": "things"
+        },
+        {
+          "start": 62.5,
+          "end": 62.86,
+          "word": "like"
+        },
+        {
+          "start": 62.86,
+          "end": 63.18,
+          "word": "this,"
+        },
+        {
+          "start": 64.17,
+          "end": 64.37,
+          "word": "is"
+        },
+        {
+          "start": 64.37,
+          "end": 64.45,
+          "word": "a"
+        },
+        {
+          "start": 64.45,
+          "end": 64.85,
+          "word": "very"
+        },
+        {
+          "start": 64.85,
+          "end": 65.27,
+          "word": "serious"
+        },
+        {
+          "start": 65.27,
+          "end": 65.79,
+          "word": "thing"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "start": 66.33,
+      "end": 78.1,
+      "text": "because you're inviting the satanic forces to work out your destruction. These forces",
+      "words": [
+        {
+          "start": 66.33,
+          "end": 66.85,
+          "word": "because"
+        },
+        {
+          "start": 66.85,
+          "end": 67.97,
+          "word": "you're"
+        },
+        {
+          "start": 67.97,
+          "end": 68.49,
+          "word": "inviting"
+        },
+        {
+          "start": 68.49,
+          "end": 69.83,
+          "word": "the"
+        },
+        {
+          "start": 69.83,
+          "end": 71.13,
+          "word": "satanic"
+        },
+        {
+          "start": 71.13,
+          "end": 71.55,
+          "word": "forces"
+        },
+        {
+          "start": 71.55,
+          "end": 72.87,
+          "word": "to"
+        },
+        {
+          "start": 73.73,
+          "end": 74.05,
+          "word": "work"
+        },
+        {
+          "start": 74.05,
+          "end": 74.25,
+          "word": "out"
+        },
+        {
+          "start": 74.25,
+          "end": 74.45,
+          "word": "your"
+        },
+        {
+          "start": 74.45,
+          "end": 74.95,
+          "word": "destruction."
+        },
+        {
+          "start": 77.34,
+          "end": 77.66,
+          "word": "These"
+        },
+        {
+          "start": 77.66,
+          "end": 78.1,
+          "word": "forces"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "start": 78.1,
+      "end": 83.16,
+      "text": "aren't ever Your friends – they can never be Your friend! Because You came",
+      "words": [
+        {
+          "start": 78.1,
+          "end": 78.36,
+          "word": "aren't"
+        },
+        {
+          "start": 78.36,
+          "end": 78.66,
+          "word": "ever"
+        },
+        {
+          "start": 78.66,
+          "end": 78.86,
+          "word": "Your"
+        },
+        {
+          "start": 78.86,
+          "end": 79.2,
+          "word": "friends"
+        },
+        {
+          "start": 79.2,
+          "end": 79.34,
+          "word": "–"
+        },
+        {
+          "start": 79.34,
+          "end": 79.56,
+          "word": "they"
+        },
+        {
+          "start": 79.56,
+          "end": 80.14,
+          "word": "can"
+        },
+        {
+          "start": 80.14,
+          "end": 80.82,
+          "word": "never"
+        },
+        {
+          "start": 80.82,
+          "end": 81.06,
+          "word": "be"
+        },
+        {
+          "start": 81.06,
+          "end": 81.24,
+          "word": "Your"
+        },
+        {
+          "start": 81.24,
+          "end": 81.6,
+          "word": "friend!"
+        },
+        {
+          "start": 82.14,
+          "end": 82.62,
+          "word": "Because"
+        },
+        {
+          "start": 82.62,
+          "end": 82.88,
+          "word": "You"
+        },
+        {
+          "start": 82.88,
+          "end": 83.16,
+          "word": "came"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "start": 83.16,
+      "end": 87.58,
+      "text": "up from the construction of God and They Are The Destructions and They Can Never",
+      "words": [
+        {
+          "start": 83.16,
+          "end": 83.42,
+          "word": "up"
+        },
+        {
+          "start": 83.42,
+          "end": 83.66,
+          "word": "from"
+        },
+        {
+          "start": 83.66,
+          "end": 83.84,
+          "word": "the"
+        },
+        {
+          "start": 83.84,
+          "end": 84.34,
+          "word": "construction"
+        },
+        {
+          "start": 84.34,
+          "end": 84.6,
+          "word": "of"
+        },
+        {
+          "start": 84.6,
+          "end": 85.06,
+          "word": "God"
+        },
+        {
+          "start": 85.06,
+          "end": 85.64,
+          "word": "and"
+        },
+        {
+          "start": 85.64,
+          "end": 85.86,
+          "word": "They"
+        },
+        {
+          "start": 85.86,
+          "end": 85.98,
+          "word": "Are"
+        },
+        {
+          "start": 85.98,
+          "end": 86.3,
+          "word": "The"
+        },
+        {
+          "start": 86.3,
+          "end": 86.84,
+          "word": "Destructions"
+        },
+        {
+          "start": 86.84,
+          "end": 87.0,
+          "word": "and"
+        },
+        {
+          "start": 87.0,
+          "end": 87.2,
+          "word": "They"
+        },
+        {
+          "start": 87.2,
+          "end": 87.4,
+          "word": "Can"
+        },
+        {
+          "start": 87.4,
+          "end": 87.58,
+          "word": "Never"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "start": 90.1,
+      "end": 98.67,
+      "text": "So the nature has to be annoyed about it, and they think that this country doesn't deserve a Buddha.",
+      "words": [
+        {
+          "start": 90.1,
+          "end": 90.74,
+          "word": "So"
+        },
+        {
+          "start": 90.84,
+          "end": 91.48,
+          "word": "the"
+        },
+        {
+          "start": 91.48,
+          "end": 91.78,
+          "word": "nature"
+        },
+        {
+          "start": 91.78,
+          "end": 92.1,
+          "word": "has"
+        },
+        {
+          "start": 92.1,
+          "end": 92.34,
+          "word": "to"
+        },
+        {
+          "start": 92.34,
+          "end": 92.94,
+          "word": "be"
+        },
+        {
+          "start": 92.94,
+          "end": 93.26,
+          "word": "annoyed"
+        },
+        {
+          "start": 93.26,
+          "end": 93.66,
+          "word": "about"
+        },
+        {
+          "start": 93.66,
+          "end": 94.16,
+          "word": "it,"
+        },
+        {
+          "start": 94.79,
+          "end": 94.97,
+          "word": "and"
+        },
+        {
+          "start": 94.97,
+          "end": 95.29,
+          "word": "they"
+        },
+        {
+          "start": 95.29,
+          "end": 95.49,
+          "word": "think"
+        },
+        {
+          "start": 95.49,
+          "end": 96.47,
+          "word": "that"
+        },
+        {
+          "start": 96.57,
+          "end": 97.09,
+          "word": "this"
+        },
+        {
+          "start": 97.09,
+          "end": 97.41,
+          "word": "country"
+        },
+        {
+          "start": 97.41,
+          "end": 97.75,
+          "word": "doesn't"
+        },
+        {
+          "start": 97.75,
+          "end": 98.23,
+          "word": "deserve"
+        },
+        {
+          "start": 98.23,
+          "end": 98.45,
+          "word": "a"
+        },
+        {
+          "start": 98.45,
+          "end": 98.67,
+          "word": "Buddha."
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "start": 102.45,
+      "end": 105.87,
+      "text": "It is their own decision about it – like They are suggesting",
+      "words": [
+        {
+          "start": 102.45,
+          "end": 102.73,
+          "word": "It"
+        },
+        {
+          "start": 102.73,
+          "end": 102.95,
+          "word": "is"
+        },
+        {
+          "start": 102.95,
+          "end": 103.17,
+          "word": "their"
+        },
+        {
+          "start": 103.17,
+          "end": 103.39,
+          "word": "own"
+        },
+        {
+          "start": 103.39,
+          "end": 103.89,
+          "word": "decision"
+        },
+        {
+          "start": 103.89,
+          "end": 104.31,
+          "word": "about"
+        },
+        {
+          "start": 104.31,
+          "end": 104.69,
+          "word": "it"
+        },
+        {
+          "start": 104.69,
+          "end": 104.83,
+          "word": "–"
+        },
+        {
+          "start": 104.83,
+          "end": 105.01,
+          "word": "like"
+        },
+        {
+          "start": 105.01,
+          "end": 105.27,
+          "word": "They"
+        },
+        {
+          "start": 105.27,
+          "end": 105.43,
+          "word": "are"
+        },
+        {
+          "start": 105.43,
+          "end": 105.87,
+          "word": "suggesting"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "start": 105.87,
+      "end": 108.69,
+      "text": "That This Country Doesn' t Deserve. Perhaps",
+      "words": [
+        {
+          "start": 105.87,
+          "end": 106.17,
+          "word": "That"
+        },
+        {
+          "start": 106.17,
+          "end": 106.37,
+          "word": "This"
+        },
+        {
+          "start": 106.37,
+          "end": 106.69,
+          "word": "Country"
+        },
+        {
+          "start": 106.69,
+          "end": 106.99,
+          "word": "Doesn'"
+        },
+        {
+          "start": 106.99,
+          "end": 107.09,
+          "word": "t"
+        },
+        {
+          "start": 107.09,
+          "end": 107.79,
+          "word": "Deserve."
+        },
+        {
+          "start": 108.37,
+          "end": 108.69,
+          "word": "Perhaps"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "start": 108.69,
+      "end": 110.41,
+      "text": "The Think I don''t know what this country",
+      "words": [
+        {
+          "start": 108.69,
+          "end": 108.91,
+          "word": "The"
+        },
+        {
+          "start": 108.91,
+          "end": 109.05,
+          "word": "Think"
+        },
+        {
+          "start": 109.05,
+          "end": 109.21,
+          "word": "I"
+        },
+        {
+          "start": 109.21,
+          "end": 109.41,
+          "word": "don''t"
+        },
+        {
+          "start": 109.41,
+          "end": 109.63,
+          "word": "know"
+        },
+        {
+          "start": 109.63,
+          "end": 109.87,
+          "word": "what"
+        },
+        {
+          "start": 109.87,
+          "end": 110.09,
+          "word": "this"
+        },
+        {
+          "start": 110.09,
+          "end": 110.41,
+          "word": "country"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "start": 110.41,
+      "end": 112.59,
+      "text": "Has done ,this part of the country",
+      "words": [
+        {
+          "start": 110.41,
+          "end": 110.77,
+          "word": "Has"
+        },
+        {
+          "start": 110.77,
+          "end": 111.01,
+          "word": "done"
+        },
+        {
+          "start": 111.01,
+          "end": 111.53,
+          "word": ",this"
+        },
+        {
+          "start": 111.53,
+          "end": 111.83,
+          "word": "part"
+        },
+        {
+          "start": 111.83,
+          "end": 112.03,
+          "word": "of"
+        },
+        {
+          "start": 112.03,
+          "end": 112.17,
+          "word": "the"
+        },
+        {
+          "start": 112.17,
+          "end": 112.59,
+          "word": "country"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "start": 112.59,
+      "end": 115.75,
+      "text": "And What i should do about them",
+      "words": [
+        {
+          "start": 112.59,
+          "end": 113.45,
+          "word": "And"
+        },
+        {
+          "start": 113.45,
+          "end": 114.25,
+          "word": "What"
+        },
+        {
+          "start": 114.25,
+          "end": 114.57,
+          "word": "i"
+        },
+        {
+          "start": 114.57,
+          "end": 114.79,
+          "word": "should"
+        },
+        {
+          "start": 114.79,
+          "end": 115.05,
+          "word": "do"
+        },
+        {
+          "start": 115.05,
+          "end": 115.33,
+          "word": "about"
+        },
+        {
+          "start": 115.33,
+          "end": 115.75,
+          "word": "them"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "start": 117.35,
+      "end": 119.99,
+      "text": "To punish someone Is very easy",
+      "words": [
+        {
+          "start": 117.35,
+          "end": 118.19,
+          "word": "To"
+        },
+        {
+          "start": 118.19,
+          "end": 118.57,
+          "word": "punish"
+        },
+        {
+          "start": 118.57,
+          "end": 118.97,
+          "word": "someone"
+        },
+        {
+          "start": 118.97,
+          "end": 119.27,
+          "word": "Is"
+        },
+        {
+          "start": 119.27,
+          "end": 119.65,
+          "word": "very"
+        },
+        {
+          "start": 119.65,
+          "end": 119.99,
+          "word": "easy"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "start": 122.36,
+      "end": 125.22,
+      "text": "And to get angry is even easier.",
+      "words": [
+        {
+          "start": 122.36,
+          "end": 123.22,
+          "word": "And"
+        },
+        {
+          "start": 123.22,
+          "end": 123.4,
+          "word": "to"
+        },
+        {
+          "start": 123.4,
+          "end": 123.68,
+          "word": "get"
+        },
+        {
+          "start": 123.68,
+          "end": 124.02,
+          "word": "angry"
+        },
+        {
+          "start": 124.02,
+          "end": 124.36,
+          "word": "is"
+        },
+        {
+          "start": 124.36,
+          "end": 124.72,
+          "word": "even"
+        },
+        {
+          "start": 124.72,
+          "end": 125.22,
+          "word": "easier."
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "start": 127.03,
+      "end": 129.17,
+      "text": "But,to have poise and understanding",
+      "words": [
+        {
+          "start": 127.03,
+          "end": 127.23,
+          "word": "But"
+        },
+        {
+          "start": 127.23,
+          "end": 127.39,
+          "word": ",to"
+        },
+        {
+          "start": 127.39,
+          "end": 127.63,
+          "word": "have"
+        },
+        {
+          "start": 127.63,
+          "end": 128.37,
+          "word": "poise"
+        },
+        {
+          "start": 128.37,
+          "end": 128.57,
+          "word": "and"
+        },
+        {
+          "start": 128.57,
+          "end": 129.17,
+          "word": "understanding"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "start": 129.17,
+      "end": 130.11,
+      "text": "& compassion",
+      "words": [
+        {
+          "start": 129.17,
+          "end": 129.49,
+          "word": "&"
+        },
+        {
+          "start": 129.49,
+          "end": 130.11,
+          "word": "compassion"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "start": 133.88,
+      "end": 134.8,
+      "text": "Is difficult",
+      "words": [
+        {
+          "start": 133.88,
+          "end": 134.36,
+          "word": "Is"
+        },
+        {
+          "start": 134.36,
+          "end": 134.8,
+          "word": "difficult"
+        }
+      ]
+    },
+    {
+      "id": 25,
+      "start": 136.88,
+      "end": 142.39,
+      "text": "The patience of a mother",
+      "words": [
+        {
+          "start": 136.88,
+          "end": 137.48,
+          "word": "The"
+        },
+        {
+          "start": 137.48,
+          "end": 138.12,
+          "word": "patience"
+        },
+        {
+          "start": 140.87,
+          "end": 141.87,
+          "word": "of"
+        },
+        {
+          "start": 141.87,
+          "end": 142.05,
+          "word": "a"
+        },
+        {
+          "start": 142.05,
+          "end": 142.39,
+          "word": "mother"
+        }
+      ]
+    },
+    {
+      "id": 26,
+      "start": 142.39,
+      "end": 143.87,
+      "text": "They cannot have",
+      "words": [
+        {
+          "start": 142.39,
+          "end": 143.07,
+          "word": "They"
+        },
+        {
+          "start": 143.07,
+          "end": 143.37,
+          "word": "cannot"
+        },
+        {
+          "start": 143.37,
+          "end": 143.87,
+          "word": "have"
+        }
+      ]
+    },
+    {
+      "id": 27,
+      "start": 145.56,
+      "end": 148.14,
+      "text": "It's alright I can understand them",
+      "words": [
+        {
+          "start": 145.56,
+          "end": 146.4,
+          "word": "It's"
+        },
+        {
+          "start": 146.4,
+          "end": 146.7,
+          "word": "alright"
+        },
+        {
+          "start": 146.7,
+          "end": 146.86,
+          "word": "I"
+        },
+        {
+          "start": 146.86,
+          "end": 147.12,
+          "word": "can"
+        },
+        {
+          "start": 147.12,
+          "end": 147.58,
+          "word": "understand"
+        },
+        {
+          "start": 147.58,
+          "end": 148.14,
+          "word": "them"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "start": 148.3,
+      "end": 149.86,
+      "text": "but they've to obey",
+      "words": [
+        {
+          "start": 148.3,
+          "end": 148.9,
+          "word": "but"
+        },
+        {
+          "start": 148.9,
+          "end": 149.18,
+          "word": "they've"
+        },
+        {
+          "start": 149.18,
+          "end": 149.4,
+          "word": "to"
+        },
+        {
+          "start": 149.4,
+          "end": 149.86,
+          "word": "obey"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "start": 151.08,
+      "end": 153.04,
+      "text": "If something has be done",
+      "words": [
+        {
+          "start": 151.08,
+          "end": 151.8,
+          "word": "If"
+        },
+        {
+          "start": 151.8,
+          "end": 152.04,
+          "word": "something"
+        },
+        {
+          "start": 152.04,
+          "end": 152.28,
+          "word": "has"
+        },
+        {
+          "start": 152.28,
+          "end": 152.48,
+          "word": "be"
+        },
+        {
+          "start": 152.48,
+          "end": 153.04,
+          "word": "done"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "start": 153.04,
+      "end": 154.66,
+      "text": "Has t o b e d on",
+      "words": [
+        {
+          "start": 153.04,
+          "end": 153.7,
+          "word": "Has"
+        },
+        {
+          "start": 153.7,
+          "end": 153.88,
+          "word": "t"
+        },
+        {
+          "start": 153.88,
+          "end": 153.88,
+          "word": "o"
+        },
+        {
+          "start": 153.88,
+          "end": 153.92,
+          "word": "b"
+        },
+        {
+          "start": 153.92,
+          "end": 154.06,
+          "word": "e"
+        },
+        {
+          "start": 154.06,
+          "end": 154.16,
+          "word": "d"
+        },
+        {
+          "start": 154.16,
+          "end": 154.66,
+          "word": "on"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "start": 155.2,
+      "end": 156.88,
+      "text": "We haveto work out",
+      "words": [
+        {
+          "start": 155.2,
+          "end": 155.66,
+          "word": "We"
+        },
+        {
+          "start": 155.66,
+          "end": 156.04,
+          "word": "haveto"
+        },
+        {
+          "start": 156.04,
+          "end": 156.26,
+          "word": "work"
+        },
+        {
+          "start": 156.26,
+          "end": 156.88,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 32,
+      "start": 156.88,
+      "end": 159.58,
+      "text": "Even if i go to hell",
+      "words": [
+        {
+          "start": 156.88,
+          "end": 157.64,
+          "word": "Even"
+        },
+        {
+          "start": 157.64,
+          "end": 158.64,
+          "word": "if"
+        },
+        {
+          "start": 158.64,
+          "end": 158.82,
+          "word": "i"
+        },
+        {
+          "start": 158.82,
+          "end": 159.06,
+          "word": "go"
+        },
+        {
+          "start": 159.06,
+          "end": 159.32,
+          "word": "to"
+        },
+        {
+          "start": 159.32,
+          "end": 159.58,
+          "word": "hell"
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "start": 159.58,
+      "end": 161.12,
+      "text": "I'll haveto work it out",
+      "words": [
+        {
+          "start": 159.58,
+          "end": 160.02,
+          "word": "I'll"
+        },
+        {
+          "start": 160.02,
+          "end": 160.28,
+          "word": "haveto"
+        },
+        {
+          "start": 160.28,
+          "end": 160.54,
+          "word": "work"
+        },
+        {
+          "start": 160.54,
+          "end": 160.76,
+          "word": "it"
+        },
+        {
+          "start": 160.76,
+          "end": 161.12,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 34,
+      "start": 161.32,
+      "end": 162.66,
+      "text": "That' my job",
+      "words": [
+        {
+          "start": 161.32,
+          "end": 161.92,
+          "word": "That'"
+        },
+        {
+          "start": 162.06,
+          "end": 162.16,
+          "word": "my"
+        },
+        {
+          "start": 162.16,
+          "end": 162.66,
+          "word": "job"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "start": 162.88,
+      "end": 166.42,
+      "text": "And that's what all of them and you,",
+      "words": [
+        {
+          "start": 162.88,
+          "end": 163.54,
+          "word": "And"
+        },
+        {
+          "start": 163.54,
+          "end": 163.8,
+          "word": "that's"
+        },
+        {
+          "start": 163.8,
+          "end": 164.32,
+          "word": "what"
+        },
+        {
+          "start": 164.32,
+          "end": 164.68,
+          "word": "all"
+        },
+        {
+          "start": 164.68,
+          "end": 165.42,
+          "word": "of"
+        },
+        {
+          "start": 165.42,
+          "end": 165.78,
+          "word": "them"
+        },
+        {
+          "start": 165.78,
+          "end": 165.98,
+          "word": "and"
+        },
+        {
+          "start": 165.98,
+          "end": 166.42,
+          "word": "you,"
+        }
+      ]
+    },
+    {
+      "id": 36,
+      "start": 166.42,
+      "end": 168.92,
+      "text": "All put together have to help Me.",
+      "words": [
+        {
+          "start": 166.42,
+          "end": 166.62,
+          "word": "All"
+        },
+        {
+          "start": 166.62,
+          "end": 166.82,
+          "word": "put"
+        },
+        {
+          "start": 166.82,
+          "end": 167.36,
+          "word": "together"
+        },
+        {
+          "start": 167.36,
+          "end": 167.96,
+          "word": "have"
+        },
+        {
+          "start": 167.96,
+          "end": 168.18,
+          "word": "to"
+        },
+        {
+          "start": 168.18,
+          "end": 168.44,
+          "word": "help"
+        },
+        {
+          "start": 168.44,
+          "end": 168.92,
+          "word": "Me."
+        }
+      ]
+    },
+    {
+      "id": 37,
+      "start": 171.32,
+      "end": 176.3,
+      "text": "Because with this anger everything will pass away",
+      "words": [
+        {
+          "start": 171.32,
+          "end": 171.92,
+          "word": "Because"
+        },
+        {
+          "start": 172.5,
+          "end": 173.5,
+          "word": "with"
+        },
+        {
+          "start": 173.5,
+          "end": 173.74,
+          "word": "this"
+        },
+        {
+          "start": 173.74,
+          "end": 174.3,
+          "word": "anger"
+        },
+        {
+          "start": 174.3,
+          "end": 175.18,
+          "word": "everything"
+        },
+        {
+          "start": 175.18,
+          "end": 175.56,
+          "word": "will"
+        },
+        {
+          "start": 175.56,
+          "end": 175.92,
+          "word": "pass"
+        },
+        {
+          "start": 175.92,
+          "end": 176.3,
+          "word": "away"
+        }
+      ]
+    },
+    {
+      "id": 38,
+      "start": 176.88,
+      "end": 180.92,
+      "text": "What'll remain is the achievement",
+      "words": [
+        {
+          "start": 176.88,
+          "end": 178.18,
+          "word": "What'll"
+        },
+        {
+          "start": 178.18,
+          "end": 179.52,
+          "word": "remain"
+        },
+        {
+          "start": 179.52,
+          "end": 179.92,
+          "word": "is"
+        },
+        {
+          "start": 179.92,
+          "end": 180.26,
+          "word": "the"
+        },
+        {
+          "start": 180.26,
+          "end": 180.92,
+          "word": "achievement"
+        }
+      ]
+    },
+    {
+      "id": 39,
+      "start": 181.17,
+      "end": 187.7,
+      "text": "Achievement we've accomplished",
+      "words": [
+        {
+          "start": 181.17,
+          "end": 182.67,
+          "word": "Achievement"
+        },
+        {
+          "start": 182.67,
+          "end": 183.89,
+          "word": "we've"
+        },
+        {
+          "start": 186.58,
+          "end": 187.7,
+          "word": "accomplished"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "start": 187.7,
+      "end": 191.12,
+      "text": "by our perseverance & patience",
+      "words": [
+        {
+          "start": 187.7,
+          "end": 188.32,
+          "word": "by"
+        },
+        {
+          "start": 188.32,
+          "end": 188.86,
+          "word": "our"
+        },
+        {
+          "start": 188.86,
+          "end": 189.64,
+          "word": "perseverance"
+        },
+        {
+          "start": 189.64,
+          "end": 190.42,
+          "word": "&"
+        },
+        {
+          "start": 190.42,
+          "end": 191.12,
+          "word": "patience"
+        }
+      ]
+    },
+    {
+      "id": 41,
+      "start": 193.17,
+      "end": 194.79,
+      "text": "So once",
+      "words": [
+        {
+          "start": 193.17,
+          "end": 193.97,
+          "word": "So"
+        },
+        {
+          "start": 193.97,
+          "end": 194.79,
+          "word": "once"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "start": 195.04,
+      "end": 199.92,
+      "text": "We realize the achievement",
+      "words": [
+        {
+          "start": 195.04,
+          "end": 195.84,
+          "word": "We"
+        },
+        {
+          "start": 195.84,
+          "end": 196.24,
+          "word": "realize"
+        },
+        {
+          "start": 196.24,
+          "end": 197.5,
+          "word": "the"
+        },
+        {
+          "start": 199.26,
+          "end": 199.92,
+          "word": "achievement"
+        }
+      ]
+    },
+    {
+      "id": 43,
+      "start": 199.92,
+      "end": 202.16,
+      "text": "and the importance of achievement.",
+      "words": [
+        {
+          "start": 199.92,
+          "end": 200.74,
+          "word": "and"
+        },
+        {
+          "start": 200.74,
+          "end": 201.06,
+          "word": "the"
+        },
+        {
+          "start": 201.06,
+          "end": 201.38,
+          "word": "importance"
+        },
+        {
+          "start": 201.38,
+          "end": 201.7,
+          "word": "of"
+        },
+        {
+          "start": 201.7,
+          "end": 202.16,
+          "word": "achievement."
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "start": 203.02,
+      "end": 206.4,
+      "text": "We do not give way to these temporary moods,",
+      "words": [
+        {
+          "start": 203.02,
+          "end": 203.26,
+          "word": "We"
+        },
+        {
+          "start": 203.26,
+          "end": 203.58,
+          "word": "do"
+        },
+        {
+          "start": 203.58,
+          "end": 203.96,
+          "word": "not"
+        },
+        {
+          "start": 203.96,
+          "end": 204.26,
+          "word": "give"
+        },
+        {
+          "start": 204.26,
+          "end": 204.7,
+          "word": "way"
+        },
+        {
+          "start": 204.7,
+          "end": 204.96,
+          "word": "to"
+        },
+        {
+          "start": 204.96,
+          "end": 205.24,
+          "word": "these"
+        },
+        {
+          "start": 205.24,
+          "end": 205.74,
+          "word": "temporary"
+        },
+        {
+          "start": 205.74,
+          "end": 206.4,
+          "word": "moods,"
+        }
+      ]
+    },
+    {
+      "id": 45,
+      "start": 206.4,
+      "end": 209.26,
+      "text": "we have be absolutely tranquil",
+      "words": [
+        {
+          "start": 206.4,
+          "end": 206.62,
+          "word": "we"
+        },
+        {
+          "start": 206.62,
+          "end": 206.86,
+          "word": "have"
+        },
+        {
+          "start": 206.86,
+          "end": 207.54,
+          "word": "be"
+        },
+        {
+          "start": 207.54,
+          "end": 208.42,
+          "word": "absolutely"
+        },
+        {
+          "start": 208.42,
+          "end": 209.26,
+          "word": "tranquil"
+        }
+      ]
+    },
+    {
+      "id": 46,
+      "start": 209.26,
+      "end": 213.02,
+      "text": "an understanding about it",
+      "words": [
+        {
+          "start": 209.26,
+          "end": 210.0,
+          "word": "an"
+        },
+        {
+          "start": 210.0,
+          "end": 210.66,
+          "word": "understanding"
+        },
+        {
+          "start": 211.3,
+          "end": 212.6,
+          "word": "about"
+        },
+        {
+          "start": 212.6,
+          "end": 213.02,
+          "word": "it"
+        }
+      ]
+    },
+    {
+      "id": 47,
+      "start": 216.99,
+      "end": 218.87,
+      "text": "also in this",
+      "words": [
+        {
+          "start": 216.99,
+          "end": 217.73,
+          "word": "also"
+        },
+        {
+          "start": 217.73,
+          "end": 218.43,
+          "word": "in"
+        },
+        {
+          "start": 218.43,
+          "end": 218.87,
+          "word": "this"
+        }
+      ]
+    },
+    {
+      "id": 48,
+      "start": 219.35,
+      "end": 222.05,
+      "text": "where play into hands negative forces",
+      "words": [
+        {
+          "start": 219.35,
+          "end": 219.75,
+          "word": "where"
+        },
+        {
+          "start": 219.75,
+          "end": 220.21,
+          "word": "play"
+        },
+        {
+          "start": 220.21,
+          "end": 220.59,
+          "word": "into"
+        },
+        {
+          "start": 220.59,
+          "end": 220.93,
+          "word": "hands"
+        },
+        {
+          "start": 220.93,
+          "end": 221.55,
+          "word": "negative"
+        },
+        {
+          "start": 221.55,
+          "end": 222.05,
+          "word": "forces"
+        }
+      ]
+    },
+    {
+      "id": 49,
+      "start": 222.31,
+      "end": 224.31,
+      "text": "because they want",
+      "words": [
+        {
+          "start": 222.31,
+          "end": 223.53,
+          "word": "because"
+        },
+        {
+          "start": 223.53,
+          "end": 223.87,
+          "word": "they"
+        },
+        {
+          "start": 223.87,
+          "end": 224.31,
+          "word": "want"
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "start": 224.31,
+      "end": 225.77,
+      "text": "disturbing",
+      "words": [
+        {
+          "start": 224.31,
+          "end": 225.77,
+          "word": "disturbing"
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "start": 225.77,
+      "end": 228.27,
+      "text": "and playing their hand in anger",
+      "words": [
+        {
+          "start": 225.77,
+          "end": 226.43,
+          "word": "and"
+        },
+        {
+          "start": 226.43,
+          "end": 226.77,
+          "word": "playing"
+        },
+        {
+          "start": 226.77,
+          "end": 227.13,
+          "word": "their"
+        },
+        {
+          "start": 227.13,
+          "end": 227.57,
+          "word": "hand"
+        },
+        {
+          "start": 227.57,
+          "end": 227.89,
+          "word": "in"
+        },
+        {
+          "start": 227.89,
+          "end": 228.27,
+          "word": "anger"
+        }
+      ]
+    },
+    {
+      "id": 52,
+      "start": 228.27,
+      "end": 229.71,
+      "text": "so actually when angry",
+      "words": [
+        {
+          "start": 228.27,
+          "end": 228.63,
+          "word": "so"
+        },
+        {
+          "start": 228.63,
+          "end": 228.99,
+          "word": "actually"
+        },
+        {
+          "start": 228.99,
+          "end": 229.23,
+          "word": "when"
+        },
+        {
+          "start": 229.23,
+          "end": 229.71,
+          "word": "angry"
+        }
+      ]
+    },
+    {
+      "id": 53,
+      "start": 229.71,
+      "end": 232.69,
+      "text": "are going against ourselves",
+      "words": [
+        {
+          "start": 229.71,
+          "end": 231.25,
+          "word": "are"
+        },
+        {
+          "start": 231.25,
+          "end": 231.57,
+          "word": "going"
+        },
+        {
+          "start": 231.57,
+          "end": 232.15,
+          "word": "against"
+        },
+        {
+          "start": 232.15,
+          "end": 232.69,
+          "word": "ourselves"
+        }
+      ]
+    },
+    {
+      "id": 54,
+      "start": 232.69,
+      "end": 234.79,
+      "text": "You are playing into the hands of negative.",
+      "words": [
+        {
+          "start": 232.69,
+          "end": 232.69,
+          "word": "You"
+        },
+        {
+          "start": 232.69,
+          "end": 233.23,
+          "word": "are"
+        },
+        {
+          "start": 233.23,
+          "end": 233.51,
+          "word": "playing"
+        },
+        {
+          "start": 233.51,
+          "end": 233.85,
+          "word": "into"
+        },
+        {
+          "start": 233.85,
+          "end": 234.07,
+          "word": "the"
+        },
+        {
+          "start": 234.07,
+          "end": 234.25,
+          "word": "hands"
+        },
+        {
+          "start": 234.25,
+          "end": 234.43,
+          "word": "of"
+        },
+        {
+          "start": 234.43,
+          "end": 234.79,
+          "word": "negative."
+        }
+      ]
+    },
+    {
+      "id": 55,
+      "start": 236.02,
+      "end": 239.24,
+      "text": "So what's a use in getting angry and showing tough?",
+      "words": [
+        {
+          "start": 236.02,
+          "end": 236.22,
+          "word": "So"
+        },
+        {
+          "start": 236.22,
+          "end": 236.54,
+          "word": "what's"
+        },
+        {
+          "start": 236.54,
+          "end": 236.62,
+          "word": "a"
+        },
+        {
+          "start": 236.62,
+          "end": 236.84,
+          "word": "use"
+        },
+        {
+          "start": 236.84,
+          "end": 237.0,
+          "word": "in"
+        },
+        {
+          "start": 237.0,
+          "end": 237.3,
+          "word": "getting"
+        },
+        {
+          "start": 237.3,
+          "end": 238.02,
+          "word": "angry"
+        },
+        {
+          "start": 238.02,
+          "end": 238.62,
+          "word": "and"
+        },
+        {
+          "start": 238.62,
+          "end": 238.86,
+          "word": "showing"
+        },
+        {
+          "start": 238.86,
+          "end": 239.24,
+          "word": "tough?"
+        }
+      ]
+    },
+    {
+      "id": 56,
+      "start": 240.04,
+      "end": 241.86,
+      "text": "It is addressed to these",
+      "words": [
+        {
+          "start": 240.04,
+          "end": 240.16,
+          "word": "It"
+        },
+        {
+          "start": 240.16,
+          "end": 240.42,
+          "word": "is"
+        },
+        {
+          "start": 240.42,
+          "end": 240.64,
+          "word": "addressed"
+        },
+        {
+          "start": 240.64,
+          "end": 240.92,
+          "word": "to"
+        },
+        {
+          "start": 240.92,
+          "end": 241.86,
+          "word": "these"
+        }
+      ]
+    },
+    {
+      "id": 57,
+      "start": 242.82,
+      "end": 246.54,
+      "text": "angry, natural things that are...",
+      "words": [
+        {
+          "start": 242.82,
+          "end": 243.46,
+          "word": "angry,"
+        },
+        {
+          "start": 244.04,
+          "end": 244.6,
+          "word": "natural"
+        },
+        {
+          "start": 244.6,
+          "end": 245.34,
+          "word": "things"
+        },
+        {
+          "start": 245.34,
+          "end": 245.74,
+          "word": "that"
+        },
+        {
+          "start": 245.74,
+          "end": 246.54,
+          "word": "are..."
+        }
+      ]
+    },
+    {
+      "id": 58,
+      "start": 246.7,
+      "end": 252.59,
+      "text": "All right! Now we should start our puja",
+      "words": [
+        {
+          "start": 246.7,
+          "end": 247.02,
+          "word": "All"
+        },
+        {
+          "start": 247.02,
+          "end": 247.6,
+          "word": "right!"
+        },
+        {
+          "start": 250.55,
+          "end": 250.87,
+          "word": "Now"
+        },
+        {
+          "start": 250.87,
+          "end": 251.03,
+          "word": "we"
+        },
+        {
+          "start": 251.03,
+          "end": 251.29,
+          "word": "should"
+        },
+        {
+          "start": 251.29,
+          "end": 251.57,
+          "word": "start"
+        },
+        {
+          "start": 251.57,
+          "end": 251.79,
+          "word": "our"
+        },
+        {
+          "start": 251.79,
+          "end": 252.59,
+          "word": "puja"
+        }
+      ]
+    },
+    {
+      "id": 59,
+      "start": 252.59,
+      "end": 257.45,
+      "text": "because I think it will settle down then with the Puja on",
+      "words": [
+        {
+          "start": 252.59,
+          "end": 253.27,
+          "word": "because"
+        },
+        {
+          "start": 253.27,
+          "end": 253.71,
+          "word": "I"
+        },
+        {
+          "start": 253.71,
+          "end": 253.91,
+          "word": "think"
+        },
+        {
+          "start": 253.91,
+          "end": 254.15,
+          "word": "it"
+        },
+        {
+          "start": 254.15,
+          "end": 255.55,
+          "word": "will"
+        },
+        {
+          "start": 255.55,
+          "end": 255.85,
+          "word": "settle"
+        },
+        {
+          "start": 255.85,
+          "end": 256.25,
+          "word": "down"
+        },
+        {
+          "start": 256.25,
+          "end": 256.51,
+          "word": "then"
+        },
+        {
+          "start": 256.51,
+          "end": 256.75,
+          "word": "with"
+        },
+        {
+          "start": 256.75,
+          "end": 256.91,
+          "word": "the"
+        },
+        {
+          "start": 256.91,
+          "end": 257.19,
+          "word": "Puja"
+        },
+        {
+          "start": 257.19,
+          "end": 257.45,
+          "word": "on"
+        }
+      ]
+    },
+    {
+      "id": 60,
+      "start": 260.33,
+      "end": 262.61,
+      "text": "As when first came England",
+      "words": [
+        {
+          "start": 260.33,
+          "end": 260.99,
+          "word": "As"
+        },
+        {
+          "start": 260.99,
+          "end": 261.57,
+          "word": "when"
+        },
+        {
+          "start": 261.57,
+          "end": 262.03,
+          "word": "first"
+        },
+        {
+          "start": 262.03,
+          "end": 262.25,
+          "word": "came"
+        },
+        {
+          "start": 262.25,
+          "end": 262.61,
+          "word": "England"
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "start": 262.61,
+      "end": 266.57,
+      "text": "there was big curse of goddess on this country",
+      "words": [
+        {
+          "start": 262.61,
+          "end": 263.13,
+          "word": "there"
+        },
+        {
+          "start": 263.13,
+          "end": 263.51,
+          "word": "was"
+        },
+        {
+          "start": 263.51,
+          "end": 264.35,
+          "word": "big"
+        },
+        {
+          "start": 264.35,
+          "end": 265.21,
+          "word": "curse"
+        },
+        {
+          "start": 265.21,
+          "end": 265.49,
+          "word": "of"
+        },
+        {
+          "start": 265.49,
+          "end": 265.83,
+          "word": "goddess"
+        },
+        {
+          "start": 265.83,
+          "end": 266.09,
+          "word": "on"
+        },
+        {
+          "start": 266.09,
+          "end": 266.31,
+          "word": "this"
+        },
+        {
+          "start": 266.31,
+          "end": 266.57,
+          "word": "country"
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "start": 266.57,
+      "end": 275.34,
+      "text": "Really, that time the climate was just like this and you could not even step out of your",
+      "words": [
+        {
+          "start": 266.57,
+          "end": 267.73,
+          "word": "Really,"
+        },
+        {
+          "start": 268.17,
+          "end": 268.41,
+          "word": "that"
+        },
+        {
+          "start": 268.41,
+          "end": 268.61,
+          "word": "time"
+        },
+        {
+          "start": 268.61,
+          "end": 268.87,
+          "word": "the"
+        },
+        {
+          "start": 268.87,
+          "end": 269.11,
+          "word": "climate"
+        },
+        {
+          "start": 269.11,
+          "end": 269.39,
+          "word": "was"
+        },
+        {
+          "start": 269.39,
+          "end": 269.71,
+          "word": "just"
+        },
+        {
+          "start": 269.71,
+          "end": 269.99,
+          "word": "like"
+        },
+        {
+          "start": 269.99,
+          "end": 270.41,
+          "word": "this"
+        },
+        {
+          "start": 270.86,
+          "end": 271.52,
+          "word": "and"
+        },
+        {
+          "start": 271.52,
+          "end": 271.74,
+          "word": "you"
+        },
+        {
+          "start": 271.74,
+          "end": 272.12,
+          "word": "could"
+        },
+        {
+          "start": 272.12,
+          "end": 272.3,
+          "word": "not"
+        },
+        {
+          "start": 272.3,
+          "end": 272.68,
+          "word": "even"
+        },
+        {
+          "start": 272.68,
+          "end": 272.96,
+          "word": "step"
+        },
+        {
+          "start": 272.96,
+          "end": 273.82,
+          "word": "out"
+        },
+        {
+          "start": 274.62,
+          "end": 275.02,
+          "word": "of"
+        },
+        {
+          "start": 275.02,
+          "end": 275.34,
+          "word": "your"
+        }
+      ]
+    },
+    {
+      "id": 63,
+      "start": 275.34,
+      "end": 275.74,
+      "text": "door.",
+      "words": [
+        {
+          "start": 275.34,
+          "end": 275.74,
+          "word": "door."
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "start": 276.67,
+      "end": 284.6,
+      "text": "We were staying in all which I remember –and uh…the car was hardly about ten feet",
+      "words": [
+        {
+          "start": 276.67,
+          "end": 276.77,
+          "word": "We"
+        },
+        {
+          "start": 276.77,
+          "end": 276.77,
+          "word": "were"
+        },
+        {
+          "start": 276.77,
+          "end": 276.97,
+          "word": "staying"
+        },
+        {
+          "start": 276.97,
+          "end": 277.29,
+          "word": "in"
+        },
+        {
+          "start": 277.29,
+          "end": 277.41,
+          "word": "all"
+        },
+        {
+          "start": 277.41,
+          "end": 277.69,
+          "word": "which"
+        },
+        {
+          "start": 277.69,
+          "end": 277.99,
+          "word": "I"
+        },
+        {
+          "start": 277.99,
+          "end": 278.37,
+          "word": "remember"
+        },
+        {
+          "start": 278.37,
+          "end": 279.39,
+          "word": "–and"
+        },
+        {
+          "start": 279.39,
+          "end": 279.81,
+          "word": "uh…the"
+        },
+        {
+          "start": 279.81,
+          "end": 280.31,
+          "word": "car"
+        },
+        {
+          "start": 280.31,
+          "end": 281.09,
+          "word": "was"
+        },
+        {
+          "start": 281.09,
+          "end": 281.45,
+          "word": "hardly"
+        },
+        {
+          "start": 281.45,
+          "end": 282.41,
+          "word": "about"
+        },
+        {
+          "start": 283.72,
+          "end": 284.22,
+          "word": "ten"
+        },
+        {
+          "start": 284.22,
+          "end": 284.6,
+          "word": "feet"
+        }
+      ]
+    },
+    {
+      "id": 65,
+      "start": 284.6,
+      "end": 287.8,
+      "text": "And we didn't know how to reach it because so windy",
+      "words": [
+        {
+          "start": 284.6,
+          "end": 284.96,
+          "word": "And"
+        },
+        {
+          "start": 284.96,
+          "end": 285.14,
+          "word": "we"
+        },
+        {
+          "start": 285.14,
+          "end": 285.32,
+          "word": "didn't"
+        },
+        {
+          "start": 285.32,
+          "end": 285.46,
+          "word": "know"
+        },
+        {
+          "start": 285.46,
+          "end": 285.72,
+          "word": "how"
+        },
+        {
+          "start": 285.72,
+          "end": 285.96,
+          "word": "to"
+        },
+        {
+          "start": 285.96,
+          "end": 286.1,
+          "word": "reach"
+        },
+        {
+          "start": 286.1,
+          "end": 286.42,
+          "word": "it"
+        },
+        {
+          "start": 286.42,
+          "end": 286.58,
+          "word": "because"
+        },
+        {
+          "start": 286.58,
+          "end": 287.4,
+          "word": "so"
+        },
+        {
+          "start": 287.4,
+          "end": 287.8,
+          "word": "windy"
+        }
+      ]
+    },
+    {
+      "id": 66,
+      "start": 288.45,
+      "end": 296.3,
+      "text": "…and wearing coats but everything was absolutely in a windy state",
+      "words": [
+        {
+          "start": 288.45,
+          "end": 288.82,
+          "word": "…and"
+        },
+        {
+          "start": 288.82,
+          "end": 289.28,
+          "word": "wearing"
+        },
+        {
+          "start": 289.28,
+          "end": 289.66,
+          "word": "coats"
+        },
+        {
+          "start": 289.66,
+          "end": 290.26,
+          "word": "but"
+        },
+        {
+          "start": 290.26,
+          "end": 290.92,
+          "word": "everything"
+        },
+        {
+          "start": 290.92,
+          "end": 292.04,
+          "word": "was"
+        },
+        {
+          "start": 292.94,
+          "end": 293.98,
+          "word": "absolutely"
+        },
+        {
+          "start": 293.98,
+          "end": 295.4,
+          "word": "in"
+        },
+        {
+          "start": 295.4,
+          "end": 295.6,
+          "word": "a"
+        },
+        {
+          "start": 295.6,
+          "end": 295.84,
+          "word": "windy"
+        },
+        {
+          "start": 295.84,
+          "end": 296.3,
+          "word": "state"
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "start": 296.59,
+      "end": 306.88,
+      "text": "And then I said that this country is really under the curse of a bodhisattva, but",
+      "words": [
+        {
+          "start": 296.59,
+          "end": 297.55,
+          "word": "And"
+        },
+        {
+          "start": 297.55,
+          "end": 297.83,
+          "word": "then"
+        },
+        {
+          "start": 297.83,
+          "end": 298.09,
+          "word": "I"
+        },
+        {
+          "start": 298.09,
+          "end": 298.33,
+          "word": "said"
+        },
+        {
+          "start": 298.33,
+          "end": 298.73,
+          "word": "that"
+        },
+        {
+          "start": 298.73,
+          "end": 298.99,
+          "word": "this"
+        },
+        {
+          "start": 298.99,
+          "end": 299.43,
+          "word": "country"
+        },
+        {
+          "start": 299.43,
+          "end": 299.83,
+          "word": "is"
+        },
+        {
+          "start": 299.83,
+          "end": 300.35,
+          "word": "really"
+        },
+        {
+          "start": 300.35,
+          "end": 300.81,
+          "word": "under"
+        },
+        {
+          "start": 300.81,
+          "end": 301.13,
+          "word": "the"
+        },
+        {
+          "start": 301.13,
+          "end": 301.39,
+          "word": "curse"
+        },
+        {
+          "start": 301.39,
+          "end": 301.65,
+          "word": "of"
+        },
+        {
+          "start": 301.65,
+          "end": 301.79,
+          "word": "a"
+        },
+        {
+          "start": 301.79,
+          "end": 302.73,
+          "word": "bodhisattva,"
+        },
+        {
+          "start": 306.76,
+          "end": 306.88,
+          "word": "but"
+        }
+      ]
+    },
+    {
+      "id": 68,
+      "start": 306.88,
+      "end": 312.97,
+      "text": "The one who curses also can take back the curse isn't it?",
+      "words": [
+        {
+          "start": 306.88,
+          "end": 307.12,
+          "word": "The"
+        },
+        {
+          "start": 307.12,
+          "end": 307.22,
+          "word": "one"
+        },
+        {
+          "start": 307.22,
+          "end": 307.46,
+          "word": "who"
+        },
+        {
+          "start": 307.46,
+          "end": 308.1,
+          "word": "curses"
+        },
+        {
+          "start": 308.1,
+          "end": 309.06,
+          "word": "also"
+        },
+        {
+          "start": 310.11,
+          "end": 310.77,
+          "word": "can"
+        },
+        {
+          "start": 310.77,
+          "end": 311.35,
+          "word": "take"
+        },
+        {
+          "start": 311.35,
+          "end": 311.89,
+          "word": "back"
+        },
+        {
+          "start": 311.89,
+          "end": 312.15,
+          "word": "the"
+        },
+        {
+          "start": 312.15,
+          "end": 312.39,
+          "word": "curse"
+        },
+        {
+          "start": 312.39,
+          "end": 312.75,
+          "word": "isn't"
+        },
+        {
+          "start": 312.75,
+          "end": 312.97,
+          "word": "it?"
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "start": 315.49,
+      "end": 318.13,
+      "text": "But This Vishnumaya was very angry actually.",
+      "words": [
+        {
+          "start": 315.49,
+          "end": 315.69,
+          "word": "But"
+        },
+        {
+          "start": 315.69,
+          "end": 315.93,
+          "word": "This"
+        },
+        {
+          "start": 315.93,
+          "end": 316.69,
+          "word": "Vishnumaya"
+        },
+        {
+          "start": 316.69,
+          "end": 316.99,
+          "word": "was"
+        },
+        {
+          "start": 316.99,
+          "end": 317.35,
+          "word": "very"
+        },
+        {
+          "start": 317.35,
+          "end": 317.63,
+          "word": "angry"
+        },
+        {
+          "start": 317.63,
+          "end": 318.13,
+          "word": "actually."
+        }
+      ]
+    },
+    {
+      "id": 70,
+      "start": 318.15,
+      "end": 321.92,
+      "text": "She's very-very angry person and when she gets angry",
+      "words": [
+        {
+          "start": 318.15,
+          "end": 318.49,
+          "word": "She's"
+        },
+        {
+          "start": 318.49,
+          "end": 318.81,
+          "word": "very"
+        },
+        {
+          "start": 318.81,
+          "end": 319.05,
+          "word": "-very"
+        },
+        {
+          "start": 319.05,
+          "end": 319.31,
+          "word": "angry"
+        },
+        {
+          "start": 319.31,
+          "end": 320.01,
+          "word": "person"
+        },
+        {
+          "start": 320.08,
+          "end": 320.86,
+          "word": "and"
+        },
+        {
+          "start": 320.86,
+          "end": 321.02,
+          "word": "when"
+        },
+        {
+          "start": 321.02,
+          "end": 321.02,
+          "word": "she"
+        },
+        {
+          "start": 321.02,
+          "end": 321.32,
+          "word": "gets"
+        },
+        {
+          "start": 321.32,
+          "end": 321.92,
+          "word": "angry"
+        }
+      ]
+    },
+    {
+      "id": 71,
+      "start": 323.11,
+      "end": 327.77,
+      "text": "she tries to show her anger",
+      "words": [
+        {
+          "start": 323.11,
+          "end": 323.71,
+          "word": "she"
+        },
+        {
+          "start": 324.13,
+          "end": 324.61,
+          "word": "tries"
+        },
+        {
+          "start": 324.61,
+          "end": 325.45,
+          "word": "to"
+        },
+        {
+          "start": 326.79,
+          "end": 327.17,
+          "word": "show"
+        },
+        {
+          "start": 327.17,
+          "end": 327.45,
+          "word": "her"
+        },
+        {
+          "start": 327.45,
+          "end": 327.77,
+          "word": "anger"
+        }
+      ]
+    },
+    {
+      "id": 72,
+      "start": 328.09,
+      "end": 331.77,
+      "text": "So as you know It Is part & parcel Of Me",
+      "words": [
+        {
+          "start": 328.09,
+          "end": 328.99,
+          "word": "So"
+        },
+        {
+          "start": 328.99,
+          "end": 329.21,
+          "word": "as"
+        },
+        {
+          "start": 329.21,
+          "end": 329.39,
+          "word": "you"
+        },
+        {
+          "start": 329.39,
+          "end": 329.79,
+          "word": "know"
+        },
+        {
+          "start": 329.79,
+          "end": 330.03,
+          "word": "It"
+        },
+        {
+          "start": 330.03,
+          "end": 330.33,
+          "word": "Is"
+        },
+        {
+          "start": 330.33,
+          "end": 330.57,
+          "word": "part"
+        },
+        {
+          "start": 330.57,
+          "end": 330.77,
+          "word": "&"
+        },
+        {
+          "start": 330.77,
+          "end": 331.03,
+          "word": "parcel"
+        },
+        {
+          "start": 331.03,
+          "end": 331.25,
+          "word": "Of"
+        },
+        {
+          "start": 331.25,
+          "end": 331.77,
+          "word": "Me"
+        }
+      ]
+    },
+    {
+      "id": 73,
+      "start": 332.09,
+      "end": 338.46,
+      "text": "But My own part and parcel suggests, like supposing there's something burning",
+      "words": [
+        {
+          "start": 332.09,
+          "end": 332.73,
+          "word": "But"
+        },
+        {
+          "start": 332.73,
+          "end": 333.25,
+          "word": "My"
+        },
+        {
+          "start": 333.25,
+          "end": 333.65,
+          "word": "own"
+        },
+        {
+          "start": 333.65,
+          "end": 333.85,
+          "word": "part"
+        },
+        {
+          "start": 333.85,
+          "end": 334.01,
+          "word": "and"
+        },
+        {
+          "start": 334.01,
+          "end": 334.37,
+          "word": "parcel"
+        },
+        {
+          "start": 334.37,
+          "end": 335.03,
+          "word": "suggests,"
+        },
+        {
+          "start": 336.3,
+          "end": 336.64,
+          "word": "like"
+        },
+        {
+          "start": 336.64,
+          "end": 337.34,
+          "word": "supposing"
+        },
+        {
+          "start": 337.34,
+          "end": 337.74,
+          "word": "there's"
+        },
+        {
+          "start": 337.74,
+          "end": 337.98,
+          "word": "something"
+        },
+        {
+          "start": 337.98,
+          "end": 338.46,
+          "word": "burning"
+        }
+      ]
+    },
+    {
+      "id": 74,
+      "start": 339.38,
+      "end": 343.64,
+      "text": "when I put my foot on that it suggest –",
+      "words": [
+        {
+          "start": 339.38,
+          "end": 340.3,
+          "word": "when"
+        },
+        {
+          "start": 340.3,
+          "end": 340.42,
+          "word": "I"
+        },
+        {
+          "start": 340.42,
+          "end": 340.56,
+          "word": "put"
+        },
+        {
+          "start": 340.56,
+          "end": 340.84,
+          "word": "my"
+        },
+        {
+          "start": 340.84,
+          "end": 340.96,
+          "word": "foot"
+        },
+        {
+          "start": 340.96,
+          "end": 341.22,
+          "word": "on"
+        },
+        {
+          "start": 341.22,
+          "end": 341.56,
+          "word": "that"
+        },
+        {
+          "start": 342.24,
+          "end": 343.08,
+          "word": "it"
+        },
+        {
+          "start": 343.08,
+          "end": 343.5,
+          "word": "suggest"
+        },
+        {
+          "start": 343.5,
+          "end": 343.64,
+          "word": "–"
+        }
+      ]
+    },
+    {
+      "id": 75,
+      "start": 343.64,
+      "end": 349.44,
+      "text": "My food suggests Me this is hot. Better not put your…",
+      "words": [
+        {
+          "start": 343.64,
+          "end": 343.88,
+          "word": "My"
+        },
+        {
+          "start": 343.88,
+          "end": 344.04,
+          "word": "food"
+        },
+        {
+          "start": 344.04,
+          "end": 344.42,
+          "word": "suggests"
+        },
+        {
+          "start": 344.42,
+          "end": 344.64,
+          "word": "Me"
+        },
+        {
+          "start": 344.64,
+          "end": 344.84,
+          "word": "this"
+        },
+        {
+          "start": 344.84,
+          "end": 345.14,
+          "word": "is"
+        },
+        {
+          "start": 345.14,
+          "end": 345.4,
+          "word": "hot."
+        },
+        {
+          "start": 345.72,
+          "end": 345.98,
+          "word": "Better"
+        },
+        {
+          "start": 345.98,
+          "end": 346.22,
+          "word": "not"
+        },
+        {
+          "start": 346.22,
+          "end": 346.48,
+          "word": "put"
+        },
+        {
+          "start": 349.1,
+          "end": 349.44,
+          "word": "your…"
+        }
+      ]
+    },
+    {
+      "id": 76,
+      "start": 349.44,
+      "end": 352.08,
+      "text": "So let us see how the puja works out",
+      "words": [
+        {
+          "start": 349.44,
+          "end": 349.74,
+          "word": "So"
+        },
+        {
+          "start": 349.74,
+          "end": 349.96,
+          "word": "let"
+        },
+        {
+          "start": 349.96,
+          "end": 350.12,
+          "word": "us"
+        },
+        {
+          "start": 350.12,
+          "end": 350.52,
+          "word": "see"
+        },
+        {
+          "start": 350.52,
+          "end": 350.9,
+          "word": "how"
+        },
+        {
+          "start": 350.9,
+          "end": 351.16,
+          "word": "the"
+        },
+        {
+          "start": 351.16,
+          "end": 351.38,
+          "word": "puja"
+        },
+        {
+          "start": 351.38,
+          "end": 351.72,
+          "word": "works"
+        },
+        {
+          "start": 351.72,
+          "end": 352.08,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 77,
+      "start": 352.62,
+      "end": 355.0,
+      "text": "It' s a great challenge to all of you",
+      "words": [
+        {
+          "start": 352.62,
+          "end": 353.32,
+          "word": "It'"
+        },
+        {
+          "start": 353.48,
+          "end": 353.54,
+          "word": "s"
+        },
+        {
+          "start": 353.54,
+          "end": 353.66,
+          "word": "a"
+        },
+        {
+          "start": 353.66,
+          "end": 353.82,
+          "word": "great"
+        },
+        {
+          "start": 353.82,
+          "end": 354.3,
+          "word": "challenge"
+        },
+        {
+          "start": 354.3,
+          "end": 354.54,
+          "word": "to"
+        },
+        {
+          "start": 354.54,
+          "end": 354.74,
+          "word": "all"
+        },
+        {
+          "start": 354.74,
+          "end": 354.88,
+          "word": "of"
+        },
+        {
+          "start": 354.88,
+          "end": 355.0,
+          "word": "you"
+        }
+      ]
+    },
+    {
+      "id": 78,
+      "start": 355.0,
+      "end": 357.04,
+      "text": "Let Us do with shraddha",
+      "words": [
+        {
+          "start": 355.0,
+          "end": 355.68,
+          "word": "Let"
+        },
+        {
+          "start": 355.68,
+          "end": 355.86,
+          "word": "Us"
+        },
+        {
+          "start": 355.86,
+          "end": 356.06,
+          "word": "do"
+        },
+        {
+          "start": 356.06,
+          "end": 356.34,
+          "word": "with"
+        },
+        {
+          "start": 356.34,
+          "end": 357.04,
+          "word": "shraddha"
+        }
+      ]
+    },
+    {
+      "id": 79,
+      "start": 357.04,
+      "end": 359.78,
+      "text": "Don't have ashraddhah then will work out",
+      "words": [
+        {
+          "start": 357.04,
+          "end": 357.58,
+          "word": "Don't"
+        },
+        {
+          "start": 357.58,
+          "end": 357.84,
+          "word": "have"
+        },
+        {
+          "start": 357.84,
+          "end": 358.8,
+          "word": "ashraddhah"
+        },
+        {
+          "start": 358.8,
+          "end": 358.98,
+          "word": "then"
+        },
+        {
+          "start": 358.98,
+          "end": 359.24,
+          "word": "will"
+        },
+        {
+          "start": 359.24,
+          "end": 359.56,
+          "word": "work"
+        },
+        {
+          "start": 359.56,
+          "end": 359.78,
+          "word": "out"
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "start": 359.78,
+      "end": 360.44,
+      "text": "I'm sure",
+      "words": [
+        {
+          "start": 359.78,
+          "end": 360.06,
+          "word": "I'm"
+        },
+        {
+          "start": 360.06,
+          "end": 360.44,
+          "word": "sure"
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "start": 360.44,
+      "end": 363.22,
+      "text": "You are My better children",
+      "words": [
+        {
+          "start": 360.44,
+          "end": 360.9,
+          "word": "You"
+        },
+        {
+          "start": 360.9,
+          "end": 362.0,
+          "word": "are"
+        },
+        {
+          "start": 362.0,
+          "end": 362.2,
+          "word": "My"
+        },
+        {
+          "start": 362.2,
+          "end": 362.52,
+          "word": "better"
+        },
+        {
+          "start": 362.52,
+          "end": 363.22,
+          "word": "children"
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "start": 365.5,
+      "end": 367.06,
+      "text": "May God bless you",
+      "words": [
+        {
+          "start": 365.5,
+          "end": 366.2,
+          "word": "May"
+        },
+        {
+          "start": 366.2,
+          "end": 366.42,
+          "word": "God"
+        },
+        {
+          "start": 366.42,
+          "end": 366.7,
+          "word": "bless"
+        },
+        {
+          "start": 366.7,
+          "end": 367.06,
+          "word": "you"
+        }
+      ]
+    }
+  ]
+}
