@@ -30,6 +30,7 @@ import argparse
 import json
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import yaml
@@ -183,6 +184,26 @@ def migrate_pipeline(gh, talk_ids: list[str], apply: bool) -> list[str]:
     if apply:
         for t in waiting:
             _create(gh, t, "op:pipeline", _new_talk_body(t, talk_text_only(t)))
+    return waiting
+
+
+def migrate_translator(gh, talk_ids: list[str], apply: bool, pause_s: float = 2.0, sleep=time.sleep) -> list[str]:
+    """Talks already at the translator (an open `Review:`) that predate the
+    operator issue; with apply, open one at op:translator for each, the issue
+    on_review_created opens for a new talk. The pause keeps a run of ~100
+    creations under GitHub's secondary limits on content creation."""
+    reviewed = gh.titles(REVIEW_LABEL, state="open")
+    operated = gh.titles(OPERATOR_LABEL)
+    waiting = [
+        t
+        for t in talk_ids
+        if TALK_ID_RE.fullmatch(t) and f"Review: {t}" in reviewed and operator_title(t) not in operated
+    ]
+    if apply:
+        for n, t in enumerate(waiting):
+            if n:
+                sleep(pause_s)
+            _create(gh, t, "op:translator", _translator_body(t, talk_text_only(t)))
     return waiting
 
 
@@ -369,7 +390,7 @@ class Gh:
     def reopen(self, number: int) -> None:
         self._run("issue", "reopen", str(number))
 
-    def titles(self, label: str) -> set[str]:
+    def titles(self, label: str, state: str = "all") -> set[str]:
         out = self._run(
             "api",
             "-X",
@@ -379,7 +400,7 @@ class Gh:
             "-f",
             f"labels={label}",
             "-f",
-            "state=all",
+            f"state={state}",
             "-f",
             "per_page=100",
             "--jq",
@@ -411,6 +432,8 @@ def main(argv: list[str] | None = None) -> None:
         p.add_argument("--talk", required=True, help="talk id")
     p = sub.add_parser("migrate-pipeline", help="open op:pipeline issues for talks the pipeline has not finished")
     p.add_argument("--apply", action="store_true", help="create the issues (default: only list them)")
+    p = sub.add_parser("migrate-translator", help="open op:translator issues for talks with an open Review: and none")
+    p.add_argument("--apply", action="store_true", help="create the issues (default: only list them)")
     p = sub.add_parser("packaged", help="mark the package committed and post the e-mail comment")
     p.add_argument("--issue", type=int, required=True)
     p.add_argument("--comment-file", required=True, help="markdown written by amruta_package --comment-out")
@@ -424,6 +447,10 @@ def main(argv: list[str] | None = None) -> None:
     elif args.cmd == "migrate-pipeline":
         talks = sorted(p.parent.name for p in (ROOT / "talks").glob("*/meta.yaml"))
         for t in migrate_pipeline(gh, talks, args.apply):
+            print(("created " if args.apply else "would create ") + operator_title(t))
+    elif args.cmd == "migrate-translator":
+        talks = sorted(p.parent.name for p in (ROOT / "talks").glob("*/meta.yaml"))
+        for t in migrate_translator(gh, talks, args.apply):
             print(("created " if args.apply else "would create ") + operator_title(t))
     elif args.cmd == "pr-ready":
         on_pr_ready(gh, args.branch, args.pr)

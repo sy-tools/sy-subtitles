@@ -46,8 +46,12 @@ class FakeGh:
     def open_sync_prs(self, talk_id):
         return [p for p in self.open_prs if op.talk_id_from_branch(p["headRefName"]) == talk_id]
 
-    def titles(self, label):
-        return {i["title"] for i in self.issues.values() if label in i["labels"]}
+    def titles(self, label, state="all"):
+        return {
+            i["title"]
+            for i in self.issues.values()
+            if label in i["labels"] and (state == "all" or i["state"] == state.upper())
+        }
 
 
 def _operator_issue(number, labels, state="OPEN"):
@@ -440,3 +444,75 @@ def test_cli_take_prints_decision(monkeypatch, capsys):
     monkeypatch.setattr(op, "Gh", lambda: gh)
     op.main(["take", "--issue", "7", "--sender-id", str(OPERATOR_ID)])
     assert capsys.readouterr().out.strip() == "taken"
+
+
+# --- migrate-translator: existing talks at the translator get an Operator: issue ---
+
+OTHER = "1990-01-01_Other-Talk"
+CLOSED_ONE = "1991-01-01_Closed-Review"
+
+
+def _review_of(talk, number, state="OPEN"):
+    return {"number": number, "title": f"Review: {talk}", "state": state, "labels": ["talk-review", "review:pending"]}
+
+
+def _migration_gh():
+    return FakeGh(
+        [
+            _operator_issue(7, ["op:translator"]),
+            _review_issue(),
+            _review_of(OTHER, 412),
+            _review_of(CLOSED_ONE, 413, state="CLOSED"),
+        ]
+    )
+
+
+def test_migrate_translator_lists_open_reviews_without_operator():
+    gh = _migration_gh()
+    assert op.migrate_translator(gh, [TALK, OTHER, CLOSED_ONE], apply=False) == [OTHER]
+    assert not [c for c in gh.calls if c[0] == "create"]
+
+
+def test_migrate_translator_apply_creates_translator_issue(monkeypatch):
+    monkeypatch.setattr(op, "talk_text_only", lambda t: False)
+    gh = _migration_gh()
+    assert op.migrate_translator(gh, [TALK, OTHER, CLOSED_ONE], apply=True, sleep=lambda s: None) == [OTHER]
+    creates = [c for c in gh.calls if c[0] == "create"]
+    assert creates == [
+        (
+            "create",
+            f"Operator: {OTHER}",
+            ("op:translator", "talk-operator"),
+            op.operator_login(),
+            op._translator_body(OTHER, False),
+        )
+    ]
+
+
+def test_migrate_translator_skips_existing_and_closed(monkeypatch):
+    monkeypatch.setattr(op, "talk_text_only", lambda t: False)
+    gh = _migration_gh()
+    op.migrate_translator(gh, [TALK, OTHER, CLOSED_ONE], apply=True, sleep=lambda s: None)
+    assert op.migrate_translator(gh, [TALK, OTHER, CLOSED_ONE], apply=True, sleep=lambda s: None) == []
+
+
+def test_migrate_translator_skips_non_talk_ids():
+    podcast = "_SAHAJ_TIMES_PODCAST_S.3_E.15"
+    gh = FakeGh([_review_of(podcast, 414)])
+    assert op.migrate_translator(gh, [podcast], apply=False) == []
+
+
+def test_migrate_translator_pauses_between_creations(monkeypatch):
+    monkeypatch.setattr(op, "talk_text_only", lambda t: False)
+    third = "1992-01-01_Third-Talk"
+    gh = FakeGh([_review_of(OTHER, 412), _review_of(third, 415)])
+    pauses = []
+    op.migrate_translator(gh, [OTHER, third], apply=True, sleep=pauses.append)
+    assert 2.0 in pauses
+
+
+def test_gh_titles_passes_the_state_filter(monkeypatch):
+    seen = []
+    monkeypatch.setattr(op.Gh, "_run", lambda self, *args: seen.append(args) or "Review: x\n")
+    assert op.Gh().titles("talk-review", state="open") == {"Review: x"}
+    assert "state=open" in seen[0]
