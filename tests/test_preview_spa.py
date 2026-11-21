@@ -4097,7 +4097,7 @@ class TestSubtitleLangPerTalk:
 
 
 class TestReviewSrtLangDropdowns:
-    """Review SRT mode: left dropdown shows source/ languages,
+    """Review SRT mode: left dropdown shows the source languages,
     right dropdown shows final/ languages, choices are persisted."""
 
     MULTI_SRC_TREE = {
@@ -4202,6 +4202,167 @@ class TestReviewSrtLangDropdowns:
         self._goto_review_srt(server, page)
         assert page.evaluate("reviewState.srtLeftLang") == "en"
         assert page.evaluate("reviewState.srtRightLang") == "uk"
+
+
+class TestReviewSrtLeftColumnPrefersFinal:
+    """The left column reads the corrected final/<lang>.srt when the video has
+    one, else the downloaded source/<lang>.srt — the same choice
+    tools/srt_utils.timing_en_srt makes for the build."""
+
+    TALK = "2001-01-01_Test-Talk"
+    COMMIT = "c" * 40
+    FINAL_EN_SHA = "f" * 40
+    SOURCE_EN_SHA = "5" * 40
+
+    BOTH = "Both"
+    FINAL_ONLY = "Final-Only"
+    SOURCE_ONLY = "Source-Only"
+    HINDI_FINAL_ONLY = "Hindi-Final-Only"
+    HINDI_FINAL_ENGLISH_SOURCE = "Hindi-Final-English-Source"
+
+    CORRECTED_EN_SRT = "1\n00:00:01,000 --> 00:00:04,000\nCorrected English block\n"
+    CORRECTED_HI_SRT = "1\n00:00:01,000 --> 00:00:04,000\nCorrected Hindi block\n"
+
+    @classmethod
+    def _tree(cls):
+        def blob(path, sha=None):
+            entry = {"path": f"talks/{cls.TALK}/{path}", "type": "blob"}
+            if sha:
+                entry["sha"] = sha
+            return entry
+
+        return {
+            "sha": cls.COMMIT,
+            "tree": [
+                blob(f"{cls.BOTH}/final/en.srt", cls.FINAL_EN_SHA),
+                blob(f"{cls.BOTH}/final/uk.srt"),
+                blob(f"{cls.BOTH}/source/en.srt", cls.SOURCE_EN_SHA),
+                blob(f"{cls.FINAL_ONLY}/final/en.srt", cls.FINAL_EN_SHA),
+                blob(f"{cls.FINAL_ONLY}/final/uk.srt"),
+                blob(f"{cls.SOURCE_ONLY}/final/uk.srt"),
+                blob(f"{cls.SOURCE_ONLY}/source/en.srt", cls.SOURCE_EN_SHA),
+                blob(f"{cls.HINDI_FINAL_ONLY}/final/hi.srt"),
+                blob(f"{cls.HINDI_FINAL_ONLY}/final/uk.srt"),
+                blob(f"{cls.HINDI_FINAL_ENGLISH_SOURCE}/final/hi.srt"),
+                blob(f"{cls.HINDI_FINAL_ENGLISH_SOURCE}/final/uk.srt"),
+                blob(f"{cls.HINDI_FINAL_ENGLISH_SOURCE}/source/en.srt"),
+                blob("meta.yaml"),
+                blob("transcript_en.txt"),
+                blob("transcript_uk.txt"),
+            ],
+        }
+
+    def _open_srt_review(self, server, page, video):
+        en_requests = []
+
+        def serve_en(route):
+            url = route.request.url
+            en_requests.append(url)
+            body = self.CORRECTED_EN_SRT if "/final/en.srt" in url else SAMPLE_EN_SRT
+            route.fulfill(status=200, content_type="text/plain", body=body)
+
+        page.unroute("**/api.github.com/**")
+        page.route(
+            "**/api.github.com/**",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                headers={"ETag": '"test-etag-left-final"'},
+                body=json.dumps(self._tree()),
+            ),
+        )
+        page.route("**/raw.githubusercontent.com/**/en.srt*", serve_en)
+        page.route(
+            "**/raw.githubusercontent.com/**/hi.srt*",
+            lambda route: route.fulfill(status=200, content_type="text/plain", body=self.CORRECTED_HI_SRT),
+        )
+        page.route(
+            "**/raw.githubusercontent.com/**/uk.srt*",
+            lambda route: route.fulfill(status=200, content_type="text/plain", body=SAMPLE_SRT),
+        )
+        goto_spa(page, server)
+        page.evaluate("localStorage.setItem('sy_expert_mode', '1'); expertMode = true; applyExpertMode();")
+        page.evaluate(f"location.hash = '#/review/{self.TALK}'")
+        page.wait_for_function("document.querySelectorAll('.cell').length > 0", timeout=10000)
+        page.evaluate(f"SPA.switchReviewMode('srt', '{video}')")
+        page.wait_for_function(
+            "reviewState.mode === 'srt' && reviewState.alignedRows && reviewState.alignedRows.length > 0",
+            timeout=10000,
+        )
+        return en_requests
+
+    def _left_text(self, page):
+        return " ".join(page.evaluate("reviewState.leftParas"))
+
+    def _left_header(self, page):
+        return page.evaluate("document.getElementById('col-header-left').firstChild.textContent")
+
+    def test_left_header_names_final_when_the_corrected_file_is_shown(self, server, page):
+        self._open_srt_review(server, page, self.BOTH)
+        assert self._left_header(page) == "English (final) \u25be"
+
+    def test_left_header_names_final_for_a_video_with_only_a_corrected_file(self, server, page):
+        self._open_srt_review(server, page, self.FINAL_ONLY)
+        assert self._left_header(page) == "English (final) \u25be"
+
+    def test_left_header_names_source_when_the_download_is_shown(self, server, page):
+        self._open_srt_review(server, page, self.SOURCE_ONLY)
+        assert self._left_header(page) == "English (source) \u25be"
+
+    def test_left_header_follows_the_folder_across_a_language_switch(self, server, page):
+        self._open_srt_review(server, page, self.HINDI_FINAL_ENGLISH_SOURCE)
+        assert self._left_header(page) == "English (source) \u25be"
+        page.evaluate("SPA.switchSrtLang('left', 'hi')")
+        page.wait_for_function("reviewState.srtLeftLang === 'hi'", timeout=10000)
+        assert self._left_header(page) == "Hindi (final) \u25be"
+        page.evaluate("SPA.switchSrtLang('left', 'en')")
+        page.wait_for_function("reviewState.srtLeftLang === 'en'", timeout=10000)
+        assert self._left_header(page) == "English (source) \u25be"
+
+    def test_corrected_file_is_shown_instead_of_the_download(self, server, page):
+        requests = self._open_srt_review(server, page, self.BOTH)
+        assert "Corrected English block" in self._left_text(page)
+        assert "First subtitle block" not in self._left_text(page)
+        assert requests == [
+            f"https://raw.githubusercontent.com/sy-tools/sy-subtitles/{self.COMMIT}"
+            f"/talks/{self.TALK}/{self.BOTH}/final/en.srt?v={self.FINAL_EN_SHA}"
+        ]
+
+    def test_video_with_only_a_corrected_file_has_an_english_column(self, server, page):
+        requests = self._open_srt_review(server, page, self.FINAL_ONLY)
+        assert "Corrected English block" in self._left_text(page)
+        assert len(requests) == 1 and f"/{self.FINAL_ONLY}/final/en.srt?v={self.FINAL_EN_SHA}" in requests[0]
+
+    def test_video_without_a_corrected_file_still_reads_the_download(self, server, page):
+        requests = self._open_srt_review(server, page, self.SOURCE_ONLY)
+        assert "First subtitle block" in self._left_text(page)
+        assert len(requests) == 1 and f"/{self.SOURCE_ONLY}/source/en.srt?v={self.SOURCE_EN_SHA}" in requests[0]
+
+    def test_language_switch_reloads_the_corrected_file(self, server, page):
+        requests = self._open_srt_review(server, page, self.BOTH)
+        del requests[:]
+        page.evaluate("SPA.switchSrtLang('left', 'en')")
+        page.wait_for_function("document.getElementById('review-status').style.display === 'none'", timeout=10000)
+        assert len(requests) == 1 and f"/{self.BOTH}/final/en.srt?v={self.FINAL_EN_SHA}" in requests[0]
+        assert "Corrected English block" in self._left_text(page)
+
+    def test_translation_in_final_is_not_offered_as_a_source_language(self, server, page):
+        self._open_srt_review(server, page, self.BOTH)
+        assert page.evaluate(f"reviewSourceSrtLangs(reviewState.talk, '{self.BOTH}')") == ["en"]
+        assert page.evaluate("reviewState.srtLeftLang") == "en"
+        assert page.evaluate("reviewState.srtRightLang") == "uk"
+
+    def test_corrected_file_in_the_only_source_language_fills_the_left_column(self, server, page):
+        self._open_srt_review(server, page, self.HINDI_FINAL_ONLY)
+        assert page.evaluate("reviewState.srtLeftLang") == "hi"
+        assert "Corrected Hindi block" in self._left_text(page)
+
+    def test_left_dropdown_lists_a_language_found_only_in_final(self, server, page):
+        self._open_srt_review(server, page, self.HINDI_FINAL_ENGLISH_SOURCE)
+        page.evaluate("SPA.toggleTranscriptDropdown('left')")
+        page.wait_for_selector("#transcript-dropdown-left.open", timeout=5000)
+        offered = [el.text_content() for el in page.locator("#transcript-dropdown-left div").all()]
+        assert offered == ["English", "Hindi"]
 
 
 class TestIndexFilterPersistence:
