@@ -26,6 +26,7 @@
 <script src="js/text_sanitize.js"></script>
 <script src="js/edit_store.js"></script>
 <script src="js/load_token.js"></script>
+<script src="js/review_source_srt.js"></script>
 <script src="js/index_url_state.js"></script>
 <script src="js/manifest_fetch.js"></script>
 <script src="js/offline_fallback.js"></script>
@@ -7814,7 +7815,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   SyncPlayer.init(talkId, videoSlug);
 
   var talk = reviewState.talk;
-  var srcLangs = (talk && talk._srcSrtLangs && talk._srcSrtLangs[videoSlug]) || ['en'];
+  var srcLangs = reviewSourceSrtLangs(talk, videoSlug);
   var finalLangs = (talk && talk._srtLangs && talk._srtLangs[videoSlug]) || ['uk'];
   var savedLeft = localStorage.getItem('sy_review_srt_left_' + talkId);
   var savedRight = localStorage.getItem('sy_review_srt_right_' + talkId);
@@ -7824,9 +7825,9 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   reviewState.srtRightLang = rightLang;
   updateColHeaders();
   ensureEditSync();   // re-key: <video>-<rightLang> SRT target
-  var leftSha = (talk && talk._srcSrtSha && talk._srcSrtSha[videoSlug + '/' + leftLang]) || '';
+  var leftSrt = resolveReviewSourceSrt(talk, videoSlug, leftLang);
   var rightSha = (talk && talk._srtSha && talk._srtSha[videoSlug + '/' + rightLang]) || '';
-  var enUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt', leftSha);
+  var enUrl = rawPin('talks/' + talkId + '/' + leftSrt.relPath, leftSrt.sha);
   var ukUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt', rightSha);
 
   var srtToken = bumpLoadToken(reviewState);
@@ -9658,9 +9659,10 @@ SPA.toggleTranscriptDropdown = function(side) {
   var talk = reviewState.talk;
 
   if (reviewState.mode === 'srt') {
-    // SRT mode: left shows source/ languages, right shows final/ languages
+    // SRT mode: left shows the source languages (js/review_source_srt.js),
+    // right shows final/ languages
     var langs = side === 'left'
-      ? (talk && talk._srcSrtLangs && talk._srcSrtLangs[reviewState.videoSlug]) || ['en']
+      ? reviewSourceSrtLangs(talk, reviewState.videoSlug)
       : (talk && talk._srtLangs && talk._srtLangs[reviewState.videoSlug]) || ['uk'];
     if (langs.length <= 1) { return; }
     dd.innerHTML = '';
@@ -9703,9 +9705,9 @@ SPA.switchSrtLang = function(side, lang) {
 
   var leftLang = side === 'left' ? lang : (reviewState.srtLeftLang);
   var rightLang = side === 'right' ? lang : (reviewState.srtRightLang);
-  var leftSha = (talk && talk._srcSrtSha && talk._srcSrtSha[videoSlug + '/' + leftLang]) || '';
+  var leftSrt = resolveReviewSourceSrt(talk, videoSlug, leftLang);
   var rightSha = (talk && talk._srtSha && talk._srtSha[videoSlug + '/' + rightLang]) || '';
-  var enUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/source/' + leftLang + '.srt', leftSha);
+  var enUrl = rawPin('talks/' + talkId + '/' + leftSrt.relPath, leftSrt.sha);
   var ukUrl = rawPin('talks/' + talkId + '/' + videoSlug + '/final/' + rightLang + '.srt', rightSha);
 
   var loadToken = bumpLoadToken(reviewState);
