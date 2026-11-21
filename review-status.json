@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:10:39.357852+00:00",
+  "updated_at": "2026-11-21T08:11:32.486573+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -117,7 +117,10 @@
       "status": "in-progress",
       "reviewer": "IrynaFilSY",
       "issue_number": 21,
-      "updated_at": "2026-04-15T13:10:14Z"
+      "updated_at": "2026-04-15T13:10:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1432
     },
     "1987-01-02_Talk-on-Innocence-Musical-Program-Morning": {
       "status": "approved",
@@ -165,7 +168,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 150,
-      "updated_at": "2026-07-11T13:00:58Z"
+      "updated_at": "2026-07-11T13:00:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1437
     },
     "1996-06-09_Adi-Shakti-Puja-The-compassion-has-to-become-active": {
       "status": "pending",
@@ -204,7 +210,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 184,
-      "updated_at": "2026-05-24T05:54:56Z"
+      "updated_at": "2026-05-24T05:54:56Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1435
     },
     "1984-08-11_Raksha-Bandhan-and-Maryadas": {
       "status": "approved",
@@ -261,7 +270,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 224,
-      "updated_at": "2026-07-15T03:41:28Z"
+      "updated_at": "2026-07-15T03:41:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1434
     },
     "1991-12-29_Shri-Lakshmi-Puja-Sea-is-your-grandfather": {
       "status": "pending",
@@ -462,7 +474,10 @@
       "status": "in-progress",
       "reviewer": "Dmytro7-sys",
       "issue_number": 347,
-      "updated_at": "2026-09-02T07:51:00Z"
+      "updated_at": "2026-09-02T07:51:00Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1439
     },
     "1977-03-22_Advice-at-Bharatiya-Vidya-Bhavan": {
       "status": "pending",
@@ -639,7 +654,10 @@
       "status": "in-progress",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 456,
-      "updated_at": "2026-06-27T06:31:23Z"
+      "updated_at": "2026-06-27T06:31:23Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1436
     },
     "2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else": {
       "status": "pending",
@@ -684,7 +702,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 670,
-      "updated_at": "2026-07-04T04:12:42Z"
+      "updated_at": "2026-07-04T04:12:42Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1442
     },
     "1999-09-05_Shri-Virata-Puja-First-of-all-you-have-to-rise-above-your-ego": {
       "status": "pending",
@@ -720,7 +741,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 938,
-      "updated_at": "2026-08-07T21:15:10Z"
+      "updated_at": "2026-08-07T21:15:10Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1438
     },
     "2004-07-04_Guru-Puja-Follow-My-Message-of-Love": {
       "status": "approved",
@@ -855,13 +879,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1152,
-      "updated_at": "2026-10-12T20:18:20Z"
+      "updated_at": "2026-10-12T20:18:20Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1441
     },
     "1989-10-06_8th-Day-of-Navaratri-Talk-to-English-Yogis-on-Style-and-Content": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 1148,
-      "updated_at": "2026-10-09T22:27:34Z"
+      "updated_at": "2026-10-09T22:27:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1440
     },
     "1981-11-01_Diwali-Puja-Powers-of-the-Gruha-Lakshmi": {
       "status": "pending",
