@@ -4294,6 +4294,31 @@ class TestReviewSrtLeftColumnPrefersFinal:
     def _left_text(self, page):
         return " ".join(page.evaluate("reviewState.leftParas"))
 
+    def _left_header(self, page):
+        return page.evaluate("document.getElementById('col-header-left').firstChild.textContent")
+
+    def test_left_header_names_final_when_the_corrected_file_is_shown(self, server, page):
+        self._open_srt_review(server, page, self.BOTH)
+        assert self._left_header(page) == "English (final) \u25be"
+
+    def test_left_header_names_final_for_a_video_with_only_a_corrected_file(self, server, page):
+        self._open_srt_review(server, page, self.FINAL_ONLY)
+        assert self._left_header(page) == "English (final) \u25be"
+
+    def test_left_header_names_source_when_the_download_is_shown(self, server, page):
+        self._open_srt_review(server, page, self.SOURCE_ONLY)
+        assert self._left_header(page) == "English (source) \u25be"
+
+    def test_left_header_follows_the_folder_across_a_language_switch(self, server, page):
+        self._open_srt_review(server, page, self.HINDI_FINAL_ENGLISH_SOURCE)
+        assert self._left_header(page) == "English (source) \u25be"
+        page.evaluate("SPA.switchSrtLang('left', 'hi')")
+        page.wait_for_function("reviewState.srtLeftLang === 'hi'", timeout=10000)
+        assert self._left_header(page) == "Hindi (final) \u25be"
+        page.evaluate("SPA.switchSrtLang('left', 'en')")
+        page.wait_for_function("reviewState.srtLeftLang === 'en'", timeout=10000)
+        assert self._left_header(page) == "English (source) \u25be"
+
     def test_corrected_file_is_shown_instead_of_the_download(self, server, page):
         requests = self._open_srt_review(server, page, self.BOTH)
         assert "Corrected English block" in self._left_text(page)

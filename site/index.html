@@ -7509,7 +7509,8 @@ function updateColHeaders() {
   var lh = document.getElementById('col-header-left');
   var rh = document.getElementById('col-header-right');
   if (reviewState.mode === 'srt') {
-    if (lh) lh.firstChild.textContent = langName(reviewState.srtLeftLang) + ' (source) \u25BE';
+    var leftDir = resolveReviewSourceSrt(reviewState.talk, reviewState.videoSlug, reviewState.srtLeftLang).dir;
+    if (lh) lh.firstChild.textContent = langName(reviewState.srtLeftLang) + ' (' + leftDir + ') \u25BE';
     if (rh) rh.firstChild.textContent = langName(reviewState.srtRightLang) + ' (final) \u25BE';
   } else {
     if (lh) lh.firstChild.textContent = langName(reviewState.leftLang) + ' \u25BE';

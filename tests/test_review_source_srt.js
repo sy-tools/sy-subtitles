@@ -132,8 +132,10 @@ test('index.html loads the module and no longer hard-codes source/ for the left 
     'the left SRT URL must come from resolveReviewSourceSrt, not a literal source/ path');
   assert.ok(!/_srcSrtLangs\[(reviewState\.)?videoSlug\]/.test(INDEX),
     'the left language list must come from reviewSourceSrtLangs');
-  assert.equal((INDEX.match(/resolveReviewSourceSrt\(/g) || []).length, 2,
-    'the initial load and the language switch both resolve the file');
+  assert.equal((INDEX.match(/resolveReviewSourceSrt\(/g) || []).length, 3,
+    'the initial load, the language switch and the column header all resolve the file');
+  assert.ok(!INDEX.includes("' (source) "),
+    'the left header must name the folder resolveReviewSourceSrt picked, not a literal');
   assert.equal((INDEX.match(/reviewSourceSrtLangs\(/g) || []).length, 2,
     'the initial load and the dropdown both list the languages');
 });
