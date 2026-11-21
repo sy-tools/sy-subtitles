@@ -269,7 +269,11 @@ function unflattenDoc(flat) {
 //                                 conflict local wins and the re-push carries
 //                                 it to the other device)
 // Deletions are just absence — no tombstones needed with a base snapshot.
-function mergeSyncDocs(baseEntries, localEntries, remoteEntries) {
+// That reading of absence holds only for a remote that started from the base.
+// `remoteNeverSawBase` is for one that did not: what it lacks it never held,
+// so nothing was deleted there and the local item stays.
+function mergeSyncDocs(baseEntries, localEntries, remoteEntries, opts) {
+  var remoteNeverSawBase = !!(opts && opts.remoteNeverSawBase);
   var bf = flattenDoc(baseEntries || {});
   var lf = flattenDoc(localEntries || {});
   var rf = flattenDoc(remoteEntries || {});
@@ -280,6 +284,7 @@ function mergeSyncDocs(baseEntries, localEntries, remoteEntries) {
     var b = bf[k], l = lf[k], r = rf[k];
     var v;
     if (l === r) v = l;
+    else if (r === undefined && remoteNeverSawBase) v = l;
     else if (l === b) v = r;
     else v = l;
     if (v !== undefined) out[k] = v;
@@ -375,6 +380,10 @@ function createSyncEngine(opts) {
   // this window a doc another device writes with a clock running behind ours
   // is refused too (see isTornDown).
   var TOMBSTONE_TTL_MS = 5 * 60 * 1000;
+  // How long a PR answer that contradicts itself (mergedSyncPr) is asked again
+  // before it is taken for "not merged". Such an answer is a stale read, so
+  // the same layers bound it.
+  var UNSETTLED_WAIT_MS = TOMBSTONE_TTL_MS;
 
   // Base meta = last synced doc + CAS sha + PR coordinates; survives reloads.
   var meta = null;
@@ -444,6 +453,61 @@ function createSyncEngine(opts) {
       writtenAt: Date.parse(doc && doc.updatedAt),
       sha: file.sha,
     };
+  }
+
+  // Was this state file written on top of the one our base is? A push lands
+  // only over the file it was merged with (the blob sha is the lock) and gives
+  // it a higher revision, so a file whose revision is not above our base's was
+  // created anew — after a merge or a teardown deleted the branch, or a
+  // finalize removed the file — by a device that never held what this base
+  // holds. Its PR number would say the same and costs a request; this is in
+  // the file already.
+  // `baseRevision` is the revision of the very file the base is. `revision` is
+  // this device's counter, which runs ahead of it once a re-created file has
+  // been adopted; it stands in only for a base saved before the former existed.
+  function builtOnOurBase(remote) {
+    var baseRevision = meta.baseRevision !== undefined ? meta.baseRevision : (meta.revision || 0);
+    return remote.sha === meta.sha || remote.revision > baseRevision;
+  }
+
+  // Fold a fetched state file into local state: merge, write remote-won items
+  // into storage, advance the base to the remote. The caller saves the base.
+  function integrate(remote) {
+    var neverSawBase = !builtOnOurBase(remote);
+    var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries,
+      { remoteNeverSawBase: neverSawBase });
+    var changedKeys = apply(merged.entries);
+    if (changedKeys.length) onRemoteApplied(changedKeys);
+    baseMoved(remote.entries, remote.sha, remote.revision);
+    meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+    merged.remoteNeverSawBase = neverSawBase;
+    return merged;
+  }
+
+  // The base is now this state file: one fetched and merged, or one just pushed.
+  function baseMoved(entries, sha, fileRevision) {
+    meta.doc = entries;
+    meta.sha = sha;
+    meta.baseRevision = fileRevision;
+    delete meta.unsettledSince;
+  }
+
+  // The PR coordinates of a base are those of the branch its state file was
+  // on. Once a file created anew is adopted they name the PR of the branch
+  // that was, and everything addressed to "the PR" — the chip's link, a
+  // re-draft, a finalize, the merged-PR check — would go to that one. A lookup
+  // that fails or finds no open PR leaves them as they were.
+  function refreshSyncPr() {
+    // With no PR cached there is nothing stale: attach() and the push look it up.
+    if (disposed || !meta.prNumber) return Promise.resolve();
+    var shaAtAsk = meta.sha;
+    return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
+      if (disposed || meta.sha !== shaAtAsk || !pr || pr.number === meta.prNumber) return;
+      meta.prNumber = pr.number; meta.prUrl = pr.html_url; meta.nodeId = pr.node_id;
+      meta.prDraft = pr.draft !== false;
+      saveMeta();
+      onStatus(status, info());
+    }, function () {});
   }
 
   // The tombstone a teardown left, while it is still in force. A timestamp
@@ -560,13 +624,7 @@ function createSyncEngine(opts) {
     return gh.getFileContent(api, token, path, branch, fetchImpl).then(function (file) {
       if (disposed) return;
       if (file) {
-        var remote = parseRemote(file);
-        var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
-        var changedKeys = apply(merged.entries);
-        if (changedKeys.length) onRemoteApplied(changedKeys);
-        meta.doc = remote.entries;
-        meta.sha = remote.sha;
-        meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+        var merged = integrate(parseRemote(file));
         saveMeta();
         if (Object.keys(merged.entries).length) {
           // A concurrent device's edits survive on the remote — don't tear the
@@ -628,16 +686,16 @@ function createSyncEngine(opts) {
     setStatus('syncing');
     var attempt = 0;
 
-    // Fold a freshly fetched remote doc into local state: three-way merge,
-    // write remote-won items into storage, advance the base to the remote.
+    var prMayBeStale = false;
     function integrateRemote(remote) {
-      var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
-      var changedKeys = apply(merged.entries);
-      if (changedKeys.length) onRemoteApplied(changedKeys);
-      meta.doc = remote.entries;
-      meta.sha = remote.sha;
-      meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+      var merged = integrate(remote);
       local = merged.entries;
+      if (merged.remoteNeverSawBase) prMayBeStale = true;
+    }
+    function refreshPrIfStale() {
+      if (!prMayBeStale) return Promise.resolve();
+      prMayBeStale = false;
+      return refreshSyncPr();
     }
 
     // First push of this session (or right after a finalize): adopt whatever
@@ -679,11 +737,23 @@ function createSyncEngine(opts) {
 
     // A submitted (ready) PR silently returns to draft when editing resumes —
     // new commits must never land on a PR that looks review-ready.
+    // GitHub refuses the conversion for a PR that is merged or closed, and
+    // this is the first request of the push to go out: left as a plain error
+    // it would stop every push short of the request that finds the branch
+    // gone, for as long as the base says "submitted". What the refusal says
+    // is not parsed; the PR list is asked what became of the PR.
     function ensureDraft() {
       if (disposed || !meta.prNumber || meta.prDraft !== false) return Promise.resolve();
       return gh.convertPullToDraft(token, meta.nodeId, fetchImpl).then(function () {
         meta.prDraft = true;
         saveMeta();
+      }, function (refusal) {
+        return syncPrIsClosed().then(function (closed) {
+          if (!closed) throw refusal;
+          var e = new Error((refusal && refusal.message) || 'The sync PR is closed');
+          e.syncPrClosed = true;
+          throw e;
+        }, function () { throw refusal; });
       });
     }
 
@@ -742,8 +812,7 @@ function createSyncEngine(opts) {
         sha: meta.sha || undefined,
         keepalive: keepalive,
       }, fetchImpl).then(function (res) {
-        meta.doc = local;
-        meta.sha = (res && res.content && res.content.sha) || null;
+        baseMoved(local, (res && res.content && res.content.sha) || null, revision);
         meta.revision = revision;
         if (editSeq === seqAtStart) clearDirty();
         saveMeta();
@@ -790,7 +859,7 @@ function createSyncEngine(opts) {
         });
     }
 
-    return ensureRemoteBase().then(function () {
+    return ensureRemoteBase().then(refreshPrIfStale).then(function () {
       if (disposed) return;
       // Same doc as the last push (e.g. an edit typed and reverted): no PUT,
       // but still make sure the PR exists (its creation may have failed).
@@ -799,7 +868,7 @@ function createSyncEngine(opts) {
       var step = unchanged
         ? Promise.resolve()
         : ensureDraft().then(push).then(pushFiles);
-      return step.then(ensurePr).then(function () {
+      return step.then(refreshPrIfStale).then(ensurePr).then(function () {
         if (disposed) return;
         if (unchanged && editSeq === seqAtStart) clearDirty();
         // A finalize that pre-flushed owns the chip until it is done: 'synced'
@@ -816,7 +885,9 @@ function createSyncEngine(opts) {
       // are dropped first, so the fresh PR proposes only what is new. A lookup
       // or a read that fails rejects into the handler below — pushing on a
       // guess would propose the landed edits again.
-      if (isBranchGone(e) && !healed) {
+      // A PR found closed by the re-draft (ensureDraft) is the same news,
+      // whether or not its branch outlived it.
+      if ((isBranchGone(e) || (e && e.syncPrClosed)) && !healed) {
         return mergedFileTexts().then(function (texts) {
           if (disposed) return;
           if (texts) dropLandedLocally(texts);
@@ -857,22 +928,56 @@ function createSyncEngine(opts) {
     var shaAtProbe = meta.sha;
     return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
       if (!e || e.status !== 404) throw e;
-      return mergedFileTexts().then(function (texts) {
-        // A push re-created the branch while we were asking: its base stands.
-        if (disposed || meta.sha !== shaAtProbe) return;
-        var left = texts ? dropLandedLocally(texts) : collect();
+      function holdBack(left) {
         resetBase();
         if (!Object.keys(left).length) { clearDirty(); setStatus('idle'); return; }
         meta.orphaned = true;
         saveMeta();
         setStatus('pending');
+      }
+      return mergedFileTexts().then(function (texts) {
+        // A push re-created the branch while we were asking: its base stands.
+        if (disposed || meta.sha !== shaAtProbe) return;
+        holdBack(texts ? dropLandedLocally(texts) : collect());
       }, function (lookupError) {
         if (lookupError && lookupError.status === 401) throw lookupError;
+        if (disposed || meta.sha !== shaAtProbe) return;
+        // An answer GitHub never settles is, past the wait, "not merged":
+        // every edit is kept and held back.
+        if (lookupError && lookupError.unsettled && unsettledForTooLong()) { holdBack(collect()); return; }
         // Unknown is not "closed": the base holds the PR number, and without
         // it nothing can find the merge once the answer does come. Keep it,
         // so the next pull asks again — but the edits are on no branch
         // meanwhile, and the chip has to say so.
-        if (!disposed && meta.sha === shaAtProbe) setStatus('pending');
+        setStatus('pending');
+      });
+    });
+  }
+
+  // Has the PR of this base gone unsettled (see mergedSyncPr) for longer than
+  // a stale read can explain? The first such answer starts the clock, in the
+  // base, so that reloads do not restart it; a base that moves on ends it
+  // (baseMoved). A stamp from the future (the clock was set back since) starts
+  // it over, as for the tombstone.
+  function unsettledForTooLong() {
+    var age = meta.unsettledSince === undefined ? -1 : now() - meta.unsettledSince;
+    if (age < 0) {
+      meta.unsettledSince = now();
+      saveMeta();
+      return false;
+    }
+    return age >= UNSETTLED_WAIT_MS;
+  }
+
+  // Is the PR this base names no longer open? One head holds one open PR at a
+  // time, so a later PR of the branch says so as surely as the PR's own state.
+  // False when it cannot be asked.
+  function syncPrIsClosed() {
+    var known = meta.prNumber;
+    if (!gh.listPrsByHead || !known) return Promise.resolve(false);
+    return gh.listPrsByHead(api, token, owner, branch, fetchImpl).then(function (prs) {
+      return (prs || []).some(function (pr) {
+        return pr.number > known || (pr.number === known && (pr.merged || pr.state !== 'open'));
       });
     });
   }
@@ -904,7 +1009,11 @@ function createSyncEngine(opts) {
       var newest = (prs || []).reduce(function (a, pr) { return !a || pr.number > a.number ? pr : a; }, null);
       if (newest && newest.number > known) return null;
       var settled = newest && newest.number === known && (newest.merged || newest.state !== 'open');
-      if (!settled) throw new Error('GitHub has not settled what became of sync PR #' + known);
+      if (!settled) {
+        var e = new Error('GitHub has not settled what became of sync PR #' + known);
+        e.unsettled = true;
+        throw e;
+      }
       return newest.merged ? newest : null;
     });
   }
@@ -996,12 +1105,7 @@ function createSyncEngine(opts) {
         if (status !== 'synced') setStatus('synced');
         return;
       }
-      var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
-      var changedKeys = apply(merged.entries);
-      if (changedKeys.length) onRemoteApplied(changedKeys);
-      meta.doc = remote.entries;
-      meta.sha = remote.sha;
-      meta.revision = Math.max(meta.revision || 0, remote.revision || 0);
+      var merged = integrate(remote);
       saveMeta();
       if (merged.changedVsRemote) {
         // Local still differs (dirty edits or a merge the remote lacks) —
@@ -1013,6 +1117,7 @@ function createSyncEngine(opts) {
       } else if (!dirty && !finalizing) {
         setStatus('synced');
       }
+      if (merged.remoteNeverSawBase) return refreshSyncPr();
     }).catch(function (e) {
       // A rejected promise can carry a falsy reason, so read status defensively.
       var status = e && e.status;
