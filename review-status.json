@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:07:23.824531+00:00",
+  "updated_at": "2026-11-21T08:08:14.393797+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -15,13 +15,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 27,
-      "updated_at": "2026-04-15T13:10:18Z"
+      "updated_at": "2026-04-15T13:10:18Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1395
     },
     "1980-03-23_Birthday-Puja": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 6,
-      "updated_at": "2026-04-15T13:10:07Z"
+      "updated_at": "2026-04-15T13:10:07Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1398
     },
     "1981-03-21_Birthday-Puja-1981-Sydney": {
       "status": "approved",
@@ -126,7 +132,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 127,
-      "updated_at": "2026-07-11T06:53:44Z"
+      "updated_at": "2026-07-11T06:53:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1402
     },
     "2001-04-22_Easter-Puja-You-Cannot-Resurrect-Yourself-Without-Controlling-Agnya": {
       "status": "pending",
@@ -234,7 +243,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 227,
-      "updated_at": "2026-07-14T10:01:59Z"
+      "updated_at": "2026-07-14T10:01:59Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1396
     },
     "1988-06-08_Shri-Ekadasha-Rudra-Puja-Ekadasha-Principle-is-built-in-the-Void": {
       "status": "pending",
@@ -258,7 +270,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 241,
-      "updated_at": "2026-07-15T00:33:12Z"
+      "updated_at": "2026-07-15T00:33:12Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1405
     },
     "1995-02-19_Arrival-Talk": {
       "status": "pending",
@@ -279,25 +294,37 @@
       "status": "in-progress",
       "reviewer": "anastasijka-prog",
       "issue_number": 259,
-      "updated_at": "2026-08-29T08:47:13Z"
+      "updated_at": "2026-08-29T08:47:13Z",
+      "operator_stage": "review",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1400
     },
     "1980-07-27_Guru-Puja-The-Statutes-of-the-Lord": {
       "status": "in-progress",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 256,
-      "updated_at": "2026-07-26T14:07:04Z"
+      "updated_at": "2026-07-26T14:07:04Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1399
     },
     "1982-07-04_Guru-Puja-Establishing-the-Guru-Principle-and-Havan-After-Puja": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 271,
-      "updated_at": "2026-06-14T09:58:51Z"
+      "updated_at": "2026-06-14T09:58:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1404
     },
     "1982-06-22_England-has-to-become-Jerusalem": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 263,
-      "updated_at": "2026-06-14T09:57:07Z"
+      "updated_at": "2026-06-14T09:57:07Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1403
     },
     "1982-07-10_From-Mooladhara-to-Void": {
       "status": "in-progress",
@@ -771,7 +798,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1227,
-      "updated_at": "2026-11-10T00:14:39Z"
+      "updated_at": "2026-11-10T00:14:39Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1401
     },
     "1997-05-25_Adi-Shakti-Puja-Respect-the-Mother-Earth-Why-are-we-in-Sahaja-Yoga": {
       "status": "approved",
