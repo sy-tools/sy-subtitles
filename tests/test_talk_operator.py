@@ -385,3 +385,58 @@ def test_talk_text_only_treats_a_broken_meta_as_a_video_talk(tmp_path, monkeypat
     (tmp_path / "talks" / TEXT_ONLY_TALK / "meta.yaml").write_text(meta, encoding="utf-8")
     monkeypatch.setattr(op, "ROOT", tmp_path)
     assert op.talk_text_only(TEXT_ONLY_TALK) is False
+
+
+# --- take: the operator takes a talk to QA without a translator PR ---
+
+
+def test_next_labels_take_from_translator_moves_to_qa():
+    assert op.next_labels({"talk-operator", "op:translator", "op:take"}, "take") == (
+        {"op:qa"},
+        {"op:translator", "op:take"},
+    )
+
+
+@pytest.mark.parametrize("stage", ["op:pipeline", "op:review", "op:qa", "op:ready", "op:delivered"])
+def test_next_labels_take_elsewhere_is_none(stage):
+    assert op.next_labels({"talk-operator", stage, "op:take"}, "take") is None
+
+
+def test_take_moves_to_qa_and_closes_review():
+    gh = FakeGh([_operator_issue(7, ["op:translator", "op:take"]), _review_issue()])
+    assert op.on_take(gh, 7, OPERATOR_ID) is True
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:qa"}
+    assert "review:approved" in gh.issues[411]["labels"]
+    assert "review:in-progress" not in gh.issues[411]["labels"]
+    assert gh.issues[411]["state"] == "CLOSED"
+    comments = [c for c in gh.calls if c[0] == "comment" and c[1] == 7]
+    assert len(comments) == 1 and "without a translator PR" in comments[0][2]
+
+
+def test_take_by_a_non_operator_is_undone():
+    gh = FakeGh([_operator_issue(7, ["op:translator", "op:take"]), _review_issue()])
+    assert op.on_take(gh, 7, TRANSLATOR_ID) is False
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:translator"}
+    assert any(c[0] == "comment" and c[1] == 7 and "roles.yaml" in c[2] for c in gh.calls)
+    assert gh.issues[411]["state"] == "OPEN"
+
+
+def test_take_outside_translator_is_undone():
+    gh = FakeGh([_operator_issue(7, ["op:review", "op:take"]), _review_issue()])
+    assert op.on_take(gh, 7, OPERATOR_ID) is False
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:review"}
+    assert any(c[0] == "comment" and c[1] == 7 and "op:translator" in c[2] for c in gh.calls)
+    assert gh.issues[411]["state"] == "OPEN"
+
+
+def test_take_with_review_already_closed_still_moves():
+    gh = FakeGh([_operator_issue(7, ["op:translator", "op:take"]), _review_issue(state="CLOSED")])
+    assert op.on_take(gh, 7, OPERATOR_ID) is True
+    assert "op:qa" in gh.issues[7]["labels"]
+
+
+def test_cli_take_prints_decision(monkeypatch, capsys):
+    gh = FakeGh([_operator_issue(7, ["op:translator", "op:take"]), _review_issue()])
+    monkeypatch.setattr(op, "Gh", lambda: gh)
+    op.main(["take", "--issue", "7", "--sender-id", str(OPERATOR_ID)])
+    assert capsys.readouterr().out.strip() == "taken"

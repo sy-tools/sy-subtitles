@@ -46,6 +46,9 @@ REVIEW_LABEL = "talk-review"
 STAGES = ("op:pipeline", "op:translator", "op:review", "op:qa", "op:ready", "op:delivered")
 PRE_PHASE = {"op:pipeline", "op:translator"}
 QA_PASSED = "op:qa-passed"
+# Trigger label: the operator takes a talk from the translator to QA with no
+# translator PR (the edits landed some other way). The bot removes it.
+TAKE = "op:take"
 SYNC_BRANCH = re.compile(r"^sync/[^/]+/(?P<talk>.+?)--[^/]+$")
 
 
@@ -97,6 +100,10 @@ def next_labels(
     if event == "packaged":
         if QA_PASSED in current:
             return {"op:ready"}, {"op:qa", QA_PASSED}
+        return None
+    if event == "take":
+        if "op:translator" in current:
+            return {"op:qa"}, {"op:translator", TAKE}
         return None
     if event == "closed":
         if "op:ready" in current:
@@ -253,6 +260,28 @@ def on_qa_passed(gh, issue_number: int, sender_id: int) -> bool:
     return False
 
 
+def on_take(gh, issue_number: int, sender_id: int) -> bool:
+    # Same trust rule as on_qa_passed: the label is open to anyone with triage
+    # access, so only an operator from roles.yaml may move the stage with it.
+    issue = gh.get_issue(issue_number)
+    if not is_operator(sender_id):
+        gh.edit_labels(issue_number, set(), {TAKE})
+        gh.comment(issue_number, f"`{TAKE}` removed: only an operator listed in roles.yaml can take a talk to QA.")
+        return False
+    change = next_labels(issue["labels"], "take")
+    if change is None:
+        gh.edit_labels(issue_number, set(), {TAKE})
+        gh.comment(issue_number, f"`{TAKE}` removed: a talk can be taken to QA only from `op:translator`.")
+        return False
+    _apply(gh, issue, change)
+    _approve_review(gh, issue["title"].removeprefix("Operator: "))
+    gh.comment(
+        issue_number,
+        "Taken to QA by the operator without a translator PR; the `Review:` issue is closed as approved.",
+    )
+    return True
+
+
 def on_packaged(gh, issue_number: int, comment_md: str) -> None:
     issue = gh.get_issue(issue_number)
     _apply(gh, issue, next_labels(issue["labels"], "packaged"))
@@ -370,7 +399,7 @@ def main(argv: list[str] | None = None) -> None:
         p = sub.add_parser(name, help=f"handle a translator sync PR event ({name})")
         p.add_argument("--branch", required=True, help="PR head branch, sync/{login}/{talk_id}--{target}")
         p.add_argument("--pr", type=int, required=True, help="PR number")
-    for name in ("qa-passed", "closed", "delivered"):
+    for name in ("qa-passed", "take", "closed", "delivered"):
         p = sub.add_parser(name, help=f"handle an Operator: issue event ({name})")
         p.add_argument("--issue", type=int, required=True)
         if name != "delivered":
@@ -402,6 +431,8 @@ def main(argv: list[str] | None = None) -> None:
         on_pr_merged(gh, args.branch, args.pr)
     elif args.cmd == "qa-passed":
         print("package" if on_qa_passed(gh, args.issue, args.sender_id) else "skip")
+    elif args.cmd == "take":
+        print("taken" if on_take(gh, args.issue, args.sender_id) else "skip")
     elif args.cmd == "packaged":
         on_packaged(gh, args.issue, Path(args.comment_file).read_text(encoding="utf-8"))
     elif args.cmd == "closed":
