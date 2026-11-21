@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-21T08:12:18.485832+00:00",
+  "updated_at": "2026-11-21T08:13:16.410215+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -102,7 +102,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 26,
-      "updated_at": "2026-07-11T01:58:18Z"
+      "updated_at": "2026-07-11T01:58:18Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1455
     },
     "2001-07-29_Shri-Krishna-Puja-New-York": {
       "status": "approved",
@@ -198,7 +201,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 171,
-      "updated_at": "2026-07-14T06:26:39Z"
+      "updated_at": "2026-07-14T06:26:39Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1461
     },
     "1994-03-14_Mahashivaratri-Puja-Surrender": {
       "status": "pending",
@@ -261,7 +267,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 221,
-      "updated_at": "2026-07-15T07:27:24Z"
+      "updated_at": "2026-07-15T07:27:24Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1457
     },
     "1979-12-30_Advice-about-Chakras": {
       "status": "pending",
@@ -285,7 +294,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 235,
-      "updated_at": "2026-07-15T05:53:30Z"
+      "updated_at": "2026-07-15T05:53:30Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1454
     },
     "2001-12-25_Christmas-Puja": {
       "status": "pending",
@@ -393,7 +405,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 288,
-      "updated_at": "2026-06-16T07:34:07Z"
+      "updated_at": "2026-06-16T07:34:07Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1459
     },
     "1982-08-06_The-Importance-of-Dedication-and-Devotion": {
       "status": "pending",
@@ -408,13 +423,19 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 297,
-      "updated_at": "2026-07-17T11:03:44Z"
+      "updated_at": "2026-07-17T11:03:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1460
     },
     "1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective": {
       "status": "pending",
       "reviewer": null,
       "issue_number": 305,
-      "updated_at": "2026-07-17T11:09:36Z"
+      "updated_at": "2026-07-17T11:09:36Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1463
     },
     "1998-12-14_The-Revival-of-Indian-Spirituality": {
       "status": "pending",
@@ -615,7 +636,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 414,
-      "updated_at": "2026-07-17T17:41:26Z"
+      "updated_at": "2026-07-17T17:41:26Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1452
     },
     "1991-05-05_Sahasrara-Puja-Realise-Your-Own-Divinity": {
       "status": "pending",
@@ -651,7 +675,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 429,
-      "updated_at": "2026-07-18T04:22:16Z"
+      "updated_at": "2026-07-18T04:22:16Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1456
     },
     "1990-06-03_How-to-get-the-connection-with-the-Divine-power": {
       "status": "pending",
@@ -687,7 +714,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 490,
-      "updated_at": "2026-06-13T05:55:22Z"
+      "updated_at": "2026-06-13T05:55:22Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1458
     },
     "1983-10-14_After-Self-Realization-You-Must-Master-It": {
       "status": "pending",
@@ -753,7 +783,10 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 932,
-      "updated_at": "2026-08-05T11:12:44Z"
+      "updated_at": "2026-08-05T11:12:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1462
     },
     "1989-07-23_Guru-Puja-Creativity": {
       "status": "pending",
