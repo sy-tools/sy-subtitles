@@ -37,12 +37,18 @@ function syncBaseKey(talkId, target) {
 // file-scoped sync (still local + in "Copy backup").
 function srtSyncTarget(talkId, videoSlug, lang) {
   var canon = 'srt_edits_' + talkId + '_' + videoSlug + '_' + lang;
+  var held = placeholderKeyOf(canon);
   var legacyPrefix = 'review_srt_' + talkId + '_' + videoSlug + '_';
   var suffix = '_' + lang;
   return {
     slug: videoSlug + '-' + lang,
+    filePath: 'talks/' + talkId + '/' + videoSlug + '/final/' + lang + '.srt',
+    // The one entry keyed by the file's own block index. The legacy
+    // review_srt_* leftovers are keyed by aligned ROW.
+    editsKey: canon,
+    fileKind: 'srt',
     filter: function (key) {
-      if (key === canon) return true;
+      if (key === canon || key === held) return true;
       return key.indexOf(legacyPrefix) === 0 && key.slice(-suffix.length) === suffix;
     },
   };
@@ -55,6 +61,9 @@ function transcriptSyncTarget(talkId, lang) {
     // quirk); the slug carries the active lang so the branch/file are named
     // for the transcript actually being committed.
     slug: 'transcript-' + lang,
+    filePath: 'talks/' + talkId + '/transcript_' + lang + '.txt',
+    editsKey: reviewKey,
+    fileKind: 'transcript',
     filter: function (key) { return key === reviewKey; },
   };
 }
@@ -65,19 +74,46 @@ function isSyncSpaceKey(key, talkId) {
   return key === 'review_' + talkId
     || key.indexOf('review_srt_' + talkId + '_') === 0
     || key.indexOf('preview_' + talkId + '_') === 0
-    || key.indexOf('srt_edits_' + talkId + '_') === 0;
+    || key.indexOf('srt_edits_' + talkId + '_') === 0
+    || key.indexOf('srt_placeholders_' + talkId + '_') === 0;
 }
 
 // Canonical per-block stores (js/edit_store.js) are a bare {blockIdx: text}
 // map, unlike the {marks/markers/edits} wrappers of the other entries.
 function isCanonicalKey(key) { return String(key).indexOf('srt_edits_') === 0; }
 
+// The placeholder markers of a canonical store (js/edit_store.js) have the
+// same bare shape and sync as its sibling entry. They have to travel: a device
+// that adopted a captured row without its marker would see an edit equal to
+// the file, retire it, and push the removal back to the device that made it.
+function isPlaceholderKey(key) { return String(key).indexOf('srt_placeholders_') === 0; }
+function placeholderKeyOf(canonicalKey) {
+  return 'srt_placeholders_' + String(canonicalKey).slice('srt_edits_'.length);
+}
+function isBlockMapKey(key) { return isCanonicalKey(key) || isPlaceholderKey(key); }
+
+// A marker holds only while its edit reads the same (edit_store.js). One that
+// outlived that is noise, and would keep an otherwise empty doc — and so its
+// PR — alive.
+function withoutEndedPlaceholders(entries) {
+  Object.keys(entries).filter(isPlaceholderKey).forEach(function (heldKey) {
+    var edits = entries['srt_edits_' + heldKey.slice('srt_placeholders_'.length)] || {};
+    var held = entries[heldKey], live = {};
+    Object.keys(held).forEach(function (idx) {
+      if (held[idx] === edits[idx]) live[idx] = held[idx];
+    });
+    if (Object.keys(live).length) entries[heldKey] = live;
+    else delete entries[heldKey];
+  });
+  return entries;
+}
+
 // An entry with no marks, no markers and no edits carries nothing worth
 // syncing (e.g. everything was reverted) — treated as absent. `key` selects
 // the entry's shape (canonical block map vs marks/markers/edits wrapper).
 function entryIsEmpty(entry, key) {
   if (!entry) return true;
-  if (isCanonicalKey(key)) return !Object.keys(entry).length;
+  if (isBlockMapKey(key)) return !Object.keys(entry).length;
   if (Object.keys(entry.marks || {}).length) return false;
   if ((entry.markers || []).length) return false;
   var edits = entry.edits || {};
@@ -105,7 +141,7 @@ function collectSyncEntries(talkId, storage, keyFilter) {
     if (entryIsEmpty(parsed, key)) continue;
     entries[key] = parsed;
   }
-  return entries;
+  return withoutEndedPlaceholders(entries);
 }
 
 // Write merged entries back into localStorage; sync-space keys absent from
@@ -150,9 +186,10 @@ function flattenDoc(entries) {
   var flat = {};
   Object.keys(entries || {}).forEach(function (entryKey) {
     var e = entries[entryKey] || {};
-    if (isCanonicalKey(entryKey)) {
+    if (isBlockMapKey(entryKey)) {
+      var kind = isPlaceholderKey(entryKey) ? 'placeholders' : 'blocks';
       Object.keys(e).forEach(function (idx) {
-        flat[JSON.stringify([entryKey, 'blocks', idx])] = JSON.stringify(e[idx]);
+        flat[JSON.stringify([entryKey, kind, idx])] = JSON.stringify(e[idx]);
       });
       return;
     }
@@ -189,7 +226,7 @@ function unflattenDoc(flat) {
     var e = entries[entryKey];
     if (!e) e = entries[entryKey] = { marks: {}, edits: {}, markers: [], blocks: {} };
     var value = JSON.parse(flat[flatKey]);
-    if (kind === 'blocks') {
+    if (kind === 'blocks' || kind === 'placeholders') {
       e.blocks[path[2]] = value;
     } else if (kind === 'marks') {
       e.marks[path[2]] = value;
@@ -215,7 +252,7 @@ function unflattenDoc(flat) {
     // so a byte-different equal doc would cause pointless pushes/re-renders.
     // A merge can leave an entry with no items (every edit deleted) — drop it.
     var isPreview = entryKey.indexOf('preview_') === 0;
-    var norm = isCanonicalKey(entryKey) ? e.blocks
+    var norm = isBlockMapKey(entryKey) ? e.blocks
       : isPreview
         ? { mode: e.mode === undefined ? 'marker' : e.mode, markers: e.markers, edits: e.edits }
         : { marks: e.marks, edits: e.edits };
@@ -258,6 +295,36 @@ function mergeSyncDocs(baseEntries, localEntries, remoteEntries) {
     changedVsLocal: differs(lf),
     changedVsRemote: differs(rf),
   };
+}
+
+// What is left of the local entries once the sync PR has MERGED, given what
+// the merged file reads: `texts[i]` is its text at the index the edits of
+// `editsKey` are keyed by. An edit is dropped only where the file reads exactly
+// as the edit does — a fact about the file, whatever this device believed it
+// had pushed. Everything else stays: an edit the merge did not carry, a mark
+// (a note for the reviewer, never file content), and a placeholder, which
+// proposed nothing.
+// `sanitize` is what the push passes the whole file through. Two texts it
+// makes equal produce the same pushed file, so an edit differing from the
+// file only by what it strips (NBSP, zero-width) proposes nothing either.
+function dropEditsInFile(localEntries, editsKey, texts, sanitize) {
+  var entries = Object.assign({}, localEntries || {});
+  var entry = editsKey && entries[editsKey];
+  if (!entry || !texts) return entries;
+  var canonical = isCanonicalKey(editsKey);
+  var edits = canonical ? entry : (entry.edits || {});
+  var held = canonical ? (entries[placeholderKeyOf(editsKey)] || {}) : {};
+  var kept = {};
+  function asPushed(text) { return sanitize ? sanitize(text) : text; }
+  Object.keys(edits).forEach(function (idx) {
+    var inFile = typeof edits[idx] === 'string' && typeof texts[idx] === 'string'
+      && asPushed(texts[idx]) === asPushed(edits[idx]);
+    if (!inFile || held[idx] === edits[idx]) kept[idx] = edits[idx];
+  });
+  var left = canonical ? kept : Object.assign({}, entry, { edits: kept });
+  if (entryIsEmpty(left, editsKey)) delete entries[editsKey];
+  else entries[editsKey] = left;
+  return withoutEndedPlaceholders(entries);
 }
 
 function makeSyncDoc(talkId, entries, revision, client, nowIso) {
@@ -320,6 +387,14 @@ function createSyncEngine(opts) {
   // Rebuilds the real edited files for the currently open view (wiring
   // provides it); their commits make the draft PR diff human-readable.
   var buildFiles = opts.buildFiles || function () { return []; };
+  // The one file this engine's target commits. buildFiles rebuilds whichever
+  // view is open, and only this path is the file the target's PR merges.
+  var filePath = opts.filePath || null;
+  // How that file is read back once the PR has merged (see mergedFileTexts):
+  // the entry whose edits are keyed by the file's own index, and the parser
+  // giving the file's text at each index.
+  var editsKey = opts.editsKey || null;
+  var parseFile = opts.parseFile || null;
 
   // Last gate before rebuilt file bytes reach GitHub. Collaborators still hold
   // edits containing NBSP in localStorage from before the input fields were
@@ -571,9 +646,18 @@ function createSyncEngine(opts) {
       if (meta.sha !== null) return Promise.resolve();
       return readRemote().then(function (remote) {
         if (remote) { integrateRemote(remote); return; }
-        // A known PR means the branch exists and the state file was removed
-        // by a finalize — the push below simply recreates it.
-        if (meta.prNumber) return;
+        // A known PR with no state file is a finalized one — as long as its
+        // branch is still there, and then the push below simply recreates
+        // the file. A finalized PR is also the kind that gets merged, which
+        // deletes the branch: say so in the words the self-heal reads.
+        if (meta.prNumber) {
+          return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
+            if (!e || e.status !== 404) throw e;
+            var gone = new Error('Branch ' + branch + ' not found');
+            gone.status = 404;
+            throw gone;
+          });
+        }
         return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
           if (pr) {
             // existing PR on the deterministic branch (finalized on another
@@ -610,7 +694,9 @@ function createSyncEngine(opts) {
       if (disposed) return Promise.resolve();
       // Invisible characters ONLY: `content` is a whole rebuilt file, and the
       // field-level rule would collapse its newlines and destroy the SRT.
-      var files = (buildFiles() || []).map(function (f) {
+      var files = (buildFiles() || []).filter(function (f) {
+        return !filePath || f.path === filePath;
+      }).map(function (f) {
         return sanitize ? { path: f.path, content: sanitize(f.content) } : f;
       });
       var chain = Promise.resolve();
@@ -726,9 +812,17 @@ function createSyncEngine(opts) {
       // externally or on another device): wipe the stale branch/PR coordinates
       // and re-create the branch, state file and a fresh draft PR. One retry only
       // — `healed` guards against a loop if the re-create somehow 404s again.
+      // A branch gone because its PR MERGED landed some of these edits: they
+      // are dropped first, so the fresh PR proposes only what is new. A lookup
+      // or a read that fails rejects into the handler below — pushing on a
+      // guess would propose the landed edits again.
       if (isBranchGone(e) && !healed) {
-        resetBase();
-        return doFlush(fopts, true);
+        return mergedFileTexts().then(function (texts) {
+          if (disposed) return;
+          if (texts) dropLandedLocally(texts);
+          resetBase();
+          return doFlush(fopts, true);
+        });
       }
       throw e;
     }).catch(function (e) {
@@ -751,21 +845,86 @@ function createSyncEngine(opts) {
   //    edits are then on no branch at all, and the merge in pull() would read
   //    "base == local, remote absent" as nothing to do — leaving edits on
   //    screen under a hidden chip. So the base is wiped and the chip says "not
-  //    synced". But nothing is pushed for it: the branch may be gone because a
-  //    maintainer closed the PR, or because it was MERGED and this device
-  //    still holds the edits — and opening a page must not reopen the one or
-  //    propose the other again. `orphaned` holds the push back, across reloads,
-  //    until the user edits (notifyEdit) or asks for a sync (a forced flush).
+  //    synced". But nothing is pushed for it: a maintainer may have closed the
+  //    PR, and opening a page must not reopen it. `orphaned` holds the push
+  //    back, across reloads, until the user edits (notifyEdit) or asks for a
+  //    sync (a forced flush).
+  //    A MERGED PR is the third case, and the merged file is what tells it
+  //    apart per edit: one the file holds has landed and is dropped here, on
+  //    the device, so that it is never proposed a second time — by then over
+  //    whatever the block has become. Every other edit stays held.
   function markOrphanedIfBranchGone() {
     var shaAtProbe = meta.sha;
     return gh.getBranchHeadSha(api, token, branch, fetchImpl).then(function () {}, function (e) {
       if (!e || e.status !== 404) throw e;
-      // A push re-created the branch while the probe was out: its base stands.
-      if (disposed || meta.sha !== shaAtProbe) return;
-      resetBase();
-      meta.orphaned = true;
-      saveMeta();
-      setStatus('pending');
+      return mergedFileTexts().then(function (texts) {
+        // A push re-created the branch while we were asking: its base stands.
+        if (disposed || meta.sha !== shaAtProbe) return;
+        var left = texts ? dropLandedLocally(texts) : collect();
+        resetBase();
+        if (!Object.keys(left).length) { clearDirty(); setStatus('idle'); return; }
+        meta.orphaned = true;
+        saveMeta();
+        setStatus('pending');
+      }, function (lookupError) {
+        if (lookupError && lookupError.status === 401) throw lookupError;
+        // Unknown is not "closed": the base holds the PR number, and without
+        // it nothing can find the merge once the answer does come. Keep it,
+        // so the next pull asks again — but the edits are on no branch
+        // meanwhile, and the chip has to say so.
+        if (!disposed && meta.sha === shaAtProbe) setStatus('pending');
+      });
+    });
+  }
+
+  function dropLandedLocally(texts) {
+    var left = dropEditsInFile(collect(), editsKey, texts, sanitize);
+    var changedKeys = apply(left);
+    if (changedKeys.length) onRemoteApplied(changedKeys);
+    return left;
+  }
+
+  // The PR this base was synced with, if it merged — null if it did not, or
+  // if the cached number cannot be trusted to be that PR.
+  // The deterministic branch name is shared by every PR generation, and the
+  // cached number can be an earlier generation's: a pull adopts the state file
+  // another device pushed for its own, newer PR, and the number stays. The
+  // state this base holds was on the branch that is now gone, so its PR is
+  // the newest one opened from it; an older number says nothing about these
+  // edits. Without a number, or wired without the lookup, nothing is known
+  // either. "Not merged" keeps every edit, held back.
+  // Rejects when the answers cannot both be true: GitHub closes a PR as its
+  // head branch is deleted, so "open" beside a branch that is gone — or a
+  // list that does not reach our PR yet — is a read of an earlier moment,
+  // not a closed PR. The caller treats it as a lookup that failed.
+  function mergedSyncPr() {
+    var known = meta.prNumber;
+    if (!gh.listPrsByHead || !known) return Promise.resolve(null);
+    return gh.listPrsByHead(api, token, owner, branch, fetchImpl).then(function (prs) {
+      var newest = (prs || []).reduce(function (a, pr) { return !a || pr.number > a.number ? pr : a; }, null);
+      if (newest && newest.number > known) return null;
+      var settled = newest && newest.number === known && (newest.merged || newest.state !== 'open');
+      if (!settled) throw new Error('GitHub has not settled what became of sync PR #' + known);
+      return newest.merged ? newest : null;
+    });
+  }
+
+  // What the target's file reads at the merge commit of this base's PR, by
+  // the index its edits are keyed with — or null when there is nothing to
+  // compare the edits with (no merge, no such file, an unreadable one).
+  // The merge commit and not the PR branch: sync-subtitles.yml may have
+  // committed to the branch after the last push, and what merged is what
+  // main has. And not this device's record of its pushes: a state file can
+  // be on the branch with no file behind it.
+  // A failed request rejects. It is not "nothing landed" — the caller must
+  // neither clear on it nor forget the PR that finds the merge.
+  function mergedFileTexts() {
+    return mergedSyncPr().then(function (pr) {
+      if (!pr || !pr.mergeCommitSha || !filePath || !editsKey || !parseFile) return null;
+      return gh.getFileContent(api, token, filePath, pr.mergeCommitSha, fetchImpl).then(function (file) {
+        if (!file) return null;
+        try { return parseFile(file.content); } catch (e) { return null; }
+      });
     });
   }
 
@@ -808,11 +967,33 @@ function createSyncEngine(opts) {
           setStatus('pending');
           return;
         }
-        if (meta.sha !== null && Object.keys(collect()).length) return markOrphanedIfBranchGone();
+        // A base that names a state file (sha) or a PR claims a branch. With
+        // no state file on it, check the branch is still there — whether or
+        // not edits remain: a base left pointing at a dead PR keeps the chip
+        // on it and sends the next edit to a branch that does not exist.
+        if (meta.sha !== null || meta.prNumber) return markOrphanedIfBranchGone();
+        // The edits an orphaned base held back can all go without a push —
+        // retired once the file caught up with them. Nothing is un-synced then.
+        if (meta.orphaned && !dirty && !Object.keys(collect()).length) {
+          delete meta.orphaned;
+          saveMeta();
+          setStatus('idle');
+        }
         return;
       }
       if (remote.sha === meta.sha) {
-        if (!dirty && !finalizing && status !== 'synced') setStatus('synced');
+        if (dirty || finalizing) return;
+        // Storage can move away from the base with no notifyEdit behind it —
+        // the SPA retires an edit once the loaded file already has its text.
+        // Nobody would push that, and the PR would go on proposing it.
+        if (mergeSyncDocs(meta.doc || {}, collect(), remote.entries).changedVsRemote) {
+          dirty = true;
+          editSeq += 1;
+          armDebounce();
+          setStatus('pending');
+          return;
+        }
+        if (status !== 'synced') setStatus('synced');
         return;
       }
       var merged = mergeSyncDocs(meta.doc || {}, collect(), remote.entries);
@@ -847,7 +1028,11 @@ function createSyncEngine(opts) {
     if (disposed) return Promise.resolve();
     return pull(true).then(function () {
       if (meta.prNumber) {
-        if (meta.prDraft === false && !dirty && status !== 'ready') setStatus('ready');
+        // Only over a pull that had nothing to say: 'pending' is its "these
+        // edits are on no branch" and 'error' its revoked token, and a cached
+        // PR answers neither.
+        var quiet = status === 'idle' || status === 'synced';
+        if (meta.prDraft === false && !dirty && quiet) setStatus('ready');
         return;
       }
       return gh.findOpenPrByHead(api, token, owner, branch, fetchImpl).then(function (pr) {
@@ -955,6 +1140,7 @@ if (typeof module !== 'undefined' && module.exports) {
     flattenDoc: flattenDoc,
     unflattenDoc: unflattenDoc,
     mergeSyncDocs: mergeSyncDocs,
+    dropEditsInFile: dropEditsInFile,
     makeSyncDoc: makeSyncDoc,
     createSyncEngine: createSyncEngine,
   };

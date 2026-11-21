@@ -325,3 +325,110 @@ describe('cross-mode consolidation (preview <-> review)', () => {
     assert.strictEqual(b.getItem(backupKeyFor(PREVIEW_KEY)), previewRaw);
   });
 });
+
+describe('retireLandedEdits (an edit whose text the loaded file already has)', () => {
+  const { retireLandedEdits } = require('../site/js/edit_store');
+  const BLOCKS = [{ text: 'нуль' }, { text: 'один' }, { text: 'два' }];
+
+  it('drops the edits equal to the block text and keeps the rest', () => {
+    const res = retireLandedEdits({ 0: 'нуль', 1: 'ОДИН, змінено', 2: 'два' }, BLOCKS);
+    assert.deepStrictEqual(res.kept, { 1: 'ОДИН, змінено' });
+    assert.deepStrictEqual(res.retired, { 0: 'нуль', 2: 'два' });
+  });
+
+  it('compares the exact text: whitespace or case is a real difference', () => {
+    const res = retireLandedEdits({ 0: 'нуль ', 1: 'Один' }, BLOCKS);
+    assert.deepStrictEqual(res.kept, { 0: 'нуль ', 1: 'Один' });
+    assert.deepStrictEqual(res.retired, {});
+  });
+
+  it('reads both sides as the push writes them: invisible characters are no difference', () => {
+    // The push strips them from the whole file, so such an edit proposes nothing.
+    const res = retireLandedEdits({ 0: 'ну\u00adль\u200b', 1: 'один', 2: 'д\u00a0ва' },
+      [{ text: 'нуль' }, { text: 'о\u200bдин' }, { text: 'д ва' }]);
+    assert.deepStrictEqual(res.kept, {});
+    assert.deepStrictEqual(res.retired, { 0: 'ну\u00adль\u200b', 1: 'один', 2: 'д\u00a0ва' });
+  });
+
+  it('a placeholder holding invisible characters is still told by its stored text', () => {
+    const res = retireLandedEdits({ 0: 'д\u00a0ва' }, [{ text: 'д ва' }], { 0: 'д\u00a0ва' });
+    assert.deepStrictEqual(res.kept, { 0: 'д\u00a0ва' });
+  });
+
+  it('keeps an edit whose block is not in the file (nothing to compare it with)', () => {
+    const res = retireLandedEdits({ 7: 'два', 2: 'два' }, BLOCKS);
+    assert.deepStrictEqual(res.kept, { 7: 'два' });
+    assert.deepStrictEqual(res.retired, { 2: 'два' });
+  });
+
+  it('retires nothing when no blocks were loaded (a failed fetch parses to none)', () => {
+    assert.deepStrictEqual(retireLandedEdits({ 0: '' }, []), { kept: { 0: '' }, retired: {} });
+    assert.deepStrictEqual(retireLandedEdits({ 0: 'x' }, null), { kept: { 0: 'x' }, retired: {} });
+  });
+
+  it('does not mutate its input and tolerates no edits', () => {
+    const edits = { 0: 'нуль' };
+    retireLandedEdits(edits, BLOCKS);
+    assert.deepStrictEqual(edits, { 0: 'нуль' });
+    assert.deepStrictEqual(retireLandedEdits(null, BLOCKS), { kept: {}, retired: {} });
+  });
+});
+
+describe('placeholders (an edit row opened on a block and not typed into yet)', () => {
+  const {
+    retireLandedEdits, srtPlaceholdersKey, loadSrtPlaceholders, markSrtPlaceholder,
+  } = require('../site/js/edit_store');
+  const BLOCKS = [{ text: 'нуль' }, { text: 'один' }, { text: 'два' }];
+  const HELD_KEY = 'srt_placeholders_' + TALK + '_' + VIDEO + '_uk';
+
+  function storeWithPlaceholders(edits, heldIdxs) {
+    const s = memStorage();
+    saveSrtEdits(TALK, VIDEO, 'uk', edits, s);
+    heldIdxs.forEach((idx) => markSrtPlaceholder(TALK, VIDEO, 'uk', idx, edits[idx], s));
+    return s;
+  }
+
+  it('lives beside the edits, in a key of its own', () => {
+    assert.strictEqual(srtPlaceholdersKey(TALK, VIDEO, 'uk'), HELD_KEY);
+    const s = storeWithPlaceholders({ 0: 'нуль' }, [0]);
+    assert.deepStrictEqual(loadSrtEdits(TALK, VIDEO, 'uk', s), { 0: 'нуль' }, 'the edits stay a bare {idx: text} map');
+    assert.deepStrictEqual(loadSrtPlaceholders(TALK, VIDEO, 'uk', s), { 0: 'нуль' });
+  });
+
+  it('a placeholder is never retired, though its text equals the block', () => {
+    const res = retireLandedEdits({ 0: 'нуль', 2: 'два' }, BLOCKS, { 0: 'нуль' });
+    assert.deepStrictEqual(res.kept, { 0: 'нуль' });
+    assert.deepStrictEqual(res.retired, { 2: 'два' });
+  });
+
+  it('a marker left behind by a different text protects nothing', () => {
+    const res = retireLandedEdits({ 1: 'один' }, BLOCKS, { 1: 'один, як було колись' });
+    assert.deepStrictEqual(res.retired, { 1: 'один' });
+  });
+
+  it('typing into the row ends the placeholder', () => {
+    const s = storeWithPlaceholders({ 0: 'нуль', 1: 'один' }, [0, 1]);
+    saveSrtEdits(TALK, VIDEO, 'uk', { 0: 'нуль, змінено', 1: 'один' }, s);
+    assert.deepStrictEqual(loadSrtPlaceholders(TALK, VIDEO, 'uk', s), { 1: 'один' });
+  });
+
+  it('removing the row ends the placeholder, and the last one takes the key with it', () => {
+    const s = storeWithPlaceholders({ 0: 'нуль' }, [0]);
+    saveSrtEdits(TALK, VIDEO, 'uk', {}, s);
+    assert.strictEqual(s.getItem(HELD_KEY), null);
+  });
+
+  it('a save that ends no placeholder does not rewrite the key', () => {
+    const s = storeWithPlaceholders({ 0: 'нуль' }, [0]);
+    const written = [];
+    const set = s.setItem.bind(s);
+    s.setItem = (k, v) => { written.push(k); set(k, v); };
+    saveSrtEdits(TALK, VIDEO, 'uk', { 0: 'нуль', 2: 'ДВА' }, s);
+    assert.deepStrictEqual(written, [srtEditsKey(TALK, VIDEO, 'uk')]);
+  });
+
+  it('is per language', () => {
+    const s = storeWithPlaceholders({ 0: 'нуль' }, [0]);
+    assert.deepStrictEqual(loadSrtPlaceholders(TALK, VIDEO, 'en', s), {});
+  });
+});

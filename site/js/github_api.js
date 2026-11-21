@@ -384,8 +384,12 @@ function issueHasAssignee(issue, login) {
   return ((issue && issue.assignees) || []).some(function (a) { return a && a.login === login; });
 }
 
+// Read past the HTTP cache, for every caller: the answer is either "is this
+// branch still there" — and a cached one keeps a deleted branch alive for a
+// minute, long enough to push to it or to take a merged PR for a live one —
+// or the commit a new branch starts from. Neither is ever asked in a loop.
 function getBranchHeadSha(api, token, branch, fetchImpl) {
-  return ghJson(api + '/git/ref/heads/' + branch, token, null, fetchImpl)
+  return ghJson(api + '/git/ref/heads/' + branch, token, BYPASS_HTTP_CACHE, fetchImpl)
     .then(function (r) { return r.object.sha; });
 }
 
@@ -457,6 +461,24 @@ function findOpenPrByHead(api, token, owner, branch, fetchImpl) {
       if (!list || !list.length) return null;
       var r = list[0];
       return { number: r.number, html_url: r.html_url, node_id: r.node_id, draft: r.draft };
+    });
+}
+
+// Every PR ever opened from <owner>:<branch>, newest first, open or not. The
+// sync branch name is deterministic, so one name carries each generation of
+// the PR. Read past the HTTP cache: a list cached from before the merge would
+// say "not merged". `mergeCommitSha` of a merged PR is the commit the base
+// branch was moved to — merge, squash or rebase alike — so a file read at it
+// is the file as it merged. A PR that never merged names a commit there too
+// (GitHub's test merge, which is on no branch), so it is reported as null.
+function listPrsByHead(api, token, owner, branch, fetchImpl) {
+  return ghJson(api + '/pulls?head=' + encodeURIComponent(owner + ':' + branch)
+    + '&state=all&sort=created&direction=desc', token, null, freshFetch(fetchImpl))
+    .then(function (list) {
+      return (list || []).map(function (r) {
+        return { number: r.number, state: r.state, merged: !!r.merged_at,
+          mergeCommitSha: (r.merged_at && r.merge_commit_sha) || null, html_url: r.html_url };
+      });
     });
 }
 
@@ -667,6 +689,7 @@ if (typeof module !== 'undefined' && module.exports) {
     putFile: putFile,
     createPull: createPull,
     findOpenPrByHead: findOpenPrByHead,
+    listPrsByHead: listPrsByHead,
     markPullReady: markPullReady,
     convertPullToDraft: convertPullToDraft,
     closePull: closePull,

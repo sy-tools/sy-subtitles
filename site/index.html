@@ -23,13 +23,13 @@
 <script src="js/typo_hints.js"></script>
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/preview_state.js"></script>
+<script src="js/text_sanitize.js"></script>
 <script src="js/edit_store.js"></script>
 <script src="js/load_token.js"></script>
 <script src="js/index_url_state.js"></script>
 <script src="js/manifest_fetch.js"></script>
 <script src="js/offline_fallback.js"></script>
 <script src="js/talk_slug.js"></script>
-<script src="js/text_sanitize.js"></script>
 <script src="js/vimeo_codec.js"></script>
 <script src="js/end_freeze.js"></script>
 <script src="js/cursor_idle.js"></script>
@@ -2594,6 +2594,7 @@ function loadSubtitleLang(lang) {
       s.subtitles = parseSRT(text);
       s.srtLang = lang;
       console.log('[SPA] SRT loaded (' + lang + '):', s.subtitles.length, 'blocks');
+      retireLandedPreviewEdits(s, lang);
       return true;
     })
     .catch(function(err) {
@@ -5243,6 +5244,7 @@ SPA.addEdit = function(opts) {
   if (previewState.edits[lang][idx] === undefined) {
     previewState.edits[lang][idx] = blocks[idx].text;
     savePreviewState();
+    markSrtPlaceholder(previewState.talkId, previewState.videoSlug, lang, idx, blocks[idx].text, localStorage);
     editNotify();
     renderEditList();
     updateClearBtn();
@@ -7848,6 +7850,7 @@ SPA.switchReviewMode = function(mode, videoSlug) {
     var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
       reviewState.rowToBlock, localStorage);
     reviewState._legacyEdits = !!(mig && mig.error);
+    retireLandedReviewSrtEdits();
     loadReviewEditsForMode();
 
     renderReview();
@@ -8414,6 +8417,7 @@ function ensureEditSync() {
       deleteFile: deleteFile,
       createPull: createPull,
       findOpenPrByHead: findOpenPrByHead,
+      listPrsByHead: listPrsByHead,
       markPullReady: markPullReady,
       convertPullToDraft: convertPullToDraft,
       closePull: closePull,
@@ -8421,6 +8425,9 @@ function ensureEditSync() {
     },
     isOffline: isOfflineError,
     buildFiles: buildSyncFiles,
+    filePath: tgt.filePath,
+    editsKey: tgt.editsKey,
+    parseFile: syncFileTexts(tgt.fileKind),
     // Invisible characters only -- these are whole rebuilt files.
     sanitize: sanitizeInvisible,
     onStatus: onSyncStatus,
@@ -8431,6 +8438,16 @@ function ensureEditSync() {
   editSync = engine;
   engine.attach();
   renderSyncStatus(engine.getInfo().status, engine.getInfo());
+}
+
+// A sync target's file as the texts its edits are keyed against: an SRT by
+// block, a transcript by paragraph — the parsers the views themselves load
+// the file with, so an index means here what it means in the edit store.
+function syncFileTexts(fileKind) {
+  if (fileKind === 'srt') {
+    return function(content) { return parseSRT(content).map(function(block) { return block.text; }); };
+  }
+  return function(content) { return parseTranscript(content).paragraphs; };
 }
 
 // Tears the engine down and returns a promise that settles once any
@@ -8694,6 +8711,38 @@ function syncRevertSoon() { if (editSync) editSync.flushSoon(); }
 // separate from savePreviewState so marker changes / mode switches don't dirty
 // the edit engine (see savePreviewState).
 function editNotify() { if (editSync) editSync.notifyEdit(); }
+// Storage changed with no edit behind it (landed edits were retired). Not
+// notifyEdit: that is the user's word, and it lifts the hold an orphaned base
+// keeps on pushing. A pull weighs local against base and remote, and arms a
+// push only where one is due.
+function editSyncReconcile() { if (editSync) editSync.pull(true); }
+
+// A row SPA.addEdit opened and nobody typed into yet holds the block's own
+// text, which reads exactly like a landed edit: its placeholder marker is what
+// keeps it. A session on the legacy store (the migration failed, so storage is
+// refusing writes) retires nothing — a marker may not have been written either.
+function retireLandedPreviewEdits(s, lang) {
+  if (s !== previewState || !s.edits || s._legacyEdits) return;
+  var swept = retireLandedEdits(s.edits[lang], s.subtitles,
+    loadSrtPlaceholders(s.talkId, s.videoSlug, lang, localStorage));
+  if (!Object.keys(swept.retired).length) return;
+  s.edits[lang] = swept.kept;
+  savePreviewState();
+  editSyncReconcile();
+  updateClearBtn();
+}
+
+function retireLandedReviewSrtEdits() {
+  // A failed migration keeps the edits row-keyed in the legacy store, where
+  // there is no block to compare them with.
+  if (reviewState._legacyEdits) return;
+  var talkId = reviewState.talkId, videoSlug = reviewState.videoSlug, lang = reviewState.srtRightLang;
+  var swept = retireLandedEdits(loadSrtEdits(talkId, videoSlug, lang, localStorage), reviewState.ukBlocks,
+    loadSrtPlaceholders(talkId, videoSlug, lang, localStorage));
+  if (!Object.keys(swept.retired).length) return;
+  saveSrtEdits(talkId, videoSlug, lang, swept.kept, localStorage);
+  editSyncReconcile();
+}
 // Marker equivalents: a discrete add/remove/clear syncs on the fast cadence.
 function markerNotify() { if (markerSync) markerSync.notifyEdit(); }
 function markerNotifySoon() { if (markerSync) { markerSync.notifyEdit(); markerSync.flushSoon(); } }
@@ -9685,6 +9734,7 @@ SPA.switchSrtLang = function(side, lang) {
     var mig = migrateReviewSrtEdits(talkId, videoSlug, leftLang, rightLang,
       reviewState.rowToBlock, localStorage);
     reviewState._legacyEdits = !!(mig && mig.error);
+    retireLandedReviewSrtEdits();
     // Only the RIGHT (final) lang selects the sync target; re-key on change.
     ensureEditSync();
     loadReviewEditsForMode();

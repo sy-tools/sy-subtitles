@@ -250,6 +250,15 @@ describe('branch + contents + pull primitives', () => {
       payload: { object: { sha: 'abc123' } } }], calls);
     assert.strictEqual(await getBranchHeadSha(API, 'gho_x', 'main', f), 'abc123');
   });
+  it('getBranchHeadSha bypasses the HTTP cache: a branch deleted a moment ago must not answer "alive"', async () => {
+    let seenInit = null;
+    const f = async (url, init) => {
+      seenInit = init;
+      return new Response(JSON.stringify({ object: { sha: 'abc123' } }), { status: 200 });
+    };
+    await getBranchHeadSha(API, 'gho_x', 'sync/u/t', f);
+    assert.strictEqual(seenInit.cache, 'no-store');
+  });
   it('createRef POSTs refs/heads/<name> with the sha', async () => {
     const calls = [];
     const f = routerFetch([{ method: 'POST', match: '/git/refs', status: 201,
@@ -503,6 +512,38 @@ describe('findOpenPrByHead', () => {
   it('resolves null when no open PR has that head', async () => {
     const f = routerFetch([{ method: 'GET', match: '/pulls?head=', payload: [] }], []);
     assert.strictEqual(await findOpenPrByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f), null);
+  });
+});
+
+describe('listPrsByHead', () => {
+  const { listPrsByHead } = require('../site/js/github_api');
+  it('asks for every state, newest first, and says which were merged, and at which commit', async () => {
+    const calls = [];
+    // An un-merged PR carries a merge_commit_sha too: GitHub's test merge.
+    const f = routerFetch([{ method: 'GET', match: '/pulls?head=', payload: [
+      { number: 9, state: 'closed', merged_at: null, merge_commit_sha: 'testmerge9', html_url: 'u9' },
+      { number: 7, state: 'closed', merged_at: '2026-11-01T10:00:00Z', merge_commit_sha: 'merge7', html_url: 'u7' },
+    ] }], calls);
+    const res = await listPrsByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f);
+    assert.deepStrictEqual(res, [
+      { number: 9, state: 'closed', merged: false, mergeCommitSha: null, html_url: 'u9' },
+      { number: 7, state: 'closed', merged: true, mergeCommitSha: 'merge7', html_url: 'u7' },
+    ]);
+    const url = calls[0].url;
+    assert.ok(url.includes('/pulls?head=' + encodeURIComponent('sy-tools:sync/u/t')), url);
+    assert.match(url, /[?&]state=all(&|$)/);
+    assert.match(url, /[?&]sort=created(&|$)/);
+    assert.match(url, /[?&]direction=desc(&|$)/);
+  });
+  it('bypasses the HTTP cache: the answer decides whether local edits are dropped', async () => {
+    let seenInit = null;
+    const f = async (url, init) => { seenInit = init; return new Response('[]', { status: 200 }); };
+    assert.deepStrictEqual(await listPrsByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f), []);
+    assert.strictEqual(seenInit.cache, 'no-store');
+  });
+  it('rejects on an HTTP error instead of reporting "no PR"', async () => {
+    const f = routerFetch([{ method: 'GET', match: '/pulls?head=', status: 500, payload: { message: 'boom' } }], []);
+    await assert.rejects(listPrsByHead(API, 'gho_x', 'sy-tools', 'sync/u/t', f));
   });
 });
 
