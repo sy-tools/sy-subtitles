@@ -56,6 +56,7 @@ to use the portal.
 
 ## Before you finish
 
-Check both files parse as JSON arrays of strings with exactly as many entries
-as `cues.json`, and that no entry is empty. Report how many cues you wrote and
-any place you were unsure of what was said.
+Read both files back: each must be a JSON array of strings with exactly as
+many entries as `cues.json`, none empty (the next step refuses anything else).
+You have no shell; read and write files only. Report how many cues you wrote
+and any place you were unsure of what was said.

@@ -167,7 +167,13 @@ jobs:
           claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
           path_to_bun_executable: ${{ steps.tools.outputs.bun }}
           path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
-          claude_args: "--max-turns 40 --dangerously-skip-permissions --effort high --model ${{ env.MODEL }}"
+          # Least privilege: the text comes from recognised speech, and the
+          # agent only reads and writes two JSON files. No shell means nothing
+          # in the job's environment (the OAuth token) is within its reach.
+          claude_args: >-
+            --max-turns 40 --effort high --model ${{ env.MODEL }}
+            --allowedTools "Read,Glob,Grep,Edit(help-work/**),Write(help-work/**)"
+            --disallowedTools "Bash,WebFetch,WebSearch"
           show_full_output: true
           prompt: |
             Read templates/help_subtitles_prompt.md and follow it.
