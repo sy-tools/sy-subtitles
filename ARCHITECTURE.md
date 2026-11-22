@@ -252,6 +252,24 @@ still lacks a `whisper.json`, and talks timed from the EN SRT never need it.
 Replays the subtitle pipeline using `tools.fake_llm` snapshots — exercises
 the build/sync stack without burning Claude calls.
 
+### help-subtitles.yml
+Ukrainian and English subtitles for the portal's video tutorials. The videos
+are hosted by the `sy-tools/sy-help` repository's GitHub Pages site (a release
+download is served as `application/octet-stream`, which Safari will not play)
+and listed by opaque refs in `site/js/help_videos.js`. A push that changes that
+list subtitles every video still short of a language; a dispatch can redo all
+or some.
+
+Per video: whisper (Ukrainian, word timestamps) → `tools.help_subtitles cues`
+cuts the words into cues → an LLM writes one Ukrainian text per cue, correcting
+the recognition, and one English translation per cue
+(`templates/help_subtitles_prompt.md`) → `tools.help_subtitles vtt` puts both
+back on the cue timings. The LLM sees no timestamp. Interface names must match
+the portal's own strings in each language, so the agent is handed them
+(`ui-strings`, read out of the I18N table in `index.html`). The `.vtt` files and
+an `index.json` of which languages each ref has land in `site/help/subs/` by a
+bot PR; the help sheet adds a `<track>` for each.
+
 ### burn-subtitles.yml
 `workflow_dispatch` from the preview SPA: downloads the video, burns
 `final/uk.srt` into the picture — the whole video or a clip of it — with

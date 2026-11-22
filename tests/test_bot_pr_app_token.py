@@ -46,6 +46,7 @@ BOT_PR_JOBS = [
     ("sync-review-status.yml", "sync"),
     ("talk-operator.yml", "qa"),
     ("talk-operator.yml", "deliver"),
+    ("help-subtitles.yml", "commit"),
 ]
 
 

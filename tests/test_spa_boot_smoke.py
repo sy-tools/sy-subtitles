@@ -236,3 +236,58 @@ def test_the_help_sheet_closes_and_hands_focus_back(index_page):
         ), "a video kept playing behind the closed sheet"
         assert page.evaluate("getComputedStyle(document.documentElement).overflow") != "hidden"
     assert page.locator("#help-sheet .help-video").count() == HELP_VIDEO_COUNT, "reopening built the list twice"
+
+
+def _serve_subtitles(page, manifest):
+    page.route(
+        "**/help/subs/index.json",
+        lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps(manifest)),
+    )
+    page.route(
+        "**/help/subs/*.vtt",
+        lambda r: r.fulfill(
+            status=200, content_type="text/vtt", body="WEBVTT\n\n1\n00:00:00.000 --> 00:00:02.000\nx\n"
+        ),
+    )
+
+
+def _first_ref(page):
+    return page.evaluate("HelpVideos.HELP_SECTIONS[0].videos[0].ref")
+
+
+def _track_modes(page):
+    return page.evaluate("[...document.querySelector('#help-sheet video').textTracks].map(t => [t.language, t.mode])")
+
+
+@pytest.mark.parametrize("lang, english_mode", [("en", "showing"), ("uk", "disabled")])
+def test_help_videos_carry_subtitles_shown_only_for_an_english_interface(smoke_server, smoke_page, lang, english_mode):
+    page = smoke_page
+    page.route("**/sy-tools.github.io/sy-help/**", lambda r: r.fulfill(status=404, body="not found"))
+    page.add_init_script(f"localStorage.setItem('sy_lang', '{lang}')")
+    page.goto(f"{smoke_server}/index.html")
+    page.wait_for_function("document.title.length > 0", timeout=10000)
+    _serve_subtitles(page, {_first_ref(page): ["en", "uk"]})
+
+    _open_help(page)
+
+    labels = page.eval_on_selector_all("#help-sheet video >> nth=0 >> track", "ts => ts.map(t => t.label)")
+    assert labels == ["Українська", "English"]
+    page.wait_for_function("document.querySelector('#help-sheet video').textTracks.length === 2")
+    assert dict(_track_modes(page)) == {"uk": "disabled", "en": english_mode}
+    assert page.locator("#help-sheet video >> nth=1 >> track").count() == 0, "a video without subtitles got tracks"
+
+
+def test_switching_the_interface_language_follows_into_an_open_sheet(smoke_server, smoke_page):
+    page = smoke_page
+    page.route("**/sy-tools.github.io/sy-help/**", lambda r: r.fulfill(status=404, body="not found"))
+    page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
+    page.goto(f"{smoke_server}/index.html")
+    page.wait_for_function("document.title.length > 0", timeout=10000)
+    _serve_subtitles(page, {_first_ref(page): ["en", "uk"]})
+    _open_help(page)
+    page.keyboard.press("Escape")
+
+    page.evaluate("SPA.toggleLang()")
+    _open_help(page)
+    page.wait_for_function("document.querySelector('#help-sheet video').textTracks.length === 2")
+    assert dict(_track_modes(page)) == {"uk": "disabled", "en": "showing"}

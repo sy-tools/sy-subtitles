@@ -10355,12 +10355,31 @@ function closePrefsMenu() {
 // ============================================================
 // Video tutorials sheet
 // ============================================================
+// Which tutorials have subtitles, in which languages. Fetched once, on the
+// first open; a missing or broken list only means players without subtitles.
+var helpSubtitles = null;
+function loadHelpSubtitles() {
+  if (!helpSubtitles) {
+    helpSubtitles = fetch('help/subs/index.json')
+      .then(function(r) { return r.ok ? r.json() : {}; })
+      .catch(function() { return {}; });
+  }
+  return helpSubtitles;
+}
+
 SPA.openHelp = function() {
   closePrefsMenu();
   var sheet = document.getElementById('help-sheet');
   var body = document.getElementById('help-sheet-body');
   if (!sheet || !body) return;
-  if (!body.children.length) HelpSheet.render(body);
+  if (!body.dataset.lang) {
+    body.dataset.lang = currentLang;
+    loadHelpSubtitles().then(function(subtitles) { HelpSheet.render(body, subtitles, currentLang); });
+  } else if (body.dataset.lang !== currentLang) {
+    // Built under the other language: its subtitle choice was made for that one.
+    body.dataset.lang = currentLang;
+    HelpSheet.applySubtitleLanguage(body, currentLang);
+  }
   sheet.hidden = false;
   // The page behind must not scroll under a finger that reached the sheet's end.
   document.documentElement.classList.add('help-sheet-open');

@@ -1,0 +1,243 @@
+name: Help Subtitles
+
+# Ukrainian and English subtitles for the video tutorials the portal lists in
+# site/js/help_videos.js. Whisper cuts the speech into timed cues, an LLM writes
+# the text of each cue (templates/help_subtitles_prompt.md), and
+# tools.help_subtitles puts those texts back on the same timings as .vtt files,
+# which a bot PR lands in site/help/subs/.
+#
+# Listing a new video is enough: the push picks up every video short of a
+# language. Dispatch with select=all, or a list of refs, to redo some.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/js/help_videos.js'
+  workflow_dispatch:
+    inputs:
+      select:
+        description: 'missing (videos short of a language), all, or a comma-separated list of refs'
+        type: string
+        default: missing
+      model:
+        description: 'Claude model that writes the subtitles'
+        type: choice
+        options:
+          - claude-opus-5-5
+          - claude-fable-5-2
+          - claude-sonnet-5
+        default: claude-opus-5-5
+      oauth_token:
+        description: 'Claude account: default = CLAUDE_CODE_OAUTH_TOKEN; any other value X = CLAUDE_CODE_OAUTH_TOKEN_X (missing/empty named secret fails the run)'
+        type: choice
+        options:
+          - default
+          - EXTRA
+        default: default
+
+permissions:
+  contents: read
+
+concurrency:
+  group: help-subtitles
+  cancel-in-progress: false
+
+env:
+  # Push-triggered runs have no inputs context: fall back to the defaults.
+  MODEL: ${{ inputs.model || 'claude-opus-5-5' }}
+  # Same convention as subtitle-pipeline.yml: a named account whose secret is
+  # missing resolves to '' and the guard step fails, never the default account.
+  OAUTH_TOKEN: ${{ (inputs.oauth_token && inputs.oauth_token != 'default' && secrets[format('CLAUDE_CODE_OAUTH_TOKEN_{0}', inputs.oauth_token)]) || ((!inputs.oauth_token || inputs.oauth_token == 'default') && secrets.CLAUDE_CODE_OAUTH_TOKEN) || '' }}
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      refs: ${{ steps.pending.outputs.refs }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: List the videos to subtitle
+        id: pending
+        env:
+          SELECT: ${{ inputs.select || 'missing' }}
+        run: |
+          set -euo pipefail
+          node -e "const h = require('./site/js/help_videos.js');
+            console.log(JSON.stringify(h.HELP_SECTIONS.flatMap(s => s.videos.map(v => v.ref))))" > /tmp/refs.json
+          REFS=$(python -m tools.help_subtitles pending --refs /tmp/refs.json --dir site/help/subs --select "$SELECT")
+          echo "To subtitle: $REFS"
+          echo "refs=$REFS" >> "$GITHUB_OUTPUT"
+
+  subtitles:
+    needs: discover
+    if: needs.discover.outputs.refs != '[]'
+    environment: main
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ref: ${{ fromJson(needs.discover.outputs.refs) }}
+      fail-fast: false
+      max-parallel: 4
+    env:
+      REF: ${{ matrix.ref }}
+      WORK: help-work
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify Claude token selection
+        env:
+          SELECTED: ${{ inputs.oauth_token }}
+        run: |
+          if [ -z "$OAUTH_TOKEN" ]; then
+            echo "::error::oauth_token='${SELECTED}' did not resolve: secret CLAUDE_CODE_OAUTH_TOKEN_${SELECTED} is missing or empty — there is no fallback to default; add the secret or rerun with oauth_token=default"
+            exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pip
+          key: pip-whisper-${{ hashFiles('requirements.txt', 'requirements-whisper.txt') }}
+          restore-keys: pip-whisper-
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+          pip install -r requirements.txt -r requirements-whisper.txt
+
+      - name: Cache Whisper model
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface/hub
+          key: faster-whisper-medium
+
+      - name: Download the video
+        run: |
+          set -euo pipefail
+          URL=$(node -e "console.log(require('./site/js/help_videos.js').helpVideoUrl(process.argv[1]))" "$REF")
+          mkdir -p /tmp/help
+          curl -fsSL --retry 3 -o /tmp/help/video.mp4 "$URL"
+
+      - name: Cut the speech into cues
+        run: |
+          set -euo pipefail
+          mkdir -p "$WORK"
+          python -m tools.whisper_run --video /tmp/help/video.mp4 --output "$WORK/whisper.json" --model medium --language uk
+          python -m tools.help_subtitles cues --whisper "$WORK/whisper.json" --out "$WORK/cues.json"
+          python -m tools.help_subtitles ui-strings --index site/index.html --out "$WORK/ui.json"
+          node -e "const h = require('./site/js/help_videos.js');
+            const v = h.HELP_SECTIONS.flatMap(s => s.videos).find(v => v.ref === process.argv[1]);
+            console.log(JSON.stringify({title: v.title, ref: v.ref}))" "$REF" > "$WORK/meta.json"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2
+
+      - name: Cache Claude Code
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.claude-code
+            ~/.local/share/claude-code
+          key: claude-code-${{ runner.os }}
+
+      - name: Install Claude Code
+        run: bun install -g @anthropic-ai/claude-code@latest
+
+      - name: Resolve executable paths
+        id: tools
+        run: |
+          echo "bun=$(which bun)" >> "$GITHUB_OUTPUT"
+          echo "claude=$(which claude)" >> "$GITHUB_OUTPUT"
+
+      - name: Write the subtitle texts
+        uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8  # v1.0.275
+        with:
+          claude_code_oauth_token: ${{ env.OAUTH_TOKEN }}
+          path_to_bun_executable: ${{ steps.tools.outputs.bun }}
+          path_to_claude_code_executable: ${{ steps.tools.outputs.claude }}
+          claude_args: "--max-turns 40 --dangerously-skip-permissions --effort high --model ${{ env.MODEL }}"
+          show_full_output: true
+          prompt: |
+            Read templates/help_subtitles_prompt.md and follow it.
+            The work directory is help-work/.
+
+      - name: Put the texts on the cue timings
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          for lang in uk en; do
+            python -m tools.help_subtitles vtt --cues "$WORK/cues.json" --texts "$WORK/$lang.json" --out "out/$REF.$lang.vtt"
+          done
+
+      - name: Upload the subtitles
+        uses: actions/upload-artifact@v7
+        with:
+          # '__' delimits, as in the other workflows' artifact names.
+          name: help-subs__${{ matrix.ref }}
+          path: out/*.vtt
+          if-no-files-found: error
+          retention-days: 7
+
+  commit:
+    needs: [discover, subtitles]
+    # Land what succeeded even when another video failed.
+    if: always() && !cancelled() && needs.discover.outputs.refs != '[]'
+    runs-on: ubuntu-latest
+    # The App key is a secret of the `main` environment.
+    environment: main
+    env:
+      BOT_APP_READY: ${{ vars.BOT_APP_ID != '' && secrets.BOT_APP_PRIVATE_KEY != '' }}
+    steps:
+      # Why an App token, and why before the checkout: tests/test_bot_pr_app_token.py
+      - name: Mint bot App token
+        id: bot-token
+        if: env.BOT_APP_READY == 'true'
+        continue-on-error: true
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          app-id: ${{ vars.BOT_APP_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Warn that the bot PR will wait for approval
+        if: steps.bot-token.outputs.token == ''
+        run: echo "::warning::No bot App token (the App is not configured, or minting failed above), so the bot PR is opened with GITHUB_TOKEN and its CI will wait for a person to approve it"
+      - uses: actions/checkout@v7
+        with:
+          token: ${{ steps.bot-token.outputs.token || github.token }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Collect the subtitles
+        uses: actions/download-artifact@v8
+        with:
+          pattern: help-subs__*
+          merge-multiple: true
+          path: site/help/subs
+
+      - name: Write the manifest
+        run: python -m tools.help_subtitles manifest --dir site/help/subs
+
+      - name: Commit via PR
+        env:
+          GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
+        run: |
+          .github/scripts/bot-pr.sh \
+            bot/help-subtitles \
+            "Add video tutorial subtitles" \
+            "site/help/subs/*.vtt" "site/help/subs/index.json"

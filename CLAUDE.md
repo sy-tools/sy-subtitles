@@ -69,6 +69,7 @@ kept in lockstep with `.github/workflows/` by `tests/test_claude_md_lockstep.py`
 - `pipeline-matrix-dryrun.yml` — replay the pipeline against snapshots
 - `golden-talks.yml` — full-corpus pytest, on demand
 - `talk-operator.yml` — operator issue lifecycle: QA, Amruta package, delivery record
+- `help-subtitles.yml` — Ukrainian + English subtitles for the portal's video tutorials
 <!-- workflow-index:end -->
 
 `ci.yml`'s **`gate`** job is the ONE required check on `main`. It is always
@@ -308,6 +309,10 @@ that live nowhere else.
   only live progress channel the SPA has into a running job.
 - `burn_clip` — the one reading of a burn's `clip` input: the input guard, the
   render and the span the gates measure all parse it here.
+- `help_subtitles` — subtitles for the portal's video tutorials (hosted by
+  `sy-tools/sy-help`): cuts whisper into cues, and puts the LLM's text for each
+  cue back on that cue's timing as `.vtt`. As in `build_map`, the LLM never
+  writes a timestamp.
 - `retime_snapshot` — carry a dry-run snapshot's timings onto a new block cut.
   Run it after changing `text_segmentation` or `subtitle_omit`, which move block
   boundaries; see `TESTING.md`.
