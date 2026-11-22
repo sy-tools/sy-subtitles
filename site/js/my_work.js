@@ -23,6 +23,10 @@ function classifyWorkRow(row) {
   // review-status reviewer field. Counting them by creator pulled talks
   // reviewed by OTHERS into "work I started" (live bug: issue #2).
   if (row && /^Review: /.test(row.title || '')) return null;
+  // "Operator: <id>" issues are the operator view's own state, one per talk
+  // and created with the operator's token — by creator they would make the
+  // whole corpus the operator's "work".
+  if (row && /^Operator: /.test(row.title || '')) return null;
   var talkId = parseTalkIdFromTitle(row && row.title);
   if (!talkId) return null;
   var isPr = !!(row.pull_request);
