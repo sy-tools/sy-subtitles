@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-22T16:55:11.642211+00:00",
+  "updated_at": "2026-11-22T16:56:00.759004+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1062,11 +1062,11 @@
       "operator_issue": 1320
     },
     "1982-07-12_Shri-Bhoomi-Devi-Puja": {
-      "status": "in-progress",
+      "status": "approved",
       "reviewer": "SlavaSubotskiy",
       "issue_number": 1497,
-      "updated_at": "2026-11-22T15:36:24Z",
-      "operator_stage": "translator",
+      "updated_at": "2026-11-22T16:55:11Z",
+      "operator_stage": "qa",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1498
     }
