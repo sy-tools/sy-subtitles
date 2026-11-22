@@ -163,3 +163,74 @@ def test_the_styleguide_builds_its_live_catalog_without_errors(smoke_server, smo
 
     assert not page_errors, "uncaught JS error(s) in the styleguide:\n  " + "\n  ".join(page_errors)
     assert page.locator(".burn-seg").count() > 0, "the burn-progress examples were never built"
+
+
+HELP_VIDEO_COUNT = 13
+
+
+@pytest.fixture
+def help_page(smoke_page):
+    smoke_page.route(
+        "**/sy-tools.github.io/sy-help/**",
+        lambda r: r.fulfill(status=404, body="not found"),
+    )
+    return smoke_page
+
+
+def test_the_help_page_lists_every_video_styled_without_errors(smoke_server, help_page):
+    page = help_page
+    page_errors = []
+    page.on("pageerror", lambda e: page_errors.append(str(e)))
+
+    page.goto(f"{smoke_server}/help.html")
+    page.wait_for_selector(".help-video")
+
+    assert page.locator(".help-section").count() == 2
+    assert page.locator(".help-video").count() == HELP_VIDEO_COUNT
+    srcs = page.eval_on_selector_all(".help-video video", "vs => vs.map(v => v.getAttribute('src'))")
+    assert all(s.startswith("https://sy-tools.github.io/sy-help/v/") and s.endswith(".mp4") for s in srcs), srcs
+    assert len(set(srcs)) == HELP_VIDEO_COUNT
+    assert page.locator(".help-section[data-section='updates'] .help-video__notes li").count() > 0
+
+    bg = page.evaluate("getComputedStyle(document.body).backgroundColor")
+    assert bg not in _UNSTYLED_BG, f"<body> is unstyled — help page CSS did not apply (bg={bg!r})"
+    assert not page_errors, "uncaught JS error(s) on the help page:\n  " + "\n  ".join(page_errors)
+
+
+def test_the_help_page_follows_the_portal_theme(smoke_server, help_page):
+    page = help_page
+    page.goto(f"{smoke_server}/help.html")
+    page.evaluate("localStorage.setItem('sy_theme', 'dark')")
+    page.reload()
+    page.wait_for_selector(".help-video")
+    assert page.evaluate("document.documentElement.getAttribute('data-theme')") == "dark"
+
+
+def test_the_help_page_stays_shut_until_the_portal_is_unlocked(smoke_server, help_page):
+    page = help_page
+    page.add_init_script("window.__SY_GATE_HASH = 'abc123';")
+    page.goto(f"{smoke_server}/help.html")
+
+    page.wait_for_selector(".help-locked")
+    assert page.locator(".help-video").count() == 0
+    assert page.locator(".help-locked a").get_attribute("href") == "./"
+
+    page.evaluate("localStorage.setItem('sy_gate', 'abc123')")
+    page.reload()
+    page.wait_for_selector(".help-video")
+    assert page.locator(".help-locked").count() == 0
+
+
+def test_the_settings_menu_ends_with_the_help_link_in_a_new_window(smoke_server, smoke_page):
+    page = smoke_page
+    page.goto(f"{smoke_server}/index.html")
+    page.wait_for_function("document.title.includes('Index')", timeout=10000)
+    page.click("#prefs-btn")
+
+    last = page.locator("#prefs-menu > :last-child")
+    assert last.evaluate("el => el.tagName") == "A"
+    assert last.get_attribute("href") == "help.html"
+    assert last.get_attribute("target") == "_blank"
+    assert "noopener" in last.get_attribute("rel")
+    assert last.is_visible()
+    assert last.locator("svg").count() == 1, "the new-window icon is missing"

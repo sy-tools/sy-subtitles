@@ -57,10 +57,15 @@ jobs:
             exit 1
           fi
           HASH=$(python3 -m tools.passphrase_gate hash --salt "$SALT" --iterations "$ITERS" "$GATE_PASSPHRASE")
-          sed -i "s/var APP_GATE_HASH = '';/var APP_GATE_HASH = '${HASH}';/" site/index.html
+          # help.html checks the same unlock as the portal, so it is gated too.
+          sed -i "s/var APP_GATE_HASH = '';/var APP_GATE_HASH = '${HASH}';/" site/index.html site/help.html
           # Assert the injection landed — never silently ship an empty (disabled) gate.
           grep -q "var APP_GATE_HASH = '${HASH}';" site/index.html || {
-            echo "::error::gate hash injection failed (placeholder not found?)"
+            echo "::error::gate hash injection failed in index.html (placeholder not found?)"
+            exit 1
+          }
+          grep -q "var APP_GATE_HASH = '${HASH}';" site/help.html || {
+            echo "::error::gate hash injection failed in help.html (placeholder not found?)"
             exit 1
           }
           echo "Gate hash injected (length=${#HASH})"

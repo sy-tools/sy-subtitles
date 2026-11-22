@@ -65,3 +65,17 @@ def test_index_html_has_gate_hash_placeholder():
     idx = (Path(__file__).parent.parent / "site" / "index.html").read_text()
     assert "var APP_GATE_HASH = '';" in idx
     assert "js/passphrase_gate.js" in idx
+
+
+def test_help_html_has_gate_hash_placeholder():
+    """help.html checks the same unlock as the portal, so the deploy must stamp
+    the hash into it too; an unstamped page would show its videos to anyone."""
+    page = (Path(__file__).parent.parent / "site" / "help.html").read_text()
+    assert "var APP_GATE_HASH = '';" in page
+    assert "js/passphrase_gate.js" in page
+
+
+def test_deploy_stamps_the_gate_hash_into_every_gated_page():
+    wf = (Path(__file__).parent.parent / ".github" / "workflows" / "deploy-pages.yml").read_text()
+    for page in ("site/index.html", "site/help.html"):
+        assert f"grep -q \"var APP_GATE_HASH = '${{HASH}}';\" {page}" in wf, page

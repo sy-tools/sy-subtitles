@@ -1,7 +1,7 @@
 // Service Worker for SPA caching
 // Browser detects changes by comparing sw.js byte-for-byte.
 // CACHE_VERSION: bump when cache format changes or to force purge.
-var CACHE_VERSION = 21;
+var CACHE_VERSION = 22;
 var CACHE_NAME = 'sy-subtitles-c' + CACHE_VERSION;
 
 // Routing predicates (isImmutable / isApiOrRaw / isNavigation / pickStrategy) are
@@ -182,6 +182,8 @@ function cacheFirst(request) {
 }
 
 self.addEventListener('fetch', function(e) {
+  // Not calling respondWith hands the request back to the browser untouched.
+  if (bypassesWorker(e.request.destination, e.request.headers.get('Range'))) return;
   var strategy = pickStrategy(e.request.url);
   if (strategy === 'cache-first') {
     // CDN libs, icon, and sha-pinned ?v= content (SRT/transcripts): cache-first

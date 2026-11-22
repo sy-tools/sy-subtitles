@@ -129,8 +129,21 @@ function pickStrategy(url) {
   return 'network-first';
 }
 
+// Media never goes through the worker. A <video> fetches its file as a run of
+// range requests over minutes, and a worker standing in the middle of them
+// broke it: after a few minutes paused, Chrome's next seek died with
+// "data source error" while the same video played on with the worker blocked.
+// The Cache API cannot store a 206 either, so routing media through the worker
+// buys nothing to make up for it.
+var MEDIA_DESTINATIONS = ['video', 'audio'];
+
+function bypassesWorker(destination, rangeHeader) {
+  return MEDIA_DESTINATIONS.indexOf(destination) !== -1 || !!rangeHeader;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    bypassesWorker: bypassesWorker,
     IMMUTABLE_PATTERNS: IMMUTABLE_PATTERNS,
     isImmutable: isImmutable,
     isApiOrRaw: isApiOrRaw,

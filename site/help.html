@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="icon.png">
+<title>Відео-інструкції — SY Subtitles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/components.css">
+<script src="js/preferences.js"></script>
+<script src="js/passphrase_gate.js"></script>
+<script src="js/help_videos.js"></script>
+<script src="js/help_page.js"></script>
+<script>
+var APP_GATE_HASH = ''; // passphrase-gate PBKDF2 hash, injected at deploy (empty => gate disabled)
+// Before the body paints, so a dark-theme reader never sees a flash of paper.
+HelpPage.applyTheme(document.documentElement, localStorage);
+</script>
+</head>
+<body>
+<main class="help" id="help">
+  <p class="help__eyebrow">SY Subtitles</p>
+  <h1 class="help__title">Відео-інструкції</h1>
+</main>
+<script>
+HelpPage.render(document.getElementById('help'), localStorage);
+</script>
+</body>
+</html>

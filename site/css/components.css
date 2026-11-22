@@ -1919,6 +1919,46 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 .prefs-switch input { accent-color: var(--link); width: 15px; height: 15px;
   cursor: pointer; margin: 0; }
 
+/* A row that leaves the app rather than changing a setting. It is a link, not
+   a button, so the browser's own "open in new tab" and the address on hover
+   work; the icon says before the click that the portal stays where it is. */
+.prefs-link { text-decoration: none; cursor: pointer; }
+.prefs-link:hover { background: var(--bg4); text-decoration: none; }
+.prefs-link:hover .prefs-row__label { color: var(--fg2); }
+.prefs-link svg { width: 13px; height: 13px; color: var(--fg5); flex: none; }
+
+/* help.html: the tutorial videos. */
+.help { width: 100%; max-width: 880px; margin: 0 auto; box-sizing: border-box;
+  padding: var(--space-7) var(--space-5) var(--space-8); font-family: var(--f-sans); }
+.help__eyebrow { margin: 0; font-family: var(--f-mono); font-size: var(--text-2xs);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg5); }
+.help__title { margin: var(--space-1) 0 var(--space-7); font-family: var(--f-serif);
+  font-weight: 400; font-size: var(--text-display); color: var(--fg2); }
+.help-section + .help-section { margin-top: var(--space-8); }
+.help-section__title { margin: 0 0 var(--space-5); padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border); font-family: var(--f-serif); font-weight: 400;
+  font-size: var(--text-2xl); color: var(--fg2); }
+.help-section__list { display: grid; gap: var(--space-6); }
+.help-video { padding: var(--space-4); background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); }
+.help-video__head { display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-4); margin-bottom: var(--space-3); }
+/* Type is declared, not inherited, so the styleguide's own h3 rule cannot
+   dress the catalog copy differently from the page. */
+.help-video__title { margin: 0; font-family: var(--f-sans); font-size: var(--text-lg);
+  font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--fg2); }
+.help-video__duration { font-family: var(--f-mono); font-size: var(--text-xs); color: var(--fg5);
+  white-space: nowrap; }
+/* The box is reserved before metadata arrives, so the list does not jump as
+   thirteen players learn their size one by one. */
+.help-video__player { display: block; width: 100%; aspect-ratio: 16 / 9;
+  background: var(--player-letterbox); border-radius: var(--radius-md); }
+.help-video__notes { margin: var(--space-3) 0 0; padding-left: var(--space-6);
+  font-size: var(--text-sm); color: var(--fg3); }
+.help-locked { padding: var(--space-6); background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); color: var(--fg3); }
+.help-locked p { margin: 0 0 var(--space-4); }
+
 /* Footer build stamp. The app-shell version is a single token with no break
    opportunity that grows with every app file; as a flex item its min-width
    would be the whole token, widening the document past the window. */
