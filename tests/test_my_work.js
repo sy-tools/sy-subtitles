@@ -31,6 +31,12 @@ describe('classifyWorkRow', () => {
     // creator's "work I started" group (live bug: issue #2 Guru-Puja).
     assert.strictEqual(classifyWorkRow({ number: 2, title: `Review: ${TALK}`, state: 'open', html_url: 'u2' }), null);
   });
+  it('excludes "Operator:" tracking issues — every talk has one', () => {
+    // Created with the operator's own token, one per talk: counted by
+    // creator, they would make the whole corpus "mine".
+    assert.strictEqual(classifyWorkRow({ number: 8, title: `Operator: ${TALK}`, state: 'open', html_url: 'u8' }), null);
+    assert.strictEqual(classifyWorkRow({ number: 8, title: `Operator: ${TALK}`, state: 'closed', html_url: 'u8' }), null);
+  });
   it('classifies an open issue', () => {
     assert.deepStrictEqual(classifyWorkRow({ ...base, state: 'open' }),
       { talkId: TALK, kind: 'issue', state: 'open', number: 7, url: 'https://x/7' });
