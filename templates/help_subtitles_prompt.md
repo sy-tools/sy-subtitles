@@ -50,6 +50,9 @@ to use the portal.
 - Interface names: **exactly as `ui.json` has them in English**, in "double
   quotes". The English reader sees the English interface, so the subtitle must
   name what is on their screen, not translate the Ukrainian label anew.
+  The same holds for labels that are not the portal's (GitHub's buttons, the
+  operating system's menus): use their English names ("Select All"), so
+  `en.json` never carries Ukrainian text.
 - Sahaja Yoga terms: the English the glossary maps them from.
 - Same cue boundaries as the Ukrainian: a cue's English says what that cue's
   Ukrainian says. Same length limits.
