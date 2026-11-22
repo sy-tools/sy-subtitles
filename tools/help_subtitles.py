@@ -48,6 +48,14 @@ def build_cues(whisper):
     cues = []
     cue = None
     for word in _words(whisper):
+        if not any(ch.isalnum() for ch in word["text"]):
+            # Punctuation whisper heard as a word ("–", "..."): it belongs to the
+            # sentence it was said in, and alone after a pause it is not speech
+            # at all, so it never opens a cue of its own.
+            if cue is not None and word["start"] - cue["end"] < PAUSE_SECONDS:
+                cue["text"] += " " + word["text"]
+                cue["end"] = word["end"]
+            continue
         if cue is not None:
             text = cue["text"] + " " + word["text"]
             if (

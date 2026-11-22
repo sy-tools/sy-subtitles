@@ -197,3 +197,13 @@ def test_pending_takes_a_list_of_listed_refs_only(tmp_path):
     assert pending(REFS, tmp_path, " h1ccc, h1aaa ") == ["h1ccc", "h1aaa"]
     with pytest.raises(ValueError, match="not a listed video: h1zzz"):
         pending(REFS, tmp_path, "h1aaa,h1zzz")
+
+
+def test_a_word_with_no_letter_or_digit_never_becomes_a_cue():
+    cues = build_cues(_whisper((0.0, 0.5, "Раз."), (3.0, 3.2, "–"), (6.0, 6.5, "Два.")))
+    assert [c["text"] for c in cues] == ["Раз.", "Два."]
+
+
+def test_a_dash_inside_a_sentence_stays_in_its_cue():
+    words = [(0.0, 0.5, "не"), (0.6, 1.2, "заходили"), (1.3, 2.0, "–"), (2.1, 2.4, "як"), (2.5, 2.9, "бути?")]
+    assert [c["text"] for c in build_cues(_whisper(*words))] == ["не заходили – як бути?"]
