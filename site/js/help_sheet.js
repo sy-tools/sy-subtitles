@@ -1,21 +1,11 @@
-// help.html: the tutorial videos listed in help_videos.js, behind the same
-// passphrase gate as the portal and in the theme the portal was left in.
+// The tutorial videos listed in help_videos.js, drawn into the sheet the
+// settings menu opens over the app.
 //
-// The page has no prompt of its own. It is opened from the portal's settings
-// menu, so a reader who got here the normal way has already unlocked the
-// portal in this browser; anyone else is sent to the portal to do it there.
+// A sheet, not a page of its own: a portal installed on an iPhone's home screen
+// opens a link in Safari, which shares none of its storage, so a separate page
+// would find the passphrase gate locked and the chosen theme gone.
 
 (function () {
-  function gateHash() {
-    if (typeof window.__SY_GATE_HASH === 'string') return window.__SY_GATE_HASH;
-    return typeof APP_GATE_HASH === 'string' ? APP_GATE_HASH : '';
-  }
-
-  function applyTheme(root, storage) {
-    var theme = readPref(storage, 'theme');
-    if (theme !== 'auto') root.setAttribute('data-theme', theme);
-  }
-
   function el(tag, className, text) {
     var node = document.createElement(tag);
     if (className) node.className = className;
@@ -45,21 +35,7 @@
     return card;
   }
 
-  function renderLocked(root) {
-    var box = el('div', 'help-locked');
-    box.appendChild(el('p', null, 'Інструкції відкриваються після входу на портал.'));
-    var link = el('a', 'btn btn--primary btn--sm', 'Відкрити портал');
-    link.href = './';
-    box.appendChild(link);
-    root.appendChild(box);
-  }
-
-  function render(root, storage) {
-    var hash = gateHash();
-    if (PassphraseGate.isGateEnabled(hash) && !PassphraseGate.isUnlocked(hash, storage)) {
-      renderLocked(root);
-      return;
-    }
+  function render(root) {
     HelpVideos.HELP_SECTIONS.forEach(function (section) {
       var block = el('section', 'help-section');
       block.setAttribute('data-section', section.id);
@@ -71,5 +47,7 @@
     });
   }
 
-  window.HelpPage = { applyTheme: applyTheme, render: render };
+  var api = { render: render };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  else window.HelpSheet = api;
 })();

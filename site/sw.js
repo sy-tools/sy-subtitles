@@ -59,6 +59,8 @@ var SHELL_ASSETS = [
   'js/talk_actions.js',
   'js/review_issue.js',
   'js/passphrase_gate.js',
+  'js/help_videos.js',
+  'js/help_sheet.js',
   'js/github_auth.js',
   'js/github_api.js',
   'js/review_status_live.js',

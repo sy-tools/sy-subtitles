@@ -43,6 +43,8 @@
 <script src="js/talk_actions.js"></script>
 <script src="js/review_issue.js"></script>
 <script src="js/passphrase_gate.js"></script>
+<script src="js/help_videos.js"></script>
+<script src="js/help_sheet.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
 <script src="js/review_status_live.js"></script>
@@ -476,11 +478,10 @@
           <span class="prefs-row__label" data-i18n="prefs.operator">Operator mode</span>
           <span class="prefs-switch"><input type="checkbox" id="prefs-operator" onchange="SPA.toggleOperator()"></span>
         </label>
-        <a class="prefs-row prefs-link" href="help.html" target="_blank" rel="noopener">
+        <button type="button" id="prefs-help" class="prefs-row prefs-action" onclick="SPA.openHelp()" aria-haspopup="dialog" aria-controls="help-sheet">
           <span class="prefs-row__label" data-i18n="prefs.help">Video tutorials</span>
-          <span class="sr-only" data-i18n="prefs.new_window">(opens in a new window)</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-        </a>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/></svg>
+        </button>
       </div>
     </div>
   </div>
@@ -781,6 +782,18 @@
 <!-- Says which letter of a mixed-script word is the Latin one. Outside the
      editable text on purpose: the hints never touch the document being edited. -->
 <div class="typo-tip" id="typo-tip" role="status" hidden></div>
+
+<!-- Video tutorials, over whatever view is open. Built on first open: thirteen
+     players asking for their metadata at boot would cost every visit. -->
+<div id="help-sheet" class="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-sheet-title" hidden onclick="if (event.target === this) SPA.closeHelp()">
+  <div class="help-sheet__panel">
+    <div class="help-sheet__head">
+      <h2 id="help-sheet-title" class="help-sheet__title" data-i18n="help.title">Video tutorials</h2>
+      <button type="button" id="help-sheet-close" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.closeHelp()" data-i18n-aria-label="help.close" data-i18n-title="help.close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    </div>
+    <div id="help-sheet-body" class="help-sheet__body"></div>
+  </div>
+</div>
 
 <footer id="app-footer" style="background:var(--bg2);border-top:1px solid var(--border);padding:4px 20px;font-size:11px;color:var(--fg6);display:flex;align-items:center;justify-content:space-between;">
   <span id="footer-version"></span>
@@ -1163,7 +1176,8 @@ var I18N = {
     'op.failed': 'Не вдалося: {err}',
     'prefs.typo': '\u041f\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u0442\u0438 \u043e\u043f\u0438\u0441\u043a\u0438',
     'prefs.help': '\u0412\u0456\u0434\u0435\u043e-\u0456\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0456\u0457',
-    'prefs.new_window': '(\u0432\u0456\u0434\u043a\u0440\u0438\u0454\u0442\u044c\u0441\u044f \u0432 \u043d\u043e\u0432\u043e\u043c\u0443 \u0432\u0456\u043a\u043d\u0456)',
+    'help.title': '\u0412\u0456\u0434\u0435\u043e-\u0456\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0456\u0457',
+    'help.close': '\u0417\u0430\u043a\u0440\u0438\u0442\u0438',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
     // Composed by mixedScriptMessage in js/typo_hints.js: title, then one
@@ -1456,7 +1470,8 @@ var I18N = {
     'op.failed': 'Failed: {err}',
     'prefs.typo': 'Highlight typos',
     'prefs.help': 'Video tutorials',
-    'prefs.new_window': '(opens in a new window)',
+    'help.title': 'Video tutorials',
+    'help.close': 'Close',
     'typo.mixed.title': 'Two keyboard layouts in one word',
     'typo.mixed.instead': 'Latin «{lat}» where «{cyr}» belongs',
     'typo.mixed.stray': 'Latin «{lat}»',
@@ -10336,6 +10351,38 @@ function closePrefsMenu() {
   if (menu) menu.classList.remove('open');
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
+
+// ============================================================
+// Video tutorials sheet
+// ============================================================
+SPA.openHelp = function() {
+  closePrefsMenu();
+  var sheet = document.getElementById('help-sheet');
+  var body = document.getElementById('help-sheet-body');
+  if (!sheet || !body) return;
+  if (!body.children.length) HelpSheet.render(body);
+  sheet.hidden = false;
+  // The page behind must not scroll under a finger that reached the sheet's end.
+  document.documentElement.classList.add('help-sheet-open');
+  document.getElementById('help-sheet-close').focus();
+};
+
+SPA.closeHelp = function() {
+  var sheet = document.getElementById('help-sheet');
+  if (!sheet || sheet.hidden) return;
+  // A hidden <video> keeps playing; nothing on screen would say so.
+  sheet.querySelectorAll('video').forEach(function(v) { v.pause(); });
+  sheet.hidden = true;
+  document.documentElement.classList.remove('help-sheet-open');
+  var btn = document.getElementById('prefs-btn');
+  if (btn) btn.focus();
+};
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var sheet = document.getElementById('help-sheet');
+  if (sheet && !sheet.hidden) SPA.closeHelp();
+});
 
 // A menu that only closes by clicking its own trigger is a trap on touch, where
 // there is no Escape key \u2014 so a tap anywhere outside dismisses it too.

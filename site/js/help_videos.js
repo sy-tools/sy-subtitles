@@ -1,4 +1,4 @@
-// The tutorial videos help.html lists, and how a listed video finds its file.
+// The tutorial videos the help sheet lists, and how a listed video finds its file.
 //
 // The files live in the sy-tools/sy-help repository and are served by its
 // GitHub Pages site, which answers range requests with video/mp4. A release
