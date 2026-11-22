@@ -1,0 +1,457 @@
+WEBVTT
+
+1
+00:00:00.720 --> 00:00:07.380
+And let's look at our second button – "Review translation"
+
+2
+00:00:07.570 --> 00:00:11.850
+using the same talk as an example. We click it.
+
+3
+00:00:15.490 --> 00:00:18.430
+Here we can work in
+
+4
+00:00:19.490 --> 00:00:26.040
+several modes: either editing the text, just as it is here – we click and edit,
+
+5
+00:00:27.200 --> 00:00:31.760
+or we can switch to "subtitles".
+
+6
+00:00:32.060 --> 00:00:34.480
+The mode for working with subtitles.
+
+7
+00:00:35.420 --> 00:00:39.760
+You see, here we have two video recordings, and separately for them –
+
+8
+00:00:39.760 --> 00:00:42.440
+each one has its own subtitles.
+
+9
+00:00:43.740 --> 00:00:50.590
+So we can switch to working in this mode and edit here.
+
+10
+00:00:53.680 --> 00:01:00.390
+If we can or need to watch the video at the same time, there is a button
+
+11
+00:01:00.390 --> 00:01:01.430
+"Show video".
+
+12
+00:01:03.000 --> 00:01:05.380
+It can be dragged.
+
+13
+00:01:07.560 --> 00:01:13.440
+And you also see the small "Revert this block edit" buttons.
+
+14
+00:01:13.540 --> 00:01:18.420
+That is, if you need to undo the edit in this block, we click – and it
+
+15
+00:01:18.420 --> 00:01:25.270
+is undone. If we made edits in several blocks and then want to reset it all,
+
+16
+00:01:25.270 --> 00:01:28.030
+we can use the red "Revert all" – and
+
+17
+00:01:29.150 --> 00:01:31.590
+they will disappear.
+
+18
+00:01:34.140 --> 00:01:40.370
+When we work in this mode, then automatically,
+
+19
+00:01:40.370 --> 00:01:46.690
+in step with the video, if we chose to work with the video, the edits
+
+20
+00:01:46.690 --> 00:01:52.370
+will also move along. Our subtitles will be highlighted as well.
+
+21
+00:02:05.830 --> 00:02:12.490
+You can see the subtitles running, but unlike the preview mode, here we cannot
+
+22
+00:02:12.490 --> 00:02:19.250
+go fullscreen with these subtitles. Here our attention is more on
+
+23
+00:02:19.690 --> 00:02:24.830
+the original and the translation, and on the context around them.
+
+24
+00:02:25.230 --> 00:02:31.730
+Here we focus more on the text than on listening.
+
+25
+00:02:36.050 --> 00:02:38.230
+We try whatever suits each of us better.
+
+26
+00:02:39.030 --> 00:02:45.950
+When our editing is ready – for example, we removed a dot here – then
+
+27
+00:02:47.450 --> 00:02:50.210
+we can submit these changes.
+
+28
+00:02:50.210 --> 00:02:55.980
+We have two buttons – an orange one and a green-and-orange one.
+
+29
+00:02:56.360 --> 00:03:02.370
+This one is in effect for passing it on as a comment, for example,
+
+30
+00:03:02.430 --> 00:03:09.150
+if you are not sure about the changes and just want
+
+31
+00:03:09.150 --> 00:03:12.990
+to add your comments, for example...
+
+32
+00:03:12.990 --> 00:03:15.210
+A comment from the translator:
+
+33
+00:03:15.630 --> 00:03:19.930
+maybe it would be better to simplify something?
+
+34
+00:03:20.470 --> 00:03:26.630
+If you just want to pass on a comment in this mode, it's best to click "Create
+
+35
+00:03:26.630 --> 00:03:27.630
+Issue".
+
+36
+00:03:31.170 --> 00:03:34.020
+Here you can first preview what it will look like.
+
+37
+00:03:35.280 --> 00:03:39.220
+Here we will have the suggested edits, that is, what we are proposing.
+
+38
+00:03:40.420 --> 00:03:46.400
+Maybe it's better to simplify, and remove the dot here. We can create a proposal like this
+
+39
+00:03:48.650 --> 00:03:54.910
+and record it, so to speak, like this. And then you can discuss it with someone
+
+40
+00:03:54.910 --> 00:03:56.830
+else, or send it to me.
+
+41
+00:03:58.870 --> 00:04:04.300
+On the whole, the proposal is recorded, but it still needs more work.
+
+42
+00:04:06.430 --> 00:04:13.110
+But if we're working in final-edit mode, that is, we understand everything – there shouldn't
+
+43
+00:04:13.110 --> 00:04:18.930
+be a dot here, and there shouldn't be a dot here – it's a clear-cut edit, and we want to pass it
+
+44
+00:04:18.930 --> 00:04:22.170
+into the system, there's nothing to discuss here, as they say,
+
+45
+00:04:22.170 --> 00:04:28.800
+then it's more fitting to click not the orange
+
+46
+00:04:28.800 --> 00:04:31.120
+"Create Issue", but "Open in GitHub Editor".
+
+47
+00:04:32.150 --> 00:04:36.830
+What does it tell us? To click "Open GitHub" – this button – and in the editor
+
+48
+00:04:36.830 --> 00:04:40.430
+select all (Ctrl+A) and paste (Ctrl+V).
+
+49
+00:04:41.490 --> 00:04:43.610
+We click and try to do it.
+
+50
+00:04:46.650 --> 00:04:52.030
+Here we put the cursor inside this big block. We can use either
+
+51
+00:04:52.030 --> 00:04:58.200
+the key combination, or simply "Select all", and
+
+52
+00:04:59.670 --> 00:05:06.670
+"Select All" if your system interface is in Ukrainian – then paste.
+
+53
+00:05:08.790 --> 00:05:15.710
+Pasted. After that we click green buttons three times: the first one is here,
+
+54
+00:05:15.710 --> 00:05:20.350
+at the top right, "Commit changes"; the second, in this dialog, is "Propose
+
+55
+00:05:20.350 --> 00:05:21.350
+changes",
+
+56
+00:05:23.100 --> 00:05:26.990
+and the third is "Create pull request".
+
+57
+00:05:28.840 --> 00:05:34.900
+When you submit changes in this format, they are already
+
+58
+00:05:34.900 --> 00:05:37.440
+final proposals.
+
+59
+00:05:37.460 --> 00:05:44.380
+So to speak – that is, inside a specific file, here we see, in
+
+60
+00:05:44.380 --> 00:05:50.750
+the final subtitles for the 1987 Vishnumaya Puja,
+
+61
+00:05:50.750 --> 00:05:57.170
+we made two edits, and here a new line also
+
+62
+00:05:57.170 --> 00:05:59.710
+got removed – that's what needed fixing.
+
+63
+00:06:01.070 --> 00:06:06.170
+And when we refresh, after a while we'll see that our edits have also been
+
+64
+00:06:06.170 --> 00:06:12.880
+synced
+
+65
+00:06:12.880 --> 00:06:15.820
+into the other subtitles and into the transcript.
+
+66
+00:06:16.690 --> 00:06:23.630
+This way, nobody will need to go and sync by hand the changes that
+
+67
+00:06:23.630 --> 00:06:25.510
+were proposed in one source.
+
+68
+00:06:26.560 --> 00:06:33.130
+In the case of this talk, for example, we have three sources – subtitles for the talk, subtitles
+
+69
+00:06:33.130 --> 00:06:37.210
+for the full recording with the protocol, and the transcript.
+
+70
+00:06:38.290 --> 00:06:40.070
+So the sync has happened.
+
+71
+00:06:40.110 --> 00:06:41.910
+Indeed, two dots were removed –
+
+72
+00:06:46.810 --> 00:06:53.130
+both here and here. And, by the way, that extra change moving text to a new
+
+73
+00:06:53.130 --> 00:06:54.130
+line is gone.
+
+74
+00:06:56.580 --> 00:06:59.140
+So, at this stage...
+
+75
+00:06:59.270 --> 00:07:02.810
+But still, something didn't go quite as it should...
+
+76
+00:07:04.620 --> 00:07:11.300
+At this stage your work of submitting changes is done. You can take this
+
+77
+00:07:11.300 --> 00:07:17.840
+link or the number of this proposal, in this case 487,
+
+78
+00:07:17.840 --> 00:07:24.360
+and send it to me, so that I can take another look
+
+79
+00:07:24.680 --> 00:07:29.640
+at this edit with a second, technical eye: whether all the automations worked here.
+
+80
+00:07:29.660 --> 00:07:36.600
+In this case they didn't, and that's exactly what needs looking into. And then I just click this
+
+81
+00:07:36.600 --> 00:07:43.090
+button, and the changes will be in the main version. And here, you see,
+
+82
+00:07:43.770 --> 00:07:46.740
+is your separate version.
+
+83
+00:07:48.020 --> 00:07:54.890
+It will be named after you – "name-patch-4". In fact, it can be
+
+84
+00:07:54.890 --> 00:07:59.650
+customised: when we click the green buttons, you can customise it there if
+
+85
+00:07:59.650 --> 00:08:01.790
+needed, but by default it's in this format.
+
+86
+00:08:06.030 --> 00:08:07.030
+And
+
+87
+00:08:09.070 --> 00:08:15.670
+this same version can be used on the portal, right here. So let's
+
+88
+00:08:15.730 --> 00:08:18.730
+try to find a use for it, shall we?
+
+89
+00:08:19.410 --> 00:08:26.150
+In fact, if you have this proposal with such a version, and it has a great many edits,
+
+90
+00:08:27.210 --> 00:08:30.050
+and you tell someone, "Please,
+
+91
+00:08:31.230 --> 00:08:34.570
+look over this proposed version of mine,
+
+92
+00:08:35.940 --> 00:08:42.320
+because there are many edits, maybe something still needs fixing, and please don't
+
+93
+00:08:42.320 --> 00:08:47.520
+replace the main version with my edits yet."
+
+94
+00:08:47.920 --> 00:08:54.100
+Then you can take this version, the one named after you.
+
+95
+00:08:56.420 --> 00:09:02.850
+On this portal, let's revert all the changes, as if they never happened – the dots
+
+96
+00:09:02.850 --> 00:09:04.190
+are back in place.
+
+97
+00:09:05.220 --> 00:09:12.160
+Now we can refresh, to make sure that
+
+98
+00:09:12.480 --> 00:09:14.300
+our edit is here.
+
+99
+00:09:15.450 --> 00:09:20.020
+And we choose – let's find "SlavaSubotskiy-patch-4".
+
+100
+00:09:22.050 --> 00:09:27.820
+We click it and get the version without the dots here.
+
+101
+00:09:28.460 --> 00:09:35.320
+So in this way, by working like this, we can do
+
+102
+00:09:35.320 --> 00:09:42.280
+an extra review of the changed version, the proposed version, not only
+
+103
+00:09:42.280 --> 00:09:43.420
+on your computer.
+
+104
+00:09:43.500 --> 00:09:46.020
+That is, at first your edits were only on your computer.
+
+105
+00:09:46.500 --> 00:09:53.500
+But once you have submitted them in this format, when a special version is created, your
+
+106
+00:09:53.500 --> 00:09:57.780
+named one, you can pass it to someone to review.
+
+107
+00:09:57.780 --> 00:10:01.940
+Besides, you can take this very link.
+
+108
+00:10:02.980 --> 00:10:05.360
+If you have switched to your version,
+
+109
+00:10:06.390 --> 00:10:13.190
+it will contain your named version and this very talk you are
+
+110
+00:10:13.190 --> 00:10:19.570
+watching. Anyone who opens it via this link will land right on
+
+111
+00:10:19.570 --> 00:10:26.070
+your special named version and will be able to
+
+112
+00:10:26.070 --> 00:10:33.060
+finish proofreading it. Well, that's all about working
+
+113
+00:10:33.060 --> 00:10:39.750
+with the review page. That's "Review
+
+114
+00:10:39.750 --> 00:10:40.750
+translation".

@@ -1,0 +1,325 @@
+WEBVTT
+
+1
+00:00:00.660 --> 00:00:06.000
+So, we move on to the final component, or rather aspect.
+
+2
+00:00:06.000 --> 00:00:07.780
+It is security.
+
+3
+00:00:08.800 --> 00:00:12.100
+What would I like to share on this front?
+
+4
+00:00:12.440 --> 00:00:18.000
+First of all, the platform we work on itself – GitHub.
+
+5
+00:00:18.140 --> 00:00:24.800
+It is unique, one could say – it is
+
+6
+00:00:24.800 --> 00:00:31.580
+used by commercial organisations and by most of the world's
+
+7
+00:00:31.580 --> 00:00:33.520
+open-source products.
+
+8
+00:00:35.260 --> 00:00:41.640
+It is among the leaders in security among such platforms, so the platform itself is
+
+9
+00:00:41.640 --> 00:00:44.620
+secure by default.
+
+10
+00:00:44.680 --> 00:00:51.020
+Besides, the platform itself has many security tools and settings,
+
+11
+00:00:51.080 --> 00:00:54.260
+and we have most of them turned on.
+
+12
+00:00:55.460 --> 00:01:01.280
+Thanks to this, we get automatic detection of vulnerabilities
+
+13
+00:01:03.840 --> 00:01:10.240
+and of various available security improvements, and it reaches us as recommendations.
+
+14
+00:01:10.440 --> 00:01:13.360
+You can see, for example, "dependencies".
+
+15
+00:01:13.480 --> 00:01:20.400
+This is exactly what came to us automatically from the built-in system:
+
+16
+00:01:20.460 --> 00:01:26.650
+improvements for our portal and
+
+17
+00:01:26.650 --> 00:01:27.650
+for automation.
+
+18
+00:01:29.650 --> 00:01:36.030
+The second aspect is the security of access itself
+
+19
+00:01:36.030 --> 00:01:42.130
+to protocol recordings for the general public.
+
+20
+00:01:44.500 --> 00:01:48.260
+What do we have? Here we have
+
+21
+00:01:51.300 --> 00:01:56.120
+metadata for recordings, including protocol ones.
+
+22
+00:01:59.820 --> 00:02:06.140
+Here we have transcripts, subtitles and
+
+23
+00:02:06.140 --> 00:02:07.160
+metadata.
+
+24
+00:02:08.500 --> 00:02:14.860
+And the metadata could hold, right here, and it did before we added
+
+25
+00:02:15.160 --> 00:02:18.560
+the feature, a link to the video, on Vimeo.
+
+26
+00:02:18.700 --> 00:02:22.020
+The Vimeo link – it is…
+
+27
+00:02:22.020 --> 00:02:28.580
+If you know it, you can watch the video without any restrictions.
+
+28
+00:02:29.020 --> 00:02:31.840
+So the protection rests on nobody knowing the link.
+
+29
+00:02:33.490 --> 00:02:37.730
+So if we put that link here, any automated system,
+
+30
+00:02:37.850 --> 00:02:40.010
+anyone simply coming in from the internet,
+
+31
+00:02:40.010 --> 00:02:46.450
+because our project is public, could take this video, open it in a new
+
+32
+00:02:46.450 --> 00:02:53.290
+tab and get access to a protocol video, which is probably not
+
+33
+00:02:53.290 --> 00:02:54.290
+right.
+
+34
+00:02:55.150 --> 00:03:01.150
+That is why we use an encoding system: you see this link
+
+35
+00:03:01.150 --> 00:03:04.750
+in a form you cannot just open.
+
+36
+00:03:05.970 --> 00:03:08.550
+Several algorithms are applied in sequence,
+
+37
+00:03:09.790 --> 00:03:16.340
+which turn this link into something you cannot simply turn back
+
+38
+00:03:16.340 --> 00:03:21.640
+into a link. Only by knowing the order of these transformations can you
+
+39
+00:03:21.640 --> 00:03:27.560
+restore it. So neither an automated system nor someone who opens the
+
+40
+00:03:27.560 --> 00:03:32.580
+repository will get the link to a protocol video.
+
+41
+00:03:33.820 --> 00:03:37.760
+But there is a second aspect – our portal.
+
+42
+00:03:38.000 --> 00:03:44.620
+In our portal, when we click "View translation" or "Review translation", we also get
+
+43
+00:03:44.620 --> 00:03:51.240
+the ability to play the video. And all these algorithms
+
+44
+00:03:51.240 --> 00:03:58.000
+for decoding this form into the real link run in this portal. And to
+
+45
+00:03:58.000 --> 00:04:03.380
+protect against someone who simply found this portal and opened it, whether
+
+46
+00:04:03.380 --> 00:04:07.140
+an automated system or just anyone on the internet,
+
+47
+00:04:08.480 --> 00:04:11.740
+so that nobody can come in and watch this video,
+
+48
+00:04:12.810 --> 00:04:16.050
+including protocol ones, we have password protection.
+
+49
+00:04:16.610 --> 00:04:21.630
+Everyone who has used this portal knows that when we click this button,
+
+50
+00:04:21.630 --> 00:04:28.530
+we are asked for a password. Once entered, it is saved in the user's
+
+51
+00:04:28.530 --> 00:04:33.630
+browser and not asked for again, so it seems there is no password for
+
+52
+00:04:33.630 --> 00:04:35.010
+someone who has entered it once.
+
+53
+00:04:36.020 --> 00:04:42.960
+These are the security aspects we use in
+
+54
+00:04:42.960 --> 00:04:47.460
+working with this source code.
+
+55
+00:04:49.160 --> 00:04:55.720
+Any user in the world can send proposals for changes.
+
+56
+00:04:56.260 --> 00:05:03.260
+But only those who
+
+57
+00:05:03.260 --> 00:05:07.390
+are in our group can make such changes.
+
+58
+00:05:09.280 --> 00:05:15.540
+Let's find this group, and I'll just show you now how
+
+59
+00:05:15.540 --> 00:05:19.630
+a new user is added.
+
+60
+00:05:19.670 --> 00:05:21.450
+We happen to have an example.
+
+61
+00:05:21.450 --> 00:05:22.670
+Now
+
+62
+00:05:25.870 --> 00:05:28.990
+let's find it: here we have
+
+63
+00:05:30.080 --> 00:05:35.980
+"Settings", and for this
+
+64
+00:05:35.980 --> 00:05:39.280
+repository there are the users who are allowed.
+
+65
+00:05:39.700 --> 00:05:46.520
+Right now it is my account, Dmytro Shcherbyna, Iryna
+
+66
+00:05:46.520 --> 00:05:47.520
+Fil,
+
+67
+00:05:48.160 --> 00:05:52.640
+Dmytro Yefremenko did not manage to join in the time we had, he did not
+
+68
+00:05:52.640 --> 00:05:53.900
+have the time.
+
+69
+00:05:55.600 --> 00:06:02.470
+And we still need to add, let's find her now,
+
+70
+00:06:04.900 --> 00:06:07.460
+Anastasia – there is her email.
+
+71
+00:06:08.620 --> 00:06:13.280
+We add her and
+
+72
+00:06:19.520 --> 00:06:24.120
+say that she has "Write" access.
+
+73
+00:06:27.090 --> 00:06:30.210
+And there are different access levels – that's it.
+
+74
+00:06:30.230 --> 00:06:33.270
+Now Anastasia will accept this invitation
+
+75
+00:06:34.340 --> 00:06:38.860
+and will be able to make changes, including to the system.
+
+76
+00:06:40.710 --> 00:06:42.110
+To propose them, of course,
+
+77
+00:06:43.150 --> 00:06:46.370
+when needed, and also to accept those changes.
+
+78
+00:06:49.060 --> 00:06:52.860
+About how to hand over changes, how to take them,
+
+79
+00:06:56.580 --> 00:07:01.880
+take them on yourself, mark that you have taken them into work –
+
+80
+00:07:02.020 --> 00:07:04.100
+that will be in the next videos.
+
+81
+00:07:04.220 --> 00:07:10.840
+That was just about the security aspects of our project. Jai Shri Mataji!

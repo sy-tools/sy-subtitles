@@ -1,0 +1,301 @@
+WEBVTT
+
+1
+00:00:01.170 --> 00:00:06.010
+Now let's see how to add a new talk from Amruta.
+
+2
+00:00:06.820 --> 00:00:08.940
+We have the "+ Add Talk" button.
+
+3
+00:00:08.980 --> 00:00:12.940
+If we click it, we will see a hint:
+
+4
+00:00:13.020 --> 00:00:19.080
+"Drag this button to your bookmarks bar, then click it
+
+5
+00:00:19.080 --> 00:00:23.620
+while on a talk page at amruta.org." Let's try it.
+
+6
+00:00:24.780 --> 00:00:26.480
+We open the bookmarks bar.
+
+7
+00:00:27.220 --> 00:00:32.460
+Mine is here; it can differ: by default it is at the top, and in general,
+
+8
+00:00:32.700 --> 00:00:36.880
+find some bookmarks bar or bookmarks list.
+
+9
+00:00:37.280 --> 00:00:40.000
+I already have it here, so I'll delete it
+
+10
+00:00:41.060 --> 00:00:45.120
+and drag it into the bookmarks.
+
+11
+00:00:46.490 --> 00:00:50.900
+Here we just click "Save" – and we have this bookmark.
+
+12
+00:00:51.780 --> 00:00:55.780
+Now we need to go to the Amruta page.
+
+13
+00:00:56.740 --> 00:01:00.180
+I'll use this feature here.
+
+14
+00:01:00.500 --> 00:01:06.760
+By clicking the date. And let's take "Talk of the day",
+
+15
+00:01:10.730 --> 00:01:13.110
+the first one we came across.
+
+16
+00:01:14.200 --> 00:01:16.920
+Here there is "Review transcript".
+
+17
+00:01:18.540 --> 00:01:19.660
+Here there are subtitles.
+
+18
+00:01:23.170 --> 00:01:24.170
+Excellent.
+
+19
+00:01:25.600 --> 00:01:27.340
+What do we do now?
+
+20
+00:01:27.760 --> 00:01:33.760
+While on this Amruta page, we click our "+ Sahaja Yoga Subtitles".
+
+21
+00:01:35.260 --> 00:01:39.100
+When we click it, a page like this opens.
+
+22
+00:01:40.260 --> 00:01:46.640
+It is already prefilled: it automatically picked up which videos there are, which
+
+23
+00:01:46.640 --> 00:01:53.560
+transcript, and here even an encoded view
+
+24
+00:01:54.720 --> 00:02:01.500
+of this transcript. These are technical things; it has to be like this for it all to work.
+
+25
+00:02:02.020 --> 00:02:08.960
+What do we do now? We click the green "Create PR" button. By this point we
+
+26
+00:02:08.960 --> 00:02:11.280
+should already be registered on GitHub.
+
+27
+00:02:12.100 --> 00:02:18.980
+What does it say here? "meta.yaml copied. Click "Open GitHub", then paste
+
+28
+00:02:18.980 --> 00:02:22.160
+(Ctrl+V) into the new file content field."
+
+29
+00:02:22.360 --> 00:02:24.280
+Let's go through this procedure together.
+
+30
+00:02:25.070 --> 00:02:27.100
+First – "Open GitHub".
+
+31
+00:02:28.170 --> 00:02:34.500
+Second – we put the cursor here and pressed Ctrl+V or
+
+32
+00:02:35.300 --> 00:02:40.480
+"Paste". And after that we click the green button.
+
+33
+00:02:40.800 --> 00:02:47.190
+We need to click the green one several times.
+
+34
+00:02:55.660 --> 00:03:02.320
+Three green ones. That is the whole adding procedure on your side.
+
+35
+00:03:02.930 --> 00:03:09.170
+Once that is done, you can simply take this link and send it to me, so that
+
+36
+00:03:09.250 --> 00:03:14.890
+I can then start that costly
+
+37
+00:03:14.890 --> 00:03:20.910
+translation process, which is tied
+
+38
+00:03:20.910 --> 00:03:24.190
+to a private paid subscription at the moment.
+
+39
+00:03:25.380 --> 00:03:32.360
+On your side, apart from these three buttons, you don't need to click anything else here
+
+40
+00:03:32.360 --> 00:03:37.540
+at all. Just take this link or the number and simply say
+
+41
+00:03:37.720 --> 00:03:42.880
+in a private message: here, please, we need…
+
+42
+00:03:42.880 --> 00:03:47.580
+we want to work on translating this one.
+
+43
+00:03:50.290 --> 00:03:55.020
+So your part ends at this point.
+
+44
+00:03:55.240 --> 00:04:00.580
+I'm not talking about cases where someone also takes on these tasks and
+
+45
+00:04:00.580 --> 00:04:04.820
+runs these translations on their own subscriptions.
+
+46
+00:04:06.150 --> 00:04:09.750
+But for transparency I can show what happens next.
+
+47
+00:04:11.010 --> 00:04:14.150
+You sent me this link – I opened it.
+
+48
+00:04:15.230 --> 00:04:16.650
+And what do I do first?
+
+49
+00:04:16.670 --> 00:04:22.630
+I wait while these yellow automatic processes here are running, so that they
+
+50
+00:04:22.630 --> 00:04:28.870
+finish. What is here? There is unpacking, fetching the subtitles,
+
+51
+00:04:28.870 --> 00:04:34.930
+in general certain technical processes; once they are finished,
+
+52
+00:04:34.930 --> 00:04:41.470
+part of the automatic processes will be done.
+
+53
+00:04:42.130 --> 00:04:48.430
+The ones we can run for free, because this platform,
+
+54
+00:04:48.430 --> 00:04:54.920
+GitHub, gives us some computing power for free.
+
+55
+00:04:55.390 --> 00:04:58.550
+They will run here; I'll wait until it is all done.
+
+56
+00:04:58.550 --> 00:05:02.330
+And after it finishes,
+
+57
+00:05:03.570 --> 00:05:07.290
+I'll accept it and click this "Merge" button.
+
+58
+00:05:08.510 --> 00:05:15.430
+These changes will get into the system, and after that I'll go and start this
+
+59
+00:05:15.430 --> 00:05:21.510
+subtitle pipeline, where I'll enter the name, for example,
+
+60
+00:05:22.520 --> 00:05:29.260
+this was your name, and, basically, click this green
+
+61
+00:05:29.260 --> 00:05:33.440
+button. Then a process like this one will start,
+
+62
+00:05:34.670 --> 00:05:37.250
+in which the translation will happen,
+
+63
+00:05:39.230 --> 00:05:44.930
+the translation will be checked by proofreading, by a linguist, by an agent that creates
+
+64
+00:05:44.930 --> 00:05:46.370
+subtitles, and so on.
+
+65
+00:05:46.370 --> 00:05:51.690
+If it fails somewhere – I'll check whether it is a system error or a peculiarity of that
+
+66
+00:05:51.690 --> 00:05:57.090
+talk. And if it is green,
+
+67
+00:05:58.280 --> 00:06:04.780
+then on this portal this talk
+
+68
+00:06:04.780 --> 00:06:08.920
+will automatically appear under "Needs review".
+
+69
+00:06:09.810 --> 00:06:12.970
+We won't wait now for all these processes to run,
+
+70
+00:06:14.510 --> 00:06:20.130
+but in general this is the procedure, for a full understanding of what
+
+71
+00:06:20.130 --> 00:06:26.610
+happens. As you can see, this system lets you follow who proposed what change,
+
+72
+00:06:26.610 --> 00:06:29.150
+and how the processes went.
+
+73
+00:06:30.090 --> 00:06:32.790
+It is a kind of construction kit, you could say,
+
+74
+00:06:33.450 --> 00:06:40.430
+which we assembled for our needs and we work with it. That's all
+
+75
+00:06:40.430 --> 00:06:42.470
+on adding a new talk.

@@ -1,0 +1,717 @@
+WEBVTT
+
+1
+00:00:00.850 --> 00:00:05.850
+Now let's move on to the components and the architecture of the system.
+
+2
+00:00:07.060 --> 00:00:13.020
+The very first thing to say is that we use the GitHub platform. It is
+
+3
+00:00:13.020 --> 00:00:19.980
+known to all software developers, because it is a rather old
+
+4
+00:00:19.980 --> 00:00:26.120
+platform. It is very friendly to open source. It
+
+5
+00:00:26.120 --> 00:00:30.240
+gives open-source
+
+6
+00:00:31.080 --> 00:00:37.860
+projects every means to grow, including computing
+
+7
+00:00:37.860 --> 00:00:39.540
+power, which it gives for free.
+
+8
+00:00:41.020 --> 00:00:46.100
+It is quite a mature platform with many tools, and we will go through all
+
+9
+00:00:46.100 --> 00:00:52.980
+the details and points: which components of this platform we use. So
+
+10
+00:00:52.980 --> 00:00:55.700
+to work with this platform we need to sign up.
+
+11
+00:00:57.270 --> 00:00:59.950
+How do we sign up?
+
+12
+00:01:00.270 --> 00:01:04.090
+We need to go to github.com,
+
+13
+00:01:08.140 --> 00:01:13.720
+choose "Sign up" if you don't have an account, and, for example, sign up with a
+
+14
+00:01:13.720 --> 00:01:20.660
+Google account. Choose the Google account you already have. There you will only need
+
+15
+00:01:20.660 --> 00:01:25.860
+to give a nickname. Let's try it; I think it's like this. Let's confirm that
+
+16
+00:01:25.860 --> 00:01:32.440
+we can continue. And here all you will need is to enter a username,
+
+17
+00:01:32.580 --> 00:01:34.940
+pick one that is not taken yet.
+
+18
+00:01:35.100 --> 00:01:38.040
+Click "Continue", choose the country.
+
+19
+00:01:38.100 --> 00:01:40.080
+Of course, I don't know why it's here...
+
+20
+00:01:40.720 --> 00:01:46.180
+"Iran" is some kind of gesture on GitHub's part, I suppose.
+
+21
+00:01:48.910 --> 00:01:52.550
+"Ukraine", and after that you don't need to tick the box.
+
+22
+00:01:54.090 --> 00:01:56.650
+They would just send you emails.
+
+23
+00:01:56.750 --> 00:02:00.250
+And we press the green button and get our account.
+
+24
+00:02:00.250 --> 00:02:06.190
+So our nickname will be, for example, this one, startlink, and our email.
+
+25
+00:02:06.330 --> 00:02:09.030
+Once we have signed up
+
+26
+00:02:11.450 --> 00:02:16.300
+and have this account, just send me that email or that
+
+27
+00:02:16.300 --> 00:02:23.000
+username, to be added to the team that works on the projects.
+
+28
+00:02:26.480 --> 00:02:29.780
+GitHub; let's go back to the plan.
+
+29
+00:02:29.960 --> 00:02:31.880
+What do we have in this GitHub?
+
+30
+00:02:31.880 --> 00:02:33.880
+There is a lot of code in GitHub.
+
+31
+00:02:35.650 --> 00:02:40.590
+Code here describes, of course, all the automated pipelines and the like.
+
+32
+00:02:41.370 --> 00:02:45.710
+The talks are also stored as code,
+
+33
+00:02:48.510 --> 00:02:54.330
+their transcripts, subtitles for each of the videos, and so on: metadata.
+
+34
+00:02:55.430 --> 00:03:00.570
+We also have an important component in this repository that can be
+
+35
+00:03:00.570 --> 00:03:07.020
+used no matter whether we work through this
+
+36
+00:03:07.020 --> 00:03:10.260
+portal or not, and whichever AI we use.
+
+37
+00:03:10.360 --> 00:03:12.040
+It is the glossary, a little dictionary,
+
+38
+00:03:13.040 --> 00:03:19.300
+built from the Mantra Books,
+
+39
+00:03:19.300 --> 00:03:26.120
+from existing translations (there should be a description down here), from
+
+40
+00:03:26.120 --> 00:03:32.120
+the English Mantra Book for terminology, the Ukrainian Mantra Book for spelling,
+
+41
+00:03:32.120 --> 00:03:34.400
+Ukrainian spelling, in fact.
+
+42
+00:03:34.860 --> 00:03:41.700
+From other talks that had already been translated before
+
+43
+00:03:42.620 --> 00:03:48.820
+from English into Ukrainian, so as to build this
+
+44
+00:03:48.820 --> 00:03:54.560
+dictionary. It has a set format, and it can be used
+
+45
+00:03:55.580 --> 00:03:58.560
+with any AI.
+
+46
+00:03:59.440 --> 00:04:06.100
+What does it give you? Simply the spelling: if it's
+
+47
+00:04:06.100 --> 00:04:08.280
+Kundalini, then it's Kundalini, like this.
+
+48
+00:04:12.360 --> 00:04:19.240
+So that the terminology in our translations agrees with
+
+49
+00:04:19.240 --> 00:04:25.400
+how it is written, for example, in the Mantra Books, because the Mantra Books were not made
+
+50
+00:04:25.400 --> 00:04:27.040
+just like that, but on a sound basis.
+
+51
+00:04:28.240 --> 00:04:33.530
+So this artifact can be used on its own.
+
+52
+00:04:33.910 --> 00:04:36.410
+There are even releases here.
+
+53
+00:04:37.700 --> 00:04:41.400
+There is an archive you can give, for example, to your AI:
+
+54
+00:04:41.400 --> 00:04:48.250
+"Take the archive, this release No. 3, sy-tools,
+
+55
+00:04:48.250 --> 00:04:54.530
+sy-subtitles, and use it when translating
+
+56
+00:04:54.530 --> 00:04:56.990
+my material locally."
+
+57
+00:04:57.830 --> 00:05:02.010
+Does your AI support fetching files from the internet?
+
+58
+00:05:02.030 --> 00:05:08.960
+If not, you can download the ZIP archive and give it to it, if it can only read
+
+59
+00:05:08.960 --> 00:05:15.740
+local files. That is all about the dictionary for better
+
+60
+00:05:15.740 --> 00:05:16.920
+automatic translation.
+
+61
+00:05:18.720 --> 00:05:24.480
+The next component is the automation of translation and subtitle creation.
+
+62
+00:05:25.260 --> 00:05:32.190
+I just want to explain how it works, for general understanding: there is
+
+63
+00:05:32.190 --> 00:05:38.110
+another component, here, Actions, which
+
+64
+00:05:38.110 --> 00:05:44.100
+has many different automated things. The ones that run by default
+
+65
+00:05:44.400 --> 00:05:50.480
+we did not make; they just run automatically.
+
+66
+00:05:50.740 --> 00:05:55.040
+Various scanners from GitHub to improve the code,
+
+67
+00:05:56.920 --> 00:05:59.700
+to find vulnerabilities and so on.
+
+68
+00:06:00.240 --> 00:06:06.300
+But our own ones: here, for example, one of our main pipelines in
+
+69
+00:06:06.300 --> 00:06:09.700
+the automation is the "subtitle pipeline".
+
+70
+00:06:10.700 --> 00:06:16.780
+It... let's open it on the example of some already processed
+
+71
+00:06:16.780 --> 00:06:17.780
+talk,
+
+72
+00:06:18.970 --> 00:06:20.290
+one that needed it recently.
+
+73
+00:06:20.770 --> 00:06:26.850
+Here, you see, is the title as it is on Amruta, and then
+
+74
+00:06:27.460 --> 00:06:32.360
+which processes were run: Translate, Review and Build.
+
+75
+00:06:34.680 --> 00:06:36.400
+The subtitle build, I mean.
+
+76
+00:06:36.620 --> 00:06:38.200
+Here we can see...
+
+77
+00:06:39.210 --> 00:06:42.350
+Let me think how to make it easier to see.
+
+78
+00:06:43.230 --> 00:06:46.620
+Translate & Review has several steps.
+
+79
+00:06:51.320 --> 00:06:56.500
+The only thing is, it doesn't show me details because I'm not signed in.
+
+80
+00:06:57.560 --> 00:07:00.780
+You have to sign in with at least some account to see the details.
+
+81
+00:07:00.920 --> 00:07:04.580
+Until now I was completely anonymous, so to speak.
+
+82
+00:07:04.580 --> 00:07:06.140
+So, with my account...
+
+83
+00:07:12.860 --> 00:07:19.700
+we sign in, and now we can see a little
+
+84
+00:07:19.700 --> 00:07:20.940
+more detail.
+
+85
+00:07:25.720 --> 00:07:27.420
+What steps do we have here?
+
+86
+00:07:27.460 --> 00:07:31.600
+First we have the translation steps.
+
+87
+00:07:32.740 --> 00:07:39.700
+That is, there are instructions for the agent saying: you must work on
+
+88
+00:07:39.700 --> 00:07:46.200
+translating this particular talk, here is the metadata; so the agent must understand what it is working on,
+
+89
+00:07:46.200 --> 00:07:50.480
+and later, if anything is interesting, I'll show it; it's all in the code.
+
+90
+00:07:51.220 --> 00:07:57.960
+What instructions are passed to it, and can we even see that here?
+
+91
+00:07:58.360 --> 00:08:03.850
+There! You see, it says here what it needs to read,
+
+92
+00:08:05.780 --> 00:08:12.020
+which files to load, which rules apply to it, and so on,
+
+93
+00:08:13.120 --> 00:08:15.500
+and it works. It translates.
+
+94
+00:08:16.770 --> 00:08:23.610
+After it translates, we have a small step that checks
+
+95
+00:08:23.610 --> 00:08:30.150
+whether the AI has messed something up, whether there are at least as many paragraphs.
+
+96
+00:08:31.400 --> 00:08:38.380
+If it slipped so badly that the number of paragraphs differs, the run fails here.
+
+97
+00:08:38.380 --> 00:08:42.200
+Next we have this review step,
+
+98
+00:08:43.220 --> 00:08:44.860
+the automated 2 plus 1.
+
+99
+00:08:45.500 --> 00:08:47.480
+What does that mean?
+
+100
+00:08:47.660 --> 00:08:54.600
+It means that separate
+
+101
+00:08:54.600 --> 00:08:56.560
+agents are launched first.
+
+102
+00:08:57.900 --> 00:09:02.320
+One agent is the linguist, so to speak.
+
+103
+00:09:02.920 --> 00:09:08.700
+That is, the one who proofreads as a scholar of the Ukrainian language. It checks
+
+104
+00:09:08.700 --> 00:09:15.680
+for all kinds of spelling, punctuation, orthography,
+
+105
+00:09:15.700 --> 00:09:17.260
+grammar and so on.
+
+106
+00:09:17.840 --> 00:09:24.480
+And a separate reviewer is also a translator, one with knowledge of
+
+107
+00:09:24.480 --> 00:09:30.380
+Sahaja Yoga, of the Sahaja Yoga domain; it also proofreads, so that if the first
+
+108
+00:09:30.380 --> 00:09:37.080
+translator made some mistakes, it corrects them, because these artificial
+
+109
+00:09:37.080 --> 00:09:42.420
+intelligences, however many times you run them, may work a little
+
+110
+00:09:42.420 --> 00:09:43.420
+differently each time.
+
+111
+00:09:44.480 --> 00:09:50.100
+So if we put one on the big translation task, and the other not
+
+112
+00:09:50.100 --> 00:09:54.800
+on that but on finding specific flaws, it gives a better result.
+
+113
+00:09:56.300 --> 00:10:02.780
+But there is also a third: these two run first in parallel, and the third is the Critic,
+
+114
+00:10:03.180 --> 00:10:08.580
+a linguist who
+
+115
+00:10:08.580 --> 00:10:14.800
+understands the Sahaja Yoga domain through this dictionary or its general
+
+116
+00:10:14.800 --> 00:10:17.840
+understanding, through the instructions.
+
+117
+00:10:18.460 --> 00:10:24.670
+And it looks at what the first two found and filters out what may
+
+118
+00:10:24.670 --> 00:10:28.630
+be out of place. So it also acts as an arbiter.
+
+119
+00:10:29.190 --> 00:10:35.370
+Rather than simply: if one of these two reviewers glitched, roughly speaking,
+
+120
+00:10:36.590 --> 00:10:38.730
+that becomes the final result.
+
+121
+00:10:39.450 --> 00:10:45.570
+No! The output, the analysis results from those two go to the Critic.
+
+122
+00:10:45.610 --> 00:10:52.360
+The Critic then analyses this limited amount of information to decide whether
+
+123
+00:10:52.360 --> 00:10:54.660
+to apply these corrections or not.
+
+124
+00:10:56.760 --> 00:11:02.260
+And maybe the two of them also conflict with each other in some places.
+
+125
+00:11:02.460 --> 00:11:04.800
+It decides, and then it applies the changes.
+
+126
+00:11:04.940 --> 00:11:09.420
+So this is the review phase, this 2 plus 1,
+
+127
+00:11:10.580 --> 00:11:12.940
+and after that the changes are applied.
+
+128
+00:11:14.360 --> 00:11:20.580
+Once they are applied, let's see, subtitles can also
+
+129
+00:11:20.580 --> 00:11:25.140
+be created. These are also steps we can choose or not.
+
+130
+00:11:26.530 --> 00:11:30.740
+In this case it was chosen, and it is here.
+
+131
+00:11:33.200 --> 00:11:40.140
+In general there is a procedure by which some intermediate material is first prepared,
+
+132
+00:11:40.140 --> 00:11:44.500
+by which the Ukrainian sentences are split into pieces,
+
+133
+00:11:45.640 --> 00:11:47.880
+which can be logical ones, at the full stops.
+
+134
+00:11:49.600 --> 00:11:56.360
+Then one more agent is launched and finds, for these fragments into which
+
+135
+00:11:56.360 --> 00:12:01.180
+the text was logically split, the matching timestamps,
+
+136
+00:12:02.580 --> 00:12:07.340
+and after that it assembles the subtitles.
+
+137
+00:12:08.710 --> 00:12:12.690
+After that, there is the timecode format,
+
+138
+00:12:13.940 --> 00:12:17.620
+a whole set of steps that lets us assemble the subtitles.
+
+139
+00:12:17.660 --> 00:12:21.900
+After that an optimisation runs as well.
+
+140
+00:12:22.120 --> 00:12:29.010
+This is exactly about our motivation to have subtitles
+
+141
+00:12:29.010 --> 00:12:35.690
+of proper quality. That is, there is a whole list of steps that run
+
+142
+00:12:36.110 --> 00:12:40.310
+to optimise our subtitles so they are comfortable to read.
+
+143
+00:12:40.430 --> 00:12:46.670
+The main parameter is CPS, characters per
+
+144
+00:12:46.670 --> 00:12:53.260
+second, so that subtitles are not shown
+
+145
+00:12:53.260 --> 00:12:59.600
+too fast, because when the speech is fast, you can show during that fast
+
+146
+00:12:59.600 --> 00:13:03.760
+speech our Ukrainian translation, but nobody will manage to read it,
+
+147
+00:13:04.820 --> 00:13:07.420
+and it will all be uncomfortable.
+
+148
+00:13:08.760 --> 00:13:15.720
+Yogis don't always watch only at home; it may be shown somewhere online
+
+149
+00:13:15.720 --> 00:13:21.360
+or at a programme. And you can't pause or rewind,
+
+150
+00:13:21.840 --> 00:13:27.800
+so this is an important point. And why else is it important?
+
+151
+00:13:28.000 --> 00:13:33.840
+Because Ukrainian, as we probably all know, is a little more
+
+152
+00:13:33.840 --> 00:13:36.180
+character-heavy than English.
+
+153
+00:13:37.200 --> 00:13:43.340
+And the same thing that can be read a bit faster in English needs a bit
+
+154
+00:13:43.340 --> 00:13:50.050
+more time in Ukrainian. More characters per second have to be taken in, and so
+
+155
+00:13:50.050 --> 00:13:55.870
+we arrive at the rule that we try to have no more than 15
+
+156
+00:13:55.870 --> 00:14:02.830
+characters per second, but if the speech is very fast, then
+
+157
+00:14:02.830 --> 00:14:06.850
+up to 20. That is our maximum.
+
+158
+00:14:06.890 --> 00:14:10.130
+If we cannot achieve that,
+
+159
+00:14:12.120 --> 00:14:18.000
+then this pipeline of ours will fail.
+
+160
+00:14:18.260 --> 00:14:22.420
+It will say, "Sorry, we couldn't do it."
+
+161
+00:14:22.420 --> 00:14:25.900
+And then you have to go and look by hand: why?
+
+162
+00:14:26.020 --> 00:14:31.980
+What happened? Maybe the translator translated too wordily, or maybe there is some
+
+163
+00:14:31.980 --> 00:14:32.980
+other problem.
+
+164
+00:14:33.720 --> 00:14:40.340
+Overall the system keeps improving to cover different variants, different cases.
+
+165
+00:14:40.360 --> 00:14:42.040
+Cases can be very different.
+
+166
+00:14:42.360 --> 00:14:47.320
+Sometimes the video and the transcript don't match.
+
+167
+00:14:47.900 --> 00:14:48.900
+For example,
+
+168
+00:14:50.500 --> 00:14:57.080
+the video may lack part of the transcript. The transcript may be fuller,
+
+169
+00:14:57.240 --> 00:14:59.920
+while in the video this fragment was lost.
+
+170
+00:15:00.120 --> 00:15:03.280
+But someone recorded it from somewhere, the transcript.
+
+171
+00:15:03.640 --> 00:15:09.950
+There are many such special cases, and if,
+
+172
+00:15:09.950 --> 00:15:15.910
+while our pipeline runs, it turns out that something does not fit into the
+
+173
+00:15:15.910 --> 00:15:20.510
+subtitles at all, or there are some problems, it turns red instead of green. We will see it and
+
+174
+00:15:20.510 --> 00:15:26.840
+be able to handle the special cases separately. Also, as you know, we have
+
+175
+00:15:26.840 --> 00:15:30.000
+several videos, usually.
+
+176
+00:15:30.320 --> 00:15:37.240
+For example, there is the full Puja protocol and several talks. So we
+
+177
+00:15:37.240 --> 00:15:44.240
+also build double subtitles. That is, we have the transcript we translate, and we
+
+178
+00:15:44.240 --> 00:15:46.440
+have two more separate subtitles,
+
+179
+00:15:48.480 --> 00:15:49.960
+for two separate videos.

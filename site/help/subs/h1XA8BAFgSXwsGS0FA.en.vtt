@@ -1,0 +1,253 @@
+WEBVTT
+
+1
+00:00:00.590 --> 00:00:07.050
+Good day, Jai Shri Mataji! I would like to share a little about the
+
+2
+00:00:07.050 --> 00:00:13.620
+tool we have for making the work on
+
+3
+00:00:13.620 --> 00:00:14.620
+translations easier.
+
+4
+00:00:16.300 --> 00:00:21.240
+On the screen is a short plan we will try to go through, and maybe split it into several
+
+5
+00:00:21.240 --> 00:00:25.160
+videos. First of all: what the motivation was.
+
+6
+00:00:25.220 --> 00:00:30.620
+Of course, to make – as each of us can here – pure knowledge more
+
+7
+00:00:30.620 --> 00:00:33.900
+accessible to Ukrainian yogis and newcomers –
+
+8
+00:00:36.790 --> 00:00:40.860
+that part is clear. Taking the mechanical work off the translators –
+
+9
+00:00:41.990 --> 00:00:48.230
+this is about the point where we have an automatic translation and it
+
+10
+00:00:48.230 --> 00:00:52.790
+makes the same mistakes in every talk,
+
+11
+00:00:54.210 --> 00:00:56.550
+not understanding that it is Shri Mataji speaking,
+
+12
+00:00:58.450 --> 00:01:04.530
+or simply the same corrections that we may have across all the talks.
+
+13
+00:01:05.650 --> 00:01:11.950
+So the translator's attention goes to fixing all these things instead of
+
+14
+00:01:11.950 --> 00:01:16.850
+giving that attention to the truly subtler points
+
+15
+00:01:18.440 --> 00:01:25.090
+as a Sahaja Yogi translator. The mechanical work of whoever makes the subtitles
+
+16
+00:01:25.290 --> 00:01:29.590
+is quite a lot of work.
+
+17
+00:01:30.470 --> 00:01:35.490
+Especially if we talk about the fourth point: subtitles of proper quality.
+
+18
+00:01:35.790 --> 00:01:42.260
+To make subtitles of proper quality, comfortable to read,
+
+19
+00:01:42.260 --> 00:01:48.440
+depending on the talk, it is sometimes not that easy and takes a lot of
+
+20
+00:01:48.440 --> 00:01:54.780
+time. Especially with fast speech, making it comfortable to read
+
+21
+00:01:54.780 --> 00:01:55.780
+is a real challenge.
+
+22
+00:01:56.940 --> 00:02:02.340
+And so, if we hand this task over to algorithms, the algorithms can
+
+23
+00:02:02.340 --> 00:02:03.350
+cope with it better.
+
+24
+00:02:04.470 --> 00:02:06.630
+Those, in fact, were the motivations.
+
+25
+00:02:08.870 --> 00:02:11.750
+And that is how this project was born.
+
+26
+00:02:13.990 --> 00:02:20.740
+Its code is written entirely not by hand but, in fact, also by
+
+27
+00:02:20.740 --> 00:02:22.580
+artificial intelligence agents,
+
+28
+00:02:24.100 --> 00:02:29.850
+which lets us develop this tool and keep it
+
+29
+00:02:29.850 --> 00:02:35.530
+at a proper level without spending too much time on it.
+
+30
+00:02:37.190 --> 00:02:41.990
+I should say right away what limitations this tool has. It is designed
+
+31
+00:02:41.990 --> 00:02:46.450
+to work with materials from Amruta. Although it has no direct integration,
+
+32
+00:02:47.590 --> 00:02:51.510
+the idea is that it works first of all with materials from Amruta.
+
+33
+00:02:51.650 --> 00:02:56.290
+Further on we will look at the different components, and there are ways to use this
+
+34
+00:02:56.290 --> 00:03:03.030
+project for other materials, but not to the full extent. There is also
+
+35
+00:03:03.030 --> 00:03:09.230
+a limitation right now: our auto-translation system runs on a paid, private
+
+36
+00:03:09.230 --> 00:03:13.490
+subscription to the Claude Code agent.
+
+37
+00:03:14.390 --> 00:03:21.170
+So right now it is my personal one, and I also use it for my
+
+38
+00:03:21.170 --> 00:03:27.370
+main job. That is why I watch the limits. For example, today, if we look,
+
+39
+00:03:28.990 --> 00:03:31.510
+there is still a lot of time until 9 pm,
+
+40
+00:03:32.550 --> 00:03:35.070
+and a lot of the limits are still unused.
+
+41
+00:03:35.070 --> 00:03:38.570
+There is a weekly limit and a five-hour limit.
+
+42
+00:03:38.790 --> 00:03:45.690
+So for now, launching it at any moment is mostly always
+
+43
+00:03:45.690 --> 00:03:51.610
+possible, but depending on the volume, that is, if a lot of material is needed at once,
+
+44
+00:03:51.610 --> 00:03:57.410
+I check these limits before launching, and fit the launch time
+
+45
+00:03:57.410 --> 00:04:01.010
+around my own work.
+
+46
+00:04:02.010 --> 00:04:07.910
+That is the limitation for now, but if someone has another subscription of their own, or, again,
+
+47
+00:04:07.910 --> 00:04:12.870
+to use parts of the system, that is possible even with
+
+48
+00:04:13.250 --> 00:04:18.200
+free AI tools.
+
+49
+00:04:19.730 --> 00:04:26.150
+That is it about limitations. So for now anyone can add materials, but
+
+50
+00:04:26.150 --> 00:04:32.930
+launching this active translation phase currently goes through me,
+
+51
+00:04:33.220 --> 00:04:34.920
+because it is a paid subscription.
+
+52
+00:04:35.100 --> 00:04:40.420
+If someone also has their own paid subscription, we can add it to the list
+
+53
+00:04:40.420 --> 00:04:46.810
+of supported ones, and other participants will then be able to
+
+54
+00:04:46.810 --> 00:04:50.330
+launch on their own subscriptions, watching their own limits.
+
+55
+00:04:50.330 --> 00:04:56.910
+If such cases come up, we will build that feature, and it will be possible to
+
+56
+00:04:56.910 --> 00:05:03.730
+work that way too. But take, for example, just recently, last week there was
+
+57
+00:05:03.730 --> 00:05:10.730
+a case where many dozens of talks had to be translated without
+
+58
+00:05:10.760 --> 00:05:16.240
+making subtitles, for work on a book.
+
+59
+00:05:17.240 --> 00:05:22.460
+And within a week those dozens fit into the limits,
+
+60
+00:05:24.300 --> 00:05:25.300
+so it is not the case
+
+61
+00:05:26.070 --> 00:05:29.270
+that this has to be a blocker.
+
+62
+00:05:30.070 --> 00:05:35.070
+Most often you can launch translations right away, and if not at that moment, then
+
+63
+00:05:35.070 --> 00:05:36.070
+in the evening.
