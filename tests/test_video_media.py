@@ -6,6 +6,7 @@ synthetic (a YouTube id is 11 characters, a Drive id 33).
 
 import subprocess
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 import yaml
@@ -110,7 +111,8 @@ class TestDownload:
         run = FakeRun(ok={YT})
         with pytest.raises(SystemExit):
             video_media.download(yt_video(), tmp_path / "v.mp4", ci=True, run=run)
-        assert not any("youtube.com" in url for url in run.urls())
+        hosts = {urlparse(url).hostname for url in run.urls()}
+        assert not hosts & {"www.youtube.com", "youtube.com", "m.youtube.com", "youtu.be"}, hosts
 
     def test_youtube_is_the_last_resort_at_home(self, tmp_path):
         run = FakeRun(ok={YT})
