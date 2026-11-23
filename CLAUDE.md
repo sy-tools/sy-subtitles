@@ -69,6 +69,7 @@ kept in lockstep with `.github/workflows/` by `tests/test_claude_md_lockstep.py`
 - `pipeline-matrix-dryrun.yml` — replay the pipeline against snapshots
 - `golden-talks.yml` — full-corpus pytest, on demand
 - `talk-operator.yml` — operator issue lifecycle: QA, Amruta package, delivery record
+- `wordlist-refresh.yml` — rebuild the typo-hint wordlist on `main` after talks land
 <!-- workflow-index:end -->
 
 `ci.yml`'s **`gate`** job is the ONE required check on `main`. It is always
@@ -273,9 +274,10 @@ that live nowhere else.
 - `build_wordlist` — rebuild `site/dict/words_uk.txt`, the list the SPA's typo
   hints check against. It holds only what the vendored hunspell dictionary
   MISSES — the transliterated SY vocabulary — gathered from every
-  `transcript_uk.txt`, every `final/uk.srt` and the glossary. The pipeline
-  rebuilds it for the talks it builds; run it by hand after a glossary edit or a
-  hand-edited transcript, and commit the result.
+  `transcript_uk.txt`, every `final/uk.srt` and the glossary. It is one
+  sorted file shared by every talk, so a talk's PR never carries it — parallel
+  pipeline PRs would conflict on it. `wordlist-refresh.yml` rebuilds it on
+  `main` once talk or glossary changes land.
 
 **Vimeo links and access**
 - `vimeo_codec` / `mask_video_refs` — `meta.yaml` stores links as `video_ref`,

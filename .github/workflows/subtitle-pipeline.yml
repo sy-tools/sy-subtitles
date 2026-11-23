@@ -1306,23 +1306,6 @@ jobs:
             done
           fi
 
-      - name: Refresh typo-hint wordlist
-        # The SPA underlines a word no dictionary spells, and the talks are full
-        # of transliterations no dictionary carries — so site/dict/words_uk.txt
-        # ships the vocabulary this project has already accepted. It is derived
-        # from transcript_uk.txt and final/uk.srt, the very files this job just
-        # wrote, which means every build leaves the committed list one talk
-        # behind and every reviewer of that talk gets underlined for words the
-        # pipeline itself produced.
-        #
-        # Nothing else notices in time: ci.yml's path filter reaches only
-        # meta.yaml and source/whisper.json under talks/, so CI does not run on
-        # this commit at all, and the `Typo-hint wordlist is current` guard
-        # fires for the first time on the next unrelated pull request — which
-        # it then fails (that is how #1060 went red and #1069 had to be
-        # refreshed by hand). Rebuild it here, where the change is made.
-        run: python -m tools.build_wordlist
-
       - name: Commit via PR
         env:
           GH_TOKEN: ${{ steps.bot-token.outputs.token || github.token }}
@@ -1335,8 +1318,7 @@ jobs:
             "talks/*/*/work/timecodes.txt" \
             "talks/*/*/final/uk.srt" "talks/*/*/final/report.txt" \
             "talks/*/*/final/build_report.txt" \
-            "talks/*/*/final/build_manifest.yaml" \
-            "site/dict/words_uk.txt"
+            "talks/*/*/final/build_manifest.yaml"
 
       # mode: rebuilt — this run built and committed subtitles;
       #       existing — no build this run, but the talk already has subtitles
