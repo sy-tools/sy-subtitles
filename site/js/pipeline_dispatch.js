@@ -19,7 +19,7 @@ var PIPELINE_INPUT_TYPES = ['string', 'boolean', 'choice'];
 
 // Mirrors TALK_ID_RE in tools/workflow_validation.py, which the workflow
 // enforces; tests/test_pipeline_dispatch_contract.py pins the two.
-var PIPELINE_TALK_ID_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Za-z0-9_.-]{1,80}$/;
+var PIPELINE_TALK_ID_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}_[A-Za-z0-9_.-]{1,108}$/;
 
 function dispatchInputsFromDoc(doc) {
   // A YAML 1.1 loader turns the bare key `on` into true; js-yaml (1.2) does not.

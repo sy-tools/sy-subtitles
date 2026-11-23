@@ -10,18 +10,32 @@
 // site/index.html (exposes a `slugify` global) AND require()d by the Node test
 // suite — no inline mirror.
 
+// The one length limit for a slug — the twin of SLUG_MAX_LEN in
+// tools/talk_slug.py; both are pinned to tests/fixtures/slug_cases.json.
+var SLUG_MAX_LEN = 108;
+
 // Strips everything but ASCII letters/digits/space/hyphen, turns whitespace
 // runs into single hyphens, collapses repeats, and trims edge hyphens. Case is
 // PRESERVED (not title-cased): "Raksha Bandhan and Maryadas" keeps its
-// lowercase "and" -> "Raksha-Bandhan-and-Maryadas".
+// lowercase "and" -> "Raksha-Bandhan-and-Maryadas". A slug longer than
+// SLUG_MAX_LEN is cut back to its last whole word; a single word longer than
+// the limit is cut hard.
 function slugify(text) {
-  return String(text == null ? '' : text)
+  var slug = String(text == null ? '' : text)
     .replace(/[^a-zA-Z0-9 -]/g, '')
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
+  if (slug.length > SLUG_MAX_LEN) {
+    var cut = slug.slice(0, SLUG_MAX_LEN);
+    if (slug.charAt(SLUG_MAX_LEN) !== '-' && cut.indexOf('-') !== -1) {
+      cut = cut.slice(0, cut.lastIndexOf('-'));
+    }
+    slug = cut.replace(/-+$/, '');
+  }
+  return slug;
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { slugify: slugify };
+  module.exports = { slugify: slugify, SLUG_MAX_LEN: SLUG_MAX_LEN };
 }

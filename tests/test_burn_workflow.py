@@ -448,13 +448,14 @@ class TestSpaContract:
         # a listed video to the one on screen. The SPA's pattern for it is the two
         # workflow guards written as one, so a talk the workflow renders and the
         # SPA cannot place would simply be missing from the list.
+        from tools.talk_slug import SLUG_MAX_LEN
         from tools.workflow_validation import TALK_ID_RE, VIDEO_SLUG_RE
 
         place = self._js_regex("BURN_RUN_PLACE_RE")
         for talk, slug in [
             ("1993-09-19_Ganesha-Puja", "Talk"),
             ("2000-07-23_Guru-Puja-Shraddha", "Talk_2.part-1"),
-            ("1979-09-27_" + "x" * 80, "_" + "y" * 63),
+            ("1979-09-27_" + "x" * SLUG_MAX_LEN, "_" + "y" * 63),
         ]:
             assert TALK_ID_RE.fullmatch(talk) and VIDEO_SLUG_RE.fullmatch(slug)
             found = place.fullmatch(f"{talk}/{slug}")
@@ -462,7 +463,7 @@ class TestSpaContract:
             assert found.group(1) == talk and found.group(2) == slug
         for talk, slug in [
             ("1993-9-19_Ganesha", "Talk"),  # an unpadded date
-            ("1993-09-19_" + "x" * 81, "Talk"),  # one character past the talk id
+            ("1993-09-19_" + "x" * (SLUG_MAX_LEN + 1), "Talk"),  # one character past the talk id
             ("1993-09-19_Ganesha", "-rf"),  # an option-shaped slug
             ("1993-09-19_Ganesha", "."),  # a dot-only slug
             ("1993-09-19_Ganesha", "y" * 65),  # one character past the slug

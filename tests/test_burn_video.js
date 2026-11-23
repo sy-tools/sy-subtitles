@@ -1,5 +1,6 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
+const { SLUG_MAX_LEN } = require('../site/js/talk_slug');
 const {
   BURN_WORKFLOW,
   makeRequestId,
@@ -244,7 +245,7 @@ describe('parseBurnRunTitle', () => {
   it('refuses a run name with any field out of shape', () => {
     const bad = {
       talk: ['1993-09-19', '93-09-19_Talk', '1993-09-19_Ganesha Puja',
-             '1993-09-19_' + 'x'.repeat(81)],
+             '1993-09-19_' + 'x'.repeat(SLUG_MAX_LEN + 1)],
       slug: ['.hidden', '-rf', 'a/b', 'x'.repeat(65), ''],
       actor: ['-lead', 'a_b', 'x'.repeat(40), 'bot[bot]x', ''],
       scale: ['9%', '1001%', '150', '0150%', '15.5%', '10000%'],

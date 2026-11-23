@@ -6,7 +6,7 @@ const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { slugify } = require('../site/js/talk_slug.js');
+const { slugify, SLUG_MAX_LEN } = require('../site/js/talk_slug.js');
 
 const fixture = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'fixtures', 'slug_cases.json'), 'utf8')
@@ -20,4 +20,8 @@ for (const c of fixture.cases) {
 
 test('slugify matches the SPA for the Raksha Bandhan talk', () => {
   assert.strictEqual(slugify('Raksha Bandhan and Maryadas'), 'Raksha-Bandhan-and-Maryadas');
+});
+
+test('the slug length limit is the fixture\'s', () => {
+  assert.strictEqual(SLUG_MAX_LEN, fixture.max_len);
 });

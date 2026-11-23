@@ -169,7 +169,7 @@ function burnStateKey(talkId, videoSlug) {
 // with the [bot] suffix an App acting as one carries; the request id is what
 // makeRequestId produces. A clip span has no leading zeros, so one span has
 // exactly one spelling.
-var BURN_RUN_PLACE_RE = /^(\d{4}-\d{2}-\d{2}_[A-Za-z0-9_.-]{1,80})\/([A-Za-z0-9_][A-Za-z0-9_.-]{0,63})$/;
+var BURN_RUN_PLACE_RE = /^(\d{4}-\d{2}-\d{2}_[A-Za-z0-9_.-]{1,108})\/([A-Za-z0-9_][A-Za-z0-9_.-]{0,63})$/;
 var BURN_RUN_ACTOR_RE = /^[A-Za-z0-9][A-Za-z0-9-]{0,38}(\[bot\])?$/;
 var BURN_RUN_SCALE_RE = /^([1-9][0-9]{1,3})%$/;
 var BURN_RUN_CLIP_RE = /^(0|[1-9][0-9]{0,8})-([1-9][0-9]{0,8})$/;
