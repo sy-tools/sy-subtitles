@@ -71,6 +71,14 @@ def validate_whisper_json(path: str) -> dict:
     # downstream tools tolerate absence, so we only type-check when present.
     if "language" in data and not isinstance(data["language"], str):
         raise SchemaError("whisper.json", path, "language must be a string when present")
+    # `duration` (seconds of decoded audio) is missing from files written
+    # before it was recorded; consumers then leave the subtitle tail unbounded.
+    if "duration" in data:
+        duration = data["duration"]
+        if isinstance(duration, bool) or not isinstance(duration, (int, float)) or duration <= 0:
+            raise SchemaError(
+                "whisper.json", path, f"duration must be a positive number when present, got {duration!r}"
+            )
     segments = _require(data, "segments", list, "whisper.json", "")
 
     if not segments:

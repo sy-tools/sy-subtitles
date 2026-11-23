@@ -195,3 +195,54 @@ def test_balance_cps_does_not_shift_neighbor_when_adjacent_silence_suffices():
     result = balance_cps(blocks, config, threshold=20)
     assert result[1]["start_ms"] == 10000
     assert result[1]["end_ms"] == 15000
+
+
+# ---------------------------------------------------------------------------
+# media end (issue #1303): no block may run past the end of the video
+# ---------------------------------------------------------------------------
+
+
+def test_apply_padding_last_block_stops_at_media_end():
+    # The video ends 500ms after the last subtitle; the usual +2000ms tail
+    # padding would carry it 1.5s past the end of the media.
+    blocks = [
+        _make_block(1, 0, 1000, "A"),
+        _make_block(2, 2000, 4000, "B"),
+    ]
+    config = OptimizeConfig(media_end_ms=4500)
+    result = apply_padding(blocks, config)
+    assert result[-1]["end_ms"] == 4500
+
+
+def test_apply_padding_without_media_end_keeps_the_tail_pad():
+    blocks = [_make_block(1, 0, 1000, "A")]
+    result = apply_padding(blocks, OptimizeConfig())
+    assert result[-1]["end_ms"] == 3000
+
+
+def test_enforce_duration_last_block_stops_at_media_end():
+    # A short last block may not be stretched to min_duration past the media.
+    blocks = [
+        _make_block(1, 0, 1000, "A"),
+        _make_block(2, 5000, 5300, "B"),
+    ]
+    config = OptimizeConfig(min_duration_ms=1200, media_end_ms=5600)
+    result = enforce_duration(blocks, config)
+    assert result[-1]["end_ms"] <= 5600
+
+
+def test_build_srt_never_writes_a_block_past_media_end(tmp_path):
+    # The builder's raw end already runs past the media (an EN SRT tail that
+    # outlasts the video): the built SRT must still stop at the media end.
+    from tools.build_srt import build_srt_from_blocks
+    from tools.srt_utils import parse_srt
+
+    blocks = [
+        _make_block(1, 0, 2000, "Перший блок."),
+        _make_block(2, 3000, 9000, "Останній блок."),
+    ]
+    out = tmp_path / "uk.srt"
+    build_srt_from_blocks(blocks, str(out), media_end_ms=7000)
+    built = parse_srt(str(out))
+    assert built[-1]["end_ms"] == 7000
+    assert all(b["end_ms"] <= 7000 for b in built)

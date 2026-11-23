@@ -2,6 +2,7 @@
 
 import json
 import re
+import sys
 from pathlib import Path
 
 from .config import OptimizeConfig
@@ -94,6 +95,44 @@ def load_whisper_json(filepath):
     with open(filepath) as f:
         data = json.load(f)
     return data["segments"]
+
+
+def load_media_end_ms(filepath):
+    """The media's end in ms from a whisper.json's recorded `duration`.
+
+    None when the file is missing or predates the field.
+    """
+    try:
+        with open(filepath) as f:
+            duration = json.load(f).get("duration")
+    except FileNotFoundError:
+        return None
+    return round(duration * 1000) if duration else None
+
+
+def clamp_to_media_end(blocks, media_end_ms):
+    """End every block at or before the media's end, in place.
+
+    A block that STARTS at or past the end is left alone and reported: no
+    clamp can make it right, its whole timeline is suspect.
+    Returns the number of blocks shortened.
+    """
+    if media_end_ms is None:
+        return 0
+    clamped = 0
+    for b in blocks:
+        if b["end_ms"] <= media_end_ms:
+            continue
+        if b["start_ms"] >= media_end_ms:
+            print(
+                f"  WARNING: block #{b.get('idx', '?')} starts at {ms_to_time(b['start_ms'])}, "
+                f"at or past the media end {ms_to_time(media_end_ms)}",
+                file=sys.stderr,
+            )
+            continue
+        b["end_ms"] = media_end_ms
+        clamped += 1
+    return clamped
 
 
 def calc_stats(blocks, config=None):

@@ -10,13 +10,16 @@ Usage:
 
 import argparse
 import copy
+import dataclasses
 import json
 import re
 
 from .config import OptimizeConfig
 from .srt_utils import (
     calc_stats,
+    clamp_to_media_end,
     format_stats,
+    load_media_end_ms,
     load_whisper_json,
     parse_srt,
     time_to_ms,
@@ -400,7 +403,12 @@ def extend_cps(blocks, config):
                 max(current_duration, duration_split_cap_ms(config)),
             )
 
-            max_end = blocks[i + 1]["start_ms"] - config.min_gap_ms if i + 1 < len(blocks) else b["end_ms"] + 60000
+            if i + 1 < len(blocks):
+                max_end = blocks[i + 1]["start_ms"] - config.min_gap_ms
+            else:
+                max_end = b["end_ms"] + 60000
+                if config.media_end_ms is not None:
+                    max_end = min(max_end, config.media_end_ms)
             min_start = blocks[i - 1]["end_ms"] + config.min_gap_ms if i > 0 else 0
             min_start = max(min_start, _earliest_allowed_start(b, config))
 
@@ -1223,7 +1231,10 @@ def optimize_readability(blocks, whisper_segments, config, report):
     # Phase 8: Ensure minimum duration
     for b in blocks:
         if b["end_ms"] - b["start_ms"] < config.min_duration_ms:
-            b["end_ms"] = b["start_ms"] + config.min_duration_ms
+            end = b["start_ms"] + config.min_duration_ms
+            if config.media_end_ms is not None:
+                end = max(b["end_ms"], min(end, config.media_end_ms))
+            b["end_ms"] = end
 
     # Phase 8b: Trim oversized blocks with very little text
     # Blocks that exceed max_duration but have too few chars to split
@@ -1475,7 +1486,12 @@ def optimize(srt_path, json_path, output_path, report_path=None, config=None, uk
     if anchors_path:
         report.append(tag_anchors(blocks, anchors_path))
     whisper_segments = load_whisper_json(json_path) if json_path else []
+    if config.media_end_ms is None and json_path:
+        config = dataclasses.replace(config, media_end_ms=load_media_end_ms(json_path))
     original_blocks = copy.deepcopy(blocks)
+    # Every phase must see the input already inside the media: a block cut
+    # only at the end would reach the next run shorter than this one saw it.
+    clamp_to_media_end(blocks, config.media_end_ms)
 
     orig_stats = calc_stats(blocks, config)
     report.append(format_stats(orig_stats, "ORIGINAL SRT STATISTICS"))
@@ -1485,6 +1501,12 @@ def optimize(srt_path, json_path, output_path, report_path=None, config=None, uk
     blocks = fix_structural(blocks, config, report)
     blocks = optimize_readability(blocks, whisper_segments, config, report)
     blocks = apply_chaining(blocks, config, report)
+
+    # Before the late merge: a block the media end cuts short must be seen
+    # (and merged) by this run, or the next run merges it — not a fixed point.
+    clamped = clamp_to_media_end(blocks, config.media_end_ms)
+    if clamped:
+        report.append(f"  Blocks ended at the media end: {clamped}")
 
     # Idempotency guard: apply_chaining extends block ends to close small
     # gaps, which can push a block's CPS across the sparse threshold. Run

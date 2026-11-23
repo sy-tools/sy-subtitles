@@ -286,3 +286,42 @@ def test_a_primary_slug_matching_the_declaration_is_accepted(tmp_path):
     results = build_secondary_srts(str(talk), primary_slug="Puja")
 
     assert _result_for(results, "Puja-Talk")["status"] == "built"
+
+
+# ---------------------------------------------------------------------------
+#  Issue #1303: a derived SRT stops where ITS video does
+# ---------------------------------------------------------------------------
+
+
+def test_derived_srt_is_capped_at_the_secondary_media_duration(tmp_path):
+    import json
+
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "vid1": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT)},
+            "vid2": {"en": _blocks(_EN_TEXT, offset_ms=5000)},
+        },
+    )
+    # The primary's last UK block ends at 35000ms; the +5000ms offset puts it
+    # at 40000ms on vid2 — whose recording is only 39500ms long.
+    (talk / "vid2" / "source" / "whisper.json").write_text(
+        json.dumps({"segments": [{"start": 5.0, "end": 39.0, "text": "x"}], "duration": 39.5}),
+        encoding="utf-8",
+    )
+    build_secondary_srts(talk, "vid1")
+    built = parse_srt(str(talk / "vid2" / "final" / "uk.srt"))
+    assert built[-1]["end_ms"] == 39500
+
+
+def test_derived_srt_without_a_recorded_duration_is_unchanged(tmp_path):
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "vid1": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT)},
+            "vid2": {"en": _blocks(_EN_TEXT, offset_ms=5000)},
+        },
+    )
+    build_secondary_srts(talk, "vid1")
+    built = parse_srt(str(talk / "vid2" / "final" / "uk.srt"))
+    assert built[-1]["end_ms"] == 40000
