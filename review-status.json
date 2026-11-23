@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T22:04:04.214819+00:00",
+  "updated_at": "2026-11-23T22:06:46.174091+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1289,18 +1289,18 @@
     "1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:10:16Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1700,
+      "updated_at": "2026-11-23T22:05:33Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1640
     },
     "1996-05-05_Sahasrara-Puja-You-must-feel-responsible-but-be-humble": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:10:12Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1698,
+      "updated_at": "2026-11-23T22:05:18Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1639
     },
