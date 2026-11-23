@@ -207,3 +207,22 @@ def test_a_word_with_no_letter_or_digit_never_becomes_a_cue():
 def test_a_dash_inside_a_sentence_stays_in_its_cue():
     words = [(0.0, 0.5, "не"), (0.6, 1.2, "заходили"), (1.3, 2.0, "–"), (2.1, 2.4, "як"), (2.5, 2.9, "бути?")]
     assert [c["text"] for c in build_cues(_whisper(*words))] == ["не заходили – як бути?"]
+
+
+def test_a_word_whisper_split_at_an_apostrophe_or_hyphen_is_glued_back():
+    words = [
+        (0.0, 0.3, "ім"),
+        (0.3, 0.5, "'я"),
+        (0.6, 0.9, "будь"),
+        (0.9, 1.2, "-якого"),
+        (1.3, 1.6, "комп"),
+        (1.6, 2.0, "’ютера"),
+    ]
+    assert [c["text"] for c in build_cues(_whisper(*words))] == ["ім'я будь-якого комп’ютера"]
+
+
+def test_a_glued_word_is_never_cut_between_two_cues():
+    words = _steady(["слово"] * 15) + [(6.0, 6.2, "комп"), (6.2, 6.6, "’ютері")]
+    texts = [c["text"] for c in build_cues(_whisper(*words))]
+    assert "комп’ютері" in " ".join(texts)
+    assert not any(t.startswith("’") for t in texts)

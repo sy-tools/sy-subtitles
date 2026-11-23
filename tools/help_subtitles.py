@@ -27,6 +27,11 @@ SENTENCE_CHARS = 20  # a sentence end closes a cue only once it holds this much
 CUE_GAP_SECONDS = 0.05
 MAX_TEXT_CHARS = 120  # a rewritten cue may run longer than the cut, not much longer
 
+# Whisper hands back the tail of a word split at an apostrophe or a hyphen as
+# a word of its own ("ім" + "'я", "будь" + "-якого"). The tail carries no
+# leading space in whisper's own text, but whisper_run strips that away, so
+# the mark at its start is what tells it apart.
+_WORD_TAIL = re.compile(r"^['’ʼ\-]\w")
 _SENTENCE_END = re.compile(r"[.?!…]['\"»)]*$")
 _VTT_NAME = re.compile(r"^(?P<ref>.+)\.(?P<lang>[a-z]{2})\.vtt$")
 _I18N_BLOCK = re.compile(r"^var I18N = \{\n(.*?)^\};", re.S | re.M)
@@ -48,6 +53,11 @@ def build_cues(whisper):
     cues = []
     cue = None
     for word in _words(whisper):
+        if _WORD_TAIL.match(word["text"]) and (cue is not None or cues):
+            whole = cue if cue is not None else cues[-1]
+            whole["text"] += word["text"]
+            whole["end"] = word["end"]
+            continue
         if not any(ch.isalnum() for ch in word["text"]):
             # Punctuation whisper heard as a word ("–", "..."): it belongs to the
             # sentence it was said in, and alone after a pause it is not speech
