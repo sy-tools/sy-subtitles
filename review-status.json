@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T15:44:29.212145+00:00",
+  "updated_at": "2026-11-23T15:57:36.335199+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1091,18 +1091,18 @@
     "1993-03-21_Birthday-Puja-Satya-Yuga": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:30:19Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1572,
+      "updated_at": "2026-11-23T15:57:09Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1554
     },
     "1992-02-09_Shri-Ganesha-Puja-Gravity-and-Balance": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:30:15Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1574,
+      "updated_at": "2026-11-23T15:57:28Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1553
     },
