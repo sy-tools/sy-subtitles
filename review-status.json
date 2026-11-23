@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T22:01:44.089675+00:00",
+  "updated_at": "2026-11-23T22:04:04.214819+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1253,9 +1253,9 @@
     "2001-02-25_Mahashivaratri-Puja-Destructive-Power-of-Shri-Mahadeva": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:10:32Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1694,
+      "updated_at": "2026-11-23T22:03:15Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1644
     },
