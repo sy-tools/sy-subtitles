@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T17:45:53.890077+00:00",
+  "updated_at": "2026-11-23T17:48:15.903860+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1280,9 +1280,9 @@
     "1998-06-21_Adi-Shakti-Puja-You-Must-Develop-Humility": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:10:20Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1679,
+      "updated_at": "2026-11-23T17:47:55Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1641
     },
