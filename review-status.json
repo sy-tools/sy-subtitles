@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T16:01:15.744271+00:00",
+  "updated_at": "2026-11-23T16:05:06.988504+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1073,9 +1073,9 @@
     "1995-07-16_Guru-Puja-Watch-Your-Mind-and-Attention": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:30:27Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1581,
+      "updated_at": "2026-11-23T16:01:13Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1556
     },
@@ -1109,9 +1109,9 @@
     "1988-08-14_Shri-Fatima-Puja-The-principle-of-the-Left-Nabhi": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:30:11Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1584,
+      "updated_at": "2026-11-23T16:01:46Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1552
     },
