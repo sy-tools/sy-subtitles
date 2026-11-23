@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T16:09:06.796627+00:00",
+  "updated_at": "2026-11-23T16:19:14.597163+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1199,9 +1199,9 @@
     "1991-12-09_Shri-Shakti-Mahakali-Puja-I-believe-in-Shri-Mataji": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T16:08:36Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1598,
+      "updated_at": "2026-11-23T16:18:44Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1591
     },
