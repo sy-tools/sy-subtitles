@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T16:05:06.988504+00:00",
+  "updated_at": "2026-11-23T16:09:06.796627+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1159,6 +1159,96 @@
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1547
+    },
+    "1997-11-02_Diwali-Puja-Shri-Lakshmi-and-Money": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:51Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1595
+    },
+    "1996-07-16_Shri-Mahalakshmi-Puja-We-have-to-live-like-one-family": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:47Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1594
+    },
+    "1995-06-04_Adi-Shakti-Puja-the-hurdles-in-rising-the-Kundalini": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:43Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1593
+    },
+    "1992-09-13_Hamsa-Chakra-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:40Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1592
+    },
+    "1991-12-09_Shri-Shakti-Mahakali-Puja-I-believe-in-Shri-Mataji": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:36Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1591
+    },
+    "1989-05-24_Shri-Pallas-Athena-Puja-The-Origins-and-Role-of-Greece": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:31Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1590
+    },
+    "1986-07-06_Guru-Puja-Cosmic-Consciousness": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:27Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1589
+    },
+    "1985-05-19_Shri-Ganesha-Puja-You-Should-be-Prepared-to-Change": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:23Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1588
+    },
+    "1985-03-10_Devi-Puja-How-To-Ascend-Into-Nirvikalpa": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:20Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1587
+    },
+    "1983-11-05_Eve-of-Diwali-Puja-Talk-to-Sahaja-Yogis-Money-Sleep-Bhoots-Lethargy": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T16:08:16Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1586
     }
   }
 }
