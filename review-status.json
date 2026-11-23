@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T17:51:19.763032+00:00",
+  "updated_at": "2026-11-23T22:01:44.089675+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1262,9 +1262,9 @@
     "2000-09-16_Shri-Ganesha-Puja-the-sanctity-of-marriage": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:10:28Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1691,
+      "updated_at": "2026-11-23T22:01:21Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1643
     },
