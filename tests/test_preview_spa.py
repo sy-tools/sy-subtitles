@@ -4772,6 +4772,193 @@ class TestBookmarkletExtraction:
         assert len(data["tx"]) > 1000, len(data["tx"])
         assert "Christ was born" in data["tx"], data["tx"][:200]
 
+    YT_FIXTURE = Path(__file__).parent / "fixtures" / "amruta_youtube_two_videos.html"
+
+    def test_extracts_youtube_videos_with_drive_mirrors(self, browser):
+        """amruta.org moved from Vimeo to YouTube. Video 1 of the (synthetic)
+        fixture plays through a Bunny iframe and names its YouTube id only in
+        the details block; video 2 plays through .youtube-player. Both come out
+        as YouTube videos with their two MP4 Drive mirrors — the MPG links and
+        everything Bunny are left behind."""
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.goto(self.YT_FIXTURE.as_uri())
+            data = self._run_bookmarklet(pg)
+        finally:
+            ctx.close()
+
+        assert data["v"] == [
+            {
+                "p": "yt",
+                "id": "AbCdEfGhIjK",
+                "gd": ["1Syntheticdriveid00abcdefghijklmn", "1Syntheticdriveid01abcdefghijklmn"],
+                "l": "Bhoomi Devi Puja Talk",
+            },
+            {
+                "p": "yt",
+                "id": "ZyXwVuTsRqP",
+                "gd": ["1Syntheticdriveid04abcdefghijklmn", "1Syntheticdriveid05abcdefghijklmn"],
+                "l": "Bhoomi Devi Puja",
+            },
+        ], data["v"]
+        assert "mediadelivery" not in json.dumps(data)
+        assert data["t"] == "Shri Bhoomi Devi Puja"
+        assert data["tx"].endswith("May God bless you."), data["tx"][-80:]
+
+    def _videos_of(self, browser, body):
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.set_content('<div class="entry-content">' + body + "</div>")
+            return self._run_bookmarklet(pg)["v"]
+        finally:
+            ctx.close()
+
+    @staticmethod
+    def _wrapper(inner, label="Some Puja"):
+        return (
+            '<div class="embedded-video-wrapper">'
+            + inner
+            + '<div class="video-meta-info">2001-01-01 '
+            + label
+            + ", Location, 60'</div></div>"
+        )
+
+    def test_youtube_id_source_order(self, browser):
+        """.youtube-player[data-id], else the "Watch on YouTube" link, else the
+        collapse-<id> suffix."""
+        player = '<div class="youtube-player" data-id="AAAAAAAAAAA"></div>'
+        link = '<a href="https://www.youtube.com/watch?v=BBBBBBBBBBB" title="Watch on YouTube">Watch</a>'
+        collapse = '<div id="collapse-CCCCCCCCCCC"></div>'
+        w = self._wrapper
+        v = self._videos_of(browser, w(collapse + link + player) + w(collapse + link) + w(collapse))
+        assert [x["id"] for x in v] == ["AAAAAAAAAAA", "BBBBBBBBBBB", "CCCCCCCCCCC"], v
+        assert all(x["p"] == "yt" and x["gd"] == [] for x in v), v
+
+    def test_vimeo_wrapper_keeps_the_vimeo_payload(self, browser):
+        """A wrapper with a Vimeo iframe stays {id, h, l} — no provider tag —
+        even next to YouTube and Drive links, and beside a YouTube video."""
+        vimeo = (
+            '<iframe src="https://player.vimeo.com/video/111?h=abc"></iframe>'
+            '<a href="https://youtu.be/AbCdEfGhIjK" title="Watch on YouTube">Watch</a>'
+            '<a href="https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn/view"'
+            ' title="Download MP4 (streaming quality)">MP4</a>'
+        )
+        yt = '<div class="youtube-player" data-id="ZyXwVuTsRqP"></div>'
+        v = self._videos_of(browser, self._wrapper(vimeo, "Old Cut") + self._wrapper(yt, "New Cut"))
+        assert v == [
+            {"id": "111", "h": "abc", "l": "Old Cut"},
+            {"p": "yt", "id": "ZyXwVuTsRqP", "gd": [], "l": "New Cut"},
+        ], v
+
+    def test_wrapper_without_any_id_is_a_linkless_video(self, browser):
+        """Neither a Vimeo iframe nor a YouTube id: the video is still listed,
+        with no link, so the form shows a row to fill in by hand."""
+        inner = (
+            '<iframe src="https://iframe.mediadelivery.net/embed/000000/00000000-0000"></iframe>'
+            '<div id="collapse-tooshort"></div>'
+            '<a href="https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn/view"'
+            ' title="Download MP4 (streaming quality)">MP4</a>'
+        )
+        v = self._videos_of(browser, self._wrapper(inner, "Mystery Puja"))
+        assert v == [{"id": "", "h": "", "l": "Mystery Puja"}], v
+
+    def test_add_form_stores_youtube_and_vimeo_rows(self, server, page):
+        """Mixed talk through the real form: the YouTube row becomes an r2
+        video_ref with its two media_refs, the Vimeo row an r1 video_ref, and a
+        YouTube link typed over a scraped one loses the mirrors it never had."""
+        payload = {
+            "t": "Mixed Talk",
+            "d": "1982-07-12",
+            "u": "https://www.amruta.org/1982/07/12/mixed/",
+            "v": [
+                {
+                    "p": "yt",
+                    "id": "AbCdEfGhIjK",
+                    "gd": ["1Syntheticdriveid00abcdefghijklmn", "1Syntheticdriveid01abcdefghijklmn"],
+                    "l": "Bhoomi Devi Puja",
+                },
+                {"id": "123456", "h": "abcd", "l": "Bhoomi Devi Puja Talk"},
+            ],
+            "tx": "Some transcript.",
+        }
+        page.goto(f"{server}{SPA_URL}#/add?data={quote(json.dumps(payload), safe='')}")
+        page.wait_for_selector("#add-form", state="visible", timeout=5000)
+        page.wait_for_timeout(200)  # let updateAddPreview run
+        meta = yaml.safe_load(page.locator("#add-preview").text_content())
+        yt, vimeo = meta["videos"]
+        assert yt["video_ref"].startswith("r2") and vimeo["video_ref"].startswith("r1"), meta["videos"]
+        assert len(yt["media_refs"]) == 2 and all(r.startswith("r2") for r in yt["media_refs"])
+        assert "media_refs" not in vimeo
+        urls = page.eval_on_selector_all(".add-video-url", "els => els.map(e => e.value)")
+        assert urls == ["https://www.youtube.com/watch?v=AbCdEfGhIjK", "https://vimeo.com/123456/abcd"]
+
+        page.fill(".add-video-url >> nth=0", "https://youtu.be/ZyXwVuTsRqP")
+        retyped = yaml.safe_load(page.locator("#add-preview").text_content())["videos"][0]
+        assert retyped["video_ref"].startswith("r2") and "media_refs" not in retyped, retyped
+
+    def test_add_form_blocks_submit_on_a_link_it_cannot_store(self, server, page):
+        """Retyping a scraped YouTube row to a link the codec refuses (a
+        /live/ link) used to throw inside the input handler: the preview kept
+        the previous YAML and submit committed it — the OLD video_ref and
+        media_refs. Now the row says what is wrong, the preview holds no YAML,
+        and submit is refused until the link is one that can be stored."""
+        payload = {
+            "t": "Blocked Talk",
+            "d": "1982-07-12",
+            "u": "https://www.amruta.org/1982/07/12/blocked/",
+            "v": [
+                {
+                    "p": "yt",
+                    "id": "AbCdEfGhIjK",
+                    "gd": ["1Syntheticdriveid00abcdefghijklmn", "1Syntheticdriveid01abcdefghijklmn"],
+                    "l": "Bhoomi Devi Puja",
+                },
+                {"id": "123456", "h": "abcd", "l": "Bhoomi Devi Puja Talk"},
+            ],
+            "tx": "Some transcript.",
+        }
+        page.goto(f"{server}{SPA_URL}#/add?data={quote(json.dumps(payload), safe='')}")
+        page.wait_for_selector("#add-form", state="visible", timeout=5000)
+        page.wait_for_timeout(200)  # let updateAddPreview run
+        preview = page.locator("#add-preview")
+        old_ref = yaml.safe_load(preview.text_content())["videos"][0]["video_ref"]
+        errors = page.locator("#add-videos .field-error")
+        assert errors.count() == 2 and not errors.nth(0).is_visible() and not errors.nth(1).is_visible()
+        assert page.locator("#add-submit").is_enabled()
+
+        page.evaluate(
+            "() => { window._opened = []; window._alerts = [];"
+            " window.open = function(u) { window._opened.push(u); };"
+            " window.alert = function(m) { window._alerts.push(m); }; }"
+        )
+        page.fill(".add-video-url >> nth=0", "https://www.youtube.com/live/ZyXwVuTsRqP")
+
+        text = preview.text_content()
+        assert old_ref not in text and "video_ref" not in text and "media_refs" not in text, text
+        assert errors.nth(0).is_visible() and errors.nth(0).text_content().strip()
+        assert not errors.nth(1).is_visible()
+        assert page.get_attribute(".add-video-url >> nth=0", "aria-invalid") == "true"
+        assert page.get_attribute(".add-video-url >> nth=1", "aria-invalid") is None
+        assert page.locator("#add-submit").is_disabled()
+        # Refused even when called past the disabled button.
+        assert page.evaluate("SPA.submitAddTalk()") is False
+        assert page.evaluate("window._opened") == []
+        assert len(page.evaluate("window._alerts")) == 1
+
+        # A link that can be stored clears it — without the mirrors of the old one.
+        page.fill(".add-video-url >> nth=0", "https://youtu.be/ZyXwVuTsRqP")
+        video = yaml.safe_load(preview.text_content())["videos"][0]
+        assert video["video_ref"].startswith("r2") and video["video_ref"] != old_ref
+        assert "media_refs" not in video
+        assert not errors.nth(0).is_visible()
+        assert page.get_attribute(".add-video-url >> nth=0", "aria-invalid") is None
+        assert page.locator("#add-submit").is_enabled()
+        page.evaluate("SPA.submitAddTalk()")
+        opened = page.evaluate("window._opened")
+        assert len(opened) == 1 and quote(video["video_ref"], safe="") in opened[0], opened
+
     def test_transcript_collapses_hardwrapped_paragraphs_and_nbsp(self, browser):
         """Older amruta posts hard-wrap paragraph text with literal newlines,
         and stray non-breaking spaces sneak in. The bookmarklet must normalize

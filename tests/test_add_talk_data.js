@@ -6,8 +6,12 @@ const {
   defaultSyncRoles,
   syncRolesForRows,
   addTalkPrBody,
+  videoFromPayload,
+  rowMediaUrls,
+  isSupportedVideoUrl,
+  buildMetaYamlChecked,
 } = require('../site/js/add_talk_data');
-const { decodeVideoRef } = require('../site/js/vimeo_codec');
+const { decodeVideoRef, decodeVideoSource } = require('../site/js/vimeo_codec');
 
 // The bookmarklet encodes its payload exactly like this, then opens the SPA
 // at `<base>#/add?data=<encoded>`. These helpers reproduce that round trip so
@@ -326,5 +330,233 @@ describe('addTalkPrBody', () => {
   it('links the index searched to this talk, across every status', () => {
     const body = addTalkPrBody('https://www.amruta.org/x', '1981-11-01_Diwali', INDEX);
     assert.ok(body.includes('(' + INDEX + '?q=1981-11-01_Diwali&f=all)'), body);
+  });
+});
+
+// --- YouTube + Google Drive mirrors ------------------------------------------
+// amruta.org moved its talks from Vimeo to YouTube, each with Google Drive MP4
+// mirrors. The bookmarklet hands a YouTube video over as {p:'yt', id, gd, l};
+// meta.yaml stores the YouTube link as video_ref and the mirrors as media_refs.
+// Every id here is synthetic.
+
+const YT_ID = 'AbCdEfGhIjK';
+const YT_URL = 'https://www.youtube.com/watch?v=' + YT_ID;
+const GD_IDS = ['1Syntheticdriveid00abcdefghijklmn', '1Syntheticdriveid01abcdefghijklmn'];
+const GD_URLS = GD_IDS.map((id) => 'https://drive.google.com/file/d/' + id + '/view');
+
+// The media_refs block list under the video whose slug is given.
+function mediaRefsOf(yaml, slug) {
+  const block = yaml.split(/^- slug: /m).find((b) => b.startsWith(slug + '\n')) || '';
+  const m = block.match(/^ {2}media_refs:\n((?: {2}- \S+\n)+)/m);
+  return m ? m[1].trim().split('\n').map((l) => l.replace(/^\s*- /, '')) : null;
+}
+
+describe('videoFromPayload — bookmarklet video → form row', () => {
+  it('turns a YouTube video into its watch URL plus the Drive mirrors', () => {
+    assert.deepStrictEqual(
+      videoFromPayload({ p: 'yt', id: YT_ID, gd: GD_IDS, l: 'Bhoomi Devi Puja Talk' }),
+      { url: YT_URL, title: 'Bhoomi Devi Puja Talk', mediaUrls: GD_URLS }
+    );
+  });
+
+  it('gives a YouTube video with no mirrors an empty list', () => {
+    assert.deepStrictEqual(videoFromPayload({ p: 'yt', id: YT_ID, l: 'T' }), {
+      url: YT_URL, title: 'T', mediaUrls: [],
+    });
+  });
+
+  it('keeps a Vimeo video exactly as before', () => {
+    assert.deepStrictEqual(videoFromPayload({ id: '123456', h: 'abcd', l: 'Talk' }), {
+      url: 'https://vimeo.com/123456/abcd', title: 'Talk', mediaUrls: [],
+    });
+  });
+
+  it('keeps the legacy bare-id string payload', () => {
+    assert.deepStrictEqual(videoFromPayload('123456'), {
+      url: 'https://vimeo.com/123456', title: '', mediaUrls: [],
+    });
+  });
+
+  it('gives a video whose link could not be found a row with no URL', () => {
+    // What the bookmarklet emits for a wrapper it found no id in.
+    assert.deepStrictEqual(videoFromPayload({ id: '', h: '', l: 'Mystery' }), {
+      url: '', title: 'Mystery', mediaUrls: [],
+    });
+    assert.deepStrictEqual(videoFromPayload({ p: 'yt', id: '', gd: GD_IDS, l: 'Mystery' }), {
+      url: '', title: 'Mystery', mediaUrls: [],
+    });
+  });
+});
+
+describe('rowMediaUrls — mirrors belong to the link they came with', () => {
+  it('keeps the mirrors while the row still carries the scraped link', () => {
+    assert.deepStrictEqual(rowMediaUrls(' ' + YT_URL + ' ', YT_URL, GD_URLS), GD_URLS);
+  });
+
+  it('drops them once the editor types a different link', () => {
+    assert.deepStrictEqual(rowMediaUrls('https://youtu.be/ZyXwVuTsRqP', YT_URL, GD_URLS), []);
+  });
+
+  it('gives a manually added row none', () => {
+    assert.deepStrictEqual(rowMediaUrls(YT_URL, '', []), []);
+    assert.deepStrictEqual(rowMediaUrls(YT_URL, undefined, undefined), []);
+    assert.deepStrictEqual(rowMediaUrls('', '', GD_URLS), []);
+  });
+});
+
+describe('buildMetaYaml — YouTube video_ref and media_refs', () => {
+  it('stores a YouTube link as an r2 video_ref and the mirrors as media_refs', () => {
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1982-07-12', language: 'en',
+      videos: [{ slug: 'A', title: 'A', url: YT_URL, mediaUrls: GD_URLS }],
+    });
+    const ref = yaml.match(/^ {2}video_ref: (r2[A-Za-z0-9_-]+)$/m);
+    assert.ok(ref, 'expected an r2 video_ref line:\n' + yaml);
+    assert.deepStrictEqual(decodeVideoSource(ref[1]), { provider: 'yt', id: YT_ID, watchUrl: YT_URL });
+    const refs = mediaRefsOf(yaml, 'A');
+    assert.ok(refs, 'expected a media_refs block list:\n' + yaml);
+    assert.strictEqual(refs.length, 2);
+    assert.deepStrictEqual(refs.map((r) => decodeVideoSource(r).provider), ['gd', 'gd']);
+    assert.deepStrictEqual(refs.map(decodeVideoRef), GD_URLS);
+    // media_refs sits right after video_ref.
+    assert.match(yaml, /^ {2}video_ref: \S+\n {2}media_refs:\n {2}- /m);
+    // Nothing plaintext reaches the file.
+    assert.doesNotMatch(yaml, /youtu|drive\.google|AbCdEfGhIjK|Syntheticdriveid/);
+  });
+
+  it('writes no media_refs for a YouTube video without mirrors', () => {
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1982-07-12', language: 'en',
+      videos: [{ slug: 'A', title: 'A', url: 'https://youtu.be/' + YT_ID }, { slug: 'B', title: 'B', url: YT_URL, mediaUrls: [] }],
+    });
+    assert.strictEqual((yaml.match(/^ {2}video_ref: r2/gm) || []).length, 2);
+    assert.doesNotMatch(yaml, /media_refs/);
+  });
+
+  it('never writes media_refs on a Vimeo video or on one with no link', () => {
+    // tools/schemas.py allows media_refs only next to a YouTube video_ref.
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1982-07-12', language: 'en',
+      videos: [
+        { slug: 'A', title: 'A', url: 'https://vimeo.com/1/2', mediaUrls: GD_URLS },
+        { slug: 'B', title: 'B', url: '', mediaUrls: GD_URLS },
+      ],
+    });
+    assert.doesNotMatch(yaml, /media_refs/);
+  });
+
+  it('keeps each provider on its own video in a mixed talk', () => {
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1982-07-12', language: 'en',
+      videos: [
+        { slug: 'Puja', title: 'Puja', url: 'https://vimeo.com/123456/abcd', sync: 'primary' },
+        { slug: 'Puja-Talk', title: 'Puja Talk', url: YT_URL, mediaUrls: GD_URLS, sync: 'derived' },
+      ],
+    });
+    const [, vimeo, yt] = yaml.split(/^- slug: /m);
+    assert.match(vimeo, /^ {2}video_ref: r1\S+\n {2}sync: primary$/m);
+    assert.doesNotMatch(vimeo, /media_refs/);
+    assert.match(yt, /^ {2}video_ref: r2\S+\n {2}media_refs:\n {2}- r2\S+\n {2}- r2\S+\n {2}sync: derived$/m);
+    assert.strictEqual(mediaRefsOf(yaml, 'Puja'), null);
+    assert.deepStrictEqual(mediaRefsOf(yaml, 'Puja-Talk').map(decodeVideoRef), GD_URLS);
+  });
+});
+
+// tools/download.py's setup_talk writes the same videos from the CLI path. Both
+// sides read tests/fixtures/add_talk_meta_parity.json, so the form and the CLI
+// cannot come to store the same video differently.
+describe('buildMetaYaml — parity with tools.download setup_talk', () => {
+  const parity = require('./fixtures/add_talk_meta_parity.json');
+
+  it('emits exactly the refs the shared fixture expects', () => {
+    const yaml = buildMetaYaml({
+      title: 'T', date: '1982-07-12', language: 'en',
+      videos: parity.videos.map((v) => ({
+        slug: v.slug, title: v.title, url: v.video_url, mediaUrls: v.media_urls,
+      })),
+    });
+    const blocks = yaml.split(/^- slug: /m).slice(1);
+    assert.strictEqual(blocks.length, parity.expected.length);
+    parity.expected.forEach((want, i) => {
+      const ref = blocks[i].match(/^ {2}video_ref: (\S+)$/m);
+      assert.strictEqual(ref ? ref[1] : undefined, want.video_ref, want.slug);
+      assert.deepStrictEqual(mediaRefsOf(yaml, want.slug) || undefined, want.media_refs, want.slug);
+    });
+  });
+});
+
+// --- a link that cannot be stored --------------------------------------------
+// encodeVideoRef throws on a link it does not know (a YouTube /live/ or
+// /shorts/ link, a half-typed one). The form used to let that throw escape its
+// input handler: the preview kept the YAML of the PREVIOUS keystroke and
+// submit committed it — the old video_ref and media_refs under a row that now
+// said something else. buildMetaYamlChecked is what the form calls instead: a
+// build either succeeds or yields no YAML at all.
+
+describe('isSupportedVideoUrl', () => {
+  it('accepts what the codec can store', () => {
+    for (const url of [YT_URL, 'https://youtu.be/' + YT_ID, 'https://vimeo.com/123456/abcd', GD_URLS[0]]) {
+      assert.strictEqual(isSupportedVideoUrl(url), true, url);
+    }
+  });
+
+  it('rejects what it cannot', () => {
+    for (const url of [
+      'https://www.youtube.com/live/' + YT_ID,
+      'https://www.youtube.com/shorts/' + YT_ID,
+      'https://youtu.b',
+      'https://example.com/video.mp4',
+      '',
+      null,
+    ]) {
+      assert.strictEqual(isSupportedVideoUrl(url), false, String(url));
+    }
+  });
+});
+
+describe('buildMetaYamlChecked — a failed build yields no YAML', () => {
+  const base = { title: 'T', date: '1982-07-12', language: 'en' };
+
+  it('returns the same YAML as buildMetaYaml when every link encodes', () => {
+    const fields = {
+      ...base,
+      videos: [
+        { slug: 'A', title: 'A', url: YT_URL, mediaUrls: GD_URLS, sync: 'primary' },
+        { slug: 'B', title: 'B', url: 'https://vimeo.com/1/2', sync: 'derived' },
+        { slug: 'C', title: 'C', url: '', sync: 'ignored' },
+      ],
+    };
+    assert.deepStrictEqual(buildMetaYamlChecked(fields), {
+      ok: true, yaml: buildMetaYaml(fields), badVideos: [],
+    });
+    assert.deepStrictEqual(buildMetaYamlChecked(base), {
+      ok: true, yaml: buildMetaYaml(base), badVideos: [],
+    });
+  });
+
+  it('names the video whose link cannot be stored and returns no YAML', () => {
+    const res = buildMetaYamlChecked({
+      ...base,
+      videos: [
+        { slug: 'A', title: 'A', url: 'https://vimeo.com/1/2' },
+        { slug: 'B', title: 'B', url: 'https://www.youtube.com/live/' + YT_ID, mediaUrls: GD_URLS },
+        { slug: 'C', title: 'C', url: 'https://youtu.b' },
+      ],
+    });
+    assert.deepStrictEqual(res, { ok: false, yaml: '', badVideos: [1, 2] });
+  });
+
+  it('treats a mirror that cannot be stored as that video\'s failure', () => {
+    const res = buildMetaYamlChecked({
+      ...base,
+      videos: [{ slug: 'A', title: 'A', url: YT_URL, mediaUrls: [GD_URLS[0], 'https://drive.google.com/file/d/short/view'] }],
+    });
+    assert.deepStrictEqual(res, { ok: false, yaml: '', badVideos: [0] });
+  });
+
+  it('does not throw where buildMetaYaml does', () => {
+    const fields = { ...base, videos: [{ slug: 'A', title: 'A', url: 'nope' }] };
+    assert.throws(() => buildMetaYaml(fields));
+    assert.doesNotThrow(() => buildMetaYamlChecked(fields));
   });
 });

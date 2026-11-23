@@ -148,13 +148,27 @@ synced or built at all.</p>
 <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;max-width:560px">
   <label><span style="color:var(--fg4);font-size:13px;">Video title</span>
     <input class="input compact" type="text" value="Guru Puja" style="margin-top:4px"></label>
-  <label><span style="color:var(--fg4);font-size:13px;">Vimeo URL</span>
+  <label><span style="color:var(--fg4);font-size:13px;">Video URL</span>
     <input class="input compact" type="url" value="https://vimeo.com/…" style="margin-top:4px"></label>
   <label><span style="color:var(--fg4);font-size:13px;">Sync</span>
     <select class="input compact" style="margin-top:4px">
       <option>Primary</option><option>Derived</option>
       <option>Independent</option><option>Ignored</option>
     </select></label>
+</div>
+
+<h3>Field error (<code>.field-error</code>)</h3>
+<p>A value the form cannot accept: the field takes <code>aria-invalid="true"</code> (a
+<code>--danger-border</code> outline) and a <code>.field-error</code> line under the row says
+why. The line is the message — the border only points at the field. Here, a video link that is
+neither a Vimeo nor a YouTube link the app can store; the add-talk form shows no
+<code>meta.yaml</code> preview and keeps <em>Create PR</em> disabled until it is fixed.</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;max-width:560px">
+  <label><span style="color:var(--fg4);font-size:13px;">Video title</span>
+    <input class="input compact" type="text" value="Guru Puja" style="margin-top:4px"></label>
+  <label><span style="color:var(--fg4);font-size:13px;">Video URL</span>
+    <input class="input compact" type="url" aria-invalid="true" value="https://www.youtube.com/live/…" style="margin-top:4px"></label>
+  <div class="field-error" role="alert" style="grid-column:1/-1">This link is not recognised. Use a Vimeo link (vimeo.com/…) or a YouTube link (youtube.com/watch?v=… or youtu.be/…).</div>
 </div>
 
 <h2>Preferences menu</h2>

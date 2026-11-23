@@ -1279,7 +1279,9 @@ var I18N = {
     'add.sync_independent': '\u041E\u043A\u0440\u0435\u043C\u0435',
     'add.sync_ignored': '\u041D\u0435 \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u0443\u0432\u0430\u0442\u0438',
     'add.sync_needs_one_primary': '\u041f\u043e\u0437\u043d\u0430\u0447\u0442\u0435 \u0440\u0456\u0432\u043d\u043e \u043e\u0434\u043d\u0435 \u0432\u0456\u0434\u0435\u043e \u044f\u043a \u00ab\u041e\u0441\u043d\u043e\u0432\u043d\u0435\u00bb \u2014 \u0431\u0435\u0437 \u043d\u044c\u043e\u0433\u043e \u043f\u0440\u043e\u043c\u043e\u0432\u0443 \u043d\u0435 \u043c\u043e\u0436\u043d\u0430 \u043d\u0456 \u0437\u0456\u0431\u0440\u0430\u0442\u0438, \u043d\u0456 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0456\u0437\u0443\u0432\u0430\u0442\u0438.',
-    'add.vimeo_url': 'Vimeo URL',
+    'add.video_url': '\u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u043D\u0430 \u0432\u0456\u0434\u0435\u043E',
+    'add.video_url_unsupported': '\u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u043D\u0435 \u0440\u043E\u0437\u043F\u0456\u0437\u043D\u0430\u043D\u043E. \u041F\u043E\u0442\u0440\u0456\u0431\u043D\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F Vimeo (vimeo.com/\u2026) \u0430\u0431\u043E YouTube (youtube.com/watch?v=\u2026 \u0447\u0438 youtu.be/\u2026).',
+    'add.preview_blocked': '\u041F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u044C\u043E\u0433\u043E \u043F\u0435\u0440\u0435\u0433\u043B\u044F\u0434\u0443 \u043D\u0435\u043C\u0430\u0454: \u0432\u0438\u043F\u0440\u0430\u0432\u0442\u0435 \u043F\u043E\u0437\u043D\u0430\u0447\u0435\u043D\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u043D\u0430 \u0432\u0456\u0434\u0435\u043E.',
 
     'add.link': '+ \u0414\u043E\u0434\u0430\u0442\u0438',
     'error.srt': '\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432',
@@ -1613,7 +1615,9 @@ var I18N = {
     'add.sync_independent': 'Independent',
     'add.sync_ignored': 'Ignored',
     'add.sync_needs_one_primary': 'Mark exactly one video as Primary — without it the talk can be neither built nor synced.',
-    'add.vimeo_url': 'Vimeo URL',
+    'add.video_url': 'Video URL',
+    'add.video_url_unsupported': 'This link is not recognised. Use a Vimeo link (vimeo.com/\u2026) or a YouTube link (youtube.com/watch?v=\u2026 or youtu.be/\u2026).',
+    'add.preview_blocked': 'No preview: fix the marked video link first.',
 
     'add.link': '+ Add Talk',
     'error.srt': 'Error loading subtitles',
@@ -10203,9 +10207,9 @@ function showAddTalk(hash) {
   container.innerHTML = '';
   if (data.v && data.v.length) {
     data.v.forEach(function(vid) {
-      var vUrl = typeof vid === 'string' ? 'https://vimeo.com/' + vid : 'https://vimeo.com/' + vid.id + '/' + vid.h;
-      var vTitle = typeof vid === 'object' ? (vid.l || '') : '';
-      addVideoRowWithUrl(vUrl, vTitle);
+      // Vimeo or YouTube (with its Drive mirrors) — js/add_talk_data.js.
+      var row = videoFromPayload(vid);
+      addVideoRowWithUrl(row.url, row.title, row.mediaUrls);
     });
   }
   if (!container.children.length) SPA.addVideoRow();
@@ -10217,20 +10221,32 @@ function showAddTalk(hash) {
   });
 }
 
-function addVideoRowWithUrl(vimeoUrl, videoTitle) {
+// mediaUrls: the Google Drive mirrors scraped along with videoUrl (a YouTube
+// video's). The row remembers which link they came with — rowMediaUrls() drops
+// them once the editor types a different one. A row added by hand has none.
+function addVideoRowWithUrl(videoUrl, videoTitle, mediaUrls) {
   var container = document.getElementById('add-videos');
   var div = document.createElement('div');
+  div._scrapedUrl = videoUrl || '';
+  div._mediaUrls = mediaUrls || [];
   div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto auto;gap:8px;margin-bottom:8px;align-items:end;';
   var opts = SYNC_ROLES.map(function(r) {
     return '<option value="' + r + '">' + t('add.sync_' + r) + '</option>';
   }).join('');
   div.innerHTML = '<label><span style="color:var(--fg4);font-size:13px;">' + t('add.video_title') + '</span>'
     + '<input class="add-video-title input compact" type="text" value="' + esc(videoTitle || '') + '" style="margin-top:4px"></label>'
-    + '<label><span style="color:var(--fg4);font-size:13px;">' + t('add.vimeo_url') + '</span>'
-    + '<input class="add-video-url input compact" type="url" value="' + esc(vimeoUrl || '') + '" style="margin-top:4px"></label>'
+    + '<label><span style="color:var(--fg4);font-size:13px;">' + t('add.video_url') + '</span>'
+    + '<input class="add-video-url input compact" type="url" value="' + esc(videoUrl || '') + '" style="margin-top:4px"></label>'
     + '<label><span style="color:var(--fg4);font-size:13px;">' + t('add.sync_role') + '</span>'
     + '<select class="add-video-sync input compact" style="margin-top:4px">' + opts + '</select></label>'
-    + '<button type="button" onclick="this.parentElement.remove();applyDefaultSyncRoles();updateAddPreview()" style="padding:8px;background:var(--danger-bg);color:var(--danger-fg);border:1px solid var(--danger-border);border-radius:4px;cursor:pointer;">&times;</button>';
+    + '<button type="button" onclick="this.parentElement.remove();applyDefaultSyncRoles();updateAddPreview()" style="padding:8px;background:var(--danger-bg);color:var(--danger-fg);border:1px solid var(--danger-border);border-radius:4px;cursor:pointer;">&times;</button>'
+    // Shown by updateAddPreview while this row's link cannot be stored.
+    + '<div class="field-error" role="alert" style="grid-column:1/-1">' + t('add.video_url_unsupported') + '</div>';
+  // Hidden from here, not by an attribute in the string above: the row exists
+  // only once the form is open, so the boot-time hiding guard
+  // (tests/test_spa_hidden_surfaces.py) could not resolve it. That it really
+  // stops rendering is asserted where the row exists — the add-form E2E.
+  div.querySelector('.field-error').hidden = true;
   container.appendChild(div);
   div.querySelectorAll('input').forEach(function(inp) {
     inp.addEventListener('input', function() { applyDefaultSyncRoles(); updateAddPreview(); });
@@ -10287,6 +10303,7 @@ function updateAddPreview() {
   var url = document.getElementById('add-url').value.trim();
 
   var videos = [];
+  var videoRows = []; // videoRows[i] is the form row videos[i] came from
   // How many videos this talk will actually declare — blank rows are not one.
   var rowCount = Array.prototype.slice
     .call(document.querySelectorAll('#add-videos > div'))
@@ -10298,9 +10315,11 @@ function updateAddPreview() {
     var vUrl = row.querySelector('.add-video-url').value.trim();
     var vSync = row.querySelector('.add-video-sync');
     if (vTitle || vUrl) {
+      videoRows.push(row);
       videos.push({
         title: vTitle,
         url: vUrl,
+        mediaUrls: rowMediaUrls(vUrl, row._scrapedUrl, row._mediaUrls),
         slug: slugify(vTitle || 'Video-' + (videos.length + 1)),
         // A single-video talk declares nothing: tools/video_roles.py resolves it.
         sync: rowCount > 1 && vSync ? vSync.value : '',
@@ -10314,7 +10333,9 @@ function updateAddPreview() {
   // including the quoting that keeps colons in titles/location valid.
   var transcriptBase64 = transcript ? btoa(unescape(encodeURIComponent(transcript))) : '';
 
-  var yaml = buildMetaYaml({
+  // buildMetaYamlChecked, not buildMetaYaml: a link that cannot be stored must
+  // not throw out of this handler and leave the previous YAML standing.
+  var built = buildMetaYamlChecked({
     title: title,
     date: date,
     location: location,
@@ -10324,8 +10345,22 @@ function updateAddPreview() {
     transcriptBase64: transcriptBase64,
   });
 
-  document.getElementById('add-preview').textContent = yaml;
+  document.querySelectorAll('#add-videos > div').forEach(function(row) {
+    var bad = built.badVideos.indexOf(videoRows.indexOf(row)) !== -1;
+    var input = row.querySelector('.add-video-url');
+    if (bad) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
+    row.querySelector('.field-error').hidden = !bad;
+  });
+  // The YAML submit sends is this variable, never the preview's text: what is
+  // on screen while a build has failed is a message, not a file.
+  addTalkYaml = built.ok ? built.yaml : null;
+  document.getElementById('add-preview').textContent = built.ok ? built.yaml : t('add.preview_blocked');
+  document.getElementById('add-submit').disabled = !built.ok;
 }
+
+// meta.yaml of the add form as last built by updateAddPreview — null while a
+// video link cannot be stored, and then nothing may be submitted.
+var addTalkYaml = null;
 
 SPA.submitAddTalk = function() {
   var title = document.getElementById('add-title').value.trim();
@@ -10337,8 +10372,13 @@ SPA.submitAddTalk = function() {
   // A multi-video talk needs exactly one primary. Without it tools/video_roles.py
   // refuses the talk outright, so it can be neither synced nor built — and the
   // editor only finds out from a red check well after submitting.
-  var yamlPreview = document.getElementById('add-preview').textContent;
-  var declared = (yamlPreview.match(/^  sync: \w+$/gm) || []);
+  // Rebuilt here rather than trusted from the last input event, and refused
+  // outright when it cannot be built — the disabled button is not the guard.
+  updateAddPreview();
+  var yaml = addTalkYaml;
+  if (yaml == null) { alert(t('add.video_url_unsupported')); return false; }
+
+  var declared = (yaml.match(/^  sync: \w+$/gm) || []);
   if (declared.length && declared.filter(function(l) { return l.trim() === 'sync: primary'; }).length !== 1) {
     alert(t('add.sync_needs_one_primary'));
     return false;
@@ -10346,7 +10386,6 @@ SPA.submitAddTalk = function() {
 
   var slug = slugify(title);
   var talkId = date + '_' + slug;
-  var yaml = document.getElementById('add-preview').textContent;
   var filename = 'talks/' + talkId + '/meta.yaml';
 
   // Signed-in path: branch + commit + PR in one click. sync-subtitles /

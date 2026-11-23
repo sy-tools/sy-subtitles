@@ -60,6 +60,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 }
 .input:hover { border-color: var(--border3); }
 .input[type="date"], .input.compact { padding: 8px; font-size: 13px; }
+/* A field whose value cannot be accepted, and the line under it that says why.
+   The line is the message; the border only points at the field it is about. */
+.input[aria-invalid="true"] { border-color: var(--danger-border); }
+.field-error { font-size: var(--text-sm); color: var(--danger-fg); }
+.field-error[hidden] { display: none; }
 textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--bg4);
   color: var(--fg); padding: 8px 20px; border-radius: 8px; font-size: 14px; z-index: 100;

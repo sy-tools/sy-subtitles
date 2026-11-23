@@ -1832,9 +1832,46 @@ describe('Add Talk: i18n for dynamic video row labels', () => {
     assert.ok(ukMatch >= 2, 'add.video_title should be in uk and en, found: ' + ukMatch);
   });
 
-  it('add.vimeo_url i18n key exists in both languages', () => {
-    var matches = (html.match(/'add\.vimeo_url'/g) || []).length;
-    assert.ok(matches >= 2, 'add.vimeo_url should be in uk and en, found: ' + matches);
+  // The field takes a Vimeo or a YouTube link, so neither the key nor the
+  // label names a provider any more.
+  it('add.video_url i18n key exists in both languages', () => {
+    var matches = (html.match(/'add\.video_url'/g) || []).length;
+    assert.ok(matches >= 2, 'add.video_url should be in uk and en, found: ' + matches);
+  });
+
+  it('the unsupported-link messages exist in both languages', () => {
+    ['add.video_url_unsupported', 'add.preview_blocked'].forEach(function (key) {
+      var n = (html.match(new RegExp("'" + key.replace('.', '\\.') + "':", 'g')) || []).length;
+      assert.strictEqual(n, 2, key + ' should be in uk and en, found: ' + n);
+    });
+  });
+
+  it('the add form never builds its YAML unguarded, nor submits the preview text', () => {
+    var update = html.slice(html.indexOf('function updateAddPreview()'), html.indexOf('SPA.submitAddTalk = function'));
+    update = update.replace(/^\s*\/\/.*$/gm, ''); // code only — the comments name both
+    assert.ok(update.includes('buildMetaYamlChecked('), 'updateAddPreview must use buildMetaYamlChecked');
+    assert.ok(!/[^a-zA-Z]buildMetaYaml\(/.test(update), 'updateAddPreview must not call buildMetaYaml directly');
+    var submit = html.slice(html.indexOf('SPA.submitAddTalk = function'));
+    submit = submit.slice(0, submit.indexOf('\n};'));
+    assert.ok(!submit.includes("getElementById('add-preview')"), 'submit must not read YAML back from the preview');
+  });
+
+  it('.field-error is a catalogued component', () => {
+    var css = fs.readFileSync('site/css/components.css', 'utf8');
+    assert.ok(/^\.field-error\s*\{/m.test(css), '.field-error rule missing');
+    var guide = fs.readFileSync('site/styleguide.html', 'utf8');
+    assert.ok(guide.includes('class="field-error"'), 'styleguide must show .field-error');
+    assert.ok(guide.includes('aria-invalid="true"'), 'styleguide must show the invalid input');
+  });
+
+  it('the video link field is not labelled "Vimeo URL"', () => {
+    assert.ok(html.includes("t('add.video_url')"), 'dynamic row should use t(add.video_url)');
+    assert.ok(!html.includes('add.vimeo_url'), 'stale add.vimeo_url key');
+    assert.ok(!/'add\.video_url': 'Vimeo URL'/.test(html), 'label still says Vimeo URL');
+    assert.ok(html.includes("'add.video_url': 'Video URL'"), 'EN label should be "Video URL"');
+    var guide = fs.readFileSync('site/styleguide.html', 'utf8');
+    assert.ok(!guide.includes('Vimeo URL'), 'styleguide form row still says Vimeo URL');
+    assert.ok(guide.includes('>Video URL<'), 'styleguide form row should say Video URL');
   });
 });
 
