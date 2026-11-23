@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T17:23:34.183143+00:00",
+  "updated_at": "2026-11-23T17:28:19.266953+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1343,45 +1343,45 @@
     "1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:49Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1661,
+      "updated_at": "2026-11-23T17:23:44Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1634
     },
     "1990-03-20_Eve-of-Birthday-Puja-Talk-to-Sahaja-Yogis-Dont-create-groups": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:44Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1657,
+      "updated_at": "2026-11-23T17:23:36Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1633
     },
     "1989-08-14_Shri-Krishna-Puja-They-have-to-come-back-again-and-again": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:40Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1666,
+      "updated_at": "2026-11-23T17:25:07Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1632
     },
     "1989-06-11_Virata-Puja-We-have-to-really-examine-ourselves": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:35Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1668,
+      "updated_at": "2026-11-23T17:27:23Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1631
     },
     "1988-04-03_Easter-Puja-You-have-to-be-strong-like-Christ": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:31Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1662,
+      "updated_at": "2026-11-23T17:23:47Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1630
     },
@@ -1415,18 +1415,18 @@
     "1983-09-18_Shri-Krishna-Puja-He-has-to-be-prasanna": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:14Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1656,
+      "updated_at": "2026-11-23T17:23:34Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1626
     },
     "1982-08-15_Shri-Yogeshwara-Puja-God-of-Yoga": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:10Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1664,
+      "updated_at": "2026-11-23T17:24:19Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1625
     }
