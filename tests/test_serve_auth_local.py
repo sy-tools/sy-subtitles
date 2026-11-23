@@ -83,3 +83,13 @@ def test_the_injection_points_the_help_sheet_at_another_help_repo():
     script = serve_auth_local.injection("http://x", "", help_repo="sy-tools/sy-help-staging")
     assert "window.__SY_HELP_REPO='sy-tools/sy-help-staging';" in script
     assert "__SY_HELP_REPO" not in serve_auth_local.injection("http://x", "")
+
+
+def test_the_injection_can_turn_the_passphrase_gate_on_for_a_test_phrase():
+    from tools.passphrase_gate import derive_hash
+
+    script = serve_auth_local.injection("http://x", "", gate_phrase="test-passphrase")
+    expected = derive_hash("test-passphrase", "a3f1c92e6b4d80571e2c9f3a6d8b0e47", 200000)
+    assert f"window.__SY_GATE_HASH='{expected}';" in script
+    assert "test-passphrase" not in script
+    assert "__SY_GATE_HASH" not in serve_auth_local.injection("http://x", "")
