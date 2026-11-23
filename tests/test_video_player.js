@@ -13,6 +13,7 @@ const {
   parseAspect,
   YT_POLL_MS,
   YT_READY_TIMEOUT_MS,
+  YT_SEEK_HOLD_MS,
 } = require('../site/js/video_player.js');
 
 const ORIGIN = 'https://sy-tools.github.io';
@@ -338,8 +339,359 @@ describe('createVideoPlayer — YouTube', () => {
   });
 });
 
+// Measured in the real embed, 2026-11-23: seekTo from any state but playing
+// or paused STARTS playback (cued -> buffering -> playing, ~0.6 s later), and
+// so does a seek from ended. Vimeo's setCurrentTime never does. The mock
+// models that transition; the adapter must keep a stopped player stopped.
+const settle = () => new Promise((r) => setTimeout(r, 5));
+
+describe('mock YouTube player — a seek starts playback, as the real one does', () => {
+  it('from unstarted', async () => {
+    const win = loadMock('mock_youtube_player.js');
+    const states = [];
+    const p = new win.YT.Player({ getAttribute: () => null }, { events: { onStateChange: (e) => states.push(e.data) } });
+    p.seekTo(60, true);
+    await settle();
+    assert.deepStrictEqual(states, [3, 1]);
+    assert.strictEqual(p.getCurrentTime(), 60);
+  });
+
+  it('from ended, but not while paused or playing', async () => {
+    const win = loadMock('mock_youtube_player.js');
+    const states = [];
+    const p = new win.YT.Player({ getAttribute: () => null }, { events: { onStateChange: (e) => states.push(e.data) } });
+    p._fire('play'); p._fire('pause');
+    states.length = 0;
+    p.seekTo(10, true);
+    await settle();
+    assert.deepStrictEqual(states, [], 'paused stays paused');
+    p._fire('play');
+    states.length = 0;
+    p.seekTo(20, true);
+    await settle();
+    assert.deepStrictEqual(states, [], 'playing keeps playing');
+    p._fire('ended');
+    states.length = 0;
+    p.seekTo(30, true);
+    await settle();
+    assert.deepStrictEqual(states, [3, 1]);
+  });
+});
+
+describe('createVideoPlayer — YouTube: a seek does not start playback', () => {
+  it('a seek before any play leaves the player stopped at the new position', async () => {
+    const { player, mock } = ytPlayer();
+    const seen = record(player, ['play', 'pause', 'seeked']);
+    await player.ready();
+    await player.setCurrentTime(60);
+    await settle();
+    assert.strictEqual(await player.getPaused(), true);
+    assert.strictEqual(mock().getPlayerState(), 2, 'paused, not left playing');
+    assert.strictEqual(await player.getCurrentTime(), 60);
+    assert.deepStrictEqual(seen.map((e) => e[0]), ['seeked'], 'the viewer never saw it play');
+  });
+
+  it("the start it stops still has YouTube's captions unloaded (they would sit under ours, paused)", async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    await player.setCurrentTime(60);
+    await settle();
+    assert.deepStrictEqual(Array.from(mock()._unloaded), ['captions']);
+  });
+
+  it('a seek after the end leaves the player stopped', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    mock()._fire('ended');
+    const seen = record(player, ['play']);
+    await player.setCurrentTime(30);
+    await settle();
+    assert.strictEqual(await player.getPaused(), true);
+    assert.deepStrictEqual(seen, []);
+  });
+
+  it('a seek while playing keeps playing', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    const seen = record(player, ['play', 'pause']);
+    await player.setCurrentTime(120);
+    await settle();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.deepStrictEqual(seen, []);
+  });
+
+  it('a seek while buffering inside playback keeps playing', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    mock()._stateTo(3);
+    const seen = record(player, ['play', 'pause']);
+    await player.setCurrentTime(120);
+    mock()._stateTo(1);
+    await settle();
+    assert.strictEqual(mock().getPlayerState(), 1);
+    assert.deepStrictEqual(seen, []);
+  });
+
+  it('a seek while paused stays paused, and the next play still plays', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    mock()._fire('pause');
+    await player.setCurrentTime(200);
+    await settle();
+    assert.strictEqual(await player.getPaused(), true);
+    const seen = record(player, ['play']);
+    mock().playVideo(); // YouTube's own play button
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('play() right behind a seek plays', async () => {
+    const { player } = ytPlayer();
+    const seen = record(player, ['play']);
+    await player.ready();
+    await player.setCurrentTime(60);
+    await player.play();
+    await settle();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it("after the stop, YouTube's own play button plays", async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    await player.setCurrentTime(60);
+    await settle();
+    const seen = record(player, ['play']);
+    mock().playVideo();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('the hold lapses: where the browser blocks the start, a later play is the viewer\'s', async () => {
+    const { player, mock, timers } = ytPlayer();
+    await player.ready();
+    mock().__seekNeverStarts = true; // autoplay blocked: the seek starts nothing
+    await player.setCurrentTime(60);
+    await settle();
+    assert.strictEqual(mock().getPlayerState(), -1);
+    timers.advance(YT_SEEK_HOLD_MS + 1);
+    const seen = record(player, ['play']);
+    mock().playVideo();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('the hold lasts through a slow buffer', async () => {
+    const { player, mock, timers } = ytPlayer();
+    await player.ready();
+    mock().__seekNeverStarts = true; // this test walks the states itself
+    await player.setCurrentTime(60);
+    timers.advance(YT_SEEK_HOLD_MS - 100);
+    mock()._stateTo(3);
+    timers.advance(YT_SEEK_HOLD_MS - 100);
+    const seen = record(player, ['play']);
+    mock()._stateTo(1);
+    assert.strictEqual(mock().getPlayerState(), 2);
+    assert.deepStrictEqual(seen, []);
+  });
+});
+
 describe('createVideoPlayer — unplayable', () => {
   it('throws for a Drive mirror', () => {
     assert.throws(() => createVideoPlayer({}, GD_SOURCE, {}));
+  });
+});
+
+// The poster over a YouTube player (site/js/video_player.js attachPoster):
+// the video's still with a small play button at its bottom-left corner, in
+// place of YouTube's own title bar and centred button.
+describe('video poster', () => {
+  const { attachPoster, posterImageUrl, POSTER_FALLBACK_MS } = require('../site/js/video_player.js');
+
+  function fakeDocument() {
+    function el(tag) {
+      return {
+        tagName: tag.toUpperCase(), children: [], parentNode: null, attrs: {}, listeners: {},
+        className: '', src: '', alt: null, type: '', innerHTML: '',
+        setAttribute(k, v) { this.attrs[k] = String(v); },
+        getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+        appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+        removeChild(c) { this.children = this.children.filter((x) => x !== c); c.parentNode = null; return c; },
+        addEventListener(ev, fn) { (this.listeners[ev] = this.listeners[ev] || []).push(fn); },
+        dispatch(ev) { (this.listeners[ev] || []).forEach((fn) => fn({ preventDefault() {}, stopPropagation() {} })); },
+        querySelectorAll(sel) {
+          const cls = sel.replace(/^\./, '');
+          const out = [];
+          (function walk(n) { n.children.forEach((c) => { if ((' ' + c.className + ' ').includes(' ' + cls + ' ')) out.push(c); walk(c); }); })(this);
+          return out;
+        },
+      };
+    }
+    return { createElement: el };
+  }
+
+  function fakePlayer() {
+    const handlers = {};
+    let settleAspect;
+    return {
+      aspect: new Promise((resolve, reject) => { settleAspect = { resolve, reject }; }),
+      settleAspect: (ok) => (ok ? settleAspect.resolve('4 / 3') : settleAspect.reject(new Error('no shape'))),
+      getAspect() { return this.aspect; },
+      plays: 0,
+      playResult: Promise.resolve(),
+      on(ev, fn) { (handlers[ev] = handlers[ev] || []).push(fn); },
+      emit(ev, d) { (handlers[ev] || []).forEach((fn) => fn(d)); },
+      play() { this.plays += 1; return this.playResult; },
+    };
+  }
+
+  function setup(source) {
+    const doc = fakeDocument();
+    const container = doc.createElement('div');
+    const timers = [];
+    const env = {
+      document: doc,
+      label: 'Play video',
+      setTimeout: (fn, ms) => { timers.push({ fn, ms, live: true }); return timers.length; },
+      clearTimeout: (id) => { if (timers[id - 1]) timers[id - 1].live = false; },
+    };
+    const player = fakePlayer();
+    const poster = attachPoster(container, player, source || YT_SOURCE, env);
+    return { container, player, poster, timers };
+  }
+
+  it('posterImageUrl names the still YouTube serves for the video', () => {
+    assert.strictEqual(posterImageUrl(YT_SOURCE), 'https://i.ytimg.com/vi/AbCdEfGhIjK/hqdefault.jpg');
+  });
+
+  it('posterImageUrl has nothing for a Vimeo, Drive or malformed source', () => {
+    assert.strictEqual(posterImageUrl(VIMEO_SOURCE), '');
+    assert.strictEqual(posterImageUrl(GD_SOURCE), '');
+    assert.strictEqual(posterImageUrl({ provider: 'yt', id: 'short' }), '');
+    assert.strictEqual(posterImageUrl(null), '');
+  });
+
+  it('puts no poster over a Vimeo player', () => {
+    const { container, poster } = setup(VIMEO_SOURCE);
+    assert.strictEqual(poster, null);
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('covers a YouTube player with a labelled button holding the still and the play mark', () => {
+    const { container, poster } = setup();
+    assert.ok(poster);
+    assert.deepStrictEqual(container.children, [poster.el]);
+    assert.strictEqual(poster.el.tagName, 'BUTTON');
+    assert.strictEqual(poster.el.type, 'button');
+    assert.strictEqual(poster.el.className, 'video-poster');
+    assert.strictEqual(poster.el.getAttribute('aria-label'), 'Play video');
+    const img = poster.el.children.find((c) => c.tagName === 'IMG');
+    assert.strictEqual(img.src, 'https://i.ytimg.com/vi/AbCdEfGhIjK/hqdefault.jpg');
+    assert.strictEqual(img.alt, '');
+    assert.strictEqual(poster.el.querySelectorAll('.video-poster__play').length, 1);
+  });
+
+  it('a click plays the video, and the first play takes the poster away', async () => {
+    const { container, player, poster } = setup();
+    poster.el.dispatch('click');
+    assert.strictEqual(player.plays, 1);
+    assert.strictEqual(container.children.length, 1, 'stays until playback really starts');
+    player.emit('play', { seconds: 0 });
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('a second click while starting does not ask to play again', () => {
+    const { player, poster } = setup();
+    poster.el.dispatch('click');
+    poster.el.dispatch('click');
+    assert.strictEqual(player.plays, 1);
+  });
+
+  it('playback started elsewhere (keyboard, sync) takes the poster away too', () => {
+    const { container, player } = setup();
+    player.emit('play', { seconds: 12 });
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('when the browser does not let the page start it, the poster steps aside for the player\'s own button', () => {
+    const { container, player, poster, timers } = setup();
+    poster.el.dispatch('click');
+    const t = timers.find((x) => x.live);
+    assert.strictEqual(t.ms, POSTER_FALLBACK_MS);
+    t.fn();
+    assert.strictEqual(container.children.length, 0);
+    player.emit('play', { seconds: 0 }); // late play: nothing left to remove, no throw
+  });
+
+  it('a refused play takes the poster away at once', async () => {
+    const { container, player, poster } = setup();
+    player.playResult = Promise.reject(new Error('not allowed'));
+    poster.el.dispatch('click');
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('remove is idempotent and cancels the fallback', () => {
+    const { container, poster, timers } = setup();
+    poster.el.dispatch('click');
+    poster.remove();
+    poster.remove();
+    assert.strictEqual(container.children.length, 0);
+    assert.ok(timers.every((x) => !x.live));
+  });
+});
+
+describe('video poster waits for the video\'s shape', () => {
+  const { attachPoster } = require('../site/js/video_player.js');
+  // The box is 16:9 until the player reports the video's shape; the still and
+  // its button show only once it has, so the button does not jump with the box.
+  function mk() {
+    const el = (tag) => ({
+      tagName: tag.toUpperCase(), children: [], attrs: {}, className: '',
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+      hasAttribute(k) { return k in this.attrs; },
+      appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+      removeChild(c) { this.children = this.children.filter((x) => x !== c); return c; },
+      addEventListener() {},
+    });
+    let settle;
+    const player = {
+      on() {}, play() { return Promise.resolve(); },
+      aspectCalls: 0,
+      getAspect() { this.aspectCalls += 1; return new Promise((res, rej) => { settle = { res, rej }; }); },
+    };
+    const poster = attachPoster(el('div'), player, YT_SOURCE, { document: { createElement: el } });
+    return { poster, player, settle: () => settle };
+  }
+
+  it('is not shaped until the player reports the shape, then is', async () => {
+    const { poster, settle } = mk();
+    assert.strictEqual(poster.el.getAttribute('data-shaped'), null);
+    settle().res('4 / 3');
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(poster.el.getAttribute('data-shaped'), '');
+  });
+
+  it('shows anyway when the shape cannot be had', async () => {
+    const { poster, settle } = mk();
+    settle().rej(new Error('offline'));
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(poster.el.getAttribute('data-shaped'), '');
+  });
+});
+
+describe('YouTube getAspect asks once per player', () => {
+  it('a second call reuses the first answer', async () => {
+    let fetches = 0;
+    const fetch = () => { fetches += 1; return Promise.resolve({ ok: true, json: () => ({ width: 640, height: 480 }) }); };
+    const p = createVideoPlayer({}, YT_SOURCE, { fetch, loadYouTubeApi: () => new Promise(() => {}) });
+    assert.strictEqual(await p.getAspect(), '640 / 480');
+    assert.strictEqual(await p.getAspect(), '640 / 480');
+    assert.strictEqual(fetches, 1);
   });
 });

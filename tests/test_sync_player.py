@@ -266,6 +266,19 @@ class TestClickToSeek:
         current = page.evaluate("window._vimeoPlayer._currentTime")
         assert abs(current - 1.0) < 0.01
 
+    def test_click_before_any_play_leaves_the_player_stopped(self, server, page):  # noqa: F811
+        """YouTube's seekTo starts a stopped player (the mock models it, as
+        measured in the real embed); Vimeo's setCurrentTime never does. A click
+        on a row must only move the position on either."""
+        _goto_review_srt(page, server)
+        page.click("#btn-sync-player")
+        page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
+
+        page.evaluate("document.querySelectorAll('#review-grid .cell-label')[0].click()")
+        page.wait_for_timeout(200)  # past the mock's seek-started playback
+        assert page.evaluate("window._vimeoPlayer._paused !== false")  # unset on the Vimeo mock until played
+        assert abs(page.evaluate("window._vimeoPlayer._currentTime") - 1.0) < 0.01
+
     def test_click_uk_text_does_not_seek(self, server, page):  # noqa: F811
         _goto_review_srt(page, server)
         page.click("#btn-sync-player")
