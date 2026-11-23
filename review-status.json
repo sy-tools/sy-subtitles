@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T17:32:00.383108+00:00",
+  "updated_at": "2026-11-23T17:45:53.890077+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1325,18 +1325,18 @@
     "1992-07-25_Shri-Durga-Mahakali-Puja-France-is-going-down-and-down": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:58Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1676,
+      "updated_at": "2026-11-23T17:44:33Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1636
     },
     "1991-12-11_Devi-Puja": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T17:09:54Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1675,
+      "updated_at": "2026-11-23T17:44:33Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1635
     },
