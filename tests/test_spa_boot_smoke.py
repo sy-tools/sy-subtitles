@@ -381,3 +381,118 @@ def test_the_tutorials_wait_behind_the_passphrase_gate(smoke_server, smoke_page)
     page.press("#sy-gate-input", "Enter")
     page.wait_for_selector("#help-sheet .help-video", timeout=10000)
     assert page.locator("#help-sheet .help-video").count() == HELP_VIDEO_COUNT
+
+
+HELP_API = "https://api.github.com/repos/sy-tools/sy-help"
+
+
+def _admin_page(smoke_server, page, push=True, put_status=200):
+    """The index signed in as a user whose push right on sy-help is `push`."""
+    import base64
+
+    calls = {"put": []}
+
+    def api(route):
+        req = route.request
+        url = req.url
+        if url == HELP_API:
+            return route.fulfill(
+                status=200, content_type="application/json", body=json.dumps({"permissions": {"push": push}})
+            )
+        if url.startswith(HELP_API + "/contents/catalog.json"):
+            if req.method == "PUT":
+                calls["put"].append(json.loads(req.post_data))
+                if put_status != 200:
+                    return route.fulfill(
+                        status=put_status, content_type="application/json", body=json.dumps({"message": "sha mismatch"})
+                    )
+                return route.fulfill(
+                    status=200, content_type="application/json", body=json.dumps({"content": {"sha": "s2"}})
+                )
+            content = base64.b64encode(json.dumps(HELP_CATALOG).encode()).decode()
+            return route.fulfill(
+                status=200, content_type="application/json", body=json.dumps({"sha": "s1", "content": content})
+            )
+        return route.fallback()
+
+    _serve_help(page)
+    page.route("**/api.github.com/repos/sy-tools/sy-help**", api)
+    page.add_init_script(
+        "localStorage.setItem('sy_lang', 'uk');"
+        "localStorage.setItem('sy_gh_token', 'gho_smoke');"
+        "localStorage.setItem('sy_gh_user', JSON.stringify({login: 'owner', id: 1}));"
+    )
+    page.goto(f"{smoke_server}/index.html")
+    page.wait_for_function("document.title.includes('Index')", timeout=10000)
+    _open_help(page)
+    return calls
+
+
+def test_the_edit_button_is_offered_only_to_who_can_push_to_the_help_repo(smoke_server, smoke_page):
+    _admin_page(smoke_server, smoke_page, push=False)
+    smoke_page.wait_for_timeout(300)
+    assert smoke_page.locator("#help-sheet-edit").is_hidden()
+
+
+def test_the_edit_button_stays_hidden_when_signed_out(index_page):
+    _open_help(index_page)
+    index_page.wait_for_timeout(300)
+    assert index_page.locator("#help-sheet-edit").is_hidden()
+
+
+def test_the_admin_saves_edited_texts_and_order_in_one_commit(smoke_server, smoke_page):
+    page = smoke_page
+    page_errors = []
+    page.on("pageerror", lambda e: page_errors.append(str(e)))
+    calls = _admin_page(smoke_server, page)
+    page.click("#help-sheet-edit")
+    page.wait_for_selector(".help-admin__bar")
+    assert page.locator(".help-admin__save").is_disabled()
+
+    page.fill("[data-path='guide/intro/title/en']", "Getting started")
+    assert page.locator(".help-admin__send").first.is_disabled(), "an upload while edits are unsaved would race them"
+    page.click(".help-admin__video[data-file='intro'] .help-admin__down")
+    page.fill("[data-path='updates/update-2026-09-05/notes/en']", "Settings menu\nTypo fixes")
+    page.click(".help-admin__save")
+    page.wait_for_selector(".help-admin__save:disabled")
+
+    assert len(calls["put"]) == 1
+    put = calls["put"][0]
+    assert put["sha"] == "s1"
+    assert put["branch"] == "main"
+    import base64
+
+    saved = json.loads(base64.b64decode(put["content"]))
+    guide = saved["sections"][0]["videos"]
+    assert [v["file"] for v in guide] == ["security", "intro"]
+    assert guide[1]["title"] == {"uk": "Вступ", "en": "Getting started"}
+    assert saved["sections"][1]["videos"][1]["notes"]["en"] == ["Settings menu", "Typo fixes"]
+
+    page.click("#help-sheet-edit")
+    titles = page.eval_on_selector_all("#help-sheet .help-video__title", "hs => hs.map(h => h.textContent)")
+    assert titles[:2] == ["1.1 Безпека", "1.2 Вступ"], "leaving edit mode did not show what was saved"
+    assert not page_errors, page_errors
+
+
+def test_a_save_over_a_catalog_changed_elsewhere_reloads_it_and_says_so(smoke_server, smoke_page):
+    page = smoke_page
+    calls = _admin_page(smoke_server, page, put_status=409)
+    page.click("#help-sheet-edit")
+    page.wait_for_selector(".help-admin__bar")
+    page.fill("[data-path='guide/intro/title/en']", "Lost edit")
+    page.click(".help-admin__save")
+    page.wait_for_selector(".help-admin__status .help-sheet__error")
+    assert len(calls["put"]) == 1
+    assert page.input_value("[data-path='guide/intro/title/en']") == "Introduction", "the stale edit was kept"
+    assert page.locator(".help-admin__save").is_disabled()
+
+
+def test_leaving_edit_mode_with_unsaved_changes_is_refused(smoke_server, smoke_page):
+    page = smoke_page
+    _admin_page(smoke_server, page)
+    page.click("#help-sheet-edit")
+    page.wait_for_selector(".help-admin__bar")
+    page.fill("[data-path='guide/security/title/en']", "Safety")
+    page.click("#help-sheet-edit")
+    page.wait_for_selector(".help-admin__status .help-sheet__error")
+    assert page.locator(".help-admin__bar").count() == 1

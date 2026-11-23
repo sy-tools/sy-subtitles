@@ -43,10 +43,12 @@
 <script src="js/talk_actions.js"></script>
 <script src="js/review_issue.js"></script>
 <script src="js/passphrase_gate.js"></script>
-<script src="js/help_videos.js"></script>
-<script src="js/help_sheet.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
+<script src="js/help_videos.js"></script>
+<script src="js/help_sheet.js"></script>
+<script src="js/help_admin.js"></script>
+<script src="js/help_admin_view.js"></script>
 <script src="js/review_status_live.js"></script>
 <script src="js/meta_batch.js"></script>
 <script src="js/edit_sync.js"></script>
@@ -789,6 +791,7 @@
   <div class="help-sheet__panel">
     <div class="help-sheet__head">
       <h2 id="help-sheet-title" class="help-sheet__title" data-i18n="help.title">Video tutorials</h2>
+      <button type="button" id="help-sheet-edit" class="btn btn--ghost btn--sm help-sheet__edit" onclick="SPA.toggleHelpAdmin()" aria-pressed="false" hidden data-i18n="help.admin.edit">Edit</button>
       <button type="button" id="help-sheet-close" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.closeHelp()" data-i18n-aria-label="help.close" data-i18n-title="help.close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
     </div>
     <div id="help-sheet-body" class="help-sheet__body"></div>
@@ -1180,6 +1183,39 @@ var I18N = {
     'help.close': '\u0417\u0430\u043a\u0440\u0438\u0442\u0438',
     'help.loading': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f\u2026',
     'help.error': '\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438 \u0441\u043f\u0438\u0441\u043e\u043a \u0432\u0456\u0434\u0435\u043e. \u0421\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.',
+    'help.admin.edit': 'Редагувати',
+    'help.admin.done': 'Готово',
+    'help.admin.save': 'Зберегти',
+    'help.admin.discard': 'Скасувати зміни',
+    'help.admin.saved': 'Збережено. На порталі зміни з’являться приблизно за хвилину.',
+    'help.admin.stale': 'Каталог змінився з іншого місця. Завантажено свіжу версію — повторіть свої правки.',
+    'help.admin.saveFailed': 'Не вдалося зберегти.',
+    'help.admin.loadFailed': 'Не вдалося завантажити каталог.',
+    'help.admin.saveFirst': 'Спершу збережіть або скасуйте зміни.',
+    'help.admin.title': 'Назва',
+    'help.admin.description': 'Опис',
+    'help.admin.notes': 'Що нового (кожен пункт з нового рядка)',
+    'help.admin.date': 'Дата',
+    'help.admin.dateIfUpdate': 'Дата (для розділу «за датою»)',
+    'help.admin.section': 'Розділ',
+    'help.admin.sectionTitle': 'Назва розділу',
+    'help.admin.byHand': 'порядок вручну',
+    'help.admin.byDate': 'за датою',
+    'help.admin.remove': 'Прибрати',
+    'help.admin.removeSection': 'Прибрати розділ',
+    'help.admin.addSection': 'Додати розділ',
+    'help.admin.addVideo': 'Додати відео',
+    'help.admin.file': 'Файл відео',
+    'help.admin.upload': 'Вивантажити',
+    'help.admin.replace': 'Замінити відео',
+    'help.admin.tooLarge': 'Файл більший за 1 ГБ.',
+    'help.admin.needTitle': 'Вкажіть назву українською.',
+    'help.admin.needDate': 'Для розділу «за датою» вкажіть дату.',
+    'help.admin.uploading': 'вивантаження {p}%',
+    'help.admin.processing': 'обробка на GitHub (стиснення, публікація)…',
+    'help.admin.published': 'опубліковано; субтитри з’являться трохи згодом',
+    'help.admin.failed': 'обробка не вдалася',
+    'help.admin.run': 'журнал',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
     // Composed by mixedScriptMessage in js/typo_hints.js: title, then one
@@ -1476,6 +1512,39 @@ var I18N = {
     'help.close': 'Close',
     'help.loading': 'Loading\u2026',
     'help.error': 'The list of videos did not load. Try again.',
+    'help.admin.edit': 'Edit',
+    'help.admin.done': 'Done',
+    'help.admin.save': 'Save',
+    'help.admin.discard': 'Discard changes',
+    'help.admin.saved': 'Saved. The portal shows it in about a minute.',
+    'help.admin.stale': 'The catalog was changed elsewhere. The latest version is loaded; make your edits again.',
+    'help.admin.saveFailed': 'Could not save.',
+    'help.admin.loadFailed': 'Could not load the catalog.',
+    'help.admin.saveFirst': 'Save or discard your changes first.',
+    'help.admin.title': 'Title',
+    'help.admin.description': 'Description',
+    'help.admin.notes': 'What is new (one item per line)',
+    'help.admin.date': 'Date',
+    'help.admin.dateIfUpdate': 'Date (for a by-date section)',
+    'help.admin.section': 'Section',
+    'help.admin.sectionTitle': 'Section title',
+    'help.admin.byHand': 'ordered by hand',
+    'help.admin.byDate': 'by date',
+    'help.admin.remove': 'Remove',
+    'help.admin.removeSection': 'Remove section',
+    'help.admin.addSection': 'Add section',
+    'help.admin.addVideo': 'Add video',
+    'help.admin.file': 'Video file',
+    'help.admin.upload': 'Upload',
+    'help.admin.replace': 'Replace video',
+    'help.admin.tooLarge': 'The file is over 1 GB.',
+    'help.admin.needTitle': 'Give a Ukrainian title.',
+    'help.admin.needDate': 'A by-date section needs a date.',
+    'help.admin.uploading': 'uploading {p}%',
+    'help.admin.processing': 'processing on GitHub (encoding, publishing)…',
+    'help.admin.published': 'published; subtitles follow a little later',
+    'help.admin.failed': 'processing failed',
+    'help.admin.run': 'log',
     'typo.mixed.title': 'Two keyboard layouts in one word',
     'typo.mixed.instead': 'Latin «{lat}» where «{cyr}» belongs',
     'typo.mixed.stray': 'Latin «{lat}»',
@@ -10404,11 +10473,206 @@ function showHelp() {
   var sheet = document.getElementById('help-sheet');
   var body = document.getElementById('help-sheet-body');
   if (!sheet || !body) return;
-  if (body.dataset.lang !== currentLang) renderHelpBody(body);
+  if (!helpAdmin.on && body.dataset.lang !== currentLang) renderHelpBody(body);
+  checkHelpAdmin();
   sheet.hidden = false;
   // The page behind must not scroll under a finger that reached the sheet's end.
   document.documentElement.classList.add('help-sheet-open');
   document.getElementById('help-sheet-close').focus();
+};
+
+// ----- Help admin -----
+// Edit mode of the sheet, offered to whoever can push to the help repository:
+// GitHub decides, and a user without the right could not write anyway. The
+// catalog being edited is read from the API (main as it is now), not from
+// Pages, which trails a deploy behind.
+var helpAdmin = { on: false, catalog: null, sha: null, dirty: false, saving: false, status: null, upload: null };
+
+function helpApi() { return 'https://api.github.com/repos/' + HelpVideos.helpRepo(window); }
+
+function checkHelpAdmin() {
+  var btn = document.getElementById('help-sheet-edit');
+  var token = getAuthToken();
+  if (!btn) return;
+  if (!token) { btn.hidden = true; return; }
+  getRepoPermissions(helpApi(), token).then(function(p) { btn.hidden = !p.push; }, function() { btn.hidden = true; });
+}
+
+function helpAdminRender() {
+  var body = document.getElementById('help-sheet-body');
+  body.dataset.lang = '';
+  HelpAdminView.render(body, helpAdmin, helpAdminActions);
+}
+
+// The save bar follows typing without a redraw, which would take the caret.
+function helpAdminMarkDirty() {
+  helpAdmin.dirty = true;
+  helpAdmin.status = null;
+  document.querySelectorAll('.help-admin__save, .help-admin__discard').forEach(function(b) { b.disabled = false; });
+  document.querySelectorAll('.help-admin__send').forEach(function(b) {
+    b.disabled = true;
+    b.setAttribute('data-i18n-title', 'help.admin.saveFirst');
+    b.title = t('help.admin.saveFirst');
+  });
+}
+
+function helpAdminLoad(status) {
+  return HelpAdmin.loadCatalog(helpApi(), getAuthToken()).then(function(r) {
+    helpAdmin.catalog = r.catalog;
+    helpAdmin.sha = r.sha;
+    helpAdmin.dirty = false;
+    helpAdmin.status = status || null;
+    if (helpAdmin.on) helpAdminRender();
+  });
+}
+
+function helpAdminEdit(change) {
+  try {
+    helpAdmin.catalog = change(helpAdmin.catalog);
+  } catch (e) {
+    helpAdmin.status = { kind: 'error', text: e.message };
+    helpAdminRender();
+    return;
+  }
+  helpAdmin.dirty = true;
+  helpAdmin.status = null;
+  helpAdminRender();
+}
+
+function helpSectionOf(file) {
+  return helpAdmin.catalog.sections.find(function(s) { return s.videos.some(function(v) { return v.file === file; }); });
+}
+
+function helpAdminFollowIngest(branch) {
+  HelpAdmin.ingestStatus(helpApi(), getAuthToken(), branch).then(function(r) {
+    var u = helpAdmin.upload;
+    if (!u || u.branch !== branch) return;
+    u.url = r.url;
+    if (r.state === 'done') {
+      u.state = 'done';
+      return helpAdminLoad();
+    }
+    u.state = r.state === 'failed' ? 'failed' : 'processing';
+    if (helpAdmin.on) helpAdminRender();
+    if (u.state !== 'failed') setTimeout(function() { helpAdminFollowIngest(branch); }, 10000);
+  }, function() { setTimeout(function() { helpAdminFollowIngest(branch); }, 20000); });
+}
+
+// Closing the tab mid-upload loses it; the browser asks first.
+function helpUploadGuard(e) { e.preventDefault(); e.returnValue = ''; }
+
+var helpAdminActions = {
+  t: function(key) { return t(key); },
+  edit: function(path, value) {
+    helpAdmin.catalog = HelpAdmin.setText(helpAdmin.catalog, path, value);
+    helpAdminMarkDirty();
+  },
+  move: function(file, delta) { helpAdminEdit(function(c) { return HelpAdmin.moveVideo(c, file, delta); }); },
+  moveTo: function(file, id) { helpAdminEdit(function(c) { return HelpAdmin.moveToSection(c, file, id); }); },
+  remove: function(file) { helpAdminEdit(function(c) { return HelpAdmin.removeVideo(c, file); }); },
+  removeSection: function(id) { helpAdminEdit(function(c) { return HelpAdmin.removeSection(c, id); }); },
+  addSection: function(spec) {
+    helpAdminEdit(function(c) {
+      var base = HelpAdmin.slugify(spec.title.en || spec.title.uk);
+      var id = base, n = 2;
+      while (c.sections.some(function(s) { return s.id === id; })) id = base + '-' + (n++);
+      return HelpAdmin.addSection(c, { id: id, title: spec.title, order: spec.order });
+    });
+  },
+  save: function() {
+    helpAdmin.saving = true;
+    helpAdminRender();
+    HelpAdmin.saveCatalog(helpApi(), getAuthToken(), helpAdmin.catalog, helpAdmin.sha, 'Edit the tutorials from the portal')
+      .then(function(sha) {
+        helpAdmin.sha = sha;
+        helpAdmin.dirty = false;
+        helpAdmin.status = { kind: 'ok', text: t('help.admin.saved') };
+        helpCatalog = null;
+      }, function(e) {
+        if (e.code === 'stale') return helpAdminLoad({ kind: 'error', text: t('help.admin.stale') });
+        helpAdmin.status = { kind: 'error', text: t('help.admin.saveFailed') + ' ' + e.message };
+      })
+      .then(function() { helpAdmin.saving = false; helpAdminRender(); });
+  },
+  discard: function() { helpAdminLoad(); },
+  upload: function(form) {
+    var cat = helpAdmin.catalog;
+    var entry;
+    if (form.video) {
+      entry = { section: helpSectionOf(form.video.file).id, file: HelpAdmin.nextFile(cat, null, form.video.file), replaces: form.video.file };
+    } else {
+      var f = form.fields;
+      var section = cat.sections.find(function(s) { return s.id === f.section; });
+      if (!f.title.uk.trim() && !(section && section.order === 'chronological')) {
+        helpAdmin.status = { kind: 'error', text: t('help.admin.needTitle') };
+        return helpAdminRender();
+      }
+      if (section && section.order === 'chronological' && !f.date) {
+        helpAdmin.status = { kind: 'error', text: t('help.admin.needDate') };
+        return helpAdminRender();
+      }
+      var base = HelpAdmin.slugify(f.title.en || f.title.uk || ('update ' + f.date));
+      entry = { section: f.section, file: HelpAdmin.nextFile(cat, base, null), replaces: null,
+        title: f.title, description: f.description, date: f.date || null, notes: { uk: [], en: [] } };
+    }
+    var file = form.file;
+    if (file.size > HelpAdmin.MAX_UPLOAD_BYTES) {
+      helpAdmin.status = { kind: 'error', text: t('help.admin.tooLarge') };
+      return helpAdminRender();
+    }
+    helpAdmin.upload = { file: entry.file, branch: 'inbox/' + entry.file, state: 'sending', done: 0, total: file.size, url: null };
+    helpAdmin.status = null;
+    helpAdminRender();
+    window.addEventListener('beforeunload', helpUploadGuard);
+    HelpAdmin.uploadVideo(helpApi(), getAuthToken(), file, entry, function(done, total) {
+      helpAdmin.upload.done = done;
+      var bar = document.querySelector('.help-admin__progress');
+      if (bar) bar.value = done;
+      var label = document.querySelector('.help-admin__status span');
+      if (label) label.textContent = entry.file + ': ' + t('help.admin.uploading').replace('{p}', String(Math.floor(100 * done / total)));
+    }).then(function(branch) {
+      helpAdmin.upload.state = 'processing';
+      helpAdminRender();
+      helpAdminFollowIngest(branch);
+    }, function(e) {
+      helpAdmin.upload.state = 'failed';
+      helpAdmin.status = { kind: 'error', text: e.message };
+      helpAdminRender();
+    }).then(function() { window.removeEventListener('beforeunload', helpUploadGuard); });
+  },
+};
+
+function setHelpEditLabel(btn, on) {
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.setAttribute('data-i18n', on ? 'help.admin.done' : 'help.admin.edit');
+  btn.textContent = t(on ? 'help.admin.done' : 'help.admin.edit');
+}
+
+SPA.toggleHelpAdmin = function() {
+  var btn = document.getElementById('help-sheet-edit');
+  var body = document.getElementById('help-sheet-body');
+  if (helpAdmin.on) {
+    if (helpAdmin.dirty) {
+      helpAdmin.status = { kind: 'error', text: t('help.admin.saveFirst') };
+      return helpAdminRender();
+    }
+    helpAdmin.on = false;
+    setHelpEditLabel(btn, false);
+    // What was just saved, not what Pages still serves for another minute.
+    var repo = HelpVideos.helpRepo(window);
+    body.dataset.lang = currentLang;
+    HelpSheet.render(body, repo, helpAdmin.catalog, currentLang);
+    return;
+  }
+  helpAdmin.on = true;
+  setHelpEditLabel(btn, true);
+  body.querySelectorAll('video').forEach(function(v) { v.pause(); });
+  body.textContent = t('help.loading');
+  helpAdminLoad().catch(function(e) {
+    helpAdmin.on = false;
+    setHelpEditLabel(btn, false);
+    body.textContent = t('help.admin.loadFailed') + ' ' + e.message;
+  });
 };
 
 SPA.closeHelp = function() {

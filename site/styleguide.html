@@ -246,6 +246,17 @@ without the scrim.</p>
   </div>
 </div>
 
+<h2>Help admin</h2>
+<p>The help sheet's edit mode (<code>.help-admin__*</code>), offered to whoever can push to the
+help repository. A sticky save bar (<code>.help-admin__bar</code>) carries Save, Discard and one
+status line, with a <code>&lt;progress&gt;</code> while a recording uploads. Every text is a pair
+of fields, Ukrainian and English side by side (<code>.help-admin__pair</code>, stacked on a
+phone). Cards keep the viewer's <code>.help-video</code> frame; the file name is shown, not
+edited. Built below by the real <code>help_admin_view.js</code>.</p>
+<div class="sg-card" style="max-width:720px">
+  <div class="help-sheet__panel"><div class="help-sheet__body" id="sg-help-admin"></div></div>
+</div>
+
 <h2>Typo hints</h2>
 <p>A word neither the Ukrainian dictionary nor the project's own vocabulary knows
 (<code>::highlight(sy-typo)</code>). Painted through the CSS Custom Highlight API, so it
@@ -618,6 +629,31 @@ click on the video gives the keys back.</p>
 </div>
 
 <script src="js/sync_status_view.js"></script>
+<script src="js/help_videos.js"></script>
+<script src="js/help_admin_view.js"></script>
+<script>
+(function () {
+  var labels = { 'help.admin.save': 'Save', 'help.admin.discard': 'Discard changes', 'help.admin.uploading': 'uploading {p}%',
+    'help.admin.title': 'Title', 'help.admin.description': 'Description', 'help.admin.notes': 'What is new (one item per line)',
+    'help.admin.date': 'Date', 'help.admin.section': 'Section', 'help.admin.sectionTitle': 'Section title',
+    'help.admin.byHand': 'ordered by hand', 'help.admin.byDate': 'by date', 'help.admin.remove': 'Remove',
+    'help.admin.removeSection': 'Remove section', 'help.admin.addSection': 'Add section', 'help.admin.addVideo': 'Add video',
+    'help.admin.file': 'Video file', 'help.admin.upload': 'Upload', 'help.admin.replace': 'Replace video',
+    'help.admin.dateIfUpdate': 'Date (for a by-date section)', 'help.admin.saveFirst': 'Save or discard your changes first.' };
+  var noop = function () {};
+  HelpAdminView.render(document.getElementById('sg-help-admin'), {
+    catalog: { version: 1, sections: [
+      { id: 'guide', title: { uk: 'Як працювати з порталом', en: 'How to work with the portal' }, order: 'manual', videos: [
+        { file: 'security', title: { uk: 'Безпека', en: 'Security' }, description: { uk: '', en: '' } },
+        { file: 'login', title: { uk: 'Login', en: 'Login' }, description: { uk: 'Вхід через GitHub', en: '' } } ] },
+      { id: 'updates', title: { uk: 'Оновлення', en: 'Updates' }, order: 'chronological', videos: [
+        { file: 'update-2026-11-22', date: '2026-11-22', notes: { uk: ['Збереження файлу субтитрів.'], en: [] } } ] } ] },
+    dirty: true, saving: false, status: null,
+    upload: { file: 'login-2', state: 'sending', done: 45, total: 100, url: null },
+  }, { t: function (k) { return labels[k] || k; }, edit: noop, move: noop, moveTo: noop, remove: noop,
+       addSection: noop, removeSection: noop, upload: noop, save: noop, discard: noop });
+})();
+</script>
 <script src="js/burn_geometry.js"></script>
 <script src="js/burn_video.js"></script>
 <script src="js/export_menu.js"></script>
