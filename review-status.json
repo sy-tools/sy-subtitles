@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T16:19:14.597163+00:00",
+  "updated_at": "2026-11-23T16:21:41.721892+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1163,36 +1163,36 @@
     "1997-11-02_Diwali-Puja-Shri-Lakshmi-and-Money": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T16:08:51Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1603,
+      "updated_at": "2026-11-23T16:21:06Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1595
     },
     "1996-07-16_Shri-Mahalakshmi-Puja-We-have-to-live-like-one-family": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T16:08:47Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1606,
+      "updated_at": "2026-11-23T16:21:15Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1594
     },
     "1995-06-04_Adi-Shakti-Puja-the-hurdles-in-rising-the-Kundalini": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T16:08:43Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1601,
+      "updated_at": "2026-11-23T16:20:48Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1593
     },
     "1992-09-13_Hamsa-Chakra-Puja": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T16:08:40Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1610,
+      "updated_at": "2026-11-23T16:21:31Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1592
     },
@@ -1226,9 +1226,9 @@
     "1985-05-19_Shri-Ganesha-Puja-You-Should-be-Prepared-to-Change": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T16:08:23Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1607,
+      "updated_at": "2026-11-23T16:21:19Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1588
     },
