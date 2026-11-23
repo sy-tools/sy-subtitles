@@ -644,6 +644,9 @@ jobs:
 
       - name: Prepare UK blocks
         id: prepare
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          TRANSLATED: ${{ needs.translate-and-review.result }}
         run: |
           TALK_ID="${{ needs.discover.outputs.talk_id }}"
           TALK="talks/$TALK_ID"
@@ -662,6 +665,15 @@ jobs:
 
           echo "talk_id=$TALK_ID" >> "$GITHUB_OUTPUT"
           echo "video_slug=$FIRST_VIDEO" >> "$GITHUB_OUTPUT"
+
+          # A dry run without translation would cut blocks from the checkout's
+          # transcript, which reviewers keep editing; the snapshot's recorded
+          # builder answer only fits the snapshot's own transcript.
+          if [ "${DRY_RUN}" = "true" ] && [ "${TRANSLATED}" != "success" ]; then
+            python -m tools.fake_llm pin-transcript \
+              --snapshot "tests/fixtures/pipeline_snapshots/${TALK_ID}/${FIRST_VIDEO}" \
+              --talk-dir "$TALK"
+          fi
 
           python -m tools.build_map prepare \
             --talk-dir "$TALK" \
@@ -698,7 +710,7 @@ jobs:
 
   # Phase 2: Single builder-agent pass (MODEL_HEAVY) — assign timecodes, build SRT
   build-timecodes:
-    needs: [prepare-build, whisper]
+    needs: [prepare-build, whisper, translate-and-review]
     if: ${{ !cancelled() && needs.prepare-build.result == 'success' }}
     environment: ${{ inputs.dry_run && 'dry-run' || 'main' }}
     runs-on: ubuntu-latest
@@ -754,6 +766,18 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
+
+      # Same reason as in prepare-build: validation reads the transcript, and
+      # it must be the one the blocks were cut from.
+      - name: Pin transcript to snapshot (dry-run)
+        if: inputs.dry_run == true && needs.translate-and-review.result != 'success'
+        env:
+          TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
+          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+        run: |
+          python -m tools.fake_llm pin-transcript \
+            --snapshot "tests/fixtures/pipeline_snapshots/${TALK_ID}/${VIDEO_SLUG}" \
+            --talk-dir "talks/${TALK_ID}"
 
       # A whisper.json committed earlier is in the checkout; one this run made
       # reaches it through whisper.yml, which waits for its bot PR to merge.
@@ -822,10 +846,12 @@ jobs:
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
           VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
         run: |
           python -m tools.fake_llm build-timecodes \
             --snapshot "tests/fixtures/pipeline_snapshots/${TALK_ID}/${VIDEO_SLUG}" \
-            --work-dir "talks/${TALK_ID}/${VIDEO_SLUG}/work"
+            --work-dir "talks/${TALK_ID}/${VIDEO_SLUG}/work" \
+            --timing-source "${TIMING_SOURCE}"
 
       - name: Build timecodes (Claude)
         if: inputs.dry_run != true
@@ -1118,9 +1144,19 @@ jobs:
             fi
           done
 
+      # Without it the translate check reads the checkout's transcript — the
+      # talk as reviewers have since edited it, not what this run translated.
+      - name: Download translation artifacts
+        if: needs.translate-and-review.result == 'success'
+        uses: actions/download-artifact@v8
+        with:
+          name: translation__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: talks/${{ needs.discover.outputs.talk_id }}
+
       - name: Verify against snapshot
         env:
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
+          TRANSLATED: ${{ needs.translate-and-review.result }}
         run: |
           # The pipeline builds only the PRIMARY video (declared in meta.yaml
           # under `sync:`) and generates derived-video SRTs via offset_srt
@@ -1139,10 +1175,17 @@ jobs:
             echo "::error::no snapshot for ${TALK_ID}/${primary}"
             exit 1
           fi
+          # A run that skipped translation has no translate output to judge.
+          if [ "${TRANSLATED}" = "success" ]; then
+            phases="translate,build"
+          else
+            phases="build"
+          fi
           python -m tools.verify_snapshot \
             --talk-dir "talks/${TALK_ID}" \
             --video-slug "${primary}" \
-            --snapshot "${snap}"
+            --snapshot "${snap}" \
+            --phases "${phases}"
 
   # Single commit job – collects all artifacts and pushes
   commit:

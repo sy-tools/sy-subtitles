@@ -204,6 +204,7 @@ def _run_full_pipeline(case: DryrunCase, scratch: Path) -> None:
 
     # optimize (mirror real pipeline flags)
     srt = video_dir / "final" / "uk.srt"
+    whisper = video_dir / "source" / "whisper.json"
     run(
         [
             sys.executable,
@@ -213,6 +214,11 @@ def _run_full_pipeline(case: DryrunCase, scratch: Path) -> None:
             str(srt),
             "--output",
             str(srt),
+            *(["--json", str(whisper)] if whisper.is_file() else []),
+            "--anchors",
+            str(video_dir / "work" / "timecodes.txt"),
+            "--max-drift-ms",
+            "2000",
             "--skip-duration-split",
             "--skip-cps-split",
         ],

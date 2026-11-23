@@ -117,6 +117,20 @@ and makes no outbound calls.
 `tests/test_dryrun_matrix.py` replays the full pipeline against canned LLM
 responses in `tests/fixtures/pipeline_snapshots/`, then `tools.verify_snapshot`
 checks the output (text preservation, block-count tolerance, CPS, validation).
+`tests/test_dryrun_matrix_modes.py` replays every cell of
+`pipeline-matrix-dryrun.yml` (full, build-only, en-srt) the way the pipeline
+runs it, `validate_subtitles` included.
+
+A dry run never builds from the talk's own `transcript_uk.txt`: without a
+translate phase the pipeline pins the snapshot's `expected/transcript_uk.txt`
+(`tools.fake_llm pin-transcript`), because the recorded builder answer only
+fits the block cut of that transcript, and reviewers keep editing the talk's.
+
+`work/timecodes.txt` is replayed for every timing source unless the snapshot
+holds a `work/timecodes.<source>.txt` for it. A video whose EN SRT covers only
+part of it needs one for `en-srt`: that mode validates the time range against
+the EN SRT, so a whisper-mode answer that times the title over the opening
+music fails there.
 
 ### Re-timing after a segmentation change
 
@@ -140,7 +154,10 @@ ratio — a span with no usable pause is split evenly and reported as a
 reports the drift and exits non-zero without writing.
 
 After re-timing, refresh `expected/final_uk.srt` and `manifest.baseline` by
-replaying the matrix — they are reference artefacts, not inputs.
+replaying the matrix — they are reference artefacts, not inputs. The same goes
+for a deliberate change to the optimizer or to the flags the pipeline passes
+it: the baseline is the pipeline's output, so the replay must use the
+pipeline's optimizer flags.
 
 > ⚠️ **Known gap:** the *original* generator `tools/bootstrap_snapshot.py` was
 > removed in `c72e1b53` ("drop uk.map … legacy cleanup"). `retime_snapshot`
