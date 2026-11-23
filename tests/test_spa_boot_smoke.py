@@ -594,3 +594,31 @@ def test_the_floating_player_moves_by_its_bar_and_grows_from_its_corner(index_pa
     grown = _panel_box(page)
     assert abs(grown["width"] - (moved["width"] + 100)) < 3
     assert abs((grown["x"] + grown["width"]) - (moved["x"] + moved["width"])) < 3, "the right edge moved"
+
+
+@pytest.mark.parametrize(
+    "edge, dx, dy, grows", [("left", -100, 0, 100), ("top", 0, -90, 160), ("right", 60, 0, 60), ("bottom", 0, 45, 80)]
+)
+def test_the_floating_player_resizes_from_any_edge(index_page, edge, dx, dy, grows):
+    page = index_page
+    page.set_viewport_size({"width": 1400, "height": 900})
+    _open_help(page)
+    _start_video(page, 0)
+    page.mouse.click(5, 300)
+    if edge in ("right", "bottom"):
+        # Room to grow that way: away from the bottom-right corner first.
+        bar = page.locator("#help-mini-title").bounding_box()
+        page.mouse.move(bar["x"] + 20, bar["y"] + 10)
+        page.mouse.down()
+        page.mouse.move(bar["x"] - 400, bar["y"] - 300, steps=4)
+        page.mouse.up()
+    before = _panel_box(page)
+    handle = page.locator(f"#help-sheet .help-mini__edge--{edge}").bounding_box()
+    x, y = handle["x"] + handle["width"] / 2, handle["y"] + handle["height"] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    page.mouse.move(x + dx, y + dy, steps=5)
+    page.mouse.up()
+    after = _panel_box(page)
+    assert abs(after["width"] - before["width"] - grows) < 3, (before, after)
+    assert "help-sheet--mini" in page.get_attribute("#help-sheet", "class")

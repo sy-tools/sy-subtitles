@@ -1981,6 +1981,16 @@ html.help-sheet-open { overflow: hidden; }
 .help-mini__resize { flex: none; width: 20px; height: 20px; cursor: nwse-resize; color: var(--fg5);
   touch-action: none; }
 .help-mini__resize svg { display: block; }
+/* Edges a pointer can take to resize: thin strips along the panel's border,
+   above the video so its own controls do not swallow the drag. */
+.help-mini__edge { display: none; }
+.help-sheet--mini .help-mini__edge { display: block; position: absolute; z-index: 2; touch-action: none; }
+.help-mini__edge--left, .help-mini__edge--right { top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.help-mini__edge--left { left: 0; }
+.help-mini__edge--right { right: 0; }
+.help-mini__edge--top, .help-mini__edge--bottom { left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.help-mini__edge--top { top: 0; }
+.help-mini__edge--bottom { bottom: 0; }
 .help-section + .help-section { margin-top: var(--space-8); }
 .help-section__title { margin: 0 0 var(--space-5); padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border); font-family: var(--f-serif); font-weight: 400;

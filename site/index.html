@@ -790,8 +790,12 @@
      players asking for their metadata at boot would cost every visit. -->
 <div id="help-sheet" class="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-sheet-title" hidden onclick="if (event.target === this) SPA.helpBesideSheet()">
   <div class="help-sheet__panel">
+    <span class="help-mini__edge help-mini__edge--left" data-edge="left"></span>
+    <span class="help-mini__edge help-mini__edge--right" data-edge="right"></span>
+    <span class="help-mini__edge help-mini__edge--top" data-edge="top"></span>
+    <span class="help-mini__edge help-mini__edge--bottom" data-edge="bottom"></span>
     <div id="help-mini-bar" class="help-mini__bar">
-      <span id="help-mini-resize" class="help-mini__resize" data-i18n-title="help.mini.resize"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="11" x2="11" y2="5"/><line x1="5" y1="15" x2="15" y2="5"/></svg></span>
+      <span id="help-mini-resize" class="help-mini__resize" data-edge="top-left" data-i18n-title="help.mini.resize"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="11" x2="11" y2="5"/><line x1="5" y1="15" x2="15" y2="5"/></svg></span>
       <span id="help-mini-title" class="help-mini__title" role="button" tabindex="0" data-i18n-title="help.mini.expand"></span>
       <button type="button" id="help-mini-expand" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.unfoldHelp()" data-i18n-aria-label="help.mini.expand" data-i18n-title="help.mini.expand"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
       <button type="button" id="help-mini-close" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.closeHelp()" data-i18n-aria-label="help.close" data-i18n-title="help.close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
@@ -10779,8 +10783,8 @@ SPA.unfoldHelp = function() {
   if (card) card.scrollIntoView({ block: 'center' });
 };
 
-// The bar moves the player; a tap on it (no real movement) unfolds it. The
-// corner grip resizes, keeping the bottom-right corner in place.
+// The bar moves the player; a tap on it (no real movement) unfolds it. Every
+// edge and the corner grip resize it.
 function followHelpPointer(e, onMove, onEnd) {
   e.preventDefault();
   var x0 = e.clientX, y0 = e.clientY;
@@ -10810,12 +10814,15 @@ document.getElementById('help-mini-title').addEventListener('pointerdown', funct
 document.getElementById('help-mini-title').addEventListener('keydown', function(e) {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); SPA.unfoldHelp(); }
 });
-document.getElementById('help-mini-resize').addEventListener('pointerdown', function(e) {
-  var panel = document.querySelector('#help-sheet .help-sheet__panel');
-  var start = { left: panel.offsetLeft, top: panel.offsetTop, width: panel.offsetWidth, height: panel.offsetHeight };
-  followHelpPointer(e, function(dx) {
-    placeHelpMini(HelpMini.resizeFromCorner(start, dx, window.innerWidth, window.innerHeight));
-  }, function() {});
+document.querySelectorAll('#help-sheet [data-edge]').forEach(function(handle) {
+  handle.addEventListener('pointerdown', function(e) {
+    var panel = document.querySelector('#help-sheet .help-sheet__panel');
+    var start = { left: panel.offsetLeft, top: panel.offsetTop, width: panel.offsetWidth, height: panel.offsetHeight };
+    var edge = handle.getAttribute('data-edge');
+    followHelpPointer(e, function(dx, dy) {
+      placeHelpMini(HelpMini.resizeFromEdge(start, edge, dx, dy, window.innerWidth, window.innerHeight));
+    }, function() {});
+  });
 });
 window.addEventListener('resize', function() {
   if (helpFolded()) placeHelpMini(HelpMini.miniRect(helpMini.remembered, window.innerWidth, window.innerHeight));

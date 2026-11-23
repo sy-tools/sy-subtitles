@@ -28,18 +28,44 @@ describe('miniRect', () => {
   });
 });
 
-describe('resizeFromCorner', () => {
-  it('grows to the left and up, keeping the bottom-right corner where it was', () => {
-    const start = M.miniRect(null, 1600, 900);
-    const r = M.resizeFromCorner(start, -100, 1600, 900);
-    assert.strictEqual(r.width, 460);
-    assert.strictEqual(r.left + r.width, start.left + start.width);
-    assert.strictEqual(r.top + r.height, start.top + start.height);
+describe('resizeFromEdge', () => {
+  const start = { left: 800, top: 300, width: 400, height: tall(400) };
+  const right = (r) => r.left + r.width;
+  const bottom = (r) => r.top + r.height;
+
+  it('widens from the left edge, keeping the right and bottom edges', () => {
+    const r = M.resizeFromEdge(start, 'left', -100, 0, 1600, 900);
+    assert.strictEqual(r.width, 500);
+    assert.strictEqual(right(r), right(start));
+    assert.strictEqual(bottom(r), bottom(start));
+  });
+
+  it('widens from the right edge, keeping the left edge', () => {
+    const r = M.resizeFromEdge(start, 'right', 100, 0, 1600, 900);
+    assert.strictEqual(r.width, 500);
+    assert.strictEqual(r.left, start.left);
+  });
+
+  it('grows from the top edge at 16:9, keeping the bottom and right edges', () => {
+    const r = M.resizeFromEdge(start, 'top', 0, -90, 1600, 900);
+    assert.strictEqual(r.width, 560);
+    assert.strictEqual(bottom(r), bottom(start));
+    assert.strictEqual(right(r), right(start));
+  });
+
+  it('grows from the bottom edge, keeping the top edge', () => {
+    const r = M.resizeFromEdge(start, 'bottom', 0, 90, 1600, 900);
+    assert.strictEqual(r.width, 560);
+    assert.strictEqual(r.top, start.top);
   });
 
   it('stops at the minimum width', () => {
-    const r = M.resizeFromCorner(M.miniRect(null, 1600, 900), 1000, 1600, 900);
-    assert.strictEqual(r.width, M.MINI_MIN_WIDTH);
+    assert.strictEqual(M.resizeFromEdge(start, 'left', 1000, 0, 1600, 900).width, M.MINI_MIN_WIDTH);
+  });
+
+  it('follows the corner by whichever way moved more', () => {
+    assert.strictEqual(M.resizeFromEdge(start, 'top-left', -100, -9, 1600, 900).width, 500);
+    assert.strictEqual(M.resizeFromEdge(start, 'top-left', -5, -90, 1600, 900).width, 560);
   });
 });
 

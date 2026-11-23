@@ -2,9 +2,8 @@
 // big it is. A tutorial is watched while doing what it shows, so a click
 // beside the sheet keeps the playing video on screen, small, over the app.
 //
-// The box keeps the video's 16:9 under a bar of MINI_HEAD pixels, never
-// leaves the viewport (FloatPanel's clamp), and grows from its top-left
-// corner: it opens in the bottom-right one, which therefore stays put.
+// The box keeps the video's 16:9 under a bar of MINI_HEAD pixels and never
+// leaves the viewport (FloatPanel's clamp).
 
 (function () {
   var Float = typeof module !== 'undefined' && module.exports ? require('./float_panel') : window;
@@ -33,12 +32,28 @@
     return { left: at.left, top: at.top, width: w, height: h };
   }
 
-  // dx: how far the top-left handle moved right since the drag began.
-  function resizeFromCorner(start, dx, viewportWidth, viewportHeight) {
-    var w = width(start.width - dx, viewportWidth);
+  // How much wider a drag of `edge` by (dx, dy) makes the box. Height follows
+  // width at 16:9, so a vertical drag counts 16/9 times; a corner goes by
+  // whichever way the pointer moved more.
+  function growth(edge, dx, dy) {
+    var byX = { left: -dx, right: dx }[edge.split('-').pop()] || 0;
+    var byY = { top: -dy, bottom: dy }[edge.split('-')[0]] * 16 / 9 || 0;
+    return Math.abs(byX) >= Math.abs(byY) ? byX : byY;
+  }
+
+  // The edge dragged moves; the opposite ones stay. For a side edge that is
+  // the other side and the bottom, for the top or bottom edge it is the right
+  // side and the other one.
+  function resizeFromEdge(start, edge, dx, dy, viewportWidth, viewportHeight) {
+    var w = width(start.width + growth(edge, dx, dy), viewportWidth);
     var h = height(w);
-    return miniRect({ left: start.left + start.width - w, top: start.top + start.height - h, width: w },
-      viewportWidth, viewportHeight);
+    var keepLeft = edge === 'right';
+    var keepTop = edge === 'bottom';
+    return miniRect({
+      left: keepLeft ? start.left : start.left + start.width - w,
+      top: keepTop ? start.top : start.top + start.height - h,
+      width: w,
+    }, viewportWidth, viewportHeight);
   }
 
   function isTap(dx, dy) { return Math.abs(dx) < TAP_PX && Math.abs(dy) < TAP_PX; }
@@ -48,7 +63,7 @@
     MINI_MIN_WIDTH: MINI_MIN_WIDTH,
     MINI_MAX_WIDTH: MINI_MAX_WIDTH,
     miniRect: miniRect,
-    resizeFromCorner: resizeFromCorner,
+    resizeFromEdge: resizeFromEdge,
     isTap: isTap,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
