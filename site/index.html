@@ -45,6 +45,10 @@
 <script src="js/passphrase_gate.js"></script>
 <script src="js/github_auth.js"></script>
 <script src="js/github_api.js"></script>
+<script src="js/help_videos.js"></script>
+<script src="js/help_sheet.js"></script>
+<script src="js/help_admin.js"></script>
+<script src="js/help_admin_view.js"></script>
 <script src="js/review_status_live.js"></script>
 <script src="js/meta_batch.js"></script>
 <script src="js/edit_sync.js"></script>
@@ -59,6 +63,7 @@
 <script src="js/export_menu.js"></script>
 <script src="js/clip_time.js"></script>
 <script src="js/float_panel.js"></script>
+<script src="js/help_mini.js"></script>
 <script src="js/fs_subs_scale.js"></script>
 <script src="js/pending_action.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
@@ -476,6 +481,10 @@
           <span class="prefs-row__label" data-i18n="prefs.operator">Operator mode</span>
           <span class="prefs-switch"><input type="checkbox" id="prefs-operator" onchange="SPA.toggleOperator()"></span>
         </label>
+        <button type="button" id="prefs-help" class="prefs-row prefs-action" onclick="SPA.openHelp()" aria-haspopup="dialog" aria-controls="help-sheet">
+          <span class="prefs-row__label" data-i18n="prefs.help">Video tutorials</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="m10 8.5 5.5 3.5-5.5 3.5z"/></svg>
+        </button>
       </div>
     </div>
   </div>
@@ -776,6 +785,29 @@
 <!-- Says which letter of a mixed-script word is the Latin one. Outside the
      editable text on purpose: the hints never touch the document being edited. -->
 <div class="typo-tip" id="typo-tip" role="status" hidden></div>
+
+<!-- Video tutorials, over whatever view is open. Built on first open: thirteen
+     players asking for their metadata at boot would cost every visit. -->
+<div id="help-sheet" class="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-sheet-title" hidden onclick="if (event.target === this) SPA.helpBesideSheet()">
+  <div class="help-sheet__panel">
+    <span class="help-mini__edge help-mini__edge--left" data-edge="left"></span>
+    <span class="help-mini__edge help-mini__edge--right" data-edge="right"></span>
+    <span class="help-mini__edge help-mini__edge--top" data-edge="top"></span>
+    <span class="help-mini__edge help-mini__edge--bottom" data-edge="bottom"></span>
+    <div id="help-mini-bar" class="help-mini__bar">
+      <span id="help-mini-resize" class="help-mini__resize" data-edge="top-left" data-i18n-title="help.mini.resize"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="11" x2="11" y2="5"/><line x1="5" y1="15" x2="15" y2="5"/></svg></span>
+      <span id="help-mini-title" class="help-mini__title" role="button" tabindex="0" data-i18n-title="help.mini.expand"></span>
+      <button type="button" id="help-mini-expand" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.unfoldHelp()" data-i18n-aria-label="help.mini.expand" data-i18n-title="help.mini.expand"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+      <button type="button" id="help-mini-close" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.closeHelp()" data-i18n-aria-label="help.close" data-i18n-title="help.close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    </div>
+    <div class="help-sheet__head">
+      <h2 id="help-sheet-title" class="help-sheet__title" data-i18n="help.title">Video tutorials</h2>
+      <button type="button" id="help-sheet-edit" class="btn btn--ghost btn--sm help-sheet__edit" onclick="SPA.toggleHelpAdmin()" aria-pressed="false" hidden data-i18n="help.admin.edit">Edit</button>
+      <button type="button" id="help-sheet-close" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.closeHelp()" data-i18n-aria-label="help.close" data-i18n-title="help.close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    </div>
+    <div id="help-sheet-body" class="help-sheet__body"></div>
+  </div>
+</div>
 
 <footer id="app-footer" style="background:var(--bg2);border-top:1px solid var(--border);padding:4px 20px;font-size:11px;color:var(--fg6);display:flex;align-items:center;justify-content:space-between;">
   <span id="footer-version"></span>
@@ -1160,6 +1192,48 @@ var I18N = {
     'op.bot_slow': 'Бот ще не закінчив — перевір ішʼю #{n}',
     'op.failed': 'Не вдалося: {err}',
     'prefs.typo': '\u041f\u0456\u0434\u0441\u0432\u0456\u0447\u0443\u0432\u0430\u0442\u0438 \u043e\u043f\u0438\u0441\u043a\u0438',
+    'prefs.help': '\u0412\u0456\u0434\u0435\u043e-\u0456\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0456\u0457',
+    'help.title': '\u0412\u0456\u0434\u0435\u043e-\u0456\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0456\u0457',
+    'help.close': '\u0417\u0430\u043a\u0440\u0438\u0442\u0438',
+    'help.loading': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f\u2026',
+    'help.error': '\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438 \u0441\u043f\u0438\u0441\u043e\u043a \u0432\u0456\u0434\u0435\u043e. \u0421\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.',
+    'help.admin.edit': 'Редагувати',
+    'help.admin.done': 'Готово',
+    'help.admin.save': 'Зберегти',
+    'help.admin.discard': 'Скасувати зміни',
+    'help.admin.saved': 'Збережено. На порталі зміни з’являться приблизно за хвилину.',
+    'help.admin.stale': 'Каталог змінився з іншого місця. Завантажено свіжу версію — повторіть свої правки.',
+    'help.admin.saveFailed': 'Не вдалося зберегти.',
+    'help.admin.loadFailed': 'Не вдалося завантажити каталог.',
+    'help.admin.saveFirst': 'Спершу збережіть або скасуйте зміни.',
+    'help.admin.title': 'Назва',
+    'help.admin.description': 'Опис',
+    'help.admin.notes': 'Що нового (кожен пункт з нового рядка)',
+    'help.admin.date': 'Дата',
+    'help.admin.dateIfUpdate': 'Дата (для розділу «за датою»)',
+    'help.admin.section': 'Розділ',
+    'help.admin.sectionTitle': 'Назва розділу',
+    'help.admin.byHand': 'порядок вручну',
+    'help.admin.byDate': 'за датою',
+    'help.admin.remove': 'Прибрати',
+    'help.admin.removeSection': 'Прибрати розділ',
+    'help.admin.addSection': 'Додати розділ',
+    'help.admin.addVideo': 'Додати відео',
+    'help.admin.file': 'Файл відео',
+    'help.admin.upload': 'Вивантажити',
+    'help.admin.replace': 'Замінити відео',
+    'help.admin.tooLarge': 'Файл більший за 1 ГБ.',
+    'help.admin.needTitle': 'Вкажіть назву українською.',
+    'help.admin.needDate': 'Для розділу «за датою» вкажіть дату.',
+    'help.admin.uploading': 'вивантаження {p}%',
+    'help.admin.processing': 'обробка на GitHub (стиснення, публікація)…',
+    'help.admin.published': 'опубліковано; субтитри з’являться трохи згодом',
+    'help.admin.failed': 'обробка не вдалася',
+    'help.admin.run': 'журнал',
+    'help.mini.expand': 'Розгорнути',
+    'help.mini.resize': 'Потягніть, щоб змінити розмір',
+    'help.admin.invalid': 'Не збережено: каталог має помилки, яких сайт не прийме.',
+    'help.admin.lostTrack': 'Не вдається стежити за обробкою; перевірте журнал на GitHub.',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
     // Composed by mixedScriptMessage in js/typo_hints.js: title, then one
@@ -1454,6 +1528,48 @@ var I18N = {
     'op.bot_slow': 'The bot has not finished yet — check issue #{n}',
     'op.failed': 'Failed: {err}',
     'prefs.typo': 'Highlight typos',
+    'prefs.help': 'Video tutorials',
+    'help.title': 'Video tutorials',
+    'help.close': 'Close',
+    'help.loading': 'Loading\u2026',
+    'help.error': 'The list of videos did not load. Try again.',
+    'help.admin.edit': 'Edit',
+    'help.admin.done': 'Done',
+    'help.admin.save': 'Save',
+    'help.admin.discard': 'Discard changes',
+    'help.admin.saved': 'Saved. The portal shows it in about a minute.',
+    'help.admin.stale': 'The catalog was changed elsewhere. The latest version is loaded; make your edits again.',
+    'help.admin.saveFailed': 'Could not save.',
+    'help.admin.loadFailed': 'Could not load the catalog.',
+    'help.admin.saveFirst': 'Save or discard your changes first.',
+    'help.admin.title': 'Title',
+    'help.admin.description': 'Description',
+    'help.admin.notes': 'What is new (one item per line)',
+    'help.admin.date': 'Date',
+    'help.admin.dateIfUpdate': 'Date (for a by-date section)',
+    'help.admin.section': 'Section',
+    'help.admin.sectionTitle': 'Section title',
+    'help.admin.byHand': 'ordered by hand',
+    'help.admin.byDate': 'by date',
+    'help.admin.remove': 'Remove',
+    'help.admin.removeSection': 'Remove section',
+    'help.admin.addSection': 'Add section',
+    'help.admin.addVideo': 'Add video',
+    'help.admin.file': 'Video file',
+    'help.admin.upload': 'Upload',
+    'help.admin.replace': 'Replace video',
+    'help.admin.tooLarge': 'The file is over 1 GB.',
+    'help.admin.needTitle': 'Give a Ukrainian title.',
+    'help.admin.needDate': 'A by-date section needs a date.',
+    'help.admin.uploading': 'uploading {p}%',
+    'help.admin.processing': 'processing on GitHub (encoding, publishing)…',
+    'help.admin.published': 'published; subtitles follow a little later',
+    'help.admin.failed': 'processing failed',
+    'help.admin.run': 'log',
+    'help.mini.expand': 'Expand',
+    'help.mini.resize': 'Drag to resize',
+    'help.admin.invalid': 'Not saved: the catalog has errors the site would refuse.',
+    'help.admin.lostTrack': 'Lost track of the processing; check its log on GitHub.',
     'typo.mixed.title': 'Two keyboard layouts in one word',
     'typo.mixed.instead': 'Latin «{lat}» where «{cyr}» belongs',
     'typo.mixed.stray': 'Latin «{lat}»',
@@ -10375,6 +10491,412 @@ function closePrefsMenu() {
   if (menu) menu.classList.remove('open');
   if (btn) btn.setAttribute('aria-expanded', 'false');
 }
+
+// ============================================================
+// Video tutorials sheet
+// ============================================================
+// The tutorials are listed by the help repository's catalog (help_videos.js),
+// fetched on the first open after the passphrase gate. A failed fetch is not
+// remembered: the next open tries again.
+var helpCatalog = null;
+function loadHelpCatalog(repo) {
+  if (!helpCatalog) {
+    helpCatalog = fetch(HelpVideos.catalogUrl(repo), { cache: 'no-cache' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('catalog: HTTP ' + r.status);
+        return r.json();
+      });
+    helpCatalog.catch(function() { helpCatalog = null; });
+  }
+  return helpCatalog;
+}
+
+// Built once per interface language: titles, notes and the subtitle choice
+// all follow it.
+function renderHelpBody(body) {
+  var repo = HelpVideos.helpRepo(window);
+  var lang = currentLang;
+  body.dataset.lang = lang;
+  body.textContent = '';
+  body.appendChild(Object.assign(document.createElement('p'), { className: 'help-sheet__status', textContent: t('help.loading') }));
+  loadHelpCatalog(repo).then(function(catalog) {
+    if (body.dataset.lang === lang) HelpSheet.render(body, repo, catalog, lang);
+  }, function() {
+    if (body.dataset.lang !== lang) return;
+    body.dataset.lang = '';
+    body.textContent = '';
+    body.appendChild(Object.assign(document.createElement('p'), { className: 'help-sheet__status help-sheet__error', textContent: t('help.error') }));
+  });
+}
+
+// Behind the same passphrase as the translation pages: a cancelled prompt
+// opens nothing, and nothing is fetched before the phrase is right.
+SPA.openHelp = function() {
+  closePrefsMenu();
+  ensureUnlocked().then(function(ok) { if (ok) showHelp(); });
+};
+
+function showHelp() {
+  var sheet = document.getElementById('help-sheet');
+  var body = document.getElementById('help-sheet-body');
+  if (!sheet || !body) return;
+  if (!helpAdmin.on && body.dataset.lang !== currentLang) renderHelpBody(body);
+  checkHelpAdmin();
+  sheet.hidden = false;
+  // The page behind must not scroll under a finger that reached the sheet's end.
+  document.documentElement.classList.add('help-sheet-open');
+  document.getElementById('help-sheet-close').focus();
+};
+
+// ----- Help admin -----
+// Edit mode of the sheet, offered to whoever can push to the help repository:
+// GitHub decides, and a user without the right could not write anyway. The
+// catalog being edited is read from the API (main as it is now), not from
+// Pages, which trails a deploy behind.
+var helpAdmin = { on: false, catalog: null, sha: null, released: [], dirty: false, saving: false, status: null, upload: null };
+
+function helpApi() { return 'https://api.github.com/repos/' + HelpVideos.helpRepo(window); }
+
+function checkHelpAdmin() {
+  var btn = document.getElementById('help-sheet-edit');
+  var token = getAuthToken();
+  if (!btn) return;
+  if (!token) { btn.hidden = true; return; }
+  getRepoPermissions(helpApi(), token).then(function(p) { btn.hidden = !p.push; }, function() { btn.hidden = true; });
+}
+
+// Only the status line: a redraw of the form would take the caret and empty
+// the add-video fields while someone is filling them in.
+function helpAdminRenderStatus() {
+  var line = document.querySelector('.help-admin__status');
+  if (line) line.replaceWith(HelpAdminView.statusLine(helpAdmin, t));
+}
+
+// Names still held by recordings in the release, which a new upload must not
+// take (a URL never changes content). Unknown names cost nothing but a -v2.
+function helpLoadReleased() {
+  return ghJson(helpApi() + '/releases/tags/media', getAuthToken(), { cache: 'no-store' }).then(function(r) {
+    helpAdmin.released = (r.assets || []).map(function(a) { return a.name.replace(/\.bin$/, ''); });
+  }, function() {});
+}
+
+function helpAdminRender() {
+  var body = document.getElementById('help-sheet-body');
+  body.dataset.lang = '';
+  HelpAdminView.render(body, helpAdmin, helpAdminActions);
+}
+
+// The save bar follows typing without a redraw, which would take the caret.
+function helpAdminMarkDirty() {
+  helpAdmin.dirty = true;
+  helpAdmin.status = null;
+  document.querySelectorAll('.help-admin__save, .help-admin__discard').forEach(function(b) { b.disabled = false; });
+  document.querySelectorAll('.help-admin__send').forEach(function(b) {
+    b.disabled = true;
+    b.setAttribute('data-i18n-title', 'help.admin.saveFirst');
+    b.title = t('help.admin.saveFirst');
+  });
+}
+
+function helpAdminLoad(status) {
+  helpLoadReleased();
+  return HelpAdmin.loadCatalog(helpApi(), getAuthToken()).then(function(r) {
+    helpAdmin.catalog = r.catalog;
+    helpAdmin.sha = r.sha;
+    helpAdmin.dirty = false;
+    helpAdmin.status = status || null;
+    if (helpAdmin.on) helpAdminRender();
+  });
+}
+
+function helpAdminEdit(change) {
+  try {
+    helpAdmin.catalog = change(helpAdmin.catalog);
+  } catch (e) {
+    helpAdmin.status = { kind: 'error', text: e.message };
+    helpAdminRender();
+    return;
+  }
+  helpAdmin.dirty = true;
+  helpAdmin.status = null;
+  helpAdminRender();
+}
+
+function helpSectionOf(file) {
+  return helpAdmin.catalog.sections.find(function(s) { return s.videos.some(function(v) { return v.file === file; }); });
+}
+
+var HELP_POLL_MS = 10000;
+var HELP_POLL_GIVE_UP = 6;
+
+function helpAdminFollowIngest(sent, failures) {
+  var u = helpAdmin.upload;
+  if (!u || u.branch !== sent.branch) return;
+  HelpAdmin.ingestStatus(helpApi(), getAuthToken(), sent.branch, sent.sha).then(function(r) {
+    u.url = r.url;
+    if (r.state === 'done') {
+      u.state = 'done';
+      return helpAdminTakePublished(u.file);
+    }
+    u.state = r.state === 'failed' ? 'failed' : 'processing';
+    helpAdminRenderStatus();
+    if (u.state !== 'failed') setTimeout(function() { helpAdminFollowIngest(sent, 0); }, HELP_POLL_MS);
+  }, function(e) {
+    if ((failures || 0) + 1 >= HELP_POLL_GIVE_UP) {
+      helpAdmin.status = { kind: 'error', text: t('help.admin.lostTrack') + ' ' + e.message };
+      return helpAdminRenderStatus();
+    }
+    setTimeout(function() { helpAdminFollowIngest(sent, (failures || 0) + 1); }, 2 * HELP_POLL_MS);
+  });
+}
+
+// The published video joins the catalog being edited without dropping what
+// was typed meanwhile.
+function helpAdminTakePublished(file) {
+  if (!helpAdmin.dirty) return helpAdminLoad();
+  return HelpAdmin.loadCatalog(helpApi(), getAuthToken()).then(function(r) {
+    helpAdmin.catalog = HelpAdmin.rebaseOnIngest(helpAdmin.catalog, r.catalog, file);
+    helpAdmin.sha = r.sha;
+    helpAdminRenderStatus();
+  }, function() { helpAdminRenderStatus(); });
+}
+
+// Closing the tab mid-upload loses it; the browser asks first.
+function helpUploadGuard(e) { e.preventDefault(); e.returnValue = ''; }
+
+var helpAdminActions = {
+  t: function(key) { return t(key); },
+  edit: function(path, value) {
+    helpAdmin.catalog = HelpAdmin.setText(helpAdmin.catalog, path, value);
+    helpAdminMarkDirty();
+  },
+  move: function(file, delta) { helpAdminEdit(function(c) { return HelpAdmin.moveVideo(c, file, delta); }); },
+  moveTo: function(file, id) { helpAdminEdit(function(c) { return HelpAdmin.moveToSection(c, file, id); }); },
+  remove: function(file) { helpAdminEdit(function(c) { return HelpAdmin.removeVideo(c, file); }); },
+  removeSection: function(id) { helpAdminEdit(function(c) { return HelpAdmin.removeSection(c, id); }); },
+  addSection: function(spec) {
+    helpAdminEdit(function(c) {
+      var base = HelpAdmin.slugify(spec.title.en || spec.title.uk);
+      var id = base, n = 2;
+      while (c.sections.some(function(s) { return s.id === id; })) id = base + '-' + (n++);
+      return HelpAdmin.addSection(c, { id: id, title: spec.title, order: spec.order });
+    });
+  },
+  save: function() {
+    helpAdmin.saving = true;
+    helpAdminRender();
+    HelpAdmin.saveCatalog(helpApi(), getAuthToken(), helpAdmin.catalog, helpAdmin.sha, 'Edit the tutorials from the portal')
+      .then(function(sha) {
+        helpAdmin.sha = sha;
+        helpAdmin.dirty = false;
+        helpAdmin.status = { kind: 'ok', text: t('help.admin.saved') };
+        helpCatalog = null;
+      }, function(e) {
+        if (e.code === 'stale') return helpAdminLoad({ kind: 'error', text: t('help.admin.stale') });
+        if (e.code === 'invalid') {
+          helpAdmin.status = { kind: 'error', text: t('help.admin.invalid') + ' ' + e.message };
+          return;
+        }
+        helpAdmin.status = { kind: 'error', text: t('help.admin.saveFailed') + ' ' + e.message };
+      })
+      .then(function() { helpAdmin.saving = false; helpAdminRender(); });
+  },
+  discard: function() { helpAdminLoad(); },
+  upload: function(form) {
+    var cat = helpAdmin.catalog;
+    var entry;
+    if (form.video) {
+      entry = { section: helpSectionOf(form.video.file).id, file: HelpAdmin.nextFile(cat, null, form.video.file, helpAdmin.released), replaces: form.video.file };
+    } else {
+      var f = form.fields;
+      var section = cat.sections.find(function(s) { return s.id === f.section; });
+      if (!f.title.uk.trim() && !(section && section.order === 'chronological')) {
+        helpAdmin.status = { kind: 'error', text: t('help.admin.needTitle') };
+        return helpAdminRenderStatus();
+      }
+      if (section && section.order === 'chronological' && !f.date) {
+        helpAdmin.status = { kind: 'error', text: t('help.admin.needDate') };
+        return helpAdminRenderStatus();
+      }
+      var base = HelpAdmin.slugify(f.title.en || f.title.uk || ('update ' + f.date));
+      entry = { section: f.section, file: HelpAdmin.nextFile(cat, base, null, helpAdmin.released), replaces: null,
+        title: f.title, description: f.description, date: f.date || null, notes: { uk: [], en: [] } };
+    }
+    var file = form.file;
+    if (file.size > HelpAdmin.MAX_UPLOAD_BYTES) {
+      helpAdmin.status = { kind: 'error', text: t('help.admin.tooLarge') };
+      return helpAdminRenderStatus();
+    }
+    helpAdmin.upload = { file: entry.file, branch: 'inbox/' + entry.file, state: 'sending', done: 0, total: file.size, url: null };
+    helpAdmin.status = null;
+    helpAdminRender();
+    window.addEventListener('beforeunload', helpUploadGuard);
+    HelpAdmin.uploadVideo(helpApi(), getAuthToken(), file, entry, function(done, total) {
+      helpAdmin.upload.done = done;
+      var bar = document.querySelector('.help-admin__progress');
+      if (bar) bar.value = done;
+      var label = document.querySelector('.help-admin__status span');
+      if (label) label.textContent = entry.file + ': ' + t('help.admin.uploading').replace('{p}', String(Math.floor(100 * done / total)));
+    }).then(function(sent) {
+      helpAdmin.upload.state = 'processing';
+      helpAdminRenderStatus();
+      helpAdminFollowIngest(sent, 0);
+    }, function(e) {
+      helpAdmin.upload.state = 'failed';
+      helpAdmin.status = { kind: 'error', text: e.message };
+      helpAdminRender();
+    }).then(function() { window.removeEventListener('beforeunload', helpUploadGuard); });
+  },
+};
+
+function setHelpEditLabel(btn, on) {
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.setAttribute('data-i18n', on ? 'help.admin.done' : 'help.admin.edit');
+  btn.textContent = t(on ? 'help.admin.done' : 'help.admin.edit');
+}
+
+SPA.toggleHelpAdmin = function() {
+  var btn = document.getElementById('help-sheet-edit');
+  var body = document.getElementById('help-sheet-body');
+  if (helpAdmin.on) {
+    if (helpAdmin.dirty) {
+      helpAdmin.status = { kind: 'error', text: t('help.admin.saveFirst') };
+      return helpAdminRender();
+    }
+    helpAdmin.on = false;
+    setHelpEditLabel(btn, false);
+    // What was just saved, not what Pages still serves for another minute.
+    var repo = HelpVideos.helpRepo(window);
+    body.dataset.lang = currentLang;
+    HelpSheet.render(body, repo, helpAdmin.catalog, currentLang);
+    return;
+  }
+  helpAdmin.on = true;
+  setHelpEditLabel(btn, true);
+  body.querySelectorAll('video').forEach(function(v) { v.pause(); });
+  body.textContent = t('help.loading');
+  helpAdminLoad().catch(function(e) {
+    helpAdmin.on = false;
+    setHelpEditLabel(btn, false);
+    body.textContent = t('help.admin.loadFailed') + ' ' + e.message;
+  });
+};
+
+// ----- Folded player -----
+// A click beside the sheet folds it into a small player of the video last
+// started (help_mini.js), so the steps it shows can be repeated in the app
+// while it plays. With nothing started there is nothing to keep: it closes.
+var helpMini = { remembered: null };
+
+function helpActiveCard() { return document.querySelector('#help-sheet .help-video.is-active'); }
+
+// play does not bubble; the capture phase still sees it.
+document.addEventListener('play', function(e) {
+  var card = e.target && e.target.closest && e.target.closest('#help-sheet .help-video');
+  if (!card) return;
+  document.querySelectorAll('#help-sheet .is-active').forEach(function(el) { el.classList.remove('is-active'); });
+  card.classList.add('is-active');
+  card.closest('.help-section').classList.add('is-active');
+}, true);
+
+function helpFolded() { return document.getElementById('help-sheet').classList.contains('help-sheet--mini'); }
+
+function placeHelpMini(rect) {
+  var panel = document.querySelector('#help-sheet .help-sheet__panel');
+  helpMini.remembered = { left: rect.left, top: rect.top, width: rect.width };
+  panel.style.left = rect.left + 'px';
+  panel.style.top = rect.top + 'px';
+  panel.style.width = rect.width + 'px';
+}
+
+SPA.helpBesideSheet = function() {
+  var card = helpActiveCard();
+  if (!card || helpAdmin.on) return SPA.closeHelp();
+  var sheet = document.getElementById('help-sheet');
+  sheet.classList.add('help-sheet--mini');
+  sheet.setAttribute('aria-modal', 'false');
+  document.documentElement.classList.remove('help-sheet-open');
+  document.getElementById('help-mini-title').textContent = card.querySelector('.help-video__title').textContent;
+  placeHelpMini(HelpMini.miniRect(helpMini.remembered, window.innerWidth, window.innerHeight));
+};
+
+SPA.unfoldHelp = function() {
+  var sheet = document.getElementById('help-sheet');
+  if (!helpFolded()) return;
+  sheet.classList.remove('help-sheet--mini');
+  sheet.setAttribute('aria-modal', 'true');
+  document.querySelector('#help-sheet .help-sheet__panel').removeAttribute('style');
+  document.documentElement.classList.add('help-sheet-open');
+  var card = helpActiveCard();
+  if (card) card.scrollIntoView({ block: 'center' });
+};
+
+// The bar moves the player; a tap on it (no real movement) unfolds it. Every
+// edge and the corner grip resize it.
+function followHelpPointer(e, onMove, onEnd) {
+  e.preventDefault();
+  var x0 = e.clientX, y0 = e.clientY;
+  var target = e.currentTarget;
+  if (target.setPointerCapture) target.setPointerCapture(e.pointerId);
+  function move(ev) { onMove(ev.clientX - x0, ev.clientY - y0); }
+  function up(ev) {
+    target.removeEventListener('pointermove', move);
+    target.removeEventListener('pointerup', up);
+    target.removeEventListener('pointercancel', up);
+    onEnd(ev.clientX - x0, ev.clientY - y0);
+  }
+  target.addEventListener('pointermove', move);
+  target.addEventListener('pointerup', up);
+  target.addEventListener('pointercancel', up);
+}
+
+document.getElementById('help-mini-title').addEventListener('pointerdown', function(e) {
+  var start = Object.assign({}, helpMini.remembered);
+  followHelpPointer(e, function(dx, dy) {
+    placeHelpMini(HelpMini.miniRect({ left: start.left + dx, top: start.top + dy, width: start.width },
+      window.innerWidth, window.innerHeight));
+  }, function(dx, dy) {
+    if (HelpMini.isTap(dx, dy)) SPA.unfoldHelp();
+  });
+});
+document.getElementById('help-mini-title').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); SPA.unfoldHelp(); }
+});
+document.querySelectorAll('#help-sheet [data-edge]').forEach(function(handle) {
+  handle.addEventListener('pointerdown', function(e) {
+    var panel = document.querySelector('#help-sheet .help-sheet__panel');
+    var start = { left: panel.offsetLeft, top: panel.offsetTop, width: panel.offsetWidth, height: panel.offsetHeight };
+    var edge = handle.getAttribute('data-edge');
+    followHelpPointer(e, function(dx, dy) {
+      placeHelpMini(HelpMini.resizeFromEdge(start, edge, dx, dy, window.innerWidth, window.innerHeight));
+    }, function() {});
+  });
+});
+window.addEventListener('resize', function() {
+  if (helpFolded()) placeHelpMini(HelpMini.miniRect(helpMini.remembered, window.innerWidth, window.innerHeight));
+});
+
+SPA.closeHelp = function() {
+  var sheet = document.getElementById('help-sheet');
+  if (!sheet || sheet.hidden) return;
+  if (helpFolded()) {
+    sheet.classList.remove('help-sheet--mini');
+    sheet.setAttribute('aria-modal', 'true');
+    document.querySelector('#help-sheet .help-sheet__panel').removeAttribute('style');
+  }
+  // A hidden <video> keeps playing; nothing on screen would say so.
+  sheet.querySelectorAll('video').forEach(function(v) { v.pause(); });
+  sheet.hidden = true;
+  document.documentElement.classList.remove('help-sheet-open');
+  var btn = document.getElementById('prefs-btn');
+  if (btn) btn.focus();
+};
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Escape') return;
+  var sheet = document.getElementById('help-sheet');
+  if (sheet && !sheet.hidden) SPA.closeHelp();
+});
 
 // A menu that only closes by clicking its own trigger is a trap on touch, where
 // there is no Escape key \u2014 so a tap anywhere outside dismisses it too.

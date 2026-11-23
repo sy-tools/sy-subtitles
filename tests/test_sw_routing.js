@@ -203,3 +203,31 @@ describe('cacheKeyFor — commit-pinned content is cached by blob, not by commit
     urls.forEach((u) => assert.strictEqual(cacheKeyFor(u), u));
   });
 });
+
+describe('bypassesWorker — media is left to the browser', () => {
+  const { bypassesWorker } = require('../site/js/sw_routing');
+  const fs = require('fs');
+
+  it('lets video and audio elements fetch on their own', () => {
+    assert.strictEqual(bypassesWorker('video', null), true);
+    assert.strictEqual(bypassesWorker('audio', null), true);
+  });
+
+  it('lets any range request through, whatever asked for it', () => {
+    assert.strictEqual(bypassesWorker('', 'bytes=0-'), true);
+  });
+
+  it('keeps everything else on the worker', () => {
+    assert.strictEqual(bypassesWorker('document', null), false);
+    assert.strictEqual(bypassesWorker('script', null), false);
+    assert.strictEqual(bypassesWorker('', null), false);
+  });
+
+  it('is consulted before the worker answers a request', () => {
+    const sw = fs.readFileSync(require('path').join(__dirname, '..', 'site', 'sw.js'), 'utf8');
+    const handler = sw.slice(sw.indexOf("addEventListener('fetch'"));
+    const check = handler.indexOf("bypassesWorker(e.request.destination, e.request.headers.get('Range'))");
+    assert.ok(check !== -1, 'the fetch handler never asks bypassesWorker');
+    assert.ok(check < handler.indexOf('e.respondWith('), 'bypassesWorker is asked after the worker has answered');
+  });
+});

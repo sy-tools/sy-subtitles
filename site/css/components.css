@@ -1919,6 +1919,130 @@ body.gh-write .gh-avatar-wrap #gh-avatar {
 .prefs-switch input { accent-color: var(--link); width: 15px; height: 15px;
   cursor: pointer; margin: 0; }
 
+/* A row that does something rather than holding a setting. A real <button>,
+   so it takes focus and Enter like the rest of the menu; the reset makes it
+   read as one more row, with hover as the cue that it acts. */
+.prefs-action { width: 100%; background: none; border: none; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; border-radius: var(--radius-sm); }
+.prefs-action:hover { background: var(--bg4); }
+.prefs-action:hover .prefs-row__label { color: var(--fg2); }
+.prefs-action svg { width: 14px; height: 14px; color: var(--fg5); flex: none; }
+
+/* Video tutorials: a sheet over whatever view is open. The scrim scrolls, not
+   the page behind it (html.help-sheet-open), and on a phone the panel takes
+   the whole screen, clear of the notch. */
+html.help-sheet-open { overflow: hidden; }
+.help-sheet { position: fixed; inset: 0; z-index: var(--z-modal); overflow-y: auto;
+  overscroll-behavior: contain; background: var(--overlay-bg);
+  padding: var(--space-7) var(--space-5); box-sizing: border-box; }
+.help-sheet[hidden] { display: none; }
+.help-sheet__panel { max-width: 880px; margin: 0 auto; background: var(--bg);
+  border: 1px solid var(--border2); border-radius: var(--radius-xl); box-shadow: var(--shadow-md);
+  font-family: var(--f-sans); letter-spacing: normal; }
+.help-sheet__head { position: sticky; top: calc(-1 * var(--space-7)); z-index: 1; display: flex;
+  align-items: center; justify-content: space-between; gap: var(--space-4);
+  padding: var(--space-4) var(--space-5); background: var(--bg); border-bottom: 1px solid var(--border);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+.help-sheet__title { margin: 0; font-family: var(--f-serif); font-weight: 400;
+  font-size: var(--text-3xl); color: var(--fg2); }
+.help-sheet__body { padding: var(--space-5); }
+@media (max-width: 600px) {
+  .help-sheet { padding: 0; }
+  .help-sheet__panel { min-height: 100%; border: none; border-radius: 0; }
+  .help-sheet__head { top: 0; border-radius: 0; padding-top: max(var(--space-4), env(safe-area-inset-top)); }
+  .help-sheet__body { padding: var(--space-4) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom)); }
+}
+/* Folded (help_mini.js): the started video alone in a small player over the
+   app, which stays usable around it. The <video> is restyled in place, never
+   moved, so playback does not stop. Size and place are set inline. */
+.help-mini__bar { display: none; }
+.help-sheet--mini { overflow: hidden; padding: 0; background: none; pointer-events: none; }
+.help-sheet--mini .help-sheet__panel { position: fixed; margin: 0; max-width: none; min-height: 0;
+  overflow: hidden; pointer-events: auto; border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.help-sheet--mini .help-sheet__head,
+.help-sheet--mini .help-admin__bar,
+.help-sheet--mini .help-section:not(.is-active),
+.help-sheet--mini .help-section__title,
+.help-sheet--mini .help-video:not(.is-active),
+.help-sheet--mini .help-video__head,
+.help-sheet--mini .help-video__description,
+.help-sheet--mini .help-video__notes { display: none; }
+.help-sheet--mini .help-sheet__body,
+.help-sheet--mini .help-video { padding: 0; margin: 0; border: 0; border-radius: 0; background: none; }
+.help-sheet--mini .help-video__player { border-radius: 0; }
+.help-sheet--mini .help-mini__bar { display: flex; align-items: center; gap: var(--space-1);
+  height: 36px; padding: 0 var(--space-1); background: var(--bg2); border-bottom: 1px solid var(--border);
+  touch-action: none; user-select: none; }
+.help-mini__title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: var(--text-sm); color: var(--fg2); cursor: move; }
+/* Top-left: the player opens in the bottom-right corner, so it grows away
+   from it. */
+.help-mini__resize { flex: none; width: 20px; height: 20px; cursor: nwse-resize; color: var(--fg5);
+  touch-action: none; }
+.help-mini__resize svg { display: block; }
+/* Edges a pointer can take to resize: thin strips along the panel's border,
+   above the video so its own controls do not swallow the drag. */
+.help-mini__edge { display: none; }
+.help-sheet--mini .help-mini__edge { display: block; position: absolute; z-index: 2; touch-action: none; }
+.help-mini__edge--left, .help-mini__edge--right { top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
+.help-mini__edge--left { left: 0; }
+.help-mini__edge--right { right: 0; }
+.help-mini__edge--top, .help-mini__edge--bottom { left: 0; right: 0; height: 6px; cursor: ns-resize; }
+.help-mini__edge--top { top: 0; }
+.help-mini__edge--bottom { bottom: 0; }
+.help-section + .help-section { margin-top: var(--space-8); }
+.help-section__title { margin: 0 0 var(--space-5); padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border); font-family: var(--f-serif); font-weight: 400;
+  font-size: var(--text-2xl); color: var(--fg2); }
+.help-section__list { display: grid; gap: var(--space-6); }
+.help-video { padding: var(--space-4); background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); }
+.help-video__head { display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--space-4); margin-bottom: var(--space-3); }
+/* Type is declared, not inherited, so the styleguide's own h3 rule cannot
+   dress the catalog copy differently from the app. */
+.help-video__title { margin: 0; font-family: var(--f-sans); font-size: var(--text-lg);
+  font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--fg2); }
+.help-video__duration { font-family: var(--f-mono); font-size: var(--text-xs); color: var(--fg5);
+  white-space: nowrap; }
+/* The box is reserved before metadata arrives, so the list does not jump as
+   each player learns its size. */
+.help-video__player { display: block; width: 100%; aspect-ratio: 16 / 9;
+  background: var(--player-letterbox); border-radius: var(--radius-md); }
+.help-video__notes { margin: var(--space-3) 0 0; padding-left: var(--space-6);
+  font-size: var(--text-sm); color: var(--fg3); }
+/* The number is the video's place, worked out from the catalog's order. */
+.help-video__number { margin-right: var(--space-1); font-family: var(--f-mono);
+  font-size: var(--text-sm); color: var(--fg5); }
+.help-video__description { margin: 0 0 var(--space-3); font-size: var(--text-sm); color: var(--fg3); }
+.help-sheet__status { margin: 0; color: var(--fg4); }
+.help-sheet__error { color: var(--danger-fg); }
+
+/* Help admin: the sheet's edit mode (help_admin_view.js). The save bar stays
+   under the sheet's head while the form scrolls. */
+.help-sheet__edit[hidden] { display: none; }
+.help-sheet__head .help-sheet__edit { margin-left: auto; }
+.help-admin__bar { position: sticky; top: var(--space-8); z-index: 1; display: flex; flex-wrap: wrap;
+  align-items: center; gap: var(--space-2); margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) var(--space-5);
+  padding: var(--space-3) var(--space-5); background: var(--bg2); border-bottom: 1px solid var(--border); }
+.help-admin__status { flex: 1 1 16rem; margin: 0; font-size: var(--text-sm); color: var(--fg3); }
+.help-admin__progress { display: block; width: 100%; margin-top: var(--space-1); }
+.help-admin__sec-head, .help-admin__tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.help-admin__sec-head { justify-content: space-between; margin-bottom: var(--space-3); }
+.help-admin__file { font-family: var(--f-mono); font-size: var(--text-xs); color: var(--fg5); overflow-wrap: anywhere; }
+.help-admin__field { margin-top: var(--space-3); }
+.help-admin__label { display: block; margin-bottom: var(--space-1); font-size: var(--text-xs); color: var(--fg4); }
+.help-admin__pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+@media (max-width: 640px) { .help-admin__pair { grid-template-columns: 1fr; } }
+.help-admin__upload { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);
+  margin-top: var(--space-3); font-size: var(--text-sm); color: var(--fg3); }
+.help-admin__file-input { max-width: 100%; }
+.help-admin__new { margin-top: var(--space-8); padding: var(--space-4); border: 1px dashed var(--border2);
+  border-radius: var(--radius-lg); }
+.help-admin__new-title { margin: 0 0 var(--space-3); font-family: var(--f-sans); font-size: var(--text-lg);
+  font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--fg2); }
+
 /* Footer build stamp. The app-shell version is a single token with no break
    opportunity that grows with every app file; as a flex item its min-width
    would be the whole token, widening the document past the window. */
