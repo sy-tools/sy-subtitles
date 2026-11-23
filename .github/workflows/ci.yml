@@ -42,6 +42,7 @@ jobs:
     outputs:
       code: ${{ steps.detect.outputs.code }}
       whisper: ${{ steps.detect.outputs.whisper }}
+      wordlist: ${{ steps.detect.outputs.wordlist }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -87,6 +88,16 @@ jobs:
             'tests/test_whisper_deps.py'
           )
 
+          # The typo-hint wordlist's inputs, minus the talks. A talk lands
+          # without the list (wordlist-refresh.yml rebuilds it on main after
+          # the merge), so checking a talk-only PR would only measure how far
+          # its base is behind that refresh.
+          WORDLIST_PATHS=(
+            'site/dict/'
+            'glossary/'
+            'tools/build_wordlist.py'
+          )
+
           if [ "$EVENT" = "pull_request" ]; then
             RANGE="$BASE_SHA...$HEAD_SHA"
           elif [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
@@ -94,8 +105,11 @@ jobs:
           else
             # A first push, a force-push, or anything else whose range cannot be
             # named: test it rather than guess it is uninteresting.
-            echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "whisper=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "code=true"
+              echo "whisper=true"
+              echo "wordlist=false"
+            } >> "$GITHUB_OUTPUT"
             echo "no comparable range for $EVENT — running every lane"
             exit 0
           fi
@@ -114,6 +128,14 @@ jobs:
             echo "whisper=true" >> "$GITHUB_OUTPUT"
           else
             echo "whisper=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Pull requests only: main is behind the list by design between a
+          # talk merge and the refresh that follows it.
+          if [ "$EVENT" = "pull_request" ] && [ -n "$(git diff --name-only "$RANGE" -- "${WORDLIST_PATHS[@]}")" ]; then
+            echo "wordlist=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "wordlist=false" >> "$GITHUB_OUTPUT"
           fi
 
   lint:
@@ -178,11 +200,11 @@ jobs:
       - run: pytest tests/ -n auto -m 'not e2e' --tb=short --cov=tools --cov-report=term-missing
 
         # The typo-hint wordlist is generated from the talks and the glossary and
-        # committed. Adding a talk introduces vocabulary the list does not carry
-        # yet, and a translator would then be underlined for words this project
-        # has already accepted. Too slow for the test lane (a pass over the whole
-        # corpus plus the dictionary), so it runs once here.
+        # committed. Too slow for the test lane (a pass over the whole corpus
+        # plus the dictionary), so it runs once here — and only on a PR that
+        # touches the list or its non-talk inputs (`changes` decides which).
       - name: Typo-hint wordlist is current
+        if: needs.changes.outputs.wordlist == 'true'
         run: python -m tools.build_wordlist --check
 
   test-e2e:
