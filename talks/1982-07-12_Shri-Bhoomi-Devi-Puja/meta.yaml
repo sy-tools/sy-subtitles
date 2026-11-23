@@ -22,3 +22,5 @@ videos:
 amruta_delivery:
 - date: '2026-11-22'
   commit: 579a144d51f9ff14b40d68554200fe28cf87469f
+- date: '2026-11-23'
+  commit: 45c9a2c8c76b7a487aae81e11ed0d45e4893be96
