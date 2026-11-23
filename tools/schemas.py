@@ -20,6 +20,7 @@ from typing import Any
 
 import yaml
 
+from .vimeo_codec import decode_video_source
 from .workflow_validation import (
     InvalidWorkflowInput,
     validate_talk_id,
@@ -199,14 +200,46 @@ def validate_meta_yaml(path: str) -> dict:
                 path,
                 f"{v_path}.vimeo_url is plaintext — store it obfuscated as video_ref (python -m tools.mask_video_refs)",
             )
-        # validate_video_ref decodes and re-checks against the vimeo_url
-        # allowlist. A video may legitimately have no link (text-only talk).
+        # validate_video_ref decodes the ref and checks it per provider: a
+        # Vimeo URL against the vimeo_url allowlist, a YouTube id against its
+        # pattern. What a viewer watches is Vimeo or YouTube, never a Drive
+        # file. A video may legitimately have no link (text-only talk).
         video_ref = video.get("video_ref", "")
         if video_ref:
             try:
-                validate_video_ref(video_ref)
+                validate_video_ref(video_ref, allowed=("vimeo", "yt"))
             except InvalidWorkflowInput as e:
                 raise SchemaError("meta.yaml", path, f"{v_path}.video_ref: {e}") from None
+
+        # Downloadable copies of a YouTube video (Drive files), in mirror
+        # order. Only a YouTube video has them: a Vimeo one downloads from
+        # Vimeo itself, and a video with no link has nothing to mirror.
+        if "media_refs" in video:
+            media_refs = video["media_refs"]
+            if not isinstance(media_refs, list):
+                raise SchemaError(
+                    "meta.yaml", path, f"{v_path}.media_refs must be a list, got {type(media_refs).__name__}"
+                )
+            if not video_ref or decode_video_source(video_ref).provider != "yt":
+                raise SchemaError("meta.yaml", path, f"{v_path}.media_refs is only allowed on a YouTube video")
+            if not media_refs:
+                raise SchemaError(
+                    "meta.yaml", path, f"{v_path}.media_refs must not be empty — omit the key when there is no mirror"
+                )
+            seen_media_ids: set[str] = set()
+            for j, media_ref in enumerate(media_refs):
+                if not isinstance(media_ref, str):
+                    raise SchemaError("meta.yaml", path, f"{v_path}.media_refs[{j}] must be a string")
+                try:
+                    validate_video_ref(media_ref, allowed=("gd",))
+                except InvalidWorkflowInput as e:
+                    raise SchemaError("meta.yaml", path, f"{v_path}.media_refs[{j}]: {e}") from None
+                # Compared by decoded id, so the same file cannot hide behind a
+                # differently written ref.
+                media_id = decode_video_source(media_ref).id
+                if media_id in seen_media_ids:
+                    raise SchemaError("meta.yaml", path, f"{v_path}.media_refs[{j}] is a duplicate of an earlier entry")
+                seen_media_ids.add(media_id)
 
     # The talk_id (directory name) isn't in the file but if the caller passes
     # a repo-relative path we can sanity-check it too.

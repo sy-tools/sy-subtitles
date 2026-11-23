@@ -1,8 +1,10 @@
-"""Reversible obfuscation codec for Vimeo links stored in meta.yaml.
+"""Reversible obfuscation codec for video links stored in meta.yaml.
 
 Private Vimeo links (``https://vimeo.com/<id>/<hash>``) must not appear as
-plaintext in this public repository. This module encodes the link into an
-opaque ``video_ref`` value and decodes it back.
+plaintext in this public repository, and neither may the YouTube and Google
+Drive ids that came after them. This module encodes a link into an opaque
+``video_ref`` value and decodes it back. (The module is still named after
+Vimeo, the only provider it had for a long time.)
 
 **This is obfuscation, not encryption.** The decode runs client-side in the
 public SPA, so the algorithm and key below are themselves public. The goal is
@@ -14,24 +16,35 @@ The JS twin lives at ``site/js/vimeo_codec.js`` and must stay behaviorally
 identical (produce identical output for the same input) — the shared vectors in
 ``tests/fixtures/vimeo_codec_vectors.json`` enforce that from both languages.
 
-Format::
+Format — the two-character version prefix selects the payload::
 
-    video_ref: r1<base64url( reverse( xor(<id>/<hash>, KEY) ) )>
+    r1<base64url( reverse( xor("<id>[/<hash>]", KEY) ) )>     Vimeo
+    r2<base64url( reverse( xor("<provider>:<id>", KEY) ) )>   yt | gd
 
-``r1`` is the scheme version (also guarantees the value starts with a letter,
-so it never reads as YAML structure). The decode is the exact inverse — both
-``reverse`` and ``xor`` are their own inverse — so for a canonical URL
-``decode(encode(url)) == url``. Non-canonical inputs (http/www/trailing slash)
-normalize to the canonical ``https://vimeo.com/...`` form on decode.
+The prefix also guarantees the value starts with a letter, so it never reads
+as YAML structure. The decode is the exact inverse — both ``reverse`` and
+``xor`` are their own inverse — so for a canonical URL
+``decode(encode(url)) == url``. Non-canonical inputs (http/www/trailing slash,
+``youtu.be``, embed links, extra query) normalize to the provider's canonical
+watch URL on decode.
+
+``r1`` carries no provider tag because it predates the idea of one; it stays
+exactly as it was, so every ref already stored keeps decoding. ``r2`` is
+strict where ``r1`` is not: its id must match the provider's pattern, so a
+decoded ``r2`` value is safe to place in a URL or a command line as is.
 """
 
 import base64
 import re
+from dataclasses import dataclass
+
+from tools.workflow_validation import DRIVE_ID_RE, YOUTUBE_ID_RE
 
 # Fixed project constant. Not a secret (it ships in the public client) — it
 # only diffuses the bytes so a naive base64 decode reveals nothing useful.
 _KEY = b"sahaja-yoga-subtitles"
-_VERSION = "r1"
+_V1 = "r1"  # Vimeo path
+_V2 = "r2"  # "<provider>:<id>"
 
 # Capture the path after ``vimeo.com/`` — tolerant of protocol/www/trailing
 # slash. The decode always reconstructs the canonical ``https://vimeo.com/...``.
@@ -40,38 +53,107 @@ _PATH_RE = re.compile(r"^(?:https?://)?(?:www\.)?vimeo\.com/(.+?)/?$", re.IGNORE
 # Canonical decoded form: numeric id plus an optional private hash.
 _CANONICAL_RE = re.compile(r"^(?:https?://)?(?:www\.)?vimeo\.com/(\d+)(?:/([0-9a-z]+))?/?$", re.IGNORECASE)
 
+# r2 URL shapes. They only ever see printable ASCII (``_PRINTABLE_ASCII_RE``
+# gates them), which is what lets ``.``, ``[^#]`` and IGNORECASE mean the same
+# thing here and in the JS twin: outside ASCII the two regex engines disagree
+# on case folding and on what ``.`` excludes. The lazy quantifiers pick the
+# FIRST ``v=`` / ``id=`` of a query that repeats it, as the sites themselves do.
+_PRINTABLE_ASCII_RE = re.compile(r"[!-~]+")
+_YT = r"([A-Za-z0-9_-]{11})"
+_GD = r"([A-Za-z0-9_-]{25,64})"
+_URL_SHAPES: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
+    (provider, re.compile(pattern, re.IGNORECASE))
+    for provider, pattern in (
+        ("yt", r"(?:https?://)?(?:www\.|m\.)?youtube\.com/watch\?(?:[^#]*?&)??v=" + _YT + r"(?:[&#].*)?"),
+        ("yt", r"(?:https?://)?youtu\.be/" + _YT + r"/?(?:[?#].*)?"),
+        ("yt", r"(?:https?://)?(?:www\.)?youtube(?:-nocookie)?\.com/embed/" + _YT + r"/?(?:[?#].*)?"),
+        ("gd", r"(?:https?://)?drive\.google\.com/file/d/" + _GD + r"(?:[/?#].*)?"),
+        ("gd", r"(?:https?://)?drive\.google\.com/open\?(?:[^#]*?&)??id=" + _GD + r"(?:[&#].*)?"),
+    )
+)
+
+# provider -> (id pattern, canonical watch URL template)
+_PROVIDERS: dict[str, tuple[re.Pattern[str], str]] = {
+    "yt": (YOUTUBE_ID_RE, "https://www.youtube.com/watch?v={id}"),
+    "gd": (DRIVE_ID_RE, "https://drive.google.com/file/d/{id}/view"),
+}
+
+
+@dataclass(frozen=True)
+class VideoSource:
+    """What a ``video_ref`` points at.
+
+    ``provider`` is ``"vimeo"``, ``"yt"`` or ``"gd"``. ``id`` is the provider's
+    own id — for Vimeo ``<id>`` or ``<id>/<hash>`` — and ``watch_url`` the
+    canonical page for it.
+    """
+
+    provider: str
+    id: str
+    watch_url: str
+
 
 def _xor(data: bytes) -> bytes:
     return bytes(b ^ _KEY[i % len(_KEY)] for i, b in enumerate(data))
 
 
-def encode_video_ref(url: str) -> str:
-    """Encode a Vimeo URL into an opaque ``video_ref`` string.
+def _encode_payload(version: str, text: str) -> str:
+    transformed = _xor(text.encode("utf-8"))[::-1]
+    return version + base64.urlsafe_b64encode(transformed).rstrip(b"=").decode("ascii")
 
-    Raises ``ValueError`` if ``url`` is not a Vimeo link.
+
+def _decode_payload(ref: str, version: str) -> str:
+    payload = ref[len(version) :]
+    padding = "=" * (-len(payload) % 4)
+    raw = base64.urlsafe_b64decode(payload + padding)
+    return _xor(raw[::-1]).decode("utf-8")
+
+
+def encode_video_ref(url: str) -> str:
+    """Encode a video URL into an opaque ``video_ref`` string.
+
+    A Vimeo URL becomes an ``r1`` ref; a YouTube or Google Drive file URL an
+    ``r2`` ref. Raises ``ValueError`` for anything else.
     """
-    match = _PATH_RE.match((url or "").strip())
-    if not match:
-        raise ValueError(f"not a vimeo url: {url!r}")
-    path = match.group(1)
-    transformed = _xor(path.encode("utf-8"))[::-1]
-    payload = base64.urlsafe_b64encode(transformed).rstrip(b"=").decode("ascii")
-    return _VERSION + payload
+    text = (url or "").strip()
+    match = _PATH_RE.match(text)
+    if match:
+        return _encode_payload(_V1, match.group(1))
+    if _PRINTABLE_ASCII_RE.fullmatch(text):
+        for provider, shape in _URL_SHAPES:
+            match = shape.fullmatch(text)
+            if match:
+                return _encode_payload(_V2, f"{provider}:{match.group(1)}")
+    raise ValueError(f"not a supported video url: {url!r}")
+
+
+def decode_video_source(ref: str) -> VideoSource:
+    """Decode a ``video_ref`` string into its provider, id and watch URL.
+
+    Raises ``ValueError`` if ``ref`` is not a recognized version, names an
+    unknown provider, or carries an id that does not fit the provider.
+    """
+    ref = (ref or "").strip()
+    if ref.startswith(_V1):
+        path = _decode_payload(ref, _V1)
+        return VideoSource("vimeo", path, "https://vimeo.com/" + path)
+    if ref.startswith(_V2):
+        provider, sep, video_id = _decode_payload(ref, _V2).partition(":")
+        if not sep or provider not in _PROVIDERS:
+            raise ValueError(f"unknown video_ref provider: {ref!r}")
+        id_re, watch_url = _PROVIDERS[provider]
+        if not id_re.fullmatch(video_id):
+            raise ValueError(f"invalid {provider} id in video_ref: {ref!r}")
+        return VideoSource(provider, video_id, watch_url.format(id=video_id))
+    raise ValueError(f"unknown video_ref version: {ref!r}")
 
 
 def decode_video_ref(ref: str) -> str:
-    """Decode a ``video_ref`` string back to its canonical Vimeo URL.
+    """Decode a ``video_ref`` string back to its canonical watch URL.
 
-    Raises ``ValueError`` if ``ref`` is not a recognized version.
+    Raises ``ValueError`` on the same inputs as ``decode_video_source``.
     """
-    ref = (ref or "").strip()
-    if not ref.startswith(_VERSION):
-        raise ValueError(f"unknown video_ref version: {ref!r}")
-    payload = ref[len(_VERSION) :]
-    padding = "=" * (-len(payload) % 4)
-    raw = base64.urlsafe_b64decode(payload + padding)
-    path = _xor(raw[::-1]).decode("utf-8")
-    return "https://vimeo.com/" + path
+    return decode_video_source(ref).watch_url
 
 
 def to_player_url(url: str) -> str:
@@ -100,24 +182,33 @@ def main(argv: list[str] | None = None) -> None:
     """
     import argparse
 
-    parser = argparse.ArgumentParser(description="Encode/decode Vimeo video_ref values.")
+    parser = argparse.ArgumentParser(description="Encode/decode video_ref values.")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    enc = sub.add_parser("encode", help="vimeo url -> video_ref")
+    enc = sub.add_parser("encode", help="video url -> video_ref")
     enc.add_argument("url")
-    dec = sub.add_parser("decode", help="video_ref -> vimeo url")
+    dec = sub.add_parser("decode", help="video_ref -> watch url")
     dec.add_argument("ref")
-    dec.add_argument(
+    form = dec.add_mutually_exclusive_group()
+    form.add_argument(
         "--player",
         action="store_true",
-        help="emit the player.vimeo.com embed form (the one yt-dlp can resolve)",
+        help="for Vimeo, emit the player.vimeo.com embed form (the one yt-dlp can resolve)",
+    )
+    form.add_argument(
+        "--provider",
+        action="store_true",
+        help="print only the provider: vimeo, yt or gd",
     )
     args = parser.parse_args(argv)
 
     if args.cmd == "encode":
         print(encode_video_ref(args.url))
+        return
+    source = decode_video_source(args.ref)
+    if args.provider:
+        print(source.provider)
     else:
-        url = decode_video_ref(args.ref)
-        print(to_player_url(url) if args.player else url)
+        print(to_player_url(source.watch_url) if args.player else source.watch_url)
 
 
 if __name__ == "__main__":

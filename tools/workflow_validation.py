@@ -21,6 +21,12 @@ TALK_ID_RE = re.compile(rf"^[0-9]{{4}}-[0-9]{{2}}-[0-9]{{2}}_[A-Za-z0-9_.-]{{1,{
 # and option-like values ("-rf", "--help") that defeat path safety.
 VIDEO_SLUG_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,63}$")
 VIMEO_URL_RE = re.compile(r"^https://(?:www\.)?(?:vimeo\.com|player\.vimeo\.com/video)/\d+(?:/[0-9a-f]+)?/?$")
+# Provider ids carried by an r2 video_ref (tools/vimeo_codec.py). ASCII classes,
+# so a decoded id is safe in a URL or on a command line as is. A YouTube id is
+# exactly 11 characters; Google publishes no length for a Drive file id, so
+# that one is a band around the lengths seen in practice.
+YOUTUBE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+DRIVE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{25,64}$")
 # A branch or tag name. Slashes are allowed because that is the shape edit-sync
 # produces ("sync/<user>/<talk>--<slug>-uk"); a leading dash is not, so the value
 # can never be read as an option by whatever consumes it. Everything git itself
@@ -117,22 +123,32 @@ def validate_vimeo_url(value: str) -> str:
     return value
 
 
-def validate_video_ref(value: str) -> str:
+def validate_video_ref(value: str, allowed: tuple[str, ...] = ("vimeo",)) -> str:
     """Validate an obfuscated ``video_ref`` (see tools/vimeo_codec.py).
 
-    Decodes the ref and re-checks the resulting URL against ``VIMEO_URL_RE`` so
-    the injection protection survives the obfuscation layer. Returns the ref
+    Decodes the ref, so the injection protection survives the obfuscation
+    layer: a Vimeo ref is re-checked against ``VIMEO_URL_RE``, and the codec
+    itself refuses a YouTube or Drive id outside its pattern. Returns the ref
     unchanged on success.
+
+    ``allowed`` names the providers the caller can handle. The default is
+    Vimeo alone, so the check fails closed: a gate in front of code that only
+    knows Vimeo keeps refusing every other provider until that code is taught
+    it and the gate is widened in the same change.
     """
-    # Imported lazily to keep this module's import graph light for workflows.
-    from tools.vimeo_codec import decode_video_ref
+    # Imported lazily: the codec imports this module for the id patterns.
+    from tools.vimeo_codec import decode_video_source
 
     try:
-        url = decode_video_ref(value)
+        source = decode_video_source(value)
     except ValueError as e:
         raise InvalidWorkflowInput(f"invalid video_ref: {value!r} ({e})") from None
-    if not VIMEO_URL_RE.fullmatch(url):
-        raise InvalidWorkflowInput(f"video_ref {value!r} decodes to invalid vimeo_url: {url!r}")
+    if source.provider not in allowed:
+        raise InvalidWorkflowInput(
+            f"video_ref {value!r} has provider {source.provider!r}, expected one of: {', '.join(allowed)}"
+        )
+    if source.provider == "vimeo" and not VIMEO_URL_RE.fullmatch(source.watch_url):
+        raise InvalidWorkflowInput(f"video_ref {value!r} decodes to invalid vimeo_url: {source.watch_url!r}")
     return value
 
 
