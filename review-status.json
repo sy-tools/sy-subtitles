@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T15:30:48.682061+00:00",
+  "updated_at": "2026-11-23T15:39:56.609549+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1136,9 +1136,9 @@
     "1984-05-05_Maha-Sahasrara-Puja-The-Start-of-a-New-Era": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:29:57Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1559,
+      "updated_at": "2026-11-23T15:39:33Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1549
     },
@@ -1154,9 +1154,9 @@
     "1982-05-05_Sahasrara-Puja-Opening-the-Primordial-Sahasrar": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:29:49Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1561,
+      "updated_at": "2026-11-23T15:39:45Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1547
     }
