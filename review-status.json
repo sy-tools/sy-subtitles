@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T16:21:41.721892+00:00",
+  "updated_at": "2026-11-23T16:25:33.602195+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1208,9 +1208,9 @@
     "1989-05-24_Shri-Pallas-Athena-Puja-The-Origins-and-Role-of-Greece": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T16:08:31Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1613,
+      "updated_at": "2026-11-23T16:23:46Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1590
     },
