@@ -11,6 +11,11 @@ against the shared fixture ``tests/fixtures/slug_cases.json``
 
 import re
 
+# The one length limit for a slug. tools/workflow_validation.py builds TALK_ID_RE
+# from it; the JS twin and the SPA's talk-id patterns are pinned to it by tests
+# through tests/fixtures/slug_cases.json.
+SLUG_MAX_LEN = 108
+
 
 def slugify(text):
     """Slugify a talk title for use as a folder name.
@@ -19,9 +24,16 @@ def slugify(text):
     runs into single hyphens, collapses repeats, and trims edge hyphens.
     Case is PRESERVED (not title-cased), so "Raksha Bandhan and Maryadas"
     keeps its lowercase "and" -> "Raksha-Bandhan-and-Maryadas".
+    A slug longer than SLUG_MAX_LEN is cut back to its last whole word; a
+    single word longer than the limit is cut hard.
     """
     text = re.sub(r"[^a-zA-Z0-9 -]", "", text or "")
     text = re.sub(r"\s+", "-", text)
     text = re.sub(r"-+", "-", text)
     text = re.sub(r"^-|-$", "", text)
+    if len(text) > SLUG_MAX_LEN:
+        cut = text[:SLUG_MAX_LEN]
+        if text[SLUG_MAX_LEN] != "-" and "-" in cut:
+            cut = cut[: cut.rindex("-")]
+        text = cut.rstrip("-")
     return text
