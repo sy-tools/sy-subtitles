@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T15:57:36.335199+00:00",
+  "updated_at": "2026-11-23T16:01:15.744271+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1082,9 +1082,9 @@
     "1994-05-08_Sahasrara-Puja-Mahamaya-Swarupa": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:30:23Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1578,
+      "updated_at": "2026-11-23T15:58:11Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1555
     },
