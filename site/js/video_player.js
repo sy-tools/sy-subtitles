@@ -271,6 +271,21 @@ function createYouTubePlayer(iframe, source, env) {
     last = { t: t, at: at, d: d > 0 ? d : (last ? last.d : 0), playing: isPlaying };
   }
 
+  var aspectPromise = null;
+  function askAspect() {
+    if (!fetchFn) return Promise.resolve(DEFAULT_ASPECT);
+    // maxwidth/maxheight: the default answer is a 200px-wide thumbnail size,
+    // whose rounded height (113 for 16:9) is not the video's ratio.
+    var url = 'https://www.youtube.com/oembed?format=json&maxwidth=1920&maxheight=1080&url='
+      + encodeURIComponent(source.watchUrl);
+    return Promise.resolve()
+      .then(function () { return fetchFn(url); })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        return j && j.width > 0 && j.height > 0 ? j.width + ' / ' + j.height : DEFAULT_ASPECT;
+      }, function () { return DEFAULT_ASPECT; });
+  }
+
   function whenReady(fn) {
     return readyPromise.then(function () { return fn(yt); });
   }
@@ -292,19 +307,13 @@ function createYouTubePlayer(iframe, source, env) {
     },
     getDuration: function () { return whenReady(function (p) { return p.getDuration(); }); },
     getPaused: function () { return whenReady(function (p) { return p.getPlayerState() !== YT_PLAYING; }); },
+    // Asked once per player: the preview and the poster both want it.
     getAspect: function () {
-      if (!fetchFn) return Promise.resolve(DEFAULT_ASPECT);
-      // maxwidth/maxheight: the default answer is a 200px-wide thumbnail size,
-      // whose rounded height (113 for 16:9) is not the video's ratio.
-      var url = 'https://www.youtube.com/oembed?format=json&maxwidth=1920&maxheight=1080&url='
-        + encodeURIComponent(source.watchUrl);
-      return Promise.resolve()
-        .then(function () { return fetchFn(url); })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (j) {
-          return j && j.width > 0 && j.height > 0 ? j.width + ' / ' + j.height : DEFAULT_ASPECT;
-        }, function () { return DEFAULT_ASPECT; });
+      if (aspectPromise) return aspectPromise;
+      aspectPromise = askAspect();
+      return aspectPromise;
     },
+
     play: function () { return whenReady(function (p) { seekHoldUntil = 0; p.playVideo(); }); },
     pause: function () { return whenReady(function (p) { p.pauseVideo(); }); },
     on: emitter.on,
@@ -329,6 +338,82 @@ function createVideoPlayer(iframe, source, env) {
     : createVimeoPlayer(iframe, source, env);
 }
 
+// The still over a YouTube player before it first plays: YouTube's own
+// unstarted embed puts the title, the channel and a large play button across
+// the middle of the picture, and none of it can be moved; amruta.org shows the
+// still with a small play button in the bottom-left corner instead, and so do
+// we. The player under it is live from the start, so seeking and the sync
+// bar work before playback as they do without the poster.
+// A mobile browser may refuse playback the page starts (the YouTube API says
+// playVideo() does not work in every mobile environment): if the player has
+// not started this long after the click, the poster steps aside and the
+// viewer's next tap lands on YouTube's own button.
+var POSTER_FALLBACK_MS = 1500;
+var POSTER_PLAY_SVG = '<svg viewBox="0 0 68 48" aria-hidden="true" focusable="false">'
+  + '<path class="video-poster__play-bg" d="M66.5 7.7a8.5 8.5 0 0 0-6-6C55.3.3 34 .3 34 .3s-21.3 0-26.5 1.4a8.5 8.5 0 0 0-6 6C.1 12.9.1 24 .1 24s0 11.1 1.4 16.3a8.5 8.5 0 0 0 6 6C12.7 47.7 34 47.7 34 47.7s21.3 0 26.5-1.4a8.5 8.5 0 0 0 6-6c1.4-5.2 1.4-16.3 1.4-16.3s0-11.1-1.4-16.3z"/>'
+  + '<path class="video-poster__play-mark" d="M45 24 27 14v20z"/></svg>';
+
+function posterImageUrl(source) {
+  if (!source || source.provider !== 'yt' || !YT_ID_RE.test(source.id || '')) return '';
+  return 'https://i.ytimg.com/vi/' + source.id + '/hqdefault.jpg';
+}
+
+// env: {document, label, setTimeout, clearTimeout}; the page's globals
+// otherwise. Returns {el, remove} or null (no poster for this source).
+function attachPoster(container, player, source, env) {
+  env = env || {};
+  var still = posterImageUrl(source);
+  if (!still || !container || !player) return null;
+  var doc = env.document || document;
+  var setTimeoutFn = env.setTimeout || function (fn, ms) { return setTimeout(fn, ms); };
+  var clearTimeoutFn = env.clearTimeout || function (id) { clearTimeout(id); };
+
+  var el = doc.createElement('button');
+  el.type = 'button';
+  el.className = 'video-poster';
+  el.setAttribute('aria-label', env.label || 'Play video');
+  var img = doc.createElement('img');
+  img.alt = '';
+  img.src = still;
+  el.appendChild(img);
+  var mark = doc.createElement('span');
+  mark.className = 'video-poster__play';
+  mark.innerHTML = POSTER_PLAY_SVG;
+  el.appendChild(mark);
+  container.appendChild(el);
+
+  // The box takes the video's shape only once the player reports it; the
+  // still and its button show from then, where they stay (components.css).
+  function shaped() { el.setAttribute('data-shaped', ''); }
+  try {
+    var a = player.getAspect ? player.getAspect() : null;
+    if (a && typeof a.then === 'function') a.then(shaped, shaped);
+    else shaped();
+  } catch (err) { shaped(); }
+
+  var gone = false;
+  var starting = false;
+  var timer = null;
+  function remove() {
+    if (gone) return;
+    gone = true;
+    if (timer !== null) { clearTimeoutFn(timer); timer = null; }
+    if (el.parentNode) el.parentNode.removeChild(el);
+  }
+  player.on('play', remove);
+  el.addEventListener('click', function (e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (gone || starting) return;
+    starting = true;
+    el.setAttribute('data-state', 'starting');
+    timer = setTimeoutFn(remove, POSTER_FALLBACK_MS);
+    var r;
+    try { r = player.play(); } catch (err) { remove(); return; }
+    if (r && typeof r.then === 'function') r.then(null, remove);
+  });
+  return { el: el, remove: remove };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VIMEO_SDK_URL: VIMEO_SDK_URL,
@@ -344,5 +429,8 @@ if (typeof module !== 'undefined' && module.exports) {
     parseAspect: parseAspect,
     loadProviderApi: loadProviderApi,
     createVideoPlayer: createVideoPlayer,
+    POSTER_FALLBACK_MS: POSTER_FALLBACK_MS,
+    posterImageUrl: posterImageUrl,
+    attachPoster: attachPoster,
   };
 }
