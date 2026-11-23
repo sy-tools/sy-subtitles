@@ -8,6 +8,7 @@ tools.video_roles; a talk that has videos but no primary must keep failing.
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -35,8 +36,14 @@ def _discover(tmp_path: Path, meta: dict, talk_id: str = "2001-02-03_Text-Only-T
         "INPUT_TALK_ID": talk_id,
         "GITHUB_OUTPUT": str(out),
         "PYTHONPATH": str(ROOT),
+        # The step calls a bare `python3`: left to the inherited PATH, that is
+        # whichever interpreter comes first there, with or without PyYAML.
+        "PATH": f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}",
     }
-    subprocess.run(["bash", "-e", "-c", _find_step()["run"]], cwd=tmp_path, env=env, check=True, capture_output=True)
+    proc = subprocess.run(
+        ["bash", "-e", "-c", _find_step()["run"]], cwd=tmp_path, env=env, capture_output=True, text=True
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
     return dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").splitlines())
 
 
@@ -52,6 +59,16 @@ def test_discover_marks_a_talk_without_videos_text_only(tmp_path: Path) -> None:
 def test_discover_does_not_mark_a_video_talk_text_only(tmp_path: Path) -> None:
     meta = {"title": "Talk", "videos": [{"slug": "Talk", "vimeo_url": "https://vimeo.com/1"}]}
     assert _discover(tmp_path, meta, "2000-01-01_Talk")["text_only"] == "false"
+
+
+def test_discover_runs_on_the_test_interpreter_whatever_python3_path_finds_first(tmp_path: Path, monkeypatch) -> None:
+    foreign = tmp_path / "foreign-bin"
+    foreign.mkdir()
+    (foreign / "python3").write_text("#!/bin/sh\necho 'foreign python3' >&2\nexit 1\n", encoding="utf-8")
+    (foreign / "python3").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{foreign}{os.pathsep}{os.environ['PATH']}")
+
+    assert _discover(tmp_path, {"title": "Text-only talk"})["text_only"] == "true"
 
 
 def test_a_text_only_talk_skips_the_build() -> None:
