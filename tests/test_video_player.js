@@ -13,6 +13,7 @@ const {
   parseAspect,
   YT_POLL_MS,
   YT_READY_TIMEOUT_MS,
+  YT_SEEK_HOLD_MS,
 } = require('../site/js/video_player.js');
 
 const ORIGIN = 'https://sy-tools.github.io';
@@ -335,6 +336,167 @@ describe('createVideoPlayer — YouTube', () => {
   it('falls back to 16 / 9 when oEmbed fails', async () => {
     const { player } = ytPlayer();
     assert.strictEqual(await player.getAspect(), '16 / 9');
+  });
+});
+
+// Measured in the real embed, 2026-11-23: seekTo from any state but playing
+// or paused STARTS playback (cued -> buffering -> playing, ~0.6 s later), and
+// so does a seek from ended. Vimeo's setCurrentTime never does. The mock
+// models that transition; the adapter must keep a stopped player stopped.
+const settle = () => new Promise((r) => setTimeout(r, 5));
+
+describe('mock YouTube player — a seek starts playback, as the real one does', () => {
+  it('from unstarted', async () => {
+    const win = loadMock('mock_youtube_player.js');
+    const states = [];
+    const p = new win.YT.Player({ getAttribute: () => null }, { events: { onStateChange: (e) => states.push(e.data) } });
+    p.seekTo(60, true);
+    await settle();
+    assert.deepStrictEqual(states, [3, 1]);
+    assert.strictEqual(p.getCurrentTime(), 60);
+  });
+
+  it('from ended, but not while paused or playing', async () => {
+    const win = loadMock('mock_youtube_player.js');
+    const states = [];
+    const p = new win.YT.Player({ getAttribute: () => null }, { events: { onStateChange: (e) => states.push(e.data) } });
+    p._fire('play'); p._fire('pause');
+    states.length = 0;
+    p.seekTo(10, true);
+    await settle();
+    assert.deepStrictEqual(states, [], 'paused stays paused');
+    p._fire('play');
+    states.length = 0;
+    p.seekTo(20, true);
+    await settle();
+    assert.deepStrictEqual(states, [], 'playing keeps playing');
+    p._fire('ended');
+    states.length = 0;
+    p.seekTo(30, true);
+    await settle();
+    assert.deepStrictEqual(states, [3, 1]);
+  });
+});
+
+describe('createVideoPlayer — YouTube: a seek does not start playback', () => {
+  it('a seek before any play leaves the player stopped at the new position', async () => {
+    const { player, mock } = ytPlayer();
+    const seen = record(player, ['play', 'pause', 'seeked']);
+    await player.ready();
+    await player.setCurrentTime(60);
+    await settle();
+    assert.strictEqual(await player.getPaused(), true);
+    assert.strictEqual(mock().getPlayerState(), 2, 'paused, not left playing');
+    assert.strictEqual(await player.getCurrentTime(), 60);
+    assert.deepStrictEqual(seen.map((e) => e[0]), ['seeked'], 'the viewer never saw it play');
+  });
+
+  it("the start it stops still has YouTube's captions unloaded (they would sit under ours, paused)", async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    await player.setCurrentTime(60);
+    await settle();
+    assert.deepStrictEqual(Array.from(mock()._unloaded), ['captions']);
+  });
+
+  it('a seek after the end leaves the player stopped', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    mock()._fire('ended');
+    const seen = record(player, ['play']);
+    await player.setCurrentTime(30);
+    await settle();
+    assert.strictEqual(await player.getPaused(), true);
+    assert.deepStrictEqual(seen, []);
+  });
+
+  it('a seek while playing keeps playing', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    const seen = record(player, ['play', 'pause']);
+    await player.setCurrentTime(120);
+    await settle();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.deepStrictEqual(seen, []);
+  });
+
+  it('a seek while buffering inside playback keeps playing', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    mock()._stateTo(3);
+    const seen = record(player, ['play', 'pause']);
+    await player.setCurrentTime(120);
+    mock()._stateTo(1);
+    await settle();
+    assert.strictEqual(mock().getPlayerState(), 1);
+    assert.deepStrictEqual(seen, []);
+  });
+
+  it('a seek while paused stays paused, and the next play still plays', async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    mock()._fire('play');
+    mock()._fire('pause');
+    await player.setCurrentTime(200);
+    await settle();
+    assert.strictEqual(await player.getPaused(), true);
+    const seen = record(player, ['play']);
+    mock().playVideo(); // YouTube's own play button
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('play() right behind a seek plays', async () => {
+    const { player } = ytPlayer();
+    const seen = record(player, ['play']);
+    await player.ready();
+    await player.setCurrentTime(60);
+    await player.play();
+    await settle();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it("after the stop, YouTube's own play button plays", async () => {
+    const { player, mock } = ytPlayer();
+    await player.ready();
+    await player.setCurrentTime(60);
+    await settle();
+    const seen = record(player, ['play']);
+    mock().playVideo();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('the hold lapses: where the browser blocks the start, a later play is the viewer\'s', async () => {
+    const { player, mock, timers } = ytPlayer();
+    await player.ready();
+    mock().__seekNeverStarts = true; // autoplay blocked: the seek starts nothing
+    await player.setCurrentTime(60);
+    await settle();
+    assert.strictEqual(mock().getPlayerState(), -1);
+    timers.advance(YT_SEEK_HOLD_MS + 1);
+    const seen = record(player, ['play']);
+    mock().playVideo();
+    assert.strictEqual(await player.getPaused(), false);
+    assert.strictEqual(seen.length, 1);
+  });
+
+  it('the hold lasts through a slow buffer', async () => {
+    const { player, mock, timers } = ytPlayer();
+    await player.ready();
+    mock().__seekNeverStarts = true; // this test walks the states itself
+    await player.setCurrentTime(60);
+    timers.advance(YT_SEEK_HOLD_MS - 100);
+    mock()._stateTo(3);
+    timers.advance(YT_SEEK_HOLD_MS - 100);
+    const seen = record(player, ['play']);
+    mock()._stateTo(1);
+    assert.strictEqual(mock().getPlayerState(), 2);
+    assert.deepStrictEqual(seen, []);
   });
 });
 

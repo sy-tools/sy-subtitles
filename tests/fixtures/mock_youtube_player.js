@@ -58,9 +58,34 @@
       this._rate = r;
       if (this._events.onPlaybackRateChange) this._events.onPlaybackRateChange({ target: this, data: r });
     },
-    seekTo: function (sec) { this._currentTime = sec; },
-    playVideo: function () { if (this._state !== STATE.PLAYING) this._stateTo(STATE.PLAYING); },
-    pauseVideo: function () { if (this._state === STATE.PLAYING) this._stateTo(STATE.PAUSED); },
+    // Measured in the real embed (2026-11-23): a seek from any state but
+    // playing or paused STARTS playback — cued/unstarted -> buffering ->
+    // playing about 0.6 s later, ended -> playing at once — where Vimeo's
+    // setCurrentTime never does. A pauseVideo() issued before that start
+    // cancels it. window.__seekNeverStarts / player.__seekNeverStarts stands
+    // for a browser that blocks the start (autoplay policy).
+    seekTo: function (sec) {
+      this._currentTime = sec;
+      if (this._state === STATE.PLAYING || this._state === STATE.PAUSED) return;
+      if (this.__seekNeverStarts || win.__seekNeverStarts) return;
+      var self = this;
+      this._seekStart = (this._seekStart || 0) + 1;
+      var mine = this._seekStart;
+      later(function () {
+        if (self._destroyed || self._seekStart !== mine) return;
+        if (self._state === STATE.PLAYING || self._state === STATE.PAUSED) return;
+        self._stateTo(STATE.BUFFERING);
+        self._stateTo(STATE.PLAYING);
+      }, 0);
+    },
+    playVideo: function () {
+      this._seekStart = (this._seekStart || 0) + 1;
+      if (this._state !== STATE.PLAYING) this._stateTo(STATE.PLAYING);
+    },
+    pauseVideo: function () {
+      this._seekStart = (this._seekStart || 0) + 1;
+      if (this._state === STATE.PLAYING) this._stateTo(STATE.PAUSED);
+    },
     unloadModule: function (name) { this._unloaded.push(name); },
     getIframe: function () { return this._el || null; },
     destroy: function () { this._destroyed = true; },

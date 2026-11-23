@@ -27,6 +27,15 @@ var YT_SEEK_JUMP_SEC = 1;
 var YT_PLAYING = 1;
 var YT_PAUSED = 2;
 var YT_ENDED = 0;
+var YT_BUFFERING = 3;
+// seekTo starts playback from any state but playing or paused (cued,
+// unstarted, ended) — measured 2026-11-23: cued -> buffering -> playing about
+// 0.6 s after the call. Vimeo's setCurrentTime never plays, and the SPA seeks
+// a stopped player (resume on open, a click on a row). So a start that comes
+// this soon after such a seek is the seek's, and is paused; buffering renews
+// the wait. A browser that blocks the start leaves nothing to pause, and past
+// this the next play is the viewer's own.
+var YT_SEEK_HOLD_MS = 2000;
 var DEFAULT_ASPECT = '16 / 9';
 // A YouTube player that has neither answered ready nor reported an error by
 // then is not coming: its API loaded, the widget did not. The real one is
@@ -163,6 +172,9 @@ function createYouTubePlayer(iframe, source, env) {
   // new 'play', and only a real start after a stop is.
   var playing = false;
   var last = null; // {t, at, d, playing}
+  // Until when a start of playback belongs to a seek made while stopped
+  // (YT_SEEK_HOLD_MS); 0 when no such seek is pending.
+  var seekHoldUntil = 0;
 
   var setTimeoutFn = env.setTimeout || function (fn, ms) { return setTimeout(fn, ms); };
   var clearTimeoutFn = env.clearTimeout || function (id) { clearTimeout(id); };
@@ -203,12 +215,29 @@ function createYouTubePlayer(iframe, source, env) {
   // A rejection nobody asked about yet must not surface as unhandled.
   readyPromise.catch(function () {});
 
+  // cc_load_policy=0 does not keep YouTube's own captions off (measured
+  // 2026-11-23: they showed under ours); the captions module loads with
+  // playback, so it is unloaded each time playback starts.
+  function unloadCaptions() {
+    try { yt.unloadModule('captions'); } catch (e) { /* no captions module */ }
+  }
+
   function onState(state) {
+    if (seekHoldUntil && now() > seekHoldUntil) seekHoldUntil = 0;
+    if (seekHoldUntil) {
+      if (state === YT_BUFFERING) { seekHoldUntil = now() + YT_SEEK_HOLD_MS; return; }
+      if (state === YT_PLAYING) {
+        // The seek's start, not the viewer's: back to stopped, unannounced.
+        // Even this much playback loads the captions module.
+        seekHoldUntil = 0;
+        unloadCaptions();
+        yt.pauseVideo();
+        return;
+      }
+      if (state === YT_PAUSED) seekHoldUntil = 0;
+    }
     if (state === YT_PLAYING) {
-      // cc_load_policy=0 does not keep YouTube's own captions off (measured
-      // 2026-11-23: they showed under ours); the captions module loads with
-      // playback, so it is unloaded each time playback starts.
-      try { yt.unloadModule('captions'); } catch (e) { /* no captions module */ }
+      unloadCaptions();
       if (!playing) { playing = true; emitter.emit('play', { seconds: yt.getCurrentTime() }); }
     } else if (state === YT_PAUSED) {
       if (playing) { playing = false; emitter.emit('pause', { seconds: yt.getCurrentTime() }); }
@@ -252,6 +281,9 @@ function createYouTubePlayer(iframe, source, env) {
     getCurrentTime: function () { return whenReady(function (p) { return p.getCurrentTime(); }); },
     setCurrentTime: function (s) {
       return whenReady(function (p) {
+        var state = p.getPlayerState();
+        var stopped = !playing && state !== YT_PLAYING && state !== YT_PAUSED;
+        if (stopped) seekHoldUntil = now() + YT_SEEK_HOLD_MS;
         p.seekTo(s, true);
         if (last) last = { t: s, at: now(), d: last.d, playing: last.playing };
         emitter.emit('seeked', { seconds: s, duration: p.getDuration() });
@@ -273,7 +305,7 @@ function createYouTubePlayer(iframe, source, env) {
           return j && j.width > 0 && j.height > 0 ? j.width + ' / ' + j.height : DEFAULT_ASPECT;
         }, function () { return DEFAULT_ASPECT; });
     },
-    play: function () { return whenReady(function (p) { p.playVideo(); }); },
+    play: function () { return whenReady(function (p) { seekHoldUntil = 0; p.playVideo(); }); },
     pause: function () { return whenReady(function (p) { p.pauseVideo(); }); },
     on: emitter.on,
     destroy: function () {
@@ -304,6 +336,7 @@ if (typeof module !== 'undefined' && module.exports) {
     YT_POLL_MS: YT_POLL_MS,
     YT_SEEK_JUMP_SEC: YT_SEEK_JUMP_SEC,
     YT_READY_TIMEOUT_MS: YT_READY_TIMEOUT_MS,
+    YT_SEEK_HOLD_MS: YT_SEEK_HOLD_MS,
     VIMEO_PREVIEW_PARAMS: VIMEO_PREVIEW_PARAMS,
     isPlayableSource: isPlayableSource,
     vimeoEmbed: vimeoEmbed,
