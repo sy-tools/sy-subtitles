@@ -5,7 +5,7 @@
 //   * Invisible characters — non-breaking and other odd spaces, zero-width
 //     characters, stray BOMs. Noise in every language; safe on whole files.
 //   * Ukrainian typography — the quote/dash/apostrophe/ellipsis rules from
-//     glossary/CLAUDE.md. Ukrainian ONLY: English prose legitimately uses a
+//     glossary/AGENTS.md. Ukrainian ONLY: English prose legitimately uses a
 //     straight double quote and an em dash, and applying these to it corrupts it.
 //
 // This exists because `contenteditable` injects &nbsp; on its own — when a space

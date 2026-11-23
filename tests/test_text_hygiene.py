@@ -7,7 +7,7 @@ BOMs and NBSP. This test is the backstop for every other path -- hand-integrated
 translator documents, direct commits, GitHub's web editor.
 
 Level A (invisible characters, CRLF) applies to every tracked text file.
-Level B (Ukrainian typography per glossary/CLAUDE.md) applies to UK content only
+Level B (Ukrainian typography per glossary/AGENTS.md) applies to UK content only
 -- English prose legitimately uses a straight double quote and an em dash.
 
 tests/fixtures/** is excluded: those files hold captured dirty input BY DESIGN.
