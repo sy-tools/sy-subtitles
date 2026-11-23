@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 from .build_srt import build_srt_from_blocks
-from .srt_utils import load_whisper_json, time_to_ms
+from .srt_utils import load_media_end_ms, load_whisper_json, time_to_ms
 from .text_segmentation import build_blocks_from_paragraphs, load_transcript
 
 # Regex for parsing timecodes output from the LLM
@@ -178,7 +178,8 @@ def cmd_assemble(args):
     output_srt = str(video / "final" / f"{lang}.srt")
     report = str(video / "final" / _build_report_name(lang))
     Path(output_srt).parent.mkdir(parents=True, exist_ok=True)
-    build_srt_from_blocks(blocks, output_srt, report)
+    media_end_ms = load_media_end_ms(video / "source" / "whisper.json")
+    build_srt_from_blocks(blocks, output_srt, report, media_end_ms=media_end_ms)
 
 
 # ---------------------------------------------------------------------------

@@ -38,9 +38,18 @@ import yaml
 
 from .offset_srt import apply_offset, detect_offset
 from .resync_srt import resync
-from .srt_utils import parse_srt, timing_en_srt
+from .srt_utils import clamp_to_media_end, load_media_end_ms, parse_srt, timing_en_srt, write_srt
 from .video_roles import RoleError, resolve_roles
 from .video_roles import primary_slug as resolve_primary
+
+
+def _end_at_media_end(srt_path: Path, video_dir: Path) -> None:
+    """Cut the derived SRT at its OWN video's end — the primary's padded tail,
+    carried across the timelines, can outlast a shorter recording."""
+    media_end_ms = load_media_end_ms(video_dir / "source" / "whisper.json")
+    blocks = parse_srt(str(srt_path))
+    if clamp_to_media_end(blocks, media_end_ms):
+        write_srt(blocks, str(srt_path))
 
 
 def _video_slugs(talk_dir: Path) -> list[str]:
@@ -151,6 +160,7 @@ def build_secondary_srts(talk_dir, primary_slug: str | None = None, run_id=None)
             print(f"=== {slug}: no constant offset → resync via en.srt word alignment", file=sys.stderr)
             resync(str(primary_uk), str(primary_en), str(secondary_en), str(out))
             mode = "secondary-resync"
+        _end_at_media_end(out, talk_dir / slug)
 
         _write_manifest(final_dir / "build_manifest.yaml", mode, primary_slug, run_id)
         results.append({"slug": slug, "status": "built", "mode": mode, "reason": None})

@@ -24,6 +24,8 @@ import contextlib
 import functools
 import http.server
 import os
+import re
+from pathlib import Path
 
 SITE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "site")
 
@@ -44,7 +46,7 @@ class SpaHTTPServer(http.server.ThreadingHTTPServer):
     daemon_threads = True
 
 
-def injection(exchange_url, client_id, burn_ref=""):
+def injection(exchange_url, client_id, burn_ref="", help_repo="", gate_phrase=""):
     """The <script> that overrides the shipped auth constants.
 
     Only the exchange URL is required: the client id in index.html is public
@@ -56,7 +58,22 @@ def injection(exchange_url, client_id, burn_ref=""):
         lines.append(f"window.__SY_GH_CLIENT_ID={_js_string(client_id)};")
     if burn_ref:
         lines.append(f"window.__SY_BURN_REF={_js_string(burn_ref)};")
+    if help_repo:
+        lines.append(f"window.__SY_HELP_REPO={_js_string(help_repo)};")
+    if gate_phrase:
+        lines.append(f"window.__SY_GATE_HASH={_js_string(_gate_hash(gate_phrase))};")
     return "<script>" + "".join(lines) + "</script>"
+
+
+def _gate_hash(phrase):
+    """The gate hash for `phrase`, with the KDF parameters read from
+    site/js/passphrase_gate.js exactly as deploy-pages.yml reads them."""
+    from tools.passphrase_gate import derive_hash
+
+    js = (Path(SITE_DIR) / "js" / "passphrase_gate.js").read_text(encoding="utf-8")
+    salt = re.search(r"GATE_SALT = '([0-9a-f]+)'", js).group(1)
+    iterations = int(re.search(r"GATE_ITERATIONS = (\d+)", js).group(1))
+    return derive_hash(phrase, salt, iterations)
 
 
 def _js_string(value):
@@ -142,9 +159,22 @@ def main(argv=None):
         "(defaults to the shipped 'main'); set this to exercise a workflow "
         "change before it is on the default branch",
     )
+    parser.add_argument(
+        "--help-repo",
+        default="",
+        help="repository whose catalog the video tutorials sheet reads and its "
+        "admin writes (defaults to sy-tools/sy-help); sy-tools/sy-help-staging "
+        "for trying the admin without touching the live tutorials",
+    )
+    parser.add_argument(
+        "--gate-phrase",
+        default="",
+        help="turn the passphrase gate on with this phrase (deploys inject the real "
+        "one; locally the gate is off unless this is given)",
+    )
     args = parser.parse_args(argv)
 
-    Handler.script = injection(args.exchange_url, args.client_id, args.burn_ref)
+    Handler.script = injection(args.exchange_url, args.client_id, args.burn_ref, args.help_repo, args.gate_phrase)
     handler = functools.partial(Handler, directory=SITE_DIR)
     with SpaHTTPServer(("127.0.0.1", args.port), handler) as httpd:
         print(f"SPA        http://localhost:{args.port}/?repo=sy-tools/sy-subtitles")

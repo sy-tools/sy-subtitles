@@ -407,6 +407,27 @@ Painting goes through the CSS Custom Highlight API, so the text is decorated
 where it stands — no wrapper element, and therefore no disturbance to the caret,
 the undo stack, or the text the edit store saves.
 
+### Video tutorials
+
+The tutorials are not this repository's: `sy-tools/sy-help` holds their
+catalog, files, subtitles and the workflows that publish them (its README says
+how). The portal only renders that repository's `catalog.json` from its Pages
+site, in a sheet over the current view (`site/js/help_sheet.js`): a portal
+installed on an iPhone's home screen opens a link in Safari, which shares none
+of its storage, so a separate page would find the gate locked and the session
+gone. The sheet opens behind the same passphrase gate as the translation pages.
+
+Whoever can push to the help repository also gets an Edit mode
+(`site/js/help_admin.js` + `help_admin_view.js`) that commits `catalog.json`
+and uploads new recordings with their own sign-in. A browser cannot upload a
+release asset (no CORS on `uploads.github.com`, nor on Git LFS), so a recording
+goes up as 30 MiB git blobs to an `inbox/<file>` branch that the help
+repository's ingest workflow publishes.
+
+The service worker leaves `<video>`/`<audio>` and any `Range` request to the
+network (`bypassesWorker` in `site/js/sw_routing.js`): answering them through
+the worker broke seeking after a pause.
+
 ## Review Tracking
 
 ```

@@ -110,8 +110,11 @@ def run_whisper(video_path, output_path, model="medium", language="en"):
             else:
                 print(f"  {mins}min | {len(segments)} seg | {fmt_duration(elapsed)} elapsed", flush=True)
 
+    # The decoded audio's length, not Vimeo's metadata: the player reports a
+    # whole-second rounding that can sit past where the media really ends.
     output = {
         "language": info.language,
+        "duration": round(info.duration, 3),
         "segments": segments,
     }
 

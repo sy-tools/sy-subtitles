@@ -663,6 +663,7 @@ function listBurnRuns(api, token, workflowFile, sinceIso, fetchImpl) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     authHeaders: authHeaders,
+    ghJson: ghJson,
     exchangeCode: exchangeCode,
     getViewer: getViewer,
     listIssueComments: listIssueComments,

@@ -10,14 +10,14 @@ This module has no CLI entry point — it's called from tools.build_map.
 import sys
 
 from .config import OptimizeConfig
-from .srt_utils import ms_to_time, write_srt
+from .srt_utils import clamp_to_media_end, ms_to_time, write_srt
 
 
 def apply_padding(blocks, config=None):
     """Extend block end times into silence for readability.
 
     For each block, extend end to: min(next_start - gap, end + 5000ms, max_duration).
-    Last block: extend up to +2000ms.
+    Last block: extend up to +2000ms, never into the time past the media end.
     """
     if config is None:
         config = OptimizeConfig()
@@ -44,7 +44,10 @@ def apply_padding(blocks, config=None):
             b["end_ms"] = max(padded_end, original_end)
         else:
             # Last block: modest extension, capped at max duration
-            b["end_ms"] = min(original_end + last_block_pad_ms, max_end)
+            padded_end = min(original_end + last_block_pad_ms, max_end)
+            if config.media_end_ms is not None:
+                padded_end = max(original_end, min(padded_end, config.media_end_ms))
+            b["end_ms"] = padded_end
 
         result.append(b)
 
@@ -202,10 +205,16 @@ def enforce_duration(blocks, config=None):
 
         deficit = config.min_duration_ms - duration
 
-        # Last block — just extend freely
+        # Last block — extend freely up to the media end; whatever that bound
+        # leaves short is taken from the silence before it instead.
         if i == len(blocks) - 1:
-            blocks[i]["end_ms"] = blocks[i]["start_ms"] + config.min_duration_ms
-            continue
+            end = blocks[i]["start_ms"] + config.min_duration_ms
+            if config.media_end_ms is not None:
+                end = max(blocks[i]["end_ms"], min(end, config.media_end_ms))
+            blocks[i]["end_ms"] = end
+            deficit = config.min_duration_ms - (end - blocks[i]["start_ms"])
+            if deficit <= 0:
+                continue
 
         remaining = _extend_block(blocks, i, deficit, config)
         if remaining > 0:
@@ -260,13 +269,14 @@ def balance_cps(blocks, config=None, threshold=None):
     return blocks
 
 
-def build_srt_from_blocks(blocks, output_path, report_path=None):
+def build_srt_from_blocks(blocks, output_path, report_path=None, media_end_ms=None):
     """Full timing pipeline on in-memory blocks.
 
     blocks: list of dicts with keys {idx, start_ms, end_ms, text}.
-    Runs: gaps(raw) → CPS → duration → CPS(soft) → pad → gaps → write SRT.
+    media_end_ms: where the video ends, when known — no block ends past it.
+    Runs: gaps(raw) → CPS → duration → CPS(soft) → pad → gaps → media end → write SRT.
     """
-    config = OptimizeConfig()
+    config = OptimizeConfig(media_end_ms=media_end_ms)
 
     if not blocks:
         print("ERROR: No blocks provided")
@@ -296,6 +306,9 @@ def build_srt_from_blocks(blocks, output_path, report_path=None):
 
     print("Enforcing gaps (≥80ms)...")
     blocks = enforce_gaps(blocks, config)
+
+    if clamp_to_media_end(blocks, config.media_end_ms):
+        print(f"Clamped to the media end {ms_to_time(config.media_end_ms)}")
 
     # Write SRT
     print(f"Writing SRT: {output_path}")
