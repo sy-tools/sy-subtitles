@@ -1952,6 +1952,35 @@ html.help-sheet-open { overflow: hidden; }
   .help-sheet__head { top: 0; border-radius: 0; padding-top: max(var(--space-4), env(safe-area-inset-top)); }
   .help-sheet__body { padding: var(--space-4) var(--space-4) max(var(--space-5), env(safe-area-inset-bottom)); }
 }
+/* Folded (help_mini.js): the started video alone in a small player over the
+   app, which stays usable around it. The <video> is restyled in place, never
+   moved, so playback does not stop. Size and place are set inline. */
+.help-mini__bar { display: none; }
+.help-sheet--mini { overflow: hidden; padding: 0; background: none; pointer-events: none; }
+.help-sheet--mini .help-sheet__panel { position: fixed; margin: 0; max-width: none; min-height: 0;
+  overflow: hidden; pointer-events: auto; border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); }
+.help-sheet--mini .help-sheet__head,
+.help-sheet--mini .help-admin__bar,
+.help-sheet--mini .help-section:not(.is-active),
+.help-sheet--mini .help-section__title,
+.help-sheet--mini .help-video:not(.is-active),
+.help-sheet--mini .help-video__head,
+.help-sheet--mini .help-video__description,
+.help-sheet--mini .help-video__notes { display: none; }
+.help-sheet--mini .help-sheet__body,
+.help-sheet--mini .help-video { padding: 0; margin: 0; border: 0; border-radius: 0; background: none; }
+.help-sheet--mini .help-video__player { border-radius: 0; }
+.help-sheet--mini .help-mini__bar { display: flex; align-items: center; gap: var(--space-1);
+  height: 36px; padding: 0 var(--space-1); background: var(--bg2); border-bottom: 1px solid var(--border);
+  touch-action: none; user-select: none; }
+.help-mini__title { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  font-size: var(--text-sm); color: var(--fg2); cursor: move; }
+/* Top-left: the player opens in the bottom-right corner, so it grows away
+   from it. */
+.help-mini__resize { flex: none; width: 20px; height: 20px; cursor: nwse-resize; color: var(--fg5);
+  touch-action: none; }
+.help-mini__resize svg { display: block; }
 .help-section + .help-section { margin-top: var(--space-8); }
 .help-section__title { margin: 0 0 var(--space-5); padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--border); font-family: var(--f-serif); font-weight: 400;

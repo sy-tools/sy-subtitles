@@ -63,6 +63,7 @@
 <script src="js/export_menu.js"></script>
 <script src="js/clip_time.js"></script>
 <script src="js/float_panel.js"></script>
+<script src="js/help_mini.js"></script>
 <script src="js/fs_subs_scale.js"></script>
 <script src="js/pending_action.js"></script>
 <link rel="stylesheet" href="css/tokens.css">
@@ -787,8 +788,14 @@
 
 <!-- Video tutorials, over whatever view is open. Built on first open: thirteen
      players asking for their metadata at boot would cost every visit. -->
-<div id="help-sheet" class="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-sheet-title" hidden onclick="if (event.target === this) SPA.closeHelp()">
+<div id="help-sheet" class="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-sheet-title" hidden onclick="if (event.target === this) SPA.helpBesideSheet()">
   <div class="help-sheet__panel">
+    <div id="help-mini-bar" class="help-mini__bar">
+      <span id="help-mini-resize" class="help-mini__resize" data-i18n-title="help.mini.resize"><svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="5" y1="11" x2="11" y2="5"/><line x1="5" y1="15" x2="15" y2="5"/></svg></span>
+      <span id="help-mini-title" class="help-mini__title" role="button" tabindex="0" data-i18n-title="help.mini.expand"></span>
+      <button type="button" id="help-mini-expand" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.unfoldHelp()" data-i18n-aria-label="help.mini.expand" data-i18n-title="help.mini.expand"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg></button>
+      <button type="button" id="help-mini-close" class="btn btn--ghost btn--sm btn--icon" onclick="SPA.closeHelp()" data-i18n-aria-label="help.close" data-i18n-title="help.close"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg></button>
+    </div>
     <div class="help-sheet__head">
       <h2 id="help-sheet-title" class="help-sheet__title" data-i18n="help.title">Video tutorials</h2>
       <button type="button" id="help-sheet-edit" class="btn btn--ghost btn--sm help-sheet__edit" onclick="SPA.toggleHelpAdmin()" aria-pressed="false" hidden data-i18n="help.admin.edit">Edit</button>
@@ -1216,6 +1223,8 @@ var I18N = {
     'help.admin.published': 'опубліковано; субтитри з’являться трохи згодом',
     'help.admin.failed': 'обробка не вдалася',
     'help.admin.run': 'журнал',
+    'help.mini.expand': 'Розгорнути',
+    'help.mini.resize': 'Потягніть, щоб змінити розмір',
     'help.admin.invalid': 'Не збережено: каталог має помилки, яких сайт не прийме.',
     'help.admin.lostTrack': 'Не вдається стежити за обробкою; перевірте журнал на GitHub.',
     'prefs.lang.uk': 'UK',
@@ -1547,6 +1556,8 @@ var I18N = {
     'help.admin.published': 'published; subtitles follow a little later',
     'help.admin.failed': 'processing failed',
     'help.admin.run': 'log',
+    'help.mini.expand': 'Expand',
+    'help.mini.resize': 'Drag to resize',
     'help.admin.invalid': 'Not saved: the catalog has errors the site would refuse.',
     'help.admin.lostTrack': 'Lost track of the processing; check its log on GitHub.',
     'typo.mixed.title': 'Two keyboard layouts in one word',
@@ -10719,9 +10730,105 @@ SPA.toggleHelpAdmin = function() {
   });
 };
 
+// ----- Folded player -----
+// A click beside the sheet folds it into a small player of the video last
+// started (help_mini.js), so the steps it shows can be repeated in the app
+// while it plays. With nothing started there is nothing to keep: it closes.
+var helpMini = { remembered: null };
+
+function helpActiveCard() { return document.querySelector('#help-sheet .help-video.is-active'); }
+
+// play does not bubble; the capture phase still sees it.
+document.addEventListener('play', function(e) {
+  var card = e.target && e.target.closest && e.target.closest('#help-sheet .help-video');
+  if (!card) return;
+  document.querySelectorAll('#help-sheet .is-active').forEach(function(el) { el.classList.remove('is-active'); });
+  card.classList.add('is-active');
+  card.closest('.help-section').classList.add('is-active');
+}, true);
+
+function helpFolded() { return document.getElementById('help-sheet').classList.contains('help-sheet--mini'); }
+
+function placeHelpMini(rect) {
+  var panel = document.querySelector('#help-sheet .help-sheet__panel');
+  helpMini.remembered = { left: rect.left, top: rect.top, width: rect.width };
+  panel.style.left = rect.left + 'px';
+  panel.style.top = rect.top + 'px';
+  panel.style.width = rect.width + 'px';
+}
+
+SPA.helpBesideSheet = function() {
+  var card = helpActiveCard();
+  if (!card || helpAdmin.on) return SPA.closeHelp();
+  var sheet = document.getElementById('help-sheet');
+  sheet.classList.add('help-sheet--mini');
+  sheet.setAttribute('aria-modal', 'false');
+  document.documentElement.classList.remove('help-sheet-open');
+  document.getElementById('help-mini-title').textContent = card.querySelector('.help-video__title').textContent;
+  placeHelpMini(HelpMini.miniRect(helpMini.remembered, window.innerWidth, window.innerHeight));
+};
+
+SPA.unfoldHelp = function() {
+  var sheet = document.getElementById('help-sheet');
+  if (!helpFolded()) return;
+  sheet.classList.remove('help-sheet--mini');
+  sheet.setAttribute('aria-modal', 'true');
+  document.querySelector('#help-sheet .help-sheet__panel').removeAttribute('style');
+  document.documentElement.classList.add('help-sheet-open');
+  var card = helpActiveCard();
+  if (card) card.scrollIntoView({ block: 'center' });
+};
+
+// The bar moves the player; a tap on it (no real movement) unfolds it. The
+// corner grip resizes, keeping the bottom-right corner in place.
+function followHelpPointer(e, onMove, onEnd) {
+  e.preventDefault();
+  var x0 = e.clientX, y0 = e.clientY;
+  var target = e.currentTarget;
+  if (target.setPointerCapture) target.setPointerCapture(e.pointerId);
+  function move(ev) { onMove(ev.clientX - x0, ev.clientY - y0); }
+  function up(ev) {
+    target.removeEventListener('pointermove', move);
+    target.removeEventListener('pointerup', up);
+    target.removeEventListener('pointercancel', up);
+    onEnd(ev.clientX - x0, ev.clientY - y0);
+  }
+  target.addEventListener('pointermove', move);
+  target.addEventListener('pointerup', up);
+  target.addEventListener('pointercancel', up);
+}
+
+document.getElementById('help-mini-title').addEventListener('pointerdown', function(e) {
+  var start = Object.assign({}, helpMini.remembered);
+  followHelpPointer(e, function(dx, dy) {
+    placeHelpMini(HelpMini.miniRect({ left: start.left + dx, top: start.top + dy, width: start.width },
+      window.innerWidth, window.innerHeight));
+  }, function(dx, dy) {
+    if (HelpMini.isTap(dx, dy)) SPA.unfoldHelp();
+  });
+});
+document.getElementById('help-mini-title').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); SPA.unfoldHelp(); }
+});
+document.getElementById('help-mini-resize').addEventListener('pointerdown', function(e) {
+  var panel = document.querySelector('#help-sheet .help-sheet__panel');
+  var start = { left: panel.offsetLeft, top: panel.offsetTop, width: panel.offsetWidth, height: panel.offsetHeight };
+  followHelpPointer(e, function(dx) {
+    placeHelpMini(HelpMini.resizeFromCorner(start, dx, window.innerWidth, window.innerHeight));
+  }, function() {});
+});
+window.addEventListener('resize', function() {
+  if (helpFolded()) placeHelpMini(HelpMini.miniRect(helpMini.remembered, window.innerWidth, window.innerHeight));
+});
+
 SPA.closeHelp = function() {
   var sheet = document.getElementById('help-sheet');
   if (!sheet || sheet.hidden) return;
+  if (helpFolded()) {
+    sheet.classList.remove('help-sheet--mini');
+    sheet.setAttribute('aria-modal', 'true');
+    document.querySelector('#help-sheet .help-sheet__panel').removeAttribute('style');
+  }
   // A hidden <video> keeps playing; nothing on screen would say so.
   sheet.querySelectorAll('video').forEach(function(v) { v.pause(); });
   sheet.hidden = true;

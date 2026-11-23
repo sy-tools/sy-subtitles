@@ -63,6 +63,7 @@ var SHELL_ASSETS = [
   'js/help_sheet.js',
   'js/help_admin.js',
   'js/help_admin_view.js',
+  'js/help_mini.js',
   'js/github_auth.js',
   'js/github_api.js',
   'js/review_status_live.js',

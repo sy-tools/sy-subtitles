@@ -508,3 +508,89 @@ def test_a_catalog_the_site_would_refuse_is_not_saved(smoke_server, smoke_page):
     page.wait_for_selector(".help-admin__status .help-sheet__error")
     assert "'intro' has no date" in page.text_content(".help-admin__status")
     assert calls["put"] == []
+
+
+def _start_video(page, n):
+    # The fixture's files 404, so "playing" is the play event the sheet hears.
+    page.evaluate(f"document.querySelectorAll('#help-sheet video')[{n}].dispatchEvent(new Event('play'))")
+
+
+def _panel_box(page):
+    return page.locator("#help-sheet .help-sheet__panel").bounding_box()
+
+
+def test_a_click_beside_the_sheet_folds_a_started_video_into_a_floating_player(index_page):
+    page = index_page
+    _open_help(page)
+    _start_video(page, 1)
+    page.mouse.click(5, 300)
+
+    sheet = page.locator("#help-sheet")
+    assert sheet.is_visible()
+    assert "help-sheet--mini" in sheet.get_attribute("class")
+    shown = page.eval_on_selector_all("#help-sheet video", "vs => vs.filter(v => v.offsetParent).map(v => v.src)")
+    assert shown == [HELP_PAGES + "v/security.mp4"], "the floating player shows something other than the started video"
+    assert page.text_content("#help-mini-title").strip() == "1.2 Безпека"
+    assert page.evaluate("getComputedStyle(document.documentElement).overflow") != "hidden", (
+        "the app behind stays locked"
+    )
+    vw, vh = page.viewport_size["width"], page.viewport_size["height"]
+    box = _panel_box(page)
+    assert box["width"] <= 400 and box["x"] + box["width"] <= vw and box["y"] + box["height"] <= vh
+    assert box["x"] > vw / 2 and box["y"] > vh / 2, "the floating player does not sit in the bottom-right corner"
+    assert page.evaluate("!document.getElementById('help-sheet').contains(document.elementFromPoint(5, 300))"), (
+        "the app beside the floating player cannot be clicked"
+    )
+
+    page.click("#help-mini-title")
+    assert "help-sheet--mini" not in sheet.get_attribute("class")
+    assert page.locator("#help-sheet .help-video").count() == HELP_VIDEO_COUNT
+    assert page.locator("#help-sheet .help-video:visible").count() == HELP_VIDEO_COUNT
+
+
+def test_a_click_beside_the_sheet_with_nothing_started_still_closes_it(index_page):
+    page = index_page
+    _open_help(page)
+    page.mouse.click(5, 300)
+    page.wait_for_selector("#help-sheet", state="hidden")
+
+
+def test_the_floating_player_closes_with_its_video_paused(index_page):
+    page = index_page
+    _open_help(page)
+    _start_video(page, 0)
+    page.mouse.click(5, 300)
+    page.evaluate(
+        "document.querySelectorAll('#help-sheet video').forEach(v => v.pause = () => { v.dataset.paused = '1'; })"
+    )
+    page.click("#help-mini-close")
+    page.wait_for_selector("#help-sheet", state="hidden")
+    assert page.evaluate("document.querySelector('#help-sheet video').dataset.paused") == "1"
+    _open_help(page)
+    assert "help-sheet--mini" not in page.get_attribute("#help-sheet", "class"), "reopened folded"
+
+
+def test_the_floating_player_moves_by_its_bar_and_grows_from_its_corner(index_page):
+    page = index_page
+    _open_help(page)
+    _start_video(page, 0)
+    page.mouse.click(5, 300)
+    before = _panel_box(page)
+
+    bar = page.locator("#help-mini-title").bounding_box()
+    page.mouse.move(bar["x"] + 20, bar["y"] + 10)
+    page.mouse.down()
+    page.mouse.move(bar["x"] - 180, bar["y"] - 120, steps=5)
+    page.mouse.up()
+    moved = _panel_box(page)
+    assert abs(moved["x"] - (before["x"] - 200)) < 3 and abs(moved["y"] - (before["y"] - 130)) < 3
+    assert "help-sheet--mini" in page.get_attribute("#help-sheet", "class"), "a drag of the bar was taken for a tap"
+
+    grip = page.locator("#help-mini-resize").bounding_box()
+    page.mouse.move(grip["x"] + 4, grip["y"] + 4)
+    page.mouse.down()
+    page.mouse.move(grip["x"] - 96, grip["y"] - 50, steps=5)
+    page.mouse.up()
+    grown = _panel_box(page)
+    assert abs(grown["width"] - (moved["width"] + 100)) < 3
+    assert abs((grown["x"] + grown["width"]) - (moved["x"] + moved["width"])) < 3, "the right edge moved"
