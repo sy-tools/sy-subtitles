@@ -348,7 +348,7 @@ function listIssueComments(api, token, number, fetchImpl) {
   return fetchPage(1, []);
 }
 
-// A trigger label on the Operator issue (op:qa-passed, op:take). Adding a
+// A trigger label on the Operator issue (op:qa-passed, op:take, op:back-to-qa). Adding a
 // label the issue already carries fires no `labeled` event, and a failed bot
 // run can leave it in place, so a retry takes it off first or
 // talk-operator.yml never hears of it.
@@ -373,6 +373,12 @@ function passQa(api, token, number, fetchImpl) {
 // Take to QA = the op:take label; the bot moves op:translator to op:qa.
 function takeToQa(api, token, number, fetchImpl) {
   return retriggerLabel(api, token, number, 'op:take', fetchImpl);
+}
+
+// Back to QA = the op:back-to-qa label; the bot reopens a sent (or packaged)
+// talk's issue at op:qa.
+function backToQa(api, token, number, fetchImpl) {
+  return retriggerLabel(api, token, number, 'op:back-to-qa', fetchImpl);
 }
 
 function addAssignees(api, token, issueNumber, logins, fetchImpl) {
@@ -662,6 +668,7 @@ if (typeof module !== 'undefined' && module.exports) {
     listIssueComments: listIssueComments,
     passQa: passQa,
     takeToQa: takeToQa,
+    backToQa: backToQa,
     getRepoPermissions: getRepoPermissions,
     withDeadline: withDeadline,
     freshFetch: freshFetch,

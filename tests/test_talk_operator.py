@@ -561,3 +561,71 @@ def test_gh_open_sync_prs_ignores_fork_prs(monkeypatch):
     ]
     monkeypatch.setattr(op.Gh, "_run", lambda self, *args: __import__("json").dumps(prs))
     assert [p["number"] for p in op.Gh().open_sync_prs(TALK)] == [1]
+
+
+# --- back to QA: re-open a sent (or packaged) talk to rebuild and resend ---
+
+
+@pytest.mark.parametrize("stage", ["op:delivered", "op:ready"])
+def test_next_labels_back_to_qa_from_sent_or_ready(stage):
+    assert op.next_labels({"talk-operator", stage, "op:back-to-qa"}, "back-to-qa") == (
+        {"op:qa"},
+        {stage, "op:back-to-qa", "op:qa-passed"},
+    )
+
+
+@pytest.mark.parametrize("stage", ["op:pipeline", "op:translator", "op:review", "op:qa"])
+def test_next_labels_back_to_qa_elsewhere_is_none(stage):
+    assert op.next_labels({"talk-operator", stage, "op:back-to-qa"}, "back-to-qa") is None
+
+
+def test_back_to_qa_reopens_a_delivered_issue_at_qa():
+    gh = FakeGh([_operator_issue(7, ["op:delivered", "op:back-to-qa"], state="CLOSED")])
+    assert op.on_back_to_qa(gh, 7, OPERATOR_ID) is True
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:qa"}
+    assert gh.issues[7]["state"] == "OPEN"
+    comments = [c for c in gh.calls if c[0] == "comment" and c[1] == 7]
+    assert len(comments) == 1 and "op:qa-passed" in comments[0][2]
+
+
+def test_back_to_qa_from_ready_keeps_the_issue_open():
+    gh = FakeGh([_operator_issue(7, ["op:ready", "op:back-to-qa"])])
+    assert op.on_back_to_qa(gh, 7, OPERATOR_ID) is True
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:qa"}
+    assert not any(c[0] == "reopen" for c in gh.calls)
+
+
+def test_back_to_qa_by_a_non_operator_is_undone():
+    gh = FakeGh([_operator_issue(7, ["op:delivered", "op:back-to-qa"], state="CLOSED")])
+    assert op.on_back_to_qa(gh, 7, TRANSLATOR_ID) is False
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:delivered"}
+    assert gh.issues[7]["state"] == "CLOSED"
+    assert any(c[0] == "comment" and c[1] == 7 and "roles.yaml" in c[2] for c in gh.calls)
+
+
+def test_back_to_qa_from_another_stage_is_undone():
+    gh = FakeGh([_operator_issue(7, ["op:translator", "op:back-to-qa"])])
+    assert op.on_back_to_qa(gh, 7, OPERATOR_ID) is False
+    assert gh.issues[7]["labels"] == {"talk-operator", "op:translator"}
+    assert any(c[0] == "comment" and c[1] == 7 and "op:delivered" in c[2] for c in gh.calls)
+
+
+def test_back_to_qa_that_fails_to_reopen_can_be_retried():
+    # Reopen first, labels second: a failed reopen leaves op:delivered in
+    # place, so re-adding op:back-to-qa from the SPA retries the whole move.
+    gh = FakeGh([_operator_issue(7, ["op:delivered", "op:back-to-qa"], state="CLOSED")])
+
+    def boom(number):
+        raise RuntimeError("gh failed")
+
+    gh.reopen = boom
+    with pytest.raises(RuntimeError):
+        op.on_back_to_qa(gh, 7, OPERATOR_ID)
+    assert "op:delivered" in gh.issues[7]["labels"]
+
+
+def test_cli_back_to_qa_prints_decision(monkeypatch, capsys):
+    gh = FakeGh([_operator_issue(7, ["op:delivered", "op:back-to-qa"], state="CLOSED")])
+    monkeypatch.setattr(op, "Gh", lambda: gh)
+    op.main(["back-to-qa", "--issue", "7", "--sender-id", str(OPERATOR_ID)])
+    assert capsys.readouterr().out.strip() == "moved"

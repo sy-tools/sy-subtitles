@@ -437,6 +437,7 @@ and `subtitle-pipeline.yml` through `tools/talk_operator.py`:
 | `op:qa-passed` | the operator: QA done |
 | `op:ready` | `tools/amruta_package.py` committed `talks/{id}/_for_Amruta/` and posted the Gmail compose link |
 | `op:delivered` | the operator closed the issue from `op:ready`; `amruta_delivery` (date + package commit) appended to `meta.yaml` |
+| `op:back-to-qa` | a trigger, not a stage: the operator's "Back to QA" on a sent (or packaged) talk; the bot reopens the issue at `op:qa`, so the ordinary cycle rebuilds `_for_Amruta/` from `main` and the next close appends a second `amruta_delivery` entry. Same trust rule as `op:take` |
 
 Labels are the state. The workflow edits issues with GITHUB_TOKEN, which
 fires no other workflow — so the bot sets `review:approved` itself and its

@@ -44,8 +44,9 @@ def test_pr_job_only_for_ready_sync_branches():
 
 def test_issue_jobs_only_for_operator_issues():
     jobs = _op()["jobs"]
-    for name in ("qa", "take", "deliver"):
+    for name in ("qa", "take", "back_to_qa", "deliver"):
         assert "'talk-operator'" in jobs[name]["if"], name
+    assert "'op:back-to-qa'" in jobs["back_to_qa"]["if"]
     assert "'op:qa-passed'" in jobs["qa"]["if"]
     assert "'op:take'" in jobs["take"]["if"]
     assert "github.event.action == 'closed'" in jobs["deliver"]["if"]
@@ -55,6 +56,7 @@ def test_issue_jobs_pass_the_sender_id_to_the_gate():
     for name, cmd in (
         ("qa", "talk_operator qa-passed"),
         ("take", "talk_operator take"),
+        ("back_to_qa", "talk_operator back-to-qa"),
         ("deliver", "talk_operator closed"),
     ):
         gate = next(s for s in _op()["jobs"][name]["steps"] if s.get("id") == "gate")
@@ -63,7 +65,7 @@ def test_issue_jobs_pass_the_sender_id_to_the_gate():
 
 
 def test_issue_title_is_validated_before_use():
-    for name in ("qa", "take", "deliver"):
+    for name in ("qa", "take", "back_to_qa", "deliver"):
         run = _run_text(_op()["jobs"][name])
         assert "workflow_validation_cli --talk-id" in run, name
         assert "${{ github.event.issue.title }}" not in run, "titles reach the shell only through env"
@@ -118,14 +120,15 @@ def test_status_job_reuses_sync_review_status():
     job = _op()["jobs"]["status"]
     assert job["uses"] == "./.github/workflows/sync-review-status.yml"
     assert job.get("secrets") == "inherit"
-    assert set(job["needs"]) == {"added", "pr", "qa", "take", "deliver"}
+    assert set(job["needs"]) == {"added", "pr", "qa", "take", "back_to_qa", "deliver"}
+    assert "needs.back_to_qa.result == 'success'" in job["if"]
     assert "needs.added.result == 'success'" in job["if"]
     assert "needs.take.result == 'success'" in job["if"]
     assert "success" in job["if"] and "always()" in job["if"]
 
 
 def test_write_jobs_serialize_without_cancel():
-    for name in ("pr", "qa", "take", "deliver"):
+    for name in ("pr", "qa", "take", "back_to_qa", "deliver"):
         conc = _op()["jobs"][name]["concurrency"]
         assert conc["group"] and conc.get("cancel-in-progress") is False, name
 
@@ -188,5 +191,11 @@ def test_added_job_skips_a_bad_folder_and_ignores_renames():
 def test_take_job_reports_a_failed_run_on_the_issue():
     # Without it the SPA waits out its whole window with nothing on the issue.
     steps = _op()["jobs"]["take"]["steps"]
+    report = [s for s in steps if "failure()" in str(s.get("if", ""))]
+    assert report and "gh issue comment" in report[0]["run"]
+
+
+def test_back_to_qa_job_reports_a_failed_run_on_the_issue():
+    steps = _op()["jobs"]["back_to_qa"]["steps"]
     report = [s for s in steps if "failure()" in str(s.get("if", ""))]
     assert report and "gh issue comment" in report[0]["run"]

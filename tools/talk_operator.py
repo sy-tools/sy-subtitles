@@ -10,6 +10,8 @@ The issue's `op:*` label is the talk's operator stage:
     op:qa-passed  set by the operator: QA done, build the Amruta package
     op:ready      package committed, e-mail link posted
     op:delivered  the operator closed the issue after sending the e-mail
+    op:back-to-qa set by the operator on a sent (or packaged) talk: reopen
+                  it at op:qa, so a new QA pass rebuilds and resends the package
 
 Changes made with the workflow's GITHUB_TOKEN fire no other workflow, so
 when this module closes the `Review:` issue it also sets `review:approved`
@@ -23,6 +25,7 @@ itself instead of relying on the sync-review-status close handler.
     python -m tools.talk_operator pr-merged --branch B --pr N
     python -m tools.talk_operator qa-passed --issue N      # prints package|skip
     python -m tools.talk_operator take --issue N           # prints taken|skip
+    python -m tools.talk_operator back-to-qa --issue N     # prints moved|skip
     python -m tools.talk_operator packaged --issue N --comment-file F
     python -m tools.talk_operator closed --issue N         # prints deliver|skip
     python -m tools.talk_operator delivered --issue N      # after the record landed
@@ -52,6 +55,9 @@ QA_PASSED = "op:qa-passed"
 # Trigger label: the operator takes a talk from the translator to QA with no
 # translator PR (the edits landed some other way). The bot removes it.
 TAKE = "op:take"
+# Trigger label: the operator sends a delivered (or packaged) talk back to QA,
+# to fix it and deliver again. The bot removes it.
+BACK_TO_QA = "op:back-to-qa"
 SYNC_BRANCH = re.compile(r"^sync/[^/]+/(?P<talk>.+?)--[^/]+$")
 
 
@@ -107,6 +113,11 @@ def next_labels(
     if event == "take":
         if "op:translator" in current:
             return {"op:qa"}, {"op:translator", TAKE}
+        return None
+    if event == "back-to-qa":
+        sent = current & {"op:delivered", "op:ready"}
+        if sent:
+            return {"op:qa"}, sent | {BACK_TO_QA, QA_PASSED}
         return None
     if event == "closed":
         if "op:ready" in current:
@@ -313,6 +324,35 @@ def on_take(gh, issue_number: int, sender_id: int) -> bool:
     return True
 
 
+def on_back_to_qa(gh, issue_number: int, sender_id: int) -> bool:
+    # Same trust rule as on_take: only an operator from roles.yaml.
+    issue = gh.get_issue(issue_number)
+    if not is_operator(sender_id):
+        gh.edit_labels(issue_number, set(), {BACK_TO_QA})
+        gh.comment(
+            issue_number, f"`{BACK_TO_QA}` removed: only an operator listed in roles.yaml can send a talk back to QA."
+        )
+        return False
+    change = next_labels(issue["labels"], "back-to-qa")
+    if change is None:
+        gh.edit_labels(issue_number, set(), {BACK_TO_QA})
+        gh.comment(
+            issue_number, f"`{BACK_TO_QA}` removed: only a talk at `op:delivered` or `op:ready` goes back to QA."
+        )
+        return False
+    # Reopen first: if it fails, the stage is untouched and the operator can
+    # simply retry. A closed issue at op:qa could never be delivered again.
+    if issue["state"] != "OPEN":
+        gh.reopen(issue_number)
+    _apply(gh, issue, change)
+    gh.comment(
+        issue_number,
+        f"Back to QA by the operator. When QA is done, add `{QA_PASSED}`: the Amruta package is rebuilt "
+        "from main and a new e-mail link is posted; closing the issue after sending records another delivery.",
+    )
+    return True
+
+
 def on_packaged(gh, issue_number: int, comment_md: str) -> None:
     issue = gh.get_issue(issue_number)
     _apply(gh, issue, next_labels(issue["labels"], "packaged"))
@@ -436,7 +476,7 @@ def main(argv: list[str] | None = None) -> None:
         p = sub.add_parser(name, help=f"handle a translator sync PR event ({name})")
         p.add_argument("--branch", required=True, help="PR head branch, sync/{login}/{talk_id}--{target}")
         p.add_argument("--pr", type=int, required=True, help="PR number")
-    for name in ("qa-passed", "take", "closed", "delivered"):
+    for name in ("qa-passed", "take", "back-to-qa", "closed", "delivered"):
         p = sub.add_parser(name, help=f"handle an Operator: issue event ({name})")
         p.add_argument("--issue", type=int, required=True)
         if name != "delivered":
@@ -476,6 +516,8 @@ def main(argv: list[str] | None = None) -> None:
         print("package" if on_qa_passed(gh, args.issue, args.sender_id) else "skip")
     elif args.cmd == "take":
         print("taken" if on_take(gh, args.issue, args.sender_id) else "skip")
+    elif args.cmd == "back-to-qa":
+        print("moved" if on_back_to_qa(gh, args.issue, args.sender_id) else "skip")
     elif args.cmd == "packaged":
         on_packaged(gh, args.issue, Path(args.comment_file).read_text(encoding="utf-8"))
     elif args.cmd == "closed":
