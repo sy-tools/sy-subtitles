@@ -111,6 +111,7 @@ sy-subtitles/
     ├── sync-subtitles.yml          # PR-based transcript ↔ SRT sync
     ├── sync-review-status.yml      # Issues → review-status.json
     ├── talk-operator.yml           # Operator issue: talk added → QA → Amruta package → delivery
+    ├── wordlist-refresh.yml        # Rebuild site/dict/words_uk.txt on main after talks land
     ├── whisper.yml                 # Reusable whisper workflow
     ├── ci.yml                      # Lint + tests + E2E
     ├── deploy-pages.yml            # Deploy site/ to GitHub Pages
@@ -155,9 +156,9 @@ Triggered manually via `workflow_dispatch`. Full pipeline:
 3. **Translate + Review** — a Claude agent translates EN→UK, then 2+1 review
 4. **Build** — `build_map.py prepare` → single-pass LLM timecodes (`build-timecodes` job) → `build_map.py assemble` → `build_srt.py`
 5. **Validate** — text preservation, CPS, timing checks
-6. **Commit** — rebuilds `site/dict/words_uk.txt` from the corpus it just
-   extended (`tools/build_wordlist.py`), then pushes results + creates a
-   review tracking Issue
+6. **Commit** — pushes the talk's results as a bot PR + creates a review
+   tracking Issue. It does not touch `site/dict/words_uk.txt`: see
+   wordlist-refresh.yml
 
 ### sync-subtitles.yml
 Triggered on PRs that modify `transcript_uk.txt` **or** `*/final/uk.srt`,
@@ -209,6 +210,10 @@ arrived merged untested (#1069).
 It also takes `workflow_dispatch`, solely so the sync bot can give its own
 commit a `gate` (see sync-subtitles.yml); with no range to compare, `changes`
 runs every lane for that event.
+The typo-hint wordlist check (`tools.build_wordlist --check`) runs only on a
+pull request that touches `site/dict/`, `glossary/` or the generator: talks
+land without the list, so on a talk-only PR it would only measure how far the
+base is behind wordlist-refresh.yml.
 
 ### Bot PRs (`.github/scripts/bot-pr.sh`)
 Pipeline, whisper and review-status results reach `main` as a PR with
@@ -232,6 +237,19 @@ already do. The one step that sees the key runs an action pinned to a commit.
 merged. Its runs are serialized, but issue events come in bursts and every run
 rewrites `updated_at`: a run that branched off `main` before the previous PR
 landed would conflict with it and never auto-merge.
+
+### wordlist-refresh.yml
+`site/dict/words_uk.txt` is one sorted file generated from every talk and the
+glossary. When each pipeline PR rebuilt it, parallel runs rebuilt it from the
+same old `main`, their new words landed on neighbouring lines, and every PR
+after the first merged went `dirty` on that file alone — auto-merge never
+fires on a conflict. So talk PRs leave it alone, and this workflow rebuilds it
+from the live `main` tip on every push that changes a `transcript_uk.txt`, a
+`final/uk.srt` or the glossary (or on dispatch), as one bot PR that waits for
+its merge. Runs are serialized without cancelling the running one: a burst of
+merges ends in one running refresh plus one pending, which picks up everything
+that landed meanwhile. A leftover refresh PR (red, or not merged in time) is
+closed before the next one opens. An unchanged list opens nothing.
 
 ### deploy-pages.yml
 Deploys `site/` to GitHub Pages on changes under `site/`.
