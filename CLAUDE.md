@@ -180,7 +180,7 @@ re-invent values.** Open **`site/styleguide.html`** first — it's the live cata
 
 ## Language Rules
 
-See `glossary/CLAUDE.md` for the canonical deity-pronoun, orthography,
+See `glossary/AGENTS.md` for the canonical deity-pronoun, orthography,
 and transliteration rules.
 
 ### SRT Format
@@ -327,7 +327,7 @@ Sahaja Yoga term dictionaries live in `glossary/`:
   **Changing either list changes the block cut — re-time the dry-run snapshots
   (`tools.retime_snapshot`) and rebuild affected talks.**
 
-See `glossary/CLAUDE.md` for translator agent instructions (transliteration, capitalization rules).
+See `glossary/AGENTS.md` for translator agent instructions (transliteration, capitalization rules).
 
 ## Architecture
 

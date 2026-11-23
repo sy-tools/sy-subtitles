@@ -17,7 +17,7 @@ glossary/
     index.yaml         # Talk listing
     {slug}/en.txt      # English transcript
     {slug}/uk.txt      # Ukrainian transcript
-  CLAUDE.md            # Translator agent instructions
+  AGENTS.md            # Translator agent instructions (CLAUDE.md imports it)
   README.md            # This file
 ```
 

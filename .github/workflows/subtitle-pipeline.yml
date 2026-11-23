@@ -376,7 +376,7 @@ jobs:
             You are translating a Sahaja Yoga lecture from English to Ukrainian.
 
             REQUIRED READING – read these files before translating:
-            1. glossary/CLAUDE.md – transliteration conventions, capitalization rules
+            1. glossary/AGENTS.md – transliteration conventions, capitalization rules
             2. glossary/terms_lookup.yaml – EN→UK term dictionary (374 terms)
             3. glossary/terms_context.yaml – disambiguation context for ambiguous terms
             4. glossary/chakra_map.yaml – chakra/deity/channel mapping
@@ -397,7 +397,7 @@ jobs:
             - One paragraph per line (single \n between paragraphs)
             - Follow ALL language rules from CLAUDE.md
             - Use glossary terms consistently (terms_lookup.yaml + terms_context.yaml)
-            - Follow transliteration conventions from glossary/CLAUDE.md (ґ not г for Sanskrit g, дх for dh, і for short i)
+            - Follow transliteration conventions from glossary/AGENTS.md (ґ not г for Sanskrit g, дх for dh, і for short i)
             - Translate with devotion, precision, and respect for the sacred meaning
 
             READING STRATEGY:
@@ -490,7 +490,7 @@ jobs:
             1. talks/${{ matrix.talk_id }}/transcript_uk.txt – the translation to review
             2. talks/${{ matrix.talk_id }}/transcript_en.txt – English original for reference
             3. templates/language_review_template.md – review process and table format
-            4. glossary/CLAUDE.md – SY terminology and capitalization rules
+            4. glossary/AGENTS.md – SY terminology and capitalization rules
             5. glossary/terms_lookup.yaml – term dictionary
             6. glossary/terms_context.yaml – disambiguation context
             (CLAUDE.md is auto-loaded – no need to read it)

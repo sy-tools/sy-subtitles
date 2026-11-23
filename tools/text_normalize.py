@@ -6,7 +6,7 @@ Two independent concerns live here and are deliberately NOT merged:
   characters, stray BOMs. These are noise in every language and may be applied
   to whole files.
 * **Ukrainian typography** -- the quote/dash/apostrophe/ellipsis rules from
-  glossary/CLAUDE.md. These apply to Ukrainian text ONLY; English legitimately
+  glossary/AGENTS.md. These apply to Ukrainian text ONLY; English legitimately
   uses `"` and an em dash, and YAML/JSON use `"` as syntax.
 
 Keep this byte-for-byte equivalent to ``site/js/text_sanitize.js``. Both are
@@ -94,7 +94,7 @@ def sanitize_file_text(text: str) -> str:
     return bom + sanitize_invisible(text)
 
 
-# --- Ukrainian typography (glossary/CLAUDE.md) --------------------------------
+# --- Ukrainian typography (glossary/AGENTS.md) --------------------------------
 
 _APOSTROPHE_RE = re.compile("['‘ʼ]")
 _DASH_RE = re.compile("[—‒−―]")
@@ -151,7 +151,7 @@ def _resolve_straight_quotes(text: str) -> str:
 
 
 def normalize_uk_typography(text: str, *, live: bool = False) -> str:
-    """Apply the Ukrainian orthography rules from glossary/CLAUDE.md.
+    """Apply the Ukrainian orthography rules from glossary/AGENTS.md.
 
     UKRAINIAN TEXT ONLY. English prose legitimately uses `"` and an em dash,
     and YAML/JSON use `"` as syntax; applying this to them corrupts them.

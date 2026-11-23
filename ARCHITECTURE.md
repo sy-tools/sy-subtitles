@@ -387,7 +387,7 @@ What this cannot do is judge a name by its case. The list is keyed by the folded
 form, so a name the corpus writes lowercase somewhere legitimate — `лакшмі` in a
 mantra, `деві` in `Сарва деві дева` — is thereafter accepted in lowercase
 everywhere. Capitalisation of the sacred vocabulary stays a matter for the
-language review (`glossary/CLAUDE.md`), not for these hints.
+language review (`glossary/AGENTS.md`), not for these hints.
 
 A word mixing Cyrillic and Latin is flagged without asking either source: it is
 wrong however its pieces are judged, and the corpus holds no legitimate word of

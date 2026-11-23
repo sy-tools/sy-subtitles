@@ -46,7 +46,7 @@ Reviews ALL corrections from Reviewer L and Reviewer S together:
 - Has final say on which corrections to apply
 - Never approves a correction that repairs the original: a translator's addition
   in `[square brackets]`, or roughness carried over from what was spoken, is not
-  an error (see `glossary/CLAUDE.md`, "Fidelity to the Spoken Original")
+  an error (see `glossary/AGENTS.md`, "Fidelity to the Spoken Original")
 
 ### Flow
 
