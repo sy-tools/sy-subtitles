@@ -16,6 +16,7 @@ import pytest
 
 from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
     mock_player_js,
+    mock_youtube_js,
     page,
     server,
     spa_path,

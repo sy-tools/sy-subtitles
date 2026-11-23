@@ -32,6 +32,7 @@
 <script src="js/offline_fallback.js"></script>
 <script src="js/talk_slug.js"></script>
 <script src="js/vimeo_codec.js"></script>
+<script src="js/video_player.js"></script>
 <script src="js/end_freeze.js"></script>
 <script src="js/cursor_idle.js"></script>
 <script src="js/preview_keys.js"></script>
@@ -73,47 +74,6 @@
 
 <script>
 (function(){
-  // --- Adaptive player aspect ratio (sync player) ---
-  // The sync player's iframe gets its intrinsic video dimensions read from
-  // the SDK once it's ready, and its mount gets --sync-aspect set. Result:
-  // the player box matches the real video shape, so the letterbox pillars
-  // become our warm page color instead of Vimeo's default black inside the
-  // iframe. (The preview player does the same for itself: setPreviewAspect.)
-  function adaptAspect(iframe, target, cssVar) {
-    if (!iframe || !target || !window.Vimeo) return;
-    try {
-      const p = new Vimeo.Player(iframe);
-      Promise.all([p.getVideoWidth(), p.getVideoHeight()]).then(([w, h]) => {
-        if (w > 0 && h > 0) target.style.setProperty(cssVar, w + ' / ' + h);
-      }).catch(()=>{});
-    } catch(_){}
-  }
-  function scanPlayers() {
-    const sync = document.querySelector('#sync-player-mount iframe');
-    const mount = document.getElementById('sync-player-mount');
-    if (sync && mount && !mount.dataset.aspectBound) {
-      mount.dataset.aspectBound = '1';
-      adaptAspect(sync, mount, '--sync-aspect');
-    }
-    // The preview player is not scanned here: its own setup writes
-    // --preview-aspect onto #view-preview (see setPreviewAspect), where the
-    // fullscreen subtitle band reads it too.
-  }
-  // Observe the DOM — the app creates/replaces iframes dynamically (video
-  // switch, sync-player open). Fire the scan whenever anything changes.
-  const mo = new MutationObserver(() => scanPlayers());
-  mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['src'] });
-  // Also clear the bound flag when src changes, so the next video re-measures.
-  document.addEventListener('load', e => {
-    const f = e.target;
-    if (f && f.tagName === 'IFRAME') {
-      const m = f.closest('#sync-player-mount'); if (m) delete m.dataset.aspectBound;
-      scanPlayers();
-    }
-  }, true);
-  setTimeout(scanPlayers, 500);
-  setInterval(scanPlayers, 1500);
-
   // --- Preview player + subtitles resize ---
   // Two drag handles under the preview chrome:
   //   1) Player height (width follows aspect ratio)
@@ -1082,7 +1042,7 @@ function ghExchangeUrl() { return window.__SY_GH_EXCHANGE_URL || APP_GH_EXCHANGE
 // Bump when the cache format changes. That includes the talk fields
 // applyMetaText (js/meta_batch.js) fills from meta.yaml: a talk whose meta.yaml
 // blob is unchanged is reused from this cache and never read again.
-var CACHE_SCHEMA = 6;
+var CACHE_SCHEMA = 7;
 var CACHE_KEY = 'sy_tree_cache__' + BRANCH;
 (function() {
   try {
@@ -1111,6 +1071,7 @@ var I18N = {
     'gate.hide': '\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043F\u0430\u0440\u043E\u043B\u044C',
     'preview.resize_player': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432\u0438\u0441\u043E\u0442\u0443 \u043F\u043B\u0435\u0454\u0440\u0430',
     'preview.resize_subs': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043C\u0456\u0440 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432; \u043F\u043E\u0434\u0432\u0456\u0439\u043D\u0438\u0439 \u043A\u043B\u0430\u0446 \u2014 \u0441\u043A\u0438\u043D\u0443\u0442\u0438',
+    'preview.play_video': '\u0412\u0456\u0434\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0432\u0456\u0434\u0435\u043E',
     'preview.fs_exit': '\u0412\u0438\u0439\u0442\u0438 \u0437 \u043F\u043E\u0432\u043D\u043E\u0435\u043A\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0436\u0438\u043C\u0443',
     'search.placeholder': '\u041F\u043E\u0448\u0443\u043A \u043F\u0440\u043E\u043C\u043E\u0432...',
     'index.loading': '\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F...',
@@ -1152,7 +1113,7 @@ var I18N = {
     'title.show_video': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u043F\u043B\u0435\u0454\u0440 \u0434\u043B\u044F \u0441\u0438\u043D\u0445\u0440\u043E\u043D\u0456\u0437\u043E\u0432\u0430\u043D\u043E\u0433\u043E \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F',
     'title.hide_video': '\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043F\u043B\u0435\u0454\u0440',
     'title.resize_bar': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432\u0438\u0441\u043E\u0442\u0443 \u043F\u043B\u0435\u0454\u0440\u0430',
-    'toast.vimeo_unavailable': '\u041F\u043B\u0435\u0454\u0440 Vimeo \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439',
+    'toast.player_unavailable': '\u0412\u0456\u0434\u0435\u043E\u043F\u043B\u0435\u0454\u0440 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439',
     'btn.revert_cell': 'Скасувати правку цього блоку',
     'btn.create_review_issue': '\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 Issue',
     'btn.open_editor': '\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0432 GitHub Editor',
@@ -1449,6 +1410,7 @@ var I18N = {
     'gate.hide': 'Hide password',
     'preview.resize_player': 'Drag to resize the player',
     'preview.resize_subs': 'Drag to resize the subtitles; double-click to reset',
+    'preview.play_video': 'Play video',
     'preview.fs_exit': 'Exit fullscreen',
     'search.placeholder': 'Search talks...',
     'index.loading': 'Loading...',
@@ -1490,7 +1452,7 @@ var I18N = {
     'title.show_video': 'Open player for synced editing',
     'title.hide_video': 'Hide player',
     'title.resize_bar': 'Drag to resize player',
-    'toast.vimeo_unavailable': 'Vimeo player unavailable',
+    'toast.player_unavailable': 'Video player unavailable',
     'btn.revert_cell': 'Revert this block edit',
     'btn.create_review_issue': 'Create Issue',
     'btn.open_editor': 'Open in GitHub Editor',
@@ -1945,7 +1907,7 @@ var SyncPlayer = (function() {
           : null);
     if (!talk || !talk.videos) return false;
     var v = talk.videos.find(function(x) { return x.slug === videoSlug; });
-    return !!(v && v.vimeo_url);
+    return !!(v && isPlayableSource(v.source));
   }
 
   function init(talkId, videoSlug) {
@@ -1974,7 +1936,7 @@ var SyncPlayer = (function() {
     // Only expose the sync-player toggle when the current video actually
     // has a playable source. Without this check the button lingered with
     // stale "Hide video" text after switching to a video that has no
-    // vimeo_url at all.
+    // playable source at all.
     var playable = videoHasPlayer(talkId, videoSlug);
     if (btnSync) btnSync.style.display = playable ? '' : 'none';
     // Refresh the button label off the fresh state so stale text from a
@@ -2108,13 +2070,9 @@ var SyncPlayer = (function() {
       console.warn('[SyncPlayer] mountPlayer: no video matches slug', state.videoSlug);
       return false;
     }
-    if (!video.vimeo_url) {
-      console.warn('[SyncPlayer] mountPlayer: video has no vimeo_url', state.videoSlug);
-      return false;
-    }
-    var src = vimeoEmbed(video.vimeo_url);
-    if (!/player\.vimeo\.com\/video\/\d+/.test(src)) {
-      console.warn('[SyncPlayer] mountPlayer: vimeoEmbed produced non-embed URL', video.vimeo_url, '->', src);
+    var src = embedUrl(video.source);
+    if (!src) {
+      console.warn('[SyncPlayer] mountPlayer: video has no playable source', state.videoSlug);
       return false;
     }
 
@@ -2127,8 +2085,27 @@ var SyncPlayer = (function() {
 
     var p;
     try {
-      p = new Vimeo.Player(iframe);
+      p = createVideoPlayer(iframe, video.source);
       state.player = p;
+      attachPoster(mount, p, video.source, { label: t('preview.play_video') });
+      // Box the player in the video's own shape, so the letterbox is the
+      // page's colour rather than the player's black (#sync-player-mount).
+      p.getAspect().then(function(aspect) {
+        if (aspect && state && state.player === p) mount.style.setProperty('--sync-aspect', aspect);
+      }).catch(function() {});
+      // A YouTube player loads its API first, and can fail after this returns
+      // (or never answer: the adapter times ready out). A Vimeo player that
+      // fails keeps the bar open on Vimeo's own error message in the iframe.
+      if (p.provider === 'yt') p.ready().catch(function(e) {
+        if (!state || state.player !== p) return;
+        console.warn('[SyncPlayer] player failed to load:', e);
+        try { p.destroy(); } catch (_) {}
+        state.player = null;
+        clearMount();
+        if (bar) bar.setAttribute('hidden', '');
+        failOpen();
+        updateToggleBtn();
+      });
       // Capture player identity so late events (after destroy+reinit) are ignored.
       p.on('timeupdate', function(data) {
         if (!state || state.player !== p) return;
@@ -2149,7 +2126,7 @@ var SyncPlayer = (function() {
       }
       return true;
     } catch (e) {
-      console.warn('[SyncPlayer] Vimeo init error:', e);
+      console.warn('[SyncPlayer] player init error:', e);
       if (p) { try { p.destroy(); } catch (_) {} }
       state.player = null;
       clearMount();
@@ -2161,7 +2138,7 @@ var SyncPlayer = (function() {
     if (!state) return;
     state.open = false;
     persistNow();
-    if (typeof showToast === 'function') showToast(t('toast.vimeo_unavailable'));
+    if (typeof showToast === 'function') showToast(t('toast.player_unavailable'));
   }
 
   function updateToggleBtn() {
@@ -2176,7 +2153,6 @@ var SyncPlayer = (function() {
 
   function show() {
     if (!state) return;
-    if (!window.Vimeo) { failOpen(); return; }
     if (!state.player && !mountPlayer()) { failOpen(); return; }
     if (bar) bar.removeAttribute('hidden');
     state.open = true;
@@ -2963,7 +2939,7 @@ function hydrateManifestMeta(m) {
     apply: function(talk, text) {
       return applyMetaText(talk, text, {
         parseYaml: jsyaml.load,
-        decodeVideoRef: decodeVideoRef,
+        decodeVideoSource: decodeVideoSource,
         warn: console.warn.bind(console),
       });
     },
@@ -3459,8 +3435,8 @@ function renderIndex(el) {
     var videoLinks = '';
     if (actions.preview) {
       // Prefer the last-viewed video for this talk; fall back to the first
-      // valid one. Both must have an SRT and vimeo_url to be linkable.
-      var validVideos = (tk.videos || []).filter(function(v) { return v.hasSrt && v.vimeo_url; });
+      // valid one. Both must have an SRT and a playable source to be linkable.
+      var validVideos = (tk.videos || []).filter(function(v) { return v.hasSrt && isPlayableSource(v.source); });
       var lastSlug = localStorage.getItem('sy_last_video_' + tk.id);
       var targetVideo = (lastSlug && validVideos.find(function(v) { return v.slug === lastSlug; }))
         || validVideos[0];
@@ -3888,25 +3864,29 @@ function showPreview(talkId, videoSlug) {
   }
 
   // Re-entry for the already-loaded video (e.g. a manifest refresh that
-  // re-runs route()) must NOT tear down the Vimeo player — that would reset
+  // re-runs route()) must NOT tear down the player — that would reset
   // playback. Detect it and keep the live player + position; only the lighter
   // marker/edit state below is refreshed.
-  var embedUrl = video ? vimeoEmbed(video.vimeo_url) : '';
+  var playerSrc = video ? embedUrl(video.source, { preview: true }) : '';
   var oldIframe = document.getElementById('vimeo-player');
   var sameVideo = canReusePreviewPlayer(previewState, talkId, videoSlug, !!oldIframe);
 
   var iframe = oldIframe;
   if (!sameVideo) {
-    // Replace iframe to avoid stale Vimeo SDK cache when switching videos.
+    // Replace iframe to avoid a stale SDK player when switching videos.
     iframe = document.createElement('iframe');
     iframe.id = 'vimeo-player';
     iframe.allow = 'autoplay; fullscreen';
     iframe.allowFullscreen = true;
     iframe.style.cssText = oldIframe.style.cssText || 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
-    // No Vimeo captions under the SPA's own overlay, and no Transcript panel:
-    // in fullscreen it would open over the video, under the cursor shield.
-    if (embedUrl) iframe.src = withQueryParam(embedUrl, 'texttrack=false&transcript=0');
+    if (playerSrc) iframe.src = playerSrc;
     oldIframe.parentNode.replaceChild(iframe, oldIframe);
+    // The previous video's poster (video_player.js attachPoster) goes with it.
+    iframe.parentNode.querySelectorAll('.video-poster').forEach(function(el) { el.remove(); });
+    // The player's own chrome differs by provider (components.css).
+    var previewView = document.getElementById('view-preview');
+    if (playerSrc) previewView.dataset.provider = video.source.provider;
+    else delete previewView.dataset.provider;
   }
 
   var availLangs = (talk && talk._srtLangs && talk._srtLangs[videoSlug]) || ['uk'];
@@ -4021,7 +4001,7 @@ function showPreview(talkId, videoSlug) {
 
   // Hot-path DOM nodes, cached once: the overlay is rewritten from a
   // requestAnimationFrame loop (~60fps) that polls the player's true position,
-  // NOT the Vimeo `timeupdate` event. timeupdate fires only ~4×/sec (~250ms) —
+  // NOT the player's `timeupdate` event. timeupdate fires only ~4×/sec (~250ms) —
   // too coarse to render the deliberate 80ms gaps between subtitles, so the
   // overlay jumped block-to-block and never went blank. player.getCurrentTime()
   // is a local page↔iframe postMessage (~0.5ms, monotonic), so reading it every
@@ -4093,9 +4073,9 @@ function showPreview(talkId, videoSlug) {
     }
   }
 
-  if (!sameVideo && embedUrl) {
+  if (!sameVideo && playerSrc) {
     try {
-      var player = new Vimeo.Player(iframe);
+      var player = createVideoPlayer(iframe, video.source);
       previewState.player = player;
       // Token guarding everything this player settles later: a fresh entry for
       // the same video (player rebuilt) installs a new token, so the prior
@@ -4106,6 +4086,12 @@ function showPreview(talkId, videoSlug) {
       function isCurrentPlayer() {
         return stillOnSameVideo() && previewState._rafToken === rafToken;
       }
+      // Box the player to the video's shape as soon as it is known. YouTube's
+      // comes without waiting for the player, and the poster shows its still
+      // and button from that same answer (attachPoster), already in place;
+      // Vimeo's comes from the player, so it is asked once the player is ready.
+      if (player.provider === 'yt') setPreviewAspect(player, isCurrentPlayer);
+      attachPoster(iframe.parentNode, player, video.source, { label: t('preview.play_video') });
       // Reaching the end clears the saved position so the next visit starts
       // fresh. The overlay loop keeps polling after 'ended' and reports ~duration,
       // so we must (a) cancel the pending throttled write and (b) set _ended — both
@@ -4122,7 +4108,7 @@ function showPreview(talkId, videoSlug) {
       });
       // The end-freeze threshold needs where the media really ends. getDuration()
       // asked at ready (as below), before playback has loaded the media, answers
-      // with Vimeo's metadata length: the true length rounded to whole seconds.
+      // with the metadata length (Vimeo's and YouTube's alike): the true length rounded to whole seconds.
       // Rounded up (1591 for a video that ends at 1590.741) it leaves the freeze
       // a window too short to hit or none at all. 'durationchange' first repeats
       // the metadata, then brings the true length once playback loads the media
@@ -4133,7 +4119,7 @@ function showPreview(talkId, videoSlug) {
         previewState._duration = d;
         previewState._durationFromEvent = true;
       });
-      // While Vimeo has the pointer the page is blind to it; a change the
+      // While the player has the pointer the page is blind to it; a change the
       // player reports is the sign that a button or a menu choice was used.
       // Not a volume change: the volume slider stays open while it is dragged.
       ['play', 'pause', 'seeked', 'texttrackchange', 'qualitychange',
@@ -4155,12 +4141,13 @@ function showPreview(talkId, videoSlug) {
             if (isCurrentPlayer()) {
               renderOverlayAt(sec);
               // End-freeze, in every view mode: pause on the last frame before
-              // 'ended' can fire, so the Vimeo end screen never appears
+              // 'ended' can fire, so the player's end screen never appears
               // (js/end_freeze.js).
               var freezeAct = endFreezeAction({
                 sec: sec,
                 duration: previewState._duration,
                 frozen: !!previewState._frozen,
+                provider: player.provider,
               });
               if (freezeAct === 'freeze') {
                 previewState._frozen = true;
@@ -4185,8 +4172,8 @@ function showPreview(talkId, videoSlug) {
         requestAnimationFrame(overlayLoop);
       }
       player.ready().then(function() {
-        console.log('[SPA] Vimeo player ready');
-        setPreviewAspect(player, isCurrentPlayer);
+        console.log('[SPA] ' + player.provider + ' player ready');
+        if (player.provider !== 'yt') setPreviewAspect(player, isCurrentPlayer);
         // Resume where the user left off on this video. Only fresh entries reach
         // here (sameVideo re-entry keeps the live player + position); trivial
         // near-start positions are skipped by shouldResumePreviewPos.
@@ -4210,17 +4197,17 @@ function showPreview(talkId, videoSlug) {
           console.warn('[SPA] end-freeze getDuration unavailable:', e);
         }
       }).catch(function(err) {
-        console.warn('[SPA] Vimeo player error:', err);
+        console.warn('[SPA] player error:', err);
         setPreviewAspect(null, isCurrentPlayer);
       });
     } catch(e) {
-      console.warn('[SPA] Vimeo Player init error:', e);
+      console.warn('[SPA] player init error:', e);
       setPreviewAspect(null);
     }
   } else {
     console.warn('[SPA] No embed URL — video info not available');
     // A re-entry into the same video lands here too, and keeps its shape.
-    if (!embedUrl) setPreviewAspect(null);
+    if (!playerSrc) setPreviewAspect(null);
   }
 }
 
@@ -4240,29 +4227,15 @@ function setPreviewAspect(player, stillCurrent) {
   }
   if (!player) { unknown(); return; }
   try {
-    Promise.all([player.getVideoWidth(), player.getVideoHeight()]).then(function(wh) {
-      if (!(wh[0] > 0 && wh[1] > 0)) { unknown(); return; }
+    player.getAspect().then(function(aspect) {
+      var wh = parseAspect(aspect);
+      if (!wh) { unknown(); return; }
       if (current()) view.style.setProperty('--preview-aspect', wh[0] + ' / ' + wh[1]);
     }, unknown);
   } catch (e) {
     console.warn('[SPA] video size unavailable:', e);
     unknown();
   }
-}
-
-function vimeoEmbed(url) {
-  // A video with no/undecodable link (video.vimeo_url undefined) must not crash
-  // the caller — showPreview reaches here for a link-less video opened by deep
-  // link, and `undefined.match(...)` would throw and abort the whole preview.
-  if (!url) return '';
-  var m = url.match(/vimeo\.com\/(\d+)\/([a-f0-9]+)/);
-  if (m) return 'https://player.vimeo.com/video/' + m[1] + '?h=' + m[2];
-  m = url.match(/vimeo\.com\/(\d+)(?![\/\w])/);
-  if (m) return 'https://player.vimeo.com/video/' + m[1];
-  // Not a recognized Vimeo URL — return '' rather than the raw input, which
-  // would otherwise reach iframe.src in the preview route (a javascript:/data:/
-  // protocol-relative vimeo_url from meta.yaml would load/run in the iframe).
-  return '';
 }
 
 function savePreviewState() {
@@ -5850,7 +5823,7 @@ function burnWrongLangText() {
 }
 
 // meta.yaml carries no video dimensions, and the iframe is cross-origin — but
-// the Vimeo player API reports the intrinsic size over postMessage, and only
+// the player reports the video's shape (js/video_player.js getAspect), and only
 // the aspect ratio is needed here. The workflow re-probes the real pixels with
 // ffprobe, so this affects the ratio only.
 function burnGeometry() {
@@ -5864,8 +5837,9 @@ function burnGeometry() {
     // correctness of the render.
     return Promise.resolve(Object.assign(base, { videoWidth: 16, videoHeight: 9 }));
   }
-  return Promise.all([player.getVideoWidth(), player.getVideoHeight()])
-    .then(function(wh) {
+  return player.getAspect()
+    .then(function(aspect) {
+      var wh = parseAspect(aspect) || [16, 9];
       return Object.assign(base, { videoWidth: wh[0], videoHeight: wh[1] });
     })
     .catch(function() {
@@ -7752,7 +7726,7 @@ function transcriptVideoStorageKey(talkId) {
 
 function playableVideosForTalk(talk) {
   if (!talk || !talk.videos) return [];
-  return talk.videos.filter(function(v) { return v && v.vimeo_url && v.hasSrt; });
+  return talk.videos.filter(function(v) { return v && isPlayableSource(v.source) && v.hasSrt; });
 }
 
 function updateTranscriptSyncBtn() {

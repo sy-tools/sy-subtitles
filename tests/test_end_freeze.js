@@ -67,3 +67,17 @@ test('index.html loads end_freeze.js and calls endFreezeAction', () => {
   assert.ok(html.includes('endFreezeAction('),
     'index.html must call endFreezeAction from the overlay loop');
 });
+
+test('the threshold is the provider\'s: YouTube and Vimeo both freeze inside their own window', () => {
+  const { END_FREEZE_EPSILON_BY_PROVIDER } = require('../site/js/end_freeze.js');
+  ['vimeo', 'yt'].forEach((provider) => {
+    const eps = END_FREEZE_EPSILON_BY_PROVIDER[provider];
+    assert.ok(eps > 0, provider);
+    assert.strictEqual(endFreezeAction(state({ provider, sec: DUR - eps })), 'freeze', provider);
+    assert.strictEqual(endFreezeAction(state({ provider, sec: DUR - eps - 0.01 })), null, provider);
+  });
+});
+
+test('an unknown provider keeps the default threshold', () => {
+  assert.strictEqual(endFreezeAction(state({ provider: 'other', sec: DUR - END_FREEZE_EPSILON_SEC })), 'freeze');
+});

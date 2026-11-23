@@ -48,6 +48,7 @@ var SHELL_ASSETS = [
   'js/talk_slug.js',
   'js/text_sanitize.js',
   'js/vimeo_codec.js',
+  'js/video_player.js',
   'js/end_freeze.js',
   'js/cursor_idle.js',
   'js/preview_keys.js',
@@ -194,8 +195,8 @@ self.addEventListener('fetch', function(e) {
     // CDN libs, icon, and sha-pinned ?v= content (SRT/transcripts): cache-first
     e.respondWith(cacheFirst(e.request));
   } else if (strategy === 'network-only') {
-    // GitHub REST API (the Trees manifest, the branch list): passthrough, never
-    // cached. Offline this rejects, so the app falls back to its localStorage
+    // GitHub REST API (the Trees manifest, the branch list) and the YouTube
+    // player: passthrough, never cached. Offline this rejects, so the app falls back to its localStorage
     // manifest and shows the offline badge.
     e.respondWith(fetch(e.request));
   } else {
