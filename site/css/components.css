@@ -558,7 +558,8 @@ body.sync-player-resizing, body.sync-player-resizing * {
   aspect-ratio: auto; width: 100%; max-width: none; margin: 0; height: 100% !important;
 }
 #view-preview.fs-mode[data-provider="yt"] .video-wrap iframe,
-#view-preview.fs-mode[data-provider="yt"] .video-wrap > div {
+#view-preview.fs-mode[data-provider="yt"] .video-wrap > div,
+#view-preview.fs-mode[data-provider="yt"] .video-wrap > .video-poster {
   --fs-video-w: min(100cqw, 100cqh * (var(--preview-aspect, 16 / 9)));
   --fs-video-h: min(100cqh, 100cqw / (var(--preview-aspect, 16 / 9)));
   /* !important: the preview gives the iframe an inline full-size box. */
@@ -2099,3 +2100,39 @@ html.help-sheet-open { overflow: hidden; }
 .op-actions a.btn { text-decoration: none; }
 .op-actions a.op-mail-loading { pointer-events: none; opacity: 0.6; }
 .op-waiting { color: var(--fg5); font-size: var(--text-xs); font-style: italic; }
+
+/* Video poster (js/video_player.js attachPoster): the still over a YouTube
+   player until it first plays, with a small play button in the bottom-left
+   corner, as amruta.org shows it, in place of YouTube's title bar and centred
+   button. The whole still is the button. hqdefault is always 4:3, and a wide
+   (16:9) thumbnail comes letterboxed in it, black above and below: the image
+   is laid out 4/3 of the poster's height and lifted by a sixth of it, so only
+   that middle band shows, and cover then cuts the band to the box, which has
+   the video's own shape (a 4:3 video's pillarbox in a wide thumbnail goes too). */
+#sync-player-mount { position: relative; }
+.video-poster {
+  position: absolute; inset: 0; z-index: 2;
+  display: block; margin: 0; padding: 0; border: 0; border-radius: 0;
+  background: var(--player-letterbox, #000);
+  cursor: pointer; overflow: hidden;
+}
+.video-poster img { position: absolute; left: 0; top: -16.6667%; display: block; width: 100%; height: 133.3333%; object-fit: cover; }
+.video-poster__play {
+  position: absolute; left: 14px; bottom: 14px;
+  width: 52px; height: 37px; line-height: 0;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.45));
+}
+.video-poster__play svg { width: 100%; height: 100%; }
+.video-poster__play-bg { fill: var(--accent-red); opacity: .9; transition: opacity .15s ease; }
+.video-poster__play-mark { fill: #fff; }
+.video-poster:hover .video-poster__play-bg,
+.video-poster:focus-visible .video-poster__play-bg { opacity: 1; }
+.video-poster[data-state="starting"] { cursor: progress; }
+/* Until the player reports the video's shape the box is the 16:9 fallback and
+   about to change: the poster covers YouTube's own chrome with the bare
+   letterbox meanwhile, and the still and button fade in once in place. */
+.video-poster img,
+.video-poster__play { transition: opacity .2s ease; }
+.video-poster:not([data-shaped]) img,
+.video-poster:not([data-shaped]) .video-poster__play { opacity: 0; }
+#sync-player-mount .video-poster__play { left: 8px; bottom: 8px; width: 36px; height: 26px; }

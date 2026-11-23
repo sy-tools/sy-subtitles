@@ -5490,6 +5490,11 @@ class TestFullscreenCursorIdle:
     def _hit(self, page, x, y):
         return page.evaluate(f"document.elementFromPoint({x}, {y}).id")
 
+    def _dismiss_poster(self, page):
+        """A YouTube player sits under its poster until it first plays."""
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        assert page.locator(".video-poster").count() == 0
+
     def _size(self, page):
         return page.evaluate("[innerWidth, innerHeight]")
 
@@ -5608,6 +5613,7 @@ class TestFullscreenCursorIdle:
     def test_youtube_holes_are_its_taller_bar_and_its_top_row(self, server, page):
         self._goto_preview(server, page)
         self._set_fs(page, True)
+        self._dismiss_poster(page)
         w, h = self._size(page)
         assert self._hit(page, w // 2, h - 120) == "mock-player"
         assert self._hit(page, w // 2, h - 140) == "fs-idle-shield"
@@ -5633,6 +5639,12 @@ class TestFullscreenCursorIdle:
             " return [r.left, r.top, r.width, r.height]; })()"
         )
         assert r == pytest.approx([160, 0, 960, 720], abs=1)
+        poster = page.evaluate(
+            "(() => { const r = document.querySelector('.video-poster').getBoundingClientRect();"
+            " return [r.left, r.top, r.width, r.height]; })()"
+        )
+        assert poster == pytest.approx(r, abs=1), "the poster covers the player's own box"
+        self._dismiss_poster(page)
         assert self._hit(page, 640, 700) == "mock-player"
         assert self._hit(page, 60, 700) == "fs-idle-shield"
 
@@ -5651,6 +5663,7 @@ class TestFullscreenCursorIdle:
             " return [r.left, r.top, r.width, r.height]; })()"
         )
         assert r == pytest.approx([0, 150, 800, 600], abs=1)
+        self._dismiss_poster(page)
         assert self._hit(page, 400, 730) == "mock-player"
         assert self._hit(page, 400, 170) == "mock-player"
         assert self._hit(page, 400, 800) == "fs-idle-shield"
@@ -8572,3 +8585,64 @@ class TestShellUpdateDetection:
         )
         page.wait_for_timeout(500)
         assert page.evaluate("() => sessionStorage.getItem('sy_reload_target')") is None
+
+
+class TestVideoPoster:
+    """A YouTube player shows its still with a small play button in the
+    bottom-left corner until it first plays (js/video_player.js attachPoster);
+    a Vimeo player shows none."""
+
+    def _goto_preview(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="attached", timeout=10000)
+        page.wait_for_function("!!window._vimeoPlayer", timeout=5000)
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_a_click_on_the_poster_plays_and_takes_it_away(self, server, page):
+        self._goto_preview(server, page)
+        poster = page.locator("#view-preview .video-wrap > .video-poster")
+        assert poster.count() == 1
+        # The still and its button show once the box has the video's shape.
+        page.wait_for_selector(".video-poster[data-shaped]", timeout=3000)
+        page.wait_for_function(
+            "getComputedStyle(document.querySelector('.video-poster__play')).opacity === '1'", timeout=2000
+        )
+        assert poster.get_attribute("aria-label")
+        play = page.evaluate(
+            "(() => { const w = document.querySelector('#view-preview .video-wrap').getBoundingClientRect();"
+            " const b = document.querySelector('.video-poster__play').getBoundingClientRect();"
+            " return [b.left - w.left, w.bottom - b.bottom, b.width < w.width / 4]; })()"
+        )
+        assert play[0] < 40 and play[1] < 40 and play[2], "a small button at the bottom-left corner"
+        assert page.evaluate("window._vimeoPlayer._paused")
+        poster.click()
+        page.wait_for_function("!document.querySelector('.video-poster')", timeout=3000)
+        assert not page.evaluate("window._vimeoPlayer._paused")
+
+    @pytest.mark.parametrize("page", ["vimeo"], indirect=True)
+    def test_a_vimeo_player_has_no_poster(self, server, page):
+        self._goto_preview(server, page)
+        assert page.locator(".video-poster").count() == 0
+
+
+class TestVideoPosterStill:
+    """hqdefault is always 4:3: a wide (16:9) thumbnail comes letterboxed in it,
+    black above and below. The poster shows only that middle 16:9 band, cut to
+    the player's own shape, so neither those bars nor a 4:3 video's pillarbox
+    inside a wide thumbnail reach the screen."""
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_the_still_hides_hqdefaults_letterbox(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector(".video-poster img", state="attached", timeout=10000)
+        box = page.evaluate(
+            "(() => { const p = document.querySelector('.video-poster').getBoundingClientRect();"
+            " const i = document.querySelector('.video-poster img').getBoundingClientRect();"
+            " return [p.top, p.height, p.left, p.width, i.top, i.height, i.left, i.width,"
+            " getComputedStyle(document.querySelector('.video-poster img')).objectFit]; })()"
+        )
+        p_top, p_h, p_left, p_w, i_top, i_h, i_left, i_w, fit = box
+        assert i_h == pytest.approx(p_h * 4 / 3, abs=1), "the 16:9 band (3/4 of hqdefault) is the poster's height"
+        assert i_top == pytest.approx(p_top - p_h / 6, abs=1), "the band is the middle one"
+        assert (i_left, i_w) == pytest.approx((p_left, p_w), abs=1)
+        assert fit == "cover"

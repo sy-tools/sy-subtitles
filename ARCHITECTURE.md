@@ -207,6 +207,9 @@ timeline — in seconds and without credentials. So:
   mirrors, in order, and never attempts YouTube itself. A YouTube video with
   no mirror is skipped by whisper with a warning rather than queued to fail,
   and refused by burn before the run invests in anything.
+  A YouTube link added by hand is such a video — the mirrors come only from
+  amruta's page at ingest — so its whisper timings have to come from
+  `local_whisper`, and it cannot be burned in CI.
 - A home connection (`tools/local_whisper.py`) tries the mirrors and then
   YouTube itself, which does answer a residential IP. A committed
   `whisper.json` makes the pipeline skip whisper for that video.
