@@ -251,5 +251,14 @@ def test_validation_anchors_on_the_final_en_srt_and_skips_a_video_without_one(tm
 def test_the_pipeline_never_names_source_en_srt_as_the_timing_file():
     text = PIPELINE.read_text(encoding="utf-8")
     code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+    # Two lines name the file as what it is on the way IN — the download a late
+    # captions fetch just created, and the path the commit job ships it under.
+    # Neither reads it for timing; anything else that names it still fails.
+    for ingest in (
+        'git ls-files --others --exclude-standard -- "talks/${TALK_ID}/*/source/en.srt"',
+        '"talks/*/*/source/en.srt"',
+    ):
+        assert code.count(ingest) == 1, f"captions ingest line moved or duplicated: {ingest}"
+        code = code.replace(ingest, "")
     assert not re.search(r"source/en\.srt", code), "subtitle-pipeline.yml hard-codes source/en.srt"
     assert code.count("timing_en_srt") >= 2, "both the auto resolution and the validation anchor use the resolver"

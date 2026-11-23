@@ -19,6 +19,82 @@
     return !!pt && pt.indexOf("Talk Language:") < 0;
   }
 
+  // --- YouTube-era pages -----------------------------------------------------
+  // amruta.org moved its talks from Vimeo to YouTube, each with Google Drive
+  // copies of the file.
+  //
+  // The link shapes below are a COPY of URL_SHAPES / PRINTABLE_ASCII_RE in
+  // js/vimeo_codec.js, which is what the add form stores a link with. A copy
+  // because this file runs inside the amruta.org page (see the header): the
+  // codec is not there, and fetching it would put a second network round trip
+  // between the click and window.open, and the codec's globals into a page
+  // that is not ours. A copy drifts, so tests/test_bookmarklet.js reads one
+  // list of links with both and fails on any disagreement — change the codec's
+  // shapes and that test says to change these.
+  var YT_ID_RE = /^[A-Za-z0-9_-]{11}$/;
+  var PRINTABLE_ASCII_RE = /^[!-~]+$/;
+  var URL_SHAPES = [
+    ["yt", /^(?:https?:\/\/)?(?:www\.|m\.)?youtube\.com\/watch\?(?:[^#]*?&)??v=([A-Za-z0-9_-]{11})(?:[&#].*)?$/i],
+    ["yt", /^(?:https?:\/\/)?youtu\.be\/([A-Za-z0-9_-]{11})\/?(?:[?#].*)?$/i],
+    ["yt", /^(?:https?:\/\/)?(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})\/?(?:[?#].*)?$/i],
+    ["gd", /^(?:https?:\/\/)?drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{25,64})(?:[/?#].*)?$/i],
+    ["gd", /^(?:https?:\/\/)?drive\.google\.com\/open\?(?:[^#]*?&)??id=([A-Za-z0-9_-]{25,64})(?:[&#].*)?$/i],
+  ];
+
+  // The id in a link of the given provider ('yt' | 'gd'), else "".
+  function idFromHref(href, provider) {
+    var text = String(href == null ? "" : href).trim();
+    if (!PRINTABLE_ASCII_RE.test(text)) return "";
+    for (var i = 0; i < URL_SHAPES.length; i++) {
+      var m = text.match(URL_SHAPES[i][1]);
+      // The first shape that matches decides, whatever its provider — as in
+      // the codec.
+      if (m) return URL_SHAPES[i][0] === provider ? m[1] : "";
+    }
+    return "";
+  }
+
+  // The video id of a YouTube link (youtu.be/<id>, youtube.com/watch?v=<id>,
+  // …/embed/<id>), else "".
+  function youtubeIdFromHref(href) {
+    return idFromHref(href, "yt");
+  }
+
+  // The file id of a Google Drive file link, else "".
+  function driveFileIdFromHref(href) {
+    return idFromHref(href, "gd");
+  }
+
+  // A wrapper's YouTube id, from the first place that has one: the player
+  // element, the "Watch on YouTube" link, the details block's collapse-<id>.
+  // The page plays some videos through a Bunny iframe instead of the YouTube
+  // player — the last two are how such a video is still found. Bunny itself is
+  // never read.
+  function youtubeIdOfWrapper(w) {
+    var player = w.querySelector(".youtube-player[data-id]");
+    var id = player ? String(player.getAttribute("data-id") || "").trim() : "";
+    if (YT_ID_RE.test(id)) return id;
+    var link = w.querySelector('a[title="Watch on YouTube"]');
+    id = link ? youtubeIdFromHref(link.getAttribute("href")) : "";
+    if (id) return id;
+    var collapse = w.querySelector('[id^="collapse-"]');
+    id = collapse ? collapse.id.slice("collapse-".length) : "";
+    return YT_ID_RE.test(id) ? id : "";
+  }
+
+  // Drive file ids of a wrapper's "Download MP4 …" links, in page order. The
+  // "Download MPG (full quality)" links beside them are far larger files that
+  // nothing downstream wants.
+  function driveMp4IdsOfWrapper(w) {
+    var ids = [];
+    w.querySelectorAll('a[href*="drive.google.com/file/d/"]').forEach(function (a) {
+      if (String(a.getAttribute("title") || "").indexOf("Download MP4") !== 0) return;
+      var id = driveFileIdFromHref(a.getAttribute("href"));
+      if (id && ids.indexOf(id) < 0) ids.push(id);
+    });
+    return ids;
+  }
+
   // Scrape a talk page's DOM into the bookmarklet payload {t,d,u,loc,v,tx}.
   function extractAmrutaTalk(doc) {
     var titleEl = doc.querySelector("h1.entry-title,h1,.entry-title");
@@ -49,13 +125,13 @@
       }
     }
 
-    // Videos: vimeo id+hash and a label (from .video-meta-info, else the
-    // preceding heading).
+    // Videos, one per .embedded-video-wrapper, each with a label (from
+    // .video-meta-info, else the preceding heading):
+    //   Vimeo    {id, h, l}             — the wrapper holds a Vimeo iframe
+    //   YouTube  {p:'yt', id, gd, l}    — anything else an id can be found for
+    //   no link  {id:'', h:'', l}       — the form shows a row to fill in
     var v = [];
     doc.querySelectorAll(".embedded-video-wrapper").forEach(function (w) {
-      var f = w.querySelector('iframe[src*="vimeo"]');
-      if (!f) return;
-      var m = f.src.match(/player\.vimeo\.com\/video\/(\d+)\?h=(\w+)/);
       var lb = "";
       var mi = w.querySelector(".video-meta-info");
       if (mi) {
@@ -67,7 +143,15 @@
         var prev = w.previousElementSibling;
         if (prev && /^H[2-4]$/.test(prev.tagName)) lb = prev.textContent.trim();
       }
-      v.push({ id: m ? m[1] : "", h: m ? m[2] : "", l: lb });
+      var f = w.querySelector('iframe[src*="vimeo"]');
+      if (f) {
+        var m = f.src.match(/player\.vimeo\.com\/video\/(\d+)\?h=(\w+)/);
+        v.push({ id: m ? m[1] : "", h: m ? m[2] : "", l: lb });
+        return;
+      }
+      var yt = youtubeIdOfWrapper(w);
+      if (yt) v.push({ p: "yt", id: yt, gd: driveMp4IdsOfWrapper(w), l: lb });
+      else v.push({ id: "", h: "", l: lb });
     });
     if (!v.length) {
       doc.querySelectorAll('iframe[src*="vimeo"]').forEach(function (f) {
@@ -122,6 +206,8 @@
     module.exports = {
       extractAmrutaTalk: extractAmrutaTalk,
       isTranscriptBodyParagraph: isTranscriptBodyParagraph,
+      youtubeIdFromHref: youtubeIdFromHref,
+      driveFileIdFromHref: driveFileIdFromHref,
     };
   }
 })();

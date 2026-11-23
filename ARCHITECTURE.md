@@ -41,8 +41,9 @@
 sy-subtitles/
 ├── talks/                          # Talk data (one dir per talk)
 │   └── {date}_{slug}/
-│       ├── meta.yaml               # Talk metadata (title, date, videos[]; links as obfuscated video_ref;
-│                                  #   each video's `sync:` role — see "Video sync roles" below)
+│       ├── meta.yaml               # Talk metadata (title, date, videos[]; links as obfuscated video_ref,
+│                                  #   a YouTube video's downloadable copies as media_refs — see
+│                                  #   "Video providers"; each video's `sync:` role — see "Video sync roles")
 │       ├── transcript_en.txt       # English transcript
 │       ├── transcript_uk.txt       # Ukrainian translation (pipeline output)
 │       ├── review_report.md        # AI review report
@@ -67,6 +68,8 @@ sy-subtitles/
 ├── tools/                          # Python tooling (see tools/ for full listing)
 │   ├── download.py                 # Fetch from amruta.org (local only)
 │   ├── whisper_run.py              # Whisper speech detection wrapper
+│   ├── vimeo_codec.py              # video_ref / media_refs codec, every provider (name is historical)
+│   ├── video_media.py              # Resolver of where whisper and burn download a video's file from
 │   ├── burn_subtitles.py           # SRT → ASS → ffmpeg+libass burned-in video
 │   ├── render_gate.py              # Blocks a burn gate step until the encode passes N%
 │   ├── burn_clip.py                # A burn's clip: the one parser, cue re-basing, rendered span
@@ -82,6 +85,7 @@ sy-subtitles/
 │   ├── offset_srt.py               # Multi-video offset detection
 │   ├── align_uk.py                 # Ukrainian text alignment to whisper
 │   ├── text_export.py              # SRT → plain text
+│   ├── amruta_captions.py          # EN captions (VTT → SRT) for YouTube videos
 │   ├── extract_review.py           # Extract SRT text for language review
 │   ├── glossary_check.py           # Glossary candidate scanner
 │   ├── fetch_transcripts.py        # amruta.org transcript corpus fetcher
@@ -147,12 +151,122 @@ recording is `primary` and the `Talk` cut is `derived`; a video without
 an EN SRT (`final/en.srt` or `source/en.srt`) cannot be `primary`, since resyncing needs an EN bridge on
 both sides.
 
+### Video providers
+
+A talk's video lives on one of two providers, and nothing past the player
+widget may depend on which: same timings, same subtitles, same fullscreen
+look, same tools. Until 2026-11 every talk was on Vimeo; amruta.org then moved
+its talk pages to YouTube, and new talks arrive with YouTube videos. Existing
+talks were not migrated — their Vimeo links keep working and stay as they are.
+
+**What `meta.yaml` stores, per video.**
+
+| Field | What it is | Who reads it |
+|---|---|---|
+| `video_ref` | What a viewer watches: a Vimeo link or a YouTube video. | The SPA player; every tool that needs to know the provider. |
+| `media_refs` | Downloadable copies of a YouTube video — Google Drive mirrors of the same file, in the order amruta's page lists them. Optional, YouTube videos only. | Media downloads only. Never played. |
+
+Both are written by the codec (`tools/vimeo_codec.py`, JS twin
+`site/js/vimeo_codec.js` — the name predates the second provider). A ref's
+version prefix selects its payload (`r1`, untagged Vimeo; `r2`,
+provider-tagged): `r1` is a Vimeo link and carries no provider tag, because it
+predates the idea of one; it is left exactly as it was so every stored ref
+keeps decoding. `r2` carries a provider tag and is the only form YouTube and
+Drive ids are stored
+in. Decoding answers a typed source (provider, id, watch URL), not a bare URL,
+so a caller branches on the provider instead of pattern-matching a link.
+
+This is **obfuscation, not secrecy** — the decoder ships in the public SPA. It
+exists to defeat plaintext harvesting, so the rule it implies is wider than
+`meta.yaml`: no real video or file id appears in anything pushed — not in
+fixtures, docs, commit messages, or an Actions log. The tools mask what they
+try and name only the provider when they fail; tests use made-up ids.
+
+**Ingest.** The add-talk bookmarklet, the SPA add form and `tools/download.py`
+read both page eras: the Vimeo markup of older pages and the YouTube markup
+with its Drive download links. The plaintext guard
+(`tests/test_no_plaintext_vimeo.py`) refuses a YouTube or Drive link in a
+talk's files the same way it refuses a Vimeo one.
+
+**Validation fails closed.** The input guard for a `video_ref`
+(`tools/workflow_validation.py`) accepts Vimeo alone unless the caller names
+the providers it can handle. A gate in front of code that only knows Vimeo
+therefore keeps refusing everything else until that code is taught the new
+provider and the gate is widened in the same change — a new provider can never
+reach a consumer by default.
+
+**Where the media file comes from.** GitHub's runners cannot download from
+YouTube: a spike on 2026-11-23 got "confirm you're not a bot" from every
+yt-dlp client, and the only way past it is account cookies in CI, which is
+ruled out (ban risk, rotation, a personal account turned into
+infrastructure). The same spike showed the runners download amruta's Drive
+MP4 of the video — the very file the YouTube video was made from, same
+timeline — in seconds and without credentials. So:
+
+- CI (whisper, burn) downloads a YouTube video **only** from its `media_refs`
+  mirrors, in order, and never attempts YouTube itself. A YouTube video with
+  no mirror is skipped by whisper with a warning rather than queued to fail,
+  and refused by burn before the run invests in anything.
+  A YouTube link added by hand is such a video — the mirrors come only from
+  amruta's page at ingest — so its whisper timings have to come from
+  `local_whisper`, and it cannot be burned in CI.
+- A home connection (`tools/local_whisper.py`) tries the mirrors and then
+  YouTube itself, which does answer a residential IP. A committed
+  `whisper.json` makes the pipeline skip whisper for that video.
+- Vimeo videos download from Vimeo as before, including its occasional refusal
+  of data-centre IPs — `local_whisper` exists for that case too.
+
+The whisper and burn workflows and `local_whisper` take their download
+candidates from one resolver, `tools/video_media.py`, rather than building a
+URL themselves. Two things stand outside it, both local and by hand:
+`local_whisper` lets its operator name a source URL in place of a video's
+link, and `tools/download.py` still fetches a Vimeo video itself when asked
+for one — a legacy path that knows Vimeo only and does nothing for a YouTube
+video.
+
+**Where EN subtitles come from.** A Vimeo video's come from Vimeo's own text
+tracks. A YouTube video's come from amruta's public captions repository
+(`tools/amruta_captions.py`): amruta's curated tracks, on the same timeline as
+the video. They are taken as published — no machine-caption heuristic —
+because `source/en.srt` is already an input a person may correct through
+`final/en.srt`. The repository is filled daily, so "no captions yet" is an
+ordinary answer and never an error: they are fetched when the talk is added
+(`new-talk.yml`) and asked for again by the pipeline before it resolves the
+timing source. A video that never gets captions is timed from whisper, as any
+video without an EN SRT is.
+
+**The player.** The SPA drives either provider's SDK through one adapter
+(`site/js/video_player.js`) with the interface the Vimeo SDK already had, so
+the preview, the sync player and fullscreen call one API. The chrome around
+the player is still per provider — the control-bar heights fullscreen
+reserves, how close to the end playback is frozen to keep the provider's end
+screen away, how a failed load is handled — and the YouTube values there were
+measured in the browser, not guessed. A Drive mirror is a download, never
+something the page plays.
+
+**Decided against.**
+
+- *Bunny Stream.* Some amruta videos also play through Bunny. A runner can
+  download its stream, but the player refuses any foreign referrer — amruta
+  restricts embedding to its own domain, and it plays on our origin only by
+  suppressing the referrer, i.e. by sidestepping that restriction. We do not
+  build on that. Drive and the captions repository already cover everything
+  Bunny would; if Drive proves unreliable, a Bunny stream could be added later
+  as another download mirror — never as an embed.
+- *A "refresh the videos of an existing talk" flow.* There is none. A dead
+  Drive link is replaced by hand in `meta.yaml` with the codec's CLI. Two
+  mirrors per video make that rare; a flow can be its own project if it turns
+  out not to be.
+- *Storing the full-quality files.* Only the streaming-quality MP4 mirrors are
+  stored: a render's target is what the viewer watches on YouTube.
+
 ## Workflows
 
 ### subtitle-pipeline.yml (main)
 Triggered manually via `workflow_dispatch`. Full pipeline:
 1. **Discover** — finds videos and determines what needs processing
 2. **Whisper** — calls `whisper.yml` for word-level speech timestamps
+   (only for videos a runner can fetch — see "Video providers")
 3. **Translate + Review** — a Claude agent translates EN→UK, then 2+1 review
 4. **Build** — `build_map.py prepare` → single-pass LLM timecodes (`build-timecodes` job) → `build_map.py assemble` → `build_srt.py`
 5. **Validate** — text preservation, CPS, timing checks
@@ -193,6 +307,12 @@ Auto-updates labels: assign → `review:in-progress`, close → `review:approved
 ### whisper.yml
 Reusable workflow. Downloads video, runs Whisper for word-level timestamps.
 Also `workflow_dispatch` callable with a `force` flag.
+The download goes through `tools/video_media.py`, and only the talk id and
+video slug travel in the job matrix — never the ref — so the link is decoded
+and masked inside the step that uses it. A YouTube video with no Drive mirror
+is not queued: a runner cannot fetch it, so discovery warns and names
+`tools/local_whisper.py` instead of scheduling a job that can only fail (see
+"Video providers").
 
 ### ci.yml
 Runs on every push to `main` and on every pull request: ruff lint, Python
@@ -265,13 +385,21 @@ Manual `workflow_dispatch` — runs `tests/test_golden_talks.py` with
 Triggered when a PR adds a new talk directory; bootstraps metadata.
 It does **not** run whisper: the subtitle pipeline runs it for any video that
 still lacks a `whisper.json`, and talks timed from the EN SRT never need it.
+EN subtitles come from the video's provider: a Vimeo video's from Vimeo, a
+YouTube video's from amruta's captions repository (`tools/amruta_captions.py`).
+That repository is filled daily, so a talk added before its captions landed
+gets none here; `subtitle-pipeline.yml` asks again at the start of
+`prepare-build`, before the timing source is resolved, and commits what it
+finds with its results.
 
 ### pipeline-matrix-dryrun.yml
 Replays the subtitle pipeline using `tools.fake_llm` snapshots — exercises
 the build/sync stack without burning Claude calls.
 
 ### burn-subtitles.yml
-`workflow_dispatch` from the preview SPA: downloads the video, burns
+`workflow_dispatch` from the preview SPA: downloads the video (through
+`tools/video_media.py` — a YouTube video from its Drive mirror, checked before
+the run invests in anything; see "Video providers"), burns
 `final/uk.srt` into the picture — the whole video or a clip of it — with
 ffmpeg+libass reproducing the fullscreen subtitle look, and uploads the MP4 as a
 7-day artifact. Sizing arrives as ratios measured in the browser (see
@@ -338,7 +466,8 @@ under `site/css/` (`tokens.css` + `components.css`, catalogued live in
 `site/styleguide.html`), and a service worker (`site/sw.js` +
 `site/js/sw_routing.js`) that precaches the shell for offline use:
 - **Index** — talk list with search/filter, review status badges (from `review-status.json`)
-- **Preview** — Vimeo player + subtitle overlay + markers
+- **Preview** — video player (Vimeo or YouTube, behind one adapter:
+  `site/js/video_player.js`) + subtitle overlay + markers
 - **Review** — side-by-side EN/UK transcript editor
 
 Data sources (zero backend):

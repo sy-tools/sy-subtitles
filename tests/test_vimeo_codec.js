@@ -2,7 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
-const { encodeVideoRef, decodeVideoRef } = require('../site/js/vimeo_codec');
+const { encodeVideoRef, decodeVideoRef, decodeVideoSource } = require('../site/js/vimeo_codec');
 
 // The contract that keeps the JS codec byte-identical to tools/vimeo_codec.py:
 // the same frozen vectors are asserted by tests/test_vimeo_codec.py.
@@ -54,12 +54,140 @@ describe('vimeo_codec — normalization & errors', () => {
   });
 });
 
+function expectedWatchUrl(vec) {
+  if (vec.provider === 'yt') return 'https://www.youtube.com/watch?v=' + vec.id;
+  if (vec.provider === 'gd') return 'https://drive.google.com/file/d/' + vec.id + '/view';
+  return vec.url; // r1 vectors are canonical Vimeo URLs
+}
+
 describe('vimeo_codec — cross-language vectors (shared with Python)', () => {
   it('reproduces every frozen vector exactly', () => {
     assert.ok(vectors.length > 0, 'vectors file must not be empty');
     vectors.forEach((vec) => {
       assert.strictEqual(encodeVideoRef(vec.url), vec.ref, 'encode mismatch for ' + vec.url);
-      assert.strictEqual(decodeVideoRef(vec.ref), vec.url, 'decode mismatch for ' + vec.ref);
+      assert.strictEqual(decodeVideoRef(vec.ref), expectedWatchUrl(vec), 'decode mismatch for ' + vec.ref);
+      const source = decodeVideoSource(vec.ref);
+      assert.strictEqual(source.provider, vec.provider || 'vimeo');
+      assert.strictEqual(source.watchUrl, expectedWatchUrl(vec));
+      if (vec.id) assert.strictEqual(source.id, vec.id);
     });
+  });
+
+  it('covers every provider and URL shape', () => {
+    const yt = vectors.filter((v) => v.provider === 'yt');
+    const gd = vectors.filter((v) => v.provider === 'gd');
+    assert.ok(yt.length >= 4 && new Set(yt.map((v) => v.ref)).size === 1);
+    assert.ok(gd.length >= 2 && new Set(gd.map((v) => v.ref)).size === 1);
+    yt.concat(gd).forEach((v) => assert.ok(v.ref.startsWith('r2')));
+  });
+});
+
+// Synthetic ids only — never a real video or file id.
+const YT_ID = 'AbCdEfGhIjK';
+const GD_ID = '1AbCdEfGhIjKlMnOpQrStUvWxYz012345';
+const YT_WATCH = 'https://www.youtube.com/watch?v=' + YT_ID;
+const GD_VIEW = 'https://drive.google.com/file/d/' + GD_ID + '/view';
+
+// Builds a ref with an arbitrary payload — the same transform as the codec,
+// kept local so a bad payload can be tested without the module exporting it.
+function rawRef(version, payload) {
+  const KEY = 'sahaja-yoga-subtitles';
+  const bytes = [];
+  for (let i = 0; i < payload.length; i++) {
+    bytes.push(payload.charCodeAt(i) ^ KEY.charCodeAt(i % KEY.length));
+  }
+  return version + Buffer.from(bytes.reverse()).toString('base64url');
+}
+
+describe('vimeo_codec — r2 provider-tagged refs', () => {
+  it('decodes an r1 ref to a vimeo source with id and hash', () => {
+    const ref = encodeVideoRef('https://vimeo.com/111111111/aaaaaaaaaa');
+    assert.deepStrictEqual(decodeVideoSource(ref), {
+      provider: 'vimeo',
+      id: '111111111/aaaaaaaaaa',
+      watchUrl: 'https://vimeo.com/111111111/aaaaaaaaaa',
+    });
+  });
+
+  it('rawRef helper matches the codec', () => {
+    assert.strictEqual(rawRef('r2', 'yt:' + YT_ID), encodeVideoRef(YT_WATCH));
+  });
+
+  [
+    YT_WATCH,
+    'https://youtube.com/watch?v=' + YT_ID + '&t=42s',
+    'https://www.youtube.com/watch?feature=share&v=' + YT_ID,
+    'https://m.youtube.com/watch?v=' + YT_ID,
+    'https://youtu.be/' + YT_ID,
+    'https://youtu.be/' + YT_ID + '?si=abc',
+    'https://www.youtube.com/embed/' + YT_ID,
+    'https://www.youtube.com/embed/' + YT_ID + '?rel=0',
+    'https://www.youtube-nocookie.com/embed/' + YT_ID,
+    'youtube.com/watch?v=' + YT_ID,
+    'https://youtu.be/' + YT_ID + '/',
+    'https://www.youtube.com/embed/' + YT_ID + '/',
+    // A repeated v= resolves to the first one, as YouTube itself does.
+    'https://www.youtube.com/watch?v=' + YT_ID + '&v=ZZZZZZZZZZZ',
+    'HTTPS://WWW.YouTube.com/watch?v=' + YT_ID + '#t=1',
+  ].forEach((url) => {
+    it('encodes YouTube shape ' + url, () => {
+      const ref = encodeVideoRef(url);
+      assert.strictEqual(ref, encodeVideoRef(YT_WATCH));
+      assert.match(ref, /^r2[A-Za-z0-9_-]+$/);
+      assert.ok(!ref.includes(YT_ID));
+      assert.deepStrictEqual(decodeVideoSource(ref), { provider: 'yt', id: YT_ID, watchUrl: YT_WATCH });
+      assert.strictEqual(decodeVideoRef(ref), YT_WATCH);
+    });
+  });
+
+  [
+    GD_VIEW,
+    GD_VIEW + '?usp=sharing',
+    'https://drive.google.com/file/d/' + GD_ID,
+    'https://drive.google.com/open?id=' + GD_ID,
+    'https://drive.google.com/open?usp=sharing&id=' + GD_ID,
+  ].forEach((url) => {
+    it('encodes Drive shape ' + url, () => {
+      const ref = encodeVideoRef(url);
+      assert.strictEqual(ref, encodeVideoRef(GD_VIEW));
+      assert.match(ref, /^r2[A-Za-z0-9_-]+$/);
+      assert.ok(!ref.includes(GD_ID));
+      assert.deepStrictEqual(decodeVideoSource(ref), { provider: 'gd', id: GD_ID, watchUrl: GD_VIEW });
+    });
+  });
+
+  [
+    'xx:' + YT_ID,
+    'yt:short',
+    'yt:' + YT_ID + 'x',
+    'yt:' + YT_ID.slice(0, -1) + ';',
+    'gd:tooshort',
+    'gd:' + GD_ID.slice(0, -1) + '/',
+    YT_ID,
+    'vimeo:' + YT_ID,
+  ].forEach((payload) => {
+    it('rejects bad r2 payload ' + payload, () => {
+      assert.throws(() => decodeVideoSource(rawRef('r2', payload)));
+      assert.throws(() => decodeVideoRef(rawRef('r2', payload)));
+    });
+  });
+
+  [
+    'https://example.com/x',
+    'https://www.youtube.com/watch?v=short',
+    'https://www.youtube.com/watch?v=' + YT_ID + 'x',
+    'https://www.youtube.com/watch?list=' + YT_ID,
+    'https://evil.com/?u=https://youtu.be/' + YT_ID,
+    'https://drive.google.com/file/d/tooshort/view',
+    'https://drive.google.com/drive/folders/' + GD_ID,
+    '',
+  ].forEach((url) => {
+    it('rejects unsupported url ' + JSON.stringify(url), () => {
+      assert.throws(() => encodeVideoRef(url), /not a supported video url/);
+    });
+  });
+
+  it('rejects an unknown version', () => {
+    assert.throws(() => decodeVideoSource('r9zzzz'));
   });
 });

@@ -114,14 +114,12 @@ describe('SPA index source — XSS sinks are sanitized (regression guards)', () 
 });
 
 describe('SPA vimeoEmbed() — only ever yields a player.vimeo.com embed URL', () => {
-  // vimeoEmbed() feeds iframe.src in the preview route; a non-Vimeo vimeo_url
-  // from meta.yaml must not pass through raw (javascript:/data://evil would
-  // load/run in the iframe). Extract + eval the real function (extractI18N
-  // pattern); first closing brace at column 0, no inner braces.
+  // vimeoEmbed() feeds iframe.src in the preview and sync players; a
+  // non-Vimeo link from meta.yaml must not pass through raw (javascript:/
+  // data://evil would load/run in the iframe). Single source in
+  // site/js/video_player.js, loaded by the SPA.
   function loadVimeoEmbed() {
-    const m = HTML.match(/function vimeoEmbed\(url\) \{[\s\S]*?\n\}/);
-    assert.ok(m, 'vimeoEmbed() not found in index.html');
-    return eval('(' + m[0] + ')');
+    return require('../site/js/video_player.js').vimeoEmbed;
   }
 
   it('maps a private vimeo.com/ID/HASH url to an embed url', () => {

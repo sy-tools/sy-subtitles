@@ -218,6 +218,79 @@ def test_meta_rejects_leftover_plaintext_vimeo_url(tmp_path: Path) -> None:
         validate_meta_yaml(_w(tmp_path, "meta.yaml", bad))
 
 
+# Synthetic ids only — never a real video or file id.
+_YT_REF = encode_video_ref("https://www.youtube.com/watch?v=AbCdEfGhIjK")
+_GD_REFS = [
+    encode_video_ref("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view"),
+    encode_video_ref("https://drive.google.com/file/d/1ZyXwVuTsRqPoNmLkJiHgFeDcBa543210/view"),
+]
+
+
+def _meta_with_video(**video) -> dict:
+    return dict(GOOD_META, videos=[{"slug": "x", "title": "t", **video}])
+
+
+def test_meta_youtube_video_ref_ok(tmp_path: Path) -> None:
+    validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_YT_REF)))
+
+
+def test_meta_youtube_video_with_drive_media_refs_ok(tmp_path: Path) -> None:
+    validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_YT_REF, media_refs=_GD_REFS)))
+
+
+def test_meta_drive_ref_is_not_a_video_ref(tmp_path: Path) -> None:
+    with pytest.raises(SchemaError, match="video_ref"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_GD_REFS[0])))
+
+
+def test_meta_vimeo_video_with_media_refs_rejected(tmp_path: Path) -> None:
+    vimeo = encode_video_ref("https://vimeo.com/111111111/aaaaaaaaaa")
+    with pytest.raises(SchemaError, match="media_refs"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=vimeo, media_refs=_GD_REFS)))
+
+
+def test_meta_linkless_video_with_media_refs_rejected(tmp_path: Path) -> None:
+    with pytest.raises(SchemaError, match="media_refs"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(media_refs=_GD_REFS)))
+
+
+def test_meta_media_refs_containing_youtube_ref_rejected(tmp_path: Path) -> None:
+    with pytest.raises(SchemaError, match=r"media_refs\[1\]"):
+        validate_meta_yaml(
+            _w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_YT_REF, media_refs=[_GD_REFS[0], _YT_REF]))
+        )
+
+
+def test_meta_empty_media_refs_rejected(tmp_path: Path) -> None:
+    # An empty list says "there are mirrors" and names none; leave the key out.
+    with pytest.raises(SchemaError, match="media_refs must not be empty"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_YT_REF, media_refs=[])))
+
+
+def test_meta_duplicate_media_refs_rejected(tmp_path: Path) -> None:
+    with pytest.raises(SchemaError, match=r"media_refs\[2\].*duplicate"):
+        validate_meta_yaml(
+            _w(
+                tmp_path,
+                "meta.yaml",
+                _meta_with_video(video_ref=_YT_REF, media_refs=[_GD_REFS[0], _GD_REFS[1], _GD_REFS[0]]),
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    "media_refs",
+    [
+        "r2notalist",
+        [42],
+        ["https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view"],
+    ],
+)
+def test_meta_malformed_media_refs_rejected(tmp_path: Path, media_refs) -> None:
+    with pytest.raises(SchemaError, match="media_refs"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_YT_REF, media_refs=media_refs)))
+
+
 # regression against real repo -----------------------------------------------
 
 

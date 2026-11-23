@@ -14,5 +14,47 @@
   {
     "url": "https://vimeo.com/123456789",
     "ref": "r1VkEaV19VW1NC"
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=AbCdEfGhIjK",
+    "ref": "r2PhlkCSAJPEkiCCBSFQo",
+    "provider": "yt",
+    "id": "AbCdEfGhIjK"
+  },
+  {
+    "url": "https://youtu.be/AbCdEfGhIjK",
+    "ref": "r2PhlkCSAJPEkiCCBSFQo",
+    "provider": "yt",
+    "id": "AbCdEfGhIjK"
+  },
+  {
+    "url": "https://www.youtube.com/embed/AbCdEfGhIjK",
+    "ref": "r2PhlkCSAJPEkiCCBSFQo",
+    "provider": "yt",
+    "id": "AbCdEfGhIjK"
+  },
+  {
+    "url": "https://www.youtube-nocookie.com/embed/AbCdEfGhIjK",
+    "ref": "r2PhlkCSAJPEkiCCBSFQo",
+    "provider": "yt",
+    "id": "AbCdEfGhIjK"
+  },
+  {
+    "url": "https://www.youtube.com/watch?v=AbCdEfGhIjK&t=42s",
+    "ref": "r2PhlkCSAJPEkiCCBSFQo",
+    "provider": "yt",
+    "id": "AbCdEfGhIjK"
+  },
+  {
+    "url": "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view",
+    "ref": "r2V0FAH1BXFSBVNhw0HDIBIhUjGiQYKR86RSYBKh1uAytQUgUU",
+    "provider": "gd",
+    "id": "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"
+  },
+  {
+    "url": "https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+    "ref": "r2V0FAH1BXFSBVNhw0HDIBIhUjGiQYKR86RSYBKh1uAytQUgUU",
+    "provider": "gd",
+    "id": "1AbCdEfGhIjKlMnOpQrStUvWxYz012345"
   }
 ]

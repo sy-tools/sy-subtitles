@@ -3,7 +3,9 @@
 Vimeo and YouTube refuse some videos to datacenter IPs (Vimeo answers 401,
 YouTube asks to "confirm you're not a bot") while the very same request
 succeeds from a residential connection. So the step runs where the IP is
-accepted, and its output lands where the pipeline looks: with
+accepted — trying what ``tools.video_media`` offers off CI, which for a
+YouTube video is its Drive mirrors and then YouTube itself — and its output
+lands where the pipeline looks: with
 ``source/whisper.json`` present, the pipeline's discover step skips whisper
 for that video.
 
@@ -24,9 +26,8 @@ from pathlib import Path
 import yaml
 
 from tools.schemas import SchemaError, validate_whisper_json
-from tools.vimeo_codec import decode_video_ref, to_player_url
+from tools.video_media import download_candidates, referer_args
 
-REFERER = "https://www.amruta.org/"
 MODEL = "medium"
 
 
@@ -41,7 +42,7 @@ class DownloadError(Exception):
 @dataclass(frozen=True)
 class Job:
     slug: str
-    url: str
+    urls: list[str]
     output: Path
 
 
@@ -67,8 +68,10 @@ def plan(talk_dir, video_slug=None, source_url=None, force=False) -> list[Job]:
         output = talk_dir / v["slug"] / "source" / "whisper.json"
         if output.exists() and not force:
             continue
-        url = source_url or to_player_url(decode_video_ref(v["video_ref"]))
-        jobs.append(Job(v["slug"], url, output))
+        urls = [source_url] if source_url else download_candidates(v, ci=False)
+        if not urls:
+            continue
+        jobs.append(Job(v["slug"], urls, output))
     return jobs
 
 
@@ -104,8 +107,7 @@ def download_audio(url: str, dest_dir) -> Path:
         "-m",
         "yt_dlp",
         "--no-progress",
-        "--referer",
-        REFERER,
+        *provider_flags(url),
         "-f",
         "bestaudio/best",
         "-o",
@@ -118,6 +120,14 @@ def download_audio(url: str, dest_dir) -> Path:
     if not files:
         raise DownloadError(f"yt-dlp reported success but wrote no audio for {url}")
     return files[0]
+
+
+def provider_flags(url: str) -> list[str]:
+    """A --source-url may point anywhere; only a known provider gets its flags."""
+    try:
+        return referer_args(url)
+    except ValueError:
+        return []
 
 
 def check_whisper() -> None:
@@ -133,10 +143,25 @@ def transcribe(audio, output, model, language):
     run_whisper(str(audio), str(output), model, language)
 
 
+def download_first(urls: list[str], dest_dir) -> Path:
+    # One directory per attempt: a failed try's leftovers (audio.*.part) would
+    # otherwise be what the next one's glob for audio.* picks up.
+    failures = []
+    for attempt, url in enumerate(urls):
+        attempt_dir = Path(dest_dir) / f"try{attempt}"
+        attempt_dir.mkdir()
+        try:
+            return download_audio(url, attempt_dir)
+        except DownloadError as e:
+            print(f"WARNING: {e}", file=sys.stderr)
+            failures.append(str(e))
+    raise DownloadError("no source could be downloaded: " + "; ".join(failures))
+
+
 def run_job(job: Job, language) -> None:
     work = Path(tempfile.mkdtemp(prefix="local_whisper_"))
     try:
-        audio = download_audio(job.url, work)
+        audio = download_first(job.urls, work)
         candidate = work / "whisper.json"
         transcribe(audio, candidate, MODEL, language)
         validate_whisper_json(str(candidate))
@@ -154,8 +179,8 @@ def main(argv=None) -> int:
     parser.add_argument("--video-slug", help="only this video (default: every video without whisper.json)")
     parser.add_argument(
         "--source-url",
-        help="download from this URL instead of the video's Vimeo link, e.g. a YouTube copy of the "
-        "same recording; requires --video-slug when the talk has several videos",
+        help="download from this URL instead of the video's own link and mirrors, e.g. another copy "
+        "of the same recording; requires --video-slug when the talk has several videos",
     )
     parser.add_argument("--force", action="store_true", help="redo videos that already have whisper.json")
     parser.add_argument("--root", default=".", help="repository root (default: current directory)")

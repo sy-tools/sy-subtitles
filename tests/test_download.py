@@ -1,12 +1,17 @@
 """Tests for tools.download — extract_transcript method."""
 
+import json
+from pathlib import Path
+
+import pytest
 import yaml
 from bs4 import BeautifulSoup
 
 from tools import download
 from tools.download import AmrutaDownloader, setup_talk
+from tools.schemas import validate_meta_yaml
 from tools.text_normalize import check_text
-from tools.vimeo_codec import decode_video_ref
+from tools.vimeo_codec import decode_video_ref, decode_video_source, encode_video_ref
 
 
 def _make_soup(body_html):
@@ -272,7 +277,7 @@ def test_extract_videos_basic():
     assert len(videos) == 2
     assert videos[0]["slug"] == "Krishna-Puja"
     assert videos[0]["title"] == "Krishna Puja"
-    assert "111" in videos[0]["vimeo_url"]
+    assert "111" in videos[0]["video_url"]
     assert videos[1]["slug"] == "Krishna-Puja-Talk"
     assert videos[1]["title"] == "Krishna Puja Talk"
 
@@ -286,7 +291,7 @@ def test_extract_videos_fallback_strategy():
     videos = _find_videos(html)
     assert len(videos) == 2
     # Strategy 2 uses preceding label or Video-N
-    assert all("vimeo_url" in v for v in videos)
+    assert all("video_url" in v for v in videos)
 
 
 def test_extract_videos_single():
@@ -339,7 +344,7 @@ def test_setup_talk_writes_obfuscated_video_ref(tmp_path):
         slug="test-talk",
         title="Test Talk",
         location="Somewhere",
-        videos=[{"slug": "v1", "title": "V1", "vimeo_url": url}],
+        videos=[{"slug": "v1", "title": "V1", "video_url": url}],
     )
     meta = yaml.safe_load((talk_dir / "meta.yaml").read_text(encoding="utf-8"))
     video = meta["videos"][0]
@@ -348,6 +353,254 @@ def test_setup_talk_writes_obfuscated_video_ref(tmp_path):
     assert decode_video_ref(video["video_ref"]) == url
     # And the raw file text must not leak the link.
     assert "vimeo.com" not in (talk_dir / "meta.yaml").read_text(encoding="utf-8")
+
+
+# --- YouTube-era pages: YouTube id + Google Drive MP4 mirrors ---
+#
+# amruta.org moved its talks from Vimeo to YouTube. The fixture is synthetic
+# (every id invented) but keeps the structure recorded on 2026-11-23: video 1
+# plays through a Bunny iframe and names its YouTube id only in the details
+# block; video 2 plays through a .youtube-player element.
+
+_FIXTURES = Path(__file__).parent / "fixtures"
+_YT_FIXTURE = _FIXTURES / "amruta_youtube_two_videos.html"
+
+
+def _drive_url(n):
+    return f"https://drive.google.com/file/d/1Syntheticdriveid{n:02d}abcdefghijklmn/view"
+
+
+def _fixture_videos():
+    dl = AmrutaDownloader.__new__(AmrutaDownloader)
+    return dl.extract_video_labels(BeautifulSoup(_YT_FIXTURE.read_text(encoding="utf-8"), "html.parser"))
+
+
+def test_extract_videos_youtube_page():
+    assert _fixture_videos() == [
+        {
+            "title": "Bhoomi Devi Puja Talk",
+            "slug": "Bhoomi-Devi-Puja-Talk",
+            "video_url": "https://www.youtube.com/watch?v=AbCdEfGhIjK",
+            "media_urls": [_drive_url(0), _drive_url(1)],
+        },
+        {
+            "title": "Bhoomi Devi Puja",
+            "slug": "Bhoomi-Devi-Puja",
+            "video_url": "https://www.youtube.com/watch?v=ZyXwVuTsRqP",
+            "media_urls": [_drive_url(4), _drive_url(5)],
+        },
+    ]
+
+
+def test_extract_videos_never_keeps_bunny():
+    """Bunny only plays the video on amruta's page; nothing of it is stored."""
+    assert "mediadelivery" not in repr(_fixture_videos())
+
+
+def test_extract_videos_vimeo_has_no_media_urls():
+    videos = _find_videos(_make_video_wrapper(111, "Krishna Puja"))
+    assert videos == [
+        {
+            "title": "Krishna Puja",
+            "slug": "Krishna-Puja",
+            "video_url": "https://vimeo.com/111/abc",
+            "media_urls": [],
+        }
+    ]
+
+
+def _yt_wrapper(inner, title="Some Puja"):
+    return (
+        '<div class="embedded-video-wrapper">'
+        f"{inner}"
+        f'<div class="video-meta-info">2001-01-01 {title}, Location, Source, 60′</div>'
+        "</div>"
+    )
+
+
+@pytest.mark.parametrize(
+    "inner",
+    [
+        '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>',
+        '<a href="https://youtu.be/AbCdEfGhIjK" title="Watch on YouTube">Watch on YouTube</a>',
+        '<a href="https://www.youtube.com/watch?v=AbCdEfGhIjK" title="Watch on YouTube">Watch</a>',
+        '<div class="custom-collapsible" id="collapse-AbCdEfGhIjK"></div>',
+    ],
+    ids=["youtube-player", "watch-link-short", "watch-link-long", "collapse-id"],
+)
+def test_extract_videos_youtube_id_sources(inner):
+    videos = _find_videos(_yt_wrapper(inner))
+    assert [v["video_url"] for v in videos] == ["https://www.youtube.com/watch?v=AbCdEfGhIjK"]
+
+
+def test_extract_videos_youtube_id_source_order():
+    """.youtube-player wins over the watch link, which wins over collapse-<id>."""
+    player = '<div class="youtube-player" data-id="AAAAAAAAAAA"></div>'
+    link = '<a href="https://youtu.be/BBBBBBBBBBB" title="Watch on YouTube">Watch</a>'
+    collapse = '<div id="collapse-CCCCCCCCCCC"></div>'
+    assert _find_videos(_yt_wrapper(collapse + link + player))[0]["video_url"].endswith("v=AAAAAAAAAAA")
+    assert _find_videos(_yt_wrapper(collapse + link))[0]["video_url"].endswith("v=BBBBBBBBBBB")
+
+
+@pytest.mark.parametrize(
+    "href",
+    [
+        "https://youtu.be/AbCdEfGhIjK/extra",
+        "https://www.youtube.com/shorts/AbCdEfGhIjK",
+        "https://www.youtube.com/live/AbCdEfGhIjK",
+        "https://youtu.be/AbCdEfGhIjKL",
+        "https://player.mediadelivery.net/play/000000/AbCdEfGhIjK",
+    ],
+)
+def test_extract_videos_rejects_a_watch_link_the_codec_rejects(href):
+    """The scraper reads a link with tools.vimeo_codec, not a parser of its
+    own: a link the codec cannot encode is not taken as a YouTube id, since
+    setup_talk could not store it."""
+    with pytest.raises(ValueError):
+        encode_video_ref(href)
+    videos = _find_videos(_yt_wrapper(f'<a href="{href}" title="Watch on YouTube">Watch</a>'))
+    assert [v["video_url"] for v in videos] == [""]
+
+
+@pytest.mark.parametrize("bare", ["AbCdEfGhIjK?x=1", "AbCdEfGhIjK/", "AbCdEfGhIj", "AbCdEfGhIjKL"])
+def test_extract_videos_bare_id_must_be_exactly_an_id(bare):
+    """data-id and collapse-<id> carry a bare id, not a link: nothing but the id."""
+    for inner in (f'<div class="youtube-player" data-id="{bare}"></div>', f'<div id="collapse-{bare}"></div>'):
+        assert [v["video_url"] for v in _find_videos(_yt_wrapper(inner))] == [""]
+
+
+def test_extract_videos_drive_links_are_read_by_the_codec():
+    """Same for the mirrors: only a link the codec encodes as a Drive file is kept."""
+    bad = "https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn!/view"
+    with pytest.raises(ValueError):
+        encode_video_ref(bad)
+    inner = (
+        '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>'
+        f'<a href="{bad}" title="Download MP4 (streaming quality)">MP4</a>'
+        f'<a href="{_drive_url(1)}?usp=sharing" title="Download MP4 (streaming quality) Server 2">MP4 2</a>'
+    )
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_drive_url(1)]
+
+
+def test_extract_videos_vimeo_iframe_keeps_the_vimeo_path():
+    """A wrapper with a Vimeo iframe is a Vimeo video whatever else it holds."""
+    inner = (
+        '<iframe src="https://player.vimeo.com/video/111?h=abc"></iframe>'
+        '<a href="https://youtu.be/AbCdEfGhIjK" title="Watch on YouTube">Watch</a>'
+        f'<a href="{_drive_url(0)}" title="Download MP4 (streaming quality)">MP4</a>'
+    )
+    videos = _find_videos(_yt_wrapper(inner))
+    assert videos[0]["video_url"] == "https://vimeo.com/111/abc"
+    assert videos[0]["media_urls"] == []
+
+
+def test_extract_videos_media_urls_are_mp4_links_only_in_page_order():
+    inner = (
+        '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>'
+        f'<a href="{_drive_url(2)}" title="Download MPG (full quality)">MPG</a>'
+        f'<a href="{_drive_url(1)}" title="Download MP4 (streaming quality) Server 2">MP4 2</a>'
+        f'<a href="{_drive_url(0)}" title="Download MP4 (streaming quality)">MP4</a>'
+        '<a href="https://drive.google.com/drive/folders/1Syntheticdriveid09abcdefghijklmn"'
+        ' title="Download MP4 folder">folder</a>'
+    )
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_drive_url(1), _drive_url(0)]
+
+
+def test_extract_videos_wrapper_without_any_id_is_a_linkless_video():
+    """No Vimeo iframe and no YouTube id anywhere: the video is still listed,
+    with no link, rather than dropped or crashing the scrape."""
+    inner = (
+        '<iframe src="https://iframe.mediadelivery.net/embed/000000/00000000-0000"></iframe>'
+        '<div id="collapse-tooshort"></div>'
+        f'<a href="{_drive_url(0)}" title="Download MP4 (streaming quality)">MP4</a>'
+    )
+    videos = _find_videos(_yt_wrapper(inner, "Mystery Puja") + _make_video_wrapper(222, "Krishna Puja"))
+    assert videos == [
+        {"title": "Mystery Puja", "slug": "Mystery-Puja", "video_url": "", "media_urls": []},
+        {
+            "title": "Krishna Puja",
+            "slug": "Krishna-Puja",
+            "video_url": "https://vimeo.com/222/abc",
+            "media_urls": [],
+        },
+    ]
+
+
+def _setup(tmp_path, videos):
+    talk_dir = tmp_path / "1982-07-12_test-talk"
+    talk_dir.mkdir()
+    setup_talk(
+        talk_dir=str(talk_dir),
+        url="https://www.amruta.org/1982/07/12/test/",
+        date="1982-07-12",
+        slug="test-talk",
+        title="Test Talk",
+        location="Somewhere",
+        videos=videos,
+    )
+    return (talk_dir / "meta.yaml").read_text(encoding="utf-8")
+
+
+def test_setup_talk_writes_youtube_ref_and_media_refs(tmp_path):
+    text = _setup(tmp_path, _fixture_videos())
+    videos = yaml.safe_load(text)["videos"]
+    assert [list(v) for v in videos] == [["slug", "title", "video_ref", "media_refs"]] * 2
+    first = decode_video_source(videos[0]["video_ref"])
+    assert (first.provider, first.id) == ("yt", "AbCdEfGhIjK")
+    assert [decode_video_source(r).provider for r in videos[0]["media_refs"]] == ["gd", "gd"]
+    assert [decode_video_ref(r) for r in videos[0]["media_refs"]] == [_drive_url(0), _drive_url(1)]
+    assert [decode_video_ref(r) for r in videos[1]["media_refs"]] == [_drive_url(4), _drive_url(5)]
+    # Nothing plaintext reaches the file, and what is written passes the schema.
+    for needle in ("youtu", "drive.google", "AbCdEfGhIjK", "Syntheticdriveid", "mediadelivery"):
+        assert needle not in text
+    validate_meta_yaml(str(tmp_path / "1982-07-12_test-talk" / "meta.yaml"))
+
+
+def test_setup_talk_matches_the_add_form(tmp_path):
+    """Same videos, same refs as site/js/add_talk_data.js buildMetaYaml — both
+    sides read the one fixture (tests/test_add_talk_data.js is the other)."""
+    parity = json.loads((_FIXTURES / "add_talk_meta_parity.json").read_text(encoding="utf-8"))
+    text = _setup(tmp_path, parity["videos"])
+    assert yaml.safe_load(text)["videos"] == parity["expected"]
+    # The block-list layout is the form's too: media_refs right under video_ref.
+    assert "  video_ref: r2PhlkCSAJPEkiCCBSFQo\n  media_refs:\n  - r2" in text
+
+
+def test_setup_talk_never_writes_media_refs_without_a_youtube_video(tmp_path):
+    """tools/schemas.py allows media_refs only next to a YouTube video_ref."""
+    text = _setup(
+        tmp_path,
+        [
+            {"slug": "a", "title": "A", "video_url": "https://vimeo.com/1/2", "media_urls": [_drive_url(0)]},
+            {"slug": "b", "title": "B", "video_url": "", "media_urls": [_drive_url(0)]},
+        ],
+    )
+    assert "media_refs" not in text
+
+
+# --- download_talk_all: only Vimeo is fetched from here ---
+
+
+def test_download_talk_all_fetches_only_vimeo_videos(monkeypatch, tmp_path):
+    """SRTs and video files are pulled with yt-dlp from Vimeo alone. A YouTube
+    video, or one with no link, is listed but nothing is fetched for it."""
+    dl = AmrutaDownloader.__new__(AmrutaDownloader)
+    fetched = []
+    monkeypatch.setattr(dl, "download_vimeo_subs", lambda url, out: fetched.append(("srt", url)) or [])
+    monkeypatch.setattr(dl, "download_video", lambda url, out: fetched.append(("video", url)))
+    html = (
+        _YT_FIXTURE.read_text(encoding="utf-8")
+        + _make_video_wrapper(333, "Old Vimeo Cut")
+        + _yt_wrapper("", "Linkless")
+    )
+    result = dl.download_talk_all(
+        "https://www.amruta.org/1982/07/12/test/",
+        str(tmp_path / "talk"),
+        what="all",
+        soup=BeautifulSoup(html, "html.parser"),
+    )
+    assert len(result["videos"]) == 4
+    assert fetched == [("srt", "https://vimeo.com/333/abc"), ("video", "https://vimeo.com/333/abc")]
 
 
 # --- yt-dlp is handed the embed URL form ---

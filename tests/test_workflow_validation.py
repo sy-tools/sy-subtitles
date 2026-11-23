@@ -2,6 +2,8 @@ import pytest
 
 from tools.vimeo_codec import encode_video_ref
 from tools.workflow_validation import (
+    DRIVE_ID_RE,
+    YOUTUBE_ID_RE,
     InvalidWorkflowInput,
     validate_clip,
     validate_git_ref,
@@ -123,6 +125,83 @@ def test_vimeo_url_rejects(value: str) -> None:
 def test_video_ref_accepts_encoded_vimeo_url(url: str) -> None:
     ref = encode_video_ref(url)
     assert validate_video_ref(ref) == ref
+
+
+# Synthetic ids only — never a real video or file id.
+_YT_URL = "https://www.youtube.com/watch?v=AbCdEfGhIjK"
+_GD_URL = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view"
+
+
+def test_video_ref_rejects_youtube_ref_by_default() -> None:
+    # Fail closed: every gate that has not been taught YouTube keeps refusing
+    # it. A caller that can handle the provider has to say so.
+    with pytest.raises(InvalidWorkflowInput, match="provider"):
+        validate_video_ref(encode_video_ref(_YT_URL))
+
+
+def test_video_ref_accepts_youtube_ref_when_allowed() -> None:
+    ref = encode_video_ref(_YT_URL)
+    assert validate_video_ref(ref, allowed=("vimeo", "yt")) == ref
+    vimeo = encode_video_ref("https://vimeo.com/123456789")
+    assert validate_video_ref(vimeo, allowed=("vimeo", "yt")) == vimeo
+
+
+def test_cli_video_ref_gate_stays_vimeo_only(capsys) -> None:
+    from tools.workflow_validation_cli import main as cli_main
+
+    assert cli_main(["--video-ref", encode_video_ref("https://vimeo.com/123456789")]) in (0, None)
+    for url in (_YT_URL, _GD_URL):
+        with pytest.raises(SystemExit) as exc:
+            cli_main(["--video-ref", encode_video_ref(url)])
+        assert exc.value.code != 0
+
+
+def test_video_ref_rejects_drive_ref_by_default() -> None:
+    # A Drive file is a download mirror, never what a viewer watches.
+    with pytest.raises(InvalidWorkflowInput, match="provider"):
+        validate_video_ref(encode_video_ref(_GD_URL))
+
+
+def test_video_ref_accepts_drive_ref_when_allowed() -> None:
+    ref = encode_video_ref(_GD_URL)
+    assert validate_video_ref(ref, allowed=("gd",)) == ref
+
+
+def test_video_ref_rejects_provider_outside_allowed() -> None:
+    with pytest.raises(InvalidWorkflowInput, match="provider"):
+        validate_video_ref(encode_video_ref(_YT_URL), allowed=("gd",))
+    with pytest.raises(InvalidWorkflowInput, match="provider"):
+        validate_video_ref(encode_video_ref("https://vimeo.com/123456789"), allowed=("yt",))
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://youtube.com/watch?v=x",
+        _YT_URL,
+        "https://youtu.be/AbCdEfGhIjK",
+        _GD_URL,
+    ],
+)
+def test_plaintext_youtube_or_drive_url_is_not_a_valid_ref(value: str) -> None:
+    with pytest.raises(InvalidWorkflowInput):
+        validate_video_ref(value)
+    with pytest.raises(InvalidWorkflowInput):
+        validate_video_ref(value, allowed=("vimeo", "yt", "gd"))
+
+
+def test_video_ref_still_rechecks_vimeo_against_the_url_allowlist() -> None:
+    with pytest.raises(InvalidWorkflowInput, match="vimeo_url"):
+        validate_video_ref(encode_video_ref("https://vimeo.com/123;curl evil"))
+
+
+def test_provider_id_patterns() -> None:
+    assert YOUTUBE_ID_RE.fullmatch("AbCdEfGhIjK")
+    assert not YOUTUBE_ID_RE.fullmatch("AbCdEfGhIj")
+    assert not YOUTUBE_ID_RE.fullmatch("AbCdEfGhIjK\n")
+    assert DRIVE_ID_RE.fullmatch("1AbCdEfGhIjKlMnOpQrStUvWxYz012345")
+    assert not DRIVE_ID_RE.fullmatch("a" * 24)
+    assert not DRIVE_ID_RE.fullmatch("a" * 65)
 
 
 def test_video_ref_rejects_unknown_version() -> None:

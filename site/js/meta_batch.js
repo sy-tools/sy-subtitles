@@ -97,7 +97,7 @@ function reuseHydratedMeta(talks, cachedTalks, shaIndex, commitPinned) {
   return reused;
 }
 
-// deps: { parseYaml, decodeVideoRef, warn }. Returns whether the talk was filled.
+// deps: { parseYaml, decodeVideoSource, warn }. Returns whether the talk was filled.
 // What this sets is persisted in the manifest cache and copied forward by
 // reuseHydratedMeta. Changing the mapping (a new field, a new meaning for an
 // old one) requires bumping CACHE_SCHEMA in site/index.html: a talk whose
@@ -109,17 +109,17 @@ function applyMetaText(talk, text, deps) {
     // must not leave a titled, half-filled talk to be reused by sha.
     var meta = deps.parseYaml(text);
     var videos = (meta.videos || []).map(function (v) {
-      // Links are stored obfuscated as video_ref (js/vimeo_codec.js). Decode
-      // here at the read edge so the rest of the SPA keeps working with a
-      // plaintext vimeo_url in memory.
-      var vimeoUrl = '';
+      // Links are stored obfuscated as video_ref (js/vimeo_codec.js). Decoded
+      // here at the read edge into the typed {provider, id, watchUrl} the
+      // players take (js/video_player.js); null when there is none to play.
+      var source = null;
       if (v.video_ref) {
-        try { vimeoUrl = deps.decodeVideoRef(v.video_ref); }
+        try { source = deps.decodeVideoSource(v.video_ref); }
         catch (e) { deps.warn('bad video_ref for ' + talk.id, e); }
       }
       // `sync` is kept so the pipeline view can leave a declared-ignored
       // video out of its counts (js/pipeline_stages.js).
-      return { slug: v.slug, title: v.title || v.slug, vimeo_url: vimeoUrl, sync: v.sync || '' };
+      return { slug: v.slug, title: v.title || v.slug, source: source, sync: v.sync || '' };
     });
     var srtSet = Array.isArray(talk._srtSlugs) ? talk._srtSlugs : [];
     videos.forEach(function (v) { v.hasSrt = srtSet.indexOf(v.slug) !== -1; });

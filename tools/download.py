@@ -1,6 +1,6 @@
 """Download materials from amruta.org and set up talk directory.
 
-Fetches SRT subtitles, transcript text, and extracts Vimeo video URLs
+Fetches SRT subtitles, transcript text, and extracts video URLs (Vimeo, YouTube)
 from amruta.org talk pages using WordPress session cookie authentication.
 Supports multiple videos per page and batch processing.
 
@@ -34,7 +34,8 @@ from dotenv import load_dotenv
 
 from tools.talk_slug import slugify
 from tools.text_normalize import fix_text
-from tools.vimeo_codec import encode_video_ref, to_player_url
+from tools.vimeo_codec import decode_video_source, encode_video_ref, to_player_url
+from tools.workflow_validation import YOUTUBE_ID_RE
 
 
 def parse_amruta_url(url):
@@ -112,6 +113,9 @@ def to_lang_url(url, lang):
     return urlunsplit(base._replace(path="/" + lang + base.path))
 
 
+_VIMEO_URL_RE = re.compile(r"https?://(?:www\.|player\.)?vimeo\.com/", re.IGNORECASE)
+
+
 def normalize_vimeo_url(url):
     """Convert player.vimeo.com embed URL to vimeo.com direct URL.
 
@@ -124,6 +128,67 @@ def normalize_vimeo_url(url):
     if m:
         return f"https://vimeo.com/{m.group(1)}/{m.group(2)}"
     return url
+
+
+# YouTube-era pages. amruta.org moved its talks from Vimeo to YouTube, each with
+# Google Drive copies of the file. Every link is read by tools/vimeo_codec.py —
+# the one place that knows the URL shapes — so a link taken here is by
+# construction one setup_talk can store, and its URL is the canonical one.
+
+
+def _source_of_link(href, provider):
+    """The codec's reading of ``href`` if it is a ``provider`` link, else None."""
+    try:
+        source = decode_video_source(encode_video_ref(href or ""))
+    except ValueError:
+        return None
+    return source if source.provider == provider else None
+
+
+def _youtube_source_of_wrapper(wrapper):
+    """A video wrapper's YouTube source, from the first place that names one:
+    the player element, the "Watch on YouTube" link, the details block's
+    ``collapse-<id>``.
+
+    The page plays some videos through a Bunny iframe instead of the YouTube
+    player — the last two are how such a video is still found. Bunny itself is
+    never read.
+    """
+    player = wrapper.find(class_="youtube-player", attrs={"data-id": True})
+    link = wrapper.find("a", title="Watch on YouTube")
+    collapse = wrapper.find(id=re.compile(r"^collapse-"))
+    candidates = (
+        _youtube_link_of_id(player["data-id"]) if player else None,
+        link.get("href") if link else None,
+        _youtube_link_of_id(collapse["id"][len("collapse-") :]) if collapse else None,
+    )
+    for href in candidates:
+        source = _source_of_link(href, "yt")
+        if source:
+            return source
+    return None
+
+
+def _youtube_link_of_id(video_id):
+    """A bare YouTube id as a link the codec reads; None if it is not an id."""
+    video_id = (video_id or "").strip()
+    return "https://youtu.be/" + video_id if YOUTUBE_ID_RE.fullmatch(video_id) else None
+
+
+def _drive_mp4_urls_of_wrapper(wrapper):
+    """Drive URLs of a wrapper's "Download MP4 …" links, in page order.
+
+    The "Download MPG (full quality)" links beside them are far larger files
+    that nothing downstream wants.
+    """
+    urls = []
+    for a in wrapper.find_all("a", href=re.compile(r"drive\.google\.com/file/d/")):
+        if not (a.get("title") or "").startswith("Download MP4"):
+            continue
+        source = _source_of_link(a["href"], "gd")
+        if source and source.watch_url not in urls:
+            urls.append(source.watch_url)
+    return urls
 
 
 def slugify_video_name(name):
@@ -210,11 +275,20 @@ class AmrutaDownloader:
         return ""
 
     def extract_video_labels(self, soup):
-        """Extract video labels and Vimeo URLs from page.
+        """Extract each video's label and links from the page.
 
         Looks for amruta.org's embedded-video-wrapper structure first,
         then falls back to searching preceding text/headings.
-        Returns list of {title, slug, vimeo_url} dicts.
+        Returns list of {title, slug, video_url, media_urls} dicts:
+
+        - a Vimeo video: ``video_url`` is the normalized Vimeo URL and
+          ``media_urls`` is empty;
+        - a YouTube video: ``video_url`` is the watch URL and ``media_urls``
+          its Google Drive MP4 mirrors, in page order;
+        - a wrapper neither could be read from: ``video_url`` is ``""`` — the
+          video is still listed, just without a link.
+
+        The same reading as ``site/js/bookmarklet.js``.
         """
         videos = []
 
@@ -222,9 +296,14 @@ class AmrutaDownloader:
         wrappers = soup.find_all("div", class_="embedded-video-wrapper")
         for idx, wrapper in enumerate(wrappers):
             iframe = wrapper.find("iframe", src=re.compile(r"player\.vimeo\.com"))
-            if not iframe:
-                continue
-            vimeo_url = normalize_vimeo_url(iframe["src"])
+            media_urls = []
+            if iframe:
+                video_url = normalize_vimeo_url(iframe["src"])
+            else:
+                youtube = _youtube_source_of_wrapper(wrapper)
+                video_url = youtube.watch_url if youtube else ""
+                if youtube:
+                    media_urls = _drive_mp4_urls_of_wrapper(wrapper)
             label = self._extract_video_meta_label(wrapper)
             if label:
                 title = label
@@ -236,7 +315,8 @@ class AmrutaDownloader:
                 {
                     "title": title,
                     "slug": slug,
-                    "vimeo_url": vimeo_url,
+                    "video_url": video_url,
+                    "media_urls": media_urls,
                 }
             )
 
@@ -244,7 +324,7 @@ class AmrutaDownloader:
             # Strategy 2: fallback — find iframes directly
             iframes = soup.find_all("iframe", src=re.compile(r"player\.vimeo\.com"))
             for idx, iframe in enumerate(iframes):
-                vimeo_url = normalize_vimeo_url(iframe["src"])
+                video_url = normalize_vimeo_url(iframe["src"])
                 label = self._find_preceding_label(iframe)
                 if label:
                     title = label
@@ -256,7 +336,8 @@ class AmrutaDownloader:
                     {
                         "title": title,
                         "slug": slug,
-                        "vimeo_url": vimeo_url,
+                        "video_url": video_url,
+                        "media_urls": [],
                     }
                 )
 
@@ -533,7 +614,7 @@ class AmrutaDownloader:
         videos = self.extract_video_labels(soup)
 
         if not videos:
-            print("  WARNING: No Vimeo videos found on page")
+            print("  WARNING: No videos found on page")
 
         location = self.extract_location(soup)
 
@@ -549,8 +630,11 @@ class AmrutaDownloader:
             for video in videos:
                 source_dir = os.path.join(talk_dir, video["slug"], "source")
                 os.makedirs(source_dir, exist_ok=True)
+                if not _is_vimeo(video):
+                    print(f"  No SRTs fetched for: {video['title']} (not a Vimeo video)")
+                    continue
                 print(f"  Downloading SRTs for: {video['title']}")
-                srt_files = self.download_vimeo_subs(video["vimeo_url"], source_dir)
+                srt_files = self.download_vimeo_subs(video["video_url"], source_dir)
                 video["srt_files"] = srt_files
                 for f in srt_files:
                     print(f"    Downloaded: {os.path.basename(f)}")
@@ -564,10 +648,22 @@ class AmrutaDownloader:
             for video in videos:
                 source_dir = os.path.join(talk_dir, video["slug"], "source")
                 video_path = os.path.join(source_dir, "video.mp4")
+                if not _is_vimeo(video):
+                    print(f"  No video fetched for: {video['title']} (not a Vimeo video)")
+                    continue
                 print(f"  Downloading video: {video['title']}")
-                self.download_video(video["vimeo_url"], video_path)
+                self.download_video(video["video_url"], video_path)
 
         return result
+
+
+def _is_vimeo(video):
+    """True for a video this tool can fetch SRTs and media for.
+
+    Both go through yt-dlp against Vimeo's player. A YouTube video's captions
+    and media come from elsewhere, and a video with no link has neither.
+    """
+    return bool(_VIMEO_URL_RE.match(video.get("video_url") or ""))
 
 
 _LANG_MAP = {
@@ -615,7 +711,8 @@ def setup_talk(talk_dir, url, date, slug, title, location, videos):
         slug: talk slug
         title: talk title
         location: talk location (extracted from page header)
-        videos: list of {title, slug, vimeo_url} dicts
+        videos: list of {title, slug, video_url, media_urls} dicts, as
+            extract_video_labels returns them
     """
     os.makedirs(talk_dir, exist_ok=True)
 
@@ -639,14 +736,20 @@ def setup_talk(talk_dir, url, date, slug, title, location, videos):
     }
     if other_langs:
         meta["other_languages"] = other_langs
-    # Links are stored obfuscated as video_ref (see tools/vimeo_codec.py) so
-    # private Vimeo URLs never appear as plaintext in the public repo.
+    # Links are stored obfuscated (see tools/vimeo_codec.py) so no Vimeo URL,
+    # YouTube id or Drive file id appears as plaintext in the public repo:
+    # the video's own link as video_ref, a YouTube video's Drive MP4 mirrors
+    # as media_refs. Only a YouTube video may carry mirrors (tools/schemas.py).
+    # Same output as buildMetaYaml in site/js/add_talk_data.js.
     meta_videos = []
     for v in videos:
         entry = {"slug": v["slug"], "title": v["title"]}
-        vimeo_url = v.get("vimeo_url", "")
-        if vimeo_url:
-            entry["video_ref"] = encode_video_ref(vimeo_url)
+        video_url = v.get("video_url", "")
+        if video_url:
+            entry["video_ref"] = encode_video_ref(video_url)
+            media_urls = v.get("media_urls") or []
+            if media_urls and decode_video_source(entry["video_ref"]).provider == "yt":
+                entry["media_refs"] = [encode_video_ref(u) for u in media_urls]
         meta_videos.append(entry)
     meta["videos"] = meta_videos
     meta_path = os.path.join(talk_dir, "meta.yaml")
@@ -727,7 +830,7 @@ def process_single_url(downloader, url, what, slug_override=None, langs=None):
     print(f"  Title: {result['title']}")
     print(f"  Videos: {len(result['videos'])}")
     for v in result["videos"]:
-        print(f"    - {v['slug']}: {v['vimeo_url']}")
+        print(f"    - {v['slug']}: {v['video_url'] or '(no link)'}")
     for lang, path in transcripts.items():
         print(f"  Transcript ({lang}): {path}")
 
