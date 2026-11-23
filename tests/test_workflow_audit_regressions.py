@@ -80,8 +80,7 @@ def test_ci_paths_cover_shipped_talk_data_guards() -> None:
     reintroducing a plaintext vimeo_url or a corrupt whisper.json shipped
     with no check running at all."""
     paths = _ci_watched_paths()
-    assert "'talks/*/meta.yaml'" in paths, f"watched paths miss talks/*/meta.yaml: {paths}"
-    assert "'talks/*/*/source/whisper.json'" in paths, f"watched paths miss whisper.json: {paths}"
+    assert "'talks/'" in paths, f"watched paths miss talks/: {paths}"
 
 
 def test_sync_review_status_unlabeled_checks_removed_label() -> None:
