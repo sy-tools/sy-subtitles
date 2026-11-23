@@ -55,6 +55,19 @@ function isApiHost(url) {
   }
 }
 
+// The YouTube player: the IFrame API is a loader for a versioned player
+// script it names itself, so a cached copy pins an old player — and offline
+// there is no video to play anyway. Never cached.
+var YOUTUBE_HOSTS = ['www.youtube.com', 'youtube.com', 's.ytimg.com'];
+
+function isYouTubeHost(url) {
+  try {
+    return YOUTUBE_HOSTS.indexOf(new URL(url).hostname) !== -1;
+  } catch (e) {
+    return false;
+  }
+}
+
 function isNavigation(url) {
   // The HTML document: directory root, index.html, or a hash deep-link.
   return url.endsWith('/') || url.endsWith('/index.html') || url.indexOf('sy-subtitles/#') !== -1;
@@ -116,13 +129,14 @@ function cacheKeyFor(url) {
 //    read, meta.yaml's included) → network-first (prefer fresh, fall back to
 //    cache offline).
 //  - truly-immutable CDN/static assets → cache-first.
+//  - the YouTube player hosts → network-only.
 //  - everything else (app js/css, the Vimeo iframe) → network-first.
 function pickStrategy(url) {
   // MUST stay ahead of the isApiOrRaw branch below: isApiOrRaw still matches
   // api.github.com too, so removing this check would silently route the API
   // network-first again and reintroduce the offline-shadowing bug (a cached
   // 200 making the app believe it is online).
-  if (isApiHost(url)) return 'network-only';
+  if (isApiHost(url) || isYouTubeHost(url)) return 'network-only';
   if (hasImmutableVersion(url) && (!isApiOrRaw(url) || isCommitPinnedRaw(url))) return 'cache-first';
   if (isNavigation(url) || isApiOrRaw(url)) return 'network-first';
   if (isImmutable(url)) return 'cache-first';
@@ -148,6 +162,7 @@ if (typeof module !== 'undefined' && module.exports) {
     isImmutable: isImmutable,
     isApiOrRaw: isApiOrRaw,
     isApiHost: isApiHost,
+    isYouTubeHost: isYouTubeHost,
     isNavigation: isNavigation,
     hasImmutableVersion: hasImmutableVersion,
     isCommitPinnedRaw: isCommitPinnedRaw,

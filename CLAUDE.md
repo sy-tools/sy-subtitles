@@ -115,7 +115,8 @@ have one**: run the Worker from the primary checkout rather than copying the
 secret across.
 
 See `TESTING.md` for the full guide: markers, golden corpus, property tests,
-snapshots, and the `SY_E2E_REAL_VIMEO` network gate.
+snapshots, and the real-network gates (`SY_E2E_REAL_VIMEO`, on by default;
+`SY_E2E_REAL_YOUTUBE`, opt-in).
 
 ## Development (TDD required)
 
@@ -206,7 +207,10 @@ git add talks/{date}_{slug}/ && git commit -m "Add {title}" && git push
 gh workflow run subtitle-pipeline.yml -f talk_id={date}_{slug}
 ```
 
-If Vimeo returns 401: `--what text` first, then `--what srt`.
+If Vimeo returns 401: `--what text` first, then `--what srt`. That applies to
+Vimeo videos only. A YouTube video gets no SRT from `tools.download` at all:
+its EN captions are fetched by `new-talk.yml` and again by the pipeline (see
+`amruta_captions` below), so their absence after a download is not a failure.
 
 ## Tools
 
@@ -222,9 +226,15 @@ that live nowhere else.
   `tools/talk_slug.py`, the same slug the SPA computes, so the two never
   disagree. Auth/cookie: `docs/amruta-auth.md`.
 - `whisper_run` — speech detection, word-level timestamps.
-- `local_whisper` — the whisper step on this machine, for videos Vimeo or
-  YouTube refuse to GitHub's runners (datacenter IPs) but serve to a home
-  connection. A committed `whisper.json` makes the pipeline skip whisper.
+- `video_media` — where a talk's video is downloaded from; whisper, burn and
+  `local_whisper` all take their candidates from it (`download`'s own local
+  fetch of a Vimeo video is the legacy exception). A YouTube video comes from its Drive
+  mirrors (`media_refs`), the same file: YouTube refuses GitHub's runners, so
+  CI never tries it and only a home machine falls back to YouTube itself.
+- `local_whisper` — the whisper step on this machine, for videos Vimeo
+  refuses to GitHub's runners (datacenter IPs) and YouTube videos with no
+  Drive mirror that works. A committed `whisper.json` makes the pipeline skip
+  whisper.
 - `burn_subtitles` — burn subtitles into a video (SRT → ASS → ffmpeg+libass).
   Sizing is fractions of the video frame, the same fractions fullscreen draws
   on the displayed video's box — never pixels, never the screen. The font is
@@ -232,6 +242,13 @@ that live nowhere else.
   font would differ per device, and Georgia (what the preview used to fall
   back to) may not be served as a web font.
 - `text_export` — SRT → plain text.
+- `amruta_captions` — `source/en.srt` for a YouTube video, from amruta's
+  public `captions_zip` repository (a Vimeo video gets its own from Vimeo).
+  That repository is filled daily, so "no captions yet" is an ordinary answer
+  and never an error: `new-talk.yml` asks when the talk is added, the pipeline
+  asks again before it resolves the timing source. The track is taken as
+  published — it is amruta's curated one, and `final/en.srt` is where a
+  correction goes.
 
 **Building and timing subtitles**
 - `build_map` — the deterministic build orchestrator: `prepare` → (LLM writes
@@ -279,10 +296,19 @@ that live nowhere else.
   pipeline PRs would conflict on it. `wordlist-refresh.yml` rebuilds it on
   `main` once talk or glossary changes land.
 
-**Vimeo links and access**
-- `vimeo_codec` / `mask_video_refs` — `meta.yaml` stores links as `video_ref`,
-  not plaintext. This is **obfuscation, not secrecy**: the decoder ships inside
-  the public SPA.
+**Video links and access**
+- `vimeo_codec` — the codec for every video link in `meta.yaml`, both
+  providers; the name is from when Vimeo was the only one. `video_ref` is what
+  a viewer watches (Vimeo or YouTube), `media_refs` are a YouTube video's
+  Drive copies for downloads. Neither is ever plaintext. This is
+  **obfuscation, not secrecy**: the decoder ships inside the public SPA. What
+  it buys is no harvestable ids, so the rule reaches past `meta.yaml` — **no
+  real video or Drive id in anything pushed**: fixtures, docs, commit
+  messages, logs. Providers, the fail-closed validator, why CI downloads from
+  Drive and why Bunny is not used: `ARCHITECTURE.md` "Video providers".
+- `mask_video_refs` — the one-time migration that replaced plaintext Vimeo
+  links with `video_ref`. It knows Vimeo only; a new link is encoded with the
+  codec.
 - `passphrase_gate` — hashes the gate phrase for `deploy-pages.yml`. Twin of
   `site/js/passphrase_gate.js`; change one and you must change the other.
 - `serve_auth_local` — serve the SPA locally with the auth hooks injected; see

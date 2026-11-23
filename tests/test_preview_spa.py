@@ -28,6 +28,15 @@ videos:
   video_ref: r1CRxJTlpYUFZF
 """
 
+# The same talk on YouTube (synthetic ids): the E2E core paths run over both
+# players — mark a test or class with
+# @pytest.mark.parametrize("page", PROVIDERS, indirect=True).
+SAMPLE_META_YT = SAMPLE_META.replace("r1DBtMTl9VW1NC", "r2PhlkCSAJPEkiCCBSFQo").replace(
+    "r1CRxJTlpYUFZF", "r2JQJ_EjMaL1o5EztSFQo"
+)
+PROVIDERS = ["vimeo", "youtube"]
+YT_OEMBED = {"width": 1280, "height": 720}
+
 # Hostile amruta_url values (the meta.yaml / scraping-bookmarklet attacker
 # vector) that try to break out of the card's href="". Two distinct vectors,
 # because esc() escapes < > independently of the quote fix:
@@ -159,8 +168,31 @@ def mock_player_js():
     return Path(__file__).parent.joinpath("fixtures", "mock_vimeo_player.js").read_text()
 
 
+@pytest.fixture(scope="module")
+def mock_youtube_js():
+    return Path(__file__).parent.joinpath("fixtures", "mock_youtube_player.js").read_text()
+
+
+def route_youtube(pg, mock_youtube_js, oembed=None):
+    """The YouTube IFrame API, its embed page and oEmbed, all local."""
+    pg.route(
+        "**/www.youtube.com/iframe_api",
+        lambda route: route.fulfill(status=200, content_type="application/javascript", body=mock_youtube_js),
+    )
+    pg.route(
+        "**/www.youtube.com/embed/**",
+        lambda route: route.fulfill(status=200, content_type="text/html", body="<!doctype html>"),
+    )
+    pg.route(
+        "**/www.youtube.com/oembed?**",
+        lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(oembed or YT_OEMBED)),
+    )
+
+
 @pytest.fixture
-def page(server, mock_player_js, browser):
+def page(request, server, mock_player_js, mock_youtube_js, browser):
+    provider = getattr(request, "param", "vimeo")
+    meta_text = SAMPLE_META_YT if provider == "youtube" else SAMPLE_META
     ctx = browser.new_context()
     pg = ctx.new_page()
 
@@ -181,7 +213,7 @@ def page(server, mock_player_js, browser):
         lambda route: route.fulfill(
             status=200,
             content_type="text/plain",
-            body=SAMPLE_META,
+            body=meta_text,
         ),
     )
 
@@ -238,6 +270,8 @@ def page(server, mock_player_js, browser):
             body=mock_player_js,
         ),
     )
+
+    route_youtube(pg, mock_youtube_js)
 
     # Mock review-status.json
     pg.route(
@@ -708,8 +742,9 @@ class TestDirectNavigation:
         assert uk == 2
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestPreviewSubtitles:
-    """Detailed subtitle behavior tests."""
+    """Detailed subtitle behavior tests, on either player."""
 
     def _goto_preview(self, server, page):
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
@@ -1250,7 +1285,7 @@ class TestFullscreenMode:
             const vp = document.getElementById('view-preview');
             vp.style.setProperty('--preview-aspect', '640 / 480');
             const pending = new Promise(() => {});
-            setPreviewAspect({getVideoWidth: () => pending, getVideoHeight: () => pending}, () => true);
+            setPreviewAspect({getAspect: () => pending}, () => true);
             return vp.style.getPropertyValue('--preview-aspect');
         }""")
         assert kept == "640 / 480"
@@ -1263,9 +1298,8 @@ class TestFullscreenMode:
         left = page.evaluate(
             """async (kind) => {
             const players = {
-                'size-rejected': {getVideoWidth: () => Promise.reject(new Error('gone')),
-                                  getVideoHeight: () => Promise.resolve(480)},
-                'size-unknown': {getVideoWidth: () => Promise.resolve(0), getVideoHeight: () => Promise.resolve(0)},
+                'size-rejected': {getAspect: () => Promise.reject(new Error('gone'))},
+                'size-unknown': {getAspect: () => Promise.resolve(null)},
                 'no-player': null,
             };
             const vp = document.getElementById('view-preview');
@@ -5562,6 +5596,75 @@ class TestFullscreenCursorIdle:
         assert self._hit(page, 640, 700) == "mock-player"
         assert self._hit(page, 60, 700) == "fs-idle-shield"
 
+    def test_vimeo_has_no_hole_along_the_top(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        w, _ = self._size(page)
+        assert self._hit(page, w // 2, 20) == "fs-idle-shield"
+
+    # YouTube's bars, measured 2026-11-23 (components.css): 126px along the
+    # bottom of the player, 52px along its top.
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_youtube_holes_are_its_taller_bar_and_its_top_row(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        w, h = self._size(page)
+        assert self._hit(page, w // 2, h - 120) == "mock-player"
+        assert self._hit(page, w // 2, h - 140) == "fs-idle-shield"
+        assert self._hit(page, w // 2, 20) == "mock-player"
+        assert self._hit(page, w // 2, 70) == "fs-idle-shield"
+        assert self._hit(page, w // 2, h // 2) == "fs-idle-shield"
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_youtube_player_is_boxed_to_the_pillarboxed_video(self, server, page, mock_youtube_js):
+        """YouTube paints black bars of its own around the video and draws its
+        controls on the player's edges: boxed to the video, the bars are the
+        page's and the controls sit where the holes are."""
+        route_youtube(page, mock_youtube_js, oembed={"width": 640, "height": 480})
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
+            timeout=2000,
+        )
+        self._set_fs(page, True)
+        r = page.evaluate(
+            "(() => { const r = document.getElementById('mock-player').getBoundingClientRect();"
+            " return [r.left, r.top, r.width, r.height]; })()"
+        )
+        assert r == pytest.approx([160, 0, 960, 720], abs=1)
+        assert self._hit(page, 640, 700) == "mock-player"
+        assert self._hit(page, 60, 700) == "fs-idle-shield"
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_youtube_player_is_boxed_to_the_letterboxed_video(self, server, page, mock_youtube_js):
+        route_youtube(page, mock_youtube_js, oembed={"width": 640, "height": 480})
+        page.set_viewport_size({"width": 800, "height": 900})
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
+            timeout=2000,
+        )
+        self._set_fs(page, True)
+        r = page.evaluate(
+            "(() => { const r = document.getElementById('mock-player').getBoundingClientRect();"
+            " return [r.left, r.top, r.width, r.height]; })()"
+        )
+        assert r == pytest.approx([0, 150, 800, 600], abs=1)
+        assert self._hit(page, 400, 730) == "mock-player"
+        assert self._hit(page, 400, 170) == "mock-player"
+        assert self._hit(page, 400, 800) == "fs-idle-shield"
+        assert self._hit(page, 400, 100) == "fs-idle-shield"
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_a_youtube_player_change_brings_the_shield_back(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        assert self._state(page) == "vimeo"
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        assert self._state(page) == "visible"
+
     def _into_the_hole(self, page):
         w, h = self._size(page)
         page.mouse.move(w // 2, h // 2)
@@ -6021,8 +6124,8 @@ class TestTouchFullscreenChrome:
 
 class TestEndFreeze:
     """End-freeze, embedded and fullscreen alike: the player pauses just before
-    the video ends so the Vimeo 'more from this user' end screen never fires
-    (js/end_freeze.js).
+    the video ends so its end screen (Vimeo's 'more from this user', YouTube's
+    replay screen) never fires (js/end_freeze.js).
     The mock player reports a 3600s duration; 3599.8 is inside the 0.3s
     epsilon window before the end."""
 
@@ -6037,6 +6140,7 @@ class TestEndFreeze:
         page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
         page.wait_for_timeout(100)
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freezes_on_last_frame_in_fullscreen(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -6045,6 +6149,7 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freezes_on_last_frame_embedded(self, server, page):
         # The end screen shows in the embedded player too: no mode is exempt.
         self._goto_preview(server, page)
@@ -6053,6 +6158,7 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_frozen_latch_lets_viewer_play_the_tail(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -6066,6 +6172,7 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is False
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_rewind_after_freeze_saves_the_resume_position_again(self, server, page):
         # A paused seek into the last 0.3s freezes (and resets the saved
         # position, as the end does). Rewinding below the threshold leaves the
@@ -6080,6 +6187,7 @@ class TestEndFreeze:
         pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
         assert pos == "1500", f"the position rewound to must be saved, got {pos}"
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freeze_clears_saved_resume_position(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -6097,6 +6205,7 @@ class TestEndFreeze:
     MEDIA_END_SEC = 3599.6
     INSIDE_MEDIA_WINDOW_SEC = 3599.35
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freezes_before_the_media_end_not_the_metadata_end(self, server, page):
         self._goto_preview(server, page)
         page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
@@ -6120,6 +6229,63 @@ class TestEndFreeze:
         page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
+
+
+@pytest.mark.parametrize("page", ["youtube"], indirect=True)
+class TestYouTubePreview:
+    """A talk whose video is on YouTube plays through the YouTube IFrame API
+    (js/video_player.js), behind the same preview as a Vimeo one."""
+
+    def _goto_preview(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.wait_for_function("!!(window.YT && window._vimeoPlayer && window._vimeoPlayer._events.onReady)")
+
+    def test_embeds_the_youtube_player_with_its_api_on_and_captions_off(self, server, page):
+        self._goto_preview(server, page)
+        src = page.evaluate("window._vimeoPlayer._src")
+        assert src.startswith("https://www.youtube.com/embed/AbCdEfGhIjK?"), src
+        params = src.split("?", 1)[1].split("&")
+        for p in ["enablejsapi=1", "cc_load_policy=0", "rel=0", "iv_load_policy=3", "playsinline=1"]:
+            assert p in params, src
+        assert "origin=" + quote(server, safe="") in params, src
+
+    def test_marks_the_view_with_its_provider(self, server, page):
+        self._goto_preview(server, page)
+        assert page.evaluate("document.getElementById('view-preview').dataset.provider") == "yt"
+
+    def test_takes_the_shape_from_oembed(self, server, page):
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '1280 / 720'",
+            timeout=5000,
+        )
+
+    def test_unloads_youtube_captions_once_playing(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        assert "captions" in page.evaluate("window._vimeoPlayer._unloaded")
+
+    def test_resumes_where_the_viewer_left_off(self, server, page):
+        page.add_init_script("localStorage.setItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video', '1500')")
+        self._goto_preview(server, page)
+        page.wait_for_function("window._vimeoPlayer._currentTime === 1500", timeout=5000)
+
+    def test_ending_clears_the_saved_position(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer._setTime(1500); window._vimeoPlayer._fire('ended')")
+        page.evaluate("flushPreviewPos()")
+        pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
+        assert pos in (None, "0"), pos
+
+    def test_switching_videos_builds_the_next_youtube_player(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate(
+            "document.getElementById('mock-player').replaceWith(Object.assign(document.createElement('iframe'), {id: 'vimeo-player'}))"
+        )
+        page.evaluate("location.hash = '#/preview/2001-01-01_Test-Talk/Test-Video-2'")
+        page.wait_for_function("window.__mockPlayers.length === 2", timeout=5000)
+        assert page.evaluate("window._vimeoPlayer._src").startswith("https://www.youtube.com/embed/ZyXwVuTsRqP?")
 
 
 class TestClearAllCount:

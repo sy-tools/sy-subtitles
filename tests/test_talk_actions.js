@@ -2,7 +2,10 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const { talkActionVisibility, previewRedirect } = require('../site/js/talk_actions');
 
-const video = (over) => Object.assign({ slug: 'v1', hasSrt: true, vimeo_url: 'https://vimeo.com/1/a' }, over || {});
+const VIMEO = { provider: 'vimeo', id: '1/a', watchUrl: 'https://vimeo.com/1/a' };
+const YT = { provider: 'yt', id: 'AbCdEfGhIjK', watchUrl: 'https://www.youtube.com/watch?v=AbCdEfGhIjK' };
+const GD = { provider: 'gd', id: '1AbCdEfGhIjKlMnOpQrStUvWxYz012345', watchUrl: 'https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view' };
+const video = (over) => Object.assign({ slug: 'v1', hasSrt: true, source: VIMEO }, over || {});
 
 describe('talkActionVisibility', () => {
   it('shows both when there are playable subtitles AND EN+UK transcripts', () => {
@@ -31,9 +34,17 @@ describe('talkActionVisibility', () => {
     assert.strictEqual(talkActionVisibility({ hasEn: false, hasUk: true, videos: [] }).review, false);
   });
 
-  it('requires a vimeo_url (not just an SRT) for View', () => {
-    const v = talkActionVisibility({ videos: [video({ vimeo_url: '' })] });
+  it('requires a source (not just an SRT) for View', () => {
+    const v = talkActionVisibility({ videos: [video({ source: null })] });
     assert.strictEqual(v.preview, false);
+  });
+
+  it('shows View for a YouTube video with subtitles', () => {
+    assert.strictEqual(talkActionVisibility({ videos: [video({ source: YT })] }).preview, true);
+  });
+
+  it('does not show View for a video whose only source is a Drive mirror', () => {
+    assert.strictEqual(talkActionVisibility({ videos: [video({ source: GD })] }).preview, false);
   });
 
   it('shows nothing for an empty / missing talk', () => {

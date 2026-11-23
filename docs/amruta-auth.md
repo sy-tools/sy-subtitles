@@ -4,7 +4,7 @@
 
 amruta.org is a WordPress site behind Cloudflare. Transcripts (EN and UK) and talk listing pages are only accessible to logged-in users — unauthenticated requests return short/empty content or HTTP 4xx.
 
-Authentication is carried by a WordPress session cookie (`wordpress_logged_in_*`). This cookie is **local-only**: it lives in `.env` on your machine and is never used in GitHub Actions. The new-talk pipeline (`new-talk.yml`) and the bookmarklet flow never need it — they receive transcripts as base64 in `meta.yaml` and pull subtitles from Vimeo.
+Authentication is carried by a WordPress session cookie (`wordpress_logged_in_*`). This cookie is **local-only**: it lives in `.env` on your machine and is never used in GitHub Actions. The new-talk pipeline (`new-talk.yml`) and the bookmarklet flow never need it — they receive transcripts as base64 in `meta.yaml` and pull subtitles from the video's provider: Vimeo's text tracks for a Vimeo video, amruta's public captions repository for a YouTube one. Neither needs a login, and no YouTube or Google account cookie is used anywhere, locally or in CI.
 
 ---
 
@@ -112,6 +112,7 @@ Use this when the existing cookie has expired or fetch_transcripts.py starts ret
 
 Run once, log in manually, then paste the printed string into .env.
 """
+
 from playwright.sync_api import sync_playwright
 
 TARGET = "https://www.amruta.org/wp-login.php"
@@ -130,7 +131,8 @@ with sync_playwright() as p:
 
     # Filter to the WordPress session cookie(s)
     wp_cookies = [
-        c for c in all_cookies
+        c
+        for c in all_cookies
         if c["name"].startswith("wordpress_logged_in_")
         # also include wordpress_sec_* if the site uses it (HTTPS-only auth cookie)
         or c["name"].startswith("wordpress_sec_")
@@ -140,7 +142,7 @@ with sync_playwright() as p:
         print("ERROR: no wordpress_logged_in_* cookie found — are you logged in?")
     else:
         # Format as "name=value; name2=value2" for AMRUTA_SESSION_COOKIE
-        cookie_str = "; ".join(f'{c["name"]}={c["value"]}' for c in wp_cookies)
+        cookie_str = "; ".join(f"{c['name']}={c['value']}" for c in wp_cookies)
         print("\nPaste this into .env:")
         print(f"AMRUTA_SESSION_COOKIE={cookie_str}")
 

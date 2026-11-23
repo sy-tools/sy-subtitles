@@ -12,9 +12,11 @@ import json
 import pytest
 
 from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
+    PROVIDERS,
     SPA_URL,
     goto_spa,
     mock_player_js,
+    mock_youtube_js,
     page,
     server,
     spa_path,
@@ -54,6 +56,17 @@ def _goto_review_srt(page, server):  # noqa: F811
         "() => { var b = document.getElementById('btn-sync-player'); return b && b.style.display !== 'none'; }",
         timeout=RENDER_WAIT_MS,
     )
+
+
+# The YouTube player reports time only through the adapter's poll
+# (js/video_player.js YT_POLL_MS), Vimeo's mock on the spot.
+YT_POLL_SETTLE_MS = 400
+
+
+def _set_time(page, seconds):  # noqa: F811
+    """Move the mock player to `seconds` and wait until the SPA has heard it."""
+    page.evaluate(f"window._vimeoPlayer._setTime({seconds})")
+    page.wait_for_timeout(YT_POLL_SETTLE_MS if page.evaluate("!!window.YT") else 50)
 
 
 def _drag_resize_handle(page, dy_px):  # noqa: F811
@@ -124,6 +137,7 @@ class TestButtonVisibilityTransitions:
         )
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestPlayerMount:
     def test_clicking_show_mounts_vimeo_iframe(self, server, page):  # noqa: F811
         _goto_review_srt(page, server)
@@ -172,14 +186,14 @@ class TestBinarySearch:
         }
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestHighlight:
     def test_timeupdate_highlights_current_row(self, server, page):  # noqa: F811
         _goto_review_srt(page, server)
         page.click("#btn-sync-player")
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
-        page.evaluate("window._vimeoPlayer._setTime(6)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6)
 
         highlighted = page.evaluate("""
           () => Array.from(
@@ -196,8 +210,7 @@ class TestHighlight:
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
         # SAMPLE_EN_SRT row 2 starts at 4500 ms, row 3 at 8500 ms.
-        page.evaluate("window._vimeoPlayer._setTime(5)")  # between EN row 2 (4.5s) and EN row 3 (8.5s)
-        page.wait_for_timeout(50)
+        _set_time(page, 5)  # between EN row 2 (4.5s) and EN row 3 (8.5s)
 
         en_highlighted = page.evaluate("""
           () => Array.from(
@@ -213,8 +226,7 @@ class TestHighlight:
         page.click("#btn-sync-player")
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
-        page.evaluate("window._vimeoPlayer._setTime(6)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6)
 
         counts = page.evaluate("""
           () => ({
@@ -225,6 +237,7 @@ class TestHighlight:
         assert counts == {"uk": 1, "en": 1}
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestClickToSeek:
     def test_click_en_cell_seeks_player(self, server, page):  # noqa: F811
         _goto_review_srt(page, server)
@@ -266,6 +279,7 @@ class TestClickToSeek:
         assert before == after
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestFollowSmartPause:
     def test_focus_cell_pauses_follow_and_player(self, server, page):  # noqa: F811
         _goto_review_srt(page, server)
@@ -298,6 +312,7 @@ class TestFollowSmartPause:
         assert not page.evaluate("SyncPlayer._isFollowPaused()")
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestEnterAndShortcuts:
     def test_enter_in_cell_blurs_and_plays(self, server, page):  # noqa: F811
         _goto_review_srt(page, server)
@@ -341,8 +356,7 @@ class TestEnterAndShortcuts:
         _goto_review_srt(page, server)
         page.click("#btn-sync-player")
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
-        page.evaluate("window._vimeoPlayer._setTime(20)")
-        page.wait_for_timeout(50)
+        _set_time(page, 20)
         page.evaluate("document.body.focus()")
         page.keyboard.press("ArrowLeft")
         page.wait_for_timeout(50)
@@ -500,7 +514,36 @@ class TestFailOpen:
         toast = page.locator("#toast")
         assert toast.evaluate("el => el.classList.contains('show')")
         text = toast.text_content() or ""
-        assert "Vimeo" in text
+        assert text == page.evaluate("t('toast.player_unavailable')")
+
+    def test_vimeo_player_failing_to_load_keeps_the_bar_open(self, server, page):  # noqa: F811
+        """Vimeo shows its own error inside the iframe; the bar stays to show it."""
+        page.add_init_script("window.__mockReadyReject = true;")
+        _goto_review_srt(page, server)
+        page.click("#btn-sync-player")
+        page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
+        page.wait_for_timeout(300)
+        assert page.locator("#sync-player-bar").get_attribute("hidden") is None
+        assert not page.evaluate("document.getElementById('toast').classList.contains('show')")
+        assert page.locator("#btn-sync-player").text_content() == page.evaluate("t('btn.hide_video')")
+
+    def test_vimeo_embed_keeps_vimeos_own_captions(self, server, page):  # noqa: F811
+        _goto_review_srt(page, server)
+        page.click("#btn-sync-player")
+        page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
+        src = page.evaluate("window._vimeoPlayer._src")
+        assert src.startswith("https://player.vimeo.com/video/"), src
+        assert "texttrack" not in src and "transcript" not in src, src
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_youtube_api_failing_to_load_surfaces_toast(self, server, page):  # noqa: F811
+        page.route("**/www.youtube.com/iframe_api", lambda route: route.abort())
+        _goto_review_srt(page, server)
+        page.click("#btn-sync-player")
+        page.wait_for_function("document.getElementById('toast').classList.contains('show')", timeout=RENDER_WAIT_MS)
+        assert page.locator("#sync-player-bar").get_attribute("hidden") is not None
+        assert page.locator("#toast").text_content() == page.evaluate("t('toast.player_unavailable')")
+        assert page.locator("#btn-sync-player").text_content() == page.evaluate("t('btn.show_video')")
 
 
 class TestResumeFollow:
@@ -538,6 +581,7 @@ class TestResumeFollow:
         assert page.evaluate("window._stCalls > 0"), "play event must scroll current row into view on resume"
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestVideoSwitchHighlight:
     def test_video_switch_creates_new_player_instance(self, server, page):  # noqa: F811
         """Switching to a different video slug must destroy and re-create the player."""
@@ -573,8 +617,7 @@ class TestVideoSwitchHighlight:
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
         # Drive the new player's timeupdate.
-        page.evaluate("window._vimeoPlayer._setTime(6)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6)
 
         highlighted = page.evaluate(
             "Array.from(document.querySelectorAll('.cell.uk.current')).map(c => c.dataset.msStart)"
@@ -615,6 +658,7 @@ class TestToggleButtonTextSwap:
         assert title_closed != title_open, f"title must swap on toggle: closed={title_closed!r} open={title_open!r}"
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestReopenPreservesPlayhead:
     def test_reopen_after_hide_preserves_current_time(self, server, page):  # noqa: F811
         """Hiding then re-showing the bar must reuse the existing player without reset."""
@@ -623,8 +667,7 @@ class TestReopenPreservesPlayhead:
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
         # Seek to 8 seconds.
-        page.evaluate("window._vimeoPlayer._setTime(8)")
-        page.wait_for_timeout(50)
+        _set_time(page, 8)
 
         # Hide (toggle off).
         page.click("#btn-sync-player")
@@ -902,8 +945,7 @@ class TestRevertAllEditsHighlightRecovery:
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
         # Highlight the second row.
-        page.evaluate("window._vimeoPlayer._setTime(6)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6)
         assert page.evaluate("document.querySelectorAll('.cell.uk.current').length") == 1
 
         # Make a trivial edit so revertAllEdits has something to revert.
@@ -923,8 +965,7 @@ class TestRevertAllEditsHighlightRecovery:
         page.wait_for_timeout(100)
 
         # After the rebuild, drive another timeupdate at nearly the same position.
-        page.evaluate("window._vimeoPlayer._setTime(6.01)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6.01)
 
         count = page.evaluate("document.querySelectorAll('.cell.uk.current').length")
         assert count == 1, f".current must self-heal after revertAllEdits + timeupdate, got {count}"
@@ -935,8 +976,7 @@ class TestRevertAllEditsHighlightRecovery:
         page.click("#btn-sync-player")
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
-        page.evaluate("window._vimeoPlayer._setTime(6)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6)
         assert page.evaluate("document.querySelectorAll('.cell.en.current').length") == 1
 
         page.evaluate("""
@@ -951,8 +991,7 @@ class TestRevertAllEditsHighlightRecovery:
         page.click("#btn-revert-all")
         page.wait_for_timeout(100)
 
-        page.evaluate("window._vimeoPlayer._setTime(6.01)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6.01)
 
         count = page.evaluate("document.querySelectorAll('.cell.en.current').length")
         assert count == 1, f"EN .current must self-heal after revertAllEdits, got {count}"
@@ -993,8 +1032,7 @@ class TestSeekToClearsPausedEagerly:
         _goto_review_srt(page, server)
         page.click("#btn-sync-player")
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
-        page.evaluate("window._vimeoPlayer._setTime(20)")
-        page.wait_for_timeout(50)
+        _set_time(page, 20)
 
         # Pause Follow.
         page.evaluate("document.querySelector('#review-grid .cell-text').focus()")
@@ -1027,8 +1065,7 @@ class TestCurrentBoxShadow:
         _goto_review_srt(page, server)
         page.click("#btn-sync-player")
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
-        page.evaluate("window._vimeoPlayer._setTime(6)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6)
         shadow = page.evaluate("""
           () => {
             var el = document.querySelector('.cell.uk.current');
@@ -1052,8 +1089,7 @@ class TestHighlightComposition:
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
 
         # Drive timeupdate to row 0 (startMs=1000) so it gets .current.
-        page.evaluate("window._vimeoPlayer._setTime(1)")
-        page.wait_for_timeout(50)
+        _set_time(page, 1)
 
         # Edit the first cell-text — triggers .edited on its parent .cell.uk.
         page.evaluate("""
@@ -1096,8 +1132,7 @@ class TestThemeToggle:
         _goto_review_srt(page, server)
         page.click("#btn-sync-player")
         page.wait_for_selector("#mock-player", state="visible", timeout=RENDER_WAIT_MS)
-        page.evaluate("window._vimeoPlayer._setTime(6)")
-        page.wait_for_timeout(50)
+        _set_time(page, 6)
 
         # Pin a known theme regardless of the system preference.
         page.evaluate("SPA.setTheme('dark')")

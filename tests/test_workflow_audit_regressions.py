@@ -125,17 +125,18 @@ def test_sync_subtitles_commit_skips_ci_to_avoid_self_trigger() -> None:
         assert skip_token.search(line), f"sync commit message lacks a skip-ci token (self-trigger risk): {line.strip()}"
 
 
-def test_ytdlp_steps_decode_video_ref_to_player_url() -> None:
-    """Vimeo answers 401 on the internal API yt-dlp uses for the canonical
-    `vimeo.com/<id>/<hash>` form (whisper runs 2026-07-27 downloaded nothing).
-    Every workflow that feeds a decoded video_ref to yt-dlp must ask for the
-    `player.vimeo.com` embed form, which still resolves."""
-    for name in ("whisper.yml",):
+def test_talk_videos_download_only_through_the_resolver() -> None:
+    """tools/video_media.py is the one place a talk's video is fetched: it
+    picks the Vimeo player form (Vimeo answers 401 on the canonical form yt-dlp
+    would otherwise use — whisper runs 2026-07-27 downloaded nothing), the
+    Drive mirrors of a YouTube video, and the masks. A workflow that decodes a
+    video_ref and hands it to yt-dlp itself bypasses all three."""
+    for name in ("whisper.yml", "burn-subtitles.yml"):
         text = (WORKFLOWS / name).read_text(encoding="utf-8")
-        decodes = re.findall(r"python3 -m tools\.vimeo_codec decode ([^\n]*)", text)
-        assert decodes, f"{name}: no video_ref decode found"
-        for call in decodes:
-            assert "--player" in call, f"{name}: yt-dlp needs the embed form: decode {call}"
+        commands = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
+        assert "tools.video_media download" in commands, name
+        assert not re.search(r"^\s*yt-dlp\b", commands, re.MULTILINE), f"{name} runs yt-dlp directly"
+        assert "vimeo_codec decode" not in commands, f"{name} decodes a video_ref itself"
 
 
 def test_review_issue_is_only_touched_on_main() -> None:

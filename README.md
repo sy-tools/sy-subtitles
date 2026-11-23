@@ -69,9 +69,11 @@ python -m tools.download --manifest queue.yaml
 The downloader automatically:
 - Names the folder `{date}_{slugify(page_title)}` — the same convention as the
   SPA add-talk flow (single-source slugify in `tools/talk_slug.py`)
-- Finds all Vimeo videos on the page
+- Finds all videos on the page — Vimeo on older pages, YouTube (with its
+  Google Drive copies) on current ones
 - Creates named subdirectories per video (e.g., `Talk/`, `Bhajan/`)
-- Downloads SRTs per video from Vimeo
+- Downloads SRTs per video from Vimeo; a YouTube video's English subtitles are
+  fetched later by the workflows, from amruta's public captions repository
 - Saves `transcript_<lang>.txt` (one per `--langs`, default the URL's language)
   and `meta.yaml`
 

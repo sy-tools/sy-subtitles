@@ -543,7 +543,31 @@ body.sync-player-resizing, body.sync-player-resizing * {
 /* The height of the strip along the bottom of the video where Vimeo draws its
    control bar. On the container, for the two things laid out around it: the
    idle shield's hole and the subtitle scale handle. */
-#view-preview.fs-mode .player-container { --fs-vimeo-bar-h: 64px; }
+#view-preview.fs-mode .player-container { --fs-vimeo-bar-h: 64px; --fs-player-top-h: 0px; }
+/* YouTube, measured 2026-11-23 in Chrome on the 2025 embed player, at player
+   heights 293–1080px: its bottom controls (time, progress bar, the share /
+   logo row) reach 126px up from the player's bottom edge at every size; its
+   top row (title, mute, captions, settings) is 52px. It draws them on the
+   player's edges, not the video's, and paints black bars around the video —
+   so in fullscreen the iframe itself is boxed to the displayed video, which
+   puts the controls where the shield's holes are and leaves the bars ours. */
+#view-preview.fs-mode[data-provider="yt"] .player-container { --fs-vimeo-bar-h: 126px; --fs-player-top-h: 52px; }
+#view-preview.fs-mode[data-provider="yt"] .video-wrap {
+  /* The wrap fills the container, so the box below is in the container's frame. */
+  background: var(--player-letterbox) !important;
+  aspect-ratio: auto; width: 100%; max-width: none; margin: 0; height: 100% !important;
+}
+#view-preview.fs-mode[data-provider="yt"] .video-wrap iframe,
+#view-preview.fs-mode[data-provider="yt"] .video-wrap > div {
+  --fs-video-w: min(100cqw, 100cqh * (var(--preview-aspect, 16 / 9)));
+  --fs-video-h: min(100cqh, 100cqw / (var(--preview-aspect, 16 / 9)));
+  /* !important: the preview gives the iframe an inline full-size box. */
+  position: absolute !important;
+  left: calc((100cqw - var(--fs-video-w)) / 2) !important;
+  top: calc((100cqh - var(--fs-video-h)) / 2) !important;
+  width: var(--fs-video-w) !important;
+  height: var(--fs-video-h) !important;
+}
 #view-preview.fs-mode .player-container { flex: 1; max-width: 100%; margin: 0; width: 100%; display: flex; flex-direction: column; overflow: hidden; container-type: size; }
 #view-preview.fs-mode .video-wrap { flex: 1; padding-bottom: 0; height: 100%; }
 #view-preview.fs-mode .video-wrap iframe,
@@ -554,8 +578,9 @@ body.sync-player-resizing, body.sync-player-resizing * {
    iframe is cross-origin, so its cursor is out of the page's reach and only
    an element of ours under the pointer can hide it. Above the iframe (z-index
    1), below the subtitles, which stay pointer-transparent over it.
-   The hole: the strip along the bottom of the displayed video where Vimeo
-   draws its control bar. The video box is the subtitle overlay's (same
+   The hole: the strip along the bottom of the displayed video where the
+   player draws its control bar (and, for YouTube, a second one along the
+   top, where its mute and settings are; zero high for Vimeo). The video box is the subtitle overlay's (same
    --fs-video-w/h formulas, so the hole follows letterbox and pillarbox);
    hit testing honours clip-path, so the pointer reaches Vimeo only there.
    Leaving through it puts the shield away altogether ('vimeo'). */
@@ -568,11 +593,18 @@ body.sync-player-resizing, body.sync-player-resizing * {
   --hole-r: calc((100cqw + var(--fs-video-w)) / 2);
   --hole-b: calc((100cqh + var(--fs-video-h)) / 2);
   --hole-t: calc(var(--hole-b) - var(--fs-vimeo-bar-h));
+  --top-hole-t: calc((100cqh - var(--fs-video-h)) / 2);
+  --top-hole-b: calc(var(--top-hole-t) + var(--fs-player-top-h));
   display: block; position: absolute; inset: 0; z-index: 2;
+  /* Each hole is entered and left along the same edge, so the connecting
+     segments enclose no area and evenodd cuts exactly the two rectangles. */
   clip-path: polygon(evenodd,
     0 0, 100% 0, 100% 100%, 0 100%, 0 0,
     var(--hole-l) var(--hole-t), var(--hole-r) var(--hole-t),
-    var(--hole-r) var(--hole-b), var(--hole-l) var(--hole-b), var(--hole-l) var(--hole-t));
+    var(--hole-r) var(--hole-b), var(--hole-l) var(--hole-b), var(--hole-l) var(--hole-t),
+    var(--hole-l) var(--top-hole-b), var(--hole-r) var(--top-hole-b),
+    var(--hole-r) var(--top-hole-t), var(--hole-l) var(--top-hole-t), var(--hole-l) var(--top-hole-b),
+    var(--hole-l) var(--hole-t));
 }
 #view-preview.fs-mode .fs-idle-shield[data-state="hidden"] { cursor: none; }
 body {

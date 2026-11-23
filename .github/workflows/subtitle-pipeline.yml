@@ -593,6 +593,7 @@ jobs:
       talk_id: ${{ steps.prepare.outputs.talk_id }}
       video_slug: ${{ steps.prepare.outputs.video_slug }}
       timing_source: ${{ steps.timing.outputs.timing_source }}
+      captions_fetched: ${{ steps.captions.outputs.fetched }}
     steps:
       - uses: actions/checkout@v7
       - run: git pull --rebase
@@ -641,6 +642,46 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
+
+      # A YouTube video's EN subtitles come from amruta's captions repository,
+      # which is filled daily: a talk added before its captions landed got
+      # none from new-talk.yml, and that workflow never runs for it again. So
+      # ask once more here, before the timing source is resolved from what is
+      # on disk. Captions are optional — without them the build times against
+      # whisper — so nothing in this step may stop the run. A dry run replays
+      # snapshots and stays off the network.
+      #
+      # Only files this step CREATED travel on: an en.srt the repo already
+      # has may be newer on main by the time the commit job runs.
+      - name: Fetch late EN captions
+        id: captions
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        env:
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
+        run: |
+          python -m tools.amruta_captions --talk-id "$TALK_ID" \
+            || echo "::warning::EN captions fetch failed — continuing without"
+          STAGE="$RUNNER_TEMP/captions"
+          mkdir -p "$STAGE"
+          FETCHED=false
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            rel="${f#"talks/${TALK_ID}/"}"
+            mkdir -p "$STAGE/$(dirname "$rel")"
+            cp "$f" "$STAGE/$rel"
+            FETCHED=true
+            echo "new: $f"
+          done < <(git ls-files --others --exclude-standard -- "talks/${TALK_ID}/*/source/en.srt")
+          echo "fetched=$FETCHED" >> "$GITHUB_OUTPUT"
+
+      - name: Upload fetched EN captions
+        if: steps.captions.outputs.fetched == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          retention-days: 7
+          name: captions__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: ${{ runner.temp }}/captions
 
       - name: Prepare UK blocks
         id: prepare
@@ -717,6 +758,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: git pull --rebase
+
+      # EN captions prepare-build fetched for a YouTube video (see "Fetch late
+      # EN captions"): this job has its own checkout, so they arrive here as
+      # <slug>/source/en.srt under the talk directory.
+      - name: Download fetched EN captions
+        if: needs.prepare-build.outputs.captions_fetched == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: captions__${{ needs.prepare-build.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: talks/${{ needs.prepare-build.outputs.talk_id }}
 
       - name: Download UK blocks artifact
         uses: actions/download-artifact@v8
@@ -1189,7 +1240,9 @@ jobs:
 
   # Single commit job – collects all artifacts and pushes
   commit:
-    needs: [discover, translate-and-review, build-timecodes]
+    # prepare-build is here for its captions_fetched output only; it already
+    # precedes this job through build-timecodes.
+    needs: [discover, translate-and-review, prepare-build, build-timecodes]
     # commit runs after any build path completes; skipped for dry-runs.
     if: |
       inputs.dry_run != true && always() &&
@@ -1228,6 +1281,17 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
+
+      # EN captions prepare-build fetched for a YouTube video (see "Fetch late
+      # EN captions"): they are committed with this run's results, whether or not the
+      # build succeeded — a source file, good for the next run too. They land as
+      # <slug>/source/en.srt under the talk directory.
+      - name: Download fetched EN captions
+        if: needs.prepare-build.outputs.captions_fetched == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: captions__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: talks/${{ needs.discover.outputs.talk_id }}
 
       - name: Download translation artifacts
         if: needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'failure'
@@ -1318,7 +1382,8 @@ jobs:
             "talks/*/*/work/timecodes.txt" \
             "talks/*/*/final/uk.srt" "talks/*/*/final/report.txt" \
             "talks/*/*/final/build_report.txt" \
-            "talks/*/*/final/build_manifest.yaml"
+            "talks/*/*/final/build_manifest.yaml" \
+            "talks/*/*/source/en.srt"
 
       # mode: rebuilt — this run built and committed subtitles;
       #       existing — no build this run, but the talk already has subtitles
