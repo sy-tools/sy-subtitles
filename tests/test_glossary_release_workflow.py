@@ -4,9 +4,9 @@ A release must follow ANY change under `glossary/`: the translator rules
 (`AGENTS.md`), its README and every dictionary are read by the agents that
 translate and review, so each of them is part of what a glossary version is.
 
-The workflow file itself is a trigger too, so that a change to how releases
-are cut produces one on merge, and `workflow_dispatch` lets a missed release
-be cut by hand.
+Nothing else triggers it: a release with no glossary change would be empty.
+A missed release is cut by hand through `workflow_dispatch`, and even then
+only if `glossary/` changed since the previous tag.
 """
 
 import os
@@ -25,14 +25,8 @@ def _on() -> dict:
     return data[True] if True in data else data["on"]  # bare `on:` parses as True
 
 
-def test_releases_on_any_glossary_change() -> None:
-    paths = _on()["push"]["paths"]
-    assert "glossary/**" in paths
-    assert not any(p.startswith("!") for p in paths), "no glossary file is excluded"
-
-
-def test_releases_when_the_workflow_itself_changes() -> None:
-    assert ".github/workflows/glossary-release.yml" in _on()["push"]["paths"]
+def test_releases_on_any_glossary_change_and_nothing_else() -> None:
+    assert _on()["push"]["paths"] == ["glossary/**"]
 
 
 def test_push_trigger_is_main_only() -> None:
@@ -119,7 +113,7 @@ def test_notes_list_only_glossary_commits_since_previous_release(repo: Path, tmp
     assert "unrelated tool change" not in gh_args
 
 
-def test_no_release_when_glossary_unchanged_since_previous_release(repo: Path, tmp_path: Path) -> None:
+def test_dispatch_cuts_no_release_when_glossary_unchanged_since_previous_release(repo: Path, tmp_path: Path) -> None:
     _commit(repo, "glossary/terms_lookup.yaml", "already released")
     _git(repo, "tag", "glossary-v4")
     _commit(repo, ".github/workflows/glossary-release.yml", "workflow tweak")
