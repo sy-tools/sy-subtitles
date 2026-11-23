@@ -128,12 +128,19 @@ function takeQaOffered(stage, entry) {
   return stage === 'translator' && operatorStageOf(entry) === 'translator' && !!(entry && entry.operator_issue);
 }
 
+// "Back to QA": a sent (or packaged) talk needs fixing and delivering again.
+// The op:back-to-qa label reopens its issue at op:qa.
+function backToQaOffered(stage, entry) {
+  return (stage === 'delivered' || stage === 'ready') && operatorStageOf(entry) === stage
+    && !!(entry && entry.operator_issue);
+}
+
 // A wait on the bot is stored so it outlives the tab: after a reload the card
 // would otherwise offer the action again while the bot is still running, and
 // a second "QA passed" re-runs the package job. Only waits on the card stages
-// (translator, qa, ready) inside the live poll's window survive; anything
+// (translator, qa, ready, delivered) inside the live poll's window survive; anything
 // else is dropped.
-var WAIT_STAGES = ['translator', 'qa', 'ready'];
+var WAIT_STAGES = ['translator', 'qa', 'ready', 'delivered'];
 
 function restoreWaiting(stored, now, maxMs) {
   var out = {};
@@ -164,5 +171,6 @@ if (typeof module !== 'undefined' && module.exports) {
     packageFiles: packageFiles,
     restoreWaiting: restoreWaiting,
     takeQaOffered: takeQaOffered,
+    backToQaOffered: backToQaOffered,
   };
 }

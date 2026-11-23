@@ -139,6 +139,22 @@ describe('takeToQa', () => {
   });
 });
 
+describe('backToQa', () => {
+  const { backToQa } = require('../site/js/github_api');
+  it('adds op:back-to-qa, removing a stale one first so the bot sees a new labeled event', async () => {
+    const calls = [];
+    await backToQa(OP_API, 't', 5, fetchScript([
+      [200, { number: 5, labels: [{ name: 'op:delivered' }, { name: 'op:back-to-qa' }] }], [200, []], [200, []],
+    ], calls));
+    assert.deepStrictEqual(calls.map((c) => c.method + ' ' + c.url), [
+      'GET ' + OP_API + '/issues/5',
+      'DELETE ' + OP_API + '/issues/5/labels/op%3Aback-to-qa',
+      'POST ' + OP_API + '/issues/5/labels',
+    ]);
+    assert.deepStrictEqual(JSON.parse(calls[2].body), { labels: ['op:back-to-qa'] });
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Write-path additions (issues / branches / contents / pulls)
 // ---------------------------------------------------------------------------

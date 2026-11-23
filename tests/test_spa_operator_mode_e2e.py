@@ -456,3 +456,47 @@ def test_take_to_qa_confirms_adds_the_label_and_waits(server, browser):  # noqa:
     assert posts and posts[0]["body"] == {"labels": ["op:take"]}
     assert _card(pg, TRANSLATOR_TALK).locator(".op-take-btn").count() == 0
     ctx.close()
+
+
+def test_back_to_qa_on_a_sent_talk_confirms_adds_the_label_and_waits(server, browser):  # noqa: F811
+    calls = []
+    status = json.loads(json.dumps(STATUS))
+    status["talks"][READY_TALK]["operator_stage"] = "delivered"
+    ctx, pg = _page(browser, calls, OPERATOR)
+    pg.route("**/raw.githubusercontent.com/**/review-status.json", lambda r: _json(r, 200, status))
+
+    def labels(route):
+        req = route.request
+        calls.append({"method": req.method, "url": req.url, "body": req.post_data and json.loads(req.post_data)})
+        _json(route, 200, [])
+
+    pg.route("**/api.github.com/repos/**/issues/1300/labels", labels)
+    pg.goto(f"{server}{SPA_URL}")
+    pg.click(".stat-card[data-filter='op-delivered']", timeout=10000)
+    btn = _card(pg, READY_TALK).locator(".op-back-qa-btn")
+    btn.wait_for(timeout=10000)
+    btn.click()
+    pg.wait_for_selector(".sy-modal", timeout=3000)
+    pg.click(".sy-modal-btn:not(.primary):not(.danger)")
+    pg.wait_for_timeout(200)
+    assert not [c for c in calls if c["url"].endswith("/issues/1300/labels")]
+    btn.click()
+    pg.wait_for_selector(".sy-modal", timeout=3000)
+    pg.click(".sy-modal-btn.primary, .sy-modal-btn.danger")
+    pg.wait_for_function(
+        "document.querySelector(\".talk-item[data-talk-id='2002-02-02_Ready-Talk'] .op-waiting\")", timeout=5000
+    )
+    posts = [c for c in calls if c["method"] == "POST" and c["url"].endswith("/issues/1300/labels")]
+    assert posts and posts[0]["body"] == {"labels": ["op:back-to-qa"]}
+    assert _card(pg, READY_TALK).locator(".op-back-qa-btn").count() == 0
+    ctx.close()
+
+
+def test_a_packaged_talk_offers_back_to_qa_beside_the_mail(server, browser):  # noqa: F811
+    ctx, pg = _page(browser, [], OPERATOR)
+    pg.goto(f"{server}{SPA_URL}")
+    card = _card(pg, READY_TALK)
+    card.locator(".op-close-btn").wait_for(timeout=10000)
+    assert card.locator(".op-back-qa-btn").count() == 1
+    assert _card(pg, QA_TALK).locator(".op-back-qa-btn").count() == 0
+    ctx.close()
