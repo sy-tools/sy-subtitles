@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'glossary/terms_lookup.yaml'
-      - 'glossary/terms_context.yaml'
-      - 'glossary/chakra_map.yaml'
+      - 'glossary/**'
+      - '.github/workflows/glossary-release.yml'
+  workflow_dispatch:
 
 permissions:
   contents: write
