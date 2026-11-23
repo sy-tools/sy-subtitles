@@ -1,0 +1,461 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:03.520
+Jai Shri Mataji, greetings to everyone.
+
+2
+00:00:04.120 --> 00:00:10.780
+We have a new feature I would like to tell you about: signing in.
+
+3
+00:00:10.780 --> 00:00:17.390
+If you are, for example, still working with the old page and
+
+4
+00:00:17.390 --> 00:00:23.290
+you have no such button at the top left, let's take it in Ukrainian, "Sign in", then just
+
+5
+00:00:23.290 --> 00:00:29.820
+refresh the page, and it will appear. What does this
+
+6
+00:00:29.820 --> 00:00:32.960
+button give us? Let's find out.
+
+7
+00:00:33.000 --> 00:00:34.040
+In short,
+
+8
+00:00:35.080 --> 00:00:42.030
+it gives you a list of your own talks, gives
+
+9
+00:00:42.030 --> 00:00:48.970
+an easier way to take on a review, automatic syncing and
+
+10
+00:00:48.970 --> 00:00:53.050
+an easier hand-off for finalization.
+
+11
+00:00:54.260 --> 00:01:00.480
+So if you open this portal and you
+
+12
+00:01:00.480 --> 00:01:05.140
+do not have a GitHub account yet
+
+13
+00:01:06.420 --> 00:01:13.340
+or are not signed in to GitHub in this browser, you will get this
+
+14
+00:01:13.340 --> 00:01:19.760
+result: it asks you to sign in. So you can register right away if you have not
+
+15
+00:01:19.760 --> 00:01:23.660
+registered yet. Or if you already have one, you can sign in by one of the methods.
+
+16
+00:01:23.660 --> 00:01:27.780
+I already have this passkey set up, so I sign in.
+
+17
+00:01:28.080 --> 00:01:31.920
+And the result? Once I have signed in...
+
+18
+00:01:31.920 --> 00:01:38.520
+Here my avatar shows up; it's sort of, well, not...
+
+19
+00:01:38.520 --> 00:01:40.580
+It doesn't mean anything there.
+
+20
+00:01:40.600 --> 00:01:46.880
+You can set a photo in the GitHub settings, and it shows the name under which the
+
+21
+00:01:46.880 --> 00:01:52.200
+sign-in was made. This is Slava Subotskyi. You also see a small halo here, and at the top
+
+22
+00:01:52.200 --> 00:01:56.840
+a strip glows a little; on the dark theme you can see the glow better.
+
+23
+00:01:57.000 --> 00:01:59.220
+This means we are signed in.
+
+24
+00:02:01.960 --> 00:02:06.580
+What next? This gives us several things.
+
+25
+00:02:06.700 --> 00:02:08.960
+First, the list of your own talks,
+
+26
+00:02:10.460 --> 00:02:11.460
+right here.
+
+27
+00:02:12.500 --> 00:02:15.580
+We switch to "mine"; if you have none, it shows 0 here.
+
+28
+00:02:15.940 --> 00:02:19.500
+If you have taken something on before, it shows up here.
+
+29
+00:02:19.620 --> 00:02:21.960
+I have a list of six right now.
+
+30
+00:02:25.600 --> 00:02:32.360
+If you are already registered on GitHub but have never worked with this portal,
+
+31
+00:02:32.360 --> 00:02:39.200
+and have not passed on your login to be added to the project, then
+
+32
+00:02:39.200 --> 00:02:46.000
+I'll show you now what it looks like. Here I have a work account. Let's click
+
+33
+00:02:46.000 --> 00:02:47.000
+"Sign in"
+
+34
+00:02:48.620 --> 00:02:54.200
+and you see it's black and white; it says "Signed in as" ViacheslavSubotskyiJoinForma, with
+
+35
+00:02:54.200 --> 00:02:55.200
+no write access.
+
+36
+00:02:58.100 --> 00:03:01.260
+"Read-only features are available", "ask an administrator".
+
+37
+00:03:01.360 --> 00:03:05.840
+So if you are in this state, black and white,
+
+38
+00:03:07.320 --> 00:03:13.740
+and it says so, then you just need to... it means you have not started working
+
+39
+00:03:13.740 --> 00:03:18.360
+with this project and have not passed on this e-mail to be added to it. Pass it on.
+
+40
+00:03:20.280 --> 00:03:25.720
+Back to what else it gives us besides the list of your own talks.
+
+41
+00:03:25.720 --> 00:03:31.040
+It is now a bit easier to take on a review.
+
+42
+00:03:31.200 --> 00:03:32.780
+Let's try.
+
+43
+00:03:37.120 --> 00:03:40.420
+We choose what we want to take for review.
+
+44
+00:03:44.490 --> 00:03:48.010
+Guru Puja: "Take for review".
+
+45
+00:03:49.720 --> 00:03:53.770
+We click, and it is already in "mine" automatically.
+
+46
+00:03:54.860 --> 00:03:57.620
+There. Guru Puja is already here.
+
+47
+00:03:58.960 --> 00:04:01.240
+With one button, and now it's done.
+
+48
+00:04:03.320 --> 00:04:04.900
+That was the second.
+
+49
+00:04:06.400 --> 00:04:08.460
+And the third: syncing.
+
+50
+00:04:08.580 --> 00:04:14.040
+Remember? Before, our changes were stored only locally, and they had to be sent by a separate
+
+51
+00:04:14.040 --> 00:04:16.700
+procedure.
+
+52
+00:04:17.040 --> 00:04:23.310
+Now it is simpler. Let's go into any mode.
+
+53
+00:04:24.660 --> 00:04:30.100
+Now you see there are no buttons here for sending anything.
+
+54
+00:04:30.870 --> 00:04:34.070
+But now imagine we started editing.
+
+55
+00:04:35.290 --> 00:04:36.290
+We edited the subtitles.
+
+56
+00:04:38.080 --> 00:04:40.480
+Removed a full stop. We don't need that full stop.
+
+57
+00:04:40.800 --> 00:04:47.320
+The moment we edit something, a cloud appears, and it
+
+58
+00:04:47.320 --> 00:04:50.560
+now shows by its colour
+
+59
+00:04:51.880 --> 00:04:58.180
+what is happening. If it is blue and says "Syncing…", it is in progress.
+
+60
+00:04:58.320 --> 00:05:03.280
+Green means it is already "Synced"; red means something went wrong.
+
+61
+00:05:05.330 --> 00:05:10.930
+That happens if there is no internet or something else, then it can be red.
+
+62
+00:05:11.960 --> 00:05:14.120
+Otherwise it is only ever blue and green.
+
+63
+00:05:14.360 --> 00:05:18.780
+So you don't need to touch it; it works automatically.
+
+64
+00:05:18.780 --> 00:05:19.700
+Let's
+
+65
+00:05:19.750 --> 00:05:25.830
+put a comma
+
+66
+00:05:26.150 --> 00:05:30.210
+in; you see, it's blue again right away.
+
+67
+00:05:30.450 --> 00:05:35.250
+It works in the background, just as when you work in a Google document, in the background
+
+68
+00:05:35.250 --> 00:05:39.550
+it syncs automatically, and within a few seconds,
+
+69
+00:05:41.040 --> 00:05:46.720
+up to a minute, while you work on the document, it syncs everything automatically.
+
+70
+00:05:47.040 --> 00:05:53.860
+To make sure it is synced, you can click this cloud: "View
+
+71
+00:05:53.860 --> 00:06:00.620
+on GitHub". You will see that something was already created in your name one minute
+
+72
+00:06:00.620 --> 00:06:01.620
+ago.
+
+73
+00:06:02.710 --> 00:06:05.330
+A submission like this was created,
+
+74
+00:06:06.540 --> 00:06:10.260
+a few changes were made.
+
+75
+00:06:13.010 --> 00:06:19.180
+And here is the result: in this subtitle the full stop was replaced with a comma.
+
+76
+00:06:20.570 --> 00:06:27.210
+This is also an extra format, convenient for the system, which works and is then
+
+77
+00:06:27.210 --> 00:06:33.030
+cleaned up. This syncing now works automatically; you don't need
+
+78
+00:06:33.030 --> 00:06:38.030
+to know the processes for sending edits and so on.
+
+79
+00:06:38.030 --> 00:06:43.950
+Imagine you made an edit by accident and don't actually need it.
+
+80
+00:06:43.950 --> 00:06:49.780
+You undo it, clear it, and syncing happens as well, but
+
+81
+00:06:50.450 --> 00:06:54.870
+the cloud is gone. Yes, if you have no edits,
+
+82
+00:06:56.330 --> 00:07:01.350
+there is no cloud either, because there is nothing to sync; everything there is automatically
+
+83
+00:07:01.350 --> 00:07:06.030
+cleaned up, if you decided to remove all your edits here.
+
+84
+00:07:07.440 --> 00:07:13.380
+And how to finalize: the last thing I need to show.
+
+85
+00:07:14.100 --> 00:07:16.020
+Say you have already finished editing.
+
+86
+00:07:17.780 --> 00:07:24.620
+That's all you needed to do. Or let's do it here like this... Oh, something went
+
+87
+00:07:24.620 --> 00:07:25.620
+wrong.
+
+88
+00:07:29.620 --> 00:07:35.780
+It got cleared. I wanted to show it with another mode, the one with
+
+89
+00:07:35.780 --> 00:07:42.720
+"Review translation". Let's remove some full stop here. Again
+
+90
+00:07:42.720 --> 00:07:46.400
+the cloud appeared,
+
+91
+00:07:48.160 --> 00:07:53.020
+now it will turn green, and let's say these are all the edits you wanted to make.
+
+92
+00:07:53.630 --> 00:08:00.450
+Then you can actually mark your edit as one that is already
+
+93
+00:08:00.450 --> 00:08:07.350
+ready. Let me show what it looks like. Here is ours, you see, a draft.
+
+94
+00:08:07.350 --> 00:08:14.220
+That is, a draft, but if we click "Finalize — ready for review", that is, hand it
+
+95
+00:08:14.220 --> 00:08:18.860
+over for a technical final review, a second review, you could say,
+
+96
+00:08:19.860 --> 00:08:22.500
+then we click this button.
+
+97
+00:08:24.060 --> 00:08:29.800
+"PR marked ready for review", it offers to open the PR, and you see, this same PR simply
+
+98
+00:08:29.800 --> 00:08:33.940
+turned green. That is, it says it's done.
+
+99
+00:08:33.940 --> 00:08:40.810
+You have done everything, you don't want to make more edits here; this is what
+
+100
+00:08:40.810 --> 00:08:46.930
+now has to be passed on. And so a process starts here, the one that was
+
+101
+00:08:46.930 --> 00:08:47.930
+talked about
+
+102
+00:08:49.490 --> 00:08:55.750
+earlier: there are sync processes, and after them the technical part, which
+
+103
+00:08:55.750 --> 00:09:02.590
+you don't need to care about. A technical person will look at it, to bring it
+
+104
+00:09:02.590 --> 00:09:05.510
+to its final state.
+
+105
+00:09:05.710 --> 00:09:10.590
+To sync all the needed files with each other: subtitles, transcript and so on.
+
+106
+00:09:11.370 --> 00:09:17.810
+Your task as the reviewer now
+
+107
+00:09:17.810 --> 00:09:24.090
+is just to make your edits. And when you have finished your edits,
+
+108
+00:09:24.510 --> 00:09:31.030
+just click "Finalize — ready for review" at the end, and that's it.
+
+109
+00:09:33.170 --> 00:09:39.490
+We revert the edits, and it should now clean our edits away.
+
+110
+00:09:39.530 --> 00:09:41.910
+Cleaned up, closed.
+
+111
+00:09:44.580 --> 00:09:47.460
+This is how the work goes now.
+
+112
+00:09:47.480 --> 00:09:52.500
+I hope this makes the work easier, simpler and faster.
+
+113
+00:09:55.840 --> 00:10:02.300
+If you have wishes about what to improve, what features to add,
+
+114
+00:10:02.300 --> 00:10:06.500
+what is missing, what you feel could help your work,
+
+115
+00:10:07.840 --> 00:10:11.040
+let us know. We will build it together.
