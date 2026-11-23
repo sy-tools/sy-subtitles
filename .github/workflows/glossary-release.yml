@@ -5,7 +5,6 @@ on:
     branches: [main]
     paths:
       - 'glossary/**'
-      - '.github/workflows/glossary-release.yml'
   workflow_dispatch:
 
 permissions:
@@ -29,8 +28,7 @@ jobs:
           else
             NUM=${LATEST#glossary-v}
             NEXT="glossary-v$((NUM + 1))"
-            # The workflow file is a trigger too; it cuts a release only when
-            # glossary/ holds changes the latest release does not have yet.
+            # A manual dispatch must not cut an empty release.
             if git diff --quiet "$LATEST" HEAD -- glossary/; then
               CHANGED=false
             else
