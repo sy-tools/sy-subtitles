@@ -89,7 +89,7 @@ class TestWhisperRunExecutesConfig:
                         seg(1.5, 3.0, "Real speech here.", [word(1.5, 2.0, "Real "), word(2.0, 3.0, "speech")]),
                     ]
                 )
-                info = types.SimpleNamespace(language="en")
+                info = types.SimpleNamespace(language="en", duration=4.2567)
                 return segments, info
 
         fake = types.ModuleType("faster_whisper")
@@ -124,6 +124,12 @@ class TestWhisperRunExecutesConfig:
             {"start": 2.0, "end": 3.0, "word": "speech"},
         ]
         assert out["language"] == "en"
+
+    def test_output_records_the_media_duration(self, run):
+        """The decoded audio length is the media's real end — the build caps
+        the last subtitle with it (issue #1303), so it must reach the file."""
+        _kwargs, _init, out = run
+        assert out["duration"] == 4.257
 
 
 class TestHallucinationOnRealData:

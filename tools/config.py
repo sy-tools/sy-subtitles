@@ -21,3 +21,6 @@ class OptimizeConfig:
     # None leaves timing free; a budget in ms holds every block's start
     # within that much of the anchor its builder gave it.
     max_drift_ms: int | None = None
+    # Where the video's media ends (whisper.json `duration`). None leaves the
+    # tail free; when known, no block is grown or left past it.
+    media_end_ms: int | None = None

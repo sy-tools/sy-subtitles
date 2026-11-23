@@ -245,3 +245,15 @@ def test_all_shipped_whisper_valid() -> None:
         except SchemaError as e:
             failures.append(str(e))
     assert not failures, "Shipped whisper.json failures:\n" + "\n".join(failures[:5])
+
+
+def test_whisper_duration_accepted(tmp_path: Path) -> None:
+    data = dict(GOOD_WHISPER, duration=1234.5)
+    validate_whisper_json(_w(tmp_path, "whisper.json", data))
+
+
+@pytest.mark.parametrize("bad", [0, -1.0, "1234", None])
+def test_whisper_duration_must_be_a_positive_number(tmp_path: Path, bad) -> None:
+    data = dict(GOOD_WHISPER, duration=bad)
+    with pytest.raises(SchemaError, match="duration"):
+        validate_whisper_json(_w(tmp_path, "whisper.json", data))

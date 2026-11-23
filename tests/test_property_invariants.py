@@ -320,6 +320,32 @@ def test_optimize_is_idempotent(tmp_path_factory, blocks: list[Block]) -> None:
     assert key(out1) == key(out2)
 
 
+@given(uk_map_blocks(), st.integers(min_value=0, max_value=5000))
+@settings(max_examples=30, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+def test_optimize_with_a_media_end_stays_inside_it_and_idempotent(
+    tmp_path_factory, blocks: list[Block], tail_ms: int
+) -> None:
+    """No output block ends past the media, and the bound keeps the fixed point.
+
+    The media end lies at or after the input's last end: the builder times
+    blocks from speech the media contains, so the bound only ever takes away
+    tail padding, never time the speech itself needs."""
+    config = OptimizeConfig(media_end_ms=blocks[-1].end_ms + tail_ms)
+
+    def run(bs):
+        src = tmp_path_factory.mktemp("opt_in") / "in.srt"
+        dst = tmp_path_factory.mktemp("opt_out") / "out.srt"
+        _write_srt(bs, src)
+        optimize(str(src), None, str(dst), config=config)
+        return parse_srt(str(dst))
+
+    out1 = run(blocks)
+    assert all(d["end_ms"] <= config.media_end_ms for d in out1)
+    out2 = run([Block(idx=d["idx"], start_ms=d["start_ms"], end_ms=d["end_ms"], text=d["text"]) for d in out1])
+    key = lambda ds: [(d["start_ms"], d["end_ms"], d["text"]) for d in ds]  # noqa: E731
+    assert key(out1) == key(out2)
+
+
 # ---------------------------------------------------------------------------
 # Invariant 9: resync onto an identical EN timeline is the identity
 # ---------------------------------------------------------------------------

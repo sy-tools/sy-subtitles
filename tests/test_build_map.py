@@ -458,3 +458,38 @@ class TestEdgeCases:
     def test_normalize_with_hyphen(self):
         # Hyphen is \W, so it gets stripped
         assert _normalize("well-known") == "wellknown"
+
+
+class TestAssembleMediaEnd:
+    """Issue #1303: the built SRT stops where the video does."""
+
+    def _setup(self, tmp_path, whisper):
+        video = tmp_path / "talk" / "video1"
+        (video / "work").mkdir(parents=True)
+        (video / "final").mkdir(parents=True)
+        (video / "source").mkdir(parents=True)
+        blocks = [{"id": 1, "text": "Перший.", "para_idx": 0}, {"id": 2, "text": "Останній.", "para_idx": 0}]
+        (video / "work" / "uk_blocks.json").write_text(json.dumps(blocks, ensure_ascii=False), encoding="utf-8")
+        (video / "work" / "timecodes.txt").write_text(
+            "#1 | 00:00:01,000 | 00:00:03,000\n#2 | 00:00:04,000 | 00:00:06,000\n", encoding="utf-8"
+        )
+        if whisper is not None:
+            (video / "source" / "whisper.json").write_text(json.dumps(whisper), encoding="utf-8")
+        return video
+
+    def _last_end(self, video):
+        from tools.srt_utils import parse_srt
+
+        return parse_srt(str(video / "final" / "uk.srt"))[-1]["end_ms"]
+
+    def test_last_block_padding_stops_at_the_recorded_media_duration(self, tmp_path):
+        whisper = {"segments": [{"start": 4.0, "end": 5.9, "text": "x"}], "duration": 6.5}
+        video = self._setup(tmp_path, whisper)
+        cmd_assemble(argparse.Namespace(talk_dir=str(tmp_path / "talk"), video_slug="video1"))
+        assert self._last_end(video) == 6500
+
+    def test_without_a_recorded_duration_the_tail_pad_is_unchanged(self, tmp_path):
+        whisper = {"segments": [{"start": 4.0, "end": 5.9, "text": "x"}]}
+        video = self._setup(tmp_path, whisper)
+        cmd_assemble(argparse.Namespace(talk_dir=str(tmp_path / "talk"), video_slug="video1"))
+        assert self._last_end(video) == 8000

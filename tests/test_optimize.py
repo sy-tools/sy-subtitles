@@ -678,3 +678,37 @@ def test_main_optimizes_srt_file(monkeypatch, tmp_path):
     blocks = parse_srt(str(out))
     assert len(blocks) >= 1
     assert all(b["start_ms"] < b["end_ms"] for b in blocks)
+
+
+def test_optimize_never_extends_the_last_block_past_media_end(tmp_path):
+    """Issue #1303: the CPS extension may not carry the last subtitle past
+    the end of the video (whisper.json's recorded duration) — and the result
+    must stay a fixed point of optimize()."""
+    text = "Це останнє речення промови, і воно досить довге для читання."
+    src = tmp_path / "in.srt"
+    src.write_text(f"1\n00:00:10,000 --> 00:00:12,000\n{text}\n\n", encoding="utf-8")
+    whisper = tmp_path / "whisper.json"
+    whisper.write_text(
+        json.dumps({"segments": [{"start": 10.0, "end": 12.0, "text": "x"}], "duration": 13.0}), encoding="utf-8"
+    )
+    out1 = tmp_path / "out1.srt"
+    out2 = tmp_path / "out2.srt"
+    optimize(srt_path=str(src), json_path=str(whisper), output_path=str(out1))
+    optimize(srt_path=str(out1), json_path=str(whisper), output_path=str(out2))
+
+    built = parse_srt(str(out1))
+    assert built[-1]["end_ms"] <= 13000
+    key = [(b["start_ms"], b["end_ms"], b["text"]) for b in built]
+    assert key == [(b["start_ms"], b["end_ms"], b["text"]) for b in parse_srt(str(out2))]
+
+
+def test_optimize_clamps_a_last_block_that_arrives_past_media_end(tmp_path):
+    src = tmp_path / "in.srt"
+    src.write_text("1\n00:00:10,000 --> 00:00:15,000\nОстаннє речення.\n\n", encoding="utf-8")
+    whisper = tmp_path / "whisper.json"
+    whisper.write_text(
+        json.dumps({"segments": [{"start": 10.0, "end": 12.0, "text": "x"}], "duration": 13.0}), encoding="utf-8"
+    )
+    out = tmp_path / "out.srt"
+    optimize(srt_path=str(src), json_path=str(whisper), output_path=str(out))
+    assert parse_srt(str(out))[-1]["end_ms"] == 13000
