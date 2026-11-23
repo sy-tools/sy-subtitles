@@ -12,7 +12,10 @@ Usage:
         --snapshot ... --talk-dir talks/TALK
 
     python -m tools.fake_llm build-timecodes \\
-        --snapshot ... --work-dir talks/TALK/VIDEO/work
+        --snapshot ... --work-dir talks/TALK/VIDEO/work [--timing-source en-srt]
+
+    python -m tools.fake_llm pin-transcript \\
+        --snapshot ... --talk-dir talks/TALK
 
     python -m tools.fake_llm whisper \\
         --snapshot ... --output talks/TALK/VIDEO/source/whisper.json
@@ -49,9 +52,30 @@ def cmd_review(args: argparse.Namespace) -> None:
 
 
 def cmd_build_timecodes(args: argparse.Namespace) -> None:
+    """The builder's answer depends on the timing source: in en-srt mode it
+    may only place blocks inside the EN SRT's span and may skip blocks with
+    no EN counterpart. A snapshot whose video has partial EN subtitles
+    therefore records a separate `timecodes.<source>.txt` for that mode."""
     snapshot = Path(args.snapshot)
     work_dir = Path(args.work_dir)
-    _copy(snapshot / "work" / "timecodes.txt", work_dir / "timecodes.txt")
+    answer = snapshot / "work" / "timecodes.txt"
+    if args.timing_source:
+        per_source = snapshot / "work" / f"timecodes.{args.timing_source}.txt"
+        if per_source.is_file():
+            answer = per_source
+    _copy(answer, work_dir / "timecodes.txt")
+
+
+def cmd_pin_transcript(args: argparse.Namespace) -> None:
+    """Put the snapshot's transcript in place of the talk's own.
+
+    A run that skips translation builds from the transcript in the checkout,
+    which reviewers keep editing. The recorded builder answer is tied to the
+    block cut of the snapshot's transcript, so a replay against an edited one
+    misaligns every id after the first changed sentence."""
+    snapshot = Path(args.snapshot)
+    talk_dir = Path(args.talk_dir)
+    _copy(snapshot / "expected" / "transcript_uk.txt", talk_dir / "transcript_uk.txt")
 
 
 def cmd_whisper(args: argparse.Namespace) -> None:
@@ -87,7 +111,13 @@ def main() -> None:
     p_bt = sub.add_parser("build-timecodes")
     p_bt.add_argument("--snapshot", required=True)
     p_bt.add_argument("--work-dir", required=True)
+    p_bt.add_argument("--timing-source", choices=["whisper", "en-srt"])
     p_bt.set_defaults(func=cmd_build_timecodes)
+
+    p_pin = sub.add_parser("pin-transcript")
+    p_pin.add_argument("--snapshot", required=True)
+    p_pin.add_argument("--talk-dir", required=True)
+    p_pin.set_defaults(func=cmd_pin_transcript)
 
     p_ws = sub.add_parser("whisper")
     p_ws.add_argument("--snapshot", required=True)
