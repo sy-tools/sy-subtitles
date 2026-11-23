@@ -1071,6 +1071,7 @@ var I18N = {
     'gate.hide': '\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043F\u0430\u0440\u043E\u043B\u044C',
     'preview.resize_player': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0432\u0438\u0441\u043E\u0442\u0443 \u043F\u043B\u0435\u0454\u0440\u0430',
     'preview.resize_subs': '\u041F\u043E\u0442\u044F\u0433\u043D\u0456\u0442\u044C, \u0449\u043E\u0431 \u0437\u043C\u0456\u043D\u0438\u0442\u0438 \u0440\u043E\u0437\u043C\u0456\u0440 \u0441\u0443\u0431\u0442\u0438\u0442\u0440\u0456\u0432; \u043F\u043E\u0434\u0432\u0456\u0439\u043D\u0438\u0439 \u043A\u043B\u0430\u0446 \u2014 \u0441\u043A\u0438\u043D\u0443\u0442\u0438',
+    'preview.play_video': '\u0412\u0456\u0434\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0432\u0456\u0434\u0435\u043E',
     'preview.fs_exit': '\u0412\u0438\u0439\u0442\u0438 \u0437 \u043F\u043E\u0432\u043D\u043E\u0435\u043A\u0440\u0430\u043D\u043D\u043E\u0433\u043E \u0440\u0435\u0436\u0438\u043C\u0443',
     'search.placeholder': '\u041F\u043E\u0448\u0443\u043A \u043F\u0440\u043E\u043C\u043E\u0432...',
     'index.loading': '\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F...',
@@ -1409,6 +1410,7 @@ var I18N = {
     'gate.hide': 'Hide password',
     'preview.resize_player': 'Drag to resize the player',
     'preview.resize_subs': 'Drag to resize the subtitles; double-click to reset',
+    'preview.play_video': 'Play video',
     'preview.fs_exit': 'Exit fullscreen',
     'search.placeholder': 'Search talks...',
     'index.loading': 'Loading...',
@@ -2085,6 +2087,7 @@ var SyncPlayer = (function() {
     try {
       p = createVideoPlayer(iframe, video.source);
       state.player = p;
+      attachPoster(mount, p, video.source, { label: t('preview.play_video') });
       // Box the player in the video's own shape, so the letterbox is the
       // page's colour rather than the player's black (#sync-player-mount).
       p.getAspect().then(function(aspect) {
@@ -3878,6 +3881,8 @@ function showPreview(talkId, videoSlug) {
     iframe.style.cssText = oldIframe.style.cssText || 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
     if (playerSrc) iframe.src = playerSrc;
     oldIframe.parentNode.replaceChild(iframe, oldIframe);
+    // The previous video's poster (video_player.js attachPoster) goes with it.
+    iframe.parentNode.querySelectorAll('.video-poster').forEach(function(el) { el.remove(); });
     // The player's own chrome differs by provider (components.css).
     var previewView = document.getElementById('view-preview');
     if (playerSrc) previewView.dataset.provider = video.source.provider;
@@ -4081,6 +4086,12 @@ function showPreview(talkId, videoSlug) {
       function isCurrentPlayer() {
         return stillOnSameVideo() && previewState._rafToken === rafToken;
       }
+      // Box the player to the video's shape as soon as it is known. YouTube's
+      // comes without waiting for the player, and the poster shows its still
+      // and button from that same answer (attachPoster), already in place;
+      // Vimeo's comes from the player, so it is asked once the player is ready.
+      if (player.provider === 'yt') setPreviewAspect(player, isCurrentPlayer);
+      attachPoster(iframe.parentNode, player, video.source, { label: t('preview.play_video') });
       // Reaching the end clears the saved position so the next visit starts
       // fresh. The overlay loop keeps polling after 'ended' and reports ~duration,
       // so we must (a) cancel the pending throttled write and (b) set _ended — both
@@ -4162,7 +4173,7 @@ function showPreview(talkId, videoSlug) {
       }
       player.ready().then(function() {
         console.log('[SPA] ' + player.provider + ' player ready');
-        setPreviewAspect(player, isCurrentPlayer);
+        if (player.provider !== 'yt') setPreviewAspect(player, isCurrentPlayer);
         // Resume where the user left off on this video. Only fresh entries reach
         // here (sameVideo re-entry keeps the live player + position); trivial
         // near-start positions are skipped by shouldResumePreviewPos.

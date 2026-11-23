@@ -27,6 +27,15 @@ var YT_SEEK_JUMP_SEC = 1;
 var YT_PLAYING = 1;
 var YT_PAUSED = 2;
 var YT_ENDED = 0;
+var YT_BUFFERING = 3;
+// seekTo starts playback from any state but playing or paused (cued,
+// unstarted, ended) — measured 2026-11-23: cued -> buffering -> playing about
+// 0.6 s after the call. Vimeo's setCurrentTime never plays, and the SPA seeks
+// a stopped player (resume on open, a click on a row). So a start that comes
+// this soon after such a seek is the seek's, and is paused; buffering renews
+// the wait. A browser that blocks the start leaves nothing to pause, and past
+// this the next play is the viewer's own.
+var YT_SEEK_HOLD_MS = 2000;
 var DEFAULT_ASPECT = '16 / 9';
 // A YouTube player that has neither answered ready nor reported an error by
 // then is not coming: its API loaded, the widget did not. The real one is
@@ -163,6 +172,9 @@ function createYouTubePlayer(iframe, source, env) {
   // new 'play', and only a real start after a stop is.
   var playing = false;
   var last = null; // {t, at, d, playing}
+  // Until when a start of playback belongs to a seek made while stopped
+  // (YT_SEEK_HOLD_MS); 0 when no such seek is pending.
+  var seekHoldUntil = 0;
 
   var setTimeoutFn = env.setTimeout || function (fn, ms) { return setTimeout(fn, ms); };
   var clearTimeoutFn = env.clearTimeout || function (id) { clearTimeout(id); };
@@ -203,12 +215,29 @@ function createYouTubePlayer(iframe, source, env) {
   // A rejection nobody asked about yet must not surface as unhandled.
   readyPromise.catch(function () {});
 
+  // cc_load_policy=0 does not keep YouTube's own captions off (measured
+  // 2026-11-23: they showed under ours); the captions module loads with
+  // playback, so it is unloaded each time playback starts.
+  function unloadCaptions() {
+    try { yt.unloadModule('captions'); } catch (e) { /* no captions module */ }
+  }
+
   function onState(state) {
+    if (seekHoldUntil && now() > seekHoldUntil) seekHoldUntil = 0;
+    if (seekHoldUntil) {
+      if (state === YT_BUFFERING) { seekHoldUntil = now() + YT_SEEK_HOLD_MS; return; }
+      if (state === YT_PLAYING) {
+        // The seek's start, not the viewer's: back to stopped, unannounced.
+        // Even this much playback loads the captions module.
+        seekHoldUntil = 0;
+        unloadCaptions();
+        yt.pauseVideo();
+        return;
+      }
+      if (state === YT_PAUSED) seekHoldUntil = 0;
+    }
     if (state === YT_PLAYING) {
-      // cc_load_policy=0 does not keep YouTube's own captions off (measured
-      // 2026-11-23: they showed under ours); the captions module loads with
-      // playback, so it is unloaded each time playback starts.
-      try { yt.unloadModule('captions'); } catch (e) { /* no captions module */ }
+      unloadCaptions();
       if (!playing) { playing = true; emitter.emit('play', { seconds: yt.getCurrentTime() }); }
     } else if (state === YT_PAUSED) {
       if (playing) { playing = false; emitter.emit('pause', { seconds: yt.getCurrentTime() }); }
@@ -242,6 +271,21 @@ function createYouTubePlayer(iframe, source, env) {
     last = { t: t, at: at, d: d > 0 ? d : (last ? last.d : 0), playing: isPlaying };
   }
 
+  var aspectPromise = null;
+  function askAspect() {
+    if (!fetchFn) return Promise.resolve(DEFAULT_ASPECT);
+    // maxwidth/maxheight: the default answer is a 200px-wide thumbnail size,
+    // whose rounded height (113 for 16:9) is not the video's ratio.
+    var url = 'https://www.youtube.com/oembed?format=json&maxwidth=1920&maxheight=1080&url='
+      + encodeURIComponent(source.watchUrl);
+    return Promise.resolve()
+      .then(function () { return fetchFn(url); })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        return j && j.width > 0 && j.height > 0 ? j.width + ' / ' + j.height : DEFAULT_ASPECT;
+      }, function () { return DEFAULT_ASPECT; });
+  }
+
   function whenReady(fn) {
     return readyPromise.then(function () { return fn(yt); });
   }
@@ -252,6 +296,9 @@ function createYouTubePlayer(iframe, source, env) {
     getCurrentTime: function () { return whenReady(function (p) { return p.getCurrentTime(); }); },
     setCurrentTime: function (s) {
       return whenReady(function (p) {
+        var state = p.getPlayerState();
+        var stopped = !playing && state !== YT_PLAYING && state !== YT_PAUSED;
+        if (stopped) seekHoldUntil = now() + YT_SEEK_HOLD_MS;
         p.seekTo(s, true);
         if (last) last = { t: s, at: now(), d: last.d, playing: last.playing };
         emitter.emit('seeked', { seconds: s, duration: p.getDuration() });
@@ -260,20 +307,14 @@ function createYouTubePlayer(iframe, source, env) {
     },
     getDuration: function () { return whenReady(function (p) { return p.getDuration(); }); },
     getPaused: function () { return whenReady(function (p) { return p.getPlayerState() !== YT_PLAYING; }); },
+    // Asked once per player: the preview and the poster both want it.
     getAspect: function () {
-      if (!fetchFn) return Promise.resolve(DEFAULT_ASPECT);
-      // maxwidth/maxheight: the default answer is a 200px-wide thumbnail size,
-      // whose rounded height (113 for 16:9) is not the video's ratio.
-      var url = 'https://www.youtube.com/oembed?format=json&maxwidth=1920&maxheight=1080&url='
-        + encodeURIComponent(source.watchUrl);
-      return Promise.resolve()
-        .then(function () { return fetchFn(url); })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (j) {
-          return j && j.width > 0 && j.height > 0 ? j.width + ' / ' + j.height : DEFAULT_ASPECT;
-        }, function () { return DEFAULT_ASPECT; });
+      if (aspectPromise) return aspectPromise;
+      aspectPromise = askAspect();
+      return aspectPromise;
     },
-    play: function () { return whenReady(function (p) { p.playVideo(); }); },
+
+    play: function () { return whenReady(function (p) { seekHoldUntil = 0; p.playVideo(); }); },
     pause: function () { return whenReady(function (p) { p.pauseVideo(); }); },
     on: emitter.on,
     destroy: function () {
@@ -297,6 +338,82 @@ function createVideoPlayer(iframe, source, env) {
     : createVimeoPlayer(iframe, source, env);
 }
 
+// The still over a YouTube player before it first plays: YouTube's own
+// unstarted embed puts the title, the channel and a large play button across
+// the middle of the picture, and none of it can be moved; amruta.org shows the
+// still with a small play button in the bottom-left corner instead, and so do
+// we. The player under it is live from the start, so seeking and the sync
+// bar work before playback as they do without the poster.
+// A mobile browser may refuse playback the page starts (the YouTube API says
+// playVideo() does not work in every mobile environment): if the player has
+// not started this long after the click, the poster steps aside and the
+// viewer's next tap lands on YouTube's own button.
+var POSTER_FALLBACK_MS = 1500;
+var POSTER_PLAY_SVG = '<svg viewBox="0 0 68 48" aria-hidden="true" focusable="false">'
+  + '<path class="video-poster__play-bg" d="M66.5 7.7a8.5 8.5 0 0 0-6-6C55.3.3 34 .3 34 .3s-21.3 0-26.5 1.4a8.5 8.5 0 0 0-6 6C.1 12.9.1 24 .1 24s0 11.1 1.4 16.3a8.5 8.5 0 0 0 6 6C12.7 47.7 34 47.7 34 47.7s21.3 0 26.5-1.4a8.5 8.5 0 0 0 6-6c1.4-5.2 1.4-16.3 1.4-16.3s0-11.1-1.4-16.3z"/>'
+  + '<path class="video-poster__play-mark" d="M45 24 27 14v20z"/></svg>';
+
+function posterImageUrl(source) {
+  if (!source || source.provider !== 'yt' || !YT_ID_RE.test(source.id || '')) return '';
+  return 'https://i.ytimg.com/vi/' + source.id + '/hqdefault.jpg';
+}
+
+// env: {document, label, setTimeout, clearTimeout}; the page's globals
+// otherwise. Returns {el, remove} or null (no poster for this source).
+function attachPoster(container, player, source, env) {
+  env = env || {};
+  var still = posterImageUrl(source);
+  if (!still || !container || !player) return null;
+  var doc = env.document || document;
+  var setTimeoutFn = env.setTimeout || function (fn, ms) { return setTimeout(fn, ms); };
+  var clearTimeoutFn = env.clearTimeout || function (id) { clearTimeout(id); };
+
+  var el = doc.createElement('button');
+  el.type = 'button';
+  el.className = 'video-poster';
+  el.setAttribute('aria-label', env.label || 'Play video');
+  var img = doc.createElement('img');
+  img.alt = '';
+  img.src = still;
+  el.appendChild(img);
+  var mark = doc.createElement('span');
+  mark.className = 'video-poster__play';
+  mark.innerHTML = POSTER_PLAY_SVG;
+  el.appendChild(mark);
+  container.appendChild(el);
+
+  // The box takes the video's shape only once the player reports it; the
+  // still and its button show from then, where they stay (components.css).
+  function shaped() { el.setAttribute('data-shaped', ''); }
+  try {
+    var a = player.getAspect ? player.getAspect() : null;
+    if (a && typeof a.then === 'function') a.then(shaped, shaped);
+    else shaped();
+  } catch (err) { shaped(); }
+
+  var gone = false;
+  var starting = false;
+  var timer = null;
+  function remove() {
+    if (gone) return;
+    gone = true;
+    if (timer !== null) { clearTimeoutFn(timer); timer = null; }
+    if (el.parentNode) el.parentNode.removeChild(el);
+  }
+  player.on('play', remove);
+  el.addEventListener('click', function (e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (gone || starting) return;
+    starting = true;
+    el.setAttribute('data-state', 'starting');
+    timer = setTimeoutFn(remove, POSTER_FALLBACK_MS);
+    var r;
+    try { r = player.play(); } catch (err) { remove(); return; }
+    if (r && typeof r.then === 'function') r.then(null, remove);
+  });
+  return { el: el, remove: remove };
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     VIMEO_SDK_URL: VIMEO_SDK_URL,
@@ -304,6 +421,7 @@ if (typeof module !== 'undefined' && module.exports) {
     YT_POLL_MS: YT_POLL_MS,
     YT_SEEK_JUMP_SEC: YT_SEEK_JUMP_SEC,
     YT_READY_TIMEOUT_MS: YT_READY_TIMEOUT_MS,
+    YT_SEEK_HOLD_MS: YT_SEEK_HOLD_MS,
     VIMEO_PREVIEW_PARAMS: VIMEO_PREVIEW_PARAMS,
     isPlayableSource: isPlayableSource,
     vimeoEmbed: vimeoEmbed,
@@ -311,5 +429,8 @@ if (typeof module !== 'undefined' && module.exports) {
     parseAspect: parseAspect,
     loadProviderApi: loadProviderApi,
     createVideoPlayer: createVideoPlayer,
+    POSTER_FALLBACK_MS: POSTER_FALLBACK_MS,
+    posterImageUrl: posterImageUrl,
+    attachPoster: attachPoster,
   };
 }
