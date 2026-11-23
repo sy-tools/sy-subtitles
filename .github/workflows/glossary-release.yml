@@ -22,29 +22,42 @@ jobs:
       - name: Determine next version
         id: version
         run: |
-          # Find latest glossary-vN tag
           LATEST=$(git tag -l 'glossary-v*' --sort=-v:refname | head -1)
           if [ -z "$LATEST" ]; then
             NEXT="glossary-v1"
+            CHANGED=true
           else
             NUM=${LATEST#glossary-v}
             NEXT="glossary-v$((NUM + 1))"
+            # The workflow file is a trigger too; it cuts a release only when
+            # glossary/ holds changes the latest release does not have yet.
+            if git diff --quiet "$LATEST" HEAD -- glossary/; then
+              CHANGED=false
+            else
+              CHANGED=true
+            fi
           fi
-          echo "tag=$NEXT" >> "$GITHUB_OUTPUT"
-          echo "Next glossary version: $NEXT"
+          {
+            echo "tag=$NEXT"
+            echo "previous=$LATEST"
+            echo "changed=$CHANGED"
+          } >> "$GITHUB_OUTPUT"
+          echo "Next glossary version: $NEXT (glossary changed since ${LATEST:-start}: $CHANGED)"
 
       - name: Create release
+        if: steps.version.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PREVIOUS: ${{ steps.version.outputs.previous }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          CHANGES=$(git log --oneline -5 -- glossary/)
+          CHANGES=$(git log --oneline ${PREVIOUS:+"$PREVIOUS..HEAD"} -- glossary/)
           gh release create "$TAG" \
             --title "$TAG" \
             --notes "$(cat <<EOF
           Glossary updated.
 
-          Recent changes:
+          Changes since ${PREVIOUS:-the start}:
           $CHANGES
           EOF
           )"
