@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T16:30:46.174660+00:00",
+  "updated_at": "2026-11-23T17:10:53.219593+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1249,6 +1249,186 @@
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1586
+    },
+    "2001-02-25_Mahashivaratri-Puja-Destructive-Power-of-Shri-Mahadeva": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:32Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1644
+    },
+    "2000-09-16_Shri-Ganesha-Puja-the-sanctity-of-marriage": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:28Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1643
+    },
+    "1998-07-12_Guru-Puja-Humility-Complete-Obedience": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:24Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1642
+    },
+    "1998-06-21_Adi-Shakti-Puja-You-Must-Develop-Humility": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:20Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1641
+    },
+    "1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:16Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1640
+    },
+    "1996-05-05_Sahasrara-Puja-You-must-feel-responsible-but-be-humble": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:12Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1639
+    },
+    "1995-05-07_Sahasrara-Puja-Achieve-Complete-Freedom": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:07Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1638
+    },
+    "1993-08-15_Shri-Krishna-Puja-Dharma": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:10:02Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1637
+    },
+    "1992-07-25_Shri-Durga-Mahakali-Puja-France-is-going-down-and-down": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:58Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1636
+    },
+    "1991-12-11_Devi-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:54Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1635
+    },
+    "1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:49Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1634
+    },
+    "1990-03-20_Eve-of-Birthday-Puja-Talk-to-Sahaja-Yogis-Dont-create-groups": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:44Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1633
+    },
+    "1989-08-14_Shri-Krishna-Puja-They-have-to-come-back-again-and-again": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:40Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1632
+    },
+    "1989-06-11_Virata-Puja-We-have-to-really-examine-ourselves": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:35Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1631
+    },
+    "1988-04-03_Easter-Puja-You-have-to-be-strong-like-Christ": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:31Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1630
+    },
+    "1986-05-24_Mahalakshmi-Puja-The-Importance-of-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:27Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1629
+    },
+    "1984-07-14_Guru-Puja-The-State-of-Guru": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:23Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1628
+    },
+    "1984-02-03_Shri-Mahalakshmi-Puja-The-innermost-stream-of-Brahmanadi": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:18Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1627
+    },
+    "1983-09-18_Shri-Krishna-Puja-He-has-to-be-prasanna": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:14Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1626
+    },
+    "1982-08-15_Shri-Yogeshwara-Puja-God-of-Yoga": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T17:09:10Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1625
     }
   }
 }
