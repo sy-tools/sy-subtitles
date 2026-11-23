@@ -211,7 +211,11 @@ on an iPhone's home screen opens links in Safari, which shares none of its stora
 scrolls and the page behind it does not; on a phone the panel takes the whole screen. Sections
 (<code>.help-section</code>) hold cards (<code>.help-video</code>): a title, the length known
 before anything loads, and a native <code>&lt;video&gt;</code> whose 16:9 box is reserved up front.
-An update lists what it changed (<code>.help-video__notes</code>). Shown here without the scrim.</p>
+The number (<code>.help-video__number</code>) is the place in the catalog, never typed; a
+short description (<code>.help-video__description</code>) may follow the title. An update lists
+what it changed (<code>.help-video__notes</code>). While the catalog loads, or when it fails, the
+body holds one line (<code>.help-sheet__status</code>, <code>.help-sheet__error</code>). Shown here
+without the scrim.</p>
 <div class="sg-card" style="max-width:640px">
   <div class="help-sheet__panel">
     <div class="help-sheet__head" style="position:static">
@@ -220,13 +224,14 @@ An update lists what it changed (<code>.help-video__notes</code>). Shown here wi
     </div>
     <div class="help-sheet__body">
       <section class="help-section">
-        <h2 class="help-section__title" style="margin-top:0">Оновлення</h2>
+        <h2 class="help-section__title" style="margin-top:0">2. Оновлення</h2>
         <div class="help-section__list">
           <article class="help-video">
             <header class="help-video__head">
-              <h3 class="help-video__title">Оновлення на 22.11.2026</h3>
+              <h3 class="help-video__title"><span class="help-video__number">2.2</span> Оновлення на 22.11.2026</h3>
               <span class="help-video__duration">9:56</span>
             </header>
+            <p class="help-video__description">Що нового в повноекранному режимі.</p>
             <video class="help-video__player" controls preload="none" playsinline></video>
             <ul class="help-video__notes">
               <li>Зміна розміру субтитрів у повноекранному режимі.</li>
@@ -235,6 +240,8 @@ An update lists what it changed (<code>.help-video__notes</code>). Shown here wi
           </article>
         </div>
       </section>
+      <p class="help-sheet__status">Завантаження…</p>
+      <p class="help-sheet__status help-sheet__error">Не вдалося завантажити список відео. Спробуйте ще раз.</p>
     </div>
   </div>
 </div>

@@ -1973,6 +1973,12 @@ html.help-sheet-open { overflow: hidden; }
   background: var(--player-letterbox); border-radius: var(--radius-md); }
 .help-video__notes { margin: var(--space-3) 0 0; padding-left: var(--space-6);
   font-size: var(--text-sm); color: var(--fg3); }
+/* The number is the video's place, worked out from the catalog's order. */
+.help-video__number { margin-right: var(--space-1); font-family: var(--f-mono);
+  font-size: var(--text-sm); color: var(--fg5); }
+.help-video__description { margin: 0 0 var(--space-3); font-size: var(--text-sm); color: var(--fg3); }
+.help-sheet__status { margin: 0; color: var(--fg4); }
+.help-sheet__error { color: var(--danger-fg); }
 
 /* Footer build stamp. The app-shell version is a single token with no break
    opportunity that grows with every app file; as a flex item its min-width

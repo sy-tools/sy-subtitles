@@ -44,7 +44,7 @@ class SpaHTTPServer(http.server.ThreadingHTTPServer):
     daemon_threads = True
 
 
-def injection(exchange_url, client_id, burn_ref=""):
+def injection(exchange_url, client_id, burn_ref="", help_repo=""):
     """The <script> that overrides the shipped auth constants.
 
     Only the exchange URL is required: the client id in index.html is public
@@ -56,6 +56,8 @@ def injection(exchange_url, client_id, burn_ref=""):
         lines.append(f"window.__SY_GH_CLIENT_ID={_js_string(client_id)};")
     if burn_ref:
         lines.append(f"window.__SY_BURN_REF={_js_string(burn_ref)};")
+    if help_repo:
+        lines.append(f"window.__SY_HELP_REPO={_js_string(help_repo)};")
     return "<script>" + "".join(lines) + "</script>"
 
 
@@ -142,9 +144,16 @@ def main(argv=None):
         "(defaults to the shipped 'main'); set this to exercise a workflow "
         "change before it is on the default branch",
     )
+    parser.add_argument(
+        "--help-repo",
+        default="",
+        help="repository whose catalog the video tutorials sheet reads and its "
+        "admin writes (defaults to sy-tools/sy-help); sy-tools/sy-help-staging "
+        "for trying the admin without touching the live tutorials",
+    )
     args = parser.parse_args(argv)
 
-    Handler.script = injection(args.exchange_url, args.client_id, args.burn_ref)
+    Handler.script = injection(args.exchange_url, args.client_id, args.burn_ref, args.help_repo)
     handler = functools.partial(Handler, directory=SITE_DIR)
     with SpaHTTPServer(("127.0.0.1", args.port), handler) as httpd:
         print(f"SPA        http://localhost:{args.port}/?repo=sy-tools/sy-subtitles")

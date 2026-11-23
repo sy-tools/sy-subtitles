@@ -165,15 +165,77 @@ def test_the_styleguide_builds_its_live_catalog_without_errors(smoke_server, smo
     assert page.locator(".burn-seg").count() > 0, "the burn-progress examples were never built"
 
 
-HELP_VIDEO_COUNT = 13
+# The help catalog the smoke serves in place of sy-help's Pages site: two
+# sections, the updates listed newest first to prove the sheet sorts them.
+HELP_CATALOG = {
+    "version": 1,
+    "sections": [
+        {
+            "id": "guide",
+            "title": {"uk": "Як працювати з порталом", "en": "How to work with the portal"},
+            "order": "manual",
+            "videos": [
+                {
+                    "file": "intro",
+                    "title": {"uk": "Вступ", "en": "Introduction"},
+                    "duration": 61.0,
+                    "subtitles": ["uk", "en"],
+                },
+                {"file": "security", "title": {"uk": "Безпека", "en": ""}, "duration": 75.0},
+            ],
+        },
+        {
+            "id": "updates",
+            "title": {"uk": "Оновлення", "en": "Updates"},
+            "order": "chronological",
+            "videos": [
+                {
+                    "file": "update-2026-11-22",
+                    "date": "2026-11-22",
+                    "duration": 30.0,
+                    "notes": {"uk": ["Збереження файлу субтитрів."], "en": ["Saving the subtitle file."]},
+                },
+                {
+                    "file": "update-2026-09-05",
+                    "date": "2026-09-05",
+                    "duration": 20.0,
+                    "notes": {"uk": ["Меню налаштувань"], "en": []},
+                },
+            ],
+        },
+    ],
+}
+HELP_VIDEO_COUNT = 4
+HELP_PAGES = "https://sy-tools.github.io/sy-help/"
+GATE_TEST_PHRASE = "test-passphrase"
+GATE_TEST_HASH = "289fa9ee16cb75d517736c68cd7d9a646fde31efead2e17b59c3219bd1548f5f"
+
+
+def _serve_help(page, requests=None):
+    def handle(route):
+        url = route.request.url
+        if requests is not None:
+            requests.append(url)
+        if url.endswith("/catalog.json"):
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(HELP_CATALOG))
+        elif url.endswith(".vtt"):
+            route.fulfill(
+                status=200,
+                content_type="text/vtt",
+                headers={"Access-Control-Allow-Origin": "*"},
+                body="WEBVTT\n\n1\n00:00:00.000 --> 00:00:02.000\nx\n",
+            )
+        else:
+            route.fulfill(status=404, body="not found")
+
+    page.route("**/sy-tools.github.io/sy-help/**", handle)
 
 
 @pytest.fixture
 def index_page(smoke_server, smoke_page):
-    smoke_page.route(
-        "**/sy-tools.github.io/sy-help/**",
-        lambda r: r.fulfill(status=404, body="not found"),
-    )
+    _serve_help(smoke_page)
+    # The titles below are Ukrainian; the browser's own language would pick English.
+    smoke_page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
     smoke_page.goto(f"{smoke_server}/index.html")
     smoke_page.wait_for_function("document.title.includes('Index')", timeout=10000)
     return smoke_page
@@ -195,7 +257,7 @@ def test_the_settings_menu_ends_with_the_video_tutorials_entry(index_page):
     assert last.locator("svg").count() == 1
 
 
-def test_the_help_sheet_opens_over_the_index_with_every_video(index_page):
+def test_the_help_sheet_opens_over_the_index_with_the_catalog(index_page):
     page = index_page
     page_errors = []
     page.on("pageerror", lambda e: page_errors.append(str(e)))
@@ -208,9 +270,13 @@ def test_the_help_sheet_opens_over_the_index_with_every_video(index_page):
     assert page.locator("#help-sheet .help-section").count() == 2
     assert page.locator("#help-sheet .help-video").count() == HELP_VIDEO_COUNT
     srcs = page.eval_on_selector_all("#help-sheet video", "vs => vs.map(v => v.getAttribute('src'))")
-    assert all(s.startswith("https://sy-tools.github.io/sy-help/v/") and s.endswith(".mp4") for s in srcs), srcs
-    assert len(set(srcs)) == HELP_VIDEO_COUNT
-    assert page.locator("#help-sheet .help-section[data-section='updates'] .help-video__notes li").count() > 0
+    assert srcs == [
+        HELP_PAGES + "v/" + f + ".mp4" for f in ("intro", "security", "update-2026-09-05", "update-2026-11-22")
+    ], srcs
+    titles = page.eval_on_selector_all("#help-sheet .help-video__title", "hs => hs.map(h => h.textContent)")
+    assert titles[0] == "1.1 Вступ"
+    assert titles[2:] == ["2.1 Оновлення на 05.09.2026", "2.2 Оновлення на 22.11.2026"], "updates are not oldest first"
+    assert page.locator("#help-sheet .help-section[data-section='updates'] .help-video__notes li").count() == 2
     assert page.evaluate("getComputedStyle(document.documentElement).overflow") == "hidden", (
         "the page behind still scrolls"
     )
@@ -236,3 +302,82 @@ def test_the_help_sheet_closes_and_hands_focus_back(index_page):
         ), "a video kept playing behind the closed sheet"
         assert page.evaluate("getComputedStyle(document.documentElement).overflow") != "hidden"
     assert page.locator("#help-sheet .help-video").count() == HELP_VIDEO_COUNT, "reopening built the list twice"
+
+
+def test_a_catalog_that_does_not_load_says_so_and_is_tried_again(smoke_server, smoke_page):
+    page = smoke_page
+    page.route("**/sy-tools.github.io/sy-help/**", lambda r: r.fulfill(status=503, body="down"))
+    page.goto(f"{smoke_server}/index.html")
+    page.wait_for_function("document.title.includes('Index')", timeout=10000)
+    page.click("#prefs-btn")
+    page.click("#prefs-help")
+    page.wait_for_selector("#help-sheet .help-sheet__error")
+    page.keyboard.press("Escape")
+
+    page.unroute("**/sy-tools.github.io/sy-help/**")
+    _serve_help(page)
+    _open_help(page)
+    assert page.locator("#help-sheet .help-sheet__error").count() == 0
+
+
+def _track_modes(page):
+    return page.evaluate("[...document.querySelector('#help-sheet video').textTracks].map(t => [t.language, t.mode])")
+
+
+@pytest.mark.parametrize("lang, english_mode", [("en", "showing"), ("uk", "disabled")])
+def test_help_videos_carry_subtitles_shown_only_for_an_english_interface(smoke_server, smoke_page, lang, english_mode):
+    page = smoke_page
+    _serve_help(page)
+    page.add_init_script(f"localStorage.setItem('sy_lang', '{lang}')")
+    page.goto(f"{smoke_server}/index.html")
+    page.wait_for_function("document.title.length > 0", timeout=10000)
+
+    _open_help(page)
+
+    labels = page.eval_on_selector_all("#help-sheet video >> nth=0 >> track", "ts => ts.map(t => t.label)")
+    assert labels == ["Українська", "English"]
+    assert page.eval_on_selector("#help-sheet video", "v => v.getAttribute('crossorigin')") == "anonymous"
+    page.wait_for_function("document.querySelector('#help-sheet video').textTracks.length === 2")
+    assert dict(_track_modes(page)) == {"uk": "disabled", "en": english_mode}
+    assert page.locator("#help-sheet video >> nth=1 >> track").count() == 0, "a video without subtitles got tracks"
+
+
+def test_switching_the_interface_language_rebuilds_the_sheet_in_it(index_page):
+    page = index_page
+    _open_help(page)
+    page.keyboard.press("Escape")
+
+    page.evaluate("SPA.toggleLang()")
+    _open_help(page)
+    assert page.evaluate("currentLang") == "en"
+    titles = page.eval_on_selector_all("#help-sheet .help-video__title", "hs => hs.map(h => h.textContent)")
+    assert titles[0] == "1.1 Introduction"
+    assert titles[1] == "1.2 Безпека", "an empty English title falls back to Ukrainian"
+    page.wait_for_function("document.querySelector('#help-sheet video').textTracks.length === 2")
+    assert dict(_track_modes(page))["en"] == "showing"
+
+
+def test_the_tutorials_wait_behind_the_passphrase_gate(smoke_server, smoke_page):
+    page = smoke_page
+    requests = []
+    _serve_help(page, requests)
+    page.add_init_script(f"window.__SY_GATE_HASH = '{GATE_TEST_HASH}';")
+    page.goto(f"{smoke_server}/index.html")
+    page.wait_for_function("document.title.includes('Index')", timeout=10000)
+
+    page.click("#prefs-btn")
+    page.click("#prefs-help")
+    page.wait_for_selector("#sy-gate-input", timeout=4000)
+    assert page.locator("#help-sheet").is_hidden()
+    assert not requests, "the catalog was fetched before the passphrase"
+
+    page.keyboard.press("Escape")
+    page.wait_for_selector("#sy-gate-input", state="detached")
+    assert page.locator("#help-sheet").is_hidden(), "cancelling the gate still opened the tutorials"
+
+    page.click("#prefs-btn")
+    page.click("#prefs-help")
+    page.fill("#sy-gate-input", GATE_TEST_PHRASE)
+    page.press("#sy-gate-input", "Enter")
+    page.wait_for_selector("#help-sheet .help-video", timeout=10000)
+    assert page.locator("#help-sheet .help-video").count() == HELP_VIDEO_COUNT

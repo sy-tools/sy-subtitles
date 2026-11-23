@@ -77,3 +77,9 @@ def test_index_still_carries_the_injected_hooks(stand):
     assert body.index("__SY_GH_EXCHANGE_URL") < body.index("<script src="), (
         "the hooks must run before any app code, or the OAuth callback is consumed before they exist"
     )
+
+
+def test_the_injection_points_the_help_sheet_at_another_help_repo():
+    script = serve_auth_local.injection("http://x", "", help_repo="sy-tools/sy-help-staging")
+    assert "window.__SY_HELP_REPO='sy-tools/sy-help-staging';" in script
+    assert "__SY_HELP_REPO" not in serve_auth_local.injection("http://x", "")

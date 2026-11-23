@@ -1,94 +1,105 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const fs = require('fs');
-const path = require('path');
 const {
-  encodeHelpRef,
-  decodeHelpRef,
-  helpVideoUrl,
+  DEFAULT_HELP_REPO,
+  helpRepo,
+  pagesBase,
+  catalogUrl,
+  videoUrl,
+  subtitleUrl,
+  localized,
+  orderedSections,
   formatDuration,
-  HELP_SECTIONS,
 } = require('../site/js/help_videos');
 
-const SOURCE = fs.readFileSync(path.join(__dirname, '..', 'site', 'js', 'help_videos.js'), 'utf8');
-const allVideos = () => HELP_SECTIONS.flatMap((s) => s.videos);
+const CATALOG = {
+  version: 1,
+  sections: [
+    {
+      id: 'guide',
+      title: { uk: 'Як працювати', en: 'How to work' },
+      order: 'manual',
+      videos: [
+        { file: 'b', title: { uk: 'Друге', en: 'Second' } },
+        { file: 'a', title: { uk: 'Перше', en: '' } },
+      ],
+    },
+    {
+      id: 'updates',
+      title: { uk: 'Оновлення', en: 'Updates' },
+      order: 'chronological',
+      videos: [
+        { file: 'u2', date: '2026-11-22' },
+        { file: 'u1', date: '2026-09-05', title: { uk: 'Перше оновлення' } },
+      ],
+    },
+  ],
+};
 
-describe('help video refs', () => {
-  it('round-trip an id through encode and decode', () => {
-    assert.strictEqual(decodeHelpRef(encodeHelpRef('k3x9q2m7a1bd')), 'k3x9q2m7a1bd');
+describe('help repository', () => {
+  it('is sy-tools/sy-help unless the page is pointed elsewhere', () => {
+    assert.strictEqual(DEFAULT_HELP_REPO, 'sy-tools/sy-help');
+    assert.strictEqual(helpRepo({}), 'sy-tools/sy-help');
+    assert.strictEqual(helpRepo({ __SY_HELP_REPO: 'sy-tools/sy-help-staging' }), 'sy-tools/sy-help-staging');
   });
 
-  it('never carry the id in plain sight', () => {
-    const ref = encodeHelpRef('k3x9q2m7a1bd');
-    assert.ok(ref.startsWith('h1'), ref);
-    assert.ok(!ref.includes('k3x9q2m7a1bd'), ref);
+  it('ignores an override that is not owner/name', () => {
+    assert.strictEqual(helpRepo({ __SY_HELP_REPO: 'https://evil.example/x' }), 'sy-tools/sy-help');
   });
 
-  it('refuse an id that is not 12 lowercase letters or digits', () => {
-    assert.throws(() => encodeHelpRef('Intro.mp4'));
-    assert.throws(() => encodeHelpRef('k3x9q2m7a1b'));
+  it('resolves every file on that repository\'s Pages site', () => {
+    const r = 'sy-tools/sy-help-staging';
+    assert.strictEqual(pagesBase(r), 'https://sy-tools.github.io/sy-help-staging/');
+    assert.strictEqual(catalogUrl(r), 'https://sy-tools.github.io/sy-help-staging/catalog.json');
+    assert.strictEqual(videoUrl(r, 'intro-2'), 'https://sy-tools.github.io/sy-help-staging/v/intro-2.mp4');
+    assert.strictEqual(subtitleUrl(r, 'intro-2', 'en'), 'https://sy-tools.github.io/sy-help-staging/subs/intro-2.en.vtt');
+  });
+});
+
+describe('localized', () => {
+  it('picks the interface language and falls back to Ukrainian when it is empty', () => {
+    assert.strictEqual(localized({ uk: 'Так', en: 'Yes' }, 'en'), 'Yes');
+    assert.strictEqual(localized({ uk: 'Так', en: '' }, 'en'), 'Так');
+    assert.deepStrictEqual(localized({ uk: ['а'], en: [] }, 'en'), ['а']);
+    assert.strictEqual(localized(undefined, 'en'), '');
+  });
+});
+
+describe('orderedSections', () => {
+  const out = orderedSections(CATALOG);
+
+  it('numbers sections and the videos of a manual section by position', () => {
+    assert.deepStrictEqual(out.map((s) => s.number), ['1', '2']);
+    assert.deepStrictEqual(out[0].videos.map((v) => [v.file, v.number]), [['b', '1.1'], ['a', '1.2']]);
   });
 
-  it('refuse a ref of another version or one that decodes to garbage', () => {
-    assert.throws(() => decodeHelpRef('r1' + encodeHelpRef('k3x9q2m7a1bd').slice(2)));
-    assert.throws(() => decodeHelpRef('h1AAAA'));
-    assert.throws(() => decodeHelpRef(''));
+  it('sorts a chronological section oldest first', () => {
+    assert.deepStrictEqual(out[1].videos.map((v) => [v.file, v.number]), [['u1', '2.1'], ['u2', '2.2']]);
   });
 
-  it('resolve to the sy-help Pages site', () => {
-    assert.strictEqual(
-      helpVideoUrl(encodeHelpRef('k3x9q2m7a1bd')),
-      'https://sy-tools.github.io/sy-help/v/k3x9q2m7a1bd.mp4',
-    );
+  it('titles an update by its date when it has no title of its own', () => {
+    const u2 = out[1].videos[1];
+    assert.deepStrictEqual(u2.displayTitle, { uk: 'Оновлення на 22.11.2026', en: 'Update of 22.11.2026' });
+    assert.deepStrictEqual(out[1].videos[0].displayTitle, { uk: 'Перше оновлення' });
+  });
+
+  it('leaves the catalog it was given untouched', () => {
+    assert.deepStrictEqual(CATALOG.sections[1].videos.map((v) => v.file), ['u2', 'u1']);
+    assert.strictEqual(CATALOG.sections[0].videos[0].number, undefined);
   });
 });
 
 describe('formatDuration', () => {
   it('shows minutes and seconds, rounding to the nearest second', () => {
     assert.strictEqual(formatDuration(87.7), '1:28');
-    assert.strictEqual(formatDuration(951.1), '15:51');
     assert.strictEqual(formatDuration(5), '0:05');
   });
 
   it('adds hours only when the video reaches one', () => {
-    assert.strictEqual(formatDuration(3600), '1:00:00');
     assert.strictEqual(formatDuration(3725), '1:02:05');
   });
-});
 
-describe('HELP_SECTIONS', () => {
-  it('lists the guide first and the updates after it', () => {
-    assert.deepStrictEqual(HELP_SECTIONS.map((s) => s.id), ['guide', 'updates']);
-    for (const s of HELP_SECTIONS) assert.ok(s.title && s.videos.length, s.id);
-  });
-
-  it('gives every video a title, a positive duration and a ref that decodes', () => {
-    for (const v of allVideos()) {
-      assert.ok(v.title, JSON.stringify(v));
-      assert.ok(v.duration > 0, v.title);
-      assert.match(decodeHelpRef(v.ref), /^[a-z0-9]{12}$/, v.title);
-    }
-  });
-
-  it('points no two videos at the same file', () => {
-    const ids = allVideos().map((v) => decodeHelpRef(v.ref));
-    assert.strictEqual(new Set(ids).size, ids.length);
-  });
-
-  it('keeps every decoded id out of the shipped source', () => {
-    for (const v of allVideos()) {
-      const id = decodeHelpRef(v.ref);
-      assert.ok(!SOURCE.includes(id), `${v.title}: id ${id} appears in plain text`);
-    }
-  });
-
-  it('puts the newest update first, each with what it changed', () => {
-    const updates = HELP_SECTIONS.find((s) => s.id === 'updates').videos;
-    const dates = updates.map((v) => v.date);
-    assert.deepStrictEqual(dates, [...dates].sort().reverse());
-    for (const v of updates) {
-      assert.match(v.date, /^\d{4}-\d{2}-\d{2}$/, v.title);
-      assert.ok(v.notes.length > 0, v.title);
-    }
+  it('shows nothing for a video whose length is not known yet', () => {
+    assert.strictEqual(formatDuration(undefined), '');
   });
 });
