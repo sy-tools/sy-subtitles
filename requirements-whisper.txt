@@ -3,7 +3,7 @@
 # `metadata_errors` keyword faster-whisper 1.2.1 passes to av.open. CI's
 # test-whisper lane decodes audio with this exact set whenever it changes.
 faster-whisper==1.2.1
-av==18.1.0
+av==19.0.2
 ctranslate2==4.9.0
 onnxruntime==1.31.1
 tokenizers==0.23.3
