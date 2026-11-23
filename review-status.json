@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T12:10:07.207146+00:00",
+  "updated_at": "2026-11-23T15:30:48.682061+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1069,6 +1069,96 @@
       "operator_stage": "delivered",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1498
+    },
+    "1995-07-16_Guru-Puja-Watch-Your-Mind-and-Attention": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:30:27Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1556
+    },
+    "1994-05-08_Sahasrara-Puja-Mahamaya-Swarupa": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:30:23Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1555
+    },
+    "1993-03-21_Birthday-Puja-Satya-Yuga": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:30:19Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1554
+    },
+    "1992-02-09_Shri-Ganesha-Puja-Gravity-and-Balance": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:30:15Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1553
+    },
+    "1988-08-14_Shri-Fatima-Puja-The-principle-of-the-Left-Nabhi": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:30:11Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1552
+    },
+    "1987-11-06_Shri-Ganesha-Puja-spread-love-all-over-and-remove-the-people-from-the-shackles": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:30:06Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1551
+    },
+    "1985-06-02_Shri-Krishna-Puja-Play-the-melody-of-God": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:30:02Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1550
+    },
+    "1984-05-05_Maha-Sahasrara-Puja-The-Start-of-a-New-Era": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:29:57Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1549
+    },
+    "1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:29:53Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1548
+    },
+    "1982-05-05_Sahasrara-Puja-Opening-the-Primordial-Sahasrar": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": null,
+      "updated_at": "2026-11-23T15:29:49Z",
+      "operator_stage": "pipeline",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1547
     }
   }
 }
