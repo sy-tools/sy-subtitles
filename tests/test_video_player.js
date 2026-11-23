@@ -505,3 +505,193 @@ describe('createVideoPlayer — unplayable', () => {
     assert.throws(() => createVideoPlayer({}, GD_SOURCE, {}));
   });
 });
+
+// The poster over a YouTube player (site/js/video_player.js attachPoster):
+// the video's still with a small play button at its bottom-left corner, in
+// place of YouTube's own title bar and centred button.
+describe('video poster', () => {
+  const { attachPoster, posterImageUrl, POSTER_FALLBACK_MS } = require('../site/js/video_player.js');
+
+  function fakeDocument() {
+    function el(tag) {
+      return {
+        tagName: tag.toUpperCase(), children: [], parentNode: null, attrs: {}, listeners: {},
+        className: '', src: '', alt: null, type: '', innerHTML: '',
+        setAttribute(k, v) { this.attrs[k] = String(v); },
+        getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+        appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+        removeChild(c) { this.children = this.children.filter((x) => x !== c); c.parentNode = null; return c; },
+        addEventListener(ev, fn) { (this.listeners[ev] = this.listeners[ev] || []).push(fn); },
+        dispatch(ev) { (this.listeners[ev] || []).forEach((fn) => fn({ preventDefault() {}, stopPropagation() {} })); },
+        querySelectorAll(sel) {
+          const cls = sel.replace(/^\./, '');
+          const out = [];
+          (function walk(n) { n.children.forEach((c) => { if ((' ' + c.className + ' ').includes(' ' + cls + ' ')) out.push(c); walk(c); }); })(this);
+          return out;
+        },
+      };
+    }
+    return { createElement: el };
+  }
+
+  function fakePlayer() {
+    const handlers = {};
+    let settleAspect;
+    return {
+      aspect: new Promise((resolve, reject) => { settleAspect = { resolve, reject }; }),
+      settleAspect: (ok) => (ok ? settleAspect.resolve('4 / 3') : settleAspect.reject(new Error('no shape'))),
+      getAspect() { return this.aspect; },
+      plays: 0,
+      playResult: Promise.resolve(),
+      on(ev, fn) { (handlers[ev] = handlers[ev] || []).push(fn); },
+      emit(ev, d) { (handlers[ev] || []).forEach((fn) => fn(d)); },
+      play() { this.plays += 1; return this.playResult; },
+    };
+  }
+
+  function setup(source) {
+    const doc = fakeDocument();
+    const container = doc.createElement('div');
+    const timers = [];
+    const env = {
+      document: doc,
+      label: 'Play video',
+      setTimeout: (fn, ms) => { timers.push({ fn, ms, live: true }); return timers.length; },
+      clearTimeout: (id) => { if (timers[id - 1]) timers[id - 1].live = false; },
+    };
+    const player = fakePlayer();
+    const poster = attachPoster(container, player, source || YT_SOURCE, env);
+    return { container, player, poster, timers };
+  }
+
+  it('posterImageUrl names the still YouTube serves for the video', () => {
+    assert.strictEqual(posterImageUrl(YT_SOURCE), 'https://i.ytimg.com/vi/AbCdEfGhIjK/hqdefault.jpg');
+  });
+
+  it('posterImageUrl has nothing for a Vimeo, Drive or malformed source', () => {
+    assert.strictEqual(posterImageUrl(VIMEO_SOURCE), '');
+    assert.strictEqual(posterImageUrl(GD_SOURCE), '');
+    assert.strictEqual(posterImageUrl({ provider: 'yt', id: 'short' }), '');
+    assert.strictEqual(posterImageUrl(null), '');
+  });
+
+  it('puts no poster over a Vimeo player', () => {
+    const { container, poster } = setup(VIMEO_SOURCE);
+    assert.strictEqual(poster, null);
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('covers a YouTube player with a labelled button holding the still and the play mark', () => {
+    const { container, poster } = setup();
+    assert.ok(poster);
+    assert.deepStrictEqual(container.children, [poster.el]);
+    assert.strictEqual(poster.el.tagName, 'BUTTON');
+    assert.strictEqual(poster.el.type, 'button');
+    assert.strictEqual(poster.el.className, 'video-poster');
+    assert.strictEqual(poster.el.getAttribute('aria-label'), 'Play video');
+    const img = poster.el.children.find((c) => c.tagName === 'IMG');
+    assert.strictEqual(img.src, 'https://i.ytimg.com/vi/AbCdEfGhIjK/hqdefault.jpg');
+    assert.strictEqual(img.alt, '');
+    assert.strictEqual(poster.el.querySelectorAll('.video-poster__play').length, 1);
+  });
+
+  it('a click plays the video, and the first play takes the poster away', async () => {
+    const { container, player, poster } = setup();
+    poster.el.dispatch('click');
+    assert.strictEqual(player.plays, 1);
+    assert.strictEqual(container.children.length, 1, 'stays until playback really starts');
+    player.emit('play', { seconds: 0 });
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('a second click while starting does not ask to play again', () => {
+    const { player, poster } = setup();
+    poster.el.dispatch('click');
+    poster.el.dispatch('click');
+    assert.strictEqual(player.plays, 1);
+  });
+
+  it('playback started elsewhere (keyboard, sync) takes the poster away too', () => {
+    const { container, player } = setup();
+    player.emit('play', { seconds: 12 });
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('when the browser does not let the page start it, the poster steps aside for the player\'s own button', () => {
+    const { container, player, poster, timers } = setup();
+    poster.el.dispatch('click');
+    const t = timers.find((x) => x.live);
+    assert.strictEqual(t.ms, POSTER_FALLBACK_MS);
+    t.fn();
+    assert.strictEqual(container.children.length, 0);
+    player.emit('play', { seconds: 0 }); // late play: nothing left to remove, no throw
+  });
+
+  it('a refused play takes the poster away at once', async () => {
+    const { container, player, poster } = setup();
+    player.playResult = Promise.reject(new Error('not allowed'));
+    poster.el.dispatch('click');
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(container.children.length, 0);
+  });
+
+  it('remove is idempotent and cancels the fallback', () => {
+    const { container, poster, timers } = setup();
+    poster.el.dispatch('click');
+    poster.remove();
+    poster.remove();
+    assert.strictEqual(container.children.length, 0);
+    assert.ok(timers.every((x) => !x.live));
+  });
+});
+
+describe('video poster waits for the video\'s shape', () => {
+  const { attachPoster } = require('../site/js/video_player.js');
+  // The box is 16:9 until the player reports the video's shape; the still and
+  // its button show only once it has, so the button does not jump with the box.
+  function mk() {
+    const el = (tag) => ({
+      tagName: tag.toUpperCase(), children: [], attrs: {}, className: '',
+      setAttribute(k, v) { this.attrs[k] = String(v); },
+      getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+      hasAttribute(k) { return k in this.attrs; },
+      appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+      removeChild(c) { this.children = this.children.filter((x) => x !== c); return c; },
+      addEventListener() {},
+    });
+    let settle;
+    const player = {
+      on() {}, play() { return Promise.resolve(); },
+      aspectCalls: 0,
+      getAspect() { this.aspectCalls += 1; return new Promise((res, rej) => { settle = { res, rej }; }); },
+    };
+    const poster = attachPoster(el('div'), player, YT_SOURCE, { document: { createElement: el } });
+    return { poster, player, settle: () => settle };
+  }
+
+  it('is not shaped until the player reports the shape, then is', async () => {
+    const { poster, settle } = mk();
+    assert.strictEqual(poster.el.getAttribute('data-shaped'), null);
+    settle().res('4 / 3');
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(poster.el.getAttribute('data-shaped'), '');
+  });
+
+  it('shows anyway when the shape cannot be had', async () => {
+    const { poster, settle } = mk();
+    settle().rej(new Error('offline'));
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(poster.el.getAttribute('data-shaped'), '');
+  });
+});
+
+describe('YouTube getAspect asks once per player', () => {
+  it('a second call reuses the first answer', async () => {
+    let fetches = 0;
+    const fetch = () => { fetches += 1; return Promise.resolve({ ok: true, json: () => ({ width: 640, height: 480 }) }); };
+    const p = createVideoPlayer({}, YT_SOURCE, { fetch, loadYouTubeApi: () => new Promise(() => {}) });
+    assert.strictEqual(await p.getAspect(), '640 / 480');
+    assert.strictEqual(await p.getAspect(), '640 / 480');
+    assert.strictEqual(fetches, 1);
+  });
+});
