@@ -109,8 +109,24 @@ absorb a transient blip). Opt out in offline/restricted environments with:
 SY_E2E_REAL_VIMEO=0 pytest tests/test_sync_player_integration.py
 ```
 
-Every other test runs against mocked fixtures (GitHub API, meta.yaml, SRTs)
-and makes no outbound calls.
+The same file holds the real **YouTube** IFrame API tests. They are opt-in:
+no YouTube talk is in `talks/` yet, so no video is pinned in the test. Name
+one by its `video_ref` (an r2 `yt:` ref of a video that embeds on any origin)
+to run them:
+
+```bash
+SY_E2E_REAL_YOUTUBE=<video_ref> pytest tests/test_sync_player_integration.py -k YouTube
+```
+
+Every other test runs against mocked fixtures (GitHub API, meta.yaml, SRTs,
+and both players: `tests/fixtures/mock_vimeo_player.js`,
+`tests/fixtures/mock_youtube_player.js`) and makes no outbound calls. The two
+mocks share one test handle (`window._vimeoPlayer`, `_setTime`, `_fire`, …),
+so a player suite runs over both providers by parametrizing its `page`
+fixture: `@pytest.mark.parametrize("page", PROVIDERS, indirect=True)`
+(`tests/test_preview_spa.py`). The YouTube mock, like the real API, reports
+time only when polled — wait out the adapter's 250 ms poll after `_setTime`
+where the test listens for `timeupdate`.
 
 ## Dry-run snapshots
 

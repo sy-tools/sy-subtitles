@@ -231,3 +231,23 @@ describe('bypassesWorker — media is left to the browser', () => {
     assert.ok(check < handler.indexOf('e.respondWith('), 'bypassesWorker is asked after the worker has answered');
   });
 });
+
+describe('YouTube player hosts — network-only', () => {
+  // The IFrame API is a loader that pulls a versioned player script it names
+  // itself; a cached copy would pin an old one, and a stale API breaks
+  // playback outright. Offline there is no video to play anyway.
+  it('the IFrame API, its player scripts and oEmbed are network-only', () => {
+    [
+      'https://www.youtube.com/iframe_api',
+      'https://www.youtube.com/s/player/abc123/www-widgetapi.vflset/www-widgetapi.js',
+      'https://www.youtube.com/oembed?format=json&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DAbCdEfGhIjK',
+      'https://www.youtube.com/embed/AbCdEfGhIjK?enablejsapi=1',
+      'https://youtube.com/iframe_api',
+      'https://s.ytimg.com/yts/jsbin/www-widgetapi.js',
+    ].forEach((u) => assert.strictEqual(pickStrategy(u), 'network-only', u));
+  });
+  it('matches the host, not a substring', () => {
+    assert.strictEqual(pickStrategy('https://evil.com/?x=www.youtube.com'), 'network-first');
+    assert.strictEqual(pickStrategy('https://www.youtube.com.evil.com/iframe_api'), 'network-first');
+  });
+});

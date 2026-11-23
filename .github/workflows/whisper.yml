@@ -56,6 +56,7 @@ jobs:
           import os
           import yaml
 
+          from tools.video_media import download_candidates
           from tools.video_roles import declared_ignored_slugs
           from tools.workflow_validation import (
               InvalidWorkflowInput,
@@ -108,17 +109,28 @@ jobs:
                   if slug in ignored:
                       print(f"SKIP: {talk_id}/{slug} is declared sync: ignored")
                       continue
-                  # Links are stored obfuscated as video_ref; pass the ref
-                  # through the matrix (decode happens at the yt-dlp step) so no
-                  # plaintext URL lands in the public Actions logs.
+                  # The ref stays out of the matrix: the download step reads
+                  # and schema-validates meta.yaml itself (tools/video_media.py),
+                  # so only the talk id and slug travel.
                   video_ref = video.get("video_ref", "")
                   if not video_ref:
                       continue
                   try:
                       validate_video_slug(slug)
-                      validate_video_ref(video_ref)
-                  except InvalidWorkflowInput as e:
+                      validate_video_ref(video_ref, allowed=("vimeo", "yt"))
+                      fetchable = bool(download_candidates(video, ci=True))
+                  except (InvalidWorkflowInput, ValueError) as e:
                       die(f"{meta_path}: {e}")
+                  # A YouTube video with no Drive mirror cannot be fetched by
+                  # a runner (YouTube refuses them); queueing it would only
+                  # fail at the download.
+                  if not fetchable:
+                      print(
+                          f"::warning::{talk_id}/{slug}: no Drive mirror (media_refs) and YouTube refuses "
+                          "GitHub's runners. Run the whisper step on a home connection and commit the "
+                          f"result through a PR: python -m tools.local_whisper --talk-id {talk_id} --video-slug {slug}"
+                      )
+                      continue
                   whisper_path = f"talks/{talk_id}/{slug}/source/whisper.json"
 
                   if os.path.isfile(whisper_path) and not force:
@@ -128,7 +140,6 @@ jobs:
                   matrix.append({
                       "talk_id": talk_id,
                       "video_slug": slug,
-                      "video_ref": video_ref,
                   })
                   print(f"QUEUE: {talk_id}/{slug}")
 
@@ -151,7 +162,6 @@ jobs:
     env:
       TALK_ID: ${{ matrix.talk_id }}
       VIDEO_SLUG: ${{ matrix.video_slug }}
-      VIDEO_REF: ${{ matrix.video_ref }}
     steps:
       - uses: actions/checkout@v7
 
@@ -159,8 +169,7 @@ jobs:
         run: |
           python3 -m tools.workflow_validation_cli \
             --talk-id "$TALK_ID" \
-            --video-slug "$VIDEO_SLUG" \
-            --video-ref "$VIDEO_REF"
+            --video-slug "$VIDEO_SLUG"
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -189,22 +198,17 @@ jobs:
 
       - name: Download video (temporary)
         run: |
-          # Decode the obfuscated video_ref at the last moment and mask the
-          # plaintext URL from the logs. --player emits the player.vimeo.com
-          # form: Vimeo answers 401 on the internal API yt-dlp uses for the
-          # canonical vimeo.com/<id>/<hash> links.
-          VIMEO_URL=$(python3 -m tools.vimeo_codec decode --player "$VIDEO_REF")
-          echo "::add-mask::$VIMEO_URL"
+          set -euo pipefail
+          # The resolver masks each source before trying it and, when all
+          # fail, says why and points at tools.local_whisper. --ci: YouTube
+          # refuses GitHub's runners, so a YouTube video comes from its Drive
+          # mirrors here.
           mkdir -p /tmp/whisper_work
-          yt-dlp \
-            --referer "https://www.amruta.org/" \
-            -o "/tmp/whisper_work/video.mp4" \
-            "$VIMEO_URL" || {
-            # Some videos are refused to datacenter IPs only; the same
-            # download works from a home connection.
-            echo "::error::Vimeo refused the download from this runner. Run the whisper step locally and commit the result through a PR: python -m tools.local_whisper --talk-id $TALK_ID --video-slug $VIDEO_SLUG"
-            exit 1
-          }
+          python3 -m tools.video_media download --ci \
+            --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG" \
+            --out /tmp/whisper_work/video.mp4
+          test -s /tmp/whisper_work/video.mp4 \
+            || { echo "::error::downloaded file is empty"; exit 1; }
 
       - name: Run Whisper
         run: |

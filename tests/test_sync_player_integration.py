@@ -1,4 +1,4 @@
-"""Integration tests that hit real Vimeo (no SDK mock).
+"""Integration tests that hit real Vimeo and YouTube (no SDK mock).
 
 These tests load the real player.vimeo.com SDK and embed a real Vimeo
 video inside the test harness. They require outbound network access to
@@ -12,6 +12,11 @@ Current stable video: Mahashivaratri Puja 1979, from
 talks/1979-02-25_Puja-In-Pune-Marathi/meta.yaml. The link is stored as an
 obfuscated video_ref (no plaintext URL in the repo); decode_video_ref recovers
 the real URL at runtime for the live network test.
+
+YouTube runs only when SY_E2E_REAL_YOUTUBE names a video: set it to a
+video_ref (r2 "yt:<id>") of a video that embeds on any origin. No YouTube
+video is pinned here, because none is in talks/ yet — the gate becomes
+default-on, like Vimeo's, once one is and its ref can be copied in.
 """
 
 from __future__ import annotations
@@ -34,7 +39,7 @@ from tests.test_preview_spa import (  # noqa: F401  — re-exported fixtures
     server,
     spa_path,
 )
-from tools.vimeo_codec import decode_video_ref
+from tools.vimeo_codec import decode_video_ref, decode_video_source
 
 # Project-public video from the existing corpus, stored obfuscated so no
 # plaintext Vimeo link lives in the repo. Decoded at runtime for the real test.
@@ -48,7 +53,26 @@ TEST_VIMEO_URL = decode_video_ref(TEST_VIDEO_REF)
 _SKIP_REAL = os.environ.get("SY_E2E_REAL_VIMEO", "1") == "0"
 _SKIP_REASON = "SY_E2E_REAL_VIMEO=0 — real Vimeo network access disabled"
 
+_REAL_YOUTUBE_REF = os.environ.get("SY_E2E_REAL_YOUTUBE", "")
+_SKIP_REAL_YOUTUBE = not _REAL_YOUTUBE_REF
+_SKIP_REAL_YOUTUBE_REASON = "SY_E2E_REAL_YOUTUBE unset — set it to a YouTube video_ref to run"
+
 pytestmark = pytest.mark.e2e
+
+
+def _meta_for(ref):
+    return f"""title: 'Test Talk: Subtitle Preview'
+date: '2001-01-01'
+location: Test Location
+videos:
+- slug: Test-Video
+  title: Test Video
+  video_ref: {ref}
+- slug: Test-Video-2
+  title: Test Video 2
+  video_ref: {ref}
+"""
+
 
 REAL_VIMEO_META = f"""title: 'Test Talk: Subtitle Preview'
 date: '2001-01-01'
@@ -63,13 +87,7 @@ videos:
 """
 
 
-@pytest.fixture
-def real_vimeo_page(browser, server):  # noqa: F811
-    """Page fixture like `page` but WITHOUT mocking player.vimeo.com.
-
-    Uses the real Vimeo SDK from CDN.  All GitHub API calls are still mocked
-    so we only need outbound access to *.vimeo.com.
-    """
+def _real_page(browser, meta):
     ctx = browser.new_context()
     pg = ctx.new_page()
 
@@ -90,7 +108,7 @@ def real_vimeo_page(browser, server):  # noqa: F811
         lambda route: route.fulfill(
             status=200,
             content_type="text/plain",
-            body=REAL_VIMEO_META,
+            body=meta,
         ),
     )
 
@@ -144,8 +162,28 @@ def real_vimeo_page(browser, server):  # noqa: F811
         ),
     )
 
-    # NOTE: do NOT mock player.vimeo.com — we let the real SDK load from CDN.
+    # NOTE: do NOT mock the player — the real SDK / IFrame API loads.
     pg.add_init_script("localStorage.removeItem('sy_tree_cache__main');")
+    return ctx, pg
+
+
+@pytest.fixture
+def real_vimeo_page(browser, server):  # noqa: F811
+    """Page fixture like `page` but WITHOUT mocking player.vimeo.com.
+
+    Uses the real Vimeo SDK from CDN.  All GitHub API calls are still mocked
+    so we only need outbound access to *.vimeo.com.
+    """
+    ctx, pg = _real_page(browser, REAL_VIMEO_META)
+    yield pg
+    pg.close()
+    ctx.close()
+
+
+@pytest.fixture
+def real_youtube_page(browser, server):  # noqa: F811
+    """Like real_vimeo_page, with the real YouTube IFrame API and embed."""
+    ctx, pg = _real_page(browser, _meta_for(_REAL_YOUTUBE_REF))
     yield pg
     pg.close()
     ctx.close()
@@ -265,3 +303,41 @@ class TestRealVimeoIntegration:
         # wider than the bar.
         assert dims["ifrW"] >= dims["ifrH"], f"Iframe unexpectedly portrait: {dims!r}"
         assert dims["ifrW"] <= dims["barW"] + 1, f"Iframe overflows bar: {dims!r}"
+
+
+@pytest.mark.flaky(reruns=2, reruns_delay=2)
+@pytest.mark.skipif(_SKIP_REAL_YOUTUBE, reason=_SKIP_REAL_YOUTUBE_REASON)
+class TestRealYouTubeIntegration:
+    def _open_preview(self, server, page):  # noqa: F811
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_function("!!(previewState && previewState.player)", timeout=15000)
+        # Bounded: page.evaluate has no timeout of its own.
+        ready = page.evaluate("""async () => Promise.race([
+            previewState.player.ready().then(() => true, (e) => String(e)),
+            new Promise((r) => setTimeout(() => r('timeout'), 28000))])""")
+        assert ready is True, f"YouTube player never became ready: {ready!r}"
+
+    def test_real_iframe_api_plays_the_embed(self, server, real_youtube_page):  # noqa: F811
+        page = real_youtube_page
+        self._open_preview(server, page)
+        src = page.evaluate("document.getElementById('vimeo-player').src")
+        assert src.startswith("https://www.youtube.com/embed/" + decode_video_source(_REAL_YOUTUBE_REF).id), src
+        assert page.evaluate("previewState.player.provider") == "yt"
+
+    def test_real_setCurrentTime_moves_the_playhead(self, server, real_youtube_page):  # noqa: F811
+        page = real_youtube_page
+        self._open_preview(server, page)
+        page.evaluate("previewState.player.setCurrentTime(5)")
+        page.wait_for_function(
+            "previewState && Math.abs(previewState.currentTime - 5) < 1",
+            timeout=15000,
+        )
+
+    def test_real_duration_and_shape(self, server, real_youtube_page):  # noqa: F811
+        page = real_youtube_page
+        self._open_preview(server, page)
+        assert page.evaluate("previewState.player.getDuration()") > 0
+        page.wait_for_function(
+            "!!document.getElementById('view-preview').style.getPropertyValue('--preview-aspect')",
+            timeout=15000,
+        )

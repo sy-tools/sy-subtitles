@@ -28,6 +28,15 @@ videos:
   video_ref: r1CRxJTlpYUFZF
 """
 
+# The same talk on YouTube (synthetic ids): the E2E core paths run over both
+# players — mark a test or class with
+# @pytest.mark.parametrize("page", PROVIDERS, indirect=True).
+SAMPLE_META_YT = SAMPLE_META.replace("r1DBtMTl9VW1NC", "r2PhlkCSAJPEkiCCBSFQo").replace(
+    "r1CRxJTlpYUFZF", "r2JQJ_EjMaL1o5EztSFQo"
+)
+PROVIDERS = ["vimeo", "youtube"]
+YT_OEMBED = {"width": 1280, "height": 720}
+
 # Hostile amruta_url values (the meta.yaml / scraping-bookmarklet attacker
 # vector) that try to break out of the card's href="". Two distinct vectors,
 # because esc() escapes < > independently of the quote fix:
@@ -159,8 +168,31 @@ def mock_player_js():
     return Path(__file__).parent.joinpath("fixtures", "mock_vimeo_player.js").read_text()
 
 
+@pytest.fixture(scope="module")
+def mock_youtube_js():
+    return Path(__file__).parent.joinpath("fixtures", "mock_youtube_player.js").read_text()
+
+
+def route_youtube(pg, mock_youtube_js, oembed=None):
+    """The YouTube IFrame API, its embed page and oEmbed, all local."""
+    pg.route(
+        "**/www.youtube.com/iframe_api",
+        lambda route: route.fulfill(status=200, content_type="application/javascript", body=mock_youtube_js),
+    )
+    pg.route(
+        "**/www.youtube.com/embed/**",
+        lambda route: route.fulfill(status=200, content_type="text/html", body="<!doctype html>"),
+    )
+    pg.route(
+        "**/www.youtube.com/oembed?**",
+        lambda route: route.fulfill(status=200, content_type="application/json", body=json.dumps(oembed or YT_OEMBED)),
+    )
+
+
 @pytest.fixture
-def page(server, mock_player_js, browser):
+def page(request, server, mock_player_js, mock_youtube_js, browser):
+    provider = getattr(request, "param", "vimeo")
+    meta_text = SAMPLE_META_YT if provider == "youtube" else SAMPLE_META
     ctx = browser.new_context()
     pg = ctx.new_page()
 
@@ -181,7 +213,7 @@ def page(server, mock_player_js, browser):
         lambda route: route.fulfill(
             status=200,
             content_type="text/plain",
-            body=SAMPLE_META,
+            body=meta_text,
         ),
     )
 
@@ -238,6 +270,8 @@ def page(server, mock_player_js, browser):
             body=mock_player_js,
         ),
     )
+
+    route_youtube(pg, mock_youtube_js)
 
     # Mock review-status.json
     pg.route(
@@ -708,8 +742,9 @@ class TestDirectNavigation:
         assert uk == 2
 
 
+@pytest.mark.parametrize("page", PROVIDERS, indirect=True)
 class TestPreviewSubtitles:
-    """Detailed subtitle behavior tests."""
+    """Detailed subtitle behavior tests, on either player."""
 
     def _goto_preview(self, server, page):
         goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
@@ -1250,7 +1285,7 @@ class TestFullscreenMode:
             const vp = document.getElementById('view-preview');
             vp.style.setProperty('--preview-aspect', '640 / 480');
             const pending = new Promise(() => {});
-            setPreviewAspect({getVideoWidth: () => pending, getVideoHeight: () => pending}, () => true);
+            setPreviewAspect({getAspect: () => pending}, () => true);
             return vp.style.getPropertyValue('--preview-aspect');
         }""")
         assert kept == "640 / 480"
@@ -1263,9 +1298,8 @@ class TestFullscreenMode:
         left = page.evaluate(
             """async (kind) => {
             const players = {
-                'size-rejected': {getVideoWidth: () => Promise.reject(new Error('gone')),
-                                  getVideoHeight: () => Promise.resolve(480)},
-                'size-unknown': {getVideoWidth: () => Promise.resolve(0), getVideoHeight: () => Promise.resolve(0)},
+                'size-rejected': {getAspect: () => Promise.reject(new Error('gone'))},
+                'size-unknown': {getAspect: () => Promise.resolve(null)},
                 'no-player': null,
             };
             const vp = document.getElementById('view-preview');
@@ -4772,6 +4806,193 @@ class TestBookmarkletExtraction:
         assert len(data["tx"]) > 1000, len(data["tx"])
         assert "Christ was born" in data["tx"], data["tx"][:200]
 
+    YT_FIXTURE = Path(__file__).parent / "fixtures" / "amruta_youtube_two_videos.html"
+
+    def test_extracts_youtube_videos_with_drive_mirrors(self, browser):
+        """amruta.org moved from Vimeo to YouTube. Video 1 of the (synthetic)
+        fixture plays through a Bunny iframe and names its YouTube id only in
+        the details block; video 2 plays through .youtube-player. Both come out
+        as YouTube videos with their two MP4 Drive mirrors — the MPG links and
+        everything Bunny are left behind."""
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.goto(self.YT_FIXTURE.as_uri())
+            data = self._run_bookmarklet(pg)
+        finally:
+            ctx.close()
+
+        assert data["v"] == [
+            {
+                "p": "yt",
+                "id": "AbCdEfGhIjK",
+                "gd": ["1Syntheticdriveid00abcdefghijklmn", "1Syntheticdriveid01abcdefghijklmn"],
+                "l": "Bhoomi Devi Puja Talk",
+            },
+            {
+                "p": "yt",
+                "id": "ZyXwVuTsRqP",
+                "gd": ["1Syntheticdriveid04abcdefghijklmn", "1Syntheticdriveid05abcdefghijklmn"],
+                "l": "Bhoomi Devi Puja",
+            },
+        ], data["v"]
+        assert "mediadelivery" not in json.dumps(data)
+        assert data["t"] == "Shri Bhoomi Devi Puja"
+        assert data["tx"].endswith("May God bless you."), data["tx"][-80:]
+
+    def _videos_of(self, browser, body):
+        ctx = browser.new_context()
+        try:
+            pg = ctx.new_page()
+            pg.set_content('<div class="entry-content">' + body + "</div>")
+            return self._run_bookmarklet(pg)["v"]
+        finally:
+            ctx.close()
+
+    @staticmethod
+    def _wrapper(inner, label="Some Puja"):
+        return (
+            '<div class="embedded-video-wrapper">'
+            + inner
+            + '<div class="video-meta-info">2001-01-01 '
+            + label
+            + ", Location, 60'</div></div>"
+        )
+
+    def test_youtube_id_source_order(self, browser):
+        """.youtube-player[data-id], else the "Watch on YouTube" link, else the
+        collapse-<id> suffix."""
+        player = '<div class="youtube-player" data-id="AAAAAAAAAAA"></div>'
+        link = '<a href="https://www.youtube.com/watch?v=BBBBBBBBBBB" title="Watch on YouTube">Watch</a>'
+        collapse = '<div id="collapse-CCCCCCCCCCC"></div>'
+        w = self._wrapper
+        v = self._videos_of(browser, w(collapse + link + player) + w(collapse + link) + w(collapse))
+        assert [x["id"] for x in v] == ["AAAAAAAAAAA", "BBBBBBBBBBB", "CCCCCCCCCCC"], v
+        assert all(x["p"] == "yt" and x["gd"] == [] for x in v), v
+
+    def test_vimeo_wrapper_keeps_the_vimeo_payload(self, browser):
+        """A wrapper with a Vimeo iframe stays {id, h, l} — no provider tag —
+        even next to YouTube and Drive links, and beside a YouTube video."""
+        vimeo = (
+            '<iframe src="https://player.vimeo.com/video/111?h=abc"></iframe>'
+            '<a href="https://youtu.be/AbCdEfGhIjK" title="Watch on YouTube">Watch</a>'
+            '<a href="https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn/view"'
+            ' title="Download MP4 (streaming quality)">MP4</a>'
+        )
+        yt = '<div class="youtube-player" data-id="ZyXwVuTsRqP"></div>'
+        v = self._videos_of(browser, self._wrapper(vimeo, "Old Cut") + self._wrapper(yt, "New Cut"))
+        assert v == [
+            {"id": "111", "h": "abc", "l": "Old Cut"},
+            {"p": "yt", "id": "ZyXwVuTsRqP", "gd": [], "l": "New Cut"},
+        ], v
+
+    def test_wrapper_without_any_id_is_a_linkless_video(self, browser):
+        """Neither a Vimeo iframe nor a YouTube id: the video is still listed,
+        with no link, so the form shows a row to fill in by hand."""
+        inner = (
+            '<iframe src="https://iframe.mediadelivery.net/embed/000000/00000000-0000"></iframe>'
+            '<div id="collapse-tooshort"></div>'
+            '<a href="https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn/view"'
+            ' title="Download MP4 (streaming quality)">MP4</a>'
+        )
+        v = self._videos_of(browser, self._wrapper(inner, "Mystery Puja"))
+        assert v == [{"id": "", "h": "", "l": "Mystery Puja"}], v
+
+    def test_add_form_stores_youtube_and_vimeo_rows(self, server, page):
+        """Mixed talk through the real form: the YouTube row becomes an r2
+        video_ref with its two media_refs, the Vimeo row an r1 video_ref, and a
+        YouTube link typed over a scraped one loses the mirrors it never had."""
+        payload = {
+            "t": "Mixed Talk",
+            "d": "1982-07-12",
+            "u": "https://www.amruta.org/1982/07/12/mixed/",
+            "v": [
+                {
+                    "p": "yt",
+                    "id": "AbCdEfGhIjK",
+                    "gd": ["1Syntheticdriveid00abcdefghijklmn", "1Syntheticdriveid01abcdefghijklmn"],
+                    "l": "Bhoomi Devi Puja",
+                },
+                {"id": "123456", "h": "abcd", "l": "Bhoomi Devi Puja Talk"},
+            ],
+            "tx": "Some transcript.",
+        }
+        page.goto(f"{server}{SPA_URL}#/add?data={quote(json.dumps(payload), safe='')}")
+        page.wait_for_selector("#add-form", state="visible", timeout=5000)
+        page.wait_for_timeout(200)  # let updateAddPreview run
+        meta = yaml.safe_load(page.locator("#add-preview").text_content())
+        yt, vimeo = meta["videos"]
+        assert yt["video_ref"].startswith("r2") and vimeo["video_ref"].startswith("r1"), meta["videos"]
+        assert len(yt["media_refs"]) == 2 and all(r.startswith("r2") for r in yt["media_refs"])
+        assert "media_refs" not in vimeo
+        urls = page.eval_on_selector_all(".add-video-url", "els => els.map(e => e.value)")
+        assert urls == ["https://www.youtube.com/watch?v=AbCdEfGhIjK", "https://vimeo.com/123456/abcd"]
+
+        page.fill(".add-video-url >> nth=0", "https://youtu.be/ZyXwVuTsRqP")
+        retyped = yaml.safe_load(page.locator("#add-preview").text_content())["videos"][0]
+        assert retyped["video_ref"].startswith("r2") and "media_refs" not in retyped, retyped
+
+    def test_add_form_blocks_submit_on_a_link_it_cannot_store(self, server, page):
+        """Retyping a scraped YouTube row to a link the codec refuses (a
+        /live/ link) used to throw inside the input handler: the preview kept
+        the previous YAML and submit committed it — the OLD video_ref and
+        media_refs. Now the row says what is wrong, the preview holds no YAML,
+        and submit is refused until the link is one that can be stored."""
+        payload = {
+            "t": "Blocked Talk",
+            "d": "1982-07-12",
+            "u": "https://www.amruta.org/1982/07/12/blocked/",
+            "v": [
+                {
+                    "p": "yt",
+                    "id": "AbCdEfGhIjK",
+                    "gd": ["1Syntheticdriveid00abcdefghijklmn", "1Syntheticdriveid01abcdefghijklmn"],
+                    "l": "Bhoomi Devi Puja",
+                },
+                {"id": "123456", "h": "abcd", "l": "Bhoomi Devi Puja Talk"},
+            ],
+            "tx": "Some transcript.",
+        }
+        page.goto(f"{server}{SPA_URL}#/add?data={quote(json.dumps(payload), safe='')}")
+        page.wait_for_selector("#add-form", state="visible", timeout=5000)
+        page.wait_for_timeout(200)  # let updateAddPreview run
+        preview = page.locator("#add-preview")
+        old_ref = yaml.safe_load(preview.text_content())["videos"][0]["video_ref"]
+        errors = page.locator("#add-videos .field-error")
+        assert errors.count() == 2 and not errors.nth(0).is_visible() and not errors.nth(1).is_visible()
+        assert page.locator("#add-submit").is_enabled()
+
+        page.evaluate(
+            "() => { window._opened = []; window._alerts = [];"
+            " window.open = function(u) { window._opened.push(u); };"
+            " window.alert = function(m) { window._alerts.push(m); }; }"
+        )
+        page.fill(".add-video-url >> nth=0", "https://www.youtube.com/live/ZyXwVuTsRqP")
+
+        text = preview.text_content()
+        assert old_ref not in text and "video_ref" not in text and "media_refs" not in text, text
+        assert errors.nth(0).is_visible() and errors.nth(0).text_content().strip()
+        assert not errors.nth(1).is_visible()
+        assert page.get_attribute(".add-video-url >> nth=0", "aria-invalid") == "true"
+        assert page.get_attribute(".add-video-url >> nth=1", "aria-invalid") is None
+        assert page.locator("#add-submit").is_disabled()
+        # Refused even when called past the disabled button.
+        assert page.evaluate("SPA.submitAddTalk()") is False
+        assert page.evaluate("window._opened") == []
+        assert len(page.evaluate("window._alerts")) == 1
+
+        # A link that can be stored clears it — without the mirrors of the old one.
+        page.fill(".add-video-url >> nth=0", "https://youtu.be/ZyXwVuTsRqP")
+        video = yaml.safe_load(preview.text_content())["videos"][0]
+        assert video["video_ref"].startswith("r2") and video["video_ref"] != old_ref
+        assert "media_refs" not in video
+        assert not errors.nth(0).is_visible()
+        assert page.get_attribute(".add-video-url >> nth=0", "aria-invalid") is None
+        assert page.locator("#add-submit").is_enabled()
+        page.evaluate("SPA.submitAddTalk()")
+        opened = page.evaluate("window._opened")
+        assert len(opened) == 1 and quote(video["video_ref"], safe="") in opened[0], opened
+
     def test_transcript_collapses_hardwrapped_paragraphs_and_nbsp(self, browser):
         """Older amruta posts hard-wrap paragraph text with literal newlines,
         and stray non-breaking spaces sneak in. The bookmarklet must normalize
@@ -5269,6 +5490,11 @@ class TestFullscreenCursorIdle:
     def _hit(self, page, x, y):
         return page.evaluate(f"document.elementFromPoint({x}, {y}).id")
 
+    def _dismiss_poster(self, page):
+        """A YouTube player sits under its poster until it first plays."""
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        assert page.locator(".video-poster").count() == 0
+
     def _size(self, page):
         return page.evaluate("[innerWidth, innerHeight]")
 
@@ -5374,6 +5600,83 @@ class TestFullscreenCursorIdle:
         self._on_4_3_video(server, page, 1280, 720)
         assert self._hit(page, 640, 700) == "mock-player"
         assert self._hit(page, 60, 700) == "fs-idle-shield"
+
+    def test_vimeo_has_no_hole_along_the_top(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        w, _ = self._size(page)
+        assert self._hit(page, w // 2, 20) == "fs-idle-shield"
+
+    # YouTube's bars, measured 2026-11-23 (components.css): 126px along the
+    # bottom of the player, 52px along its top.
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_youtube_holes_are_its_taller_bar_and_its_top_row(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._dismiss_poster(page)
+        w, h = self._size(page)
+        assert self._hit(page, w // 2, h - 120) == "mock-player"
+        assert self._hit(page, w // 2, h - 140) == "fs-idle-shield"
+        assert self._hit(page, w // 2, 20) == "mock-player"
+        assert self._hit(page, w // 2, 70) == "fs-idle-shield"
+        assert self._hit(page, w // 2, h // 2) == "fs-idle-shield"
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_youtube_player_is_boxed_to_the_pillarboxed_video(self, server, page, mock_youtube_js):
+        """YouTube paints black bars of its own around the video and draws its
+        controls on the player's edges: boxed to the video, the bars are the
+        page's and the controls sit where the holes are."""
+        route_youtube(page, mock_youtube_js, oembed={"width": 640, "height": 480})
+        page.set_viewport_size({"width": 1280, "height": 720})
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
+            timeout=2000,
+        )
+        self._set_fs(page, True)
+        r = page.evaluate(
+            "(() => { const r = document.getElementById('mock-player').getBoundingClientRect();"
+            " return [r.left, r.top, r.width, r.height]; })()"
+        )
+        assert r == pytest.approx([160, 0, 960, 720], abs=1)
+        poster = page.evaluate(
+            "(() => { const r = document.querySelector('.video-poster').getBoundingClientRect();"
+            " return [r.left, r.top, r.width, r.height]; })()"
+        )
+        assert poster == pytest.approx(r, abs=1), "the poster covers the player's own box"
+        self._dismiss_poster(page)
+        assert self._hit(page, 640, 700) == "mock-player"
+        assert self._hit(page, 60, 700) == "fs-idle-shield"
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_youtube_player_is_boxed_to_the_letterboxed_video(self, server, page, mock_youtube_js):
+        route_youtube(page, mock_youtube_js, oembed={"width": 640, "height": 480})
+        page.set_viewport_size({"width": 800, "height": 900})
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '640 / 480'",
+            timeout=2000,
+        )
+        self._set_fs(page, True)
+        r = page.evaluate(
+            "(() => { const r = document.getElementById('mock-player').getBoundingClientRect();"
+            " return [r.left, r.top, r.width, r.height]; })()"
+        )
+        assert r == pytest.approx([0, 150, 800, 600], abs=1)
+        self._dismiss_poster(page)
+        assert self._hit(page, 400, 730) == "mock-player"
+        assert self._hit(page, 400, 170) == "mock-player"
+        assert self._hit(page, 400, 800) == "fs-idle-shield"
+        assert self._hit(page, 400, 100) == "fs-idle-shield"
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_a_youtube_player_change_brings_the_shield_back(self, server, page):
+        self._goto_preview(server, page)
+        self._set_fs(page, True)
+        self._into_the_hole(page)
+        assert self._state(page) == "vimeo"
+        page.evaluate("window._vimeoPlayer._fire('play', {})")
+        assert self._state(page) == "visible"
 
     def _into_the_hole(self, page):
         w, h = self._size(page)
@@ -5834,8 +6137,8 @@ class TestTouchFullscreenChrome:
 
 class TestEndFreeze:
     """End-freeze, embedded and fullscreen alike: the player pauses just before
-    the video ends so the Vimeo 'more from this user' end screen never fires
-    (js/end_freeze.js).
+    the video ends so its end screen (Vimeo's 'more from this user', YouTube's
+    replay screen) never fires (js/end_freeze.js).
     The mock player reports a 3600s duration; 3599.8 is inside the 0.3s
     epsilon window before the end."""
 
@@ -5850,6 +6153,7 @@ class TestEndFreeze:
         page.evaluate("document.getElementById('view-preview').classList.add('fs-mode')")
         page.wait_for_timeout(100)
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freezes_on_last_frame_in_fullscreen(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -5858,6 +6162,7 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freezes_on_last_frame_embedded(self, server, page):
         # The end screen shows in the embedded player too: no mode is exempt.
         self._goto_preview(server, page)
@@ -5866,6 +6171,7 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_frozen_latch_lets_viewer_play_the_tail(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -5879,6 +6185,7 @@ class TestEndFreeze:
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is False
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_rewind_after_freeze_saves_the_resume_position_again(self, server, page):
         # A paused seek into the last 0.3s freezes (and resets the saved
         # position, as the end does). Rewinding below the threshold leaves the
@@ -5893,6 +6200,7 @@ class TestEndFreeze:
         pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
         assert pos == "1500", f"the position rewound to must be saved, got {pos}"
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freeze_clears_saved_resume_position(self, server, page):
         self._goto_preview(server, page)
         self._enter_fs(page)
@@ -5910,6 +6218,7 @@ class TestEndFreeze:
     MEDIA_END_SEC = 3599.6
     INSIDE_MEDIA_WINDOW_SEC = 3599.35
 
+    @pytest.mark.parametrize("page", PROVIDERS, indirect=True)
     def test_freezes_before_the_media_end_not_the_metadata_end(self, server, page):
         self._goto_preview(server, page)
         page.evaluate(f"window._vimeoPlayer._setMediaDuration({self.MEDIA_END_SEC})")
@@ -5933,6 +6242,63 @@ class TestEndFreeze:
         page.evaluate(f"window._vimeoPlayer._setTime({self.INSIDE_MEDIA_WINDOW_SEC})")
         page.wait_for_timeout(300)
         assert page.evaluate("window._vimeoPlayer._paused") is True
+
+
+@pytest.mark.parametrize("page", ["youtube"], indirect=True)
+class TestYouTubePreview:
+    """A talk whose video is on YouTube plays through the YouTube IFrame API
+    (js/video_player.js), behind the same preview as a Vimeo one."""
+
+    def _goto_preview(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="visible", timeout=10000)
+        page.wait_for_function("!!(window.YT && window._vimeoPlayer && window._vimeoPlayer._events.onReady)")
+
+    def test_embeds_the_youtube_player_with_its_api_on_and_captions_off(self, server, page):
+        self._goto_preview(server, page)
+        src = page.evaluate("window._vimeoPlayer._src")
+        assert src.startswith("https://www.youtube.com/embed/AbCdEfGhIjK?"), src
+        params = src.split("?", 1)[1].split("&")
+        for p in ["enablejsapi=1", "cc_load_policy=0", "rel=0", "iv_load_policy=3", "playsinline=1"]:
+            assert p in params, src
+        assert "origin=" + quote(server, safe="") in params, src
+
+    def test_marks_the_view_with_its_provider(self, server, page):
+        self._goto_preview(server, page)
+        assert page.evaluate("document.getElementById('view-preview').dataset.provider") == "yt"
+
+    def test_takes_the_shape_from_oembed(self, server, page):
+        self._goto_preview(server, page)
+        page.wait_for_function(
+            "document.getElementById('view-preview').style.getPropertyValue('--preview-aspect') === '1280 / 720'",
+            timeout=5000,
+        )
+
+    def test_unloads_youtube_captions_once_playing(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer.play()")
+        assert "captions" in page.evaluate("window._vimeoPlayer._unloaded")
+
+    def test_resumes_where_the_viewer_left_off(self, server, page):
+        page.add_init_script("localStorage.setItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video', '1500')")
+        self._goto_preview(server, page)
+        page.wait_for_function("window._vimeoPlayer._currentTime === 1500", timeout=5000)
+
+    def test_ending_clears_the_saved_position(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate("window._vimeoPlayer._setTime(1500); window._vimeoPlayer._fire('ended')")
+        page.evaluate("flushPreviewPos()")
+        pos = page.evaluate("localStorage.getItem('sy.preview_pos.2001-01-01_Test-Talk.Test-Video')")
+        assert pos in (None, "0"), pos
+
+    def test_switching_videos_builds_the_next_youtube_player(self, server, page):
+        self._goto_preview(server, page)
+        page.evaluate(
+            "document.getElementById('mock-player').replaceWith(Object.assign(document.createElement('iframe'), {id: 'vimeo-player'}))"
+        )
+        page.evaluate("location.hash = '#/preview/2001-01-01_Test-Talk/Test-Video-2'")
+        page.wait_for_function("window.__mockPlayers.length === 2", timeout=5000)
+        assert page.evaluate("window._vimeoPlayer._src").startswith("https://www.youtube.com/embed/ZyXwVuTsRqP?")
 
 
 class TestClearAllCount:
@@ -8219,3 +8585,64 @@ class TestShellUpdateDetection:
         )
         page.wait_for_timeout(500)
         assert page.evaluate("() => sessionStorage.getItem('sy_reload_target')") is None
+
+
+class TestVideoPoster:
+    """A YouTube player shows its still with a small play button in the
+    bottom-left corner until it first plays (js/video_player.js attachPoster);
+    a Vimeo player shows none."""
+
+    def _goto_preview(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector("#mock-player", state="attached", timeout=10000)
+        page.wait_for_function("!!window._vimeoPlayer", timeout=5000)
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_a_click_on_the_poster_plays_and_takes_it_away(self, server, page):
+        self._goto_preview(server, page)
+        poster = page.locator("#view-preview .video-wrap > .video-poster")
+        assert poster.count() == 1
+        # The still and its button show once the box has the video's shape.
+        page.wait_for_selector(".video-poster[data-shaped]", timeout=3000)
+        page.wait_for_function(
+            "getComputedStyle(document.querySelector('.video-poster__play')).opacity === '1'", timeout=2000
+        )
+        assert poster.get_attribute("aria-label")
+        play = page.evaluate(
+            "(() => { const w = document.querySelector('#view-preview .video-wrap').getBoundingClientRect();"
+            " const b = document.querySelector('.video-poster__play').getBoundingClientRect();"
+            " return [b.left - w.left, w.bottom - b.bottom, b.width < w.width / 4]; })()"
+        )
+        assert play[0] < 40 and play[1] < 40 and play[2], "a small button at the bottom-left corner"
+        assert page.evaluate("window._vimeoPlayer._paused")
+        poster.click()
+        page.wait_for_function("!document.querySelector('.video-poster')", timeout=3000)
+        assert not page.evaluate("window._vimeoPlayer._paused")
+
+    @pytest.mark.parametrize("page", ["vimeo"], indirect=True)
+    def test_a_vimeo_player_has_no_poster(self, server, page):
+        self._goto_preview(server, page)
+        assert page.locator(".video-poster").count() == 0
+
+
+class TestVideoPosterStill:
+    """hqdefault is always 4:3: a wide (16:9) thumbnail comes letterboxed in it,
+    black above and below. The poster shows only that middle 16:9 band, cut to
+    the player's own shape, so neither those bars nor a 4:3 video's pillarbox
+    inside a wide thumbnail reach the screen."""
+
+    @pytest.mark.parametrize("page", ["youtube"], indirect=True)
+    def test_the_still_hides_hqdefaults_letterbox(self, server, page):
+        goto_spa(page, server, "#/preview/2001-01-01_Test-Talk/Test-Video")
+        page.wait_for_selector(".video-poster img", state="attached", timeout=10000)
+        box = page.evaluate(
+            "(() => { const p = document.querySelector('.video-poster').getBoundingClientRect();"
+            " const i = document.querySelector('.video-poster img').getBoundingClientRect();"
+            " return [p.top, p.height, p.left, p.width, i.top, i.height, i.left, i.width,"
+            " getComputedStyle(document.querySelector('.video-poster img')).objectFit]; })()"
+        )
+        p_top, p_h, p_left, p_w, i_top, i_h, i_left, i_w, fit = box
+        assert i_h == pytest.approx(p_h * 4 / 3, abs=1), "the 16:9 band (3/4 of hqdefault) is the poster's height"
+        assert i_top == pytest.approx(p_top - p_h / 6, abs=1), "the band is the middle one"
+        assert (i_left, i_w) == pytest.approx((p_left, p_w), abs=1)
+        assert fit == "cover"

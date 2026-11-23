@@ -21,9 +21,9 @@ function talk(id, extra) {
 // A stand-in for jsyaml.load: the tests hand over JSON text.
 const deps = {
   parseYaml: JSON.parse,
-  decodeVideoRef: function (ref) {
+  decodeVideoSource: function (ref) {
     if (ref === 'BAD') throw new Error('bad ref');
-    return 'https://vimeo.com/' + ref;
+    return { provider: 'vimeo', id: ref, watchUrl: 'https://vimeo.com/' + ref };
   },
   warn: function () {},
 };
@@ -141,7 +141,7 @@ describe('metaShaIndex', () => {
 describe('reuseHydratedMeta', () => {
   const cached = [
     talk('same', { title: 'Same', date: '1990-01-01', amrutaUrl: 'https://a', _metaSha: 's1',
-      videos: [{ slug: 'v', title: 'V', vimeo_url: 'u', sync: '', hasSrt: true }] }),
+      videos: [{ slug: 'v', title: 'V', source: { provider: 'vimeo', id: 'u', watchUrl: 'https://vimeo.com/u' }, sync: '', hasSrt: true }] }),
     talk('changed', { title: 'Old title', date: '1991-01-01', _metaSha: 'old' }),
     talk('failed', { title: '', _metaSha: 's3' }),
     talk('legacy', { title: 'Legacy' }),
@@ -229,8 +229,8 @@ describe('applyMetaText', () => {
     assert.strictEqual(t.date, '19900101');
     assert.strictEqual(t.amrutaUrl, 'https://amruta');
     assert.deepStrictEqual(t.videos, [
-      { slug: 'v1', title: 'One', vimeo_url: 'https://vimeo.com/REF', sync: 'ignored', hasSrt: true },
-      { slug: 'v2', title: 'v2', vimeo_url: '', sync: '', hasSrt: false },
+      { slug: 'v1', title: 'One', source: { provider: 'vimeo', id: 'REF', watchUrl: 'https://vimeo.com/REF' }, sync: 'ignored', hasSrt: true },
+      { slug: 'v2', title: 'v2', source: null, sync: '', hasSrt: false },
     ]);
   });
 
@@ -246,7 +246,24 @@ describe('applyMetaText', () => {
   it('keeps the video when its video_ref does not decode', () => {
     const t = talk('x');
     applyMetaText(t, JSON.stringify({ title: 'T', videos: [{ slug: 'v', video_ref: 'BAD' }] }), deps);
-    assert.strictEqual(t.videos[0].vimeo_url, '');
+    assert.strictEqual(t.videos[0].source, null);
+  });
+
+  it('decodes r1 Vimeo and r2 YouTube refs into sources, and a malformed r2 into null', () => {
+    const codec = require('../site/js/vimeo_codec');
+    const warned = [];
+    const t = talk('x');
+    applyMetaText(t, JSON.stringify({ title: 'T', videos: [
+      { slug: 'v', video_ref: codec.encodeVideoRef('https://vimeo.com/123456/abcdef') },
+      { slug: 'y', video_ref: 'r2PhlkCSAJPEkiCCBSFQo' },
+      { slug: 'bad', video_ref: 'r2PhlkCSAJPEkiCCBSF' },
+    ] }), { parseYaml: JSON.parse, decodeVideoSource: codec.decodeVideoSource, warn: (m) => warned.push(m) });
+    assert.deepStrictEqual(t.videos.map((v) => v.source), [
+      { provider: 'vimeo', id: '123456/abcdef', watchUrl: 'https://vimeo.com/123456/abcdef' },
+      { provider: 'yt', id: 'AbCdEfGhIjK', watchUrl: 'https://www.youtube.com/watch?v=AbCdEfGhIjK' },
+      null,
+    ]);
+    assert.deepStrictEqual(warned, ['bad video_ref for x']);
   });
 
   it('leaves the talk untouched on empty text', () => {

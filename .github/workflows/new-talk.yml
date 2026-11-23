@@ -87,7 +87,10 @@ jobs:
                       try:
                           validate_video_slug(video.get("slug", ""))
                           if video.get("video_ref"):
-                              validate_video_ref(video["video_ref"])
+                              # Vimeo and YouTube are what the setup job
+                              # below can fetch EN subtitles for. Drive is
+                              # a download mirror, never the video itself.
+                              validate_video_ref(video["video_ref"], allowed=("vimeo", "yt"))
                       except InvalidWorkflowInput as e:
                           die(f"{meta_path}: {e}")
 
@@ -132,8 +135,9 @@ jobs:
 
           import yaml
 
+          from tools import amruta_captions
           from tools.download import AmrutaDownloader
-          from tools.vimeo_codec import decode_video_ref
+          from tools.vimeo_codec import decode_video_source
 
           metas = json.loads(os.environ["NEW_METAS"])
           downloader = AmrutaDownloader()
@@ -215,11 +219,16 @@ jobs:
                               pass
                   print(f"  Created dirs: {slug}")
 
-              # 5. Download EN subtitles (Vimeo first, then YouTube search)
+              # 5. Download EN subtitles: a Vimeo video's from Vimeo, a
+              #    YouTube video's from amruta's captions repository.
               for video in meta.get("videos", []):
                   slug = video["slug"]
                   video_ref = video.get("video_ref", "")
-                  vimeo_url = decode_video_ref(video_ref) if video_ref else ""
+                  source = decode_video_source(video_ref) if video_ref else None
+                  if source and source.provider == "yt":
+                      # Before any line about this video: the runner then
+                      # redacts the id from everything the job logs after.
+                      print(f"::add-mask::{source.id}", flush=True)
                   source_dir = os.path.join(talk_dir, slug, "source")
                   en_srt = os.path.join(source_dir, "en.srt")
 
@@ -227,10 +236,28 @@ jobs:
                       print(f"  {slug}: en.srt exists — skip")
                       continue
 
-                  if not vimeo_url:
+                  if source is None:
                       print(f"  {slug}: no video_ref — skip SRT")
                       continue
 
+                  if source.provider == "yt":
+                      # The repository is filled daily, so "not yet" is an
+                      # ordinary answer; subtitle-pipeline.yml asks again.
+                      try:
+                          if amruta_captions.fetch_en_srt(source.id, en_srt):
+                              print(f"  {slug}: saved en.srt from amruta captions")
+                          else:
+                              print(f"  {slug}: no EN captions published yet")
+                      except Exception as e:
+                          # The type only: the message can carry the URL.
+                          print(f"  {slug}: captions fetch failed: {type(e).__name__}")
+                      continue
+
+                  if source.provider != "vimeo":
+                      print(f"  {slug}: {source.provider} is not a video provider — skip SRT")
+                      continue
+
+                  vimeo_url = source.watch_url
                   # Use download.py's proven download method
                   print(f"  Downloading EN SRT for {slug}")
                   try:

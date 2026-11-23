@@ -1832,9 +1832,46 @@ describe('Add Talk: i18n for dynamic video row labels', () => {
     assert.ok(ukMatch >= 2, 'add.video_title should be in uk and en, found: ' + ukMatch);
   });
 
-  it('add.vimeo_url i18n key exists in both languages', () => {
-    var matches = (html.match(/'add\.vimeo_url'/g) || []).length;
-    assert.ok(matches >= 2, 'add.vimeo_url should be in uk and en, found: ' + matches);
+  // The field takes a Vimeo or a YouTube link, so neither the key nor the
+  // label names a provider any more.
+  it('add.video_url i18n key exists in both languages', () => {
+    var matches = (html.match(/'add\.video_url'/g) || []).length;
+    assert.ok(matches >= 2, 'add.video_url should be in uk and en, found: ' + matches);
+  });
+
+  it('the unsupported-link messages exist in both languages', () => {
+    ['add.video_url_unsupported', 'add.preview_blocked'].forEach(function (key) {
+      var n = (html.match(new RegExp("'" + key.replace('.', '\\.') + "':", 'g')) || []).length;
+      assert.strictEqual(n, 2, key + ' should be in uk and en, found: ' + n);
+    });
+  });
+
+  it('the add form never builds its YAML unguarded, nor submits the preview text', () => {
+    var update = html.slice(html.indexOf('function updateAddPreview()'), html.indexOf('SPA.submitAddTalk = function'));
+    update = update.replace(/^\s*\/\/.*$/gm, ''); // code only — the comments name both
+    assert.ok(update.includes('buildMetaYamlChecked('), 'updateAddPreview must use buildMetaYamlChecked');
+    assert.ok(!/[^a-zA-Z]buildMetaYaml\(/.test(update), 'updateAddPreview must not call buildMetaYaml directly');
+    var submit = html.slice(html.indexOf('SPA.submitAddTalk = function'));
+    submit = submit.slice(0, submit.indexOf('\n};'));
+    assert.ok(!submit.includes("getElementById('add-preview')"), 'submit must not read YAML back from the preview');
+  });
+
+  it('.field-error is a catalogued component', () => {
+    var css = fs.readFileSync('site/css/components.css', 'utf8');
+    assert.ok(/^\.field-error\s*\{/m.test(css), '.field-error rule missing');
+    var guide = fs.readFileSync('site/styleguide.html', 'utf8');
+    assert.ok(guide.includes('class="field-error"'), 'styleguide must show .field-error');
+    assert.ok(guide.includes('aria-invalid="true"'), 'styleguide must show the invalid input');
+  });
+
+  it('the video link field is not labelled "Vimeo URL"', () => {
+    assert.ok(html.includes("t('add.video_url')"), 'dynamic row should use t(add.video_url)');
+    assert.ok(!html.includes('add.vimeo_url'), 'stale add.vimeo_url key');
+    assert.ok(!/'add\.video_url': 'Vimeo URL'/.test(html), 'label still says Vimeo URL');
+    assert.ok(html.includes("'add.video_url': 'Video URL'"), 'EN label should be "Video URL"');
+    var guide = fs.readFileSync('site/styleguide.html', 'utf8');
+    assert.ok(!guide.includes('Vimeo URL'), 'styleguide form row still says Vimeo URL');
+    assert.ok(guide.includes('>Video URL<'), 'styleguide form row should say Video URL');
   });
 });
 
@@ -4395,6 +4432,7 @@ describe('burn video driver behaviour', () => {
       clampPanelPosition: PANEL.clampPanelPosition,
       defaultPanelPosition: PANEL.defaultPanelPosition,
       panelClearOf: PANEL.panelClearOf,
+      parseAspect: require('../site/js/video_player.js').parseAspect,
       currentLang: 'en',
       burnStateKey: function (a, b) { return 'burn:' + a + ':' + b; },
       listRunArtifacts: function () { return Promise.resolve([]); },
@@ -4434,7 +4472,7 @@ describe('burn video driver behaviour', () => {
       'findEocd', 'readCentralDirectory', 'pickMp4Entry', 'localDataOffset',
       'listBurnRuns', 'burnHistorySince', 'burnHistoryEntries', 'burnClipProblem',
       'historyRowState', 'historyWhen', 'burnedVideoName', 'formatClipTime',
-      'parseClipTime', 'clampPanelPosition', 'defaultPanelPosition', 'panelClearOf', 'currentLang'];
+      'parseClipTime', 'clampPanelPosition', 'defaultPanelPosition', 'panelClearOf', 'parseAspect', 'currentLang'];
     const exported = ['startBurn', 'pollBurn', 'renderBurnProgress', 'onBurnFinished',
       'showBurnError', 'resumeBurnWatch', 'saveMp4', 'downloadBurned', 'downloadSrt',
       'openExportMenu', 'closeExportMenu', 'toggleExportMenu', 'videoItemAction',
@@ -4526,15 +4564,14 @@ describe('burn video driver behaviour', () => {
     return findByClass(row, cls);
   }
 
-  // A stand-in for the Vimeo player: the two reads the fragment panel makes.
+  // A stand-in for the player (js/video_player.js): the reads the fragment panel makes.
   function fakePlayer(durationSec, nowSec) {
     const player = {
       now: nowSec || 0,
       getDuration: function () { return Promise.resolve(durationSec); },
       getCurrentTime: function () { return Promise.resolve(player.now); },
       // Read by the render's own geometry once a fragment is dispatched.
-      getVideoWidth: function () { return Promise.resolve(1280); },
-      getVideoHeight: function () { return Promise.resolve(720); }
+      getAspect: function () { return Promise.resolve('1280 / 720'); }
     };
     return player;
   }
@@ -8482,5 +8519,48 @@ describe('burn video driver behaviour', () => {
     listeners.pointerup[0]({ pointerId: 3 });
     assert.strictEqual(held(), 0, 'releasing lets go of every window listener');
     assert.deepStrictEqual(captured, [3, -3]);
+  });
+});
+
+describe('video player adapter wiring', () => {
+  var fs = require('fs');
+  var html = fs.readFileSync('site/index.html', 'utf8');
+  var sw = fs.readFileSync('site/sw.js', 'utf8');
+  var css = fs.readFileSync('site/css/components.css', 'utf8');
+
+  it('loads js/video_player.js as a plain script before talk_actions.js, and precaches it', () => {
+    var tag = '<script src="js/video_player.js"></script>';
+    assert.ok(html.includes(tag), 'index.html must load js/video_player.js');
+    assert.ok(html.indexOf(tag) < html.indexOf('<script src="js/talk_actions.js"></script>'),
+      'talk_actions.js reads isPlayableSource from it');
+    assert.ok(sw.includes("'js/video_player.js'"), 'the SW must precache js/video_player.js');
+  });
+
+  it('builds every player through the adapter, never the Vimeo SDK directly', () => {
+    assert.ok(!/new Vimeo\.Player/.test(html), 'a call site still builds a Vimeo.Player');
+    assert.ok(!/getVideoWidth|getVideoHeight/.test(html), 'aspect comes from player.getAspect()');
+    assert.ok((html.match(/createVideoPlayer\(/g) || []).length >= 2, 'preview + sync player');
+  });
+
+  it('gates on the typed source, not a vimeo_url', () => {
+    assert.ok(!/vimeo_url/.test(html), 'a vimeo_url gate is left');
+    assert.ok(!/function vimeoEmbed/.test(html), 'vimeoEmbed lives in js/video_player.js');
+    assert.ok(/decodeVideoSource: decodeVideoSource/.test(html), 'meta is decoded into sources');
+  });
+
+  it('names no provider in the player-unavailable toast', () => {
+    assert.ok(!/toast\.vimeo_unavailable/.test(html));
+    var en = html.match(/'toast\.player_unavailable': '([^']*)'/g) || [];
+    assert.strictEqual(en.length, 2, 'both languages carry toast.player_unavailable');
+    en.forEach(function(line) { assert.ok(!/Vimeo|YouTube/.test(line), line); });
+  });
+
+  it('marks the preview with its provider, and keys YouTube chrome off it', () => {
+    assert.ok(/dataset\.provider = /.test(html), 'the preview view carries data-provider');
+    assert.ok(/\[data-provider="yt"\]/.test(css), 'components.css has YouTube chrome values');
+  });
+
+  it('passes the player provider into the end-freeze decision', () => {
+    assert.ok(/provider: player\.provider/.test(html));
   });
 });

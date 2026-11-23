@@ -26,7 +26,12 @@
 // off the shield or the cursor hides, and until then the first press on the
 // shield only closes it (menuMayBeOpen).
 //
-// In CSS the player container carries the bar's height as --fs-vimeo-bar-h.
+// The same holds for YouTube (js/video_player.js): its player has the same
+// cross-origin cursor and draws its controls the same way, only in other
+// places — a taller bottom bar and a second row along the top. The state
+// keeps the name 'vimeo' for "the player has the pointer" whichever it is.
+// In CSS the player container carries the bars' heights per provider as
+// --fs-vimeo-bar-h and --fs-player-top-h (#view-preview[data-provider]).
 
 var FS_CURSOR_IDLE_MS = 3000;
 var FS_VIMEO_MODE_MS = 10000;

@@ -124,16 +124,21 @@ def _box(vw, vh, ar):
     return {"left": (vw - w) / 2, "top": (vh - h) / 2, "width": w, "height": h}
 
 
-def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None, inset=""):
+def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None, inset="", provider=None):
     """Lay the preview out at vw x vh for a video of `aspect` ("W / H") and read
     the overlay's box plus the ratios the burn would be dispatched with.
     `inset` (a CSS padding) pads the fullscreen view, pushing the player off
     the viewport's edges — as any visible strip beside it would."""
     page.set_viewport_size({"width": vw, "height": vh})
     m = page.evaluate(
-        """({fsMode, tuned, aspect, scale, inset}) => {
+        """({fsMode, tuned, aspect, scale, inset, provider}) => {
             const vp = document.getElementById('view-preview');
             const ov = document.getElementById('subtitle-overlay');
+            if (provider) vp.dataset.provider = provider; else delete vp.dataset.provider;
+            // A loaded player: the preview's iframe carries an inline full-size box.
+            const fr = document.getElementById('vimeo-player');
+            fr.src = 'about:blank#loaded';
+            fr.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;border:0;';
             vp.classList.add('active');
             vp.classList.toggle('fs-mode', fsMode);
             vp.style.padding = inset;
@@ -161,10 +166,11 @@ def _measure(page, vw, vh, aspect, fs_mode=True, tuned=False, scale=None, inset=
                 font: parseFloat(cs.fontSize),
                 rect: {left: r.left, bottom: r.bottom, width: r.width},
                 player: {left: pc.left, top: pc.top, width: pc.width, height: pc.height},
+                iframe: (() => { const f = fr.getBoundingClientRect(); return {left: f.left, top: f.top, width: f.width, height: f.height}; })(),
                 ratios: measureBurnRatios({videoWidth: w, videoHeight: h, subsScale: scale || 1}),
             };
         }""",
-        {"fsMode": fs_mode, "tuned": tuned, "aspect": aspect, "scale": scale, "inset": inset},
+        {"fsMode": fs_mode, "tuned": tuned, "aspect": aspect, "scale": scale, "inset": inset, "provider": provider},
     )
     # The scale handle follows the band through a ResizeObserver, a frame
     # later. Read before that frame, it still sits where --fs-band-h was 0px
@@ -203,9 +209,27 @@ def _assert_matches_burn(m, box):
     ],
 )
 @pytest.mark.parametrize("scale", [None, 0.6, 1.5, 3])
-def test_fullscreen_overlay_is_the_burned_band(page, vw, vh, aspect, ar, scale):
-    m = _measure(page, vw, vh, aspect, tuned=scale is not None, scale=scale)
+@pytest.mark.parametrize("provider", ["vimeo", "yt"])
+def test_fullscreen_overlay_is_the_burned_band(page, vw, vh, aspect, ar, scale, provider):
+    m = _measure(page, vw, vh, aspect, tuned=scale is not None, scale=scale, provider=provider)
     _assert_matches_burn(m, _box(vw, vh, ar))
+
+
+@pytest.mark.parametrize(
+    ("vw", "vh", "aspect", "ar"),
+    [(1280, 800, "16 / 9", 16 / 9), (1280, 800, "4 / 3", 4 / 3), (390, 844, "16 / 9", 16 / 9)],
+)
+def test_the_youtube_player_is_the_video_box_the_band_sits_on(page, vw, vh, aspect, ar):
+    """YouTube draws its controls on the player's edges and its own black bars
+    around the video: boxed to the video, the band sits on the player's bottom
+    edge, as it sits on Vimeo's video."""
+    m = _measure(page, vw, vh, aspect, provider="yt")
+    box = _box(vw, vh, ar)
+    approx = lambda v: pytest.approx(v, abs=0.6)  # noqa: E731
+    assert m["iframe"]["left"] == approx(box["left"])
+    assert m["iframe"]["top"] == approx(box["top"])
+    assert m["iframe"]["width"] == approx(box["width"])
+    assert m["iframe"]["height"] == approx(box["height"])
 
 
 def test_the_band_follows_the_player_not_the_viewport(page):

@@ -1,0 +1,57 @@
+{
+  "_comment": "Shared by tests/test_add_talk_data.js (buildMetaYaml) and tests/test_download.py (setup_talk): the same videos must be stored as the same refs by the add form and by the CLI. Every id is synthetic.",
+  "videos": [
+    {
+      "slug": "Bhoomi-Devi-Puja-Talk",
+      "title": "Bhoomi Devi Puja Talk",
+      "video_url": "https://www.youtube.com/watch?v=AbCdEfGhIjK",
+      "media_urls": [
+        "https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn/view",
+        "https://drive.google.com/file/d/1Syntheticdriveid01abcdefghijklmn/view"
+      ]
+    },
+    {
+      "slug": "Bhoomi-Devi-Puja",
+      "title": "Bhoomi Devi Puja",
+      "video_url": "https://vimeo.com/111111111/aaaaaaaaaa",
+      "media_urls": []
+    },
+    {
+      "slug": "Manual-YouTube",
+      "title": "Manual YouTube",
+      "video_url": "https://www.youtube.com/watch?v=ZyXwVuTsRqP",
+      "media_urls": []
+    },
+    {
+      "slug": "No-Link",
+      "title": "No Link",
+      "video_url": "",
+      "media_urls": []
+    }
+  ],
+  "expected": [
+    {
+      "slug": "Bhoomi-Devi-Puja-Talk",
+      "title": "Bhoomi Devi Puja Talk",
+      "video_ref": "r2PhlkCSAJPEkiCCBSFQo",
+      "media_refs": [
+        "r2DBgfRgsOBx5LBA4CCgBDQwEFER8dEBEQRBUCBw1DGDlQUgUU",
+        "r2DBgfRgsOBx5LBA4CCgBCQwEFER8dEBEQRBUCBw1DGDlQUgUU"
+      ]
+    },
+    {
+      "slug": "Bhoomi-Devi-Puja",
+      "title": "Bhoomi Devi Puja",
+      "video_ref": "r1BA0VCBUDFBJMAEheSBxQW1BZUEI"
+    },
+    {
+      "slug": "Manual-YouTube",
+      "title": "Manual YouTube",
+      "video_ref": "r2JQJ_EjMaL1o5EztSFQo"
+    },
+    {
+      "slug": "No-Link",
+      "title": "No Link"
+    }
+  ]
+}

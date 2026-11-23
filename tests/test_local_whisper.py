@@ -9,8 +9,10 @@ import yaml
 from tools import local_whisper
 from tools.vimeo_codec import encode_video_ref
 
-CANONICAL = "https://vimeo.com/795494154/4330e29e6d"
-PLAYER = "https://player.vimeo.com/video/795494154?h=4330e29e6d"
+CANONICAL = "https://vimeo.com/111111111/aaaaaaaaaa"
+PLAYER = "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"
+YT = "https://www.youtube.com/watch?v=AbCdEfGhIjK"
+GD = "https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn/view"
 
 
 def make_talk(root: Path, videos, **meta_extra) -> Path:
@@ -38,9 +40,18 @@ class TestPlan:
     def test_targets_player_url_and_source_whisper_path(self, tmp_path):
         talk = make_talk(tmp_path, [video("Main")])
         jobs = local_whisper.plan(talk)
-        assert [(j.slug, j.url, j.output) for j in jobs] == [
-            ("Main", PLAYER, talk / "Main" / "source" / "whisper.json")
+        assert [(j.slug, j.urls, j.output) for j in jobs] == [
+            ("Main", [PLAYER], talk / "Main" / "source" / "whisper.json")
         ]
+
+    def test_youtube_tries_its_drive_mirrors_then_youtube_itself(self, tmp_path):
+        yt = {"slug": "Main", "title": "Main", "video_ref": encode_video_ref(YT), "media_refs": [encode_video_ref(GD)]}
+        talk = make_talk(tmp_path, [yt])
+        assert local_whisper.plan(talk)[0].urls == [GD, YT]
+
+    def test_a_video_without_a_link_is_skipped(self, tmp_path):
+        talk = make_talk(tmp_path, [{"slug": "Letter", "title": "Letter"}, video("Main")])
+        assert [j.slug for j in local_whisper.plan(talk)] == ["Main"]
 
     def test_skips_video_that_already_has_whisper(self, tmp_path):
         talk = make_talk(tmp_path, [video("Done"), video("Todo")])
@@ -65,8 +76,8 @@ class TestPlan:
 
     def test_source_url_overrides_the_vimeo_link(self, tmp_path):
         talk = make_talk(tmp_path, [video("A")])
-        jobs = local_whisper.plan(talk, source_url="https://youtu.be/zVx99dfeMC0")
-        assert jobs[0].url == "https://youtu.be/zVx99dfeMC0"
+        jobs = local_whisper.plan(talk, source_url="https://youtu.be/AbCdEfGhIjK")
+        assert jobs[0].urls == ["https://youtu.be/AbCdEfGhIjK"]
 
     def test_source_url_needs_a_single_target(self, tmp_path):
         # One override URL for two videos would put one recording's timings
@@ -112,6 +123,31 @@ class TestDownload:
         assert argv[argv.index("-f") + 1].startswith("bestaudio")
         assert argv[-1] == PLAYER
         assert out == tmp_path / "audio.m4a"
+
+    def test_drive_and_youtube_get_no_amruta_referer(self, tmp_path, monkeypatch):
+        calls = []
+
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            (tmp_path / "audio.m4a").write_bytes(b"x")
+            return subprocess.CompletedProcess(argv, 0)
+
+        monkeypatch.setattr(local_whisper.subprocess, "run", fake_run)
+        local_whisper.download_audio(GD, tmp_path)
+        local_whisper.download_audio(YT, tmp_path)
+        assert all("--referer" not in argv for argv in calls)
+
+    def test_a_failed_attempts_leftovers_are_not_taken_for_the_audio(self, tmp_path, monkeypatch):
+        def fake_run(argv, **kwargs):
+            out_dir = Path(argv[argv.index("-o") + 1]).parent
+            if argv[-1] == GD:
+                (out_dir / "audio.f251.webm.part").write_bytes(b"partial")
+                return subprocess.CompletedProcess(argv, 1)
+            (out_dir / "audio.m4a").write_bytes(b"x")
+            return subprocess.CompletedProcess(argv, 0)
+
+        monkeypatch.setattr(local_whisper.subprocess, "run", fake_run)
+        assert local_whisper.download_first([GD, YT], tmp_path).name == "audio.m4a"
 
     def test_failed_download_raises(self, tmp_path, monkeypatch):
         class R:
@@ -186,10 +222,29 @@ class TestMain:
         monkeypatch.setattr(local_whisper, "download_audio", boom)
         assert local_whisper.main(["--talk-id", talk.name, "--root", str(tmp_path)]) == 1
 
+    def test_falls_through_to_the_next_candidate(self, tmp_path, monkeypatch, fakes):
+        yt = {"slug": "Main", "title": "Main", "video_ref": encode_video_ref(YT), "media_refs": [encode_video_ref(GD)]}
+        talk = make_talk(tmp_path, [yt])
+        tried = []
 
-def test_whisper_workflow_points_at_this_tool_when_download_fails():
+        def mirror_down(url, dest):
+            tried.append(url)
+            if url == GD:
+                raise local_whisper.DownloadError("drive quota")
+            p = Path(dest) / "audio.m4a"
+            p.write_bytes(b"x")
+            return p
+
+        monkeypatch.setattr(local_whisper, "download_audio", mirror_down)
+        assert local_whisper.main(["--talk-id", talk.name, "--root", str(tmp_path)]) == 0
+        assert tried == [GD, YT]
+        assert (talk / "Main" / "source" / "whisper.json").is_file()
+
+
+def test_whisper_workflow_downloads_through_the_resolver_that_points_here():
+    # The resolver's failure message names this tool (tests/test_video_media.py).
     wf = (Path(__file__).resolve().parent.parent / ".github" / "workflows" / "whisper.yml").read_text(encoding="utf-8")
-    assert "python -m tools.local_whisper --talk-id" in wf
+    assert "tools.video_media download" in wf
 
 
 IMPERSONATION_UNAVAILABLE = """[info] Available impersonate targets

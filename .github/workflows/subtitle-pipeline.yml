@@ -198,6 +198,7 @@ jobs:
           python3 << 'PYEOF'
           import json, os, subprocess, yaml
 
+          from tools.video_media import download_candidates
           from tools.video_roles import declared_ignored_slugs, text_only
           from tools.workflow_validation import (
               InvalidWorkflowInput,
@@ -221,6 +222,17 @@ jobs:
           video_includes = []
           talk_ids = set()
           whisper_talk_ids = set()
+
+          def runner_can_fetch(video):
+              # Same question whisper.yml's discover asks. A video with no
+              # link, or a ref that does not decode, is left for whisper.yml
+              # to judge, as before.
+              if not video.get("video_ref"):
+                  return True
+              try:
+                  return bool(download_candidates(video, ci=True))
+              except ValueError:
+                  return True
 
           def process_talk(talk_id):
               try:
@@ -252,11 +264,22 @@ jobs:
                   # whisper.json must not send its talk there on every run.
                   if slug in ignored:
                       print(f"IGNORED: {talk_id}/{slug}")
-                  elif not os.path.isfile(whisper_path):
+                  elif os.path.isfile(whisper_path):
+                      print(f"READY: {talk_id}/{slug}")
+                  elif runner_can_fetch(v):
                       whisper_talk_ids.add(talk_id)
                       print(f"WHISPER NEEDED: {talk_id}/{slug}")
                   else:
-                      print(f"READY: {talk_id}/{slug}")
+                      # whisper.yml would only skip it. Sending the talk there
+                      # anyway makes the run look as if whisper ran for this
+                      # video, and sends it back on every later run.
+                      print(
+                          f"::warning::{talk_id}/{slug}: no whisper.json, and a runner cannot fetch this video "
+                          "(no Drive mirror in media_refs; YouTube refuses GitHub's runners). It builds on "
+                          "en.srt if it has one. For whisper timings run the step on a home connection and "
+                          "commit the result through a PR: "
+                          f"python -m tools.local_whisper --talk-id {talk_id} --video-slug {slug}"
+                      )
 
           if talk_id_input:
               process_talk(talk_id_input)
@@ -593,6 +616,7 @@ jobs:
       talk_id: ${{ steps.prepare.outputs.talk_id }}
       video_slug: ${{ steps.prepare.outputs.video_slug }}
       timing_source: ${{ steps.timing.outputs.timing_source }}
+      captions_fetched: ${{ steps.captions.outputs.fetched }}
     steps:
       - uses: actions/checkout@v7
       - run: git pull --rebase
@@ -641,6 +665,46 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
+
+      # A YouTube video's EN subtitles come from amruta's captions repository,
+      # which is filled daily: a talk added before its captions landed got
+      # none from new-talk.yml, and that workflow never runs for it again. So
+      # ask once more here, before the timing source is resolved from what is
+      # on disk. Captions are optional — without them the build times against
+      # whisper — so nothing in this step may stop the run. A dry run replays
+      # snapshots and stays off the network.
+      #
+      # Only files this step CREATED travel on: an en.srt the repo already
+      # has may be newer on main by the time the commit job runs.
+      - name: Fetch late EN captions
+        id: captions
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        env:
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
+        run: |
+          python -m tools.amruta_captions --talk-id "$TALK_ID" \
+            || echo "::warning::EN captions fetch failed — continuing without"
+          STAGE="$RUNNER_TEMP/captions"
+          mkdir -p "$STAGE"
+          FETCHED=false
+          while IFS= read -r f; do
+            [ -n "$f" ] || continue
+            rel="${f#"talks/${TALK_ID}/"}"
+            mkdir -p "$STAGE/$(dirname "$rel")"
+            cp "$f" "$STAGE/$rel"
+            FETCHED=true
+            echo "new: $f"
+          done < <(git ls-files --others --exclude-standard -- "talks/${TALK_ID}/*/source/en.srt")
+          echo "fetched=$FETCHED" >> "$GITHUB_OUTPUT"
+
+      - name: Upload fetched EN captions
+        if: steps.captions.outputs.fetched == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          retention-days: 7
+          name: captions__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: ${{ runner.temp }}/captions
 
       - name: Prepare UK blocks
         id: prepare
@@ -718,6 +782,16 @@ jobs:
       - uses: actions/checkout@v7
       - run: git pull --rebase
 
+      # EN captions prepare-build fetched for a YouTube video (see "Fetch late
+      # EN captions"): this job has its own checkout, so they arrive here as
+      # <slug>/source/en.srt under the talk directory.
+      - name: Download fetched EN captions
+        if: needs.prepare-build.outputs.captions_fetched == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: captions__${{ needs.prepare-build.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: talks/${{ needs.prepare-build.outputs.talk_id }}
+
       - name: Download UK blocks artifact
         uses: actions/download-artifact@v8
         with:
@@ -784,6 +858,9 @@ jobs:
       # Missing after either means the optimizer (and, in whisper mode, the
       # builder) would work blind, so fail rather than ship a worse SRT. Only
       # a run that skipped whisper for a talk that never had it builds without.
+      # A video a runner cannot fetch (YouTube with no Drive mirror) is never
+      # sent to whisper, so a whisper job that succeeded here succeeded for the
+      # talk's other videos: for this one, whisper did not run.
       - name: Check whisper timings
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
@@ -792,13 +869,27 @@ jobs:
           TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
         run: |
           WHISPER="talks/${TALK_ID}/${VIDEO_SLUG}/source/whisper.json"
+          LOCAL="python -m tools.local_whisper --talk-id ${TALK_ID} --video-slug ${VIDEO_SLUG}"
+          FETCHABLE=true
+          if [ ! -f "${WHISPER}" ]; then
+            # A meta.yaml that does not validate fails here, with its reason.
+            if ! FETCHABLE=$(python -c "import sys; from pathlib import Path; from tools.video_media import download_candidates, load_video; print('true' if download_candidates(load_video(Path('.'), sys.argv[1], sys.argv[2]), ci=True) else 'false')" "${TALK_ID}" "${VIDEO_SLUG}"); then
+              echo "${FETCHABLE}"
+              exit 1
+            fi
+          fi
           if [ -f "${WHISPER}" ]; then
             echo "Whisper timings: ${WHISPER}"
-          elif [ "${WHISPER_RESULT}" = "success" ]; then
-            echo "::error::${WHISPER} missing although this run's whisper job succeeded — its bot PR has not reached main"
+          elif [ "${WHISPER_RESULT}" = "success" ] && [ "${FETCHABLE}" = "true" ]; then
+            echo "::error::${WHISPER} missing although this run's whisper job succeeded — its bot PR has not reached main. Re-run once it has merged, or make the file on a home connection and commit it through a PR: ${LOCAL}"
             exit 1
           elif [ "${TIMING_SOURCE}" = "whisper" ]; then
-            echo "::error::${WHISPER} missing and whisper is the timing source"
+            if [ "${FETCHABLE}" = "true" ]; then
+              echo "::error::${WHISPER} missing and whisper is the timing source"
+            else
+              echo "::error::${WHISPER} missing, whisper is the timing source, and a runner cannot fetch this video (no Drive mirror in media_refs; YouTube refuses GitHub's runners)"
+            fi
+            echo "::error::Run the whisper step on a home connection and commit the result through a PR: ${LOCAL}"
             exit 1
           else
             echo "::warning::${WHISPER} missing and whisper did not run — optimizer runs without speech timings"
@@ -1189,7 +1280,9 @@ jobs:
 
   # Single commit job – collects all artifacts and pushes
   commit:
-    needs: [discover, translate-and-review, build-timecodes]
+    # prepare-build is here for its captions_fetched output only; it already
+    # precedes this job through build-timecodes.
+    needs: [discover, translate-and-review, prepare-build, build-timecodes]
     # commit runs after any build path completes; skipped for dry-runs.
     if: |
       inputs.dry_run != true && always() &&
@@ -1228,6 +1321,17 @@ jobs:
         with:
           python-version: '3.12'
       - run: pip install -r requirements.txt
+
+      # EN captions prepare-build fetched for a YouTube video (see "Fetch late
+      # EN captions"): they are committed with this run's results, whether or not the
+      # build succeeded — a source file, good for the next run too. They land as
+      # <slug>/source/en.srt under the talk directory.
+      - name: Download fetched EN captions
+        if: needs.prepare-build.outputs.captions_fetched == 'true'
+        uses: actions/download-artifact@v8
+        with:
+          name: captions__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          path: talks/${{ needs.discover.outputs.talk_id }}
 
       - name: Download translation artifacts
         if: needs.translate-and-review.result == 'success' || needs.translate-and-review.result == 'failure'
@@ -1318,7 +1422,8 @@ jobs:
             "talks/*/*/work/timecodes.txt" \
             "talks/*/*/final/uk.srt" "talks/*/*/final/report.txt" \
             "talks/*/*/final/build_report.txt" \
-            "talks/*/*/final/build_manifest.yaml"
+            "talks/*/*/final/build_manifest.yaml" \
+            "talks/*/*/source/en.srt"
 
       # mode: rebuilt — this run built and committed subtitles;
       #       existing — no build this run, but the talk already has subtitles

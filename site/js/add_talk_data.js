@@ -11,7 +11,7 @@
 
 // vimeo_codec provides encodeVideoRef. In Node it is require()d; in the browser
 // it is a global set by <script src="js/vimeo_codec.js"> (loaded before this
-// file). Both resolve to the same { encodeVideoRef, decodeVideoRef } API.
+// file). Both resolve to the same { encodeVideoRef, decodeVideoSource, … } API.
 var _vimeoCodec =
   typeof require !== 'undefined' && typeof module !== 'undefined'
     ? require('./vimeo_codec')
@@ -123,6 +123,42 @@ function syncRolesForRows(rows) {
   return out;
 }
 
+// One video of the bookmarklet payload (site/js/bookmarklet.js) as the form
+// row it becomes: {url, title, mediaUrls}.
+//   YouTube  {p:'yt', id, gd:[driveId…], l} → the watch URL + Drive file URLs
+//   Vimeo    {id, h, l}                     → https://vimeo.com/<id>/<h>
+//   legacy   '<id>' (a bare string)         → https://vimeo.com/<id>
+// A video the scraper found no id for has an empty id; it becomes a row with
+// no URL, for the editor to fill in, rather than a link that leads nowhere.
+function videoFromPayload(vid) {
+  if (typeof vid === 'string') {
+    return { url: vid ? 'https://vimeo.com/' + vid : '', title: '', mediaUrls: [] };
+  }
+  var v = vid || {};
+  var title = v.l || '';
+  if (!v.id) return { url: '', title: title, mediaUrls: [] };
+  if (v.p === 'yt') {
+    return {
+      url: 'https://www.youtube.com/watch?v=' + v.id,
+      title: title,
+      mediaUrls: (v.gd || []).map(function (id) {
+        return 'https://drive.google.com/file/d/' + id + '/view';
+      }),
+    };
+  }
+  return { url: 'https://vimeo.com/' + v.id + (v.h ? '/' + v.h : ''), title: title, mediaUrls: [] };
+}
+
+// The Drive mirrors a form row still owns. They were scraped together with one
+// particular link, so they stay only while the row carries that link: a link
+// the editor typed (a new row, or one typed over) is a different video, and
+// its mirrors are not known.
+function rowMediaUrls(currentUrl, scrapedUrl, mediaUrls) {
+  var url = String(currentUrl || '').trim();
+  if (!url || !scrapedUrl || url !== scrapedUrl) return [];
+  return (mediaUrls || []).slice();
+}
+
 // Render a scalar as a single-quoted YAML string, escaping embedded quotes by
 // doubling them (the YAML single-quote escape). Quoting makes the value safe
 // regardless of content — a colon, leading symbol, etc. can no longer be
@@ -139,7 +175,8 @@ function yamlStr(s) {
 // so they stay unquoted to match existing meta.yaml files.
 //
 // fields: { title, date, location?, amruta_url?, language,
-//           videos?: [{ slug, title, url }], transcriptBase64? }
+//           videos?: [{ slug, title, url, mediaUrls?, sync? }],
+//           transcriptBase64? }
 function buildMetaYaml(fields) {
   var f = fields || {};
   var yaml = "title: " + yamlStr(f.title) + "\n";
@@ -154,9 +191,23 @@ function buildMetaYaml(fields) {
       yaml += "- slug: " + v.slug + "\n";
       yaml += "  title: " + yamlStr(v.title) + "\n";
       // Store the link obfuscated as video_ref (see js/vimeo_codec.js) so the
-      // committed meta.yaml never carries a plaintext Vimeo URL. base64url is
+      // committed meta.yaml never carries a plaintext video link. base64url is
       // YAML-safe, so it stays unquoted.
-      if (v.url) yaml += "  video_ref: " + _vimeoCodec.encodeVideoRef(v.url) + "\n";
+      if (v.url) {
+        var ref = _vimeoCodec.encodeVideoRef(v.url);
+        yaml += "  video_ref: " + ref + "\n";
+        // A YouTube video's Google Drive MP4 mirrors, obfuscated the same
+        // way. Only a YouTube video may carry them (tools/schemas.py), so
+        // they are written for nothing else. Same block-list layout as
+        // tools/download.py setup_talk.
+        var mirrors = v.mediaUrls || [];
+        if (mirrors.length && _vimeoCodec.decodeVideoSource(ref).provider === 'yt') {
+          yaml += "  media_refs:\n";
+          mirrors.forEach(function (u) {
+            yaml += "  - " + _vimeoCodec.encodeVideoRef(u) + "\n";
+          });
+        }
+      }
       // How this video takes part in subtitle sync — read by
       // tools/video_roles.py. Omitted for a single-video talk, which needs
       // no declaration.
@@ -172,6 +223,37 @@ function buildMetaYaml(fields) {
     }
   }
   return yaml;
+}
+
+// True when a link is one meta.yaml can store — i.e. encodeVideoRef takes it.
+function isSupportedVideoUrl(url) {
+  try {
+    _vimeoCodec.encodeVideoRef(url);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+// buildMetaYaml for the form: a build either succeeds or yields NO YAML.
+//
+// encodeVideoRef throws on a link it does not know — a YouTube /live/ or
+// /shorts/ link, one that is half typed. Letting that escape the form's input
+// handler left the preview holding the YAML of the previous keystroke, and
+// submit committed it: the old video_ref and media_refs under a row that now
+// said something else. So the form asks here, and gets back which videos (by
+// index into fields.videos) cannot be stored instead of an exception.
+//
+// Returns { ok, yaml, badVideos } — yaml is '' unless ok.
+function buildMetaYamlChecked(fields) {
+  var videos = (fields && fields.videos) || [];
+  var bad = [];
+  videos.forEach(function (v, i) {
+    var links = (v.url ? [v.url] : []).concat((v.url && v.mediaUrls) || []);
+    if (!links.every(isSupportedVideoUrl)) bad.push(i);
+  });
+  if (bad.length) return { ok: false, yaml: '', badVideos: bad };
+  return { ok: true, yaml: buildMetaYaml(fields), badVideos: [] };
 }
 
 // PR body for an add-talk PR. The talk_id sits in a fenced block (GitHub adds a
@@ -191,6 +273,10 @@ if (typeof module !== 'undefined' && module.exports) {
     parseAddTalkHash: parseAddTalkHash,
     isAmrutaUrl: isAmrutaUrl,
     buildMetaYaml: buildMetaYaml,
+    videoFromPayload: videoFromPayload,
+    rowMediaUrls: rowMediaUrls,
+    isSupportedVideoUrl: isSupportedVideoUrl,
+    buildMetaYamlChecked: buildMetaYamlChecked,
     defaultSyncRoles: defaultSyncRoles,
     syncRolesForRows: syncRolesForRows,
     SYNC_ROLES: SYNC_ROLES,

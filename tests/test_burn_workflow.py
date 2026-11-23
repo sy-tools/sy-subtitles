@@ -241,25 +241,17 @@ class TestSteps:
         stripped = joined.replace("fonts-noto-core", "")
         assert "fonts-" not in stripped, "no OTHER font package may be installed"
 
-    def test_validates_the_video_ref_before_the_run_invests_in_it(self):
-        # Two reasons, one step. A talk whose video has no video_ref used to
-        # burn through the whole install before dying at Download video; and an
-        # unvalidated ref decodes to vimeo.com/<arbitrary text> — multiline,
-        # which defeats the line-based ::add-mask:: and hands the tail to the
-        # runner as workflow commands. validate_video_ref re-checks the decoded
-        # URL against the strict shape.
+    def test_checks_the_video_can_be_fetched_before_the_run_invests_in_it(self):
+        # A talk whose video has no link — or a YouTube video with no Drive
+        # mirror, which a runner cannot fetch — must fail here, not at
+        # Download video. The resolver schema-validates meta.yaml, which
+        # decodes every ref against its strict per-provider shape before any
+        # decoded value can reach ::add-mask::.
         validate = _commands(_step("Validate inputs")["run"])
-        assert "video_ref" in validate, "Validate inputs must extract the video_ref"
-        assert "--video-ref" in validate, "and reject a malformed one before any work"
-
-    def test_the_download_validates_the_ref_before_decoding_it(self):
-        # The hard guarantee lives where the value flows into add-mask/echo:
-        # decode nothing that validation has not passed.
-        download = _commands(_step("Download video")["run"])
-        assert "--video-ref" in download
-        assert download.index("--video-ref") < download.index("vimeo_codec decode"), (
-            "the guard must run before the decode, or the mask sees the payload first"
-        )
+        assert "tools.video_media check" in validate
+        assert "--ci" in validate
+        assert "--purpose burn" in validate
+        assert "--root content" in validate
 
     def test_every_run_block_is_strict(self):
         for run in _runs():
@@ -480,23 +472,21 @@ class TestSpaContract:
 
 
 class TestDownload:
-    def test_masks_the_decoded_video_url(self):
-        run = _step("Download video")["run"]
-        assert "vimeo_codec decode" in run
-        assert "::add-mask::" in run, "the plaintext URL must never reach the logs"
+    def test_downloads_through_the_resolver_as_ci(self):
+        # Masking, the Vimeo player form and referer, the mp4 container and the
+        # Drive mirrors of a YouTube video all live in tools/video_media.py
+        # (tests/test_video_media.py); --ci keeps YouTube itself out of reach.
+        run = _commands(_step("Download video")["run"])
+        assert "tools.video_media download" in run
+        assert "--ci" in run
+        assert "--purpose burn" in run
+        assert "--root content" in run
+        assert "--out /tmp/burn/source.mp4" in run
 
-    def test_decodes_to_the_player_form(self):
-        # Vimeo answers 401 on the internal API yt-dlp uses for canonical
-        # vimeo.com/<id>/<hash> links; --player emits the resolvable form.
-        assert "vimeo_codec decode --player" in _step("Download video")["run"]
-
-    def test_downloads_with_the_amruta_referer(self):
-        assert '--referer "https://www.amruta.org/"' in _step("Download video")["run"]
-
-    def test_forces_the_mp4_container(self):
-        # Without this yt-dlp may merge into source.mkv, exit 0, and leave the
-        # empty-file check complaining about an .mp4 that was never written.
-        assert "--merge-output-format mp4" in _step("Download video")["run"]
+    def test_never_calls_yt_dlp_or_decodes_a_ref_itself(self):
+        run = _commands(_step("Download video")["run"])
+        assert "yt-dlp" not in run
+        assert "vimeo_codec" not in run
 
     def test_the_whole_video_is_downloaded_even_for_a_clip(self):
         # The fragment is cut by the render's input-side seek, not by the download.
@@ -509,7 +499,7 @@ class TestDownload:
         run = _step("Download video")["run"]
         assert "set -euo pipefail" in run
         assert "test -s" in run
-        assert run.count("::error::") >= 2
+        assert "::error::" in run
 
 
 class TestBurn:

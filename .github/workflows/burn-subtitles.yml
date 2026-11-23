@@ -156,25 +156,14 @@ jobs:
             --subs-scale="$SUBS_SCALE" --clip="$CLIP" --request-id="$REQUEST_ID"
           test -f "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
             || { echo "::error::no final/uk.srt for $TALK_ID/$VIDEO_SLUG"; exit 1; }
-          # The video_ref, checked HERE for two reasons. Presence: a talk whose
-          # video has none used to sail through validation and die at Download
-          # video, after the whole install. Shape: the ref comes from meta.yaml
-          # on a caller-chosen branch, and decode_video_ref appends its payload
-          # to vimeo.com/ without any shape check — a multiline payload would
-          # defeat the line-based ::add-mask:: in the download step and hand
-          # its tail to the runner as workflow commands. validate_video_ref
-          # re-checks the DECODED url against the strict pattern.
-          VIDEO_REF=$(python3 -c "
-          import os, yaml
-          with open('content/talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
-              meta = yaml.safe_load(f)
-          for v in meta.get('videos', []):
-              if v.get('slug') == os.environ['VIDEO_SLUG']:
-                  print(v.get('video_ref', '')); break
-          ")
-          test -n "$VIDEO_REF" \
-            || { echo "::error::no video_ref for $VIDEO_SLUG — this video cannot be rendered"; exit 1; }
-          python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
+          # Whether this video can be fetched at all, checked HERE so a video
+          # with no link — or a YouTube video with no Drive mirror, which a
+          # runner cannot fetch — fails before the run invests in it. The
+          # resolver schema-validates meta.yaml (from a caller-chosen branch):
+          # every ref is decoded against its strict per-provider shape, so no
+          # multiline payload can reach the ::add-mask:: of the download.
+          python3 -m tools.video_media check --ci --purpose burn --root content \
+            --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG"
           # The ratios are measured in the browser. Reject nonsense here, with a
           # legible message, rather than deep inside ffmpeg. The font_ratio
           # band is the one the browser and the burner clamp to
@@ -208,46 +197,15 @@ jobs:
           VIDEO_SLUG: ${{ inputs.video_slug }}
         run: |
           set -euo pipefail
-          VIDEO_REF=$(python3 -c "
-          import os, yaml
-          with open('content/talks/' + os.environ['TALK_ID'] + '/meta.yaml') as f:
-              meta = yaml.safe_load(f)
-          for v in meta.get('videos', []):
-              if v.get('slug') == os.environ['VIDEO_SLUG']:
-                  print(v.get('video_ref', '')); break
-          ")
-          test -n "$VIDEO_REF" || { echo "::error::no video_ref for $VIDEO_SLUG"; exit 1; }
-          # Validated AGAIN at the point of use, not only in Validate inputs:
-          # this is where the decoded value flows into ::add-mask:: and a log
-          # echo, so the guarantee must hold here even if the steps above are
-          # ever reordered. validate_video_ref rejects any ref whose decoded
-          # url does not match the strict single-line vimeo.com shape.
-          python3 -m tools.workflow_validation_cli --video-ref "$VIDEO_REF"
-          # Decode the obfuscated video_ref at the last moment and mask the
-          # plaintext URL from the logs. --player emits the player.vimeo.com
-          # form: Vimeo answers 401 on the internal API yt-dlp uses for the
-          # canonical vimeo.com/<id>/<hash> links.
-          VIDEO_URL=$(python3 -m tools.vimeo_codec decode --player "$VIDEO_REF")
-          echo "::add-mask::$VIDEO_URL"
+          # The resolver validates meta.yaml again at the point of use, masks
+          # each source before trying it, and explains a refusal (Vimeo's 401
+          # to data-centre IPs among them). --ci: YouTube refuses GitHub's
+          # runners, so a YouTube video comes from its Drive mirrors here.
+          # The whole video is downloaded even for a clip: the render cuts it.
           mkdir -p /tmp/burn
-          # --merge-output-format pins the container: merging into source.mkv
-          # would exit 0 and leave the check below blaming an absent .mp4.
-          yt-dlp --referer "https://www.amruta.org/" \
-            --merge-output-format mp4 \
-            -o /tmp/burn/source.mp4 "$VIDEO_URL" \
-            || {
-              # Measured 2026-07-31 across two talks and two networks: some
-              # newer Vimeo uploads answer 401 from GitHub's Azure IPs while
-              # the SAME url+hash downloads fine from a home connection, with
-              # identical yt-dlp and impersonation. Older uploads work from
-              # both. So a 401 here is usually Vimeo refusing a data-centre IP,
-              # not a bad ref — say that, or the next person re-derives it.
-              echo "::error::video download failed with 401. The url and hash are"
-              echo "::error::probably fine: Vimeo blocks some newer videos from"
-              echo "::error::data-centre IPs like GitHub's runners. Rendering this"
-              echo "::error::talk needs a machine on a normal connection."
-              exit 1
-            }
+          python3 -m tools.video_media download --ci --purpose burn --root content \
+            --talk-id "$TALK_ID" --video-slug "$VIDEO_SLUG" \
+            --out /tmp/burn/source.mp4
           test -s /tmp/burn/source.mp4 \
             || { echo "::error::downloaded file is empty"; exit 1; }
 
