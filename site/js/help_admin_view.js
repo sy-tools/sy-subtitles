@@ -224,7 +224,7 @@
     root.appendChild(add);
   }
 
-  var api = { render: render };
+  var api = { render: render, statusLine: statusLine };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.HelpAdminView = api;
 })();

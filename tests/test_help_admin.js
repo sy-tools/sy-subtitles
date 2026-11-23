@@ -63,6 +63,22 @@ describe('catalog edits', () => {
   });
 });
 
+describe('validateCatalog', () => {
+  it('passes a sound catalog', () => {
+    assert.deepStrictEqual(A.validateCatalog(catalog()), []);
+  });
+
+  it('flags what the help repository would refuse to publish', () => {
+    const moved = A.moveToSection(catalog(), 'a', 'updates');
+    assert.match(A.validateCatalog(moved).join('\n'), /'a' has no date/);
+    const cleared = A.setText(catalog(), ['updates', 'u', 'date', null], '');
+    assert.match(A.validateCatalog(cleared).join('\n'), /'u' has no date/);
+    const dup = catalog();
+    dup.sections[0].videos.push({ file: 'a' });
+    assert.match(A.validateCatalog(dup).join('\n'), /duplicate file 'a'/);
+  });
+});
+
 describe('file names', () => {
   it('transliterate a Ukrainian title into a lowercase slug', () => {
     assert.strictEqual(A.slugify('Оновлення на 22.11.2026'), 'onovlennia-na-22-11-2026');
@@ -79,14 +95,19 @@ describe('file names', () => {
     assert.ok(!slug.endsWith('-'), slug);
   });
 
-  it('name a new video after its slug, or the next free number', () => {
+  it('name a new video after its slug, or the next free version', () => {
     assert.strictEqual(A.nextFile(catalog(), 'd', null), 'd');
-    assert.strictEqual(A.nextFile(catalog(), 'a', null), 'a-2');
+    assert.strictEqual(A.nextFile(catalog(), 'a', null), 'a-v2');
   });
 
-  it('give a replacement the next number of the file it replaces', () => {
-    assert.strictEqual(A.nextFile(catalog(), 'ignored', 'a'), 'a-2');
-    assert.strictEqual(A.nextFile(catalog(), 'ignored', 'c-2'), 'c-3');
+  it('never reuse the name of a recording still in the release', () => {
+    assert.strictEqual(A.nextFile(catalog(), 'gone', null, ['gone']), 'gone-v2');
+  });
+
+  it('give a replacement the next version of the file it replaces', () => {
+    assert.strictEqual(A.nextFile(catalog(), 'ignored', 'a'), 'a-v2');
+    assert.strictEqual(A.nextFile(catalog(), 'ignored', 'a-v2'), 'a-v3');
+    assert.strictEqual(A.nextFile(catalog(), 'ignored', 'update-2026-11-22'), 'update-2026-11-22-v2');
   });
 });
 
@@ -150,6 +171,13 @@ describe('catalog load and save', () => {
     assert.deepStrictEqual(JSON.parse(Buffer.from(put.body.content, 'base64').toString()), catalog());
   });
 
+  it('refuse to save a catalog the help repository would not publish', async () => {
+    const f = fakeGitHub();
+    await assert.rejects(A.saveCatalog(API, 't', A.moveToSection(catalog(), 'a', 'updates'), 'cat-sha', 'm', f),
+      (e) => e.code === 'invalid' && /'a' has no date/.test(e.message));
+    assert.strictEqual(f.calls.length, 0);
+  });
+
   it('report a catalog changed underneath as stale, never overwrite it', async () => {
     for (const status of [409, 422]) {
       await assert.rejects(A.saveCatalog(API, 't', catalog(), 'old', 'm', fakeGitHub({ putStatus: status })),
@@ -165,9 +193,9 @@ describe('uploadVideo', () => {
     const f = fakeGitHub();
     const progress = [];
     const blob = blobOf(25);
-    const branch = await A.uploadVideo(API, 't', blob, entry, (done, total) => progress.push([done, total]), f,
+    const sent = await A.uploadVideo(API, 't', blob, entry, (done, total) => progress.push([done, total]), f,
       Object.assign({ partSize: 10 }, NODE_DEPS));
-    assert.strictEqual(branch, 'inbox/d');
+    assert.deepStrictEqual(sent, { branch: 'inbox/d', sha: 'commit' });
     const blobs = f.calls.filter((c) => c.url === '/git/blobs');
     assert.strictEqual(blobs.length, 4, 'three parts and entry.json');
     assert.deepStrictEqual(Buffer.from(blobs[1].body.content, 'base64'), blob.bytes.subarray(10, 20));
@@ -212,15 +240,44 @@ describe('uploadVideo', () => {
 });
 
 describe('ingestStatus', () => {
-  it('read the state of the run on the inbox branch', async () => {
+  const run = (sha, status, conclusion, url) => ({ head_sha: sha, status, conclusion, html_url: url });
+
+  it('read the state of the run of the commit just uploaded', async () => {
     const f = fakeGitHub();
-    assert.deepStrictEqual(await A.ingestStatus(API, 't', 'inbox/d', f), { state: 'queued', url: null });
-    f.runs = { workflow_runs: [{ status: 'in_progress', conclusion: null, html_url: 'u1' }] };
-    assert.deepStrictEqual(await A.ingestStatus(API, 't', 'inbox/d', f), { state: 'running', url: 'u1' });
-    f.runs = { workflow_runs: [{ status: 'completed', conclusion: 'success', html_url: 'u2' }] };
-    assert.deepStrictEqual(await A.ingestStatus(API, 't', 'inbox/d', f), { state: 'done', url: 'u2' });
-    f.runs = { workflow_runs: [{ status: 'completed', conclusion: 'failure', html_url: 'u3' }] };
-    assert.deepStrictEqual(await A.ingestStatus(API, 't', 'inbox/d', f), { state: 'failed', url: 'u3' });
+    const status = () => A.ingestStatus(API, 't', 'inbox/d', 'c1', f);
+    assert.deepStrictEqual(await status(), { state: 'queued', url: null });
+    f.runs = { workflow_runs: [run('c1', 'in_progress', null, 'u1')] };
+    assert.deepStrictEqual(await status(), { state: 'running', url: 'u1' });
+    f.runs = { workflow_runs: [run('c1', 'completed', 'success', 'u2')] };
+    assert.deepStrictEqual(await status(), { state: 'done', url: 'u2' });
+    f.runs = { workflow_runs: [run('c1', 'completed', 'failure', 'u3')] };
+    assert.deepStrictEqual(await status(), { state: 'failed', url: 'u3' });
     assert.ok(f.calls[0].url.includes('branch=inbox%2Fd'), f.calls[0].url);
+  });
+
+  it('ignore an earlier run on the same branch name', async () => {
+    const f = fakeGitHub();
+    f.runs = { workflow_runs: [run('old', 'completed', 'failure', 'u0')] };
+    assert.deepStrictEqual(await A.ingestStatus(API, 't', 'inbox/d', 'c1', f), { state: 'queued', url: null });
+  });
+});
+
+describe('rebaseOnIngest', () => {
+  it('add the published video to unsaved edits, keeping them', () => {
+    const local = A.setText(catalog(), ['guide', 'a', 'title', 'en'], 'Edited');
+    const remote = catalog();
+    remote.sections[0].videos.push({ file: 'd', title: { uk: 'Г' }, duration: 3 });
+    const out = A.rebaseOnIngest(local, remote, 'd');
+    assert.deepStrictEqual(files(out, 0), ['a', 'b', 'c-2', 'd']);
+    assert.strictEqual(out.sections[0].videos[0].title.en, 'Edited');
+  });
+
+  it('put a replacement in place of the old file, keeping the texts edited meanwhile', () => {
+    const local = A.setText(catalog(), ['guide', 'b', 'title', 'en'], 'Edited');
+    const remote = catalog();
+    remote.sections[0].videos[1] = { file: 'b-v2', title: { uk: 'Б', en: 'B' }, duration: 9 };
+    const out = A.rebaseOnIngest(local, remote, 'b-v2');
+    assert.deepStrictEqual(files(out, 0), ['a', 'b-v2', 'c-2']);
+    assert.deepStrictEqual(out.sections[0].videos[1], { file: 'b-v2', title: { uk: 'Б', en: 'Edited' }, duration: 9 });
   });
 });

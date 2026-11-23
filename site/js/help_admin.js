@@ -121,15 +121,76 @@
   }
 
   // A file name never changes content (browsers and the Pages CDN cache by
-  // URL), so a replacement takes the next number of the name it replaces.
-  function nextFile(cat, base, replaces) {
+  // URL), so a replacement takes the next version of the name it replaces,
+  // and a name still held by a recording in the release (`released`, the
+  // asset names without .bin) is never handed out again.
+  function nextFile(cat, base, replaces, released) {
     var taken = {};
     cat.sections.forEach(function (s) { s.videos.forEach(function (v) { taken[v.file] = true; }); });
-    var stem = replaces ? replaces.replace(/-\d+$/, '') : base;
-    var n = replaces ? Math.max(2, (+(/-(\d+)$/.exec(replaces) || [0, 1])[1]) + 1) : 1;
-    var name = n === 1 ? stem : stem + '-' + n;
-    while (taken[name]) { n++; name = stem + '-' + n; }
+    (released || []).forEach(function (name) { taken[name] = true; });
+    var version = /-v(\d+)$/.exec(replaces || '');
+    var stem = replaces ? replaces.replace(/-v\d+$/, '') : base;
+    var n = replaces ? (version ? +version[1] + 1 : 2) : 1;
+    var name = n === 1 ? stem : stem + '-v' + n;
+    while (taken[name]) { n++; name = stem + '-v' + n; }
     return name;
+  }
+
+  // The rules tools/catalog.py validate holds in the help repository, whose
+  // deploy refuses a catalog that breaks them: refused here, before saving.
+  var FILE_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  function validateCatalog(cat) {
+    var errors = [];
+    var seen = {};
+    var ids = {};
+    if (cat.version !== 1) errors.push('version must be 1');
+    (cat.sections || []).forEach(function (section) {
+      if (!FILE_RE.test(String(section.id))) errors.push("section id '" + section.id + "' is not a slug");
+      if (ids[section.id]) errors.push("duplicate section '" + section.id + "'");
+      ids[section.id] = true;
+      if (section.order !== 'manual' && section.order !== 'chronological') {
+        errors.push("section '" + section.id + "' has order '" + section.order + "'");
+      }
+      if (!Array.isArray(section.videos)) { errors.push("section '" + section.id + "' has no videos list"); return; }
+      section.videos.forEach(function (v) {
+        if (!FILE_RE.test(String(v.file))) errors.push("file '" + v.file + "' is not a lowercase slug");
+        else if (seen[v.file]) errors.push("duplicate file '" + v.file + "'");
+        seen[v.file] = true;
+        if (section.order === 'chronological' && !v.date) errors.push("'" + v.file + "' has no date, which its section sorts by");
+        if (v.date && !DATE_RE.test(v.date)) errors.push("'" + v.file + "' has date '" + v.date + "', not YYYY-MM-DD");
+      });
+    });
+    return errors;
+  }
+
+  // Unsaved edits made while an upload was being published: the published
+  // entry (new, or in place of the file it replaced) joins them, so saving
+  // them does not undo the ingest, and the edits are not lost to a reload.
+  function rebaseOnIngest(local, remote, file) {
+    var out = clone(local);
+    var at = findVideo(remote, file);
+    var sectionId = remote.sections[at.s].id;
+    var published = clone(remote.sections[at.s].videos[at.i]);
+    var inRemote = {};
+    remote.sections.forEach(function (s) { s.videos.forEach(function (v) { inRemote[v.file] = true; }); });
+    var target = out.sections.findIndex(function (s) { return s.id === sectionId; });
+    if (target === -1) target = 0;
+    var list = out.sections[target].videos;
+    if (list.some(function (v) { return v.file === file; })) return out;
+    // What it replaced: a video of that section the ingest took out of main.
+    var old = list.findIndex(function (v) { return !inRemote[v.file]; });
+    if (old === -1) {
+      list.push(published);
+      return out;
+    }
+    ['title', 'description', 'notes', 'date'].forEach(function (k) {
+      if (list[old][k] !== undefined) published[k] = list[old][k];
+    });
+    delete published.subtitles;
+    list[old] = published;
+    return out;
   }
 
   function staleOr(e) {
@@ -149,6 +210,12 @@
   }
 
   function saveCatalog(api, token, catalog, sha, message, f) {
+    var errors = validateCatalog(catalog);
+    if (errors.length) {
+      var invalid = new Error(errors.join('; '));
+      invalid.code = 'invalid';
+      return Promise.reject(invalid);
+    }
     return GH.putFile(api, token, {
       path: 'catalog.json',
       branch: 'main',
@@ -245,14 +312,17 @@
           // An earlier try got this far: point its branch at this upload.
           if (e.status !== 422) throw e;
           return json(api, token, '/git/refs/heads/' + branch, 'PATCH', { sha: commit.sha, force: true }, f);
-        });
-    }).then(function () { return branch; });
+        })
+        .then(function () { return { branch: branch, sha: commit.sha }; });
+    });
   }
 
-  function ingestStatus(api, token, branch, f) {
-    var url = '/actions/runs?event=push&per_page=1&branch=' + encodeURIComponent(branch);
+  // The run of this upload's commit: a branch name is reused by a re-upload,
+  // and an earlier run on it says nothing about this one.
+  function ingestStatus(api, token, branch, sha, f) {
+    var url = '/actions/runs?event=push&per_page=10&branch=' + encodeURIComponent(branch);
     return GH.ghJson(api + url, token, { cache: 'no-store' }, f).then(function (r) {
-      var run = (r.workflow_runs || [])[0];
+      var run = (r.workflow_runs || []).filter(function (x) { return x.head_sha === sha; })[0];
       if (!run) return { state: 'queued', url: null };
       if (run.status !== 'completed') return { state: 'running', url: run.html_url };
       return { state: run.conclusion === 'success' ? 'done' : 'failed', url: run.html_url };
@@ -270,6 +340,8 @@
     removeVideo: removeVideo,
     slugify: slugify,
     nextFile: nextFile,
+    validateCatalog: validateCatalog,
+    rebaseOnIngest: rebaseOnIngest,
     loadCatalog: loadCatalog,
     saveCatalog: saveCatalog,
     uploadVideo: uploadVideo,

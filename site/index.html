@@ -1216,6 +1216,8 @@ var I18N = {
     'help.admin.published': 'опубліковано; субтитри з’являться трохи згодом',
     'help.admin.failed': 'обробка не вдалася',
     'help.admin.run': 'журнал',
+    'help.admin.invalid': 'Не збережено: каталог має помилки, яких сайт не прийме.',
+    'help.admin.lostTrack': 'Не вдається стежити за обробкою; перевірте журнал на GitHub.',
     'prefs.lang.uk': 'UK',
     'prefs.lang.en': 'EN',
     // Composed by mixedScriptMessage in js/typo_hints.js: title, then one
@@ -1545,6 +1547,8 @@ var I18N = {
     'help.admin.published': 'published; subtitles follow a little later',
     'help.admin.failed': 'processing failed',
     'help.admin.run': 'log',
+    'help.admin.invalid': 'Not saved: the catalog has errors the site would refuse.',
+    'help.admin.lostTrack': 'Lost track of the processing; check its log on GitHub.',
     'typo.mixed.title': 'Two keyboard layouts in one word',
     'typo.mixed.instead': 'Latin «{lat}» where «{cyr}» belongs',
     'typo.mixed.stray': 'Latin «{lat}»',
@@ -10486,7 +10490,7 @@ function showHelp() {
 // GitHub decides, and a user without the right could not write anyway. The
 // catalog being edited is read from the API (main as it is now), not from
 // Pages, which trails a deploy behind.
-var helpAdmin = { on: false, catalog: null, sha: null, dirty: false, saving: false, status: null, upload: null };
+var helpAdmin = { on: false, catalog: null, sha: null, released: [], dirty: false, saving: false, status: null, upload: null };
 
 function helpApi() { return 'https://api.github.com/repos/' + HelpVideos.helpRepo(window); }
 
@@ -10496,6 +10500,21 @@ function checkHelpAdmin() {
   if (!btn) return;
   if (!token) { btn.hidden = true; return; }
   getRepoPermissions(helpApi(), token).then(function(p) { btn.hidden = !p.push; }, function() { btn.hidden = true; });
+}
+
+// Only the status line: a redraw of the form would take the caret and empty
+// the add-video fields while someone is filling them in.
+function helpAdminRenderStatus() {
+  var line = document.querySelector('.help-admin__status');
+  if (line) line.replaceWith(HelpAdminView.statusLine(helpAdmin, t));
+}
+
+// Names still held by recordings in the release, which a new upload must not
+// take (a URL never changes content). Unknown names cost nothing but a -v2.
+function helpLoadReleased() {
+  return ghJson(helpApi() + '/releases/tags/media', getAuthToken(), { cache: 'no-store' }).then(function(r) {
+    helpAdmin.released = (r.assets || []).map(function(a) { return a.name.replace(/\.bin$/, ''); });
+  }, function() {});
 }
 
 function helpAdminRender() {
@@ -10517,6 +10536,7 @@ function helpAdminMarkDirty() {
 }
 
 function helpAdminLoad(status) {
+  helpLoadReleased();
   return HelpAdmin.loadCatalog(helpApi(), getAuthToken()).then(function(r) {
     helpAdmin.catalog = r.catalog;
     helpAdmin.sha = r.sha;
@@ -10543,19 +10563,39 @@ function helpSectionOf(file) {
   return helpAdmin.catalog.sections.find(function(s) { return s.videos.some(function(v) { return v.file === file; }); });
 }
 
-function helpAdminFollowIngest(branch) {
-  HelpAdmin.ingestStatus(helpApi(), getAuthToken(), branch).then(function(r) {
-    var u = helpAdmin.upload;
-    if (!u || u.branch !== branch) return;
+var HELP_POLL_MS = 10000;
+var HELP_POLL_GIVE_UP = 6;
+
+function helpAdminFollowIngest(sent, failures) {
+  var u = helpAdmin.upload;
+  if (!u || u.branch !== sent.branch) return;
+  HelpAdmin.ingestStatus(helpApi(), getAuthToken(), sent.branch, sent.sha).then(function(r) {
     u.url = r.url;
     if (r.state === 'done') {
       u.state = 'done';
-      return helpAdminLoad();
+      return helpAdminTakePublished(u.file);
     }
     u.state = r.state === 'failed' ? 'failed' : 'processing';
-    if (helpAdmin.on) helpAdminRender();
-    if (u.state !== 'failed') setTimeout(function() { helpAdminFollowIngest(branch); }, 10000);
-  }, function() { setTimeout(function() { helpAdminFollowIngest(branch); }, 20000); });
+    helpAdminRenderStatus();
+    if (u.state !== 'failed') setTimeout(function() { helpAdminFollowIngest(sent, 0); }, HELP_POLL_MS);
+  }, function(e) {
+    if ((failures || 0) + 1 >= HELP_POLL_GIVE_UP) {
+      helpAdmin.status = { kind: 'error', text: t('help.admin.lostTrack') + ' ' + e.message };
+      return helpAdminRenderStatus();
+    }
+    setTimeout(function() { helpAdminFollowIngest(sent, (failures || 0) + 1); }, 2 * HELP_POLL_MS);
+  });
+}
+
+// The published video joins the catalog being edited without dropping what
+// was typed meanwhile.
+function helpAdminTakePublished(file) {
+  if (!helpAdmin.dirty) return helpAdminLoad();
+  return HelpAdmin.loadCatalog(helpApi(), getAuthToken()).then(function(r) {
+    helpAdmin.catalog = HelpAdmin.rebaseOnIngest(helpAdmin.catalog, r.catalog, file);
+    helpAdmin.sha = r.sha;
+    helpAdminRenderStatus();
+  }, function() { helpAdminRenderStatus(); });
 }
 
 // Closing the tab mid-upload loses it; the browser asks first.
@@ -10590,6 +10630,10 @@ var helpAdminActions = {
         helpCatalog = null;
       }, function(e) {
         if (e.code === 'stale') return helpAdminLoad({ kind: 'error', text: t('help.admin.stale') });
+        if (e.code === 'invalid') {
+          helpAdmin.status = { kind: 'error', text: t('help.admin.invalid') + ' ' + e.message };
+          return;
+        }
         helpAdmin.status = { kind: 'error', text: t('help.admin.saveFailed') + ' ' + e.message };
       })
       .then(function() { helpAdmin.saving = false; helpAdminRender(); });
@@ -10599,26 +10643,26 @@ var helpAdminActions = {
     var cat = helpAdmin.catalog;
     var entry;
     if (form.video) {
-      entry = { section: helpSectionOf(form.video.file).id, file: HelpAdmin.nextFile(cat, null, form.video.file), replaces: form.video.file };
+      entry = { section: helpSectionOf(form.video.file).id, file: HelpAdmin.nextFile(cat, null, form.video.file, helpAdmin.released), replaces: form.video.file };
     } else {
       var f = form.fields;
       var section = cat.sections.find(function(s) { return s.id === f.section; });
       if (!f.title.uk.trim() && !(section && section.order === 'chronological')) {
         helpAdmin.status = { kind: 'error', text: t('help.admin.needTitle') };
-        return helpAdminRender();
+        return helpAdminRenderStatus();
       }
       if (section && section.order === 'chronological' && !f.date) {
         helpAdmin.status = { kind: 'error', text: t('help.admin.needDate') };
-        return helpAdminRender();
+        return helpAdminRenderStatus();
       }
       var base = HelpAdmin.slugify(f.title.en || f.title.uk || ('update ' + f.date));
-      entry = { section: f.section, file: HelpAdmin.nextFile(cat, base, null), replaces: null,
+      entry = { section: f.section, file: HelpAdmin.nextFile(cat, base, null, helpAdmin.released), replaces: null,
         title: f.title, description: f.description, date: f.date || null, notes: { uk: [], en: [] } };
     }
     var file = form.file;
     if (file.size > HelpAdmin.MAX_UPLOAD_BYTES) {
       helpAdmin.status = { kind: 'error', text: t('help.admin.tooLarge') };
-      return helpAdminRender();
+      return helpAdminRenderStatus();
     }
     helpAdmin.upload = { file: entry.file, branch: 'inbox/' + entry.file, state: 'sending', done: 0, total: file.size, url: null };
     helpAdmin.status = null;
@@ -10630,10 +10674,10 @@ var helpAdminActions = {
       if (bar) bar.value = done;
       var label = document.querySelector('.help-admin__status span');
       if (label) label.textContent = entry.file + ': ' + t('help.admin.uploading').replace('{p}', String(Math.floor(100 * done / total)));
-    }).then(function(branch) {
+    }).then(function(sent) {
       helpAdmin.upload.state = 'processing';
-      helpAdminRender();
-      helpAdminFollowIngest(branch);
+      helpAdminRenderStatus();
+      helpAdminFollowIngest(sent, 0);
     }, function(e) {
       helpAdmin.upload.state = 'failed';
       helpAdmin.status = { kind: 'error', text: e.message };

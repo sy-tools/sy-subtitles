@@ -496,3 +496,15 @@ def test_leaving_edit_mode_with_unsaved_changes_is_refused(smoke_server, smoke_p
     page.click("#help-sheet-edit")
     page.wait_for_selector(".help-admin__status .help-sheet__error")
     assert page.locator(".help-admin__bar").count() == 1
+
+
+def test_a_catalog_the_site_would_refuse_is_not_saved(smoke_server, smoke_page):
+    page = smoke_page
+    calls = _admin_page(smoke_server, page)
+    page.click("#help-sheet-edit")
+    page.wait_for_selector(".help-admin__bar")
+    page.select_option(".help-admin__video[data-file='intro'] .help-admin__section", "updates")
+    page.click(".help-admin__save")
+    page.wait_for_selector(".help-admin__status .help-sheet__error")
+    assert "'intro' has no date" in page.text_content(".help-admin__status")
+    assert calls["put"] == []
