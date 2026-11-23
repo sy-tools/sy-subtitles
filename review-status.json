@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-23T15:39:56.609549+00:00",
+  "updated_at": "2026-11-23T15:41:55.760981+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1118,9 +1118,9 @@
     "1987-11-06_Shri-Ganesha-Puja-spread-love-all-over-and-remove-the-people-from-the-shackles": {
       "status": "pending",
       "reviewer": null,
-      "issue_number": null,
-      "updated_at": "2026-11-23T15:30:06Z",
-      "operator_stage": "pipeline",
+      "issue_number": 1564,
+      "updated_at": "2026-11-23T15:40:11Z",
+      "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1551
     },
