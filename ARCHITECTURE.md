@@ -230,11 +230,13 @@ reach a consumer by default.
 YouTube: a spike on 2026-11-23 got "confirm you're not a bot" from every
 yt-dlp client, and the only way past it is account cookies in CI, which is
 ruled out (ban risk, rotation, a personal account turned into
-infrastructure). amruta publishes two other copies of every YouTube video,
-both the same cut, and both reachable without credentials:
+infrastructure). amruta publishes other copies of its YouTube videos, the
+same cut, reachable without credentials:
 
-- **Bunny Stream** — every video block on a talk page embeds a Bunny player
-  and links "Watch on Bunny". The stream is HLS only (the MP4 fallbacks are
+- **Bunny Stream** — most video blocks on a talk page play through a Bunny
+  player and link "Watch on Bunny" (273 of the 300 YouTube videos in this
+  repo on 2026-11-24; the rest play through the YouTube player and have no
+  Bunny copy). The stream is HLS only (the MP4 fallbacks are
   absent, the original is refused) in 240p–480p renditions, the top one the
   same file as Drive's. A spike on 2026-11-24 (17 videos) measured the same
   duration as Drive within 0.05 s and a constant 21 ms offset — one AAC
