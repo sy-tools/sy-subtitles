@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-24T06:22:04.219566+00:00",
+  "updated_at": "2026-11-24T08:45:43.280755+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1074,7 +1074,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1581,
-      "updated_at": "2026-11-23T16:01:13Z",
+      "updated_at": "2026-11-24T08:17:14Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1556
@@ -1083,7 +1083,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1578,
-      "updated_at": "2026-11-23T15:58:11Z",
+      "updated_at": "2026-11-24T08:05:39Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1555
@@ -1092,7 +1092,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1572,
-      "updated_at": "2026-11-23T15:57:09Z",
+      "updated_at": "2026-11-24T08:01:30Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1554
@@ -1101,7 +1101,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1574,
-      "updated_at": "2026-11-23T15:57:28Z",
+      "updated_at": "2026-11-24T07:51:28Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1553
@@ -1110,7 +1110,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1584,
-      "updated_at": "2026-11-23T16:01:46Z",
+      "updated_at": "2026-11-24T07:53:45Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1552
@@ -1119,7 +1119,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1564,
-      "updated_at": "2026-11-23T15:40:11Z",
+      "updated_at": "2026-11-24T07:47:08Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1551
@@ -1128,7 +1128,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1567,
-      "updated_at": "2026-11-23T15:42:32Z",
+      "updated_at": "2026-11-24T07:45:28Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1550
@@ -1155,7 +1155,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1561,
-      "updated_at": "2026-11-23T15:39:45Z",
+      "updated_at": "2026-11-24T07:43:10Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1547
@@ -1164,7 +1164,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1603,
-      "updated_at": "2026-11-23T16:21:06Z",
+      "updated_at": "2026-11-24T08:23:44Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1595
@@ -1173,7 +1173,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1606,
-      "updated_at": "2026-11-23T16:21:15Z",
+      "updated_at": "2026-11-24T08:18:51Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1594
@@ -1182,7 +1182,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1601,
-      "updated_at": "2026-11-23T16:20:48Z",
+      "updated_at": "2026-11-24T08:08:18Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1593
@@ -1191,7 +1191,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1610,
-      "updated_at": "2026-11-23T16:21:31Z",
+      "updated_at": "2026-11-24T08:00:33Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1592
@@ -1200,7 +1200,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1598,
-      "updated_at": "2026-11-23T16:18:44Z",
+      "updated_at": "2026-11-24T08:40:23Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1591
@@ -1209,7 +1209,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1613,
-      "updated_at": "2026-11-23T16:23:46Z",
+      "updated_at": "2026-11-24T08:33:42Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1590
@@ -1218,7 +1218,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1615,
-      "updated_at": "2026-11-23T16:25:30Z",
+      "updated_at": "2026-11-24T07:54:49Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1589
@@ -1227,7 +1227,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1607,
-      "updated_at": "2026-11-23T16:21:19Z",
+      "updated_at": "2026-11-24T07:10:05Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1588
@@ -1236,7 +1236,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1618,
-      "updated_at": "2026-11-23T16:25:43Z",
+      "updated_at": "2026-11-24T06:46:24Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1587
@@ -1245,7 +1245,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1620,
-      "updated_at": "2026-11-23T16:28:22Z",
+      "updated_at": "2026-11-24T06:30:53Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1586
@@ -1254,7 +1254,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1694,
-      "updated_at": "2026-11-23T22:03:15Z",
+      "updated_at": "2026-11-24T08:25:11Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1644
@@ -1263,7 +1263,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1691,
-      "updated_at": "2026-11-23T22:01:21Z",
+      "updated_at": "2026-11-24T08:24:08Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1643
@@ -1272,7 +1272,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1703,
-      "updated_at": "2026-11-23T22:06:57Z",
+      "updated_at": "2026-11-24T08:24:06Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1642
@@ -1281,7 +1281,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1679,
-      "updated_at": "2026-11-23T17:47:55Z",
+      "updated_at": "2026-11-24T08:23:42Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1641
@@ -1290,7 +1290,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1700,
-      "updated_at": "2026-11-23T22:05:33Z",
+      "updated_at": "2026-11-24T08:23:29Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1640
@@ -1299,7 +1299,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1698,
-      "updated_at": "2026-11-23T22:05:18Z",
+      "updated_at": "2026-11-24T08:20:16Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1639
@@ -1308,7 +1308,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1705,
-      "updated_at": "2026-11-23T22:07:16Z",
+      "updated_at": "2026-11-24T08:07:58Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1638
@@ -1317,7 +1317,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1683,
-      "updated_at": "2026-11-23T17:48:35Z",
+      "updated_at": "2026-11-24T08:04:41Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1637
@@ -1326,7 +1326,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1676,
-      "updated_at": "2026-11-23T17:44:33Z",
+      "updated_at": "2026-11-24T07:56:55Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1636
@@ -1335,7 +1335,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1675,
-      "updated_at": "2026-11-23T17:44:33Z",
+      "updated_at": "2026-11-24T07:46:51Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1635
@@ -1344,7 +1344,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1661,
-      "updated_at": "2026-11-23T17:23:44Z",
+      "updated_at": "2026-11-24T08:40:30Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1634
@@ -1353,7 +1353,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1657,
-      "updated_at": "2026-11-23T17:23:36Z",
+      "updated_at": "2026-11-24T08:40:10Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1633
@@ -1362,7 +1362,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1666,
-      "updated_at": "2026-11-23T17:25:07Z",
+      "updated_at": "2026-11-24T08:33:16Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1632
@@ -1371,7 +1371,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1668,
-      "updated_at": "2026-11-23T17:27:23Z",
+      "updated_at": "2026-11-24T08:39:58Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1631
@@ -1380,7 +1380,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1662,
-      "updated_at": "2026-11-23T17:23:47Z",
+      "updated_at": "2026-11-24T07:47:40Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1630
@@ -1389,7 +1389,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1653,
-      "updated_at": "2026-11-23T17:20:48Z",
+      "updated_at": "2026-11-24T07:28:34Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1629
@@ -1398,7 +1398,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1650,
-      "updated_at": "2026-11-23T17:19:38Z",
+      "updated_at": "2026-11-24T07:39:56Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1628
@@ -1407,7 +1407,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1648,
-      "updated_at": "2026-11-23T17:19:34Z",
+      "updated_at": "2026-11-24T06:29:08Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1627

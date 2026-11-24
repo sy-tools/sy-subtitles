@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself/Guru-Puja-Talk-Criteria-To-Introspect-Yourself/final/uk.srt
+  Transcript: talks/1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself/transcript_uk.txt
+  EN SRT: talks/1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself/Guru-Puja-Talk-Criteria-To-Introspect-Yourself/source/en.srt
+  SRT blocks: 515
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 515
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 515
+  CPS: avg=10.1, median=9.8, max=15.1
+  CPS > target: 7 (1.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #231: CPS=15.1 (53ch/3.5s) "Тож ви не повинні думати: «Я маю досягти цього стану,"
+    #416: CPS=15.1 (37ch/2.5s) "Тож Я сказала: підіть і скажіть йому:"
+    #283: CPS=15.0 (34ch/2.3s) "Ніякого «я» більше не залишається."
+    #276: CPS=15.0 (77ch/5.1s) "Будь-хто в Сахаджа Йозі, хто думає, що робить багато роботи ..."
+    #232: CPS=15.0 (35ch/2.3s) "я маю досягти того стану», а просто"
+    #273: CPS=15.0 (47ch/3.1s) "і відмовилися від цього, і відмовилися від...?»"
+    #124: CPS=15.0 (71ch/4.7s) "Багато людей кажуть Мені: «Матінко, людям доводилося робити ..."
+    #102: CPS=15.0 (79ch/5.3s) "– «Тому що, Матінко, в автобусі можна гарно підстрибувати ра..."
+    #502: CPS=15.0 (79ch/5.3s) "Я сказала вам це Своїм власним лагідним способом, тож ви не ..."
+    #60: CPS=15.0 (61ch/4.1s) "Є багато людей, які приїжджають, Я бачила, навіть до Кабелли..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 10.1 (target ≤15.0)
+  CPS > 15.0: 7 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

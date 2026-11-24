@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1996-07-16_Shri-Mahalakshmi-Puja-We-have-to-live-like-one-family/Mahalakshmi-Puja-Talk/final/uk.srt
+  Transcript: talks/1996-07-16_Shri-Mahalakshmi-Puja-We-have-to-live-like-one-family/transcript_uk.txt
+  EN SRT: talks/1996-07-16_Shri-Mahalakshmi-Puja-We-have-to-live-like-one-family/Mahalakshmi-Puja-Talk/source/en.srt
+  SRT blocks: 266
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 266
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 266
+  CPS: avg=7.3, median=6.2, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.5, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #97: CPS=15.0 (82ch/5.5s) "Ви ж бачили Раджу Джанаку: Він був царем, і все ж Він був на..."
+    #32: CPS=15.0 (64ch/4.3s) "Наприклад, на Заході Я бачила, що люди дуже прискіпливі до т..."
+    #109: CPS=15.0 (61ch/4.1s) "І Раджа Джанака сказав: «Я можу віддати тобі все Моє царство..."
+    #144: CPS=15.0 (46ch/3.1s) "Але якщо у вас усередині є цей Принцип Лакшмі,"
+    #176: CPS=15.0 (43ch/2.9s) "Тож Його дружина Сіта сказала: «Дай і Мені,"
+    #227: CPS=15.0 (37ch/2.5s) "Вона сказала: «Я з ними не розмовляю,"
+    #257: CPS=15.0 (37ch/2.5s) "Якщо виникає якась проблема, будь-що,"
+    #187: CPS=15.0 (68ch/4.5s) "Нещодавно ми привезли деякі подарунки, тобто нічого такого в..."
+    #205: CPS=15.0 (56ch/3.7s) "Тож йому стало дуже сумно, що той тепер забрав грамофон:"
+    #27: CPS=15.0 (78ch/5.2s) "Але він переходить до другого стану, де він підтримує [себе]..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 7.3 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

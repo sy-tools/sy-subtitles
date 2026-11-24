@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1985-05-19_Shri-Ganesha-Puja-You-Should-be-Prepared-to-Change/Shri-Ganesha-Puja-Talk/final/uk.srt
+  Transcript: talks/1985-05-19_Shri-Ganesha-Puja-You-Should-be-Prepared-to-Change/transcript_uk.txt
+  EN SRT: talks/1985-05-19_Shri-Ganesha-Puja-You-Should-be-Prepared-to-Change/Shri-Ganesha-Puja-Talk/source/en.srt
+  SRT blocks: 257
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 257
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 257
+  CPS: avg=8.3, median=6.8, max=15.0
+  CPS > target: 1 (0.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #35: CPS=15.0 (44ch/2.9s) "і Я не хочу, щоб ви тримали очі заплющеними."
+    #232: CPS=15.0 (39ch/2.6s) "які вона розігрує, щоб зробити вас дуже"
+    #233: CPS=15.0 (54ch/3.6s) "щасливими і щоб дати вам те, що якийсь митець, мабуть,"
+    #156: CPS=15.0 (73ch/4.9s) "І вони мають такий безглуздий вигляд, вони мають такий безгл..."
+    #88: CPS=15.0 (55ch/3.7s) "Шрі Матаджі: Я їх не дуже люблю [Шрі Матаджі сміється]."
+    #107: CPS=15.0 (52ch/3.5s) "Але коли ці реалізовані душі народжуються на Заході,"
+    #132: CPS=15.0 (37ch/2.5s) "що ми не повинні шукати всього цього."
+    #30: CPS=15.0 (71ch/4.7s) "Бо щоразу, коли ви намагаєтеся від чогось відмовитися чи щос..."
+    #177: CPS=15.0 (34ch/2.3s) "але не на стадії плоду, розумієте?"
+    #20: CPS=15.0 (62ch/4.1s) "Він – Володар, Він – Володар усіх «джада» [неживих сутностей..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 8.3 (target ≤15.0)
+  CPS > 15.0: 1 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

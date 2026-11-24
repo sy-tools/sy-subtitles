@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1998-06-21_Adi-Shakti-Puja-You-Must-Develop-Humility/Adi-Shakti-Puja/final/uk.srt
+  Transcript: talks/1998-06-21_Adi-Shakti-Puja-You-Must-Develop-Humility/transcript_uk.txt
+  EN SRT: talks/1998-06-21_Adi-Shakti-Puja-You-Must-Develop-Humility/Adi-Shakti-Puja/source/en.srt
+  SRT blocks: 341
+  EN SRT blocks: 389
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:05:47,311 — 00:39:24,790
+  SRT range:       00:09:51,554 — 00:39:26,790
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 341
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 341
+  CPS: avg=11.8, median=11.8, max=15.1
+  CPS > target: 20 (5.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=56.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #160: CPS=15.1 (52ch/3.4s) "ця жінка нічого від нього не отримала, а вона просто"
+    #314: CPS=15.0 (43ch/2.9s) "Що станеться від того, що ви робите все це?"
+    #310: CPS=15.0 (46ch/3.1s) "я не маю з тобою нічого спільного», – це одне."
+    #290: CPS=15.0 (61ch/4.1s) "Але ви самі отримуєте покарання, ви самі стаєте непотрібними..."
+    #159: CPS=15.0 (32ch/2.1s) "Я була вражена: подумати тільки,"
+    #273: CPS=15.0 (76ch/5.1s) "Тож коли ми маємо справу з реальністю, ми повинні знати, що ..."
+    #312: CPS=15.0 (76ch/5.1s) "У них є хитрощі й прийоми, за допомогою яких вони вміють кон..."
+    #137: CPS=15.0 (79ch/5.3s) "в яких немає всередині божественності, то як довго ви зможет..."
+    #261: CPS=15.0 (44ch/2.9s) "Наприклад, індуїстська релігія, Я б сказала,"
+    #267: CPS=15.0 (44ch/2.9s) "Вони не мають жодного уявлення про смирення."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 341
+  EN SRT blocks: 389
+  Ratio UK/EN: 0.88 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.8 (target ≤15.0)
+  CPS > 15.0: 20 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

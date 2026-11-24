@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1993-03-21_Birthday-Puja-Satya-Yuga/Birthday-Puja-CAM2-Delhi-NITL/final/uk.srt
+  Transcript: talks/1993-03-21_Birthday-Puja-Satya-Yuga/transcript_uk.txt
+  EN SRT: talks/1993-03-21_Birthday-Puja-Satya-Yuga/Birthday-Puja-CAM2-Delhi-NITL/source/en.srt
+  SRT blocks: 388
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 388
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 388
+  CPS: avg=9.7, median=9.2, max=15.0
+  CPS > target: 6 (1.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #306: CPS=15.0 (55ch/3.7s) "Якщо це неправильно, ви ніколи не повинні цього робити,"
+    #130: CPS=15.0 (29ch/1.9s) "Тож вони не можуть зрозуміти."
+    #173: CPS=15.0 (58ch/3.9s) "Тоді вам, можливо, доведеться мати ще один великий пандал,"
+    #357: CPS=15.0 (32ch/2.1s) "хотіли це втілювати, будь ласка,"
+    #362: CPS=15.0 (70ch/4.7s) "Я сподіваюся, що багато людей напишуть книжки, як написав до..."
+    #166: CPS=15.0 (53ch/3.5s) "і вони сказали: «Ми відчуваємо прохолодний вітерець!»"
+    #159: CPS=15.0 (57ch/3.8s) "Потім вони покликали Мене, вони дали Мені ще один чаддар,"
+    #308: CPS=15.0 (76ch/5.1s) "Бо тепер ви дуже могутні, і ви маєте вести людей, а не люди ..."
+    #80: CPS=15.0 (73ch/4.9s) "придатні, нікчемні люди, яких ніколи не можна привести до Бо..."
+    #305: CPS=15.0 (73ch/4.9s) "І хоч би що люди намагалися вам казати: «Краще зроби це, кра..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.7 (target ≤15.0)
+  CPS > 15.0: 6 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

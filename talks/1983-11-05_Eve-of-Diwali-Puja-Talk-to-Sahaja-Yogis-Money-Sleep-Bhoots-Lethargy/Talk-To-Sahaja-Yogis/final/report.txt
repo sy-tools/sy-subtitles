@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1983-11-05_Eve-of-Diwali-Puja-Talk-to-Sahaja-Yogis-Money-Sleep-Bhoots-Lethargy/Talk-To-Sahaja-Yogis/final/uk.srt
+  Transcript: talks/1983-11-05_Eve-of-Diwali-Puja-Talk-to-Sahaja-Yogis-Money-Sleep-Bhoots-Lethargy/transcript_uk.txt
+  EN SRT: talks/1983-11-05_Eve-of-Diwali-Puja-Talk-to-Sahaja-Yogis-Money-Sleep-Bhoots-Lethargy/Talk-To-Sahaja-Yogis/source/en.srt
+  SRT blocks: 1027
+  EN SRT blocks: 977
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:17,606 — 01:09:47,825
+  SRT range:       00:00:17,606 — 01:09:48,067
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 1027
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 1027
+  CPS: avg=13.2, median=14.7, max=20.0
+  CPS > target: 269 (26.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 3
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #915: CPS=20.0 (68ch/3.4s) "Це причина, бо їм треба пити, знаєте, де ж їм узяти гроші, щ..."
+    #534: CPS=20.0 (47ch/2.4s) "Я сказала: «Що там такого, ми приготуємо чолу»."
+    #543: CPS=20.0 (45ch/2.3s) "до якогось індійського ресторану, будь-куди»."
+    #180: CPS=20.0 (41ch/2.1s) "чому йому дозволяють заходити в автобус?»"
+    #957: CPS=20.0 (38ch/1.9s) "Він без жодних грошей; тоді він думає:"
+    #533: CPS=20.0 (36ch/1.8s) "«Матінко, ми нічого не підготували»."
+    #535: CPS=20.0 (33ch/1.7s) "У нас немає чоли, як її замочити?"
+    #536: CPS=20.0 (27ch/1.4s) "Я сказала: «Не хвилюйтеся»."
+    #541: CPS=20.0 (25ch/1.3s) "Мати каже, але як же...?»"
+    #509: CPS=20.0 (66ch/3.3s) "якщо хтось докладає зусиль до цього, до кожної колективної с..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 1027
+  EN SRT blocks: 977
+  Ratio UK/EN: 1.05 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.2 (target ≤15.0)
+  CPS > 15.0: 269 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 3 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

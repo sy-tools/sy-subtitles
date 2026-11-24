@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased/Puja-to-the-Devi-Talk/final/uk.srt
+  Transcript: talks/1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased/transcript_uk.txt
+  EN SRT: talks/1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased/Puja-to-the-Devi-Talk/source/en.srt
+  SRT blocks: 512
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 512
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 512
+  CPS: avg=11.9, median=12.8, max=20.8
+  CPS > target: 74 (14.5%)
+  CPS > hard max: 1 (0.2%)
+  CPL: avg=51.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 2
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #375: CPS=20.8 (43ch/2.1s) "Сподіваюся, Я зможу з вами побачитися, але,"
+    #480: CPS=20.0 (67ch/3.4s) "Гарна ідея. Йоґ: Вони хотіли б одружитися з дівчатами з Маха..."
+    #478: CPS=19.5 (35ch/1.8s) "Не обов’язково цього разу, Матінко."
+    #376: CPS=18.5 (54ch/2.9s) "як ви знаєте, у Мене програми, і програми, і програми."
+    #250: CPS=18.3 (80ch/4.4s) "бхути впізнають таку людину і входять у таку людину, в якої ..."
+    #481: CPS=18.2 (66ch/3.6s) "Той, що був... ти розповідав про нього, йому десь 39 чи щось..."
+    #477: CPS=17.6 (55ch/3.1s) "чи можуть вони колись одружитися з індійськими жінками."
+    #475: CPS=17.4 (45ch/2.6s) "Тож Мені доведеться знайти кількох наречених."
+    #207: CPS=16.7 (60ch/3.6s) "що має піти геть, і що Я маю висварити, щоб воно пішло геть."
+    #366: CPS=16.3 (31ch/1.9s) "У нас немає часу на марнування."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.9 (target ≤15.0)
+  CPS > 15.0: 74 blocks
+  CPS > 20.0: 1 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 2 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
