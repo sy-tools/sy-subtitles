@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-08-15_Shri-Yogeshwara-Puja-God-of-Yoga/Krishna-Puja-as-Yogeshwara/final/uk.srt
+  Transcript: talks/1982-08-15_Shri-Yogeshwara-Puja-God-of-Yoga/transcript_uk.txt
+  EN SRT: talks/1982-08-15_Shri-Yogeshwara-Puja-God-of-Yoga/Krishna-Puja-as-Yogeshwara/source/en.srt
+  SRT blocks: 646
+  EN SRT blocks: 816
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:05:00,287 — 01:09:53,631
+  SRT range:       00:05:00,287 — 01:09:55,631
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 646
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 646
+  CPS: avg=9.9, median=9.6, max=15.8
+  CPS > target: 68 (10.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 2
+  Duration > max: 2
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #462: CPS=15.8 (47ch/3.0s) "Якщо Я маю вам щось сказати, Я просто кажу вам,"
+    #352: CPS=15.1 (41ch/2.7s) "Коли ви одружені, такого не повинно бути."
+    #526: CPS=15.1 (51ch/3.4s) "Ви хочете мати тарілку, якою користувалися ви самі,"
+    #293: CPS=15.1 (34ch/2.3s) "Він мав стосунки зі своєю матір’ю."
+    #143: CPS=15.1 (71ch/4.7s) "Якщо якась людська істота починає казати: «Я Шрі Крішна, тож..."
+    #334: CPS=15.1 (69ch/4.6s) "бо увага ніколи не йде на ці брудні речі, ніколи не йде на т..."
+    #265: CPS=15.0 (77ch/5.1s) "Припустімо, Я просто граюся з вами, – ви не зможете отримати..."
+    #261: CPS=15.0 (77ch/5.1s) "Це не було так, щоб сидіти отак і серйозно розповідати про р..."
+    #236: CPS=15.0 (16ch/1.1s) "Що тут поганого?"
+    #350: CPS=15.0 (31ch/2.1s) "Залиште з ним будь-яких дівчат,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 646
+  EN SRT blocks: 816
+  Ratio UK/EN: 0.79 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.9 (target ≤15.0)
+  CPS > 15.0: 68 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 2 blocks
+  Duration > 21000ms: 2 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
