@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased/Puja-to-the-Devi/final/uk.srt
+  Transcript: talks/1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased/transcript_uk.txt
+  EN SRT: talks/1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased/Puja-to-the-Devi/source/en.srt
+  SRT blocks: 577
+  EN SRT blocks: 717
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:04:54,680 — 02:08:15,280
+  SRT range:       00:04:54,680 — 02:08:17,280
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 577
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 577
+  CPS: avg=11.4, median=12.2, max=20.0
+  CPS > target: 50 (8.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #480: CPS=20.0 (67ch/3.4s) "Гарна ідея. Йоґ: Вони хотіли б одружитися з дівчатами з Маха..."
+    #375: CPS=20.0 (43ch/2.2s) "Сподіваюся, Я зможу з вами побачитися, але,"
+    #376: CPS=18.2 (54ch/3.0s) "як ви знаєте, у Мене програми, і програми, і програми."
+    #250: CPS=18.2 (80ch/4.4s) "бхути впізнають таку людину і входять у таку людину, в якої ..."
+    #477: CPS=17.6 (55ch/3.1s) "чи можуть вони колись одружитися з індійськими жінками."
+    #386: CPS=17.4 (41ch/2.4s) "якщо хочете, ті, хто повертається додому."
+    #478: CPS=17.2 (35ch/2.0s) "Не обов’язково цього разу, Матінко."
+    #366: CPS=17.1 (31ch/1.8s) "У нас немає часу на марнування."
+    #482: CPS=17.0 (38ch/2.2s) "Йоґ: Так, він... він один із них. І..."
+    #207: CPS=16.6 (60ch/3.6s) "що має піти геть, і що Я маю висварити, щоб воно пішло геть."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 577
+  EN SRT blocks: 717
+  Ratio UK/EN: 0.80 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.4 (target ≤15.0)
+  CPS > 15.0: 50 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
