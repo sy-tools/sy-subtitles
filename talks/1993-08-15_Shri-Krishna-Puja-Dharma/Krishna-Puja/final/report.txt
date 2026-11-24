@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1993-08-15_Shri-Krishna-Puja-Dharma/Krishna-Puja/final/uk.srt
+  Transcript: talks/1993-08-15_Shri-Krishna-Puja-Dharma/transcript_uk.txt
+  EN SRT: talks/1993-08-15_Shri-Krishna-Puja-Dharma/Krishna-Puja/source/en.srt
+  SRT blocks: 601
+  EN SRT blocks: 808
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:07:16,303 — 01:02:44,178
+  SRT range:       00:07:16,303 — 01:02:46,178
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 601
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 601
+  CPS: avg=11.3, median=11.4, max=20.0
+  CPS > target: 53 (8.8%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #494: CPS=20.0 (38ch/1.9s) "Але: «Я почуваюся дуже винною в цьому."
+    #555: CPS=20.0 (83ch/4.2s) "Це було неправильно з мого боку», чи щось таке, і тоді почин..."
+    #550: CPS=20.0 (41ch/2.1s) "Хтось може сказати: «О, ти такий поганий."
+    #551: CPS=20.0 (28ch/1.4s) "Ти не зробив цього для мене."
+    #491: CPS=20.0 (24ch/1.2s) "Яка була в мене потреба?"
+    #535: CPS=19.9 (55ch/2.8s) "Але все ж він більше пам’ятає своє минуле, тож кожному,"
+    #495: CPS=19.0 (49ch/2.6s) "Я почуваюся дуже винною в цьому», – не допомагає."
+    #549: CPS=18.5 (32ch/1.7s) "Так от, провину вкладають у вас."
+    #557: CPS=18.4 (39ch/2.1s) "що це все нісенітниця, вони продовжують"
+    #556: CPS=18.4 (76ch/4.1s) "Замість того щоб зробити щось для тієї людини чи замість тог..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 601
+  EN SRT blocks: 808
+  Ratio UK/EN: 0.74 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.3 (target ≤15.0)
+  CPS > 15.0: 53 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
