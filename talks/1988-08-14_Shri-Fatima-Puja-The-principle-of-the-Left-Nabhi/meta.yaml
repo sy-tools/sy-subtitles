@@ -10,7 +10,7 @@ videos:
   media_refs:
   - r2OEBeYzIjDihkBixTBjYZPgxcJwICNkMwZy0dLhgdGzJQUgUU
   - r2ViMFFCsoJxRnACwMET4dHy42WQsTKQI2ZwQMXz5eIwxQUgUU
-  sync: independent
+  sync: ignored
 - slug: Fatima-Puja-Talk
   title: Fatima Puja Talk
   video_ref: r2JEVIJy8gDnk5BDZSFQo
