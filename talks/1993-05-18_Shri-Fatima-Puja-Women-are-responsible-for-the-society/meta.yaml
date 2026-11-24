@@ -8,6 +8,7 @@ videos:
   title: Fatima Puja
   video_ref: r2HgEeMhQhO30wPgVSFQo
   media_refs:
+  - r2Uw5VEkpRWU1dFlAUXk8CXldUTFBfVUVUR0ZWQUxcQFQXSxRYSF9AG1dbWVIPEQ
   - r2MSA0ZQYyBBBpBS0ZXVQQPgcNFQ0-Bhs7TDUjCEpcCx5QUgUU
   - r2Vx8AZTMLLQxbJxkFCgY5KlIbDR87MVggbjkiXFRYJxJQUgUU
   sync: primary
@@ -15,6 +16,7 @@ videos:
   title: Fatima Puja Talk
   video_ref: r2ND9aAzdYEl41NSJSFQo
   media_refs:
+  - r2VV1SQhAAVUAMQgZDXh8DA1dUGlILVUUAQBEEQURRTVQTS0xUSF9AG1dbWVIPEQ
   - r2IQMwFSQQPhsaAB0qIlJLKVcmES0AEC8KHCYkCwwUMBJQUgUU
   - r2FAIZSAYNXDRuJBAGOBEGXhcnWT0wBhsKSA0tOQtoAytQUgUU
   sync: derived
