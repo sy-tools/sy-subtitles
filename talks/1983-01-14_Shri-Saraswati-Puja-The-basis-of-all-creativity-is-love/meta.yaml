@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Saraswati-Puja
   title: Saraswati Puja
-  video_ref: r1VlxCDUJRQRIVBEheShlUWlNeWEE
+  video_ref: r2IAJvFQkaLXInHS1SFQo
+  media_refs:
+  - r2IDsbHQUfCRpPVRsVBCAbIgIZFhlBJg0ARCAUVyt7EAJQUgUU
+  - r2NBwaeCQdCChnNBMRGhcxKVxaDSsnNwcYSwMANxFgExhQUgUU
   sync: primary
 - slug: Saraswati-Puja-Talk-Creativity
   title: 'Saraswati Puja Talk: Creativity'
-  video_ref: r1AQgWCxcBRxAbVUhWSxVUWlNeWEE
+  video_ref: r2LAJqViU1KkVXLChSFQo
+  media_refs:
+  - r2BVgYfABQC09KTFwiDQ5eJjMURRAVVTMJABYpADBOUjJQUgUU
+  - r2UCNGdCBUXEx6FxsZUSw4JBMlJDkWKkJeGxcuWBV8UFhQUgUU
   sync: derived
