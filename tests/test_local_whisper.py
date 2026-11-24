@@ -13,6 +13,7 @@ CANONICAL = "https://vimeo.com/111111111/aaaaaaaaaa"
 PLAYER = "https://player.vimeo.com/video/111111111?h=aaaaaaaaaa"
 YT = "https://www.youtube.com/watch?v=AbCdEfGhIjK"
 GD = "https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn/view"
+BN = "https://player.mediadelivery.net/play/123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
 
 
 def make_talk(root: Path, videos, **meta_extra) -> Path:
@@ -48,6 +49,12 @@ class TestPlan:
         yt = {"slug": "Main", "title": "Main", "video_ref": encode_video_ref(YT), "media_refs": [encode_video_ref(GD)]}
         talk = make_talk(tmp_path, [yt])
         assert local_whisper.plan(talk)[0].urls == [GD, YT]
+
+    def test_youtube_tries_bunny_then_drive_then_youtube_itself(self, tmp_path):
+        refs = [encode_video_ref(GD), encode_video_ref(BN)]
+        yt = {"slug": "Main", "title": "Main", "video_ref": encode_video_ref(YT), "media_refs": refs}
+        talk = make_talk(tmp_path, [yt])
+        assert local_whisper.plan(talk)[0].urls == [BN, GD, YT]
 
     def test_a_video_without_a_link_is_skipped(self, tmp_path):
         talk = make_talk(tmp_path, [{"slug": "Letter", "title": "Letter"}, video("Main")])
@@ -136,6 +143,20 @@ class TestDownload:
         local_whisper.download_audio(GD, tmp_path)
         local_whisper.download_audio(YT, tmp_path)
         assert all("--referer" not in argv for argv in calls)
+
+    def test_bunny_gets_parallel_fragments_and_no_referer(self, tmp_path, monkeypatch):
+        calls = []
+
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            (tmp_path / "audio.mp4").write_bytes(b"x")
+            return subprocess.CompletedProcess(argv, 0)
+
+        monkeypatch.setattr(local_whisper.subprocess, "run", fake_run)
+        local_whisper.download_audio(BN, tmp_path)
+        argv = calls[0]
+        assert "--referer" not in argv
+        assert argv[argv.index("-N") + 1] == "8"
 
     def test_a_failed_attempts_leftovers_are_not_taken_for_the_audio(self, tmp_path, monkeypatch):
         def fake_run(argv, **kwargs):

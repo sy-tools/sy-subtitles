@@ -157,7 +157,7 @@ jobs:
           test -f "content/talks/$TALK_ID/$VIDEO_SLUG/final/uk.srt" \
             || { echo "::error::no final/uk.srt for $TALK_ID/$VIDEO_SLUG"; exit 1; }
           # Whether this video can be fetched at all, checked HERE so a video
-          # with no link — or a YouTube video with no Drive mirror, which a
+          # with no link — or a YouTube video with no Bunny or Drive mirror, which a
           # runner cannot fetch — fails before the run invests in it. The
           # resolver schema-validates meta.yaml (from a caller-chosen branch):
           # every ref is decoded against its strict per-provider shape, so no
@@ -200,7 +200,7 @@ jobs:
           # The resolver validates meta.yaml again at the point of use, masks
           # each source before trying it, and explains a refusal (Vimeo's 401
           # to data-centre IPs among them). --ci: YouTube refuses GitHub's
-          # runners, so a YouTube video comes from its Drive mirrors here.
+          # runners, so a YouTube video comes from its Bunny or Drive mirrors here.
           # The whole video is downloaded even for a clip: the render cuts it.
           mkdir -p /tmp/burn
           python3 -m tools.video_media download --ci --purpose burn --root content \
