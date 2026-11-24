@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1983-09-18_Shri-Krishna-Puja-He-has-to-be-prasanna/Krishna-Puja-Talk/final/uk.srt
+  Transcript: talks/1983-09-18_Shri-Krishna-Puja-He-has-to-be-prasanna/transcript_uk.txt
+  EN SRT: talks/1983-09-18_Shri-Krishna-Puja-He-has-to-be-prasanna/Krishna-Puja-Talk/source/en.srt
+  SRT blocks: 432
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 432
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 432
+  CPS: avg=13.0, median=14.2, max=20.0
+  CPS > target: 101 (23.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #85: CPS=20.0 (82ch/4.1s) "долонями донизу) він розширився у пірамідальну... (Шрі Матад..."
+    #86: CPS=20.0 (76ch/3.8s) "до одної, утворюючи дві сторони трикутника) це піраміда, він..."
+    #205: CPS=20.0 (71ch/3.5s) "Його звали Рамакрішна Парамахамса (відомий індійський релігі..."
+    #206: CPS=20.0 (56ch/2.8s) "Він одружився з жінкою і зробив її «Матір’ю» (Рамакрішна"
+    #207: CPS=20.0 (53ch/2.6s) "оголосив свою дружину втіленням Божественної Матері)."
+    #217: CPS=20.0 (40ch/2.0s) "Він назвав цю жінку «Матір’ю» (Ауробіндо"
+    #218: CPS=20.0 (47ch/2.4s) "оголосив свою духовну соратницю Мірру Альфассу,"
+    #219: CPS=20.0 (53ch/2.6s) "яка жила в його домі, втіленням Божественної Матері),"
+    #220: CPS=20.0 (35ch/1.8s) "і його стосунки з нею неоднозначні."
+    #221: CPS=20.0 (34ch/1.7s) "Невідомо, які в них були стосунки."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 13.0 (target ≤15.0)
+  CPS > 15.0: 101 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
