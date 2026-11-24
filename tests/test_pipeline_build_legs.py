@@ -96,6 +96,14 @@ def test_only_the_primary_leg_builds_derived_videos():
 
 def test_the_manifest_records_the_role_and_the_slice(tmp_path):
     (tmp_path / "talks" / "T" / "Part-2" / "final").mkdir(parents=True)
+    work = tmp_path / "talks" / "T" / "Part-2" / "work"
+    work.mkdir(parents=True)
+    blocks = [{"id": i, "text": f"b{i}", "para_idx": p} for i, p in enumerate([0, 1, 1, 2], start=1)]
+    (work / "uk_blocks.json").write_text(json.dumps(blocks), encoding="utf-8")
+    (tmp_path / "talks" / "T" / "transcript_uk.txt").write_text(
+        "Мова: англійська\n\nПерший.\n\nДругий.\n\nТретій.\n", encoding="utf-8"
+    )
+    (work / "timecodes.txt").write_text("#2 | 00:00:01,000 | 00:00:02,000\n#3 | 00:00:02,000 | 00:00:03,000\n")
     _run(
         tmp_path,
         _step("build-timecodes", "Write build manifest")["run"],
@@ -112,6 +120,8 @@ def test_the_manifest_records_the_role_and_the_slice(tmp_path):
     assert manifest["role"] == "independent"
     assert manifest["mode"] == "whisper"
     assert manifest["slice"] is True
+    assert manifest["paragraphs"] == [[2, 2]]
+    assert manifest["paragraph_count"] == 3
 
 
 def test_a_slice_leg_lets_the_builder_skip_ids():

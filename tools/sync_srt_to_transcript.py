@@ -35,6 +35,7 @@ import difflib
 import sys
 from pathlib import Path
 
+from .slice_paragraphs import SliceMapMissing, mask_foreign, own_paragraphs, recorded_paragraph_count
 from .srt_utils import parse_srt, write_srt
 from .sync_common import (
     count_occurrences,
@@ -50,6 +51,7 @@ from .sync_common import (
 )
 from .text_segmentation import (
     global_omit_phrases,
+    load_transcript,
     strip_omitted_phrases,
     talk_omit_phrases,
 )
@@ -114,6 +116,36 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
     # stripper byte for byte; the raw text is then the honest fallback.
     view, offsets = mapped if mapped else (raw, list(range(len(raw))))
 
+    # A slice's blocks belong to its own paragraphs only. Short lines recur on
+    # other tapes, and the cursor starts at the top of the whole transcript,
+    # so an edit made on a later tape lands in an earlier tape's copy of the
+    # same words. Lookups read a view where every other paragraph is blanked
+    # out; it has the same length, so offsets and edits are unchanged.
+    search_view = view
+    video_dir = Path(new_srt).parent.parent
+    try:
+        own = own_paragraphs(video_dir)
+        recorded = recorded_paragraph_count(video_dir) if own is not None else None
+    except SliceMapMissing as exc:
+        return {"error": str(exc)}
+    if own is not None:
+        paragraphs = load_transcript(transcript, omit_phrases)
+        if recorded != len(paragraphs):
+            return {
+                "error": (
+                    f"{video_dir.name}: its paragraph map was recorded for {recorded} paragraphs, the transcript "
+                    f"has {len(paragraphs)} — the map is stale. Run the full subtitle pipeline to rebuild"
+                )
+            }
+        search_view = mask_foreign(view, offsets, raw, own, len(paragraphs), omit_phrases)
+        if search_view is None:
+            return {
+                "error": (
+                    f"{video_dir.name}: cannot tell which part of the transcript is this slice's. "
+                    "Run the full subtitle pipeline to rebuild"
+                )
+            }
+
     old_texts = [b["text"] for b in old_blocks]
     new_texts = [b["text"] for b in new_blocks]
     matcher = difflib.SequenceMatcher(a=old_texts, b=new_texts, autojunk=False)
@@ -128,8 +160,8 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
         no longer means "the next one" — it means "the first one from
         somewhere earlier", which is a different sentence.
         """
-        span = find_span(view, needle, cursor)
-        occurrences = count_occurrences(view, needle)
+        span = find_span(search_view, needle, cursor)
+        occurrences = count_occurrences(search_view, needle)
         if span[0] != -1 and drifted and occurrences > 1:
             return (-1, -1), {
                 "error": (
@@ -225,7 +257,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 # Lenient (case-insensitive) fallback: benign capitalization
                 # drift must not stall the cursor, or a later deletion of
                 # duplicated text grabs an earlier occurrence.
-                _, end = find_span_lenient(view, old_texts[k], cursor)
+                _, end = find_span_lenient(search_view, old_texts[k], cursor)
                 if end == -1:
                     drifted += 1
                     continue
@@ -246,7 +278,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
             # transcript needs no change — and the cursor still has to walk
             # past this text for later find()s to land correctly.
             if joined_text(old_slice) == joined_text(new_slice):
-                _, end = find_span_lenient(view, joined_text(old_slice), cursor)
+                _, end = find_span_lenient(search_view, joined_text(old_slice), cursor)
                 if end == -1:
                     # The cursor could not walk past this re-blocked text, so
                     # it is stale from here on exactly as a drifted block
@@ -301,7 +333,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                     # stalling the cursor with nobody counting it — the very
                     # shape the ambiguity guard exists to catch, in the branch
                     # that runs on exactly the PRs that clean remarks up.
-                    _, end = find_span_lenient(view, new_t, cursor)
+                    _, end = find_span_lenient(search_view, new_t, cursor)
                     if end == -1:
                         drifted += 1
                     else:
@@ -342,7 +374,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 if omit_phrases and not strip_omitted_phrases(old_t, omit_phrases):
                     # The block was nothing but declared remarks. Dropping it
                     # from the SRT is right; the transcript still keeps them.
-                    _, end = find_span_lenient(view, old_t, cursor)
+                    _, end = find_span_lenient(search_view, old_t, cursor)
                     if end != -1:
                         cursor = end
                     print(

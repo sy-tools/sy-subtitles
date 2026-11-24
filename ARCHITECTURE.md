@@ -165,7 +165,16 @@ and the leg's build manifest says `slice: true`. Text preservation against the
 whole transcript cannot hold for a slice, so it is not checked per video
 (`validate_subtitles.manifest_validate_flags` reads the flag back for every
 re-validation). Instead the commit job runs `tools.slice_coverage` across all
-the slices and warns about blocks no video claimed or two did. It warns and
+the slices and warns about blocks no video claimed or two did. The manifest
+also records which transcript paragraphs the slice speaks
+(`tools.slice_paragraphs`), with the paragraph count it was recorded against.
+Both edit-sync legs use it: transcript → SRT skips paragraphs the slice does
+not carry, and SRT → transcript searches only the slice's own paragraphs.
+Short lines («Не знаю.», «Як тебе звати?») recur across tapes, and locating an
+edit by text alone writes it onto the wrong tape. A slice refuses a map made
+for a different paragraph count, and refuses re-paragraphing, which would
+shift the map; a count-preserving re-cut (one split plus one merge) is not
+caught. It warns and
 never fails: where one part ends and the next begins is the builder's best
 effort, and a person checks it. A leg that fails does not hold back the others
 — commit ships every leg that passed.
