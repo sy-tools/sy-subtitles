@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1995-07-16_Guru-Puja-Watch-Your-Mind-and-Attention/Guru-Puja/final/uk.srt
+  Transcript: talks/1995-07-16_Guru-Puja-Watch-Your-Mind-and-Attention/transcript_uk.txt
+  EN SRT: talks/1995-07-16_Guru-Puja-Watch-Your-Mind-and-Attention/Guru-Puja/source/en.srt
+  SRT blocks: 788
+  EN SRT blocks: 764
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:05,950 — 01:16:22,649
+  SRT range:       00:00:05,950 — 01:16:24,649
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 788
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 788
+  CPS: avg=11.0, median=11.1, max=19.0
+  CPS > target: 35 (4.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #483: CPS=19.0 (68ch/3.6s) "Якщо ви прийшли сюди, щоб похизуватися своїми знаннями і всі..."
+    #482: CPS=18.5 (59ch/3.2s) "щоб заробляти гроші, – гаразд, ви заробите гроші й вийдете."
+    #484: CPS=15.7 (25ch/1.6s) "ви покажете їх і вийдете."
+    #481: CPS=15.5 (68ch/4.4s) "Хан [слово гінді, що означає «так»], якщо ви прийшли в Сахад..."
+    #181: CPS=15.1 (20ch/1.3s) "Це цілком нормально."
+    #529: CPS=15.1 (53ch/3.5s) "«Які йшли з вами?» Я сказала: «Що ви маєте на увазі?»"
+    #535: CPS=15.0 (62ch/4.1s) "Вони намагалися влаштувати з себе таку красиву виставу, але...."
+    #701: CPS=15.0 (22ch/1.5s) "Я ніколи не телефоную."
+    #706: CPS=15.0 (22ch/1.5s) "У цьому немає потреби."
+    #306: CPS=15.0 (28ch/1.9s) "Тоді вони сказали: «Матінко,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 788
+  EN SRT blocks: 764
+  Ratio UK/EN: 1.03 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.0 (target ≤15.0)
+  CPS > 15.0: 35 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
