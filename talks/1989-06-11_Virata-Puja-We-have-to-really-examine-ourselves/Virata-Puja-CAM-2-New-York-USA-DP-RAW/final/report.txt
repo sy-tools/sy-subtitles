@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1989-06-11_Virata-Puja-We-have-to-really-examine-ourselves/Virata-Puja-CAM-2-New-York-USA-DP-RAW/final/uk.srt
+  Transcript: talks/1989-06-11_Virata-Puja-We-have-to-really-examine-ourselves/transcript_uk.txt
+  EN SRT: talks/1989-06-11_Virata-Puja-We-have-to-really-examine-ourselves/Virata-Puja-CAM-2-New-York-USA-DP-RAW/source/en.srt
+  SRT blocks: 584
+  EN SRT blocks: 864
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:07:03,023 — 01:02:17,644
+  SRT range:       00:07:03,023 — 01:02:19,644
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 584
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 584
+  CPS: avg=11.0, median=11.1, max=20.0
+  CPS > target: 25 (4.3%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=55.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #465: CPS=20.0 (65ch/3.2s) "але ви маєте бачитися з тими людьми, ви маєте зустрічатися з..."
+    #338: CPS=19.5 (65ch/3.3s) "Припустімо, ви кажете: «Будь ласка, зателефонуй такій-то люд..."
+    #343: CPS=15.0 (54ch/3.6s) "ми повинні – це так погано, все так погано, ми повинні"
+    #163: CPS=15.0 (83ch/5.5s) "Якщо ви маєте стати глибшими, ми маємо спостерігати за собою..."
+    #162: CPS=15.0 (37ch/2.5s) "Але ми повинні спостерігати за собою."
+    #346: CPS=15.0 (43ch/2.9s) "Із цього, якщо ви вростаєте – з цієї сфери,"
+    #337: CPS=15.0 (46ch/3.1s) "Тож як вони здійснюватимуть цю економію праці?"
+    #457: CPS=15.0 (49ch/3.3s) "Потім хтось прийшов, зробив одну двадцяту і втік."
+    #458: CPS=15.0 (49ch/3.3s) "Потім хтось прийшов, зробив одну сорокову і втік."
+    #442: CPS=15.0 (52ch/3.5s) "Бо вам не треба нічого робити, просто треба сказати:"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 584
+  EN SRT blocks: 864
+  Ratio UK/EN: 0.68 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.0 (target ≤15.0)
+  CPS > 15.0: 25 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
