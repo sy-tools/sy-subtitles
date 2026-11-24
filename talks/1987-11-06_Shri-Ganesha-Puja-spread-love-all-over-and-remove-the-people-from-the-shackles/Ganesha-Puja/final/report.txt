@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1987-11-06_Shri-Ganesha-Puja-spread-love-all-over-and-remove-the-people-from-the-shackles/Ganesha-Puja/final/uk.srt
+  Transcript: talks/1987-11-06_Shri-Ganesha-Puja-spread-love-all-over-and-remove-the-people-from-the-shackles/transcript_uk.txt
+  EN SRT: talks/1987-11-06_Shri-Ganesha-Puja-spread-love-all-over-and-remove-the-people-from-the-shackles/Ganesha-Puja/source/en.srt
+  SRT blocks: 361
+  EN SRT blocks: 429
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:07:27,000 — 01:04:24,527
+  SRT range:       00:07:27,000 — 01:04:26,527
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 361
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 361
+  CPS: avg=7.0, median=6.1, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #300: CPS=15.0 (64ch/4.3s) "намагаються їм допомогти і намагаються бути милими одне з од..."
+    #313: CPS=15.0 (61ch/4.1s) "«Так, так, – сказав він. – Я дбайливо сховав їх у своїй шафі..."
+    #309: CPS=15.0 (58ch/3.9s) "У Мене були слуги, Моя домашня прислуга; вони здивувалися:"
+    #98: CPS=15.0 (55ch/3.7s) "Далі, якщо вам треба користуватися ложками й виделками,"
+    #216: CPS=15.0 (52ch/3.5s) "гаразд, все гаразд, ні, ні, ні, це не має значення»,"
+    #130: CPS=15.0 (49ch/3.3s) "Немає безпосереднього взаєморозуміння між дітьми,"
+    #265: CPS=15.0 (46ch/3.1s) "І саме тоді один сахаджа йоґ сказав: «Матінко,"
+    #261: CPS=15.0 (68ch/4.5s) "У Лондоні Я не ходжу по магазинах, але Я вийшла, і Я була ви..."
+    #341: CPS=15.0 (56ch/3.7s) "Якщо ви бачите щось прекрасне, просто дивіться на нього,"
+    #197: CPS=15.0 (50ch/3.3s) "І вони приходили, бачили наш будинок і дивувалися,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 361
+  EN SRT blocks: 429
+  Ratio UK/EN: 0.84 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 7.0 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
