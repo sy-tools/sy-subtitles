@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1985-03-10_Devi-Puja-How-To-Ascend-Into-Nirvikalpa/Devi-Puja/final/uk.srt
+  Transcript: talks/1985-03-10_Devi-Puja-How-To-Ascend-Into-Nirvikalpa/transcript_uk.txt
+  EN SRT: talks/1985-03-10_Devi-Puja-How-To-Ascend-Into-Nirvikalpa/Devi-Puja/source/en.srt
+  SRT blocks: 523
+  EN SRT blocks: 728
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:01:32,454 — 02:10:04,999
+  SRT range:       00:01:32,454 — 00:40:21,760
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 523
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 523
+  CPS: avg=13.0, median=14.4, max=20.0
+  CPS > target: 94 (18.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #239: CPS=20.0 (54ch/2.7s) "у вашому духовному житті, краще відмовитися від нього."
+    #491: CPS=20.0 (73ch/3.6s) "Я маю на увазі, будь-яка людина, яка в той час не була такою..."
+    #495: CPS=20.0 (61ch/3.0s) "– розпалися, дев’яносто дев’ять і дев’ять десятих [відсотка]..."
+    #402: CPS=20.0 (81ch/4.1s) "Але якщо ваше тіло намагається вередувати, краще скажіть тіл..."
+    #424: CPS=20.0 (44ch/2.2s) "Гаразд, наступного разу я цього не робитиму."
+    #294: CPS=20.0 (30ch/1.5s) "Тоді Мені це справді набридає!"
+    #484: CPS=20.0 (30ch/1.5s) "«Як Мати може [таке] сказати?»"
+    #404: CPS=20.0 (28ch/1.4s) "Чому ти не можеш зробити це?"
+    #487: CPS=20.0 (28ch/1.4s) "Я була приголомшена, знаєте!"
+    #401: CPS=20.0 (27ch/1.4s) "до якої ви, люди, вдаєтеся."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 523
+  EN SRT blocks: 728
+  Ratio UK/EN: 0.72 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 13.0 (target ≤15.0)
+  CPS > 15.0: 94 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
