@@ -403,6 +403,9 @@ _SHAPES = {
     "remark-only paragraph": "Перший.\n\n(сміх)\n\nДругий.\n",
     "whitespace lines around a stage line": "Перший.\n\n  \n[Сміх]\n  \n\nДругий.\n",
     "remarks split by a stage line": "Перший.\n\n(сміх) (Оплески)\n[Музика]\n (сміх)\n\nДругий.\n",
+    "indented stage line": "Перший.\n  [Музика]  \nДругий.\n",
+    "whitespace-only line is not a break": "Перший.\n  \nДругий.\n\nТретій.\n",
+    "remark first, text after it": "Перший.\n\n(сміх)\nТекст.\n\nДругий.\n",
 }
 
 
@@ -421,7 +424,7 @@ def test_the_mask_cuts_the_paragraphs_load_transcript_cuts(tmp_path, raw):
     for own in range(len(paragraphs)):
         masked = mask_foreign(view, offsets, raw, {own}, len(paragraphs), _OMIT)
         visible = " ".join(masked.replace("\x00", " ").split())
-        assert visible == paragraphs[own]
+        assert visible == " ".join(paragraphs[own].split())
 
 
 def test_a_slice_that_owns_everything_sees_every_whitespace_character(tmp_path):
@@ -431,3 +434,10 @@ def test_a_slice_that_owns_everything_sees_every_whitespace_character(tmp_path):
     raw = "Перший рядок. \nДругий\tрядок.  \n\nТретій.\n"
     masked = mask_foreign(raw, list(range(len(raw))), raw, {0, 1}, 2, [])
     assert masked == raw
+
+
+def test_a_mask_cut_to_another_paragraph_count_is_refused():
+    from tools.slice_paragraphs import mask_foreign
+
+    raw = "Перший.\n\nДругий.\n"
+    assert mask_foreign(raw, list(range(len(raw))), raw, {0}, 3, []) is None
