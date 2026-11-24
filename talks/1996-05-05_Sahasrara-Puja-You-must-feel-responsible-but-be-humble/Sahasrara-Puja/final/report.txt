@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1996-05-05_Sahasrara-Puja-You-must-feel-responsible-but-be-humble/Sahasrara-Puja/final/uk.srt
+  Transcript: talks/1996-05-05_Sahasrara-Puja-You-must-feel-responsible-but-be-humble/transcript_uk.txt
+  EN SRT: talks/1996-05-05_Sahasrara-Puja-You-must-feel-responsible-but-be-humble/Sahasrara-Puja/source/en.srt
+  SRT blocks: 505
+  EN SRT blocks: 530
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:08:23,524 — 01:05:08,561
+  SRT range:       00:08:23,524 — 01:05:10,561
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 505
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 505
+  CPS: avg=9.0, median=8.3, max=16.6
+  CPS > target: 5 (1.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #386: CPS=16.6 (41ch/2.5s) "«О, тобі слід було зробити це так, отак!»"
+    #195: CPS=16.4 (42ch/2.6s) "і був інший літак, що летів до Вашингтона,"
+    #191: CPS=15.0 (55ch/3.7s) "А вони казали: «Матінко, літак, напевно, вже відлетів»."
+    #325: CPS=15.0 (50ch/3.3s) "Називає вона Мене Богом чи ні, це не має значення."
+    #324: CPS=15.0 (53ch/3.5s) "– і кидає Мені виклик, це нічого, це не має значення."
+    #69: CPS=15.0 (82ch/5.5s) "Але Я лише відчувала, що коли ви переходите від людського рі..."
+    #452: CPS=15.0 (76ch/5.1s) "Тож Я кинулася до інших людей і сказала їм: «У цього джентль..."
+    #24: CPS=15.0 (73ch/4.9s) "Але коли вони казали: «Ми намагалися слідувати за ними», – в..."
+    #330: CPS=15.0 (64ch/4.3s) "Тож якщо ви лише спробуєте, – а ви можете це зробити дуже ле..."
+    #430: CPS=15.0 (61ch/4.1s) "тепер ви, мабуть, теж бачили тих, хто ходить до церкви: гарн..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 505
+  EN SRT blocks: 530
+  Ratio UK/EN: 0.95 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.0 (target ≤15.0)
+  CPS > 15.0: 5 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
