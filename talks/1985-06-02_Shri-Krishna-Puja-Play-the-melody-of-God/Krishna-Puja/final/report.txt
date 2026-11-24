@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1985-06-02_Shri-Krishna-Puja-Play-the-melody-of-God/Krishna-Puja/final/uk.srt
+  Transcript: talks/1985-06-02_Shri-Krishna-Puja-Play-the-melody-of-God/transcript_uk.txt
+  EN SRT: talks/1985-06-02_Shri-Krishna-Puja-Play-the-melody-of-God/Krishna-Puja/source/en.srt
+  SRT blocks: 485
+  EN SRT blocks: 977
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:03,500 — 02:40:58,053
+  SRT range:       00:00:03,500 — 00:35:34,326
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 485
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 485
+  CPS: avg=12.9, median=14.5, max=20.0
+  CPS > target: 85 (17.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #426: CPS=20.0 (35ch/1.8s) "не вчи нас усіляких поганих речей»."
+    #427: CPS=20.0 (34ch/1.7s) "Розумієте, тож вони Його зупинили."
+    #448: CPS=20.0 (24ch/1.2s) "Він сказав: «Це Я знаю»."
+    #414: CPS=19.8 (26ch/1.3s) "Вони сказали: «Що сталося?"
+    #130: CPS=19.7 (64ch/3.3s) "замість того щоб чесно поглянути цьому в обличчя, ми робимо ..."
+    #424: CPS=19.5 (67ch/3.4s) "ми не хочемо чинити такої гріховної речі – давати Тобі пил і..."
+    #412: CPS=19.3 (40ch/2.1s) "жахливий біль, Я не можу його подолати»."
+    #129: CPS=19.3 (65ch/3.4s) "що це була помилка, наступного разу ми не повинні цього роби..."
+    #428: CPS=19.2 (51ch/2.7s) "Тож прийшов Нарада, він сказав: «Що ж тепер робити,"
+    #410: CPS=19.0 (77ch/4.1s) "Вони сказали: «Ні, ні, це правда, ми можемо це довести». Він..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 485
+  EN SRT blocks: 977
+  Ratio UK/EN: 0.50 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.9 (target ≤15.0)
+  CPS > 15.0: 85 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
