@@ -8,6 +8,7 @@ videos:
   title: Puja Talk
   video_ref: r2Gh9rMSkLNho4JTFSFQo
   media_refs:
+  - r2UFBXEEoBWEdeQ1NGXh8HVg1USVdTVUVXS0UDQRYITFEQF0xWSF9AG1dbWVIPEQ
   - r2FBglaBUpDjZIFUdMAxM8JQAHEy9BLAZBalQWJgxYKFhQUgUU
   - r2NjQ_XTZQKzZYOxsuGlkmGjwWJlBDWkMyaVUyADJ_UlpQUgUU
   sync: primary
@@ -15,6 +16,7 @@ videos:
   title: Puja
   video_ref: r2LDt0LCkMFkIEATZSFQo
   media_refs:
+  - r2WV9UREpSCBcLRlRHXh5VUA1UHFQMVUVWQEcHQUdZFlRDRx8CSF9AG1dbWVIPEQ
   - r2CAQWazZSJxtjE18xLFA9QgM0OgcXJUNLWQ1RAA5aACNQUgUU
   - r2BUZKRxMGHiseDVM5UVRCGFY_JyAYOh88ABI2Hz8VDxxQUgUU
   sync: derived

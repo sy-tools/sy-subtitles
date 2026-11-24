@@ -8,6 +8,7 @@ videos:
   title: Aarti
   video_ref: r2TUB3CAwYSUYkAChSFQo
   media_refs:
+  - r2A11UFUMGCERZEVpAXh1VVg5UG1UJVUVUFhcAQRFaRlARQ0tUSF9AG1dbWVIPEQ
   - r2Dhkqfxk-WjhvVDJYPioLORcuGwwTLBIRGCBTWkhlIyVQUgUU
   - r2VT8RT1IhKR19GSIMXjMeGFEuQw4XUDESQwcDDQxiLhtQUgUU
   sync: ignored
@@ -15,6 +16,7 @@ videos:
   title: Mahasahasrara Puja
   video_ref: r2HkoZAARZE2EEOTZSFQo
   media_refs:
+  - r2VFFZFkFVVRdcFlNNXkxXUg1UFQdYVUUFR0sEQRYMF1ZCRE5RSF9AG1dbWVIPEQ
   - r2Fz4mRDgmWQ9cLgdQNzYhJi4fAzYSL0MpTiMiJhVYLBtQUgUU
   - r2ADQBWThSGi1XEAwGXi8bG1MpNiUsAzkSRys9B0BLO19QUgUU
   sync: primary
@@ -22,6 +24,7 @@ videos:
   title: Mahasahastrara Puja
   video_ref: r2JBF5LTMsMlg5ARJSFQo
   media_refs:
+  - r2BQkHEEUECkRZEFIRXkwHBFZUSwQIVUVXQxADQUQNEVUURRUESF9AG1dbWVIPEQ
   - r2FRAafCcFAQtdKBIIUVQqIRwBEAMGNzQjaAUzORJIMiBQUgUU
   - r2DUUJSwwSLDFdORs1BBYePzweMSdZVx82WRUzFytgIhlQUgUU
   sync: derived

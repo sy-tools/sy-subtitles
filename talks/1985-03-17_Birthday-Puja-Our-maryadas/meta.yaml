@@ -8,6 +8,7 @@ videos:
   title: Birthday Puja P1
   video_ref: r2JEdXOCYeIHgNKSNSFQo
   media_refs:
+  - r2UAtQF0RVCEJeRgFHXkwCXlZUFFZYVUVWFkUHQUNQFlpBRxhVSF9AG1dbWVIPEQ
   - r2GxgQHw0sHABqUyggHFNGClItMSpHNwQFHlkEJElJPg1QUgUU
   - r2BjocfEweHgxfNywIBDcaQToCRT4OJjcnWAQ-NQ1cCwRQUgUU
   sync: primary
@@ -15,6 +16,7 @@ videos:
   title: Birthday Puja P2
   video_ref: r2PBpAKDEdNk5ZGBlSFQo
   media_refs:
+  - r2VllSR0EHW0cIQ1RMXh9XBQ5UGFleVUVYQxJcQRANFwcQQhgDSF9AG1dbWVIPEQ
   - r2EEIjWTIRBCBpBx0uAwI6OEhYN1s8JBYFRykOIAlKE11QUgUU
   - r2DRsHXgMAFxVyKgg3XzsgMVI5WVBCFRA1clAPDBJDOwdQUgUU
   sync: ignored
@@ -22,6 +24,7 @@ videos:
   title: Birthday Puja Talk
   video_ref: r2TUFXTB4lMnkGIBRSFQo
   media_refs:
+  - r2BFADEBUAXREIQVBEXhlSVVZUHVMPVUVVERYDQU1ZEloQQUxSSF9AG1dbWVIPEQ
   - r2UC0JHDYtJzpKURAHHC8lMFQPN18VKR4pXicIDgliFDNQUgUU
   - r2FCAQHxQiJTZUADIkWC4QRi8uBCwlVx8EZVUsJA5ZNjhQUgUU
   sync: derived
