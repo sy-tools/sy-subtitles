@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Mahashivaratri-Puja
   title: Mahashivaratri Puja
-  video_ref: r1XF0XXkBaQUFLUUheSBhXWVFeV0Q
+  video_ref: r2AkRqPiEaMBsPIwJSFQo
+  media_refs:
+  - r2Ng8FQgACCilUKCQ4DRceF100PB01FT8CFSJVDUBMDkdQUgUU
+  - r2DzIEQTc3FSYdChoRBwxHJTIFGQIyWzICfRZXOwpCDiVQUgUU
   sync: primary
 - slug: Mahashivaratri-Puja-CAM-2
   title: Mahashivaratri Puja CAM 2
-  video_ref: r1BlpCWkIDFhAZVkhXQB9XWVFeV0Q
+  video_ref: r2BhpvJVIdP0YuPhVSFQo
+  media_refs:
+  - r2ABgBGQAIGhIcCBwJUFYGGgkBBgRCFyMjbDExWzBGFQJQUgUU
+  - r2IC00G1khLRJ8Vz8xI1NKHCg6MBNGCxYbVTMkGgtAFl1QUgUU
   sync: derived

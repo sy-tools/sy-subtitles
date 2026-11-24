@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Lakshmi-Puja-Marathi-English-Alibag-India-DP
   title: Lakshmi Puja Marathi English Alibag India DP
-  video_ref: r1Bg0SCk1WEUIZVkhbSRlVU1ZcUUs
+  video_ref: r2OEJlCQoCL2czLzZSFQo
+  media_refs:
+  - r2LwE7VxA_N0tIAzguMFE0RwoIRzkQEgI2QwgfORhOAj1QUgUU
+  - r2FCY8WxMOKS1oWQsXIi0ANRA0Ez0iBE0DfiJQWwNYVw9QUgUU
   sync: primary
 - slug: Lakshmi-Puja-Talk-Marathi-English-Alibag-India-DP
   title: Lakshmi Puja Talk Marathi English Alibag India DP
-  video_ref: r1XAgXCEVVTEZMBUhXQR5VU1ZcUUs
+  video_ref: r2PDxvFFJZS2JRWRZSFQo
+  media_refs:
+  - r2TxMQYRleMEthVDVUDC4mIFEgJBsNFBk4azgPJgxaOwJQUgUU
+  - r2VjoBWBEzODt6IBAULC4aBCwuIUQMMhI4QlctDApCAAVQUgUU
   sync: derived
