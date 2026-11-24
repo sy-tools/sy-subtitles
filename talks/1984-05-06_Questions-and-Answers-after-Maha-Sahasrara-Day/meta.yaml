@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: Seminar-Day-2
   title: Seminar Day 2
-  video_ref: r1UA4RDEFUQhEdV0hYSRxRW1RbUkA
+  video_ref: r2FkVHVAYCHxlZGlZSFQo
+  media_refs:
+  - r2UTs3aw4IXEhAFA8mMQYkBw1VGUQ2ATkceyVWKz9JDhJQUgUU
+  - r2W0QQfSArXkxCNgUiNxc9MgwuAAckMh4pfVIPWwhoFF5QUgUU
