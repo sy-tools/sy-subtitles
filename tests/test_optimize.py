@@ -442,6 +442,45 @@ def test_cascade_redistribute_hard_max_rescue_uses_dense_donors():
     assert all(_cps(b) <= config.hard_max_cps for b in result), [round(_cps(b), 1) for b in result]
 
 
+def _back_to_back_on_their_anchors(texts_and_durations, gap_ms=80):
+    blocks, start = [], 0
+    for idx, (text, dur) in enumerate(texts_and_durations, 1):
+        blocks.append({"idx": idx, "start_ms": start, "end_ms": start + dur, "text": text, "anchor_ms": start})
+        start += dur + gap_ms
+    return blocks
+
+
+def test_cascade_redistribute_hard_max_rescue_reaches_past_a_long_saturated_run():
+    budget_too_tight_for_the_gentle_tier = OptimizeConfig(max_drift_ms=1)
+    saturated_at_rescue_level = ("x" * 38, 2000)
+    slack_eleven_blocks_away = ("z" * 20, 6000)
+    blocks = _back_to_back_on_their_anchors(
+        [saturated_at_rescue_level] * 10
+        + [("y" * 60, 2000)]
+        + [saturated_at_rescue_level] * 10
+        + [slack_eleven_blocks_away]
+    )
+    recipient_at_30_cps = blocks[10]
+
+    cascade_redistribute(blocks, budget_too_tight_for_the_gentle_tier, [])
+
+    assert _cps(recipient_at_30_cps) <= 20.0
+    assert all(_cps(b) <= 20.0 for b in blocks), [round(_cps(b), 1) for b in blocks]
+
+
+def test_cascade_redistribute_hard_max_rescue_leaves_a_run_alone_once_no_block_is_over_the_ceiling():
+    budget_too_tight_for_the_gentle_tier = OptimizeConfig(max_drift_ms=1)
+    saturated_at_rescue_level = ("x" * 38, 2000)
+    blocks = _back_to_back_on_their_anchors(
+        [saturated_at_rescue_level] * 10 + [("y" * 40, 2000)] + [saturated_at_rescue_level] * 10 + [("z" * 20, 6000)]
+    )
+    before = [(b["start_ms"], b["end_ms"]) for b in blocks]
+
+    cascade_redistribute(blocks, budget_too_tight_for_the_gentle_tier, [])
+
+    assert [(b["start_ms"], b["end_ms"]) for b in blocks] == before
+
+
 def test_cascade_redistribute_leaves_soft_blocks_untouched():
     """Blocks between target and hard max must NOT be densified by the
     hard-max rescue tier — it only fixes hard violations."""
