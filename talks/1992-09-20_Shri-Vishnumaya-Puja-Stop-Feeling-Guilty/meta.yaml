@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Vishnumaya-Puja-Pennsylvania-USA-DP-RAW
   title: Vishnumaya Puja Pennsylvania USA DP-RAW
-  video_ref: r1VApHUUNWREUbBUhYThRRUlFQWEs
+  video_ref: r2NBZ9BwlaKnJQRztSFQo
+  media_refs:
+  - r2NkwSXggMA0h5Ij9ZDxgFHC8FQjwkMBMJTgApQg5mPlhQUgUU
+  - r2MAIeSRtKVi4eUAczLVUqNlQuDl4SC0wGZBhUVzgbCilQUgUU
   sync: primary
 - slug: Vishnumaya-Puja-Talk-Pennsylvania-USA-DP-RAW
   title: Vishnumaya Puja Talk Pennsylvania USA DP-RAW
-  video_ref: r1VlpCWRYBFBYVWUhfSxRRUlFQWEs
+  video_ref: r2Hgp-NBQwD2oZEhZSFQo
+  media_refs:
+  - r2CS0QTFEOABRvUzVZJgseJgwjBCUuPR87aUxWHDxMLAxQUgUU
+  - r2MTg1XA83GAhoLCgrAxMbQ1ImIQ4kFQVeXAcJPhNvB19QUgUU
   sync: derived

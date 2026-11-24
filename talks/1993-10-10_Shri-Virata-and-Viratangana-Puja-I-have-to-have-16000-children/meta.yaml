@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Viratagana-Puja-Los-Angeles-USA-DP-RAW
   title: Viratagana Puja Los Angeles USA DP-RAW
-  video_ref: r1UF8XWU1UFhZPWUhdTxVRUlFQWEs
+  video_ref: r2TSxVEwkeLBVTIwZSFQo
+  media_refs:
+  - r2MUBBZy8tAU9ECRw1LwwaFDJZRhxCVxgZYzJVGBxuDQ5QUgUU
+  - r2WiA4QxASPyBpGCJWMC5AGRA2MyQ_EgImSgcRGhhBMSRQUgUU
   sync: primary
 - slug: Viratagana-Puja-Talk-Los-Angeles-USA-DP-RAW
   title: Viratagana Puja Talk Los Angeles USA DP-RAW
-  video_ref: r1Bl5FC0EHRBdMVUhcSxVRUlFQWEs
+  video_ref: r2AiBmBUowHGA-ATdSFQo
+  media_refs:
+  - r2VRAVewtQGxppVC4DMi03IjI1Di8ADDsVdTg0NQAVJz5QUgUU
+  - r2MyQ-RRQIKUlIDB8XHSM1RA8mLTgACRISVDIlPyFsJlxQUgUU
   sync: derived
