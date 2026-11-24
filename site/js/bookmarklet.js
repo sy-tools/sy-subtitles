@@ -77,7 +77,7 @@
 
   // A wrapper's YouTube id, from the first place that has one: the player
   // element, the "Watch on YouTube" link, the details block's collapse-<id>.
-  // The page plays its videos through a Bunny iframe instead of the YouTube
+  // The page plays most videos through a Bunny iframe instead of the YouTube
   // player — the last two are how such a video is still found.
   function youtubeIdOfWrapper(w) {
     var player = w.querySelector(".youtube-player[data-id]");
