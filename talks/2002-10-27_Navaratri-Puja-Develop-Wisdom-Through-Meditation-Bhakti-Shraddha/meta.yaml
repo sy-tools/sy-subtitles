@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Navaratri-Puja
   title: Navaratri Puja
-  video_ref: r1XFgVXRABQBEcV0hdTxhVW1JZVEE
+  video_ref: r2FhVqBi0KS0pTMFVSFQo
+  media_refs:
+  - r2U0EiciMyGhZMJQQiDTE_FlQaG15NVz86WFZWKBZIFV5QUgUU
+  - r2JRwEfDMFHzF-GDkXG1QSIzEqNQhAUxdeQCIhFw96NCJQUgUU
   sync: primary
 - slug: Navaratri-Puja-Talk
   title: Navaratri Puja Talk
-  video_ref: r1UFRGXhFXRhceWUhaTRRSWlJZVEE
+  video_ref: r2JCV0VCMWNFsCJCVSFQo
+  media_refs:
+  - r2DgAGRyQvDQ1CCg9MCyUEGhMvIQc9IAExWg5TNTNOLFNQUgUU
+  - r2JzYAYQBKXTFgIysIDDglXlIOOiM9KzMhfzMVLEx9Jl1QUgUU
   sync: derived
