@@ -321,7 +321,15 @@ fixture; full-corpus run lives in `golden-talks.yml`.
 
 The trigger is deliberately unfiltered. Which lanes are needed is decided by
 the `changes` job, which owns the watched-path list, and the lanes skip when
-nothing they cover moved. The point of that shape is `gate`: it depends on
+nothing they cover moved. It sorts a change into two classes: **code** (tools,
+tests, the SPA, dependencies, workflows) runs every lane; **data** (the talk
+tree) runs the unit lane alone, because that is where every reader of talk
+data lives — text hygiene, the schemas, the plaintext-link scan, the golden
+corpus — while lint, the JS suite and the browser shards open no talk file. A
+change with both runs everything. Pipeline, whisper and translation PRs are
+pure data, and so are their merge commits on `main`: a talk costs one test job
+per run, not seven, and a browser flake cannot fail a pipeline that is waiting
+to merge its own output. The point of that shape is `gate`: it depends on
 every lane, runs with `if: always()`, and passes only when each lane succeeded
 or was skipped — so it is always reported and can be the single **required
 status check** on `main`. Requiring a lane directly would wedge any PR whose

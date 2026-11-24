@@ -229,18 +229,3 @@ def test_wordlist_generator_deps_are_runtime_requirements() -> None:
     """
     runtime = (REPO_ROOT / "requirements.txt").read_text(encoding="utf-8")
     assert "spylls" in runtime, "spylls is imported by tools.build_wordlist at runtime"
-
-
-@pytest.mark.parametrize(
-    "path",
-    [
-        "talks/2000-01-01_x/transcript_uk.txt",
-        "talks/2000-01-01_x/main/final/uk.srt",
-        "talks/2000-01-01_x/review_report.md",
-    ],
-)
-def test_a_talk_only_pr_still_runs_the_unit_lane(two_commits, tmp_path, path):
-    """A talk PR carries no site/ file, yet the unit lane holds the repo-wide
-    text-hygiene guard over talk text."""
-    repo, base, head = two_commits(path)
-    assert _detect(repo, tmp_path, "pull_request", base, head)["code"] == "true"
