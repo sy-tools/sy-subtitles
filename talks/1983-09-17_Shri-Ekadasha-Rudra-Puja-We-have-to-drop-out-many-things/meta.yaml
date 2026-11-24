@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Ekadasha-Rudra-Puja
   title: Ekadasha Rudra Puja
-  video_ref: r1AwlHWRdaFBAeVUhYSBVVWlRbUkA
+  video_ref: r2FhpkWDIXGFUxLDBSFQo
+  media_refs:
+  - r2OAEHfBIeGlRiByEgOAI7RQsFBgMwLxccVxQdOTt6IiNQUgUU
+  - r2EAwgaAMNICh_B18xKwcUHwkJIS88Ly0XYVYGIDEAMlNQUgUU
   sync: primary
 - slug: Ekadasha-Rudra-Puja-Talk
   title: Ekadasha Rudra Puja Talk
-  video_ref: r1WhVcQgFARxxVVkBBH1VcUV1ZSw
+  video_ref: r2QR9-OwEWM3kuWABSFQo
+  media_refs:
+  - r2EjAefREVByZeEQhXLw84HS8VLg5GATkfHTs4Oj1_JEdQUgUU
+  - r2PUQWaVIkFiwZAx8UOlI5LC0iHVk8Cw0sVxIQWih4WTJQUgUU
   sync: derived

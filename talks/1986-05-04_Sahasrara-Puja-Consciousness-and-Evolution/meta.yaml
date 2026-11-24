@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
-  video_ref: r1XA5HDUdXRUcYAkhZTB9QUlhfUEc
+  video_ref: r2FjcdIgwODBtQKFhSFQo
+  media_refs:
+  - r2WwEEXlIhCBhnDggwWjYeGFMABQtAAQEBGlEjLSsaJQxQUgUU
+  - r2Cz0-HlQfVjhiLQI7XFY1MFwBFjsEMDEGaS9WGQp3JVhQUgUU
   sync: primary
 - slug: Sahasrara-Puja-Talk-Consciousness-And-Evolution
   title: 'Sahasrara Puja Talk: Consciousness And Evolution'
-  video_ref: r1U1VFWEQGQ0MdA0hfQBlYXVhfUEc
+  video_ref: r2LBR1Nw8JHnUgJAdSFQo
+  media_refs:
+  - r2Vxo8YAYdH0FDCzBXOiI4RiEPGwFMACwyHQlUJyobCgZQUgUU
+  - r2BxofSj5VCjJ8MEc5RTghAiE8HToZIBJGXiIwI0BXDQFQUgUU
   sync: derived

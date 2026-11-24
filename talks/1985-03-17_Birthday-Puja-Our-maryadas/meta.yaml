@@ -6,13 +6,22 @@ language: en
 videos:
 - slug: Birthday-Puja-P1
   title: Birthday Puja P1
-  video_ref: r1W0JYEgZCRRtXBkBJFVhSWFxZSw
+  video_ref: r2JEdXOCYeIHgNKSNSFQo
+  media_refs:
+  - r2GxgQHw0sHABqUyggHFNGClItMSpHNwQFHlkEJElJPg1QUgUU
+  - r2BjocfEweHgxfNywIBDcaQToCRT4OJjcnWAQ-NQ1cCwRQUgUU
   sync: primary
 - slug: Birthday-Puja-P2
   title: Birthday Puja P2
-  video_ref: r1XkFeQgcWRxxVU0BBGVhSWFxZSw
+  video_ref: r2PBpAKDEdNk5ZGBlSFQo
+  media_refs:
+  - r2EEIjWTIRBCBpBx0uAwI6OEhYN1s8JBYFRykOIAlKE11QUgUU
+  - r2DRsHXgMAFxVyKgg3XzsgMVI5WVBCFRA1clAPDBJDOwdQUgUU
   sync: ignored
 - slug: Birthday-Puja-Talk
   title: Birthday Puja Talk
-  video_ref: r1XRIKRQMQEh0AAUBIH1NSUF1ZSw
+  video_ref: r2TUFXTB4lMnkGIBRSFQo
+  media_refs:
+  - r2UC0JHDYtJzpKURAHHC8lMFQPN18VKR4pXicIDgliFDNQUgUU
+  - r2FCAQHxQiJTZUADIkWC4QRi8uBCwlVx8EZVUsJA5ZNjhQUgUU
   sync: derived
