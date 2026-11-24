@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Adi-Kundalini-Puja-Talk-The-Advent-Of-Primordial-Kundalini
   title: 'Adi Kundalini Puja Talk: The Advent Of Primordial Kundalini'
-  video_ref: r1A1hCUUFaFhZLVkhfThlSXlJfUkI
+  video_ref: r2LDAfVRFZNUs4WilSFQo
+  media_refs:
+  - r2EgwRXFcgLCxcBjUMRRE_JzorFVsxMgcHGVI0IAxoByVQUgUU
+  - r2EBI5flQJLSlqKSYAKjNBHQoiNQc9ITAUbwI1MDh9ORNQUgUU
   sync: derived
 - slug: Adi-Kundalini-Puja
   title: Adi Kundalini Puja
-  video_ref: r1U1hNW0VSFxUYBEhdSRpYXlJfUkI
+  video_ref: r2Fh1dKFMrEH0vOgZSFQo
+  media_refs:
+  - r2MycnHFMtHxJEGDMjOTkHJF0CDA8rMBYkGC4PCDhMWAVQUgUU
+  - r2BxwbTxguKkBGFlsLWycARiw_JC4uJDgrQQYUITx0EiFQUgUU
   sync: primary

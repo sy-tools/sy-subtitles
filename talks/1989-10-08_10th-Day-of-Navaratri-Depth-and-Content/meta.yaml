@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: 10th-Day-Of-Navaratri-Depth-And-Content
   title: '10th Day Of Navaratri: Depth And Content'
-  video_ref: r1AApBCEYAExIUWUhbSx9ZUlddVkA
+  video_ref: r2MAlFM1QHCW9SWiRSFQo
+  media_refs:
+  - r2Wyw2T1ERHE1KUCY-IzcnMTUHJj8yNxI5GRcoAxBFTCtQUgUU
+  - r2LUABbAsgKBpiOQYIPVhAEFUHJw4wUzoFXRQXODxbJi9QUgUU
   sync: primary
 - slug: Navaratri-Puja
   title: Navaratri Puja
-  video_ref: r1VwgSC0QAQkEUA0hbSRlZUlddVkA
+  video_ref: r2BiwaUBEoO28oJwtSFQo
+  media_refs:
+  - r2JRMJeSxVVz1LLx0kISw2BCMWHRsXUz8BHCACJj5kBQZQUgUU
+  - r2OjYSFBYgIkhbPlMyLTEXNBZfRx4lOlgiXxYzIxhgUiVQUgUU
   sync: derived

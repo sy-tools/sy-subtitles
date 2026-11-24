@@ -6,13 +6,22 @@ language: en
 videos:
 - slug: Guru-Puja-Talk-Creativity
   title: 'Guru Puja Talk: Creativity'
-  video_ref: r1U1tHXEJWQhZIUEhWSB9SWVhcUUI
+  video_ref: r2QSsfFTM5I2M7AAVSFQo
+  media_refs:
+  - r2Kyogay0dXEhsMxA1ORRLSjoGA1ktI0RBZi44FVRBKQxQUgUU
+  - r2WyICaVgLHgBlNAtYPyQrPTMFJg4dMipAQS8FHC99EVhQUgUU
   sync: derived
 - slug: Guru-Puja
   title: Guru Puja
-  video_ref: r1BF8RUEJRFxBIB0hcTR1TW1RbUkA
+  video_ref: r2JEFYOQg8K10pJiVSFQo
+  media_refs:
+  - r2NEIEalgzHB1ZUhglACUlIQweOB45BwNLWBABXEhdBxJQUgUU
+  - r2MyMybC4LN0pkCChWO0wLEAMtOAc5VR9HHgIGVzxDAwRQUgUU
   sync: ignored
 - slug: Guru-Puja-2
   title: Guru Puja 2
-  video_ref: r1XQ5FCkwDTRZPU0hWQBVYU1NQU0I
+  video_ref: r2IApfWRQqFmorAyZSFQo
+  media_refs:
+  - r2NiY5ZiQSOh8VM1gpEgYbPigKGwxHGxoRRyk9WgFGUR1QUgUU
+  - r2FDwrXBY9BTR8FQ8SEDs1LBQdGwRFAx9CZA89Fw5XFF5QUgUU
   sync: primary
