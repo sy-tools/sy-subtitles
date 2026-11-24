@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja/Mahalakshmi-Puja-Talk/final/uk.srt
+  Transcript: talks/1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja/transcript_uk.txt
+  EN SRT: talks/1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja/Mahalakshmi-Puja-Talk/source/en.srt
+  SRT blocks: 484
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 484
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 484
+  CPS: avg=11.3, median=12.3, max=20.0
+  CPS > target: 75 (15.5%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #127: CPS=20.0 (50ch/2.5s) "«О Боже мій! – сказала вона. – Ви мені не сказали."
+    #125: CPS=19.2 (53ch/2.8s) "Через стільки часу я зустрічаю Вас тут», – і те й се."
+    #145: CPS=19.1 (37ch/1.9s) "Ти повинна відправити його в поліцію."
+    #129: CPS=19.0 (50ch/2.6s) "Я б віддала своє життя за цю пані», – і таке інше,"
+    #142: CPS=19.0 (39ch/2.1s) "Я сказала: «Усе гаразд, Я його полікую,"
+    #144: CPS=19.0 (59ch/3.1s) "Я лікувала його, а вони казали: «Ти повинна піти в поліцію,"
+    #140: CPS=18.7 (84ch/4.5s) "І, як завжди, Мій брат і Мій чоловік дуже розсердилися на Ме..."
+    #143: CPS=18.4 (47ch/2.6s) "Я поставлю його на ноги, тоді все буде гаразд»."
+    #141: CPS=18.3 (39ch/2.1s) "Хто він такий? Зрештою...» – і те й се."
+    #133: CPS=18.1 (30ch/1.7s) "Навіть якщо ви добрі до людей,"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.3 (target ≤15.0)
+  CPS > 15.0: 75 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
