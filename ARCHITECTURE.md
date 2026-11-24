@@ -215,9 +215,10 @@ try and name only the provider when they fail; tests use made-up ids.
 
 **Ingest.** The add-talk bookmarklet, the SPA add form and `tools/download.py`
 read both page eras: the Vimeo markup of older pages and the YouTube markup.
-On a YouTube page each video block carries its Bunny Stream player (and a
-"Watch on Bunny" link to the same video) and its Drive download links; both
-are stored as that video's `media_refs`, Bunny first. A block's mirrors are
+On a YouTube page a video block carries its Drive download links and,
+mostly, a Bunny Stream player (with a "Watch on Bunny" link to the same
+video); a block that plays through the YouTube player has no Bunny copy. What
+is there is stored as that video's `media_refs`, Bunny first. A block's mirrors are
 taken only from that block, next to the YouTube id that names the video, so a
 mirror is never attached to the wrong one. The plaintext guard
 (`tests/test_no_plaintext_vimeo.py`) refuses a YouTube, Drive or Bunny link in
