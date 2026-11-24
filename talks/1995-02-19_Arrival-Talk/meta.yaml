@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: Arrival-Talk
   title: Arrival Talk
-  video_ref: r1U1lGXEMBERVOV0hZSBtSWVVaU0I
+  video_ref: r2MAFHEVACDW5VHRVSFQo
+  media_refs:
+  - r2PREbRiIyOQwcB11TACs7Ni0JBx0DDAAxWVgWVixsUVxQUgUU
+  - r2Dzo0XAUyBzAAJwkYBTQVOyskFQBCGi8YGBleHBZ8PiZQUgUU

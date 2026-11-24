@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Sadashiva-Puja
   title: Sadashiva Puja
-  video_ref: r1BA1DX0RRQUtPV0hZSxxZW1hcVEE
+  video_ref: r2MBhmLzRdHnwGLAlSFQo
+  media_refs:
+  - r2Fj5EdBYMFh59JxMTDCoKOTwaOwc8Li8XfBQGIBR8BzJQUgUU
+  - r2KBA9VQ4zBi1OLFxVA1Y-QAklGgQyFE0eHBITHT8ZDSRQUgUU
   sync: primary
 - slug: Sadashiva-Puja-Talk
   title: Sadashiva Puja Talk
-  video_ref: r1VA4QDxcEQkRJWEhXTR1ZW1hcVEE
+  video_ref: r2BkoANxQtE1tQOy1SFQo
+  media_refs:
+  - r2CzZHYjQuFQpOMR4rEiUjIhAaDQxEIz1EdBs0GyF6EChQUgUU
+  - r2BQdCThMfNlRmGQEzMRk9EQI8ElAtJzpATxchJzdyDDlQUgUU
   sync: derived
