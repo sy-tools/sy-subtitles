@@ -3,4 +3,18 @@ date: '1992-02-09'
 location: Gidgegannup (Australia)
 amruta_url: https://www.amruta.org/1992/02/09/shri-ganesha-puja-perth-1992/
 language: en
-videos: []
+videos:
+- slug: Ganesha-Puja-Talk
+  title: Ganesha Puja Talk
+  video_ref: r2NDAZUShYDmEXAjVSFQo
+  media_refs:
+  - r2Az8XVRJWHzIeDzAlBC5BLFQOBg49Wz1FGClVIR5fJVhQUgUU
+  - r2Ix9DeC8uAC9eI1IJBDY2BlEFGlAFOzMmby09GR9oBQdQUgUU
+  sync: primary
+- slug: Ganesha-Puja
+  title: Ganesha Puja
+  video_ref: r2IEVUIDc_LkknAixSFQo
+  media_refs:
+  - r2OB8pdQ8gBy5nBwAMMS0YGSBcOgQBFD4-eCU-BBRgJT5QUgUU
+  - r2UE0iFDs_IEhjB1gYOVJeIycYQz8uBB8BVw8LI0xMKC1QUgUU
+  sync: ignored

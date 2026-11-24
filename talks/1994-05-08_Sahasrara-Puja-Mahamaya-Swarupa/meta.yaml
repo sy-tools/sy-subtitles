@@ -3,4 +3,18 @@ date: '1994-05-08'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1994/05/08/sahastrara-puja-1994/
 language: en
-videos: []
+videos:
+- slug: Sahasrara-Puja-Talk-Mahamaya-Swarupa
+  title: 'Sahasrara Puja Talk: Mahamaya Swarupa'
+  video_ref: r2RUpICSkqLRgEPwxSFQo
+  media_refs:
+  - r2UB4JGSwXDAhZJyZWWjQcHwgJRD8BJRMqGhMUMBFhDg9QUgUU
+  - r2LAAyRDZKXU9dKj4SKjkKGzMfJi1FMwMCQzVRCUlIIw9QUgUU
+  sync: derived
+- slug: Sahasrara-Puja
+  title: Sahasrara Puja
+  video_ref: r2NCsaCys2FXgYOFlSFQo
+  media_refs:
+  - r2Nz44dQkBLjIAGy0xHxAbFw4VPAABFj5EflEwHkxBFAlQUgUU
+  - r2NE1CbycqJEF4MyRVLww4MSxaBQtNPUdEchIwORBVKz9QUgUU
+  sync: primary

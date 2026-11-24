@@ -4,4 +4,18 @@ date: '1987-11-06'
 location: Amparo sister's house, Madrid (Spain)
 amruta_url: https://www.amruta.org/1987/11/06/shri-ganesha-puja-madrid-1987/
 language: en
-videos: []
+videos:
+- slug: Ganesha-Puja-Talk
+  title: Ganesha Puja Talk
+  video_ref: r2AiNyBhAKMwAEB1dSFQo
+  media_refs:
+  - r2ACcyewQdHDsaOR4KAAUwI1I7WRoeMjsCdxRUPE97LD1QUgUU
+  - r2UEUaVQkTKhdUCRNWHgcCPVRdBgAkDxcYd0wgHxByUBtQUgUU
+  sync: derived
+- slug: Ganesha-Puja
+  title: Ganesha Puja
+  video_ref: r2EhhuLCM5NXgYHQNSFQo
+  media_refs:
+  - r2BxMlSREfFhJnGzk1KTZeBDBUAzATFRklXi8yFjdnEiBQUgUU
+  - r2ISMjZxsuOwhBTDAIGRcSMBIdMCdGD0IsHABeOgl-IiRQUgUU
+  sync: primary

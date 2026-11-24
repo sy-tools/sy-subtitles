@@ -3,4 +3,18 @@ date: '1983-01-21'
 location: Vaitarna (India)
 amruta_url: https://www.amruta.org/1983/01/21/puja-in-vaitarna-1983/
 language: en
-videos: []
+videos:
+- slug: Puja-to-the-Devi-Talk
+  title: Puja to the Devi Talk
+  video_ref: r2PBhaWDM3QUAEJlNSFQo
+  media_refs:
+  - r2JjYpSRJWIUxHEF8ULiIENRwEJiY5BCQFVBIxDBpkJg9QUgUU
+  - r2FTceegwwDQpeKSkFWxQgJDICLCEiCzMQVwgTWjYeUihQUgUU
+  sync: derived
+- slug: Puja-to-the-Devi
+  title: Puja to the Devi
+  video_ref: r2TRcaOC4YKXkHWkxSFQo
+  media_refs:
+  - r2EwclVxIUXxNfIC8-AwBFFB8_DgtZBSULeygIVj19TBpQUgUU
+  - r2PQQ7eC4DB0prBR0jI1QiJxErOzNECEUHbDY4XjNiAjhQUgUU
+  sync: primary

@@ -3,4 +3,25 @@ date: '1996-07-28'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1996/07/28/guru-puja-1996/
 language: en
-videos: []
+videos:
+- slug: Guru-Puja-Talk-Criteria-To-Introspect-Yourself
+  title: 'Guru Puja Talk: Criteria To Introspect Yourself'
+  video_ref: r2IEEYMClWSXkkECJSFQo
+  media_refs:
+  - r2JzwpTDAjLRB0MRpSCjFANzM8WSA5DBdDACA3ISNgJjBQUgUU
+  - r2GjcRHyMWCShoWQkmBAsqKhc5AyVFJBAEGVggIDcfAxJQUgUU
+  sync: derived
+- slug: Guru-Puja
+  title: Guru Puja
+  video_ref: r2TR8AJjY6A3IAXitSFQo
+  media_refs:
+  - r2DkEqH1EQABZcUAUHJlQxHQ8bBBMCKy0VZQcdIhJkJzVQUgUU
+  - r2CwMAezI4ATJJJQMvETQiBjYtWQ1BBDkBfSBSO0lvDTxQUgUU
+  sync: primary
+- slug: Talk-after-Guru-Puja-Spread-Sahaja-Yoga-Everywhere
+  title: 'Talk after Guru Puja: Spread Sahaja Yoga Everywhere'
+  video_ref: r2RSR-DgYjPUQZIAxSFQo
+  media_refs:
+  - r2Dh8AYlUCOkh3GSsUMRAQI1cbEgg8CUYWGyY3LBAAUgdQUgUU
+  - r2Ulg1bCMdDg1iEAEvMgJGBB9YHTM4DxBKawA4WE9jFB1QUgUU
+  sync: ignored

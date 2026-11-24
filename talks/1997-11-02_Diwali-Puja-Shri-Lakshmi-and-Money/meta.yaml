@@ -3,4 +3,18 @@ date: '1997-11-02'
 location: Sintra (Portugal)
 amruta_url: https://www.amruta.org/1997/11/02/diwali-puja-1997/
 language: en
-videos: []
+videos:
+- slug: Diwali-Puja-Talk-Lakshmi-And-Money
+  title: 'Diwali Puja Talk: Lakshmi And Money'
+  video_ref: r2AgFGLTQtS0wmDxVSFQo
+  media_refs:
+  - r2CRtDSzkpJiFjLCgJXSYYERQjOl4MKBQ2f1I_XSh4Aw9QUgUU
+  - r2EAcETlIuPjNDDiwEERtAFVc0H1g1MSEFHRQuHA9PL1hQUgUU
+  sync: derived
+- slug: Diwali-Puja
+  title: Diwali Puja
+  video_ref: r2NEBdBRc1LmsXKClSFQo
+  media_refs:
+  - r2LCM4TlVWJBQVLSMwDSUjERIkHy48VAY0aAcSCh1EOy5QUgUU
+  - r2ED4EQA4dOihrDF83Cg9KJCtaLDseFTsVXAJeVyFHE1NQUgUU
+  sync: primary

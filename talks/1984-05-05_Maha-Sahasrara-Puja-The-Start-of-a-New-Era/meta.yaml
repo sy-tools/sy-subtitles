@@ -3,4 +3,25 @@ date: '1984-05-05'
 location: Château de Mesnières, Mesnières-en-Bray (France)
 amruta_url: https://www.amruta.org/1984/05/05/mahasahastrara-puja-the-start-of-a-new-era/
 language: en
-videos: []
+videos:
+- slug: Aarti
+  title: Aarti
+  video_ref: r2TUB3CAwYSUYkAChSFQo
+  media_refs:
+  - r2Dhkqfxk-WjhvVDJYPioLORcuGwwTLBIRGCBTWkhlIyVQUgUU
+  - r2VT8RT1IhKR19GSIMXjMeGFEuQw4XUDESQwcDDQxiLhtQUgUU
+  sync: ignored
+- slug: Mahasahasrara-Puja
+  title: Mahasahasrara Puja
+  video_ref: r2HkoZAARZE2EEOTZSFQo
+  media_refs:
+  - r2Fz4mRDgmWQ9cLgdQNzYhJi4fAzYSL0MpTiMiJhVYLBtQUgUU
+  - r2ADQBWThSGi1XEAwGXi8bG1MpNiUsAzkSRys9B0BLO19QUgUU
+  sync: primary
+- slug: Mahasahastrara-Puja
+  title: Mahasahastrara Puja
+  video_ref: r2JBF5LTMsMlg5ARJSFQo
+  media_refs:
+  - r2FRAafCcFAQtdKBIIUVQqIRwBEAMGNzQjaAUzORJIMiBQUgUU
+  - r2DUUJSwwSLDFdORs1BBYePzweMSdZVx82WRUzFytgIhlQUgUU
+  sync: derived

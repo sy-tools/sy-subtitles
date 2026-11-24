@@ -3,4 +3,18 @@ date: '1993-08-15'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1993/08/15/shri-krishna-puja-cabella-1993/
 language: en
-videos: []
+videos:
+- slug: Krishna-Puja-Talk-Dharma
+  title: 'Krishna Puja Talk: Dharma'
+  video_ref: r2IDdPLjgBLmAlJzJSFQo
+  media_refs:
+  - r2OCE8RQ9XNiNoAiwMAyIrJgNcJRseCgFCXTYgPTB_GUdQUgUU
+  - r2LxYAHzcpCzJKKhMSGzgEQj8rAAQeDh86SwQuCAhnUkdQUgUU
+  sync: derived
+- slug: Krishna-Puja
+  title: Krishna Puja
+  video_ref: r2PEdEVj4pLVlSCExSFQo
+  media_refs:
+  - r2Wj0xHVIOATF6Cg8nKRFCIR8aIj0kDj0rACVXDh8dCStQUgUU
+  - r2J0IxQxcPXxJJJThQK1ZePz8kBR09KTdAGzs9PApjCBxQUgUU
+  sync: primary

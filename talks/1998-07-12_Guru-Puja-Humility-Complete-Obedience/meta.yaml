@@ -3,4 +3,18 @@ date: '1998-07-12'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1998/07/12/guru-puja-1998/
 language: en
-videos: []
+videos:
+- slug: Guru-Puja-Talk-Humility-Complete-Obedience
+  title: 'Guru Puja Talk: Humility & Complete Obedience'
+  video_ref: r2BjtpFh8DQFs2JDNSFQo
+  media_refs:
+  - r2MCoxTAJRXBFMUg8PBExEOSIAKxgGKEwCdVQ1DBxyNQ9QUgUU
+  - r2MgcQVFUrCDJfBgkgMTQgKzoWIQcyK0UeGjMJFy1fNw1QUgUU
+  sync: derived
+- slug: Guru-Puja
+  title: Guru Puja
+  video_ref: r2QR1YIwQXD1grEDNSFQo
+  media_refs:
+  - r2KAxFewxfDkx0Vy8rLFYgAwk7PjElMwBeZhErAD5IIDtQUgUU
+  - r2CSQYRCIyLTVZVFoxOTheFi4aRFg_BRQgQyQSORBIEF5QUgUU
+  sync: primary

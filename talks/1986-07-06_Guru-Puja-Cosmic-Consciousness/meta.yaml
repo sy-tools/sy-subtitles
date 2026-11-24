@@ -3,4 +3,18 @@ date: '1986-07-06'
 location: Gmunden (Austria)
 amruta_url: https://www.amruta.org/1986/07/06/guru-puja-1986/
 language: en
-videos: []
+videos:
+- slug: Guru-Puja-Talk-Cosmic-Consciousness
+  title: 'Guru Puja Talk: Cosmic Consciousness'
+  video_ref: r2GhoeVz9dT0sJKRZSFQo
+  media_refs:
+  - r2AQA4SjAXASwZAwc-WTMZQxw4Mjg7WiMfeCMLPi1EGFJQUgUU
+  - r2OjEffBkgHAhAEwIIWypCGS0PQgoONxIbZ1YfXQ16VR9QUgUU
+  sync: derived
+- slug: Guru-Puja
+  title: Guru Puja
+  video_ref: r2RUUUVz0IDl0tAhdSFQo
+  media_refs:
+  - r2FjEXYi4wCCl5DQcKPRYJQTMKEjwZCEE7VT4JBxRsCEdQUgUU
+  - r2ViQFfj4mIhRaIBxQLA0iMg4aA1ARDSAEXy8OORdrOB5QUgUU
+  sync: primary

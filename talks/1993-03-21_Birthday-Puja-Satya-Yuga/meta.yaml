@@ -3,4 +3,32 @@ date: '1993-03-21'
 location: New Delhi (India)
 amruta_url: https://www.amruta.org/1993/03/21/birthday-puja1993/
 language: en
-videos: []
+videos:
+- slug: Birthday-Puja-CAM1-Delhi-NITL
+  title: Birthday Puja CAM1 Delhi NITL
+  video_ref: r2EjhHVgIEQEsWEixSFQo
+  media_refs:
+  - r2EzcVdyQhVjcbIgIkNxI4AgY8OlAtKUQkYjcMKQt8JTVQUgUU
+  - r2Ng85SxgtAipHBD4qLDMdBwQvOz41W0IWS1gRCyFvIlpQUgUU
+  sync: derived
+- slug: Birthday-Puja-CAM2-Delhi-NITL
+  title: Birthday Puja CAM2 Delhi NITL
+  video_ref: r2NEoVFAspGGYxOxFSFQo
+  media_refs:
+  - r2Fy1CAFAJKiwcJjs-JzElQzEDPzMcECwFFCQTLkF_Cy9QUgUU
+  - r2AQw0fTNXVh8eMDs3MBsKBj0ZRyIAKRIsbCkvDhtDDRlQUgUU
+  sync: derived
+- slug: Birthday-Puja-Delhi-India-DP
+  title: Birthday Puja Delhi India DP
+  video_ref: r2Gip_VC4pJlkSHgtSFQo
+  media_refs:
+  - r2KUIkYVUEWxhaOygOLhMgS1EoHjYXJwE9XQcUOQtmJBtQUgUU
+  - r2I0cxXEwDLDdbDjIJUQ5LRFwaMxkGUwcWfCYCIxp7UxNQUgUU
+  sync: primary
+- slug: Birthday-Puja-Talk-Delhi-India-DP
+  title: Birthday Puja Talk Delhi India DP
+  video_ref: r2MERiED82OBspXDVSFQo
+  media_refs:
+  - r2KDoDZzQGXiZLOB8LDSArGhYNRDkiUwUXaCM0JE9CPiJQUgUU
+  - r2GzFDWixWDjhfFiZMEUwEJhVVIy0kLSwVTDsKMDVnLjhQUgUU
+  sync: derived

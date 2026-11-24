@@ -3,4 +3,18 @@ date: '1996-05-05'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1996/05/05/sahasrara-puja-1996/
 language: en
-videos: []
+videos:
+- slug: Sahasrara-Puja-Talk-You-Must-Feel-Responsible-But-Be-Humble
+  title: 'Sahasrara Puja Talk: You Must Feel Responsible But Be Humble'
+  video_ref: r2NCZqNRRWQE8RMDZSFQo
+  media_refs:
+  - r2NEJLXggPBzVcK0cSJVQJGz0EMRAbUkRCexcTOjJFJR9QUgUU
+  - r2VzgRFTdeAS1UKz00PgISAwtbOlwrVCohXDYtVwxEO1lQUgUU
+  sync: derived
+- slug: Sahasrara-Puja
+  title: Sahasrara Puja
+  video_ref: r2Bl4VCiIWGh4SLQ1SFQo
+  media_refs:
+  - r2KBoSHTRXOzFyDSRWJyVLKxIYFiE7VzkUWy8-PhVfCgtQUgUU
+  - r2EUUaGTIJWiZmJ1I5MVkGLFIGDCoVMhI2W1A9XwEYDS5QUgUU
+  sync: primary

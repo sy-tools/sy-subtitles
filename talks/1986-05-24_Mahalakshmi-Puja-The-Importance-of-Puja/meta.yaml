@@ -3,4 +3,18 @@ date: '1986-05-24'
 location: Juan Antonio's and Mari Cruz's house, Madrid (Spain)
 amruta_url: https://www.amruta.org/1986/05/24/the-importance-of-puja-madrid-1986/
 language: en
-videos: []
+videos:
+- slug: Mahalakshmi-Puja-Talk
+  title: Mahalakshmi Puja Talk
+  video_ref: r2IDlUAjMhSxorWTZSFQo
+  media_refs:
+  - r2BRAhYDszPUxAVihVIC0HPAIcOFE9PTM6dzAsWAFyDBJQUgUU
+  - r2AENeZ1ApCw5DLCFTOFUsFVIjJx0CFCEEHDsoWg5ZF1xQUgUU
+  sync: derived
+- slug: Mahalakshmi-Puja
+  title: Mahalakshmi Puja
+  video_ref: r2GkIfPlJXMlkzLwJSFQo
+  media_refs:
+  - r2OEEUWRk-LU9IOTAGCSBKNzI5AAxFVTYZZCYKKSYVUSlQUgUU
+  - r2EiJKaDsgP0lcOzokLCgnMCkvLDs9JjE_VzVUGSxAAyVQUgUU
+  sync: primary

@@ -3,4 +3,32 @@ date: '1989-06-11'
 location: Camp Wonposet, Litchfield (United States)
 amruta_url: https://www.amruta.org/1989/06/11/shri-virata-puja-connecticut-1989/
 language: en
-videos: []
+videos:
+- slug: Virata-Puja-CAM-2-New-York-USA-DP-RAW
+  title: Virata Puja CAM 2 New York USA DP-RAW
+  video_ref: r2OANhDysoP0UEHQxSFQo
+  media_refs:
+  - r2UgRLGhZUAUxZIDovUSAdETMOGQBFKUYdWQkzAS9BOQBQUgUU
+  - r2UhpAeVEFITVXUhsIXgI_MBMLAj1DCBc3RDkMATtyIidQUgUU
+  sync: primary
+- slug: Virata-Puja-Departure-Camp-Wonposet-USA-DP-RAW
+  title: Virata Puja Departure Camp Wonposet USA DP-RAW
+  video_ref: r2GhhcMRNaJmYzAiVSFQo
+  media_refs:
+  - r2Lx0jRQksKDFOFxwSCVZDFVBYMQEYUR0hXRAlKQ9LMhpQUgUU
+  - r2OBcQdTkoAwhIO1w7KS4JHiBdJSISD0RKWC0MNyNuM19QUgUU
+  sync: ignored
+- slug: Virata-Puja-Talk-CAM-2-New-York-USA-DP-RAW
+  title: Virata Puja Talk CAM 2 New York USA DP-RAW
+  video_ref: r2MAEVMgwZPB0vKD5SFQo
+  media_refs:
+  - r2FDhDeCQyHg53CDMzMVJLGhQLDAs1FAEKSgRKDghdCj1QUgUU
+  - r2FydBajsMOy1KEF8lEhcfNDBYBhEjAy9LH1FRWUp4KTpQUgUU
+  sync: derived
+- slug: Virata-Puja-Talk
+  title: Virata Puja Talk
+  video_ref: r2BkVMWFZXFFUxGlRSFQo
+  media_refs:
+  - r2JiRAHjc3OQtGVSkLGT4YXiQzGzAuUAceSSpVXTAeJzxQUgUU
+  - r2My86QwMBBg56D1IvPA0wFAYoAxgcDQU6bBdSIw9fMh9QUgUU
+  sync: derived

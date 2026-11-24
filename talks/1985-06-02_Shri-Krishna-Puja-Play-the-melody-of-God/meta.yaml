@@ -3,4 +3,18 @@ date: '1985-06-02'
 location: Englewood Ashram, New Jersey (United States)
 amruta_url: https://www.amruta.org/1985/06/02/shri-krishna-puja-englewood-1985/
 language: en
-videos: []
+videos:
+- slug: Krishna-Puja-Talk-Play-The-Melody-Of-God
+  title: 'Krishna Puja Talk: Play The Melody Of God'
+  video_ref: r2NBBqMRIiLnJSBVdSFQo
+  media_refs:
+  - r2WkYjTD4RBU99AA0zKzUEBTogFgYOIxI0RTUmKRNpVCFQUgUU
+  - r2LzcnSjAXPhJGVD9SG1IlBFY2PA9DPTgCSC0kFgxFEzhQUgUU
+  sync: derived
+- slug: Krishna-Puja
+  title: Krishna Puja
+  video_ref: r2OAp9Fh5fFRQmWAlSFQo
+  media_refs:
+  - r2JRwiHCYECBdYOCI4JAs_ND0ZTCc3Bkc6GwAgKzVEBjlQUgUU
+  - r2JTQVXAI-DAgAVQgZAxlKKg47QDNGKwEwRSkuXCNZESdQUgUU
+  sync: primary

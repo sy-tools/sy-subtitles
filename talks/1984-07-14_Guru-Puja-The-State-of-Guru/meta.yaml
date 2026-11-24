@@ -3,4 +3,18 @@ date: '1984-07-14'
 location: Grand Hotel Leysin (Leysin American Schools), Leysin (Switzerland)
 amruta_url: https://www.amruta.org/1984/07/14/guru-puja-1984/
 language: en
-videos: []
+videos:
+- slug: Guru-Puja-Talk
+  title: Guru Puja Talk
+  video_ref: r2RQRjBQYeF0AoIlRSFQo
+  media_refs:
+  - r2MjE6ACAOVwpUOQUPJyU9OlwLQBs2NQMQVS8LWQMaBzlQUgUU
+  - r2DwQCRAMxMDxkUxhSLCBDQD01BTNHNSFDeTMuNwlZMB1QUgUU
+  sync: derived
+- slug: Guru-Puja
+  title: Guru Puja
+  video_ref: r2RTBVDwNYGBQTXBNSFQo
+  media_refs:
+  - r2U0AUQhtRQhxkJykIMhEDRVYmJDskChwxa0wMFz1kGxpQUgUU
+  - r2UTtCVFEqBBFmVwlRLhkUGyQIIAZMUgwXADFTIA5dBVtQUgUU
+  sync: primary
