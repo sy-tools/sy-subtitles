@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1984-02-03_Shri-Mahalakshmi-Puja-The-innermost-stream-of-Brahmanadi/Mahalakshmi-Puja/final/uk.srt
+  Transcript: talks/1984-02-03_Shri-Mahalakshmi-Puja-The-innermost-stream-of-Brahmanadi/transcript_uk.txt
+  EN SRT: talks/1984-02-03_Shri-Mahalakshmi-Puja-The-innermost-stream-of-Brahmanadi/Mahalakshmi-Puja/source/en.srt
+  SRT blocks: 299
+  EN SRT blocks: 300
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:03:29,278 — 00:30:17,110
+  SRT range:       00:03:29,278 — 00:30:19,110
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 299
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 299
+  CPS: avg=11.5, median=12.0, max=19.0
+  CPS > target: 38 (12.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.8, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #208: CPS=19.0 (41ch/2.2s) "увага кожного неодмінно мусить піти туди."
+    #87: CPS=15.7 (75ch/4.8s) "Тож ми починаємо вибудовувати й такі нісенітниці: «Це корисн..."
+    #88: CPS=15.3 (54ch/3.5s) "це не корисно для здоров’я, оте корисно для здоров’я»."
+    #171: CPS=15.3 (72ch/4.7s) "якщо ви їм щось кажете чи просто кажете: «Це неправильно», –..."
+    #172: CPS=15.1 (63ch/4.2s) "пояснюватимуть, сперечатимуться, те й се, а якщо це не спрац..."
+    #143: CPS=15.1 (25ch/1.7s) "Знову починати свій шлях."
+    #198: CPS=15.1 (56ch/3.7s) "вам доводиться знову запускати свою Кундаліні з початку."
+    #252: CPS=15.1 (49ch/3.3s) "навіть набагато більше, бо вони нічого не робили."
+    #292: CPS=15.0 (31ch/2.1s) "про що Я говорила вам сьогодні."
+    #47: CPS=15.0 (40ch/2.7s) "і з цією Махалакшмі Таттвою ми губимося."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 299
+  EN SRT blocks: 300
+  Ratio UK/EN: 1.00 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.5 (target ≤15.0)
+  CPS > 15.0: 38 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
