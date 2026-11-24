@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Diwali-Puja-Talk
   title: Diwali Puja Talk
-  video_ref: r1VEZaTQAXEUhQAUBKG1lZUF1ZSw
+  video_ref: r2FkdKND8dCEstGSpSFQo
+  media_refs:
+  - r2UwU3RTMmV09ODhMHWi1FBSg-OVE3DiwyXD4RAlQAKjpQUgUU
+  - r2ERIiADRSGB53Nx8rPzkEEgMfNS8yPRA0FA0xKRpUKgZQUgUU
   sync: derived
 - slug: Gruha-Lakshmi-Puja
   title: Gruha Lakshmi Puja
-  video_ref: r1Ul1FDEFSTEBOWEhfSxlWWlRbUkA
+  video_ref: r2FhwaCx84SH40IzdSFQo
+  media_refs:
+  - r2CxADWDMJMBxyLxkCBRchARFcEDxFETcZSQ4yFzNaDw5QUgUU
+  - r2Jz4nXVY0Jx1eEFIyWTswBBY4DS49Jx0-axc-WTVjMRhQUgUU
   sync: primary

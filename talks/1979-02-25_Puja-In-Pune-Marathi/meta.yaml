@@ -6,6 +6,9 @@ language: en
 videos:
 - slug: Mahashivaratri-Puja
   title: Mahashivaratri Puja
-  video_ref: r1XF0WUUUDERUZAEhZTBpVU1BeUEo
+  video_ref: r2TSlHUy05Hhg4JhVSFQo
+  media_refs:
+  - r2UiYdZgkpGRVXAwBQCxUjJR0ZICBFNVheWAwzMAtdLwBQUgUU
+  - r2FhMDXgUOVxR5AjMWLw0APB04AzMgBRIaYSUXJzp9DihQUgUU
 other_languages:
 - mr

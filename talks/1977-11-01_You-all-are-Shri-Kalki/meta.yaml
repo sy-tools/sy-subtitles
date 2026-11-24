@@ -6,17 +6,29 @@ language: en
 videos:
 - slug: Workshop-Part-1
   title: Workshop Part 1
-  video_ref: r1VVVDX0EBQEJJV0hYQB1RXFBfU0o
+  video_ref: r2JBUUIAVCVF0TLhJSFQo
+  media_refs:
+  - r2BSwVHBcgICBHBgJYWyc1KQAjTSgjEzwyYVIAXS1iNAFQUgUU
+  - r2ME06GysBCkx8Ag4LRSwkOBwnIkQ4ITAcTzRTJRJiJyJQUgUU
   sync: independent
 - slug: Workshop-Part-2
   title: Workshop Part 2
-  video_ref: r1V1xNWhIAQkMaUkhbThRYX1BfU0o
+  video_ref: r2BgYYLggHEm4-LTtSFQo
+  media_refs:
+  - r2Uh9HFFICCA1CMyYDHzQkBws9EgVMVjQcW1hTGCl5UAZQUgUU
+  - r2DEY5SRcUBUFcKiUrGSQaCSclTRNFOCcYbARRPTJVGCRQUgUU
   sync: independent
 - slug: Workshop-Part-3
   title: Workshop Part 3
-  video_ref: r1VQ8SWUJbEBIZUUhbTxVYX1BfU0o
+  video_ref: r2NCxrCRY9ER85HExSFQo
+  media_refs:
+  - r2NB4FciQvIR5hMRlUAio3HysoHgw4NDoGaBkOAgNLAA5QUgUU
+  - r2FEIBfVYJPQoZPh8yHTAfPFwdJ1tZMyoxRA8GOShEFzBQUgUU
   sync: independent
 - slug: Workshop-Part-4
   title: Workshop Part 4
-  video_ref: r1VQ4VWUJXR0EfAEhfTBpYX1BfU0o
+  video_ref: r2LDt4DlMASR0WBxBSFQo
+  media_refs:
+  - r2LDgRZ1gwHj9UB1svXAZAQTcmPDEaCTsKQQYpBUFFKCNQUgUU
+  - r2CTweAAo9OAhGK14iKi8LMjEJN1ASFz0abzdeGkEZGx5QUgUU
   sync: independent

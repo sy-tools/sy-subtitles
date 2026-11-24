@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: From-Mooladhara-to-Void
   title: From Mooladhara to Void
-  video_ref: r1CURaFVQXR0kCBUBBGlVaU11ZSw
+  video_ref: r2IAFYAC4YOmggAhJSFQo
+  media_refs:
+  - r2Fh9CXj4fPQp-EDkHEQ82H1UrIQMXE0c4FDsMOlQcAAVQUgUU
+  - r2VgQdZFMSLg9eNxIPITYSPQ8AEQA8A0MpbzEPLhh_EChQUgUU
   sync: primary
 - slug: QA-after-the-Talk
   title: Q&A after the Talk
-  video_ref: r1CBdeQgEREhoCAUBBH1dZUV1ZSw
+  video_ref: r2HjRqVVVcF3cOGiZSFQo
+  media_refs:
+  - r2Lhs1WBgIFzZOPhwUODJHRTAYQT0nOx0SfiIkPz9uGyBQUgUU
+  - r2LRk5fBMmGyheBxsUDVYqOV0WBChBKEUdeDQxWB1GDyhQUgUU
   sync: derived
