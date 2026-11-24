@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: Advice
   title: Advice
-  video_ref: r1VVtHUURQEEZJWEhbQR1SX1VZVkQ
+  video_ref: r2MB5ZKzg7CV8DIhBSFQo
+  media_refs:
+  - r2DQQ9ThsmFQhgTD0iHwgdPl0_PF8RGicLZgUVOAtaWC1QUgUU
+  - r2VzwJRwUVGk5vADMTKS0xG1QvLA1NVC0LVS0NHyxjUiZQUgUU

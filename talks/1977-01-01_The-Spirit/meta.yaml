@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: The-Spirit
   title: The Spirit
-  video_ref: r1BlsSChcAFkQbUEhaQRlWW1JRV0Q
+  video_ref: r2ICN9LBU2D0ALHRFSFQo
+  media_refs:
+  - r2IAI-ahIqGFRFAgIIKwQJFTUPLA5GV01GQAlSIE57EV1QUgUU
+  - r2Ok0yS0wmLSx9Ul4XOgcqHz8WPhgFUw8FfxQVXQBDIxtQUgUU
