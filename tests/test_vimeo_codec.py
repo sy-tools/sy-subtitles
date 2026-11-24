@@ -138,6 +138,8 @@ def _expected_watch_url(vec):
         return "https://www.youtube.com/watch?v=" + vec["id"]
     if vec.get("provider") == "gd":
         return "https://drive.google.com/file/d/" + vec["id"] + "/view"
+    if vec.get("provider") == "bn":
+        return "https://player.mediadelivery.net/play/" + vec["id"]
     return vec["url"]  # r1 vectors are canonical Vimeo URLs
 
 
@@ -171,8 +173,10 @@ def test_vectors_cover_every_provider_and_url_shape():
     yt = [v for v in vectors if v.get("provider") == "yt"]
     gd = [v for v in vectors if v.get("provider") == "gd"]
     assert len(yt) >= 4 and len({v["ref"] for v in yt}) == 1, "all YouTube URL shapes encode to one ref"
+    bn = [v for v in vectors if v.get("provider") == "bn"]
     assert len(gd) >= 2 and len({v["ref"] for v in gd}) == 1, "both Drive URL shapes encode to one ref"
-    assert all(v["ref"].startswith("r2") for v in yt + gd)
+    assert len(bn) >= 3 and len({v["ref"] for v in bn}) == 1, "every Bunny URL shape encodes to one ref"
+    assert all(v["ref"].startswith("r2") for v in yt + gd + bn)
 
 
 # r2: provider-tagged refs (YouTube, Google Drive) -----------------------------
@@ -309,3 +313,82 @@ def test_cli_round_trips_a_youtube_url(capsys):
     # --player only rewrites Vimeo; any other provider passes through.
     main(["decode", "--player", ref])
     assert capsys.readouterr().out.strip() == f"https://www.youtube.com/watch?v={YT_ID}"
+
+
+# r2 "bn": a Bunny Stream video (amruta's download mirror) ---------------------
+
+# Synthetic ids only — never a real library or video id.
+BN_LIB = "123456"
+BN_GUID = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+BN_ID = f"{BN_LIB}/{BN_GUID}"
+BN_PLAY = f"https://player.mediadelivery.net/play/{BN_ID}"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        BN_PLAY,
+        f"https://player.mediadelivery.net/embed/{BN_ID}",
+        f"https://player.mediadelivery.net/embed/{BN_ID}?autoplay=false&preload=false&lang=en",
+        f"https://player.mediadelivery.net/play/{BN_ID}?autoplay=false&lang=en&t=113",
+        f"https://iframe.mediadelivery.net/embed/{BN_ID}",
+        f"https://player.mediadelivery.net/play/{BN_ID}/",
+        f"http://player.mediadelivery.net/play/{BN_ID}#t=1",
+        f"player.mediadelivery.net/play/{BN_ID}",
+        # Case is not part of a Bunny id: the guid is stored lower-case.
+        f"HTTPS://Player.MediaDelivery.net/PLAY/{BN_LIB}/{BN_GUID.upper()}",
+    ],
+)
+def test_bunny_url_shapes_encode_to_one_r2_ref(url):
+    ref = encode_video_ref(url)
+    assert ref == encode_video_ref(BN_PLAY)
+    assert ref.startswith("r2")
+    assert decode_video_source(ref) == VideoSource(provider="bn", id=BN_ID, watch_url=BN_PLAY)
+    assert decode_video_ref(ref) == BN_PLAY
+
+
+def test_bunny_stored_form_has_no_plaintext_id():
+    ref = encode_video_ref(BN_PLAY)
+    assert re.fullmatch(r"r2[A-Za-z0-9_-]+", ref)
+    assert BN_LIB not in ref and BN_GUID not in ref
+    assert "mediadelivery" not in ref.lower() and "bunny" not in ref.lower()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        f"bn:{BN_LIB}",  # no guid
+        f"bn:{BN_GUID}",  # no library
+        f"bn:abc/{BN_GUID}",  # library is not numeric
+        f"bn:{BN_LIB}/{BN_GUID[:-1]}",  # guid one hex digit short
+        f"bn:{BN_LIB}/{BN_GUID.upper()}",  # stored guids are lower-case
+        f"bn:{BN_LIB}/{BN_GUID};",  # shell metacharacter
+        f"bn:{BN_LIB}/{BN_GUID}/x",  # trailing path
+        f"bn:1234567890123/{BN_GUID}",  # library longer than 12 digits
+    ],
+)
+def test_decode_rejects_bad_bunny_payload(payload):
+    with pytest.raises(ValueError):
+        decode_video_source(_encode_payload("r2", payload))
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        f"https://player.mediadelivery.net/embed/{BN_LIB}",
+        f"https://player.mediadelivery.net/embed/{BN_GUID}",
+        f"https://player.mediadelivery.net/watch/{BN_ID}",
+        f"https://player.mediadelivery.net/embed/abc/{BN_GUID}",
+        f"https://player.mediadelivery.net.evil.com/embed/{BN_ID}",
+        f"https://evil.com/?u=https://player.mediadelivery.net/embed/{BN_ID}",
+        f"https://player.mediadelivery.net/embed/{BN_LIB}/{BN_GUID}0",
+    ],
+)
+def test_encode_rejects_unsupported_bunny_url(url):
+    with pytest.raises(ValueError, match="not a supported video url"):
+        encode_video_ref(url)
+
+
+def test_cli_decode_provider_prints_bn_for_bunny(capsys):
+    main(["decode", encode_video_ref(BN_PLAY), "--provider"])
+    assert capsys.readouterr().out.strip() == "bn"

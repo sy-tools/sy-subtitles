@@ -27,6 +27,10 @@ VIMEO_URL_RE = re.compile(r"^https://(?:www\.)?(?:vimeo\.com|player\.vimeo\.com/
 # that one is a band around the lengths seen in practice.
 YOUTUBE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 DRIVE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{25,64}$")
+# A Bunny Stream video is "<library>/<guid>": a numeric library id and a
+# lower-case UUID. The codec lower-cases the guid on encode, so a stored id
+# has exactly one spelling.
+BUNNY_ID_RE = re.compile(r"^[0-9]{1,12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 # A branch or tag name. Slashes are allowed because that is the shape edit-sync
 # produces ("sync/<user>/<talk>--<slug>-uk"); a leading dash is not, so the value
 # can never be read as an option by whatever consumes it. Everything git itself

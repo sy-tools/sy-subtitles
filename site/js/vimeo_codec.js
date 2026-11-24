@@ -1,5 +1,6 @@
 // Reversible obfuscation codec for video links stored in meta.yaml (Vimeo,
-// YouTube, Google Drive — the module keeps the name of its first provider).
+// YouTube, Google Drive, Bunny Stream — the module keeps the name of its first
+// provider).
 //
 // Twin of tools/vimeo_codec.py — the two MUST stay behaviorally identical
 // (produce identical output for the same input), enforced by the shared vectors
@@ -12,7 +13,7 @@
 //
 // Format — the version prefix selects the payload:
 //   r1<base64url( reverse( xor("<id>[/<hash>]", KEY) ) )>     Vimeo
-//   r2<base64url( reverse( xor("<provider>:<id>", KEY) ) )>   yt | gd
+//   r2<base64url( reverse( xor("<provider>:<id>", KEY) ) )>   yt | gd | bn
 //
 // Single source: loaded by the browser via <script src="js/vimeo_codec.js">
 // in site/index.html (before add_talk_data.js) AND required by the Node tests.
@@ -39,10 +40,16 @@
     ['yt', /^(?:https?:\/\/)?(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})\/?(?:[?#].*)?$/i],
     ['gd', /^(?:https?:\/\/)?drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{25,64})(?:[/?#].*)?$/i],
     ['gd', /^(?:https?:\/\/)?drive\.google\.com\/open\?(?:[^#]*?&)??id=([A-Za-z0-9_-]{25,64})(?:[&#].*)?$/i],
+    // amruta's page carries both: the player iframe (embed) and the "Watch on
+    // Bunny" link (play). iframe. is Bunny's older player host.
+    ['bn', /^(?:https?:\/\/)?(?:player|iframe)\.mediadelivery\.net\/(?:embed|play)\/([0-9]{1,12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?(?:[?#].*)?$/i],
   ];
+  // Providers whose id has no meaningful case: it is folded on encode so a
+  // stored id has one spelling. Safe to fold here, the shapes only see ASCII.
+  var CASE_FOLDED = { bn: true };
 
-  // provider -> id pattern (twins of YOUTUBE_ID_RE / DRIVE_ID_RE in
-  // tools/workflow_validation.py) and canonical watch URL.
+  // provider -> id pattern (twins of YOUTUBE_ID_RE / DRIVE_ID_RE /
+  // BUNNY_ID_RE in tools/workflow_validation.py) and canonical watch URL.
   var PROVIDERS = {
     yt: {
       idRe: /^[A-Za-z0-9_-]{11}$/,
@@ -51,6 +58,12 @@
     gd: {
       idRe: /^[A-Za-z0-9_-]{25,64}$/,
       watchUrl: function (id) { return 'https://drive.google.com/file/d/' + id + '/view'; },
+    },
+    // The "Watch on Bunny" link amruta publishes. A download source only: the
+    // player refuses any referrer but amruta's own, so it is never embedded.
+    bn: {
+      idRe: /^[0-9]{1,12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      watchUrl: function (id) { return 'https://player.mediadelivery.net/play/' + id; },
     },
   };
 
@@ -99,7 +112,8 @@
     return text;
   }
 
-  // Vimeo URL -> r1 ref; YouTube or Google Drive file URL -> r2 ref.
+  // Vimeo URL -> r1 ref; YouTube, Google Drive file or Bunny Stream player
+  // URL -> r2 ref.
   function encodeVideoRef(url) {
     var text = String(url == null ? '' : url).trim();
     var match = text.match(PATH_RE);
@@ -107,13 +121,18 @@
     if (PRINTABLE_ASCII_RE.test(text)) {
       for (var i = 0; i < URL_SHAPES.length; i++) {
         match = text.match(URL_SHAPES[i][1]);
-        if (match) return encodePayload(V2, URL_SHAPES[i][0] + ':' + match[1]);
+        if (match) {
+          var provider = URL_SHAPES[i][0];
+          var id = CASE_FOLDED[provider] ? match[1].toLowerCase() : match[1];
+          return encodePayload(V2, provider + ':' + id);
+        }
       }
     }
     throw new Error('not a supported video url: ' + url);
   }
 
-  // video_ref -> {provider, id, watchUrl}; provider is 'vimeo', 'yt' or 'gd'.
+  // video_ref -> {provider, id, watchUrl}; provider is 'vimeo', 'yt', 'gd' or
+  // 'bn'.
   // Throws on an unknown version or provider, or an id that does not fit it.
   function decodeVideoSource(ref) {
     ref = String(ref == null ? '' : ref).trim();

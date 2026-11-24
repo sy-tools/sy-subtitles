@@ -2,6 +2,7 @@ import pytest
 
 from tools.vimeo_codec import encode_video_ref
 from tools.workflow_validation import (
+    BUNNY_ID_RE,
     DRIVE_ID_RE,
     YOUTUBE_ID_RE,
     InvalidWorkflowInput,
@@ -130,6 +131,7 @@ def test_video_ref_accepts_encoded_vimeo_url(url: str) -> None:
 # Synthetic ids only — never a real video or file id.
 _YT_URL = "https://www.youtube.com/watch?v=AbCdEfGhIjK"
 _GD_URL = "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view"
+_BN_URL = "https://player.mediadelivery.net/play/123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
 
 
 def test_video_ref_rejects_youtube_ref_by_default() -> None:
@@ -167,6 +169,18 @@ def test_video_ref_accepts_drive_ref_when_allowed() -> None:
     assert validate_video_ref(ref, allowed=("gd",)) == ref
 
 
+def test_video_ref_rejects_bunny_ref_by_default() -> None:
+    with pytest.raises(InvalidWorkflowInput, match="provider"):
+        validate_video_ref(encode_video_ref(_BN_URL))
+    with pytest.raises(InvalidWorkflowInput, match="provider"):
+        validate_video_ref(encode_video_ref(_BN_URL), allowed=("vimeo", "yt"))
+
+
+def test_video_ref_accepts_bunny_ref_when_allowed() -> None:
+    ref = encode_video_ref(_BN_URL)
+    assert validate_video_ref(ref, allowed=("gd", "bn")) == ref
+
+
 def test_video_ref_rejects_provider_outside_allowed() -> None:
     with pytest.raises(InvalidWorkflowInput, match="provider"):
         validate_video_ref(encode_video_ref(_YT_URL), allowed=("gd",))
@@ -181,13 +195,14 @@ def test_video_ref_rejects_provider_outside_allowed() -> None:
         _YT_URL,
         "https://youtu.be/AbCdEfGhIjK",
         _GD_URL,
+        _BN_URL,
     ],
 )
-def test_plaintext_youtube_or_drive_url_is_not_a_valid_ref(value: str) -> None:
+def test_plaintext_youtube_drive_or_bunny_url_is_not_a_valid_ref(value: str) -> None:
     with pytest.raises(InvalidWorkflowInput):
         validate_video_ref(value)
     with pytest.raises(InvalidWorkflowInput):
-        validate_video_ref(value, allowed=("vimeo", "yt", "gd"))
+        validate_video_ref(value, allowed=("vimeo", "yt", "gd", "bn"))
 
 
 def test_video_ref_still_rechecks_vimeo_against_the_url_allowlist() -> None:
@@ -202,6 +217,10 @@ def test_provider_id_patterns() -> None:
     assert DRIVE_ID_RE.fullmatch("1AbCdEfGhIjKlMnOpQrStUvWxYz012345")
     assert not DRIVE_ID_RE.fullmatch("a" * 24)
     assert not DRIVE_ID_RE.fullmatch("a" * 65)
+    assert BUNNY_ID_RE.fullmatch("123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d")
+    assert not BUNNY_ID_RE.fullmatch("123456/0A1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D")
+    assert not BUNNY_ID_RE.fullmatch("123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d\n")
+    assert not BUNNY_ID_RE.fullmatch("0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d")
 
 
 def test_video_ref_rejects_unknown_version() -> None:
