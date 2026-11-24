@@ -159,6 +159,19 @@ function rowMediaUrls(currentUrl, scrapedUrl, mediaUrls) {
   return (mediaUrls || []).slice();
 }
 
+// Whether tools/video_roles.py will accept these declared roles (blank rows
+// pass null and declare nothing). One primary, or — for an event recorded as
+// several equal parts, where no recording is authoritative — none, with every
+// built part `independent`. A `derived` video copies the primary, so it never
+// stands without one.
+function syncRolesAcceptable(roles) {
+  var declared = (roles || []).filter(Boolean);
+  if (!declared.length) return true;
+  var count = function (role) { return declared.filter(function (r) { return r === role; }).length; };
+  if (count('primary') === 1) return true;
+  return count('primary') === 0 && count('derived') === 0 && count('independent') > 0;
+}
+
 // Render a scalar as a single-quoted YAML string, escaping embedded quotes by
 // doubling them (the YAML single-quote escape). Quoting makes the value safe
 // regardless of content — a colon, leading symbol, etc. can no longer be
@@ -279,6 +292,7 @@ if (typeof module !== 'undefined' && module.exports) {
     buildMetaYamlChecked: buildMetaYamlChecked,
     defaultSyncRoles: defaultSyncRoles,
     syncRolesForRows: syncRolesForRows,
+    syncRolesAcceptable: syncRolesAcceptable,
     SYNC_ROLES: SYNC_ROLES,
   };
 }

@@ -6,13 +6,22 @@ language: en
 videos:
 - slug: Christmas-Puja-Ganapatipule-NITL-RAW
   title: Christmas Puja Ganapatipule NITL-RAW
-  video_ref: r1AQ9FXBdXEUpLUEhfQRhQXlZeUEo
+  video_ref: r2EhdFExUsN1lWJzRSFQo
+  media_refs:
+  - r2FwQHSCAAP0tLNRI4CTUWNDYvQQ9MTzkVThUhFy4ZL1lQUgUU
+  - r2MRsCSjc1BBYZDAItGy0jMAk9TD1FEiMQchk1DE1YJl1QUgUU
 - slug: Christmas-Puja
   title: Christmas Puja
   video_ref: r1WxcLQFtAQBhYU0BPFVFaVVxZSw
 - slug: Christmas-Puja-Talk
   title: Christmas Puja Talk
-  video_ref: r1XBVQQ1tBRBQAAUBMHVdTUV1ZSw
+  video_ref: r2BgZvJQAAEEk1ITNSFQo
+  media_refs:
+  - r2BRBeYzMLAkpCU1s3Ig5LQgErPltCKBcWTgc1XAN7VAhQUgUU
+  - r2VA0HeVgQJjFhCxoUXDg3Khc2FyVEJkMJFSUJJQ1aDiVQUgUU
 - slug: Christmas-Puja-Talk-Ganapatipule-NITL-RAW
   title: Christmas Puja Talk Ganapatipule NITL-RAW
-  video_ref: r1UQ9MChZRRhAfBEhWSh5QXlZeUEo
+  video_ref: r2MCl7BRUbC1lYCRFSFQo
+  media_refs:
+  - r2AD0kXQQgPglUBCMJWws9RyAhDF8XVyAbbDEuVyZKWQVQUgUU
+  - r2LC8JSQ4zWx9PACYSAhAsIBcrHSsnUkQhbicpKkxBCSJQUgUU

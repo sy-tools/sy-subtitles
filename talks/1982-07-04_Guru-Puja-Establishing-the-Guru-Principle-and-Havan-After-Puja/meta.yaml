@@ -6,17 +6,29 @@ language: en
 videos:
 - slug: Guru-Puja
   title: Guru Puja
-  video_ref: r1AA5FW0QBTRBIUUhaQRxZW1hcVEE
+  video_ref: r2AglCJQsrK1s3PhlSFQo
+  media_refs:
+  - r2EUEmQUwRB0hODicZOyIcAzEAJAFBC0w6alJXWCZkNgBQUgUU
+  - r2CyIaSDUDNyFYNFtTDhkCBhUgAiEeESZCeFU9AD1eOCtQUgUU
   sync: primary
 - slug: Guru-Puja-Part-2-and-Havan-London-NITL-RAW
   title: Guru Puja Part 2 and Havan London NITL-RAW
-  video_ref: r1AQlAXURQQEMUUkhaTBVZWFVeUEo
+  video_ref: r2PCkVGDUHLh1RUzRSFQo
+  media_refs:
+  - r2FQwYGjEkBBJiVhALPlc8OBM7BQ5CMRoxawUvNVRUDlxQUgUU
+  - r2LDYJVxVQBS1pGzw2O1UgMBEIQCcbL0AiABkiJTQaKAlQUgUU
   sync: ignored
 - slug: Guru-Puja-Talk-Establishing-The-Guru-Principle
   title: 'Guru Puja Talk: Establishing The Guru Principle'
-  video_ref: r1VQoVUEQDQUVPU0haThRWW1hcVEE
+  video_ref: r2AgJVKisITgApIyBSFQo
+  media_refs:
+  - r2JywSSwI9WTRsJh0EGC1AHzI7RQoDMR44ZjYwXTdOIBpQUgUU
+  - r2DxNHHRMkIU4bABxZJAMiGxAUPA0QLBEHaFRWHhBPUF5QUgUU
   sync: derived
 - slug: Presents-After-Shri-Guru-Puja
   title: Presents After Shri Guru Puja
-  video_ref: r1BAoWXkNXFBVOBUhbSR5TX1ZcUkE
+  video_ref: r2NDR5UTRCN2YmJDBSFQo
+  media_refs:
+  - r2BUJLQA0mHkkfUV4xK1YYIQgBMy41NztEGwIfMAoAFilQUgUU
+  - r2OzdeelkMIwFXLj02NzcLNxEmHhwZUCQUXg8FXC18ChlQUgUU
   sync: ignored

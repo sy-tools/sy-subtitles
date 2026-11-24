@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Sahasrara-Puja-Cabella-Italy-DP-RAW
   title: Sahasrara Puja Cabella Italy DP-RAW
-  video_ref: r1VA9CXUJbExBMWUhXTRxVWFRRU0s
+  video_ref: r2QSV8Fw4VOktWEDVSFQo
+  media_refs:
+  - r2JEVGHDU-VyBLDz0ODFciKScoRhoXTx0cXhsqMB5DDBpQUgUU
+  - r2DTAdeAcUWjRnJB4JLRE0Oh0dDkQjISUUWAMLKip7LiFQUgUU
   sync: primary
 - slug: Sahasrara-Puja-Talk-Cabella-Italy-DP-RAW
   title: Sahasrara Puja Talk Cabella Italy DP-RAW
-  video_ref: r1UFoRWkZSFkBOU0hZQR1VWFRRU0s
+  video_ref: r2EjphMgRaMGZVWgJSFQo
+  media_refs:
+  - r2LTw4bhIrJzdvOCYLEAIxBFxeMy0NDy0aeTcsFRNGDQtQUgUU
+  - r2WiYfWAU2WjFvERMENzNHBzo5JhguMQU-QT4dFS4cCzJQUgUU
   sync: derived

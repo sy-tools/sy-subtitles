@@ -37,10 +37,18 @@ jobs:
   # The single source of truth for "does this change need testing at all".
   # It used to be the trigger's `paths:` filter; that could not coexist with a
   # required check, so the list moved here — one copy, read by every lane.
+  #
+  # A change is classified, not just noticed:
+  #   code — tools, tests, the SPA, dependencies, workflows. Every lane.
+  #   data — the talk tree. The unit lane only: it holds every reader of talk
+  #          data, and lint, the JS suite and the browser shards open none of it
+  #          (tests/test_ci_change_classes.py keeps that true).
+  # A change carrying both runs every lane.
   changes:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.detect.outputs.code }}
+      data: ${{ steps.detect.outputs.data }}
       whisper: ${{ steps.detect.outputs.whisper }}
       wordlist: ${{ steps.detect.outputs.wordlist }}
     steps:
@@ -74,12 +82,15 @@ jobs:
             'ruff.toml'
             # the ruff pin-lockstep guard must run when only the pre-commit rev moves
             '.pre-commit-config.yaml'
-            # Shipped-data guards (no plaintext vimeo links, meta/whisper schemas,
-            # the repo-wide text-hygiene scan) must run when only talk data
-            # changes. The whole tree, not a file list: the hygiene scan reads
-            # every talk file.
-            'talks/'
             '.github/workflows/'
+          )
+
+          # Shipped-data guards (no plaintext vimeo links, meta/whisper schemas,
+          # the repo-wide text-hygiene scan, the golden corpus) must run when
+          # only talk data changes. The whole tree, not a file list: the hygiene
+          # scan reads every talk file.
+          DATA_PATHS=(
+            'talks/'
           )
 
           # The whisper lane installs a model runtime; only these can break it.
@@ -108,6 +119,7 @@ jobs:
             # named: test it rather than guess it is uninteresting.
             {
               echo "code=true"
+              echo "data=true"
               echo "whisper=true"
               echo "wordlist=false"
             } >> "$GITHUB_OUTPUT"
@@ -118,11 +130,18 @@ jobs:
           CHANGED=$(git diff --name-only "$RANGE" -- "${PATHS[@]}")
           if [ -n "$CHANGED" ]; then
             echo "code=true" >> "$GITHUB_OUTPUT"
-            echo "watched paths changed:"
+            echo "code paths changed:"
             echo "$CHANGED"
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "no watched path changed in $RANGE"
+            echo "no code path changed in $RANGE"
+          fi
+
+          if [ -n "$(git diff --name-only "$RANGE" -- "${DATA_PATHS[@]}")" ]; then
+            echo "data=true" >> "$GITHUB_OUTPUT"
+            echo "talk data changed"
+          else
+            echo "data=false" >> "$GITHUB_OUTPUT"
           fi
 
           if [ -n "$(git diff --name-only "$RANGE" -- "${WHISPER_PATHS[@]}")" ]; then
@@ -167,9 +186,15 @@ jobs:
   # The Python suite runs as two parallel lanes: the browser e2e tests are
   # ~85% of its wall time, so splitting them out roughly halves CI latency
   # and spares the unit lane the chromium install entirely.
+  #
+  # The one lane a talk-data change needs. Not a subset of it: which tests read
+  # the talk tree is not something a marker can be trusted to keep saying, and
+  # the first one it missed would be a guard that silently stopped guarding.
+  # Nor would a subset finish sooner — the lane's longest test is the hygiene
+  # scan over the talk tree itself.
   test-unit:
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true' || needs.changes.outputs.data == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

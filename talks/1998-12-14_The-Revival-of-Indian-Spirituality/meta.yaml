@@ -6,7 +6,13 @@ language: en
 videos:
 - slug: The-Revival-of-Indian-Spirituality
   title: The Revival of Indian Spirituality
-  video_ref: r1BAgRXkxVE0IVU0hfShRQWldbUEI
+  video_ref: r2NDZVExMjLBw4LxBSFQo
+  media_refs:
+  - r2IBIlHDUqOh9IKUc7KyhCPzMiQTgYBx8nRjkhNk9rOFtQUgUU
+  - r2FzQkZzFSDSh5GyJZCys9J0gbLAo6KyEyXkwvCgseDEdQUgUU
 - slug: The-Revival-Of-Indian-Spirituality-Delhi-NITL-RAW
   title: The Revival Of Indian Spirituality Delhi NITL-RAW
-  video_ref: r1BghNWBVTFEZIBEhdShtXX1hbUEo
+  video_ref: r2PDhZOF88DHIRXVdSFQo
+  media_refs:
+  - r2NQ0VejJQGSxPCBkrAhA-AR9fJxoQUkEaehcCWCxnGDlQUgUU
+  - r2VBQfYQUUJz9XVxsiJRs4KyIbRggXNy8aRFZWIR9GJCFQUgUU

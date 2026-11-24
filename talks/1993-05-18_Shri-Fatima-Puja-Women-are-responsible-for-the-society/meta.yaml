@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Fatima-Puja
   title: Fatima Puja
-  video_ref: r1AFsWWhdQQEFJB0haSxlXWlNdWUE
+  video_ref: r2HgEeMhQhO30wPgVSFQo
+  media_refs:
+  - r2MSA0ZQYyBBBpBS0ZXVQQPgcNFQ0-Bhs7TDUjCEpcCx5QUgUU
+  - r2Vx8AZTMLLQxbJxkFCgY5KlIbDR87MVggbjkiXFRYJxJQUgUU
   sync: primary
 - slug: Fatima-Puja-Talk
   title: Fatima Puja Talk
-  video_ref: r1UVhGXURWFhJOAkhcSxRUWlZaWEE
+  video_ref: r2ND9aAzdYEl41NSJSFQo
+  media_refs:
+  - r2IQMwFSQQPhsaAB0qIlJLKVcmES0AEC8KHCYkCwwUMBJQUgUU
+  - r2FAIZSAYNXDRuJBAGOBEGXhcnWT0wBhsKSA0tOQtoAytQUgUU
   sync: derived

@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Guru-Puja
   title: Guru Puja
-  video_ref: r1BltEXEJVFBZIWUhYTR5TWFhRWUI
+  video_ref: r2NCBkLVYKAHwoEi5SFQo
+  media_refs:
+  - r2WxwVTicOHUpjIx4-BgkkJT8nDj0GIB8kFBteWTdlVjNQUgUU
+  - r2NxpKYA4QKwljETAEAihFHkgJPSEQECUlABc9Ww8ZIA1QUgUU
   sync: primary
 - slug: Guru-Puja-Talk-Gurus-Who-Belong-To-The-Collective
   title: 'Guru Puja Talk: Gurus Who Belong To The Collective'
-  video_ref: r1VwpHCEFWFxUbAkhbSx9QWFhRWUI
+  video_ref: r2GhleAA0NEmQPBCRSFQo
+  media_refs:
+  - r2LExeFBQAJj1DWAgCDQcmPVMqTTYjIxwieiQXAzZpN1NQUgUU
+  - r2US0_XAkFFh5uJjVZOBgHBCciIw8jNjEkbgo_LBJCJg9QUgUU
   sync: derived

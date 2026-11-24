@@ -115,8 +115,8 @@ have one**: run the Worker from the primary checkout rather than copying the
 secret across.
 
 See `TESTING.md` for the full guide: markers, golden corpus, property tests,
-snapshots, and the real-network gates (`SY_E2E_REAL_VIMEO`, on by default;
-`SY_E2E_REAL_YOUTUBE`, opt-in).
+snapshots, and the real-network gates (`SY_E2E_REAL_VIMEO` and
+`SY_E2E_REAL_YOUTUBE`, both on by default).
 
 ## Development (TDD required)
 
@@ -278,6 +278,13 @@ that live nowhere else.
 - `validate_subtitles` — structural checks. Timing source is whisper OR the EN
   SRT; **prefer the EN SRT** when the talk has one.
 - `validate_artifacts` — artifact contracts at pipeline phase boundaries.
+- `slice_coverage` — for a talk built as several slices of one transcript
+  (independent parts, no single recording holding it all), which blocks no
+  video claimed and which two did. Warn-only: the split is the builder's
+  best effort and a person checks it.
+- `slice_paragraphs` — which transcript paragraphs a slice speaks, recorded in
+  its build manifest at build time. Edit-sync reads it instead of matching
+  on-screen text, which short lines repeated across tapes defeat.
 
 **Glossary and corpus**
 - `glossary_check` — scan an EN transcript for glossary term candidates.

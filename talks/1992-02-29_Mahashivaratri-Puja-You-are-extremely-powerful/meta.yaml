@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Maha-Shiva-Puja
   title: Maha Shiva Puja
-  video_ref: r1VVUWXkBRTUpMVEhbQR5UU1BfVkQ
+  video_ref: r2GjRaUhMMGEwnP0xSFQo
+  media_refs:
+  - r2NCc6SBs0OiEdWC0xMi4fMRAtADBZBAAQeCsGWEtZAydQUgUU
+  - r2Tzk2YTReLA5_OQMAHSRLCTwzTSIMFDE3RCcwFS1sKw5QUgUU
   sync: primary
 - slug: Maha-Shiva-Puja-Talk-Newcastle-Australia-DP-RAW
   title: Maha Shiva Puja Talk Newcastle Australia DP-RAW
-  video_ref: r1UV9DW0ZTTEMdUEhWSRtVU1BfVkQ
+  video_ref: r2QUR5WQI7S3xYDCpSFQo
+  media_refs:
+  - r2PUZeaEwBBh5uVVsMEAs9MRMpMxNEWy09QxhXI0l8BiJQUgUU
+  - r2MDEiYzhQAEAeOB5MHwA-SjI7NgsXB0EQTxczNjd7WStQUgUU
   sync: derived

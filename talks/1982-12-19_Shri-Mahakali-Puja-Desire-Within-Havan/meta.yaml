@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Mahakali-Puja-Talk-Desire-Within
   title: 'Mahakali Puja Talk: Desire Within'
-  video_ref: r1Bg1GXhZSFhEbBUhaTx5VWlRbUkA
+  video_ref: r2HhxUMy0_QR8oHFlSFQo
+  media_refs:
+  - r2UhwjHz4OIyN_NlIODAQkHjwnRh0jEEMWfFEGFyheDQ9QUgUU
+  - r2DC8_bBkwKQtvAwVTAzAGCS0uQyg6OhAKai8VGA1ZEChQUgUU
   sync: derived
 - slug: Mahakali-Puja
   title: Mahakali Puja
-  video_ref: r1A19HDU1VTBYbA0hcQB1QW1RbUkA
+  video_ref: r2HjdfLQ4BTVdRNQhSFQo
+  media_refs:
+  - r2AT01RVETJkpjJCcsLDAfSgcgOFE5ChEhSTQ1JDF7ACBQUgUU
+  - r2VSU5fxtTHjdnKV4ZJw8iQVcnAy8lJwIDYScKWg1iBj5QUgUU
   sync: primary

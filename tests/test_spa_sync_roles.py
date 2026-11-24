@@ -43,10 +43,14 @@ def test_the_default_is_applied_from_the_shared_helper():
     assert "applyDefaultSyncRoles" in index
 
 
-def test_the_form_refuses_to_submit_without_exactly_one_primary():
+def test_the_form_refuses_roles_video_roles_would_reject():
     """video_roles rejects such a talk outright, and the editor would only
-    learn about it from a red check long after the PR was opened."""
+    learn about it from a red check long after the PR was opened. The rule
+    (one primary, or none when every part is independent) lives in the
+    tested module, not in an inline copy."""
     index = (SITE / "index.html").read_text(encoding="utf-8")
+    assert "syncRolesAcceptable(" in index
+    assert "sync: primary'; }).length !== 1" not in index, "the old one-primary-only check is back"
     assert "add.sync_needs_one_primary" in index
     for lang_block in ("'add.sync_ignored': 'Ignored',", "'add.sync_ignored': '"):
         assert lang_block in index

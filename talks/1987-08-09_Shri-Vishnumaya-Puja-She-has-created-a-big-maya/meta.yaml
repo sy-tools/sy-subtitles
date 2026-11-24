@@ -10,5 +10,8 @@ videos:
   sync: primary
 - slug: Vishnumaya-Puja-Talk
   title: Vishnumaya Puja Talk
-  video_ref: r1WkNbRAFMFhtUUkBBHVRaUF1ZSw
+  video_ref: r2Gj9yUSkhE1gIWwNSFQo
+  media_refs:
+  - r2G0U3YDFKIT5JI15YIg0rCiQlOShBDFgGGAUzWChhMQ9QUgUU
+  - r2CSFAXjMCAUB_VFg3WyQcJzAFDQQ8EhQBFQUdPTxqCRJQUgUU
   sync: derived

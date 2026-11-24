@@ -6,7 +6,13 @@ language: en
 videos:
 - slug: Advice-to-Yogis
   title: Advice to Yogis
-  video_ref: r1B19MDEADFktOWEhaSx1UU1BfVkQ
+  video_ref: r2MEEVGD5aCVoyPSRSFQo
+  media_refs:
+  - r2NgNDYgcKWC9XBi5MAlhLEQ0tGg0VWicWY0xTNTQeWCtQUgUU
+  - r2UzwKQSksDD1IGxggXTAiHRUzPlhFAQU1WgIWXFRiLjpQUgUU
 - slug: Evening-After-Maha-Shiva-Puja
   title: Evening After Maha Shiva Puja
-  video_ref: r1BA8XUEJQFBAdWUhbTRlVU1BfVkQ
+  video_ref: r2FiZGJRcgF0guBzRSFQo
+  media_refs:
+  - r2TzpCHQRVNVRoIg0qGCUEPhNBGjZCKUQ9fD4uXwppLSdQUgUU
+  - r2NiU2AAw1Bh5dWFoSEAYcBwcpLToAVx83HFUDKDp9ESdQUgUU

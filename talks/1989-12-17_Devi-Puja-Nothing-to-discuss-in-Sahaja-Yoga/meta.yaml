@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Puja-Alibag
   title: Puja Alibag
-  video_ref: r1UAhNXUUEEUEUBEhaSh5YWlRbUkA
+  video_ref: r2ODt8O1IJDGUCOSJSFQo
+  media_refs:
+  - r2TwMnSDYECCtbMCUmDwk0IDNBLBEfFz8ebwU0Vht8DhlQUgUU
+  - r2KjcVQgQiPB5ZMS8sWSYJHgQUDQIANRpKdzlTPktHKAdQUgUU
   sync: primary
 - slug: Puja-Talk
   title: Puja Talk
-  video_ref: r1BloXUEBaEUMVB0hfQBxSWlRbUkA
+  video_ref: r2PBVuKVMdO3skOilSFQo
+  media_refs:
+  - r2NxRHRiQIKT9vIh43WgYnOw8GNVweBBYGfRBKMBdaBAhQUgUU
+  - r2BCMceAc2BA1nN1kJDVUZPyMDPj8uExMmXTs0CT0APj5QUgUU
   sync: derived

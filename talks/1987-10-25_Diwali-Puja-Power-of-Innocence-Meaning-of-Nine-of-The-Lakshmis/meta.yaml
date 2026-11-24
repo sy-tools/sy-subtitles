@@ -11,11 +11,17 @@ subtitle_omit:
 videos:
 - slug: Diwali-Puja-Talk
   title: Diwali Puja Talk
-  video_ref: r1XFsSCxIBQEYaB0hZQRpXWVJaV0I
+  video_ref: r2AhBnUB8bNnRTKz5SFQo
+  media_refs:
+  - r2JSZLWRg1PAwYWCcUCyw2OTIqJTY7IRwQZiwRIhhXExxQUgUU
+  - r2VUM-WlUvDEtjCAQ0OCgBQyYiAC4dDCUFZ1NRCB15KVtQUgUU
   sync: derived
 - slug: Diwali-Puja
   title: Diwali Puja
-  video_ref: r1AF1GXUUGQBVPWUhaTBlWWlhZV0I
+  video_ref: r2JEZ6ORIbTm8lHSBSFQo
+  media_refs:
+  - r2JCoZWAgFGiNhAAAROxtAChUCIhMaGj0jSg84FgNoAglQUgUU
+  - r2IT8JYwACAkBaEgYiBzsZLDQoLAQBNTs3YwYxWAkAKjtQUgUU
   sync: primary
 amruta_delivery:
 - date: '2026-11-20'

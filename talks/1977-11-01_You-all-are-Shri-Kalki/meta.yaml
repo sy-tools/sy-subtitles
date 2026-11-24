@@ -7,7 +7,7 @@ videos:
 - slug: Workshop-Part-1
   title: Workshop Part 1
   video_ref: r1VVVDX0EBQEJJV0hYQB1RXFBfU0o
-  sync: primary
+  sync: independent
 - slug: Workshop-Part-2
   title: Workshop Part 2
   video_ref: r1V1xNWhIAQkMaUkhbThRYX1BfU0o

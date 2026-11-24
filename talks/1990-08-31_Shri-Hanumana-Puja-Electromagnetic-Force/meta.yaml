@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Hanumana-Puja-Schwetzingen-Frankfurt-Germany-DP
   title: Hanumana Puja Schwetzingen Frankfurt Germany DP
-  video_ref: r1XFQVW0JTQUYaBEheTx1TWFhRUUI
+  video_ref: r2HiNLTCo3FkI0Bi9SFQo
+  media_refs:
+  - r2JgcrSwJfOSxIMBsZCQ81Jy8GQlwhDhQ1dxgfQk1EFh1QUgUU
+  - r2CEYhShkUXiB0GQkWAiU9GjMrF19BICQkYDIiNQpGLhBQUgUU
   sync: primary
 - slug: Hanumana-Puja-Talk
   title: Hanumana Puja Talk
-  video_ref: r1WhEITFEQEUlZU0BIGlZaUF1ZSw
+  video_ref: r2MBtsBAQMNmQXKBNSFQo
+  media_refs:
+  - r2Dj09HSkRCz5bOQ4JIyM8GQ8GKww6U0QyTFRVVgkVMQdQUgUU
+  - r2FRssFScGGRhaDgUWHAIBJ1YkWR86JUdHSA8BXz9ONB5QUgUU
   sync: derived

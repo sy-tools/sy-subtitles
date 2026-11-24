@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Birthday-Puja
   title: Birthday Puja
-  video_ref: r1VwkVWEFQRkBMBUhaSB9XWlNdWUE
+  video_ref: r2AhBmVwM1KXw2RzVSFQo
+  media_refs:
+  - r2E0xGeBI_LUBnMVICIVkxETEHESwWGlgWHwpVNhV0NF9QUgUU
+  - r2FkMJHhlXXRcbCw4YEQpKOScgFi09FTAXGRcrWjVHLBxQUgUU
   sync: primary
 - slug: Birthday-Puja-Talk
   title: Birthday Puja Talk
-  video_ref: r1XVoQCxUBQEFMUkhfQB1YWlNdWUE
+  video_ref: r2QR58KzAmE3swKS9SFQo
+  media_refs:
+  - r2J0QDQQ9eODh7VDUMBQM1KlAAESsxIzNHHVhTKQlhKRpQUgUU
+  - r2Lz84ajIoIRFaES82Mlk_NRQvQERGExcWXxYzDA5rWR9QUgUU
   sync: derived

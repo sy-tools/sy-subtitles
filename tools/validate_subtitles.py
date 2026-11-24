@@ -355,8 +355,19 @@ def manifest_validate_flags(srt_path) -> dict:
         # may spike in a few places where primary's silences collapse.
         flags.update(skip_text_check=True, skip_time_check=True, skip_cps_check=True)
         return flags
-    if role == "primary" and mode == "en-srt":
-        # En-srt primary: transcript-only content is legitimately dropped
+    if manifest.get("slice"):
+        # One of several videos built from the same transcript: the SRT holds
+        # only what its own recording speaks, so text preservation against the
+        # whole transcript cannot hold. The pipeline checks coverage across
+        # the slices instead (tools.slice_coverage).
+        flags["skip_text_check"] = True
+        en_srt = timing_en_srt(srt_path.parent.parent) if mode == "en-srt" else None
+        if en_srt is not None:
+            flags["en_srt_path"] = str(en_srt)
+            flags["compare_block_count"] = True
+        return flags
+    if role in ("primary", "independent") and mode == "en-srt":
+        # En-srt build: transcript-only content is legitimately dropped
         # by the builder agent (no EN counterpart), so text preservation is replaced by
         # a block-count sanity against the EN SRT.
         flags["skip_text_check"] = True

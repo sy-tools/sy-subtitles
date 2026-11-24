@@ -6,11 +6,17 @@ language: en
 videos:
 - slug: Birthday-Puja-and-Havan
   title: Birthday Puja and Havan
-  video_ref: r1UVkWW0UGExAeVkheQBRWW1lYUUE
+  video_ref: r2AkVAVCA4TVkLIFlSFQo
+  media_refs:
+  - r2TzwcWlAIPy1GAxtQOA4sJFUiAA02DDYJVxAUNg0eVT9QUgUU
+  - r2LBALfisfACldDjo4MiIVKyIUPDYxKEAaQCsjJDh5Ij5QUgUU
   sync: primary
 - slug: Birthday-Puja-English-Talk
   title: Birthday Puja English Talk
-  video_ref: r1XVtAUUxVQ0BOB0hcSBpUW1lYUUE
+  video_ref: r2ODpkCyhYF14DJVNSFQo
+  media_refs:
+  - r2NAY0HAAQXQBbA19YHQVDF1ciLV8-DCUWey4iAw13FhBQUgUU
+  - r2KwY3XCRUGzxlORkkPCxAI1xVNhoeAQU_WCksBTZeAxpQUgUU
   sync: derived
 other_languages:
 - mr

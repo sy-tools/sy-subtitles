@@ -1,0 +1,77 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1977-11-01_You-all-are-Shri-Kalki/Workshop-Part-1/final/uk.srt
+  Transcript: talks/1977-11-01_You-all-are-Shri-Kalki/transcript_uk.txt
+  Whisper: talks/1977-11-01_You-all-are-Shri-Kalki/Workshop-Part-1/source/whisper.json
+  SRT blocks: 904
+  Whisper segments: 973
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:01,690 — 00:55:50,280
+  SRT range:       00:00:00,200 — 00:55:52,280
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 904
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 904
+  CPS: avg=14.1, median=15.0, max=20.0
+  CPS > target: 313 (34.6%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=43.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 4
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #87: CPS=20.0 (44ch/2.2s) "Шрі Матаджі: Ні, ти почуваєшся розслабленим,"
+    #98: CPS=20.0 (46ch/2.3s) "І ця мантра така, що він помре з цією мантрою."
+    #123: CPS=20.0 (26ch/1.3s) "Сахаджа йоґиня: Зрозуміло."
+    #125: CPS=20.0 (62ch/3.1s) "вони можуть бути дуже шкідливими, вони можуть бути жорстоким..."
+    #130: CPS=20.0 (28ch/1.4s) "І дають їм імена, розумієте."
+    #182: CPS=20.0 (54ch/2.7s) "що Я не змогла поговорити про цю медичну термінологію."
+    #207: CPS=20.0 (73ch/3.6s) "І починаєте робити багато роботи, і якийсь час почуваєтеся р..."
+    #208: CPS=20.0 (61ch/3.0s) "бо хтось інший узяв на себе вашу відповідальність, розумієте..."
+    #213: CPS=20.0 (66ch/3.3s) "Ви працюєте непропорційно, або все, що ви робите, – непропор..."
+    #231: CPS=20.0 (48ch/2.4s) "віддати все Богові, і тоді воно стане ось таким."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 14.1 (target ≤15.0)
+  CPS > 15.0: 313 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 4 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

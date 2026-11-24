@@ -10,15 +10,24 @@ subtitle_omit:
 videos:
 - slug: Adi-Shakti-Puja-Impressions
   title: Adi Shakti Puja Impressions
-  video_ref: r1V1xFXUxWFEsVUUhXThxSWFVbVkA
+  video_ref: r2RUBDLyQZOF4QIFFSFQo
+  media_refs:
+  - r2Fj4HWlguPTRsCAhQXS0GRAImETYOOycgGRNWCS5HDxBQUgUU
+  - r2TwY2Vz43BBMeNlwGIhkdHwFeBA8eJDsUfCgBXQpbDjxQUgUU
   sync: ignored
 - slug: Adi-Shakti-Puja-Talk-Respect-the-Mother-Earth
   title: 'Adi Shakti Puja Talk: Respect the Mother Earth'
-  video_ref: r1UlgRXxcBFhFJBUheSxlSWFVbVkA
+  video_ref: r2TTd_Ml4gFx0tHjZSFQo
+  media_refs:
+  - r2OzxKbwMJJj1yDCY7HVgQEBcDICxCCE06dFQkGDx9CAFQUgUU
+  - r2FSQJWw4IAkl1FiUVHVQAHjYaFyQ-Lz0aHQwTCBwdODBQUgUU
   sync: derived
 - slug: Adi-Shakti-Puja
   title: Adi Shakti Puja
-  video_ref: r1VQ0RUBVTEEZIU0hcSxRVWFVbVkA
+  video_ref: r2LAcVKh8aH1cAHBtSFQo
+  media_refs:
+  - r2LCpHYlYGLiFLADMmDDkaXiRcMBsXIDEefzRSCypOIA5QUgUU
+  - r2IT5EZw1KKg1LJRgtAi8CMgsUBCNZMh8ZZhM4Vg0eVR1QUgUU
   sync: primary
 amruta_delivery:
 - date: '2026-11-16'

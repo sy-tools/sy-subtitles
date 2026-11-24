@@ -5,6 +5,7 @@ const {
   buildMetaYaml,
   defaultSyncRoles,
   syncRolesForRows,
+  syncRolesAcceptable,
   addTalkPrBody,
   videoFromPayload,
   rowMediaUrls,
@@ -558,5 +559,27 @@ describe('buildMetaYamlChecked — a failed build yields no YAML', () => {
     const fields = { ...base, videos: [{ slug: 'A', title: 'A', url: 'nope' }] };
     assert.throws(() => buildMetaYaml(fields));
     assert.doesNotThrow(() => buildMetaYamlChecked(fields));
+  });
+});
+
+describe('syncRolesAcceptable — what tools/video_roles.py accepts', () => {
+  it('accepts exactly one primary', () => {
+    assert.strictEqual(syncRolesAcceptable(['primary', 'derived', 'independent', 'ignored']), true);
+  });
+  it('accepts a talk of equal parts with no primary', () => {
+    assert.strictEqual(syncRolesAcceptable(['independent', 'independent', 'independent', 'independent']), true);
+    assert.strictEqual(syncRolesAcceptable(['independent', 'ignored']), true);
+  });
+  it('refuses two primaries', () => {
+    assert.strictEqual(syncRolesAcceptable(['primary', 'primary']), false);
+  });
+  it('refuses a derived video with no primary to mirror', () => {
+    assert.strictEqual(syncRolesAcceptable(['independent', 'derived']), false);
+  });
+  it('refuses a talk with nothing to build', () => {
+    assert.strictEqual(syncRolesAcceptable(['ignored', 'ignored']), false);
+  });
+  it('accepts a talk that declares nothing (a lone video)', () => {
+    assert.strictEqual(syncRolesAcceptable([]), true);
   });
 });

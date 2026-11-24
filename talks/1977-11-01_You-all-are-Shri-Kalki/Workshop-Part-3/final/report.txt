@@ -1,0 +1,77 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1977-11-01_You-all-are-Shri-Kalki/Workshop-Part-3/final/uk.srt
+  Transcript: talks/1977-11-01_You-all-are-Shri-Kalki/transcript_uk.txt
+  Whisper: talks/1977-11-01_You-all-are-Shri-Kalki/Workshop-Part-3/source/whisper.json
+  SRT blocks: 745
+  Whisper segments: 879
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:00,340 — 00:45:43,400
+  SRT range:       00:00:00,340 — 00:45:45,400
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 745
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 745
+  CPS: avg=12.7, median=14.2, max=20.0
+  CPS > target: 124 (16.6%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=41.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 1
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #273: CPS=20.0 (70ch/3.5s) "Тож [НЕРОЗБІРЛИВО], якщо вас отак рятує спокуса, то яка в ць..."
+    #380: CPS=20.0 (38ch/1.9s) "Шрі Матаджі: Так, так, здоровий глузд."
+    #381: CPS=20.0 (30ch/1.5s) "Абсолютну правду вона сказала."
+    #508: CPS=20.0 (84ch/4.2s) "Тож вона не могла витримати, що жінка сидить і її нудить, то..."
+    #509: CPS=20.0 (75ch/3.8s) "Вам краще йти». Тож ми повернулися, і Мій чоловік дуже на Ме..."
+    #527: CPS=20.0 (31ch/1.6s) "Вона сказала: «Він мій батько»."
+    #549: CPS=20.0 (62ch/3.1s) "Після трьох-чотирьох разів, як Мене знудить, він теж виходит..."
+    #600: CPS=20.0 (24ch/1.2s) "Шрі Матаджі: Перепрошую?"
+    #661: CPS=20.0 (28ch/1.4s) "Досі Я такого не зустрічала."
+    #716: CPS=20.0 (34ch/1.7s) "Вони сказали вам неправильні речі."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.7 (target ≤15.0)
+  CPS > 15.0: 124 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 1 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

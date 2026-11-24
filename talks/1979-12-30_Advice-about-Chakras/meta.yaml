@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: The-Meaning-of-love
   title: The Meaning of love
-  video_ref: r1RgBdRAwRVUZBHE5RWU8bU11SXVFC
+  video_ref: r2EitMMQYlHX8sOj5SFQo
+  media_refs:
+  - r2KQUDfxM1BhpXCwwXDQslIx0oIyE7MQUbeCYzWjRyUgdQUgUU
+  - r2Uzoibw4DPk5cEB42IiQFMQsoTBxNTy03SAcTXT9-OTVQUgUU

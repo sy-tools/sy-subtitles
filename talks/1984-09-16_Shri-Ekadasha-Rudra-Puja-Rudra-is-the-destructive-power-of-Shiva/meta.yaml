@@ -10,7 +10,7 @@ videos:
   media_refs:
   - r2AT0-fxEpCyFrGC4ZACsCOCACIwtBPUIUX1RSGDN8I1lQUgUU
   - r2URESWhQMAElZNQ0vWgM9PQgpHjoMEjs2VzVKOwAbCVJQUgUU
-  sync: independent
+  sync: ignored
 - slug: Ekadasha-Rudra-Puja-Talk
   title: Ekadasha Rudra Puja Talk
   video_ref: r2NBFHB1YtAHkOUjFSFQo
