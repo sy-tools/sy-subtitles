@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1988-04-03_Easter-Puja-You-have-to-be-strong-like-Christ/Easter-Puja-2/final/uk.srt
+  Transcript: talks/1988-04-03_Easter-Puja-You-have-to-be-strong-like-Christ/transcript_uk.txt
+  EN SRT: talks/1988-04-03_Easter-Puja-You-have-to-be-strong-like-Christ/Easter-Puja-2/source/en.srt
+  SRT blocks: 509
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 509
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 509
+  CPS: avg=12.1, median=12.6, max=20.0
+  CPS > target: 57 (11.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.3, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #284: CPS=20.0 (58ch/2.9s) "Той сказав: «Ні, тобі не можна йти купатися в річці Ґанґа,"
+    #309: CPS=18.4 (49ch/2.7s) "Потім їм знадобився цілий місяць, щоб очиститися!"
+    #287: CPS=18.0 (41ch/2.3s) "Він сказав: «Цього тобі робити не можна!»"
+    #285: CPS=17.0 (35ch/2.1s) "бо християнство відпаде, розумієш!»"
+    #308: CPS=15.9 (56ch/3.5s) "Розумієте, брахман поставив тіку (бінді), і все, кінець!"
+    #237: CPS=15.7 (77ch/4.9s) "Вони сказали: «Це правда, але те, що кажуть ці люди, – хіба ..."
+    #250: CPS=15.1 (36ch/2.4s) "Тож ми не можемо мати таку релігію!»"
+    #305: CPS=15.0 (69ch/4.6s) "Куди ви ходили?» – «О, ми ходили до цього храму». Я сказала:..."
+    #265: CPS=15.0 (41ch/2.7s) "Тож такою є ситуація з релігією сьогодні."
+    #139: CPS=15.0 (78ch/5.2s) "Будь-який борець може це зробити, будь-хто може це зробити. ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 12.1 (target ≤15.0)
+  CPS > 15.0: 57 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
