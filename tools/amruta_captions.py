@@ -31,6 +31,7 @@ from pathlib import Path
 
 import yaml
 
+from tools.text_normalize import fix_text
 from tools.vimeo_codec import decode_video_source
 from tools.workflow_validation import (
     YOUTUBE_ID_RE,
@@ -106,7 +107,8 @@ def fetch_en_srt(
     *,
     fetch: Callable[[str], bytes | None] | None = None,
 ) -> bool:
-    """Write the English captions of ``youtube_id`` to ``out_path`` as SRT.
+    """Write the English captions of ``youtube_id`` to ``out_path`` as SRT,
+    cleaned by the same ``fix_text`` the text-hygiene guard checks against.
 
     Returns ``False``, writing nothing, when amruta has no zip for the video
     or the zip has no (non-empty) English track. Raises on a network failure
@@ -127,7 +129,7 @@ def fetch_en_srt(
         if info.file_size > _MAX_VTT_BYTES:
             raise ValueError("EN caption track is implausibly large")
         vtt = archive.read(info).decode("utf-8")
-    srt = vtt_to_srt(vtt)
+    srt = fix_text(vtt_to_srt(vtt), uk=False)
     if not srt:
         return False
     out_path = Path(out_path)
