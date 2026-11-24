@@ -157,7 +157,11 @@ A talk's video lives on one of two providers, and nothing past the player
 widget may depend on which: same timings, same subtitles, same fullscreen
 look, same tools. Until 2026-11 every talk was on Vimeo; amruta.org then moved
 its talk pages to YouTube, and new talks arrive with YouTube videos. Existing
-talks were not migrated — their Vimeo links keep working and stay as they are.
+talks are moved to YouTube video by video, and only a video whose YouTube copy
+is the same cut as the Vimeo file its subtitles were timed to — the same audio
+at the same moments, start to end — because a different cut would put every
+subtitle at the wrong moment while looking fine. A video that is not the same
+cut stays on Vimeo, whose links keep working.
 
 **What `meta.yaml` stores, per video.**
 
