@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1991-12-09_Shri-Shakti-Mahakali-Puja-I-believe-in-Shri-Mataji/Mahakali-Puja/final/uk.srt
+  Transcript: talks/1991-12-09_Shri-Shakti-Mahakali-Puja-I-believe-in-Shri-Mataji/transcript_uk.txt
+  EN SRT: talks/1991-12-09_Shri-Shakti-Mahakali-Puja-I-believe-in-Shri-Mataji/Mahakali-Puja/source/en.srt
+  SRT blocks: 310
+  EN SRT blocks: 330
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:01:49,792 — 00:29:40,459
+  SRT range:       00:01:49,792 — 00:29:42,459
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 310
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 310
+  CPS: avg=10.9, median=10.7, max=15.0
+  CPS > target: 3 (1.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #40: CPS=15.0 (34ch/2.3s) "який непристойно поводиться з цими"
+    #212: CPS=15.0 (49ch/3.3s) "Як-от, якщо ви підійдете близько до великої гори,"
+    #215: CPS=15.0 (77ch/5.1s) "щоб ви не були близькими родичами і щоб у вас не було з ними..."
+    #232: CPS=15.0 (75ch/5.0s) "Тож до нас приходять усілякі люди – якщо ви йдете й зустріча..."
+    #206: CPS=15.0 (66ch/4.4s) "ми так тяжко працювали в Махараштрі, а, як Я бачу, це марне ..."
+    #131: CPS=15.0 (79ch/5.3s) "Тож тепер ми маємо зрозуміти, що ви вірите в Сахаджа Йоґу, з..."
+    #63: CPS=15.0 (58ch/3.9s) "Тож тепер у Кералі це стало якимось повальним захопленням,"
+    #41: CPS=15.0 (55ch/3.7s) "гомосексуалістами й таке інше, і називає їх «Харе Рама,"
+    #152: CPS=15.0 (52ch/3.5s) "і ми просто насолоджуємося тим, як ця Божественність"
+    #171: CPS=15.0 (52ch/3.5s) "Тож коли ви стаєте плодом, ви маєте дуже пильнувати,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 310
+  EN SRT blocks: 330
+  Ratio UK/EN: 0.94 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.9 (target ≤15.0)
+  CPS > 15.0: 3 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
