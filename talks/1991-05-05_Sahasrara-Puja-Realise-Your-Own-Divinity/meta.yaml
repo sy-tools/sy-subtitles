@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
-  video_ref: r1Vg9EDUJQQhJOWEhfTx5YXFJeU0I
+  video_ref: r2LDd5VwglFhg0MgZSFQo
+  media_refs:
+  - r2EhRDHywTOE57NDApXw4ySgRZPggyEgUiQA4eNRgYVDNQUgUU
+  - r2BhMebiI_OB9sEicAMhcEQBYLLBshLRRARBEwNxIfWF1QUgUU
   sync: primary
 - slug: Sahasrara-Puja-Talk
   title: Sahasrara Puja Talk
-  video_ref: r1AFtHChcBEEUVWUhWSBhRU1dRVEI
+  video_ref: r2OAluIARdOlcHGQhSFQo
+  media_refs:
+  - r2UkYQXlBSC0B7OwgTKyZeQypdEBg2IAAYADtSJjYVPiZQUgUU
+  - r2LCMnZwIXWix9EwYOLlRLORFUARozT1gaWBRXIgsZAidQUgUU
   sync: derived
