@@ -13,5 +13,8 @@ videos:
   sync: primary
 - slug: Devi-Puja-Talk-Mother-you-be-in-our-brain
   title: 'Devi Puja Talk: Mother you be in our brain'
-  video_ref: r1XkdbEFVGSkwCUUBOGFBaUV1ZSw
+  video_ref: r2GgJXGB43HB4QDC9SFQo
   sync: derived
+  media_refs:
+  - r2DCYgaRsLFSx5FiZVECk8CTwcABwsGxgDSjcFOABfKglQUgUU
+  - r2D0ISSC0WHjBYAFkoMlEmH1EHGhwAMQ8kfjFXGwFcEzlQUgUU
