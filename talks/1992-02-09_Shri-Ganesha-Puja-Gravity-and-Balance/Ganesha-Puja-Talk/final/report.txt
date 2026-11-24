@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-02-09_Shri-Ganesha-Puja-Gravity-and-Balance/Ganesha-Puja-Talk/final/uk.srt
+  Transcript: talks/1992-02-09_Shri-Ganesha-Puja-Gravity-and-Balance/transcript_uk.txt
+  EN SRT: talks/1992-02-09_Shri-Ganesha-Puja-Gravity-and-Balance/Ganesha-Puja-Talk/source/en.srt
+  SRT blocks: 493
+  EN SRT blocks: 501
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:01,593 — 00:38:18,138
+  SRT range:       00:00:01,320 — 00:38:20,138
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 493
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 493
+  CPS: avg=12.3, median=13.1, max=19.4
+  CPS > target: 88 (17.8%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.7, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #359: CPS=19.4 (60ch/3.1s) "як воно там росте, але ви не можете бачити [звичайним оком]."
+    #360: CPS=19.0 (37ch/1.9s) "Ви не можете бачити, як росте дерево."
+    #358: CPS=15.6 (72ch/4.6s) "Якщо поставити камеру особливого типу, яка може записувати, ..."
+    #215: CPS=15.2 (40ch/2.6s) "Будь-хто, хто поважний, – це не означає,"
+    #403: CPS=15.1 (55ch/3.6s) "Єдине – якщо ви дасте їм бандхан, ви можете це зробити."
+    #152: CPS=15.1 (41ch/2.7s) "повинні розвинути здатність споживати те,"
+    #58: CPS=15.1 (79ch/5.2s) "Але коли вона починає рухатися у зворотний бік, вона здійсню..."
+    #399: CPS=15.1 (27ch/1.8s) "Але вам не треба казати їм."
+    #33: CPS=15.0 (48ch/3.2s) "і Я зрозуміла, чому треба було поставити свічки."
+    #229: CPS=15.0 (56ch/3.7s) "але він не може бігти за тією людиною, яка в дисбалансі."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 493
+  EN SRT blocks: 501
+  Ratio UK/EN: 0.98 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.3 (target ≤15.0)
+  CPS > 15.0: 88 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
