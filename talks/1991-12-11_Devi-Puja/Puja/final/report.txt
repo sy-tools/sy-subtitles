@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1991-12-11_Devi-Puja/Puja/final/uk.srt
+  Transcript: talks/1991-12-11_Devi-Puja/transcript_uk.txt
+  EN SRT: talks/1991-12-11_Devi-Puja/Puja/source/en.srt
+  SRT blocks: 302
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 302
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 302
+  CPS: avg=9.3, median=9.1, max=15.0
+  CPS > target: 20 (6.6%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 3
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #112: CPS=15.0 (73ch/4.9s) "Вони вдягають касаю (шафранову пов’язку на стегнах, яку носи..."
+    #28: CPS=15.0 (28ch/1.9s) "ні в будь-який інший спосіб."
+    #240: CPS=15.0 (46ch/3.1s) "Наступного разу, коли ви зустрінете цю людину,"
+    #279: CPS=15.0 (46ch/3.1s) "чи в будь-які обмеження, чи в будь-що подібне."
+    #75: CPS=15.0 (55ch/3.7s) "Чому Бог має допомагати людям, які не є сахаджа йоґами?"
+    #161: CPS=15.0 (58ch/3.9s) "якої ми дотримуємося, і ніхто не має права нас стримувати."
+    #293: CPS=15.0 (61ch/4.1s) "не сперечайтеся – суперечкою ви не можете дати їм Реалізацію..."
+    #70: CPS=15.0 (32ch/2.1s) "Але в Сахаджа Йозі так не можна."
+    #155: CPS=15.0 (64ch/4.3s) "Але все ж Я бачила, що навіть дружини можуть бути дуже владн..."
+    #196: CPS=15.0 (32ch/2.1s) "Тож як ви можете бути засмучені?"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.3 (target ≤15.0)
+  CPS > 15.0: 20 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 3 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
