@@ -1,4 +1,9 @@
 role: primary
 mode: en-srt
-built_at: '2026-11-24T08:20:43Z'
-run_id: 45352958594
+built_at: '2026-11-24T20:47:53Z'
+run_id: 45484033406
+slice: true
+paragraphs:
+- [1, 48]
+- [50, 57]
+paragraph_count: 57

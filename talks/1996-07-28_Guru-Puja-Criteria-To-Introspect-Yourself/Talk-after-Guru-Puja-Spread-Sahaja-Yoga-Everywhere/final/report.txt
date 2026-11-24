@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself/Talk-after-Guru-Puja-Spread-Sahaja-Yoga-Everywhere/final/uk.srt
+  Transcript: talks/1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself/transcript_uk.txt
+  EN SRT: talks/1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself/Talk-after-Guru-Puja-Spread-Sahaja-Yoga-Everywhere/source/en.srt
+  SRT blocks: 41
+  EN SRT blocks: 40
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:04,418 — 00:03:57,440
+  SRT range:       00:00:04,418 — 00:03:40,161
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 41
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 41
+  CPS: avg=11.8, median=12.6, max=19.8
+  CPS > target: 5 (12.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=53.6, max=81
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #38: CPS=19.8 (81ch/4.1s) "Навіть якщо у вас є всі інструменти, але ви цим не користуєт..."
+    #33: CPS=15.0 (67ch/4.5s) "Усі благословення є, усі сили є, ви можете дуже добре це зді..."
+    #36: CPS=15.0 (73ch/4.9s) "Ви знаєте все про Сахаджа Йоґу, тож Мені не треба вам про це..."
+    #37: CPS=15.0 (38ch/2.5s) "Єдине – [ви мусите] цим користуватися!"
+    #34: CPS=15.0 (74ch/4.9s) "Будь-кому, з ким вам важко, ви ставите бандхан і можете дати..."
+    #35: CPS=15.0 (24ch/1.6s) "Ви це дуже добре знаєте."
+    #30: CPS=15.0 (49ch/3.3s) "Я думаю, ви всі маєте взяти на себе зобов’язання,"
+    #32: CPS=14.7 (75ch/5.1s) "на своїх місцях роботи ви можете почати відкрито говорити пр..."
+    #14: CPS=14.5 (36ch/2.5s) "Але мати не може бути такою суворою."
+    #26: CPS=14.3 (57ch/4.0s) "– ми маємо подивитися, скільком людям ми дали Реалізацію."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 41
+  EN SRT blocks: 40
+  Ratio UK/EN: 1.02 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.8 (target ≤15.0)
+  CPS > 15.0: 5 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
