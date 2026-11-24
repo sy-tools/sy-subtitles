@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: Talk-London-UK-DP-Opt-HD
   title: Talk London UK DP Opt HD
-  video_ref: r1F1UOTVpFUEEVS05eWEwbUFpWXlBC
+  video_ref: r2RUthCys8NBQpXTFSFQo
+  media_refs:
+  - r2VEIFVQ4hJxB3E14qXDkRNVM8TD0zGCMSWBkuWCEZJhxQUgUU
+  - r2DBspZVg9Kyh7MlkWGhUKPiIdATYZDA9LYAkwOCZJUz1QUgUU
