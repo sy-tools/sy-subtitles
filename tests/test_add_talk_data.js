@@ -360,6 +360,15 @@ describe('videoFromPayload — bookmarklet video → form row', () => {
     );
   });
 
+  it('puts the Bunny mirror before the Drive ones', () => {
+    const bn = '123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
+    assert.deepStrictEqual(videoFromPayload({ p: 'yt', id: YT_ID, gd: GD_IDS, bn: bn, l: 'T' }), {
+      url: YT_URL,
+      title: 'T',
+      mediaUrls: ['https://player.mediadelivery.net/play/' + bn].concat(GD_URLS),
+    });
+  });
+
   it('gives a YouTube video with no mirrors an empty list', () => {
     assert.deepStrictEqual(videoFromPayload({ p: 'yt', id: YT_ID, l: 'T' }), {
       url: YT_URL, title: 'T', mediaUrls: [],

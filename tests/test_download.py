@@ -360,7 +360,7 @@ def test_setup_talk_writes_obfuscated_video_ref(tmp_path):
 # amruta.org moved its talks from Vimeo to YouTube. The fixture is synthetic
 # (every id invented) but keeps the structure recorded on 2026-11-23: video 1
 # plays through a Bunny iframe and names its YouTube id only in the details
-# block; video 2 plays through a .youtube-player element.
+# block; video 2 plays through a .youtube-player element and has no Bunny copy.
 
 _FIXTURES = Path(__file__).parent / "fixtures"
 _YT_FIXTURE = _FIXTURES / "amruta_youtube_two_videos.html"
@@ -368,6 +368,11 @@ _YT_FIXTURE = _FIXTURES / "amruta_youtube_two_videos.html"
 
 def _drive_url(n):
     return f"https://drive.google.com/file/d/1Syntheticdriveid{n:02d}abcdefghijklmn/view"
+
+
+_BN_LIB = "123456"
+_BN_GUID = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+_BN_PLAY = f"https://player.mediadelivery.net/play/{_BN_LIB}/{_BN_GUID}"
 
 
 def _fixture_videos():
@@ -381,7 +386,7 @@ def test_extract_videos_youtube_page():
             "title": "Bhoomi Devi Puja Talk",
             "slug": "Bhoomi-Devi-Puja-Talk",
             "video_url": "https://www.youtube.com/watch?v=AbCdEfGhIjK",
-            "media_urls": [_drive_url(0), _drive_url(1)],
+            "media_urls": [_BN_PLAY, _drive_url(0), _drive_url(1)],
         },
         {
             "title": "Bhoomi Devi Puja",
@@ -392,9 +397,60 @@ def test_extract_videos_youtube_page():
     ]
 
 
-def test_extract_videos_never_keeps_bunny():
-    """Bunny only plays the video on amruta's page; nothing of it is stored."""
-    assert "mediadelivery" not in repr(_fixture_videos())
+@pytest.mark.parametrize(
+    "bunny",
+    [
+        f'<iframe src="https://player.mediadelivery.net/embed/{_BN_LIB}/{_BN_GUID}?autoplay=false"></iframe>',
+        f'<iframe src="https://iframe.mediadelivery.net/embed/{_BN_LIB}/{_BN_GUID}"></iframe>',
+        f'<a href="https://player.mediadelivery.net/play/{_BN_LIB}/{_BN_GUID}?t=0" title="Watch on Bunny">Bunny</a>',
+        f'<a href="https://player.mediadelivery.net/play/{_BN_LIB}/{_BN_GUID.upper()}" title="Watch on Bunny">B</a>',
+    ],
+    ids=["player-iframe", "legacy-iframe-host", "watch-link", "upper-case-guid"],
+)
+def test_extract_videos_bunny_mirror_comes_first(bunny):
+    inner = (
+        '<a href="https://youtu.be/AbCdEfGhIjK" title="Watch on YouTube">Watch</a>'
+        f'<a href="{_drive_url(0)}" title="Download MP4 (streaming quality)">MP4</a>'
+        f"{bunny}"
+    )
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_BN_PLAY, _drive_url(0)]
+
+
+def test_extract_videos_bunny_iframe_wins_over_the_watch_link():
+    other = "ffffffff-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+    inner = (
+        '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>'
+        f'<a href="https://player.mediadelivery.net/play/{_BN_LIB}/{other}" title="Watch on Bunny">Bunny</a>'
+        f'<iframe src="https://player.mediadelivery.net/embed/{_BN_LIB}/{_BN_GUID}"></iframe>'
+    )
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_BN_PLAY]
+
+
+@pytest.mark.parametrize(
+    "bunny",
+    [
+        f'<iframe src="https://player.mediadelivery.net/embed/{_BN_LIB}"></iframe>',
+        f'<a href="https://player.mediadelivery.net/play/{_BN_LIB}/{_BN_GUID}0" title="Watch on Bunny">B</a>',
+        f'<a href="https://evil.example/?u=https://player.mediadelivery.net/play/{_BN_LIB}/{_BN_GUID}"'
+        ' title="Watch on Bunny">B</a>',
+    ],
+    ids=["no-guid", "guid-too-long", "foreign-host"],
+)
+def test_extract_videos_bunny_link_the_codec_rejects_is_left_out(bunny):
+    inner = '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>' + bunny
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == []
+
+
+def test_extract_videos_bunny_alone_is_not_a_video_link():
+    """Bunny is a download mirror of a YouTube video, never the video itself:
+    with no YouTube id the wrapper is a linkless video, mirrors and all."""
+    inner = f'<iframe src="https://player.mediadelivery.net/embed/{_BN_LIB}/{_BN_GUID}"></iframe>'
+    assert _find_videos(_yt_wrapper(inner))[0] == {
+        "title": "Some Puja",
+        "slug": "Some-Puja",
+        "video_url": "",
+        "media_urls": [],
+    }
 
 
 def test_extract_videos_vimeo_has_no_media_urls():
@@ -547,11 +603,11 @@ def test_setup_talk_writes_youtube_ref_and_media_refs(tmp_path):
     assert [list(v) for v in videos] == [["slug", "title", "video_ref", "media_refs"]] * 2
     first = decode_video_source(videos[0]["video_ref"])
     assert (first.provider, first.id) == ("yt", "AbCdEfGhIjK")
-    assert [decode_video_source(r).provider for r in videos[0]["media_refs"]] == ["gd", "gd"]
-    assert [decode_video_ref(r) for r in videos[0]["media_refs"]] == [_drive_url(0), _drive_url(1)]
+    assert [decode_video_source(r).provider for r in videos[0]["media_refs"]] == ["bn", "gd", "gd"]
+    assert [decode_video_ref(r) for r in videos[0]["media_refs"]] == [_BN_PLAY, _drive_url(0), _drive_url(1)]
     assert [decode_video_ref(r) for r in videos[1]["media_refs"]] == [_drive_url(4), _drive_url(5)]
     # Nothing plaintext reaches the file, and what is written passes the schema.
-    for needle in ("youtu", "drive.google", "AbCdEfGhIjK", "Syntheticdriveid", "mediadelivery"):
+    for needle in ("youtu", "drive.google", "AbCdEfGhIjK", "Syntheticdriveid", "mediadelivery", _BN_GUID):
         assert needle not in text
     validate_meta_yaml(str(tmp_path / "1982-07-12_test-talk" / "meta.yaml"))
 

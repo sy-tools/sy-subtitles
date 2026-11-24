@@ -131,7 +131,8 @@ def normalize_vimeo_url(url):
 
 
 # YouTube-era pages. amruta.org moved its talks from Vimeo to YouTube, each with
-# Google Drive copies of the file. Every link is read by tools/vimeo_codec.py —
+# a Bunny Stream copy (the player on the page) and Google Drive copies of the
+# file. Every link is read by tools/vimeo_codec.py —
 # the one place that knows the URL shapes — so a link taken here is by
 # construction one setup_talk can store, and its URL is the canonical one.
 
@@ -150,9 +151,8 @@ def _youtube_source_of_wrapper(wrapper):
     the player element, the "Watch on YouTube" link, the details block's
     ``collapse-<id>``.
 
-    The page plays some videos through a Bunny iframe instead of the YouTube
-    player — the last two are how such a video is still found. Bunny itself is
-    never read.
+    The page plays most videos through a Bunny iframe instead of the YouTube
+    player — the last two are how such a video is still found.
     """
     player = wrapper.find(class_="youtube-player", attrs={"data-id": True})
     link = wrapper.find("a", title="Watch on YouTube")
@@ -173,6 +173,21 @@ def _youtube_link_of_id(video_id):
     """A bare YouTube id as a link the codec reads; None if it is not an id."""
     video_id = (video_id or "").strip()
     return "https://youtu.be/" + video_id if YOUTUBE_ID_RE.fullmatch(video_id) else None
+
+
+def _bunny_url_of_wrapper(wrapper):
+    """The canonical URL of a wrapper's Bunny Stream copy, or None.
+
+    Read from the player iframe, else the "Watch on Bunny" link: the iframe is
+    what plays on the page, so it decides if the two ever disagree.
+    """
+    iframe = wrapper.find("iframe", src=re.compile(r"mediadelivery\.net/"))
+    link = wrapper.find("a", title="Watch on Bunny")
+    for href in (iframe.get("src") if iframe else None, link.get("href") if link else None):
+        source = _source_of_link(href, "bn")
+        if source:
+            return source.watch_url
+    return None
 
 
 def _drive_mp4_urls_of_wrapper(wrapper):
@@ -284,7 +299,8 @@ class AmrutaDownloader:
         - a Vimeo video: ``video_url`` is the normalized Vimeo URL and
           ``media_urls`` is empty;
         - a YouTube video: ``video_url`` is the watch URL and ``media_urls``
-          its Google Drive MP4 mirrors, in page order;
+          its mirrors — the Bunny Stream copy, then the Google Drive MP4s in
+          page order;
         - a wrapper neither could be read from: ``video_url`` is ``""`` — the
           video is still listed, just without a link.
 
@@ -303,7 +319,9 @@ class AmrutaDownloader:
                 youtube = _youtube_source_of_wrapper(wrapper)
                 video_url = youtube.watch_url if youtube else ""
                 if youtube:
-                    media_urls = _drive_mp4_urls_of_wrapper(wrapper)
+                    bunny = _bunny_url_of_wrapper(wrapper)
+                    media_urls = [bunny] if bunny else []
+                    media_urls += _drive_mp4_urls_of_wrapper(wrapper)
             label = self._extract_video_meta_label(wrapper)
             if label:
                 title = label
@@ -737,9 +755,9 @@ def setup_talk(talk_dir, url, date, slug, title, location, videos):
     if other_langs:
         meta["other_languages"] = other_langs
     # Links are stored obfuscated (see tools/vimeo_codec.py) so no Vimeo URL,
-    # YouTube id or Drive file id appears as plaintext in the public repo:
-    # the video's own link as video_ref, a YouTube video's Drive MP4 mirrors
-    # as media_refs. Only a YouTube video may carry mirrors (tools/schemas.py).
+    # YouTube, Drive or Bunny id appears as plaintext in the public repo:
+    # the video's own link as video_ref, a YouTube video's Bunny and Drive
+    # mirrors as media_refs. Only a YouTube video may carry mirrors (tools/schemas.py).
     # Same output as buildMetaYaml in site/js/add_talk_data.js.
     meta_videos = []
     for v in videos:

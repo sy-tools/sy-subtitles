@@ -4,6 +4,7 @@ const {
   isTranscriptBodyParagraph,
   youtubeIdFromHref,
   driveFileIdFromHref,
+  bunnyIdFromHref,
 } = require('../site/js/bookmarklet');
 const { encodeVideoRef, decodeVideoSource } = require('../site/js/vimeo_codec');
 
@@ -119,6 +120,7 @@ describe('bookmarklet: Google Drive file id from a download link', () => {
 describe('bookmarklet: reads links exactly as js/vimeo_codec.js does', () => {
   const YT = 'AbCdEfGhIjK';
   const GD = '1Syntheticdriveid00abcdefghijklmn';
+  const BN = '123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
   const HREFS = [
     // YouTube shapes the codec knows
     'https://youtu.be/' + YT,
@@ -165,6 +167,21 @@ describe('bookmarklet: reads links exactly as js/vimeo_codec.js does', () => {
     'https://drive.google.com/drive/folders/' + GD,
     'https://drive.google.com/uc?id=' + GD,
     'https://docs.google.com/file/d/' + GD + '/view',
+    // Bunny shapes the codec knows
+    'https://player.mediadelivery.net/play/' + BN,
+    'https://player.mediadelivery.net/play/' + BN + '?autoplay=false&lang=en&t=113',
+    'https://player.mediadelivery.net/embed/' + BN + '?autoplay=false&preload=false&lang=en',
+    'https://iframe.mediadelivery.net/embed/' + BN,
+    'https://player.mediadelivery.net/play/' + BN + '/',
+    'player.mediadelivery.net/play/' + BN + '#t=5',
+    'https://player.mediadelivery.net/play/' + BN.toUpperCase(),
+    // …and ones it does not
+    'https://player.mediadelivery.net/watch/' + BN,
+    'https://player.mediadelivery.net/play/' + BN + '0',
+    'https://player.mediadelivery.net/play/' + BN.split('/')[1],
+    'https://player.mediadelivery.net/play/abc/' + BN.split('/')[1],
+    'https://player.mediadelivery.net.evil.example/play/' + BN,
+    'https://video.bunnycdn.com/play/' + BN,
     // neither
     'https://vimeo.com/123456/abcd',
     'https://www.amruta.org/1982/07/12/x/',
@@ -184,6 +201,7 @@ describe('bookmarklet: reads links exactly as js/vimeo_codec.js does', () => {
     it('agrees on ' + JSON.stringify(href), () => {
       assert.strictEqual(youtubeIdFromHref(href), codecId(href, 'yt'), 'YouTube id');
       assert.strictEqual(driveFileIdFromHref(href), codecId(href, 'gd'), 'Drive file id');
+      assert.strictEqual(bunnyIdFromHref(href), codecId(href, 'bn'), 'Bunny id');
     });
   }
 
@@ -192,5 +210,7 @@ describe('bookmarklet: reads links exactly as js/vimeo_codec.js does', () => {
     const gd = HREFS.map((h) => codecId(h, 'gd'));
     assert.ok(yt.filter(Boolean).length >= 10 && gd.filter(Boolean).length >= 5);
     assert.ok(yt.filter((x) => !x).length >= 10 && gd.filter((x) => !x).length >= 5);
+    const bn = HREFS.map((h) => codecId(h, 'bn'));
+    assert.ok(bn.filter(Boolean).length >= 5 && bn.filter((x) => !x).length >= 5);
   });
 });
