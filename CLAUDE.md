@@ -282,6 +282,9 @@ that live nowhere else.
   (independent parts, no single recording holding it all), which blocks no
   video claimed and which two did. Warn-only: the split is the builder's
   best effort and a person checks it.
+- `slice_paragraphs` — which transcript paragraphs a slice speaks, recorded in
+  its build manifest at build time. Edit-sync reads it instead of matching
+  on-screen text, which short lines repeated across tapes defeat.
 
 **Glossary and corpus**
 - `glossary_check` — scan an EN transcript for glossary term candidates.

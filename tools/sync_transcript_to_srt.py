@@ -22,6 +22,7 @@ import sys
 import unicodedata
 from pathlib import Path
 
+from .slice_paragraphs import SliceMapMissing, own_paragraphs, recorded_paragraph_count
 from .srt_utils import parse_srt, write_srt
 from .sync_common import find_diff_islands
 from .text_segmentation import (
@@ -516,6 +517,33 @@ def sync_transcript(talk_dir: str, video_slug: str, old_transcript: str, new_tra
     if not srt_path.exists():
         return {"error": f"No SRT: {srt_path}"}
 
+    # A slice carries only its own recording's paragraphs, and short lines
+    # repeat across slices: matched by on-screen text, another tape's edit
+    # rewrites the same words here, or finds them twice and refuses. The
+    # build recorded which paragraphs this slice speaks; nothing else is its.
+    # Those numbers hold only for the paragraph count they were recorded
+    # against, so neither a different count nor a re-cut may pass.
+    try:
+        own = own_paragraphs(Path(talk_dir) / video_slug)
+        recorded = recorded_paragraph_count(Path(talk_dir) / video_slug) if own is not None else None
+    except SliceMapMissing as exc:
+        return {"error": str(exc)}
+    if recorded is not None and recorded != len(old_paras):
+        return {
+            "error": (
+                f"{video_slug}: its paragraph map was recorded for {recorded} paragraphs, the transcript has "
+                f"{len(old_paras)} — the map is stale. Run the full subtitle pipeline to rebuild"
+            )
+        }
+    if own is not None and len(old_paras) != len(new_paras):
+        return {
+            "error": (
+                f"Paragraph count changed: {len(old_paras)} → {len(new_paras)}. {video_slug} is one slice of "
+                "this transcript, and re-paragraphing would shift its paragraph map. Run the full subtitle "
+                "pipeline to rebuild"
+            )
+        }
+
     if len(old_paras) != len(new_paras):
         # Pure re-paragraphing: the same words re-cut into a different number
         # of paragraphs. Nothing was edited, so nothing needs syncing — the
@@ -537,6 +565,14 @@ def sync_transcript(talk_dir: str, video_slug: str, old_transcript: str, new_tra
     changed_paras = [i for i, (o, n) in enumerate(zip(old_paras, new_paras, strict=True)) if o != n]
     if not changed_paras:
         return {"changed": 0}
+
+    if own is not None:
+        foreign = [i for i in changed_paras if i not in own]
+        if foreign:
+            print(f"Not this slice's paragraphs, skipped: {[i + 1 for i in foreign]}", file=sys.stderr)
+        changed_paras = [i for i in changed_paras if i in own]
+        if not changed_paras:
+            return {"changed": 0}
 
     print(f"Changed paragraphs: {len(changed_paras)}", file=sys.stderr)
 

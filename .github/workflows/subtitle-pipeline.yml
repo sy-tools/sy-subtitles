@@ -1159,6 +1159,11 @@ jobs:
               yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
           print(f"  wrote {path} (mode={mode})")
           PYEOF
+          # Which paragraphs this slice speaks — the one thing edit-sync needs
+          # to keep another tape's edit off this one (tools.slice_paragraphs).
+          if [ "${SLICE}" = "true" ]; then
+            python -m tools.slice_paragraphs --video-dir "talks/${TALK_ID}/${VIDEO_SLUG}"
+          fi
 
       - name: Build secondary-video SRTs
         if: matrix.role == 'primary'

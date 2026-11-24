@@ -3,3 +3,8 @@ mode: whisper
 built_at: '2026-11-24T17:44:12Z'
 run_id: 45449700299
 slice: true
+paragraphs:
+- [435, 526]
+- [528, 548]
+- [550, 565]
+paragraph_count: 566
