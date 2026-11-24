@@ -6,13 +6,22 @@ language: en
 videos:
 - slug: Sahasrara-Puja-Cabella-NITL-RAW
   title: Sahasrara Puja Cabella NITL-RAW
-  video_ref: r1U1lGW0NVQBIdBEhcQRlZUlldUUo
+  video_ref: r2HgRqBDE3NEURByZSFQo
+  media_refs:
+  - r2OwU1QicBHT8eDS8DCRM7EiY6KwFBEy0FclJWJUpdBQJQUgUU
+  - r2WhkwRglTMDF9Cw02DhUYJi0ZGxocLjYAeQRTQh9uNwJQUgUU
   sync: derived
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
-  video_ref: r1A1lCWRcBRkMeU0heTBRWWlRfUkA
+  video_ref: r2JDR1LzccH14ZGC1SFQo
+  media_refs:
+  - r2FyUGZAYFFgBeBggGDg8SRgYZOloACxsGWBhUGSprUSxQUgUU
+  - r2BxQWFSAgNzRaWDVVElE5N1AWRAFHFyIXZVNSXSxYLhJQUgUU
   sync: primary
 - slug: Sahasrara-Day-Talk-The-Will-of-God
   title: 'Sahasrara Day Talk: The Will of God'
-  video_ref: r1VQhECEAEREVOVEheThhWWlRfUkA
+  video_ref: r2BjVYDzYYHncMJCBSFQo
+  media_refs:
+  - r2GCYYeTIQJh1JND05Cyk4IgA6AQxMTzsCbysMHyByAy5QUgUU
+  - r2LhhDdBIxDlRvNzUMGi5BOhJeKwA4BEY-cjsTNlR0Ki9QUgUU
   sync: derived
