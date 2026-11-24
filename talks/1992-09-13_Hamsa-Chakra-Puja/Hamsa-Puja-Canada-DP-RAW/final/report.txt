@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-09-13_Hamsa-Chakra-Puja/Hamsa-Puja-Canada-DP-RAW/final/uk.srt
+  Transcript: talks/1992-09-13_Hamsa-Chakra-Puja/transcript_uk.txt
+  EN SRT: talks/1992-09-13_Hamsa-Chakra-Puja/Hamsa-Puja-Canada-DP-RAW/source/en.srt
+  SRT blocks: 461
+  EN SRT blocks: 466
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:03:31,000 — 00:48:45,590
+  SRT range:       00:03:31,000 — 00:48:47,590
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 461
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 461
+  CPS: avg=10.5, median=10.4, max=17.6
+  CPS > target: 54 (11.7%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #356: CPS=17.6 (49ch/2.8s) "«Але вони не хотіли цього зрозуміти. Так важливо."
+    #162: CPS=16.5 (66ch/4.0s) "Той чоловік не хороший», намагаються створювати групи й таке..."
+    #373: CPS=15.2 (26ch/1.7s) "Я пішла й сіла на стілець."
+    #158: CPS=15.1 (38ch/2.5s) "а щоб виправляти свої власні недоліки."
+    #61: CPS=15.1 (44ch/2.9s) "Навіть їхні руки пахнуть їхнім гнилим сиром,"
+    #381: CPS=15.1 (59ch/3.9s) "як вони допомагають нам, як вони поруч, як усе це вдається."
+    #419: CPS=15.0 (65ch/4.3s) "Тож ототожнення, яке ви розвиваєте з іншими неправильними ре..."
+    #255: CPS=15.0 (45ch/3.0s) "Повертаймося. Яка, зрештою, від цього шкода?»"
+    #195: CPS=15.0 (25ch/1.7s) "тож ви маєте очистити це."
+    #360: CPS=15.0 (31ch/2.1s) "Він сказав: «Гаразд, заходьте»."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 461
+  EN SRT blocks: 466
+  Ratio UK/EN: 0.99 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.5 (target ≤15.0)
+  CPS > 15.0: 54 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
