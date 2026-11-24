@@ -1,8 +1,8 @@
 """Reversible obfuscation codec for video links stored in meta.yaml.
 
 Private Vimeo links (``https://vimeo.com/<id>/<hash>``) must not appear as
-plaintext in this public repository, and neither may the YouTube and Google
-Drive ids that came after them. This module encodes a link into an opaque
+plaintext in this public repository, and neither may the YouTube, Google
+Drive and Bunny Stream ids that came after them. This module encodes a link into an opaque
 ``video_ref`` value and decodes it back. (The module is still named after
 Vimeo, the only provider it had for a long time.)
 
@@ -19,7 +19,7 @@ identical (produce identical output for the same input) — the shared vectors i
 Format — the two-character version prefix selects the payload::
 
     r1<base64url( reverse( xor("<id>[/<hash>]", KEY) ) )>     Vimeo
-    r2<base64url( reverse( xor("<provider>:<id>", KEY) ) )>   yt | gd
+    r2<base64url( reverse( xor("<provider>:<id>", KEY) ) )>   yt | gd | bn
 
 The prefix also guarantees the value starts with a letter, so it never reads
 as YAML structure. The decode is the exact inverse — both ``reverse`` and
@@ -38,7 +38,7 @@ import base64
 import re
 from dataclasses import dataclass
 
-from tools.workflow_validation import DRIVE_ID_RE, YOUTUBE_ID_RE
+from tools.workflow_validation import BUNNY_ID_RE, DRIVE_ID_RE, YOUTUBE_ID_RE
 
 # Fixed project constant. Not a secret (it ships in the public client) — it
 # only diffuses the bytes so a naive base64 decode reveals nothing useful.
@@ -61,6 +61,7 @@ _CANONICAL_RE = re.compile(r"^(?:https?://)?(?:www\.)?vimeo\.com/(\d+)(?:/([0-9a
 _PRINTABLE_ASCII_RE = re.compile(r"[!-~]+")
 _YT = r"([A-Za-z0-9_-]{11})"
 _GD = r"([A-Za-z0-9_-]{25,64})"
+_BN = r"([0-9]{1,12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"
 _URL_SHAPES: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
     (provider, re.compile(pattern, re.IGNORECASE))
     for provider, pattern in (
@@ -69,13 +70,23 @@ _URL_SHAPES: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
         ("yt", r"(?:https?://)?(?:www\.)?youtube(?:-nocookie)?\.com/embed/" + _YT + r"/?(?:[?#].*)?"),
         ("gd", r"(?:https?://)?drive\.google\.com/file/d/" + _GD + r"(?:[/?#].*)?"),
         ("gd", r"(?:https?://)?drive\.google\.com/open\?(?:[^#]*?&)??id=" + _GD + r"(?:[&#].*)?"),
+        # amruta's page carries both: the player iframe (embed) and the
+        # "Watch on Bunny" link (play). iframe. is Bunny's older player host.
+        ("bn", r"(?:https?://)?(?:player|iframe)\.mediadelivery\.net/(?:embed|play)/" + _BN + r"/?(?:[?#].*)?"),
     )
 )
+
+# Providers whose id has no meaningful case: it is folded on encode so a
+# stored id has one spelling. Safe to fold here, the shapes only see ASCII.
+_CASE_FOLDED = frozenset({"bn"})
 
 # provider -> (id pattern, canonical watch URL template)
 _PROVIDERS: dict[str, tuple[re.Pattern[str], str]] = {
     "yt": (YOUTUBE_ID_RE, "https://www.youtube.com/watch?v={id}"),
     "gd": (DRIVE_ID_RE, "https://drive.google.com/file/d/{id}/view"),
+    # The "Watch on Bunny" link amruta publishes. A download source only: the
+    # player refuses any referrer but amruta's own, so it is never embedded.
+    "bn": (BUNNY_ID_RE, "https://player.mediadelivery.net/play/{id}"),
 }
 
 
@@ -83,9 +94,9 @@ _PROVIDERS: dict[str, tuple[re.Pattern[str], str]] = {
 class VideoSource:
     """What a ``video_ref`` points at.
 
-    ``provider`` is ``"vimeo"``, ``"yt"`` or ``"gd"``. ``id`` is the provider's
-    own id — for Vimeo ``<id>`` or ``<id>/<hash>`` — and ``watch_url`` the
-    canonical page for it.
+    ``provider`` is ``"vimeo"``, ``"yt"``, ``"gd"`` or ``"bn"``. ``id`` is the
+    provider's own id — for Vimeo ``<id>`` or ``<id>/<hash>``, for Bunny
+    ``<library>/<guid>`` — and ``watch_url`` the canonical page for it.
     """
 
     provider: str
@@ -112,8 +123,8 @@ def _decode_payload(ref: str, version: str) -> str:
 def encode_video_ref(url: str) -> str:
     """Encode a video URL into an opaque ``video_ref`` string.
 
-    A Vimeo URL becomes an ``r1`` ref; a YouTube or Google Drive file URL an
-    ``r2`` ref. Raises ``ValueError`` for anything else.
+    A Vimeo URL becomes an ``r1`` ref; a YouTube, Google Drive file or Bunny
+    Stream player URL an ``r2`` ref. Raises ``ValueError`` for anything else.
     """
     text = (url or "").strip()
     match = _PATH_RE.match(text)
@@ -123,7 +134,8 @@ def encode_video_ref(url: str) -> str:
         for provider, shape in _URL_SHAPES:
             match = shape.fullmatch(text)
             if match:
-                return _encode_payload(_V2, f"{provider}:{match.group(1)}")
+                video_id = match.group(1).lower() if provider in _CASE_FOLDED else match.group(1)
+                return _encode_payload(_V2, f"{provider}:{video_id}")
     raise ValueError(f"not a supported video url: {url!r}")
 
 
@@ -197,7 +209,7 @@ def main(argv: list[str] | None = None) -> None:
     form.add_argument(
         "--provider",
         action="store_true",
-        help="print only the provider: vimeo, yt or gd",
+        help="print only the provider: vimeo, yt, gd or bn",
     )
     args = parser.parse_args(argv)
 

@@ -57,6 +57,7 @@ describe('vimeo_codec — normalization & errors', () => {
 function expectedWatchUrl(vec) {
   if (vec.provider === 'yt') return 'https://www.youtube.com/watch?v=' + vec.id;
   if (vec.provider === 'gd') return 'https://drive.google.com/file/d/' + vec.id + '/view';
+  if (vec.provider === 'bn') return 'https://player.mediadelivery.net/play/' + vec.id;
   return vec.url; // r1 vectors are canonical Vimeo URLs
 }
 
@@ -77,8 +78,10 @@ describe('vimeo_codec — cross-language vectors (shared with Python)', () => {
     const yt = vectors.filter((v) => v.provider === 'yt');
     const gd = vectors.filter((v) => v.provider === 'gd');
     assert.ok(yt.length >= 4 && new Set(yt.map((v) => v.ref)).size === 1);
+    const bn = vectors.filter((v) => v.provider === 'bn');
     assert.ok(gd.length >= 2 && new Set(gd.map((v) => v.ref)).size === 1);
-    yt.concat(gd).forEach((v) => assert.ok(v.ref.startsWith('r2')));
+    assert.ok(bn.length >= 3 && new Set(bn.map((v) => v.ref)).size === 1);
+    yt.concat(gd, bn).forEach((v) => assert.ok(v.ref.startsWith('r2')));
   });
 });
 
@@ -189,5 +192,63 @@ describe('vimeo_codec — r2 provider-tagged refs', () => {
 
   it('rejects an unknown version', () => {
     assert.throws(() => decodeVideoSource('r9zzzz'));
+  });
+});
+
+// Synthetic ids only — never a real library or video id.
+const BN_LIB = '123456';
+const BN_GUID = '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
+const BN_ID = BN_LIB + '/' + BN_GUID;
+const BN_PLAY = 'https://player.mediadelivery.net/play/' + BN_ID;
+
+describe('vimeo_codec — r2 Bunny Stream refs', () => {
+  [
+    BN_PLAY,
+    'https://player.mediadelivery.net/embed/' + BN_ID,
+    'https://player.mediadelivery.net/embed/' + BN_ID + '?autoplay=false&preload=false&lang=en',
+    'https://player.mediadelivery.net/play/' + BN_ID + '?autoplay=false&lang=en&t=113',
+    'https://iframe.mediadelivery.net/embed/' + BN_ID,
+    'https://player.mediadelivery.net/play/' + BN_ID + '/',
+    'http://player.mediadelivery.net/play/' + BN_ID + '#t=1',
+    'player.mediadelivery.net/play/' + BN_ID,
+    'HTTPS://Player.MediaDelivery.net/PLAY/' + BN_LIB + '/' + BN_GUID.toUpperCase(),
+  ].forEach((url) => {
+    it('encodes Bunny shape ' + url, () => {
+      const ref = encodeVideoRef(url);
+      assert.strictEqual(ref, encodeVideoRef(BN_PLAY));
+      assert.match(ref, /^r2[A-Za-z0-9_-]+$/);
+      assert.ok(!ref.includes(BN_LIB) && !ref.includes(BN_GUID));
+      assert.deepStrictEqual(decodeVideoSource(ref), { provider: 'bn', id: BN_ID, watchUrl: BN_PLAY });
+      assert.strictEqual(decodeVideoRef(ref), BN_PLAY);
+    });
+  });
+
+  [
+    'bn:' + BN_LIB,
+    'bn:' + BN_GUID,
+    'bn:abc/' + BN_GUID,
+    'bn:' + BN_LIB + '/' + BN_GUID.slice(0, -1),
+    'bn:' + BN_LIB + '/' + BN_GUID.toUpperCase(),
+    'bn:' + BN_ID + ';',
+    'bn:' + BN_ID + '/x',
+    'bn:1234567890123/' + BN_GUID,
+  ].forEach((payload) => {
+    it('rejects bad Bunny payload ' + payload, () => {
+      assert.throws(() => decodeVideoSource(rawRef('r2', payload)));
+    });
+  });
+
+  [
+    'https://player.mediadelivery.net/embed/' + BN_LIB,
+    'https://player.mediadelivery.net/embed/' + BN_GUID,
+    'https://player.mediadelivery.net/watch/' + BN_ID,
+    'https://player.mediadelivery.net/embed/abc/' + BN_GUID,
+    'https://player.mediadelivery.net.evil.com/embed/' + BN_ID,
+    'https://evil.com/?u=https://player.mediadelivery.net/embed/' + BN_ID,
+    'https://player.mediadelivery.net/embed/' + BN_ID + '0',
+  ].forEach((url) => {
+    it('rejects unsupported Bunny url ' + url, () => {
+      assert.throws(() => encodeVideoRef(url), /not a supported video url/);
+    });
   });
 });

@@ -203,9 +203,8 @@ Both are written by the codec (`tools/vimeo_codec.py`, JS twin
 version prefix selects its payload (`r1`, untagged Vimeo; `r2`,
 provider-tagged): `r1` is a Vimeo link and carries no provider tag, because it
 predates the idea of one; it is left exactly as it was so every stored ref
-keeps decoding. `r2` carries a provider tag and is the only form YouTube and
-Drive ids are stored
-in. Decoding answers a typed source (provider, id, watch URL), not a bare URL,
+keeps decoding. `r2` carries a provider tag and is the only form YouTube,
+Drive and Bunny Stream ids are stored in. Decoding answers a typed source (provider, id, watch URL), not a bare URL,
 so a caller branches on the provider instead of pattern-matching a link.
 
 This is **obfuscation, not secrecy** — the decoder ships in the public SPA. It
