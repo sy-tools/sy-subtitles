@@ -24,4 +24,4 @@ videos:
   media_refs:
   - r2Dh8AYlUCOkh3GSsUMRAQI1cbEgg8CUYWGyY3LBAAUgdQUgUU
   - r2Ulg1bCMdDg1iEAEvMgJGBB9YHTM4DxBKawA4WE9jFB1QUgUU
-  sync: ignored
+  sync: independent
