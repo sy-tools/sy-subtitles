@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tools.video_roles import RoleError, derived_slugs, primary_slug, resolve_roles, text_only
+from tools.video_roles import RoleError, build_slugs, derived_slugs, primary_slug, resolve_roles, text_only
 
 
 def _talk(tmp_path, meta: dict, srt_slugs=()):
@@ -111,6 +111,72 @@ def test_no_primary_is_rejected(tmp_path):
     )
     with pytest.raises(RoleError, match="exactly one"):
         resolve_roles(talk)
+
+
+def test_a_talk_of_only_independent_videos_needs_no_primary(tmp_path):
+    """A workshop on four tapes: each tape is its own slice of one transcript,
+    and none of them is the authoritative recording the others mirror."""
+    talk = _talk(
+        tmp_path,
+        {"videos": [{"slug": f"Part-{i}", "sync": "independent"} for i in (1, 2, 3)]},
+    )
+    assert resolve_roles(talk) == {"Part-1": "independent", "Part-2": "independent", "Part-3": "independent"}
+
+
+def test_independent_videos_may_sit_beside_ignored_ones_without_a_primary(tmp_path):
+    talk = _talk(
+        tmp_path,
+        {"videos": [{"slug": "Tape-1", "sync": "independent"}, {"slug": "Music", "sync": "ignored"}]},
+    )
+    assert resolve_roles(talk) == {"Tape-1": "independent", "Music": "ignored"}
+
+
+def test_a_derived_video_still_needs_a_primary_to_mirror(tmp_path):
+    talk = _talk(
+        tmp_path,
+        {"videos": [{"slug": "A", "sync": "independent"}, {"slug": "B", "sync": "derived"}]},
+    )
+    with pytest.raises(RoleError, match="exactly one"):
+        resolve_roles(talk)
+
+
+def test_build_slugs_are_the_primary_first_then_every_independent(tmp_path):
+    talk = _talk(
+        tmp_path,
+        {
+            "videos": [
+                {"slug": "Talk-After", "sync": "independent"},
+                {"slug": "Puja", "sync": "primary"},
+                {"slug": "Puja-Talk", "sync": "derived"},
+                {"slug": "Music", "sync": "ignored"},
+                {"slug": "Second-Talk", "sync": "independent"},
+            ]
+        },
+    )
+    assert build_slugs(talk) == ["Puja", "Talk-After", "Second-Talk"]
+
+
+def test_build_slugs_without_a_primary(tmp_path):
+    talk = _talk(
+        tmp_path, {"videos": [{"slug": "Part-2", "sync": "independent"}, {"slug": "Part-1", "sync": "independent"}]}
+    )
+    assert build_slugs(talk) == ["Part-2", "Part-1"]
+
+
+def test_build_slugs_of_a_lone_video(tmp_path):
+    talk = _talk(tmp_path, {"videos": [{"slug": "Talk"}]})
+    assert build_slugs(talk) == ["Talk"]
+
+
+def test_cli_prints_the_build_videos(tmp_path):
+    talk = _talk(tmp_path, {"videos": [{"slug": "P1", "sync": "independent"}, {"slug": "P2", "sync": "independent"}]})
+    out = subprocess.run(
+        [sys.executable, "-m", "tools.video_roles", "--talk-dir", str(talk), "--build-videos"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert out.stdout.split() == ["P1", "P2"]
 
 
 def test_an_unknown_role_value_is_rejected(tmp_path):

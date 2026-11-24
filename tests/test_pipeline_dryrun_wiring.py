@@ -50,7 +50,7 @@ def test_build_timecodes_pins_the_transcript_when_no_translation_was_made():
 
 def test_fake_builder_replays_the_answer_for_the_runs_timing_source():
     step = _step("build-timecodes", "Build timecodes (dry-run fake)")
-    assert "needs.prepare-build.outputs.timing_source" in step["env"]["TIMING_SOURCE"]
+    assert "matrix.timing_source" in step["env"]["TIMING_SOURCE"]
     assert '--timing-source "${TIMING_SOURCE}"' in step["run"]
 
 

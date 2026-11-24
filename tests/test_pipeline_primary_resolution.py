@@ -1,4 +1,4 @@
-"""The pipeline must ask tools.video_roles which video is primary.
+"""The pipeline must ask tools.video_roles which videos it builds.
 
 It used to guess, twice, with two non-identical copies of the same heuristic
 — whichever video had the most words in whisper.json, one copy falling back
@@ -22,16 +22,16 @@ def test_the_whisper_word_count_heuristic_is_gone():
     assert "best_slug" not in text
 
 
-def test_the_primary_is_resolved_through_the_shared_module():
+def test_the_build_videos_are_resolved_through_the_shared_module():
     text = _text()
     assert text.count("tools.video_roles --talk-dir") >= 2, (
-        "both the prepare step and the snapshot check must resolve the primary the same way"
+        "both the prepare step and the snapshot check must resolve the build videos the same way"
     )
-    assert "--role primary" in text
+    assert text.count("--build-videos") >= 2
 
 
-def test_every_primary_lookup_guards_against_an_empty_answer():
-    """`--role primary` can succeed and print nothing.
+def test_every_build_video_lookup_guards_against_an_empty_answer():
+    """`--build-videos` can succeed and print nothing.
 
     resolve_roles answers with an all-`ignored` map for a multi-video talk
     that declares nothing and has no built subtitles yet, so the CLI exits 0
@@ -45,12 +45,13 @@ def test_every_primary_lookup_guards_against_an_empty_answer():
     no guard at all. Each one must also fail its step.
     """
     lines = _text().splitlines()
-    lookups = sum(1 for line in lines if "tools.video_roles --talk-dir" in line)
+    lookups = sum(1 for line in lines if "tools.video_roles --talk-dir" in line and "--build-videos" in line)
     guards = 0
     for i, line in enumerate(lines):
-        if "no video declares 'sync: primary' in meta.yaml" not in line:
+        if "no video to build" not in line:
             continue
         if any(later.strip() == "exit 1" for later in lines[i + 1 : i + 4]):
             guards += 1
 
-    assert guards == lookups, f"{lookups} primary lookups but only {guards} of them stop the step"
+    assert lookups >= 2
+    assert guards == lookups, f"{lookups} build-video lookups but only {guards} of them stop the step"
