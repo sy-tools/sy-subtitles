@@ -5,6 +5,7 @@ primary: every part is `independent` and is built as its own slice of the
 one transcript. These run the workflow's own step scripts.
 """
 
+import fnmatch
 import json
 import os
 import subprocess
@@ -256,3 +257,62 @@ def test_commit_checks_coverage_across_the_slices_without_failing_the_run():
     step = _step("commit", "Check slice coverage")
     assert step["continue-on-error"] is True
     assert "tools.slice_coverage" in step["run"]
+
+
+def test_upload_name_matches_both_download_patterns():
+    upload = _step("build-timecodes", "Upload build artifacts")["with"]["name"]
+    leg = upload.replace("${{ matrix.video_slug }}", "Part-2").replace(
+        "${{ needs.prepare-build.outputs.talk_id }}", "T"
+    )
+    for job in ("commit", "verify-dryrun"):
+        pattern = _step(job, "Download subtitle artifacts")["with"]["pattern"]
+        pattern = pattern.replace("${{ needs.discover.outputs.talk_id }}", "T")
+        assert fnmatch.fnmatchcase(leg, pattern), f"{job} downloads {pattern!r}, the build uploads {leg!r}"
+
+
+def test_verify_dryrun_merges_the_legs_into_one_tree():
+    assert _step("verify-dryrun", "Download subtitle artifacts")["with"]["merge-multiple"] is True
+
+
+def test_a_leg_is_marked_passed_only_when_every_step_before_it_passed():
+    """A step without `if` runs on success() only. Any `if` here (always(),
+    !cancelled()) would mark a leg that failed validation, and ship it."""
+    steps = _jobs()["build-timecodes"]["steps"]
+    names = [st.get("name") for st in steps]
+    mark = steps[names.index("Mark leg passed")]
+    assert "if" not in mark
+    assert names.index("Mark leg passed") > names.index("Validate subtitles")
+
+
+def test_commit_knows_which_videos_were_built():
+    step = _step("commit", "Place artifacts into talk directories")
+    assert step["env"]["BUILD_MATRIX"] == "${{ needs.prepare-build.outputs.build_matrix }}"
+
+
+def test_the_builder_is_told_whether_it_builds_a_slice():
+    prompt = _step("build-timecodes", "Build timecodes (Claude)")["with"]["prompt"]
+    assert "SLICE: ${{ matrix.slice }}" in prompt
+
+
+def _whisper(path: Path, words: list[tuple[float, float, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    segments = [{"start": s, "end": e, "text": w, "words": [{"word": w, "start": s, "end": e}]} for s, e, w in words]
+    path.write_text(json.dumps({"segments": segments}), encoding="utf-8")
+
+
+def test_a_whisper_slice_holding_only_its_own_part_passes_validation(tmp_path):
+    talk = _meta(tmp_path, [{"slug": "Part-1", "sync": "independent"}, {"slug": "Part-2", "sync": "independent"}])
+    (talk / "transcript_uk.txt").write_text(
+        "Перша касета говорить це.\n\nДруга касета говорить інше.\n", encoding="utf-8"
+    )
+    (talk / "Part-2" / "final").mkdir(parents=True)
+    (talk / "Part-2" / "final" / "uk.srt").write_text(
+        "1\n00:00:01,000 --> 00:00:03,500\nДруга касета говорить інше.\n", encoding="utf-8"
+    )
+    _whisper(talk / "Part-2" / "source" / "whisper.json", [(1.0, 1.5, "The"), (1.5, 3.4, "second tape.")])
+    env = {"TALK_ID": "T", "VIDEO_SLUG": "Part-2", "ROLE": "independent", "TIMING_SOURCE": "whisper"}
+
+    _run(tmp_path, _step("build-timecodes", "Validate subtitles")["run"], {**env, "SLICE": "true"})
+
+    with pytest.raises(subprocess.CalledProcessError):
+        _run(tmp_path, _step("build-timecodes", "Validate subtitles")["run"], {**env, "SLICE": "false"})

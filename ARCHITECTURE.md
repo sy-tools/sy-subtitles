@@ -137,7 +137,7 @@ per video in `meta.yaml` under `sync:`, and read only through
 |---|---|
 | `primary` | Authoritative subtitle text. Exactly one per talk — or none, see below. |
 | `derived` | Mirrors the primary's text positionally; keeps its own timing. |
-| `independent` | Its own slice of the transcript (a separate talk on the same day); synced against the transcript, never against the primary. |
+| `independent` | Its own slice of the transcript (a separate talk on the same day, or one part of an event recorded as several); built as its own slice and synced against the transcript, never against the primary. |
 | `ignored` | Never read, never written — a yogi's introduction, a presents ceremony, a camera angle with no subtitles. Once declared, it is not sent to whisper either. |
 
 A multi-video talk MUST declare once more than one of its videos carries a

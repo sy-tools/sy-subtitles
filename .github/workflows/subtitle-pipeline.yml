@@ -1375,8 +1375,8 @@ jobs:
 
   # Single commit job – collects all artifacts and pushes
   commit:
-    # prepare-build is here for its captions_fetched output only; it already
-    # precedes this job through build-timecodes.
+    # prepare-build is here for its captions_fetched and build_matrix
+    # outputs; it already precedes this job through build-timecodes.
     needs: [discover, translate-and-review, prepare-build, build-timecodes]
     # commit runs after any build path completes; skipped for dry-runs.
     if: |
