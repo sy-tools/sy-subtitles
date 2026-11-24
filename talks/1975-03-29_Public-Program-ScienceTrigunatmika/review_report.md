@@ -63,3 +63,5 @@ already clean on several axes, so these did **not** generate findings:
 - SY Domain (S): 4 issues found, 1 approved by Critic (S1, merged with L2)
 - **Total corrections applied: 5 substitutions** across 4 paragraphs
   (1× `у ваших` in ¶20; 4× `Сахаджа Йоґи` in ¶32 and ¶34)
+
+CI timing probe, never merged.
