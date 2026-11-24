@@ -7,8 +7,14 @@ videos:
 - slug: Durga-Mahakali-Puja-Paris-France-DP
   title: Durga Mahakali Puja Paris France DP
   video_ref: r2LF4cVAEVSRlUBDhSFQo
+  media_refs:
+  - r2DjA2ajEtXU1vAw00LyRBRQ4uRgcwMg8ZRi8mGBMeDA9QUgUU
+  - r2ASA4YhY0Kih5Jw8mXg1AHRchDAs3TzwaXiRUXxRIPhtQUgUU
   sync: primary
 - slug: Durga-Mahakali-Puja-Talk-Paris-France-DP
   title: Durga Mahakali Puja Talk Paris France DP
   video_ref: r2EiBZMRQNHmBTODFSFQo
+  media_refs:
+  - r2KyYYSxJKJxBfVToYJQkGPA4PLF0FOiMXX1QWKUFZI15QUgUU
+  - r2EiEfQS0oCzpEEyAMJjEQIyk0MhAmBQVEFUw_CBduETpQUgUU
   sync: derived
