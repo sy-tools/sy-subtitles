@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-24T07:44:18.147543+00:00",
+  "updated_at": "2026-11-24T07:47:05.429061+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1128,7 +1128,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1567,
-      "updated_at": "2026-11-23T15:42:32Z",
+      "updated_at": "2026-11-24T07:45:28Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1550
@@ -1335,7 +1335,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1675,
-      "updated_at": "2026-11-23T17:44:33Z",
+      "updated_at": "2026-11-24T07:46:51Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1635
