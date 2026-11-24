@@ -109,12 +109,13 @@ absorb a transient blip). Opt out in offline/restricted environments with:
 SY_E2E_REAL_VIMEO=0 pytest tests/test_sync_player_integration.py
 ```
 
-The same file holds the real **YouTube** IFrame API tests. They are opt-in:
-no YouTube talk is in `talks/` yet, so no video is pinned in the test. Name
-one by its `video_ref` (an r2 `yt:` ref of a video that embeds on any origin)
-to run them:
+The same file holds the real **YouTube** IFrame API tests, on by default the
+same way, against a YouTube video pinned from `talks/` (`TEST_YOUTUBE_REF`).
+Opt out with `SY_E2E_REAL_YOUTUBE=0`, or run them against another video by
+naming its `video_ref` (an r2 `yt:` ref of a video that embeds on any origin):
 
 ```bash
+SY_E2E_REAL_YOUTUBE=0 pytest tests/test_sync_player_integration.py
 SY_E2E_REAL_YOUTUBE=<video_ref> pytest tests/test_sync_player_integration.py -k YouTube
 ```
 
