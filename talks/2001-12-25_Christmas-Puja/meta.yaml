@@ -12,7 +12,10 @@ videos:
   - r2MRsCSjc1BBYZDAItGy0jMAk9TD1FEiMQchk1DE1YJl1QUgUU
 - slug: Christmas-Puja
   title: Christmas Puja
-  video_ref: r1WxcLQFtAQBhYU0BPFVFaVVxZSw
+  video_ref: r2TQF9TDIbTgACCQhSFQo
+  media_refs:
+  - r2EQIGYAwvCBp7BT8pDyAwOlQcIQ8NURk-aQcCDkgYDz5QUgUU
+  - r2CwMaVQxRBSx4VhkwERFECRA4RFsGMEUpWgMiCDJnVwNQUgUU
 - slug: Christmas-Puja-Talk
   title: Christmas Puja Talk
   video_ref: r2BgZvJQAAEEk1ITNSFQo
