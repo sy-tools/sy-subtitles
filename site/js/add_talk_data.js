@@ -125,7 +125,8 @@ function syncRolesForRows(rows) {
 
 // One video of the bookmarklet payload (site/js/bookmarklet.js) as the form
 // row it becomes: {url, title, mediaUrls}.
-//   YouTube  {p:'yt', id, gd:[driveId…], l} → the watch URL + Drive file URLs
+//   YouTube  {p:'yt', id, gd:[driveId…], bn?, l} → the watch URL + its mirrors:
+//                                            the Bunny play URL, then the Drive files
 //   Vimeo    {id, h, l}                     → https://vimeo.com/<id>/<h>
 //   legacy   '<id>' (a bare string)         → https://vimeo.com/<id>
 // A video the scraper found no id for has an empty id; it becomes a row with
@@ -138,18 +139,19 @@ function videoFromPayload(vid) {
   var title = v.l || '';
   if (!v.id) return { url: '', title: title, mediaUrls: [] };
   if (v.p === 'yt') {
+    var bunny = v.bn ? ['https://player.mediadelivery.net/play/' + v.bn] : [];
     return {
       url: 'https://www.youtube.com/watch?v=' + v.id,
       title: title,
-      mediaUrls: (v.gd || []).map(function (id) {
+      mediaUrls: bunny.concat((v.gd || []).map(function (id) {
         return 'https://drive.google.com/file/d/' + id + '/view';
-      }),
+      })),
     };
   }
   return { url: 'https://vimeo.com/' + v.id + (v.h ? '/' + v.h : ''), title: title, mediaUrls: [] };
 }
 
-// The Drive mirrors a form row still owns. They were scraped together with one
+// The mirrors a form row still owns. They were scraped together with one
 // particular link, so they stay only while the row carries that link: a link
 // the editor typed (a new row, or one typed over) is a different video, and
 // its mirrors are not known.
@@ -209,7 +211,7 @@ function buildMetaYaml(fields) {
       if (v.url) {
         var ref = _vimeoCodec.encodeVideoRef(v.url);
         yaml += "  video_ref: " + ref + "\n";
-        // A YouTube video's Google Drive MP4 mirrors, obfuscated the same
+        // A YouTube video's Bunny and Drive mirrors, obfuscated the same
         // way. Only a YouTube video may carry them (tools/schemas.py), so
         // they are written for nothing else. Same block-list layout as
         // tools/download.py setup_talk.
