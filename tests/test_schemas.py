@@ -224,6 +224,7 @@ _GD_REFS = [
     encode_video_ref("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz012345/view"),
     encode_video_ref("https://drive.google.com/file/d/1ZyXwVuTsRqPoNmLkJiHgFeDcBa543210/view"),
 ]
+_BN_REF = encode_video_ref("https://player.mediadelivery.net/play/123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d")
 
 
 def _meta_with_video(**video) -> dict:
@@ -330,3 +331,18 @@ def test_whisper_duration_must_be_a_positive_number(tmp_path: Path, bad) -> None
     data = dict(GOOD_WHISPER, duration=bad)
     with pytest.raises(SchemaError, match="duration"):
         validate_whisper_json(_w(tmp_path, "whisper.json", data))
+
+
+def test_meta_youtube_video_with_bunny_and_drive_media_refs_ok(tmp_path: Path) -> None:
+    validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_YT_REF, media_refs=[_BN_REF, *_GD_REFS])))
+
+
+def test_meta_bunny_ref_is_not_a_video_ref(tmp_path: Path) -> None:
+    with pytest.raises(SchemaError, match="video_ref"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=_BN_REF)))
+
+
+def test_meta_vimeo_video_with_bunny_media_ref_rejected(tmp_path: Path) -> None:
+    vimeo = encode_video_ref("https://vimeo.com/123456789")
+    with pytest.raises(SchemaError, match="media_refs"):
+        validate_meta_yaml(_w(tmp_path, "meta.yaml", _meta_with_video(video_ref=vimeo, media_refs=[_BN_REF])))

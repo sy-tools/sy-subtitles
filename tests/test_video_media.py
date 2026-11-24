@@ -1,7 +1,8 @@
 """tools/video_media.py — the one place a talk's video is downloaded from.
 
 No network here: every download goes through an injected ``run``. Ids are
-synthetic (a YouTube id is 11 characters, a Drive id 33).
+synthetic (a YouTube id is 11 characters, a Drive id 33, a Bunny id a numeric
+library and a UUID).
 """
 
 import subprocess
@@ -22,6 +23,9 @@ GD1_ID = "1Syntheticdriveid00abcdefghijklmn"
 GD2_ID = "1Syntheticdriveid00opqrstuvwxyzAB"
 GD1 = f"https://drive.google.com/file/d/{GD1_ID}/view"
 GD2 = f"https://drive.google.com/file/d/{GD2_ID}/view"
+BN_LIB = "123456"
+BN_GUID = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+BN = f"https://player.mediadelivery.net/play/{BN_LIB}/{BN_GUID}"
 TALK_ID = "1977-10-31_About-Jesus-Christ"
 
 
@@ -127,7 +131,7 @@ class TestDownload:
         out = capsys.readouterr().out
         assert "::error::" in out
         assert "python -m tools.local_whisper --talk-id " + TALK_ID + " --video-slug Main" in out
-        assert "::error::Video download failed: no Drive mirror of this YouTube video could be downloaded." in out
+        assert "::error::Video download failed: no mirror of this YouTube video could be downloaded." in out
 
     def test_vimeo_failure_keeps_the_data_centre_explanation(self, tmp_path, capsys):
         with pytest.raises(SystemExit):
@@ -192,15 +196,15 @@ class TestPurpose:
         with pytest.raises(SystemExit):
             video_media.download(yt_video(mirrors=()), tmp_path / "v.mp4", ci=True, run=FakeRun(), purpose="burn")
         out = capsys.readouterr().out
-        assert "no Drive mirror (media_refs)" in out
-        assert "Add the Drive copy of this video to media_refs in meta.yaml." in out
+        assert "no download mirror (media_refs)" in out
+        assert "Add the Bunny or Drive copy of this video to media_refs in meta.yaml." in out
         assert "local_whisper" not in out
 
     def test_burn_youtube_mirrors_failing_suggests_nothing_else(self, tmp_path, capsys):
         with pytest.raises(SystemExit):
             video_media.download(yt_video(), tmp_path / "v.mp4", ci=True, run=FakeRun(), purpose="burn")
         out = capsys.readouterr().out
-        assert "::error::Video download failed: no Drive mirror of this YouTube video could be downloaded." in out
+        assert "::error::Video download failed: no mirror of this YouTube video could be downloaded." in out
         assert "local_whisper" not in out
 
     def test_whisper_is_the_default_purpose(self, tmp_path, capsys):
@@ -342,7 +346,7 @@ class TestCli:
         with pytest.raises(SystemExit):
             cli("check", tmp_path, "--ci", "--purpose", "burn")
         out = capsys.readouterr().out
-        assert "Add the Drive copy of this video to media_refs in meta.yaml." in out
+        assert "Add the Bunny or Drive copy of this video to media_refs in meta.yaml." in out
         assert "local_whisper" not in out
 
     def test_download_for_burn_names_no_whisper_fallback(self, tmp_path, monkeypatch, capsys):
@@ -353,3 +357,82 @@ class TestCli:
         out = capsys.readouterr().out
         assert "Rendering this video needs a machine on a normal connection." in out
         assert "local_whisper" not in out
+
+
+class TestBunny:
+    def test_bunny_comes_before_drive_whatever_the_stored_order(self):
+        assert video_media.download_candidates(yt_video(mirrors=(GD1, BN, GD2)), ci=True) == [BN, GD1, GD2]
+
+    def test_at_home_bunny_then_drive_then_youtube(self):
+        assert video_media.download_candidates(yt_video(mirrors=(GD1, BN)), ci=False) == [BN, GD1, YT]
+
+    def test_bunny_alone_is_enough_for_ci(self):
+        assert video_media.download_candidates(yt_video(mirrors=(BN,)), ci=True) == [BN]
+
+    def test_drive_is_the_fallback_when_bunny_fails(self, tmp_path):
+        run = FakeRun(ok={GD1})
+        assert video_media.download(yt_video(mirrors=(BN, GD1)), tmp_path / "v.mp4", ci=True, run=run) == "gd"
+        assert run.urls() == [BN, GD1]
+
+    def test_bunny_is_sent_no_referer(self, tmp_path):
+        run = FakeRun(ok={BN})
+        assert video_media.download(yt_video(mirrors=(BN,)), tmp_path / "v.mp4", ci=True, run=run) == "bn"
+        assert "--referer" not in run.calls[0]
+
+    def test_bunny_fetches_its_fragments_in_parallel(self, tmp_path):
+        run = FakeRun(ok={BN})
+        video_media.download(yt_video(mirrors=(BN,)), tmp_path / "v.mp4", ci=True, run=run)
+        argv = run.calls[0]
+        assert argv[argv.index("-N") + 1] == "8"
+
+    def test_whisper_takes_the_smallest_bunny_rendition(self, tmp_path):
+        run = FakeRun(ok={BN})
+        video_media.download(yt_video(mirrors=(BN,)), tmp_path / "v.mp4", ci=True, run=run, purpose="whisper")
+        argv = run.calls[0]
+        assert argv[argv.index("-f") + 1] == "worst"
+
+    def test_burn_takes_the_best_bunny_rendition_up_to_480p(self, tmp_path):
+        run = FakeRun(ok={BN})
+        video_media.download(yt_video(mirrors=(BN,)), tmp_path / "v.mp4", ci=True, run=run, purpose="burn")
+        argv = run.calls[0]
+        assert argv[argv.index("-f") + 1] == "best[height<=480]/best"
+
+    def test_drive_and_vimeo_keep_their_arguments(self, tmp_path):
+        run = FakeRun(ok={GD1})
+        video_media.download(yt_video(mirrors=(GD1,)), tmp_path / "v.mp4", ci=True, run=run, purpose="burn")
+        run_vimeo = FakeRun(ok={VIMEO_PLAYER})
+        video_media.download(vimeo_video(), tmp_path / "w.mp4", ci=True, run=run_vimeo, purpose="burn")
+        for argv in (run.calls[0], run_vimeo.calls[0]):
+            assert "-N" not in argv and "-f" not in argv
+
+    def test_the_bunny_library_guid_and_url_are_masked_before_the_try(self, tmp_path, capsys, monkeypatch):
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        seen_before_call = []
+        run = FakeRun(ok={BN}, on_call=lambda argv: seen_before_call.append(capsys.readouterr().out))
+        video_media.download(yt_video(mirrors=(BN,)), tmp_path / "v.mp4", ci=True, run=run)
+        for secret in (BN, f"{BN_LIB}/{BN_GUID}", BN_LIB, BN_GUID):
+            assert f"::add-mask::{secret}\n" in seen_before_call[0], secret
+
+    def test_nothing_printed_carries_a_plaintext_bunny_id(self, tmp_path, capsys, monkeypatch):
+        monkeypatch.setenv("GITHUB_ACTIONS", "true")
+        with pytest.raises(SystemExit):
+            video_media.download(yt_video(mirrors=(BN, GD1)), tmp_path / "v.mp4", ci=True, run=FakeRun())
+        lines = [ln for ln in capsys.readouterr().out.splitlines() if not ln.startswith("::add-mask::")]
+        for secret in (BN_LIB, BN_GUID):
+            assert not any(secret in ln for ln in lines), secret
+
+    def test_provider_of_a_bunny_url(self):
+        assert video_media.provider_of_url(BN) == "bn"
+        assert video_media.referer_args(BN) == []
+
+    def test_transport_args_add_parallel_fragments_for_bunny_only(self):
+        assert video_media.transport_args(BN) == ["-N", "8"]
+        assert video_media.transport_args(GD1) == []
+        assert video_media.transport_args(VIMEO_PLAYER) == ["--referer", "https://www.amruta.org/"]
+
+    def test_cli_downloads_a_bunny_mirror_from_meta(self, tmp_path, monkeypatch):
+        make_talk(tmp_path, [yt_video(mirrors=(BN, GD1))])
+        run = FakeRun(ok={BN})
+        monkeypatch.setattr(video_media.subprocess, "run", run)
+        cli("download", tmp_path, "--out", str(tmp_path / "v.mp4"), "--ci")
+        assert run.urls() == [BN]

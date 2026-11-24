@@ -4,10 +4,11 @@ A video's link decides where its file can come from:
 
 - Vimeo: the player form of its link (Vimeo answers 401 on the internal API
   yt-dlp uses for the canonical ``vimeo.com/<id>/<hash>`` form).
-- YouTube: its Drive mirrors (``media_refs``), in order — the Drive file is the
-  very file the YouTube video was made from. YouTube itself comes last, and
-  only off CI: it asks GitHub's runners to "confirm you're not a bot" on every
-  client, while Drive serves them the full file.
+- YouTube: its mirrors (``media_refs``) — amruta's Bunny Stream copy first,
+  then its Drive files in stored order. Both are the same cut as the YouTube
+  video. Bunny comes first because it serves GitHub's runners, where Drive
+  answers 429 more often than not. YouTube itself comes last, and only off CI:
+  it asks the runners to "confirm you're not a bot" on every client.
 
 The plaintext link never reaches a log: in GitHub Actions each candidate is
 masked before it is tried, and the error messages name only the provider.
@@ -31,8 +32,18 @@ REFERER = "https://www.amruta.org/"
 _PROVIDER_HOSTS = (
     ("vimeo", "vimeo.com/"),
     ("gd", "drive.google.com/"),
+    ("bn", "mediadelivery.net/"),
     ("yt", "youtube.com/"),
 )
+
+_MIRROR_ORDER = ("bn", "gd")
+
+# A Bunny video is an HLS stream in a few renditions (240p-480p, each with the
+# same AAC track): whisper needs only the audio, so it takes the smallest; a
+# render takes the best, which is the quality the viewer watches. Its
+# fragments are fetched in parallel, or a long talk takes minutes on a runner.
+_BUNNY_FORMATS = {"whisper": "worst", "burn": "best[height<=480]/best"}
+_BUNNY_TRANSPORT = ["-N", "8"]
 
 # Measured 2026-07-31 across two talks and two networks: some newer Vimeo
 # uploads answer 401 from GitHub's Azure IPs while the SAME url+hash downloads
@@ -42,16 +53,16 @@ _VIMEO_FAILED = (
     "Vimeo refused the download (usually a 401). The url and hash are probably fine: "
     "Vimeo blocks some newer videos from data-centre IPs like GitHub's runners."
 )
-_YT_NO_MIRROR = "this YouTube video has no Drive mirror (media_refs), and YouTube refuses GitHub's runners."
-_YT_FAILED = "no Drive mirror of this YouTube video could be downloaded."
-_YT_HOME_FAILED = "neither the Drive mirrors nor YouTube itself could be downloaded."
+_YT_NO_MIRROR = "this YouTube video has no download mirror (media_refs), and YouTube refuses GitHub's runners."
+_YT_FAILED = "no mirror of this YouTube video could be downloaded."
+_YT_HOME_FAILED = "neither the mirrors nor YouTube itself could be downloaded."
 
 # What to do once every source has failed depends on what the video was for:
 # the whisper step can run on a home connection, a render has no such path.
 PURPOSES = ("whisper", "burn")
 _BURN_HINTS = {
     _VIMEO_FAILED: "Rendering this video needs a machine on a normal connection.",
-    _YT_NO_MIRROR: "Add the Drive copy of this video to media_refs in meta.yaml.",
+    _YT_NO_MIRROR: "Add the Bunny or Drive copy of this video to media_refs in meta.yaml.",
 }
 
 
@@ -63,6 +74,7 @@ def _sources(video: dict, *, ci: bool) -> list[VideoSource]:
     if source.provider == "vimeo":
         return [source]
     mirrors = [decode_video_source(m) for m in video.get("media_refs") or []]
+    mirrors.sort(key=lambda mirror: _MIRROR_ORDER.index(mirror.provider))
     return mirrors if ci else [*mirrors, source]
 
 
@@ -91,8 +103,21 @@ def provider_of_url(url: str) -> str:
 
 
 def referer_args(url: str) -> list[str]:
-    """Vimeo checks the embedding page; the other providers get no referer."""
+    """Vimeo checks the embedding page; the other providers get no referer.
+
+    Bunny refuses a foreign referer and serves a request without one. It is
+    never sent amruta's: that would be impersonating the embedding site.
+    """
     return ["--referer", REFERER] if provider_of_url(url) == "vimeo" else []
+
+
+def transport_args(url: str) -> list[str]:
+    """How yt-dlp reaches ``url``'s provider, whatever the file is for."""
+    return [*referer_args(url), *(_BUNNY_TRANSPORT if provider_of_url(url) == "bn" else [])]
+
+
+def _format_args(provider: str, purpose: str) -> list[str]:
+    return ["-f", _BUNNY_FORMATS[purpose]] if provider == "bn" else []
 
 
 def _fail(video: dict, reason: str, purpose: str, talk_id: str | None, video_slug: str | None) -> None:
@@ -158,7 +183,8 @@ def download(
             "-m",
             "yt_dlp",
             "--no-continue",
-            *referer_args(url),
+            *transport_args(url),
+            *_format_args(provider, purpose),
             "--merge-output-format",
             "mp4",
             "-o",
