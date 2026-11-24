@@ -3,4 +3,18 @@ date: '1985-05-19'
 location: Rome Ashram – Nirmala House, Rome (Italy)
 amruta_url: https://www.amruta.org/1985/05/19/shri-ganesha-puja-rome-1985/
 language: en
-videos: []
+videos:
+- slug: Shri-Ganesha-Puja-Talk
+  title: Shri Ganesha Puja Talk
+  video_ref: r2FhhuIgwhIWgHJ0xSFQo
+  media_refs:
+  - r2IAwARhEBOhIYVQ0kP1QcJg5dEAsCCk1DeAYOAR5CWQJQUgUU
+  - r2K0BGGj5fBFR9MRoWPhcYBhMjHAMCEB4jeClfLhF8CytQUgUU
+  sync: derived
+- slug: Shri-Ganesha-Puja
+  title: Shri Ganesha Puja
+  video_ref: r2QTVBCxQmT3JMOQVSFQo
+  media_refs:
+  - r2Mg0XGSk-VkhuMj4QAgoDFAQcGA0hGyUsGQ44NSFhKBJQUgUU
+  - r2A0UcXTceCD1-BB8bIStGRVEmFVAFICxAQDchOSZsLBxQUgUU
+  sync: primary

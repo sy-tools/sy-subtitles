@@ -4,4 +4,18 @@ date: '1983-11-05'
 location: Surbiton Ashram, Surbiton (England)
 amruta_url: https://www.amruta.org/1983/11/05/money-sleep-bhoots-lethargy-surbiton-1983/
 language: en
-videos: []
+videos:
+- slug: Eve-Of-Diwali-Puja
+  title: Eve Of Diwali Puja
+  video_ref: r2LEdiEBMaVFwgIQ9SFQo
+  media_refs:
+  - r2EB0RFVIhDDwcKj87MhVCQAwYQVlMNQ0DfVcMJz1ZDD5QUgUU
+  - r2VS9DbxQLJD4UNTAGXhQhRAxZJw4dDQEcWRAyOy1POSdQUgUU
+  sync: ignored
+- slug: Talk-To-Sahaja-Yogis
+  title: Talk To Sahaja Yogis
+  video_ref: r2JEFABikAP1dZHRtSFQo
+  media_refs:
+  - r2VwwRbiM0WDpcOAYtAykCGyA-Ph0rUQw_YREPARpLM15QUgUU
+  - r2CTNLVyATWC8UER8LKRAlJws2IAo5MA8mADsQGyZuKSBQUgUU
+  sync: primary

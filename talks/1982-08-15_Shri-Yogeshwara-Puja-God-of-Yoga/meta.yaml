@@ -3,4 +3,18 @@ date: '1982-08-15'
 location: Chelsham Road Ashram, London (England)
 amruta_url: https://www.amruta.org/1982/08/15/shri-yogeshwara-puja-1982/
 language: en
-videos: []
+videos:
+- slug: Krishna-Puja-as-Yogeshwara
+  title: Krishna Puja as Yogeshwara
+  video_ref: r2HjF1JV8EEmY5GQNSFQo
+  media_refs:
+  - r2Ix4ieC8eVzBOOw0mN1BKHAYKHBpNJDg7HisFFR9PMFJQUgUU
+  - r2JkIBYBcwKkxDFVkUACobKl0JBAQ-V0A2FDZTWUtUGz9QUgUU
+  sync: primary
+- slug: Krishna-Puja-Talk-Krishna-as-Yogeshwara
+  title: 'Krishna Puja Talk: Krishna as Yogeshwara'
+  video_ref: r2BktmKCY_O0UELgdSFQo
+  media_refs:
+  - r2LDQGdTdUCRJEU1hYOgk7GTQCG1tCMgAGYg0JGhhpNTBQUgUU
+  - r2FRMiblIIJjZoDRIMXDAUBA05FwQAW0QXdxgyFhVjKjpQUgUU
+  sync: derived

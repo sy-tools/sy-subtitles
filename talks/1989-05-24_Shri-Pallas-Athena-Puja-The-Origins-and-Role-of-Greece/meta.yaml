@@ -3,4 +3,18 @@ date: '1989-05-24'
 location: Stamatis Boudouris house, Athens (Greece)
 amruta_url: https://www.amruta.org/1989/05/24/shri-pallas-athena-puja-greece-1989/
 language: en
-videos: []
+videos:
+- slug: Pallas-Athena-Puja-Talk-The-Origins-and-Role-of-Greece
+  title: 'Pallas Athena Puja Talk: The Origins and Role of Greece'
+  video_ref: r2PBVABx0OO1xWRxVSFQo
+  media_refs:
+  - r2KA0YFAQpKRceBTksCzMECg84Qh9DDTIrSFAUPwlOGQVQUgUU
+  - r2EUEGHFICWQNODQIODgIHMA8EFwcCJzwUewsVPwFYFhxQUgUU
+  sync: derived
+- slug: Pallas-Athena-Puja-The-Origins-and-Role-of-Greece
+  title: 'Pallas Athena Puja: The Origins and Role of Greece'
+  video_ref: r2AjxMJjQCPHIgBT5SFQo
+  media_refs:
+  - r2EAQcSihWPhxUOCklByhHQBUNF1kuJhwLaSQhPkhrAxhQUgUU
+  - r2ICYmaVlSWj4cUVwuLFYqOyZZIF0sKSMgHSwKDRZDNRtQUgUU
+  sync: primary

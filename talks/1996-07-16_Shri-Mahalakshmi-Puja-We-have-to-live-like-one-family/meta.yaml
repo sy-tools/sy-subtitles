@@ -3,4 +3,18 @@ date: '1996-07-16'
 location: Moscow (Russia)
 amruta_url: https://www.amruta.org/1996/07/16/mahalakshmi-puja-moscow-1996/
 language: en
-videos: []
+videos:
+- slug: Mahalakshmi-Puja-Moscow-Russia-DP
+  title: Mahalakshmi Puja Moscow Russia DP
+  video_ref: r2QQsbVBNcPGQoMwhSFQo
+  media_refs:
+  - r2UTMYaCMmGi9VGBpRXQkGBD88Nl5FOhcwSwQqKUBOBzNQUgUU
+  - r2PRYWGwIfBwhEGQk-JlgkRzwNJh8wJCMCHy5VHE1XGFlQUgUU
+  sync: primary
+- slug: Mahalakshmi-Puja-Talk
+  title: Mahalakshmi Puja Talk
+  video_ref: r2OAd-NB8cMGlMGVNSFQo
+  media_refs:
+  - r2BRZGSxc2K1RFDV4tWzMkEAMEB14mOiElbicTFxFDVzBQUgUU
+  - r2DDM-XSJfWDtDADw5OwUwIDMvGUREGCECWS0-JBxZVitQUgUU
+  sync: derived

@@ -3,4 +3,25 @@ date: '1982-05-05'
 location: Ashram in Le Raincy, Le Raincy (France)
 amruta_url: https://www.amruta.org/1982/05/05/sahastrara-puja-1982/
 language: en
-videos: []
+videos:
+- slug: Sahasrara-Puja-Paris-France-DP-RAW
+  title: Sahasrara Puja Paris France DP-RAW
+  video_ref: r2AjZ3NQsWVHwtWS1SFQo
+  media_refs:
+  - r2EQQQXwoQLDZdOF4FJzsGOy4-Rh45EBFedywoBk5FKxJQUgUU
+  - r2DCw1QzgMFxxmLjguHjk3BToBRhkQMB8lekwdWT5KUTJQUgUU
+  sync: primary
+- slug: Sahasrara-Puja-Talk
+  title: Sahasrara Puja Talk
+  video_ref: r2GiEZGQJXPlwoGQ9SFQo
+  media_refs:
+  - r2DEIlQThfCTJXIiwZGzQiRw8lBV8tAUwdeiU2LC5lKDJQUgUU
+  - r2C0AiR1UqJRZcNBkvRQISIA8rETElKwM2eDYpDTxrOB5QUgUU
+  sync: derived
+- slug: Sahasrara-Puja-Talk-2
+  title: Sahasrara Puja Talk
+  video_ref: r2TUtJLQUkJkcCR1lSFQo
+  media_refs:
+  - r2K0EaeSc1LB1-EEciJS00OAJUHBMxJiIfZgsSLU59FVJQUgUU
+  - r2NjsReyUOCRIYJRNMWDgaHwQGG18SWkY6GlReFTxeCTJQUgUU
+  sync: derived

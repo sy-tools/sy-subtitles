@@ -3,4 +3,25 @@ date: '1988-04-03'
 location: Shudy Camps Park, Shudy Camps (England)
 amruta_url: https://www.amruta.org/1988/04/03/easter-puja-1988/
 language: en
-videos: []
+videos:
+- slug: Easter-Puja-Talk
+  title: Easter Puja Talk
+  video_ref: r2RUMUFCRdQV4LKFZSFQo
+  media_refs:
+  - r2MEwbXRYuWy1pJDMKOhAyC0g9OgMDOAEjVyowVxsaCR9QUgUU
+  - r2UgcJclc1DC8aFyA7OSoFOj0FOCoODhQndBs4NQNoVl9QUgUU
+  sync: derived
+- slug: Easter-Puja
+  title: Easter Puja
+  video_ref: r2GiBFKVVbHH9XMzZSFQo
+  media_refs:
+  - r2DRAVZiJKPRBEBB4FASlAMCsUEjwYCwVLfwwvKTdOPjJQUgUU
+  - r2OyMgY1QSVktOFTMIKgQ5BRQoMFsRNz0WYSwyXh5aID5QUgUU
+  sync: primary
+- slug: Easter-Puja-2
+  title: Easter Puja
+  video_ref: r2QTZnOC4nNH8GHhNSFQo
+  media_refs:
+  - r2AAFGQAUFVkt1AzkpJTIBPgstFzoDDwIYVQUzDjV6OwxQUgUU
+  - r2WxcrRTNRHwFvCwUEUSBAQxIfNz1NLCwqchUvPCxMDgJQUgUU
+  sync: derived

@@ -3,4 +3,18 @@ date: '1995-07-16'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1995/07/16/guru-puja-1995/
 language: en
-videos: []
+videos:
+- slug: Guru-Puja-Talk-Cabella-DP-RAW
+  title: Guru Puja Talk Cabella DP-RAW
+  video_ref: r2RR9dLShfTWcLJAhSFQo
+  media_refs:
+  - r2JR5eWywwKSYfDCJQOSsEHlIIEzZGKg0eHAsXBz9rOThQUgUU
+  - r2Wj0RThQ1KjxPFVIKBxc8Cg44NigSGw8eaAoPWUoYUgRQUgUU
+  sync: derived
+- slug: Guru-Puja
+  title: Guru Puja
+  video_ref: r2FglBChMYHX8oUw1SFQo
+  media_refs:
+  - r2OBk7fAoyOglrVRkNDCknFS5BAzpNJAxAfyVUWQhcGRxQUgUU
+  - r2GBkfFCkoPTFiCSgKAVI_XhAjB1g5KzwgdAwMWipyF15QUgUU
+  sync: primary

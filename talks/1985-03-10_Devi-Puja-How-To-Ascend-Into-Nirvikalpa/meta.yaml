@@ -3,4 +3,18 @@ date: '1985-03-10'
 location: Sydney (Australia)
 amruta_url: https://www.amruta.org/1985/03/10/shri-devi-puja-sydney-1985/
 language: en
-videos: []
+videos:
+- slug: Devi-Puja-Talk-How-To-Ascend-Into-Nirvikalpa
+  title: 'Devi Puja Talk: How To Ascend Into Nirvikalpa'
+  video_ref: r2LEZPBjYdLx4XORJSFQo
+  media_refs:
+  - r2AzQ0GxZRBCF7JFIqUA1BKgI-MREOLQ0hQTURGhR4DyxQUgUU
+  - r2AQNCTy4yIC5_IAwUXhMbQQZVEh4bMxQiREwtJA9UUzlQUgUU
+  sync: derived
+- slug: Devi-Puja
+  title: Devi Puja
+  video_ref: r2AhRsURU2L0ATXQZSFQo
+  media_refs:
+  - r2CCQZSjIeGBNkUw4VKS0rRysKPC8TGDQ5SgkeWEp_MS5QUgUU
+  - r2LiEEADAwXk10OV8-MQ8XBREBDi4TUiwxQRQ-ASxHEQtQUgUU
+  sync: primary

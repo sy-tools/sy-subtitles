@@ -3,4 +3,18 @@ date: '1991-12-09'
 location: Keshavs shilpa, Bengaluru (India)
 amruta_url: https://www.amruta.org/1991/12/09/shri-shakti-mahakali-puja-bangalore-1991/
 language: en
-videos: []
+videos:
+- slug: Mahakali-Puja-Talk
+  title: Mahakali Puja Talk
+  video_ref: r2GhVfM1Q2MnwqMxdSFQo
+  media_refs:
+  - r2VT8adQs4KSZMKAZULjIRAS8lES4DUCYRdSotWChOVT9QUgUU
+  - r2PSEKbBM4HQBEGSAGO1lDBwohOT0aDEI7aiRSOzBcNyZQUgUU
+  sync: derived
+- slug: Mahakali-Puja
+  title: Mahakali Puja
+  video_ref: r2LBZ-BDc-O1RVWC5SFQo
+  media_refs:
+  - r2AxI1WTktLi0UEFpWPxAeK1EJF1AjDgNEaSI3OAp-MiNQUgUU
+  - r2BxwGRREvHCEZLQMiWTUmNwo-KzMbNBcaXAspKkl5KDhQUgUU
+  sync: primary

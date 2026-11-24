@@ -3,4 +3,18 @@ date: '2000-09-16'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/2000/09/16/shri-ganesha-puja-2000/
 language: en
-videos: []
+videos:
+- slug: Shri-Ganesha-Puja-Talk
+  title: Shri Ganesha Puja Talk
+  video_ref: r2BjtFBBcnSBlVIAxSFQo
+  media_refs:
+  - r2FSZAeww9BhsYGRBQHCZKHwohES8uNRonRlFVGCZuBDpQUgUU
+  - r2JTtAFVgULh5CViQAOAIyGDQpAwpFPUIBHQgVCjcaIyJQUgUU
+  sync: derived
+- slug: Shri-Ganesha-Puja
+  title: Shri Ganesha Puja
+  video_ref: r2LAEdWV8sFB0NKwJSFQo
+  media_refs:
+  - r2AzEVV1QdPwxmB0cWL1E0MjJBMyMgNC8YSApKBCtyKThQUgUU
+  - r2NT04eDciWUtBVzhTWjklBzVUBisBVRcRFDMrHS5PBTpQUgUU
+  sync: primary

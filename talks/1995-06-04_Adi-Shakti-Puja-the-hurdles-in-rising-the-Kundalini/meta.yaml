@@ -3,4 +3,18 @@ date: '1995-06-04'
 location: Campus, Cabella Ligure (Italy)
 amruta_url: https://www.amruta.org/1995/06/04/adi-shakti-puja-1995/
 language: en
-videos: []
+videos:
+- slug: Adi-Shakti-Puja-Cabella-Italy-DP-RAW
+  title: Adi Shakti Puja Cabella Italy DP-RAW
+  video_ref: r2Bj5kBShfG0QEKw9SFQo
+  media_refs:
+  - r2Vz0YSwMdISpfNVIjHVdeRgsqGhgrI0cReisGWzFjFFlQUgUU
+  - r2DxsdZiorOTV3UxAZKQogCgY2IyURDB5HSRESJy9cJA1QUgUU
+  sync: primary
+- slug: Adi-Shakti-Puja-Talk-Cabella-Italy-DP-RAW
+  title: Adi Shakti Puja Talk Cabella Italy DP-RAW
+  video_ref: r2MBZAMVYmPlktDzlSFQo
+  media_refs:
+  - r2KCdKdCcMHzVvDC9UDBk-RiwBHAoAASZebwAdXC0dUwZQUgUU
+  - r2EB0_VRMrGgsZVRsEJRgjPCxbLFAmIEw_QSM4IixhNAZQUgUU
+  sync: derived
