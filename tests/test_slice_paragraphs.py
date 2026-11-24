@@ -390,3 +390,44 @@ def test_a_drifted_block_judges_a_repeated_line_by_this_slices_copies_only(tmp_p
     assert "error" not in result, result
     assert text.rstrip().endswith("Сахаджа йоґ: Я не знаю.")
     assert text.count("Сахаджа йоґ: Не знаю.") == 2
+
+
+# paragraph_spans must cut exactly where load_transcript cuts, or the mask
+# refuses (count mismatch) or hides the wrong text. Each shape below is one
+# load_transcript rule: stage lines dropped, remark-only paragraphs dropped,
+# both paragraph formats, whitespace around a dropped line.
+_OMIT = ["(сміх)", "(Оплески)"]
+_SHAPES = {
+    "stage line between one-per-line paragraphs": "Перший.\n[Музика]\nДругий.\n",
+    "stage line as its own blank-line paragraph": "Перший.\n\n[Музика]\n\nДругий.\n",
+    "remark-only paragraph": "Перший.\n\n(сміх)\n\nДругий.\n",
+    "whitespace lines around a stage line": "Перший.\n\n  \n[Сміх]\n  \n\nДругий.\n",
+    "remarks split by a stage line": "Перший.\n\n(сміх) (Оплески)\n[Музика]\n (сміх)\n\nДругий.\n",
+}
+
+
+@pytest.mark.parametrize("raw", list(_SHAPES.values()), ids=list(_SHAPES))
+def test_the_mask_cuts_the_paragraphs_load_transcript_cuts(tmp_path, raw):
+    from tools.slice_paragraphs import mask_foreign
+    from tools.sync_common import strip_with_map
+    from tools.text_segmentation import load_transcript
+
+    path = tmp_path / "transcript_uk.txt"
+    path.write_text(raw, encoding="utf-8")
+    paragraphs = load_transcript(str(path), _OMIT)
+    view, offsets = strip_with_map(raw, _OMIT)
+    masked = mask_foreign(view, offsets, raw, set(range(len(paragraphs))), len(paragraphs), _OMIT)
+    assert masked is not None, f"mask disagrees with load_transcript's {len(paragraphs)} paragraphs"
+    for own in range(len(paragraphs)):
+        masked = mask_foreign(view, offsets, raw, {own}, len(paragraphs), _OMIT)
+        visible = " ".join(masked.replace("\x00", " ").split())
+        assert visible == paragraphs[own]
+
+
+def test_a_slice_that_owns_everything_sees_every_whitespace_character(tmp_path):
+    """A gap a block runs across may hold spaces and tabs, not only newlines."""
+    from tools.slice_paragraphs import mask_foreign
+
+    raw = "Перший рядок. \nДругий\tрядок.  \n\nТретій.\n"
+    masked = mask_foreign(raw, list(range(len(raw))), raw, {0, 1}, 2, [])
+    assert masked == raw

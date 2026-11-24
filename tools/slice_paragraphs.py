@@ -102,8 +102,8 @@ _HEADER_MARKER = re.compile(r"(Talk Language:|Language:|Мова промови:
 _STAGE_LINE = re.compile(r"\[[^\[\]]+\]")
 
 
-def paragraph_spans(text: str) -> list[tuple[int, int]]:
-    """Where load_transcript's paragraphs sit in the raw `text`, as (start, end).
+def paragraph_spans(text: str) -> list[tuple[int, int, str]]:
+    """(start, end, kept text) of each paragraph load_transcript cuts from raw `text`.
 
     The same cut as text_segmentation.load_transcript before declared remarks
     are stripped — header lines, whole bracketed lines dropped, blank-line or
@@ -140,16 +140,19 @@ def paragraph_spans(text: str) -> list[tuple[int, int]]:
     else:
         groups = [[ln] for ln in kept]
 
-    spans = []
+    # A group's raw range still holds the stage lines dropped from it, so it
+    # is judged by its kept lines — the text load_transcript actually has —
+    # and bounded by the first and last of them that hold anything.
+    paragraphs = []
     for group in groups:
-        lo, hi = group[0][0], group[-1][1]
-        chunk = text[lo:hi]
-        if not chunk.strip():
+        filled = [ln for ln in group if ln[2].strip()]
+        if not filled:
             continue
-        lo += len(chunk) - len(chunk.lstrip())
-        hi -= len(chunk) - len(chunk.rstrip())
-        spans.append((lo, hi))
-    return spans
+        first, last = filled[0], filled[-1]
+        lo = first[0] + len(first[2]) - len(first[2].lstrip())
+        hi = last[0] + len(last[2].rstrip())
+        paragraphs.append((lo, hi, "\n".join(ln[2] for ln in group)))
+    return paragraphs
 
 
 def mask_foreign(view: str, offsets: list[int], raw: str, own: set[int], expected: int, omit_phrases) -> str | None:
@@ -164,7 +167,7 @@ def mask_foreign(view: str, offsets: list[int], raw: str, own: set[int], expecte
     own paragraphs. None when `raw` does not yield `expected` paragraphs:
     a mask built from a different cut could not be trusted.
     """
-    spans = [(lo, hi) for lo, hi in paragraph_spans(raw) if strip_omitted_phrases(raw[lo:hi], omit_phrases)]
+    spans = [(lo, hi) for lo, hi, kept in paragraph_spans(raw) if strip_omitted_phrases(kept, omit_phrases)]
     if len(spans) != expected:
         return None
     raw_own = [False] * (len(raw) + 1)
