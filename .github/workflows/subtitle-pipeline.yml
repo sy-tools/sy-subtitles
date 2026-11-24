@@ -614,8 +614,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       talk_id: ${{ steps.prepare.outputs.talk_id }}
-      video_slug: ${{ steps.prepare.outputs.video_slug }}
-      timing_source: ${{ steps.timing.outputs.timing_source }}
+      build_matrix: ${{ steps.timing.outputs.build_matrix }}
       captions_fetched: ${{ steps.captions.outputs.fetched }}
     steps:
       - uses: actions/checkout@v7
@@ -715,20 +714,21 @@ jobs:
           TALK_ID="${{ needs.discover.outputs.talk_id }}"
           TALK="talks/$TALK_ID"
 
-          # The primary video is declared in meta.yaml under `sync:` and read
-          # through tools.video_roles — the one interpreter of that key. It
-          # used to be guessed here by counting whisper words, which cannot
-          # answer before whisper has run and disagrees with the declaration
-          # on 1998-05-10, whose Talk cut is the authoritative recording.
-          FIRST_VIDEO=$(python -m tools.video_roles --talk-dir "$TALK" --role primary)
-          if [ -z "$FIRST_VIDEO" ]; then
-            echo "::error::${TALK_ID}: no video declares 'sync: primary' in meta.yaml"
+          # Which videos get a build of their own is declared in meta.yaml
+          # under `sync:` and read through tools.video_roles — the one
+          # interpreter of that key: the primary, if the talk has one, then
+          # every independent video. A talk of equal parts (a workshop on
+          # several tapes) has no primary; each part is built as its slice of
+          # the one transcript.
+          BUILD_VIDEOS=$(python -m tools.video_roles --talk-dir "$TALK" --build-videos)
+          if [ -z "$BUILD_VIDEOS" ]; then
+            echo "::error::${TALK_ID}: no video to build — meta.yaml declares neither 'sync: primary' nor 'sync: independent'"
             exit 1
           fi
-          echo "Primary video: $FIRST_VIDEO"
+          FIRST_VIDEO=$(echo "$BUILD_VIDEOS" | head -1)
+          echo "Build videos: $(echo "$BUILD_VIDEOS" | tr '\n' ' ')"
 
           echo "talk_id=$TALK_ID" >> "$GITHUB_OUTPUT"
-          echo "video_slug=$FIRST_VIDEO" >> "$GITHUB_OUTPUT"
 
           # A dry run without translation would cut blocks from the checkout's
           # transcript, which reviewers keep editing; the snapshot's recorded
@@ -739,30 +739,51 @@ jobs:
               --talk-dir "$TALK"
           fi
 
-          python -m tools.build_map prepare \
-            --talk-dir "$TALK" \
-            --video-slug "$FIRST_VIDEO" > /dev/null
+          for VIDEO in $BUILD_VIDEOS; do
+            python -m tools.build_map prepare \
+              --talk-dir "$TALK" \
+              --video-slug "$VIDEO" > /dev/null
+          done
 
+      # One build-timecodes leg per build video. A leg is a SLICE when the
+      # talk builds more than one video: its builder keeps only the blocks
+      # its own recording speaks, and text preservation against the whole
+      # transcript is replaced by tools.slice_coverage across all legs.
       - name: Resolve timing source
         id: timing
         env:
           TIMING_SOURCE_INPUT: ${{ inputs.timing_source }}
           TALK_ID: ${{ steps.prepare.outputs.talk_id }}
-          VIDEO_SLUG: ${{ steps.prepare.outputs.video_slug }}
         run: |
-          if [ "$TIMING_SOURCE_INPUT" = "auto" ] || [ -z "$TIMING_SOURCE_INPUT" ]; then
-            EN_SRT=$(python -c "import sys; from tools.srt_utils import timing_en_srt; print(timing_en_srt(sys.argv[1]) or '')" "talks/${TALK_ID}/${VIDEO_SLUG}")
-            if [ -n "$EN_SRT" ]; then
-              RESOLVED=en-srt
-            else
-              RESOLVED=whisper
-            fi
-            echo "auto → $RESOLVED (${EN_SRT:-no en.srt})"
-          else
-            RESOLVED="$TIMING_SOURCE_INPUT"
-            echo "explicit → $RESOLVED"
-          fi
-          echo "timing_source=$RESOLVED" >> "$GITHUB_OUTPUT"
+          python3 <<'PYEOF'
+          import json
+          import os
+
+          from tools.srt_utils import timing_en_srt
+          from tools.video_roles import build_slugs, resolve_roles
+
+          talk = f"talks/{os.environ['TALK_ID']}"
+          wanted = os.environ.get("TIMING_SOURCE_INPUT") or "auto"
+          roles = resolve_roles(talk)
+          slugs = build_slugs(talk)
+          legs = []
+          for slug in slugs:
+              if wanted == "auto":
+                  en_srt = timing_en_srt(f"{talk}/{slug}")
+                  source = "en-srt" if en_srt else "whisper"
+                  print(f"{slug}: auto → {source} ({en_srt or 'no en.srt'})")
+              else:
+                  source = wanted
+                  print(f"{slug}: explicit → {source}")
+              legs.append({
+                  "video_slug": slug,
+                  "role": roles[slug],
+                  "timing_source": source,
+                  "slice": len(slugs) > 1,
+              })
+          with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+              f.write(f"build_matrix={json.dumps({'include': legs})}\n")
+          PYEOF
 
       - name: Upload UK blocks
         uses: actions/upload-artifact@v7
@@ -772,12 +793,17 @@ jobs:
           path: |
             talks/${{ needs.discover.outputs.talk_id }}/*/work/uk_blocks.json
 
-  # Phase 2: Single builder-agent pass (MODEL_HEAVY) — assign timecodes, build SRT
+  # Phase 2: One builder-agent pass (MODEL_HEAVY) per build video — assign
+  # timecodes, build SRT. A leg that fails does not stop the others: commit
+  # takes every leg that passed (see its `leg_ok` marker below).
   build-timecodes:
     needs: [prepare-build, whisper, translate-and-review]
     if: ${{ !cancelled() && needs.prepare-build.result == 'success' }}
     environment: ${{ inputs.dry_run && 'dry-run' || 'main' }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-build.outputs.build_matrix) }}
     steps:
       - uses: actions/checkout@v7
       - run: git pull --rebase
@@ -801,7 +827,7 @@ jobs:
       - name: Place UK blocks into work dir
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
         run: |
           WORK="talks/${TALK_ID}/${VIDEO_SLUG}/work"
           mkdir -p "$WORK"
@@ -847,7 +873,7 @@ jobs:
         if: inputs.dry_run == true && needs.translate-and-review.result != 'success'
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
         run: |
           python -m tools.fake_llm pin-transcript \
             --snapshot "tests/fixtures/pipeline_snapshots/${TALK_ID}/${VIDEO_SLUG}" \
@@ -864,9 +890,9 @@ jobs:
       - name: Check whisper timings
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
           WHISPER_RESULT: ${{ needs.whisper.result }}
-          TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
+          TIMING_SOURCE: ${{ matrix.timing_source }}
         run: |
           WHISPER="talks/${TALK_ID}/${VIDEO_SLUG}/source/whisper.json"
           LOCAL="python -m tools.local_whisper --talk-id ${TALK_ID} --video-slug ${VIDEO_SLUG}"
@@ -898,8 +924,8 @@ jobs:
       - name: Prepare timing data
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
-          TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
+          TIMING_SOURCE: ${{ matrix.timing_source }}
         run: |
           python -m tools.build_map prepare-timing             --talk-dir "talks/${TALK_ID}"             --video-slug "${VIDEO_SLUG}"             --timing-source "${TIMING_SOURCE}"
 
@@ -936,8 +962,8 @@ jobs:
         if: inputs.dry_run == true
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
-          TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
+          TIMING_SOURCE: ${{ matrix.timing_source }}
         run: |
           python -m tools.fake_llm build-timecodes \
             --snapshot "tests/fixtures/pipeline_snapshots/${TALK_ID}/${VIDEO_SLUG}" \
@@ -959,17 +985,31 @@ jobs:
             Assign timecodes to Ukrainian subtitle blocks.
 
             TALK: talks/${{ needs.prepare-build.outputs.talk_id }}
-            VIDEO: ${{ needs.prepare-build.outputs.video_slug }}
-            TIMING SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
+            VIDEO: ${{ matrix.video_slug }}
+            TIMING SOURCE: ${{ matrix.timing_source }}
+            SLICE: ${{ matrix.slice }}
 
             Step 1 — Read:
-            - UK blocks: talks/${{ needs.prepare-build.outputs.talk_id }}/${{ needs.prepare-build.outputs.video_slug }}/work/uk_blocks.json
-            - Timing:    talks/${{ needs.prepare-build.outputs.talk_id }}/${{ needs.prepare-build.outputs.video_slug }}/work/timing.json
+            - UK blocks: talks/${{ needs.prepare-build.outputs.talk_id }}/${{ matrix.video_slug }}/work/uk_blocks.json
+            - Timing:    talks/${{ needs.prepare-build.outputs.talk_id }}/${{ matrix.video_slug }}/work/timing.json
             - Context:   talks/${{ needs.prepare-build.outputs.talk_id }}/transcript_en.txt
 
             timing.json format:
               whisper → {"source":"whisper","words":[{"w":word,"s":start_ms,"e":end_ms},...]}
               en-srt  → {"source":"en-srt","blocks":[{"n":idx,"s":start_ms,"e":end_ms,"t":text},...]}
+
+            SLICE true means this talk was recorded as several videos (tapes,
+            parts) that share ONE transcript, and this VIDEO speaks only part
+            of it. uk_blocks.json holds the whole transcript. Find where this
+            video's speech begins and ends in it, time only the blocks this
+            recording actually speaks, and SKIP every block that belongs to
+            another part (before or after this video) — do not emit a line for
+            it. Section markers such as "[Плівка 2]" or a title line are
+            skipped too. Inside this video's own stretch, keep every spoken
+            block. If the recording speaks nothing in the transcript, write an
+            empty timecodes.txt and say why in your final message: the leg
+            then fails on purpose, because such a video should be declared
+            `sync: ignored` instead.
 
             Step 2 — For each block in uk_blocks.json, determine start and end timecodes.
 
@@ -991,14 +1031,16 @@ jobs:
               - The EN SRT is the ground truth for what is subtitled; transcript-only content must not leak into the output.
 
             Step 3 — Write to:
-            talks/${{ needs.prepare-build.outputs.talk_id }}/${{ needs.prepare-build.outputs.video_slug }}/work/timecodes.txt
+            talks/${{ needs.prepare-build.outputs.talk_id }}/${{ matrix.video_slug }}/work/timecodes.txt
 
             EXACT format — one line per block, IDs in ascending order, no other text:
             #<id> | HH:MM:SS,mmm | HH:MM:SS,mmm
 
             Rules:
             - WHISPER mode: every block in uk_blocks.json must appear exactly once
+              (SLICE true: every block this video speaks, exactly once)
             - EN-SRT mode: emit only blocks that have an EN SRT counterpart; IDs may skip but must be strictly ascending
+            - SLICE true, either mode: IDs may skip but must be strictly ascending
             - Timecodes must be non-overlapping
             - Do NOT write block text, only the id and timecodes
             - Do NOT use TodoWrite
@@ -1018,15 +1060,17 @@ jobs:
       - name: Validate timecodes format
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
-          TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
+          TIMING_SOURCE: ${{ matrix.timing_source }}
+          SLICE: ${{ matrix.slice }}
         run: |
           N=$(python3 -c "import json; print(len(json.load(open('talks/${TALK_ID}/${VIDEO_SLUG}/work/uk_blocks.json'))))")
           # WHISPER mode: every uk_block must have a timecode — exact count.
           # EN-SRT mode: the builder agent is allowed to SKIP UK blocks with no EN
           # counterpart, so count is an upper bound; IDs must still be
-          # strictly ascending.
-          if [ "$TIMING_SOURCE" = "en-srt" ]; then
+          # strictly ascending. A SLICE skips every block another video
+          # speaks, in either mode.
+          if [ "$TIMING_SOURCE" = "en-srt" ] || [ "$SLICE" = "true" ]; then
             python -m tools.validate_artifacts \
               --timecodes "talks/${TALK_ID}/${VIDEO_SLUG}/work/timecodes.txt" \
               --max-blocks "${N}" \
@@ -1040,7 +1084,7 @@ jobs:
       - name: Assemble and build SRT
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
         run: |
           python -m tools.build_map assemble \
             --talk-dir "talks/${TALK_ID}" \
@@ -1049,7 +1093,7 @@ jobs:
       - name: Optimize SRT
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
         run: |
           # Word timings let the merge phases tell "timecodes touch" apart from
           # "speech is continuous" — without them a block inherited from a
@@ -1079,15 +1123,17 @@ jobs:
             --skip-duration-split \
             --skip-cps-split
 
-      - name: Write primary build manifest
+      - name: Write build manifest
         # Records which mode was used so downstream consumers (golden tests,
         # future reviewers) can apply the same validation rules the
         # pipeline used. See `tests/test_golden_talks.py` for how this is
         # consumed.
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
-          TIMING_SOURCE: ${{ needs.prepare-build.outputs.timing_source }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
+          TIMING_SOURCE: ${{ matrix.timing_source }}
+          ROLE: ${{ matrix.role }}
+          SLICE: ${{ matrix.slice }}
           RUN_ID: ${{ github.run_id }}
         run: |
           python3 <<'PYEOF'
@@ -1099,11 +1145,15 @@ jobs:
           video = os.environ["VIDEO_SLUG"]
           mode = os.environ["TIMING_SOURCE"]  # whisper | en-srt
           manifest = {
-              "role": "primary",
+              "role": os.environ["ROLE"],  # primary | independent
               "mode": mode,
               "built_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "run_id": int(os.environ["RUN_ID"]),
           }
+          # Read back by validate_subtitles.manifest_validate_flags, so every
+          # re-validation judges a slice the way this build did.
+          if os.environ["SLICE"] == "true":
+              manifest["slice"] = True
           path = f"talks/{talk}/{video}/final/build_manifest.yaml"
           with open(path, "w") as f:
               yaml.dump(manifest, f, default_flow_style=False, sort_keys=False)
@@ -1111,6 +1161,7 @@ jobs:
           PYEOF
 
       - name: Build secondary-video SRTs
+        if: matrix.role == 'primary'
         # Secondary videos (same talk, different recording) get their uk.srt
         # from the primary's output — a simple time offset when the two en.srt
         # files are identical-text-different-timing, or word-level re-alignment
@@ -1121,7 +1172,7 @@ jobs:
         # a failure. See tools/build_secondary_srts.py.
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
         run: |
           python -m tools.build_secondary_srts \
             --talk-dir "talks/${TALK_ID}" \
@@ -1131,18 +1182,23 @@ jobs:
       - name: Validate subtitles
         env:
           TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
-          VIDEO_SLUG: ${{ needs.prepare-build.outputs.video_slug }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
+          ROLE: ${{ matrix.role }}
+          SLICE: ${{ matrix.slice }}
+          TIMING_SOURCE: ${{ matrix.timing_source }}
         run: |
           TALK="talks/${TALK_ID}"
           FIRST="${VIDEO_SLUG}"
 
-          python3 -c "
-          import yaml
-          with open('${TALK}/meta.yaml') as f:
-            meta = yaml.safe_load(f)
-          for v in meta['videos']:
-            print(v['slug'])
-          " | while read slug; do
+          # This leg's own video, plus — on the primary leg — the derived
+          # videos it just built. Other legs validate their own videos; an
+          # SRT this run did not make is not this leg's to judge.
+          LEG_VIDEOS="${VIDEO_SLUG}"
+          if [ "${ROLE}" = "primary" ]; then
+            LEG_VIDEOS="${LEG_VIDEOS} $(python -m tools.video_roles --talk-dir "${TALK}" --role derived | tr '\n' ' ')"
+          fi
+          echo "LEG_VIDEOS=${LEG_VIDEOS}" >> "$GITHUB_ENV"
+          for slug in ${LEG_VIDEOS}; do
             VIDEO="${TALK}/${slug}"
             if [ ! -f "${VIDEO}/final/uk.srt" ]; then
               echo "SKIP ${slug}: no uk.srt"
@@ -1154,19 +1210,23 @@ jobs:
               # passed text check), timing comes from offset/resync (may
               # produce occasional high-CPS blocks unfixable without silence).
               EXTRA_FLAGS="--skip-text-check --skip-time-check --skip-cps-check"
-            elif [ "${{ needs.prepare-build.outputs.timing_source }}" = "en-srt" ]; then
+            elif [ "${TIMING_SOURCE}" = "en-srt" ]; then
               # Primary in en-srt mode: the builder agent is instructed to DROP UK blocks
               # with no EN counterpart (trailing signatures, stage
               # directions), so transcript ↔ SRT word equality no longer
               # holds. Replace text-preservation with a block-count sanity
               # check against EN SRT; time range still enforced.
               EXTRA_FLAGS="--skip-text-check --compare-block-count"
+            elif [ "${SLICE}" = "true" ]; then
+              # A slice holds only its own recording's part of the
+              # transcript; coverage across the slices is checked in commit.
+              EXTRA_FLAGS="--skip-text-check"
             fi
             # Anchor matches the builder's timing source:
             #   whisper mode → --whisper-json (whisper words)
             #   en-srt mode  → --en-srt       (EN SRT blocks)
             ANCHOR_FLAG=""
-            if [ "${{ needs.prepare-build.outputs.timing_source }}" = "en-srt" ]; then
+            if [ "${TIMING_SOURCE}" = "en-srt" ]; then
               EN_SRT=$(python -c "import sys; from tools.srt_utils import timing_en_srt; print(timing_en_srt(sys.argv[1]) or '')" "${VIDEO}")
               # A derived video without English subtitles has no anchor; it
               # runs with --skip-time-check, so none is needed.
@@ -1185,18 +1245,46 @@ jobs:
               --report "${VIDEO}/final/report.txt"
           done
 
+      # Every step above passed. Commit takes a video's files only when a
+      # `leg_ok` marker sits in that video's directory, so a leg that failed
+      # validation never puts its SRT on main — while the legs that passed
+      # still ship.
+      - name: Mark leg passed
+        run: touch "$RUNNER_TEMP/leg_passed"
+
+      # Only this leg's own videos travel: the checkout also holds the other
+      # videos' committed files, and another leg is building those.
+      - name: Stage leg outputs
+        if: "!cancelled()"
+        env:
+          TALK_ID: ${{ needs.prepare-build.outputs.talk_id }}
+          VIDEO_SLUG: ${{ matrix.video_slug }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/leg"
+          for slug in ${LEG_VIDEOS:-$VIDEO_SLUG}; do
+            for f in work/timecodes.txt final/uk.srt final/report.txt final/build_report.txt final/build_manifest.yaml; do
+              src="talks/${TALK_ID}/${slug}/${f}"
+              if [ -f "$src" ]; then
+                mkdir -p "$RUNNER_TEMP/leg/${slug}/$(dirname "$f")"
+                cp "$src" "$RUNNER_TEMP/leg/${slug}/${f}"
+              fi
+            done
+            # Inside the video's own directory, not at the artifact root:
+            # download-artifact extracts a lone matching artifact flat, and
+            # the root of one artifact is then the root of the download.
+            if [ -f "$RUNNER_TEMP/leg_passed" ] && [ -d "$RUNNER_TEMP/leg/${slug}" ]; then
+              echo "${slug}" > "$RUNNER_TEMP/leg/${slug}/leg_ok"
+            fi
+          done
+          find "$RUNNER_TEMP/leg" -type f
+
       - name: Upload build artifacts
         if: "!cancelled()"
         uses: actions/upload-artifact@v7
         with:
           retention-days: 7
-          name: subtitles__${{ needs.prepare-build.outputs.talk_id }}${{ inputs.dry_run_tag }}
-          path: |
-            talks/${{ needs.prepare-build.outputs.talk_id }}/*/work/timecodes.txt
-            talks/${{ needs.prepare-build.outputs.talk_id }}/*/final/uk.srt
-            talks/${{ needs.prepare-build.outputs.talk_id }}/*/final/report.txt
-            talks/${{ needs.prepare-build.outputs.talk_id }}/*/final/build_report.txt
-            talks/${{ needs.prepare-build.outputs.talk_id }}/*/final/build_manifest.yaml
+          name: subtitles__${{ needs.prepare-build.outputs.talk_id }}${{ inputs.dry_run_tag }}__video__${{ matrix.video_slug }}
+          path: ${{ runner.temp }}/leg
 
 
   # Dry-run verifier — replaces the commit job when inputs.dry_run is true.
@@ -1218,7 +1306,8 @@ jobs:
       - name: Download subtitle artifacts
         uses: actions/download-artifact@v8
         with:
-          name: subtitles__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          pattern: subtitles__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}__video__*
+          merge-multiple: true
           path: /tmp/subtitles
 
       - name: Stage artifacts back under talks/
@@ -1249,21 +1338,13 @@ jobs:
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
           TRANSLATED: ${{ needs.translate-and-review.result }}
         run: |
-          # The pipeline builds only the PRIMARY video (declared in meta.yaml
-          # under `sync:`) and generates derived-video SRTs via offset_srt
-          # apply. Verify only the primary — derived videos are trivially so.
-          primary=$(python -m tools.video_roles --talk-dir "talks/${TALK_ID}" --role primary)
-          if [ -z "$primary" ]; then
-            # Without this the snapshot path collapses to the talk directory,
-            # which exists, so the -d guard below passes and verify_snapshot
-            # runs with an empty --video-slug.
-            echo "::error::${TALK_ID}: no video declares 'sync: primary' in meta.yaml"
-            exit 1
-          fi
-          echo "Primary video: ${primary}"
-          snap="tests/fixtures/pipeline_snapshots/${TALK_ID}/${primary}"
-          if [ ! -d "$snap" ]; then
-            echo "::error::no snapshot for ${TALK_ID}/${primary}"
+          # Each build video is verified against its own snapshot; derived
+          # videos come from the primary through offset_srt apply, so they
+          # are trivially so. A build video without a snapshot is not
+          # verified — but at least one must be.
+          videos=$(python -m tools.video_roles --talk-dir "talks/${TALK_ID}" --build-videos)
+          if [ -z "$videos" ]; then
+            echo "::error::${TALK_ID}: no video to build — meta.yaml declares neither 'sync: primary' nor 'sync: independent'"
             exit 1
           fi
           # A run that skipped translation has no translate output to judge.
@@ -1272,16 +1353,30 @@ jobs:
           else
             phases="build"
           fi
-          python -m tools.verify_snapshot \
-            --talk-dir "talks/${TALK_ID}" \
-            --video-slug "${primary}" \
-            --snapshot "${snap}" \
-            --phases "${phases}"
+          verified=0
+          for video in $videos; do
+            snap="tests/fixtures/pipeline_snapshots/${TALK_ID}/${video}"
+            if [ ! -d "$snap" ]; then
+              echo "::warning::no snapshot for ${TALK_ID}/${video} — not verified"
+              continue
+            fi
+            echo "Verifying ${video}"
+            python -m tools.verify_snapshot \
+              --talk-dir "talks/${TALK_ID}" \
+              --video-slug "${video}" \
+              --snapshot "${snap}" \
+              --phases "${phases}"
+            verified=$((verified + 1))
+          done
+          if [ "$verified" -eq 0 ]; then
+            echo "::error::no snapshot for any build video of ${TALK_ID}"
+            exit 1
+          fi
 
   # Single commit job – collects all artifacts and pushes
   commit:
-    # prepare-build is here for its captions_fetched output only; it already
-    # precedes this job through build-timecodes.
+    # prepare-build is here for its captions_fetched and build_matrix
+    # outputs; it already precedes this job through build-timecodes.
     needs: [discover, translate-and-review, prepare-build, build-timecodes]
     # commit runs after any build path completes; skipped for dry-runs.
     if: |
@@ -1347,7 +1442,10 @@ jobs:
         continue-on-error: true
         uses: actions/download-artifact@v8
         with:
-          name: subtitles__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}
+          # One artifact per build video. Each video's directory carries its
+          # own `leg_ok`, so the layout (flat for one artifact, nested for
+          # several) does not matter.
+          pattern: subtitles__${{ needs.discover.outputs.talk_id }}${{ inputs.dry_run_tag }}__video__*
           path: /tmp/subtitles
 
       - name: Verify subtitle artifacts present
@@ -1364,16 +1462,20 @@ jobs:
           fi
 
       - name: Place artifacts into talk directories
-        # BUILD_RESULT gates the subtitle copy — skip when validation failed
-        # so the broken SRT does not end up on main as the next run's
-        # baseline. TRANSLATE_RESULT gates the translation copy the same way:
-        # a transcript that failed the translate job's verification gate
-        # (1:1 paragraph count) must not become the next run's baseline;
-        # its artifact stays downloadable for inspection. Both values are
-        # workflow-controlled enums (success/failure/cancelled/skipped),
-        # not user input — using `env:` anyway as the safe default.
+        id: place
+        # A video's `leg_ok` marker gates its subtitle copy — a leg that failed
+        # validation never puts its SRT on main as the next run's baseline.
+        # BUILD_RESULT=success then demands a marker from every build video,
+        # so a lost artifact cannot pass as a clean run. TRANSLATE_RESULT
+        # gates the translation copy the same way: a transcript that failed
+        # the translate job's verification gate (1:1 paragraph count) must not
+        # become the next run's baseline; its artifact stays downloadable for
+        # inspection. Both results are workflow-controlled enums
+        # (success/failure/cancelled/skipped), not user input — using `env:`
+        # anyway as the safe default.
         env:
           BUILD_RESULT: ${{ needs.build-timecodes.result }}
+          BUILD_MATRIX: ${{ needs.prepare-build.outputs.build_matrix }}
           TRANSLATE_RESULT: ${{ needs.translate-and-review.result }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
         run: |
@@ -1392,23 +1494,57 @@ jobs:
             done
           fi
 
-          # Subtitles — only when build-timecodes succeeded (validation passed).
-          if [ "$BUILD_RESULT" != "success" ]; then
-            echo "=== Subtitle artifacts SKIPPED (build-timecodes=$BUILD_RESULT) ==="
-          elif [ -d /tmp/subtitles ]; then
-            echo "=== Subtitle artifacts ==="
+          # Subtitles — per video, only from a leg that passed every step
+          # (the video's directory carries `leg_ok`). A talk built as several
+          # slices keeps the parts that passed when one part fails.
+          SHIPPED=false
+          if [ -d /tmp/subtitles ]; then
+            echo "=== Subtitle artifacts (build-timecodes=$BUILD_RESULT) ==="
             find /tmp/subtitles -type f
-            find /tmp/subtitles \( -name "uk.srt" -o -name "timecodes.txt" -o -name "report.txt" -o -name "build_report.txt" -o -name "build_manifest.yaml" \) | while read src; do
-              # Preserve video slug subdirectory
-              rel=$(echo "$src" | grep -o '[^/]*/\(work\|final\)/[^/]*$')
-              if [ -n "$rel" ]; then
-                dest="talks/$TALK_ID/$rel"
-                mkdir -p "$(dirname "$dest")"
-                cp "$src" "$dest"
-                echo "  -> $dest"
+            while IFS= read -r marker; do
+              dir=$(dirname "$marker")
+              slug=$(basename "$dir")
+              for f in work/timecodes.txt final/uk.srt final/report.txt final/build_report.txt final/build_manifest.yaml; do
+                if [ -f "$dir/$f" ]; then
+                  dest="talks/$TALK_ID/$slug/$f"
+                  mkdir -p "$(dirname "$dest")"
+                  cp "$dir/$f" "$dest"
+                  echo "  -> $dest"
+                  SHIPPED=true
+                fi
+              done
+            done < <(find /tmp/subtitles -name leg_ok -type f)
+            find /tmp/subtitles -path '*/final/uk.srt' -type f | while IFS= read -r srt; do
+              dir=$(dirname "$(dirname "$srt")")
+              [ -f "$dir/leg_ok" ] || echo "  SKIPPED $(basename "$dir"): its leg did not pass"
+            done
+          fi
+          echo "shipped=$SHIPPED" >> "$GITHUB_OUTPUT"
+          # Every leg passed, so every leg's videos must be here. Shipping none
+          # of them while reporting success is how a broken placement would
+          # otherwise hide.
+          if [ "$BUILD_RESULT" = "success" ] && [ "$SHIPPED" != "true" ]; then
+            echo "::error::build-timecodes succeeded but no video carried a leg_ok marker — nothing was placed"
+            exit 1
+          fi
+          if [ "$BUILD_RESULT" = "success" ]; then
+            for slug in $(echo "$BUILD_MATRIX" | jq -r '.include[].video_slug'); do
+              if [ -z "$(find /tmp/subtitles -path "*/${slug}/leg_ok" -type f -print -quit)" ]; then
+                echo "::error::build-timecodes succeeded but ${slug} has no leg_ok marker — its artifact did not arrive"
+                exit 1
               fi
             done
           fi
+
+      # Warn-only: which transcript blocks no slice claimed, or two did.
+      # Judged on what main will hold after this commit. A talk that builds
+      # one video is skipped by the tool itself.
+      - name: Check slice coverage
+        if: needs.build-timecodes.result != 'skipped'
+        continue-on-error: true
+        env:
+          TALK_ID: ${{ needs.discover.outputs.talk_id }}
+        run: python -m tools.slice_coverage --talk-dir "talks/${TALK_ID}"
 
       - name: Commit via PR
         env:
@@ -1432,13 +1568,16 @@ jobs:
       # A text-only talk never builds: its translation stands in
       # for the build — made this run is `rebuilt`, already on disk is
       # `existing`, failed or missing is `none`.
-      # A failed build announces nothing: resetting the issue to review:pending
-      # would wipe the real review status without shipping anything to review.
+      # A build that shipped nothing announces nothing: resetting the issue to
+      # review:pending would wipe the real review status without shipping
+      # anything to review. A build that failed in one slice but shipped the
+      # others did ship something.
       - name: Decide review issue
         id: review-gate
         env:
           WANTED: ${{ inputs.review_issue }}
           BUILD_RESULT: ${{ needs.build-timecodes.result }}
+          SHIPPED: ${{ steps.place.outputs.shipped }}
           TRANSLATE_RESULT: ${{ needs.translate-and-review.result }}
           TEXT_ONLY: ${{ needs.discover.outputs.text_only }}
           TALK_ID: ${{ needs.discover.outputs.talk_id }}
@@ -1454,7 +1593,9 @@ jobs:
               fi
             fi
           elif [ "$WANTED" != "false" ]; then
-            if [ "$BUILD_RESULT" = "success" ]; then
+            # A talk built as slices can fail one part and ship the others;
+            # what shipped is what needs review.
+            if [ "$BUILD_RESULT" = "success" ] || [ "$SHIPPED" = "true" ]; then
               MODE=rebuilt
             elif [ "$BUILD_RESULT" = "skipped" ] && compgen -G "talks/${TALK_ID}/*/final/uk.srt" > /dev/null; then
               MODE=existing

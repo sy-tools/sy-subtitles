@@ -9,11 +9,18 @@ about any of it and treated every SRT as an equal source of truth.
 Roles are declared per video in meta.yaml under `sync:` and read here.
 This module is the ONLY interpreter of that key.
 
-    primary      Authoritative subtitle text. Exactly one per talk.
+    primary      Authoritative subtitle text. At most one per talk.
     derived      Mirrors the primary's text positionally; its own timing.
     independent  Its own slice of the transcript; synced with the
                  transcript directly, never against the primary.
     ignored      Never read, never written.
+
+A talk has exactly one primary, with one exception: an event recorded as
+several equal parts (a workshop on four tapes) has no authoritative
+recording, so every part is `independent` and none is primary. Without a
+primary there is nothing for a `derived` video to mirror, so such a talk
+carries no derived video. The pipeline builds the primary, if there is one,
+and every independent video — see build_slugs().
 
 A multi-video talk MUST declare. There is deliberately no default: a
 default in a resolver is seen by nobody and fires in CI, which is the
@@ -88,7 +95,8 @@ def resolve_roles(talk_dir: str | Path) -> dict[str, str]:
     roles = {v["slug"]: v.get("sync", "ignored") for v in videos}
 
     primaries = [s for s, r in roles.items() if r == "primary"]
-    if len(primaries) != 1:
+    all_parts = not primaries and "independent" in roles.values() and "derived" not in roles.values()
+    if len(primaries) != 1 and not all_parts:
         raise RoleError(
             f"{talk_dir.name}: expected exactly one video with `sync: primary`, "
             f"found {len(primaries)}" + (f" ({', '.join(primaries)})" if primaries else "")
@@ -106,6 +114,18 @@ def primary_slug(talk_dir: str | Path) -> str:
 
 def derived_slugs(talk_dir: str | Path) -> list[str]:
     return [s for s, r in resolve_roles(talk_dir).items() if r == "derived"]
+
+
+def build_slugs(talk_dir: str | Path) -> list[str]:
+    """The videos the pipeline builds subtitles for, in build order.
+
+    The primary first (it is what derived videos are made from), then every
+    independent video in meta.yaml order. Derived videos are not here: they
+    come from the primary's SRT, not from a build of their own.
+    """
+    roles = resolve_roles(talk_dir)
+    primary = [s for s, r in roles.items() if r == "primary"]
+    return primary + [s for s, r in roles.items() if r == "independent"]
 
 
 def declared_ignored_slugs(talk_dir: str | Path) -> set[str]:
@@ -149,6 +169,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description="Resolve a talk's subtitle sync roles")
     p.add_argument("--talk-dir", required=True)
     p.add_argument("--role", choices=ROLES, help="Print only slugs with this role")
+    p.add_argument("--build-videos", action="store_true", help="Print the slugs the pipeline builds, one per line")
     p.add_argument("--text-only", action="store_true", help="Print true/false: the talk has no counted video")
     args = p.parse_args()
     if args.text_only:
@@ -160,9 +181,14 @@ def main() -> None:
         return
     try:
         roles = resolve_roles(args.talk_dir)
+        build = build_slugs(args.talk_dir) if args.build_videos else None
     except RoleError as exc:
         print(f"::error::{exc}", file=sys.stderr)
         sys.exit(1)
+    if build is not None:
+        for slug in build:
+            print(slug)
+        return
     for slug, role in roles.items():
         if args.role is None:
             print(f"{slug}\t{role}")

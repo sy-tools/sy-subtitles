@@ -278,6 +278,10 @@ that live nowhere else.
 - `validate_subtitles` — structural checks. Timing source is whisper OR the EN
   SRT; **prefer the EN SRT** when the talk has one.
 - `validate_artifacts` — artifact contracts at pipeline phase boundaries.
+- `slice_coverage` — for a talk built as several slices of one transcript
+  (independent parts, no single recording holding it all), which blocks no
+  video claimed and which two did. Warn-only: the split is the builder's
+  best effort and a person checks it.
 
 **Glossary and corpus**
 - `glossary_check` — scan an EN transcript for glossary term candidates.

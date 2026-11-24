@@ -135,9 +135,9 @@ per video in `meta.yaml` under `sync:`, and read only through
 
 | Role | Meaning |
 |---|---|
-| `primary` | Authoritative subtitle text. Exactly one per talk. |
+| `primary` | Authoritative subtitle text. Exactly one per talk — or none, see below. |
 | `derived` | Mirrors the primary's text positionally; keeps its own timing. |
-| `independent` | Its own slice of the transcript (a separate talk on the same day); synced against the transcript, never against the primary. |
+| `independent` | Its own slice of the transcript (a separate talk on the same day, or one part of an event recorded as several); built as its own slice and synced against the transcript, never against the primary. |
 | `ignored` | Never read, never written — a yogi's introduction, a presents ceremony, a camera angle with no subtitles. Once declared, it is not sent to whisper either. |
 
 A multi-video talk MUST declare once more than one of its videos carries a
@@ -150,6 +150,25 @@ Declare the roles as soon as a talk gains a second video. Rules of thumb: the fu
 recording is `primary` and the `Talk` cut is `derived`; a video without
 an EN SRT (`final/en.srt` or `source/en.srt`) cannot be `primary`, since resyncing needs an EN bridge on
 both sides.
+
+**A talk with no primary.** Some events were recorded as equal parts — a
+workshop on four tapes, each holding a stretch of the one transcript — and no
+recording is the authoritative one the others mirror. Every part is then
+`independent` and the talk has no primary. A `derived` video copies the
+primary, so a talk without one carries none; that combination is refused.
+
+**What the pipeline builds.** `video_roles.build_slugs` — the primary, if any,
+then every `independent` video — and `build-timecodes` runs one leg per entry.
+When a talk builds more than one video, each leg is a *slice*: its builder
+receives the whole transcript, keeps only the blocks its own recording speaks,
+and the leg's build manifest says `slice: true`. Text preservation against the
+whole transcript cannot hold for a slice, so it is not checked per video
+(`validate_subtitles.manifest_validate_flags` reads the flag back for every
+re-validation). Instead the commit job runs `tools.slice_coverage` across all
+the slices and warns about blocks no video claimed or two did. It warns and
+never fails: where one part ends and the next begins is the builder's best
+effort, and a person checks it. A leg that fails does not hold back the others
+— commit ships every leg that passed.
 
 ### Video providers
 

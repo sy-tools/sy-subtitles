@@ -31,11 +31,13 @@ def test_commit_job_places_build_manifest() -> None:
     subtitle placement filter used to omit it, so it was never committed and
     sync_pr fell back to whisper-strict validation for en-srt talks."""
     text = (WORKFLOWS / "subtitle-pipeline.yml").read_text(encoding="utf-8")
-    # the commit job's placement find is the one that also copies build_report.txt
-    finds = [line for line in text.splitlines() if "find /tmp/subtitles" in line and "build_report.txt" in line]
-    assert finds, "commit-job subtitle placement find not found"
-    for line in finds:
-        assert "build_manifest.yaml" in line, f"subtitle placement filter misses build_manifest.yaml: {line.strip()}"
+    placement = re.search(r"- name: Place artifacts into talk directories.*?- name: ", text, re.S)
+    assert placement, "placement step not found"
+    # the commit job's placement list is the one that also copies build_report.txt
+    lists = [line for line in placement.group(0).splitlines() if "final/build_report.txt" in line]
+    assert lists, "commit-job subtitle placement list not found"
+    for line in lists:
+        assert "final/build_manifest.yaml" in line, f"subtitle placement misses build_manifest.yaml: {line.strip()}"
 
 
 def test_commit_job_gates_translation_on_translate_success() -> None:

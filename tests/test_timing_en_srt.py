@@ -204,7 +204,15 @@ def _run_step(tmp_path: Path, script: str, env: dict) -> dict:
     out = tmp_path / "github_output"
     out.write_text("", encoding="utf-8")
     path = f"{Path(sys.executable).parent}{os.pathsep}{os.environ.get('PATH', '')}"
-    full_env = {**os.environ, **env, "GITHUB_OUTPUT": str(out), "PYTHONPATH": str(ROOT), "PATH": path}
+    github_env = tmp_path / "github_env"
+    full_env = {
+        **os.environ,
+        **env,
+        "GITHUB_OUTPUT": str(out),
+        "GITHUB_ENV": str(github_env),
+        "PYTHONPATH": str(ROOT),
+        "PATH": path,
+    }
     subprocess.run(["bash", "-e", "-c", script], cwd=tmp_path, env=full_env, check=True, capture_output=True)
     return dict(line.split("=", 1) for line in out.read_text(encoding="utf-8").splitlines() if "=" in line)
 
@@ -216,16 +224,19 @@ def _run_step(tmp_path: Path, script: str, env: dict) -> dict:
 def test_auto_timing_resolution(tmp_path, files, expected):
     video = tmp_path / "talks" / "T" / "V"
     (video / "source").mkdir(parents=True)
+    (video.parent / "meta.yaml").write_text(yaml.safe_dump({"videos": [{"slug": "V"}]}), encoding="utf-8")
     for rel in files:
         _write(video / rel, [(0, 1000, "Line.")])
 
     out = _run_step(
         tmp_path,
         _step("prepare-build", "Resolve timing source"),
-        {"TIMING_SOURCE_INPUT": "auto", "TALK_ID": "T", "VIDEO_SLUG": "V"},
+        {"TIMING_SOURCE_INPUT": "auto", "TALK_ID": "T"},
     )
 
-    assert out["timing_source"] == expected
+    assert json.loads(out["build_matrix"])["include"] == [
+        {"video_slug": "V", "role": "primary", "timing_source": expected, "slice": False}
+    ]
 
 
 def test_validation_anchors_on_the_final_en_srt_and_skips_a_video_without_one(tmp_path):
@@ -238,11 +249,13 @@ def test_validation_anchors_on_the_final_en_srt_and_skips_a_video_without_one(tm
     _write(talk / "P" / "final" / "en.srt", [(100, 1100, "Line.")])
     for slug in ("P", "D"):
         _write(talk / slug / "final" / "uk.srt", [(100, 1100, "Рядок.")])
-    script = _step("build-timecodes", "Validate subtitles").replace(
-        "${{ needs.prepare-build.outputs.timing_source }}", "en-srt"
-    )
+    script = _step("build-timecodes", "Validate subtitles")
 
-    _run_step(tmp_path, script, {"TALK_ID": "T", "VIDEO_SLUG": "P"})
+    _run_step(
+        tmp_path,
+        script,
+        {"TALK_ID": "T", "VIDEO_SLUG": "P", "ROLE": "primary", "SLICE": "false", "TIMING_SOURCE": "en-srt"},
+    )
 
     assert "EN SRT: talks/T/P/final/en.srt" in (talk / "P" / "final" / "report.txt").read_text(encoding="utf-8")
     assert "None" not in (talk / "D" / "final" / "report.txt").read_text(encoding="utf-8")
