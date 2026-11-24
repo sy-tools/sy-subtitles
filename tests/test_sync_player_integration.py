@@ -13,10 +13,12 @@ talks/1979-02-25_Puja-In-Pune-Marathi/meta.yaml. The link is stored as an
 obfuscated video_ref (no plaintext URL in the repo); decode_video_ref recovers
 the real URL at runtime for the live network test.
 
-YouTube runs only when SY_E2E_REAL_YOUTUBE names a video: set it to a
-video_ref (r2 "yt:<id>") of a video that embeds on any origin. No YouTube
-video is pinned here, because none is in talks/ yet — the gate becomes
-default-on, like Vimeo's, once one is and its ref can be copied in.
+The real YouTube IFrame API tests run by default too, against
+TEST_YOUTUBE_REF: Krishna Puja as Yogeshwara 1982, from
+talks/1982-08-15_Shri-Yogeshwara-Puja-God-of-Yoga/meta.yaml. Same stability
+policy as Vimeo: if it stops embedding, copy another YouTube video_ref from
+talks/. SY_E2E_REAL_YOUTUBE=<video_ref> runs them against another video;
+SY_E2E_REAL_YOUTUBE=0 skips them.
 """
 
 from __future__ import annotations
@@ -53,9 +55,16 @@ TEST_VIMEO_URL = decode_video_ref(TEST_VIDEO_REF)
 _SKIP_REAL = os.environ.get("SY_E2E_REAL_VIMEO", "1") == "0"
 _SKIP_REASON = "SY_E2E_REAL_VIMEO=0 — real Vimeo network access disabled"
 
-_REAL_YOUTUBE_REF = os.environ.get("SY_E2E_REAL_YOUTUBE", "")
-_SKIP_REAL_YOUTUBE = not _REAL_YOUTUBE_REF
-_SKIP_REAL_YOUTUBE_REASON = "SY_E2E_REAL_YOUTUBE unset — set it to a YouTube video_ref to run"
+# Project-public YouTube video from the corpus, stored obfuscated like the
+# Vimeo one above.
+TEST_YOUTUBE_REF = "r2HjF1JV8EEmY5GQNSFQo"
+
+# Gate, as for Vimeo: on by default; SY_E2E_REAL_YOUTUBE=0 skips, any other
+# value names the video_ref to run against instead of the pinned one.
+_YOUTUBE_ENV = os.environ.get("SY_E2E_REAL_YOUTUBE", "")
+_SKIP_REAL_YOUTUBE = _YOUTUBE_ENV == "0"
+_REAL_YOUTUBE_REF = _YOUTUBE_ENV if _YOUTUBE_ENV and not _SKIP_REAL_YOUTUBE else TEST_YOUTUBE_REF
+_SKIP_REAL_YOUTUBE_REASON = "SY_E2E_REAL_YOUTUBE=0 — real YouTube network access disabled"
 
 pytestmark = pytest.mark.e2e
 
@@ -341,3 +350,7 @@ class TestRealYouTubeIntegration:
             "!!document.getElementById('view-preview').style.getPropertyValue('--preview-aspect')",
             timeout=15000,
         )
+
+
+def test_real_youtube_runs_by_default():
+    assert not _SKIP_REAL_YOUTUBE or os.environ.get("SY_E2E_REAL_YOUTUBE") == "0"

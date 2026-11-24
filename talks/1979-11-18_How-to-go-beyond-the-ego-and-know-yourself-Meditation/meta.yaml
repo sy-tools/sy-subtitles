@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: How-To-Get-To-Meditation
   title: How To Get To Meditation
-  video_ref: r1QwFbFQ9CBxAWFU5QXE8UU11SXVFC
+  video_ref: r2JABGCRcBA0JMWFNSFQo
+  media_refs:
+  - r2EUMfSTsWFTVlLhgLWxIbCyskByE4FgRLTxUMGiMZGwtQUgUU
+  - r2OgMiHRcSDA9vViQRDFJCCgczQgASNVgnbwUPHihaVT1QUgUU

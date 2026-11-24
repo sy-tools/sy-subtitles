@@ -957,11 +957,21 @@ def _readable_floor_ms(chars, cps, config):
     return max(config.min_duration_ms, int(chars / cps * 1000))
 
 
-def _cascade_pass(blocks, config, recipient_min_cps, level_cps, honour_drift_budget=True):
+_CASCADE_SEARCH_RADIUS = 8
+
+
+def _block_cps(block):
+    dur = block["end_ms"] - block["start_ms"]
+    return len(block["text"].replace("\n", "")) / (dur / 1000.0) if dur > 0 else 999
+
+
+def _cascade_pass(
+    blocks, config, recipient_min_cps, level_cps, honour_drift_budget=True, search_radius=_CASCADE_SEARCH_RADIUS
+):
     """One redistribution pass: blocks with CPS above ``recipient_min_cps``
-    receive time (aiming at ``level_cps``) from neighbors whose CPS stays
-    below ``level_cps`` after donating. Returns (blocks, count)."""
-    SEARCH_RADIUS = 8
+    receive time (aiming at ``level_cps``) from neighbors — up to
+    ``search_radius`` blocks away — whose CPS stays below ``level_cps`` after
+    donating. Returns (blocks, count)."""
     redistributed = 0
 
     for _iteration in range(5):
@@ -982,7 +992,7 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps, honour_drift_bud
                 continue
 
             # Search backwards
-            for dist in range(1, min(SEARCH_RADIUS + 1, i + 1)):
+            for dist in range(1, min(search_radius + 1, i + 1)):
                 if extra_needed <= 0:
                     break
                 nb = blocks[i - dist]
@@ -1007,7 +1017,7 @@ def _cascade_pass(blocks, config, recipient_min_cps, level_cps, honour_drift_bud
                         iter_redis += 1
 
             # Search forwards
-            for dist in range(1, min(SEARCH_RADIUS + 1, len(blocks) - i)):
+            for dist in range(1, min(search_radius + 1, len(blocks) - i)):
                 if extra_needed <= 0:
                     break
                 nb = blocks[i + dist]
@@ -1053,13 +1063,26 @@ def cascade_redistribute(blocks, config, report):
        This tier ignores any drift budget: a block nobody can read is a worse
        fault than one that sits further from its anchor than we would like,
        and tier 1 has already spent whatever room the budget allowed.
+       For the same reason it is not held to the search radius: when a dense
+       run is longer than the radius, every block in reach is already at the
+       rescue level and the slack lies beyond it. The radius doubles until no
+       block is left over the ceiling, so a violator the first pass fixes is
+       fixed exactly as before, and only one it could not fix reaches further.
     """
     blocks, redistributed = _cascade_pass(blocks, config, config.target_cps, config.target_cps)
 
     rescue_level = config.hard_max_cps * 0.95
     rescued = 0
     if rescue_level > config.target_cps:
-        blocks, rescued = _cascade_pass(blocks, config, config.hard_max_cps, rescue_level, honour_drift_budget=False)
+        radius = _CASCADE_SEARCH_RADIUS
+        while True:
+            blocks, count = _cascade_pass(
+                blocks, config, config.hard_max_cps, rescue_level, honour_drift_budget=False, search_radius=radius
+            )
+            rescued += count
+            if radius >= len(blocks) or all(_block_cps(b) <= config.hard_max_cps for b in blocks):
+                break
+            radius *= 2
 
     if redistributed:
         report.append(f"  Phase 7 - Cascade time redistribution: {redistributed}")

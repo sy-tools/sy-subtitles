@@ -1,0 +1,77 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1977-11-01_You-all-are-Shri-Kalki/Workshop-Part-2/final/uk.srt
+  Transcript: talks/1977-11-01_You-all-are-Shri-Kalki/transcript_uk.txt
+  Whisper: talks/1977-11-01_You-all-are-Shri-Kalki/Workshop-Part-2/source/whisper.json
+  SRT blocks: 785
+  Whisper segments: 762
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs whisper)
+============================================================
+  whisper range: 00:00:00,530 — 00:55:47,230
+  SRT range:       00:00:00,530 — 00:55:49,230
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 785
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 785
+  CPS: avg=12.2, median=14.0, max=20.0
+  CPS > target: 152 (19.4%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=36.7, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 5
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #91: CPS=20.0 (28ch/1.4s) "Сахаджа йоґ: [НЕРОЗБІРЛИВО]."
+    #107: CPS=20.0 (37ch/1.9s) "Шрі Матаджі: Тепер це на правій Аґії."
+    #231: CPS=20.0 (41ch/2.0s) "Шрі Матаджі: Нехай Бог благословить тебе."
+    #261: CPS=20.0 (45ch/2.2s) "Шрі Матаджі: Ти, мабуть, поклала її десь тут?"
+    #262: CPS=20.0 (32ch/1.6s) "Сахаджа йоґ: Якого вона кольору?"
+    #264: CPS=20.0 (33ch/1.6s) "Слава Богу. Тобі треба її знайти."
+    #265: CPS=20.0 (57ch/2.9s) "Це (лимон) – тобі треба тримати його під ліжком дві доби."
+    #274: CPS=20.0 (27ch/1.4s) "Сахаджа йоґиня: Так, стане."
+    #317: CPS=20.0 (27ch/1.4s) "Сахаджа йоґ: Та сама жінка."
+    #393: CPS=20.0 (78ch/3.9s) "Їх убивали багато разів – знову вони народжуються, знову їх ..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 12.2 (target ≤15.0)
+  CPS > 15.0: 152 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 5 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

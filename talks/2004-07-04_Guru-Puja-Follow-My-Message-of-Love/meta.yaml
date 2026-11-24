@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Guru-Puja-Talk
   title: Guru Puja Talk
-  video_ref: r1VV1AXRJbQENLAkhdShlXWFBdVkQ
+  video_ref: r2EgBmVj9dA1gzPS5SFQo
+  media_refs:
+  - r2LTgRWhVQHhhnWR8JBwkVNS8JGzAtDBwGRjUGNjAVUlNQUgUU
+  - r2GxIUFSgVLRBeCAkIHEwZADQDHCsZBTkbHVQhFyFACVpQUgUU
   sync: derived
 - slug: Guru-Puja
   title: Guru Puja
-  video_ref: r1BA1CD0UHTRAbVkheTxVWWlNdWUE
+  video_ref: r2MBleFyUMVF0zHjRSFQo
+  media_refs:
+  - r2VgwCRhEIVitvWT1QHjFKIyclLBBDVB8HWFcNKixODCNQUgUU
+  - r2JzgdegYQAykeBAwbICoSMSQhRC09CAEbQRArKghPKxtQUgUU
   sync: primary

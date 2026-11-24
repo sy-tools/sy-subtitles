@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Navaratri-Puja-Cabella-Italy-DP-RAW
   title: Navaratri Puja Cabella Italy DP-RAW
-  video_ref: r1A1pFXREETEYfVUhYQRRWXlNcUUs
+  video_ref: r2EkEfVjcwGk9XBABSFQo
+  media_refs:
+  - r2Jw8rSSUMKT1LWDsMIjAJPCIDGC0lLhw5Zi8hXSscPhxQUgUU
+  - r2Vjo8ZwhXJyZkWFwQUAJKRlBaMzg5DB4hci8eAQoAAyZQUgUU
   sync: primary
 - slug: Navaratri-Puja-Talk-Cabella-Italy-DP-RAW
   title: Navaratri Puja Talk Cabella Italy DP-RAW
-  video_ref: r1UwpMWUIBQkZIU0hXSxRWXlNcUUs
+  video_ref: r2Akt7KlMJMF5MCVRSFQo
+  media_refs:
+  - r2EEMGfTEoXS9YECIMBAQmNVUaLgA8KR0yW1g2KEAZTDJQUgUU
+  - r2UioYciAWNk9VBjsICiYFMAEeNgQkUz41HAQoXUB8BRxQUgUU
   sync: derived

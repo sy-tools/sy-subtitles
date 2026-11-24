@@ -8,11 +8,17 @@ language: en
 videos:
 - slug: Easter-Puja
   title: Easter Puja
-  video_ref: r1Bl0WWkABE0UYVUhXTBRSWVlbV0I
+  video_ref: r2LEZ4LjdYG081Hw5SFQo
+  media_refs:
+  - r2KgQ6TwQ-LQNJFiM0DiIsRxcBRz5ZBU0dSDYxPSpiKwJQUgUU
+  - r2GwUkYQ4uACh-CzUsBjYaFiIEQhsCFicaVS1fAQ9cVyRQUgUU
   sync: primary
 - slug: Easter-Puja-Talk
   title: Easter Puja Talk
-  video_ref: r1VQlMCxJXR0QUAkhbQR1SWVlbV0I
+  video_ref: r2IDR9WSRYNhs-IglSFQo
+  media_refs:
+  - r2CAQ6aQ0_CANAIFMZWyYwGyk6NzZHBiMhblEIAx1HGw5QUgUU
+  - r2UgVHShUhOztkGzwQGhVeGSonGR8rEAYhZ1cSOwtaLzBQUgUU
   sync: derived
 amruta_delivery:
 - date: '2026-11-15'

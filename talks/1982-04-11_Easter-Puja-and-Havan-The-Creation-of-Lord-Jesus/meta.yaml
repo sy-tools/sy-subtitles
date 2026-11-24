@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Easter-Puja-London-DP-RAW
   title: Easter Puja London DP-RAW
-  video_ref: r1ElUIRQ0VVBdBSE5TV0AZV1NUXVBC
+  video_ref: r2PCF-GxIeSHQDHSBSFQo
+  media_refs:
+  - r2KTEUfUwoJ0FgVTADUAkrMAYkQ1AyBDgmTio9DBhDGzJQUgUU
+  - r2Klg5FSo2FRceAAIXRRgUIjRYByUOETFFZhlSDj4fKTtQUgUU
   sync: primary
 - slug: Easter-Puja-Talk-London-DP-RAW
   title: Easter Puja Talk London DP-RAW
-  video_ref: r1FVNdRlFDVhZFSU5fW0oYV1NUXVBC
+  video_ref: r2QRZOTA4kCFwKByhSFQo
+  media_refs:
+  - r2EU1LbFAdLT96Ii0lJS8QRQkoIQ0dNwIRSAk-FUoZUC5QUgUU
+  - r2KwQ4fhMpMCFlVBIzBDQLQzFeWRocETwRYlJRWzQfAw1QUgUU
   sync: derived

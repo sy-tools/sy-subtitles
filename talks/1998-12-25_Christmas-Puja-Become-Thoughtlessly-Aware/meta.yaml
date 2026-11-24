@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Christmas-Puja
   title: Christmas Puja
-  video_ref: r1AVQWWkYEREcZA0hXTB1YWFBZVEE
+  video_ref: r2PDZCCkoYHUwMMgJSFQo
+  media_refs:
+  - r2B00sFSgdNiYbKQYmIVkXQxY7RVs9IRcbYydKGw16CAhQUgUU
+  - r2Dy0GfhgOQkl4JQEALyBeKgoeIgQiOzs5QyUyBQNXBhBQUgUU
   sync: primary
 - slug: Christmas-Puja-Talk
   title: Christmas Puja Talk
-  video_ref: r1Ug8SXhVWTEpJUEhWSR1YWFBZVEE
+  video_ref: r2AiR8VBYaM1sURz5SFQo
+  media_refs:
+  - r2DxYVTlYzHihAKgslHhQGS1U-Ex0dUR86RxECPzt_IyNQUgUU
+  - r2EzQDTBIRKR5KMjMpMCgwEigBHhNZVw0rZhgoGAlfJj5QUgUU
   sync: derived

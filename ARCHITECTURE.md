@@ -135,9 +135,9 @@ per video in `meta.yaml` under `sync:`, and read only through
 
 | Role | Meaning |
 |---|---|
-| `primary` | Authoritative subtitle text. Exactly one per talk. |
+| `primary` | Authoritative subtitle text. Exactly one per talk — or none, see below. |
 | `derived` | Mirrors the primary's text positionally; keeps its own timing. |
-| `independent` | Its own slice of the transcript (a separate talk on the same day); synced against the transcript, never against the primary. |
+| `independent` | Its own slice of the transcript (a separate talk on the same day, or one part of an event recorded as several); built as its own slice and synced against the transcript, never against the primary. |
 | `ignored` | Never read, never written — a yogi's introduction, a presents ceremony, a camera angle with no subtitles. Once declared, it is not sent to whisper either. |
 
 A multi-video talk MUST declare once more than one of its videos carries a
@@ -151,13 +151,45 @@ recording is `primary` and the `Talk` cut is `derived`; a video without
 an EN SRT (`final/en.srt` or `source/en.srt`) cannot be `primary`, since resyncing needs an EN bridge on
 both sides.
 
+**A talk with no primary.** Some events were recorded as equal parts — a
+workshop on four tapes, each holding a stretch of the one transcript — and no
+recording is the authoritative one the others mirror. Every part is then
+`independent` and the talk has no primary. A `derived` video copies the
+primary, so a talk without one carries none; that combination is refused.
+
+**What the pipeline builds.** `video_roles.build_slugs` — the primary, if any,
+then every `independent` video — and `build-timecodes` runs one leg per entry.
+When a talk builds more than one video, each leg is a *slice*: its builder
+receives the whole transcript, keeps only the blocks its own recording speaks,
+and the leg's build manifest says `slice: true`. Text preservation against the
+whole transcript cannot hold for a slice, so it is not checked per video
+(`validate_subtitles.manifest_validate_flags` reads the flag back for every
+re-validation). Instead the commit job runs `tools.slice_coverage` across all
+the slices and warns about blocks no video claimed or two did. The manifest
+also records which transcript paragraphs the slice speaks
+(`tools.slice_paragraphs`), with the paragraph count it was recorded against.
+Both edit-sync legs use it: transcript → SRT skips paragraphs the slice does
+not carry, and SRT → transcript searches only the slice's own paragraphs.
+Short lines («Не знаю.», «Як тебе звати?») recur across tapes, and locating an
+edit by text alone writes it onto the wrong tape. A slice refuses a map made
+for a different paragraph count, and refuses re-paragraphing, which would
+shift the map; a count-preserving re-cut (one split plus one merge) is not
+caught. It warns and
+never fails: where one part ends and the next begins is the builder's best
+effort, and a person checks it. A leg that fails does not hold back the others
+— commit ships every leg that passed.
+
 ### Video providers
 
 A talk's video lives on one of two providers, and nothing past the player
 widget may depend on which: same timings, same subtitles, same fullscreen
 look, same tools. Until 2026-11 every talk was on Vimeo; amruta.org then moved
 its talk pages to YouTube, and new talks arrive with YouTube videos. Existing
-talks were not migrated — their Vimeo links keep working and stay as they are.
+talks are moved to YouTube video by video, and only a video whose YouTube copy
+is the same cut as the Vimeo file its subtitles were timed to — the same audio
+at the same moments, start to end — because a different cut would put every
+subtitle at the wrong moment while looking fine. A video that is not the same
+cut stays on Vimeo, whose links keep working.
 
 **What `meta.yaml` stores, per video.**
 
@@ -321,7 +353,15 @@ fixture; full-corpus run lives in `golden-talks.yml`.
 
 The trigger is deliberately unfiltered. Which lanes are needed is decided by
 the `changes` job, which owns the watched-path list, and the lanes skip when
-nothing they cover moved. The point of that shape is `gate`: it depends on
+nothing they cover moved. It sorts a change into two classes: **code** (tools,
+tests, the SPA, dependencies, workflows) runs every lane; **data** (the talk
+tree) runs the unit lane alone, because that is where every reader of talk
+data lives — text hygiene, the schemas, the plaintext-link scan, the golden
+corpus — while lint, the JS suite and the browser shards open no talk file. A
+change with both runs everything. Pipeline, whisper and translation PRs are
+pure data, and so are their merge commits on `main`: a talk costs one test job
+per run, not seven, and a browser flake cannot fail a pipeline that is waiting
+to merge its own output. The point of that shape is `gate`: it depends on
 every lane, runs with `if: always()`, and passes only when each lane succeeded
 or was skipped — so it is always reported and can be the single **required
 status check** on `main`. Requiring a lane directly would wedge any PR whose

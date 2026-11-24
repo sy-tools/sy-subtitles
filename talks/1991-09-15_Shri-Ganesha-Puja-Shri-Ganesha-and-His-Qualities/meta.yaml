@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Ganesha-Puja-Cabella-Italy-DP-RAW
   title: Ganesha Puja Cabella Italy DP-RAW
-  video_ref: r1UAoRWERQTEQfU0hfQRpVXFJcUUQ
+  video_ref: r2OBcANAw7PGhVBiVSFQo
+  media_refs:
+  - r2KS0eHSgLWD8UAjMyBzADIVYVAT48MUIHbiIxKD1aNSJQUgUU
+  - r2LkwAHjAdJhtlEDIMDjIlBh1VKzYmAzs_VVk2HE4VOSJQUgUU
   sync: primary
 - slug: Ganesha-Puja-Talk
   title: Ganesha Puja Talk
-  video_ref: r1U1RNDREHQkNIUEhcTBRXWFBdVkQ
+  video_ref: r2IBBaNDQkFwBTXCpSFQo
+  media_refs:
+  - r2DS8DdCMzNx55Vy07OQIJIQQGAwAWJBM3TDk9Fi9fMgZQUgUU
+  - r2KRcrWBMyBzNdFjgbDjhDHRcNKw81EDA3RgsqGzVyKSxQUgUU
   sync: derived

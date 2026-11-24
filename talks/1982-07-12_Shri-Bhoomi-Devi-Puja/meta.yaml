@@ -13,11 +13,17 @@ subtitle_omit:
 videos:
 - slug: Bhoomi-Devi-Puja-Talk
   title: Bhoomi Devi Puja Talk
-  video_ref: r1AV0QWkFVEEsUVkhYQBlTWVVbUkA
+  video_ref: r2PCFGWAEkDhwTPyNSFQo
+  media_refs:
+  - r2BBk_GwcxNhR_NiJMHjcXHywmFSA2DSQAclEBAwBgMzVQUgUU
+  - r2K0cnSD5SIBFCGFgJDS84BlApJyUfMQYUbC0BDSNALRtQUgUU
   sync: derived
 - slug: Bhoomi-Devi-Puja
   title: Bhoomi Devi Puja
-  video_ref: r1AQ9GXxIHFBAeBUhdTxtUWlRbUkA
+  video_ref: r2LBxDVko8CEIbJipSFQo
+  media_refs:
+  - r2Dz4SXiQJKEhHADM0JzgnNEgiKwEBARo7dAgCBgp4Lx9QUgUU
+  - r2BRwgHwkTFSB_FQNTWAsLGhEHTCUOC0Y_RiQRHhoZWUdQUgUU
   sync: primary
 amruta_delivery:
 - date: '2026-11-22'

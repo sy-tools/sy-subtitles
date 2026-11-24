@@ -10,7 +10,7 @@ videos:
   media_refs:
   - r2BSwVHBcgICBHBgJYWyc1KQAjTSgjEzwyYVIAXS1iNAFQUgUU
   - r2ME06GysBCkx8Ag4LRSwkOBwnIkQ4ITAcTzRTJRJiJyJQUgUU
-  sync: primary
+  sync: independent
 - slug: Workshop-Part-2
   title: Workshop Part 2
   video_ref: r2BgYYLggHEm4-LTtSFQo

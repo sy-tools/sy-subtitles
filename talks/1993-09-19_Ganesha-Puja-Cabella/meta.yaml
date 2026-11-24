@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Ganesha-Puja
   title: Ganesha Puja
-  video_ref: r1V15GXxFREBEeBUhdTB5WWlRbUkA
+  video_ref: r2QRZoKz81DGoQHhVSFQo
+  media_refs:
+  - r2MxssH1c3JwBDNiQIGFg3Ngo5RFgeVTwEfTEsOUgAFTNQUgUU
+  - r2CB4DbBAsIDRZIykwLgBAQVMqEQBDNyQdXBgLCw1bGTJQUgUU
   sync: primary
 - slug: Ganesha-Puja-Talk
   title: Ganesha Puja Talk
-  video_ref: r1Vl1GChZUR0BIV0hcQBtSWlRbUkA
+  video_ref: r2JEBuFQw6PhoMBA1SFQo
+  media_refs:
+  - r2ESA-aFBKFztZA1NXLRISPwpZBj0SGwAiRiQdIRsVNiRQUgUU
+  - r2NTs3RjUwXA5nCDIpXCUpEVQ8GR4cIQUDRycRKjMYGw9QUgUU
   sync: derived
