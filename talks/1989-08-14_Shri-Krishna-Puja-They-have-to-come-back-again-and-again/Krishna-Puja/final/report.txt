@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1989-08-14_Shri-Krishna-Puja-They-have-to-come-back-again-and-again/Krishna-Puja/final/uk.srt
+  Transcript: talks/1989-08-14_Shri-Krishna-Puja-They-have-to-come-back-again-and-again/transcript_uk.txt
+  EN SRT: talks/1989-08-14_Shri-Krishna-Puja-They-have-to-come-back-again-and-again/Krishna-Puja/source/en.srt
+  SRT blocks: 631
+  EN SRT blocks: 618
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:05:03,826 — 01:03:37,976
+  SRT range:       00:05:03,826 — 01:03:40,086
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 631
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 631
+  CPS: avg=11.3, median=11.7, max=17.2
+  CPS > target: 95 (15.1%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=55.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 2
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #467: CPS=17.2 (52ch/3.0s) "сказати їм: «Ні, мені це не подобається. Це недобре."
+    #341: CPS=16.5 (48ch/2.9s) "Але людські істоти такі, що якщо вони вирішують,"
+    #388: CPS=15.1 (58ch/3.8s) "що ми маємо бути дуже незалежною річчю, і Мені це вдалося."
+    #194: CPS=15.1 (63ch/4.2s) "Тож і ті, і ті – одного стилю, бо один не може дати раду жит..."
+    #470: CPS=15.0 (71ch/4.7s) "дисципліна не означає чогось дуже владного з боку однієї люд..."
+    #204: CPS=15.0 (83ch/5.5s) "Якщо вони люблять гроші, якщо вони люблять владу, якщо вони ..."
+    #589: CPS=15.0 (62ch/4.1s) "Тож сьогодні, коли ми поклоняємося Шрі Крішні, ми маємо знат..."
+    #423: CPS=15.0 (78ch/5.2s) "Припустімо, ви кажете комусь правду, йому це може не сподоба..."
+    #199: CPS=15.0 (22ch/1.5s) "Вони не знають грошей."
+    #200: CPS=15.0 (22ch/1.5s) "Вони нічого не знають."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 631
+  EN SRT blocks: 618
+  Ratio UK/EN: 1.02 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 11.3 (target ≤15.0)
+  CPS > 15.0: 95 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 2 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
