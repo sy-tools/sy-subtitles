@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1994-05-08_Sahasrara-Puja-Mahamaya-Swarupa/Sahasrara-Puja/final/uk.srt
+  Transcript: talks/1994-05-08_Sahasrara-Puja-Mahamaya-Swarupa/transcript_uk.txt
+  EN SRT: talks/1994-05-08_Sahasrara-Puja-Mahamaya-Swarupa/Sahasrara-Puja/source/en.srt
+  SRT blocks: 497
+  EN SRT blocks: 742
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:04:59,083 — 00:56:04,333
+  SRT range:       00:04:59,083 — 00:56:06,333
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 497
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 497
+  CPS: avg=9.7, median=9.4, max=15.1
+  CPS > target: 5 (1.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.1, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #404: CPS=15.1 (72ch/4.8s) "Тож найкраще дати в газеті [оголошення], що ви не маєте нічо..."
+    #408: CPS=15.0 (22ch/1.5s) "Він уже був банкрутом."
+    #284: CPS=15.0 (49ch/3.3s) "Що тут поганого?» – і далі робить безглузді речі."
+    #405: CPS=15.0 (64ch/4.3s) "з цим Лілідейлом, і Сахаджа Йоґа не має з ним нічого спільно..."
+    #180: CPS=15.0 (76ch/5.1s) "Після приходу в Сахаджа Йоґу, після того, як вони бачили всі..."
+    #99: CPS=15.0 (54ch/3.6s) "говорити зі Мною, ви не можете сісти в ту саму машину,"
+    #321: CPS=15.0 (30ch/2.0s) "Я не хочу з ним зустрічатися»."
+    #322: CPS=15.0 (27ch/1.8s) "У нього дуже погане минуле."
+    #392: CPS=15.0 (73ch/4.9s) "І інший, жахливий, сказав йому, що він повинен купити цю кон..."
+    #131: CPS=15.0 (70ch/4.7s) "Хтось може сказати: «Матінко, як Ти розв’язуєш проблеми саха..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 497
+  EN SRT blocks: 742
+  Ratio UK/EN: 0.67 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 9.7 (target ≤15.0)
+  CPS > 15.0: 5 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
