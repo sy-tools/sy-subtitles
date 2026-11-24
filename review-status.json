@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-11-24T08:22:47.622617+00:00",
+  "updated_at": "2026-11-24T08:29:41.036556+00:00",
   "talks": {
     "1979-02-25_Puja-In-Pune-Marathi": {
       "status": "in-progress",
@@ -1164,7 +1164,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1603,
-      "updated_at": "2026-11-23T16:21:06Z",
+      "updated_at": "2026-11-24T08:23:44Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1595
@@ -1254,7 +1254,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1694,
-      "updated_at": "2026-11-23T22:03:15Z",
+      "updated_at": "2026-11-24T08:25:11Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1644
@@ -1263,7 +1263,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1691,
-      "updated_at": "2026-11-23T22:01:21Z",
+      "updated_at": "2026-11-24T08:24:08Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1643
@@ -1272,7 +1272,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1703,
-      "updated_at": "2026-11-23T22:06:57Z",
+      "updated_at": "2026-11-24T08:24:06Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1642
@@ -1281,7 +1281,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1679,
-      "updated_at": "2026-11-23T17:47:55Z",
+      "updated_at": "2026-11-24T08:23:42Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1641
@@ -1290,7 +1290,7 @@
       "status": "pending",
       "reviewer": null,
       "issue_number": 1700,
-      "updated_at": "2026-11-23T22:05:33Z",
+      "updated_at": "2026-11-24T08:23:29Z",
       "operator_stage": "translator",
       "operator": "SlavaSubotskiy",
       "operator_issue": 1640
