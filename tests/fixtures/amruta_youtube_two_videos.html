@@ -4,9 +4,12 @@
   Synthetic fixture modelled on an amruta.org talk page after the switch from
   Vimeo to YouTube (structure recorded 2026-11-23). Every media id below is
   synthetic; real YouTube/Drive/Bunny ids must never be committed.
-  Video 1: the page plays it through a Bunny iframe; its YouTube id only
-           appears in the details block ("Watch on YouTube", collapse-<id>).
-  Video 2: the page plays it through a .youtube-player[data-id] element.
+  Video 1: the page plays it through a Bunny iframe and links "Watch on
+           Bunny"; its YouTube id only appears in the details block ("Watch
+           on YouTube", collapse-<id>). Every block of a current page looks
+           like this one.
+  Video 2: the page plays it through a .youtube-player[data-id] element and
+           has no Bunny copy.
 -->
 <h1 class="entry-title">Shri Bhoomi Devi Puja</h1>
 <div class="entry-content">
@@ -14,7 +17,7 @@
 
 <div class="embedded-video-wrapper">
   <div class="video-player-container">
-    <iframe src="https://iframe.mediadelivery.net/embed/000000/00000000-0000-0000-0000-000000000000" allowfullscreen></iframe>
+    <iframe src="https://player.mediadelivery.net/embed/123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d?autoplay=false&#038;preload=false&#038;lang=en" allowfullscreen></iframe>
   </div>
   <div class="video-details-wrapper print-no">
     <div class="video-meta-info"><b>1982-07-12 Bhoomi Devi Puja Talk, Birmingham, UK, DP-RAW</b>, 6'</div>
@@ -43,7 +46,7 @@
             </div>
           </details>
           <a href="https://youtu.be/AbCdEfGhIjK" class="custom-btn" target="_blank" title="Watch on YouTube">Watch on YouTube</a>
-          <a href="https://player.mediadelivery.net/play/000000/00000000-0000-0000-0000-000000000000" class="custom-btn" target="_blank" title="Watch on Bunny">Watch on Bunny</a>
+          <a href="https://player.mediadelivery.net/play/123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d?autoplay=false&amp;lang=en" class="custom-btn custom-btn-secondary" target="_blank" title="Watch on Bunny">Watch on Bunny</a>
         </div>
       </div></div>
     </div>

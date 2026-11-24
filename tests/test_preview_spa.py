@@ -4811,9 +4811,10 @@ class TestBookmarkletExtraction:
     def test_extracts_youtube_videos_with_drive_mirrors(self, browser):
         """amruta.org moved from Vimeo to YouTube. Video 1 of the (synthetic)
         fixture plays through a Bunny iframe and names its YouTube id only in
-        the details block; video 2 plays through .youtube-player. Both come out
-        as YouTube videos with their two MP4 Drive mirrors — the MPG links and
-        everything Bunny are left behind."""
+        the details block; video 2 plays through .youtube-player and has no
+        Bunny copy. Both come out as YouTube videos with their two MP4 Drive
+        mirrors — the MPG links are left behind — and video 1 with its Bunny
+        id."""
         ctx = browser.new_context()
         try:
             pg = ctx.new_page()
@@ -4827,6 +4828,7 @@ class TestBookmarkletExtraction:
                 "p": "yt",
                 "id": "AbCdEfGhIjK",
                 "gd": ["1Syntheticdriveid00abcdefghijklmn", "1Syntheticdriveid01abcdefghijklmn"],
+                "bn": "123456/0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
                 "l": "Bhoomi Devi Puja Talk",
             },
             {

@@ -20,8 +20,8 @@
   }
 
   // --- YouTube-era pages -----------------------------------------------------
-  // amruta.org moved its talks from Vimeo to YouTube, each with Google Drive
-  // copies of the file.
+  // amruta.org moved its talks from Vimeo to YouTube, each with a Bunny Stream
+  // copy (the player on the page) and Google Drive copies of the file.
   //
   // The link shapes below are a COPY of URL_SHAPES / PRINTABLE_ASCII_RE in
   // js/vimeo_codec.js, which is what the add form stores a link with. A copy
@@ -39,9 +39,12 @@
     ["yt", /^(?:https?:\/\/)?(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([A-Za-z0-9_-]{11})\/?(?:[?#].*)?$/i],
     ["gd", /^(?:https?:\/\/)?drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{25,64})(?:[/?#].*)?$/i],
     ["gd", /^(?:https?:\/\/)?drive\.google\.com\/open\?(?:[^#]*?&)??id=([A-Za-z0-9_-]{25,64})(?:[&#].*)?$/i],
+    ["bn", /^(?:https?:\/\/)?(?:player|iframe)\.mediadelivery\.net\/(?:embed|play)\/([0-9]{1,12}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?(?:[?#].*)?$/i],
   ];
+  // Copy of CASE_FOLDED in js/vimeo_codec.js.
+  var CASE_FOLDED = { bn: true };
 
-  // The id in a link of the given provider ('yt' | 'gd'), else "".
+  // The id in a link of the given provider ('yt' | 'gd' | 'bn'), else "".
   function idFromHref(href, provider) {
     var text = String(href == null ? "" : href).trim();
     if (!PRINTABLE_ASCII_RE.test(text)) return "";
@@ -49,7 +52,9 @@
       var m = text.match(URL_SHAPES[i][1]);
       // The first shape that matches decides, whatever its provider — as in
       // the codec.
-      if (m) return URL_SHAPES[i][0] === provider ? m[1] : "";
+      if (!m) continue;
+      if (URL_SHAPES[i][0] !== provider) return "";
+      return CASE_FOLDED[provider] ? m[1].toLowerCase() : m[1];
     }
     return "";
   }
@@ -65,11 +70,15 @@
     return idFromHref(href, "gd");
   }
 
+  // "<library>/<guid>" of a Bunny Stream player link, else "".
+  function bunnyIdFromHref(href) {
+    return idFromHref(href, "bn");
+  }
+
   // A wrapper's YouTube id, from the first place that has one: the player
   // element, the "Watch on YouTube" link, the details block's collapse-<id>.
-  // The page plays some videos through a Bunny iframe instead of the YouTube
-  // player — the last two are how such a video is still found. Bunny itself is
-  // never read.
+  // The page plays its videos through a Bunny iframe instead of the YouTube
+  // player — the last two are how such a video is still found.
   function youtubeIdOfWrapper(w) {
     var player = w.querySelector(".youtube-player[data-id]");
     var id = player ? String(player.getAttribute("data-id") || "").trim() : "";
@@ -80,6 +89,17 @@
     var collapse = w.querySelector('[id^="collapse-"]');
     id = collapse ? collapse.id.slice("collapse-".length) : "";
     return YT_ID_RE.test(id) ? id : "";
+  }
+
+  // The Bunny id of a wrapper's player iframe, else of its "Watch on Bunny"
+  // link: the iframe is what plays on the page, so it decides if the two ever
+  // disagree. "" when it has neither.
+  function bunnyIdOfWrapper(w) {
+    var iframe = w.querySelector('iframe[src*="mediadelivery.net/"]');
+    var id = iframe ? bunnyIdFromHref(iframe.getAttribute("src")) : "";
+    if (id) return id;
+    var link = w.querySelector('a[title="Watch on Bunny"]');
+    return link ? bunnyIdFromHref(link.getAttribute("href")) : "";
   }
 
   // Drive file ids of a wrapper's "Download MP4 …" links, in page order. The
@@ -128,7 +148,8 @@
     // Videos, one per .embedded-video-wrapper, each with a label (from
     // .video-meta-info, else the preceding heading):
     //   Vimeo    {id, h, l}             — the wrapper holds a Vimeo iframe
-    //   YouTube  {p:'yt', id, gd, l}    — anything else an id can be found for
+    //   YouTube  {p:'yt', id, gd, bn?, l} — anything else an id can be found
+    //                                      for; bn only when it has a Bunny copy
     //   no link  {id:'', h:'', l}       — the form shows a row to fill in
     var v = [];
     doc.querySelectorAll(".embedded-video-wrapper").forEach(function (w) {
@@ -150,8 +171,14 @@
         return;
       }
       var yt = youtubeIdOfWrapper(w);
-      if (yt) v.push({ p: "yt", id: yt, gd: driveMp4IdsOfWrapper(w), l: lb });
-      else v.push({ id: "", h: "", l: lb });
+      if (!yt) {
+        v.push({ id: "", h: "", l: lb });
+        return;
+      }
+      var entry = { p: "yt", id: yt, gd: driveMp4IdsOfWrapper(w), l: lb };
+      var bn = bunnyIdOfWrapper(w);
+      if (bn) entry.bn = bn;
+      v.push(entry);
     });
     if (!v.length) {
       doc.querySelectorAll('iframe[src*="vimeo"]').forEach(function (f) {
@@ -208,6 +235,7 @@
       isTranscriptBodyParagraph: isTranscriptBodyParagraph,
       youtubeIdFromHref: youtubeIdFromHref,
       driveFileIdFromHref: driveFileIdFromHref,
+      bunnyIdFromHref: bunnyIdFromHref,
     };
   }
 })();
