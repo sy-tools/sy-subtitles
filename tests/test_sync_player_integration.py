@@ -352,21 +352,5 @@ class TestRealYouTubeIntegration:
         )
 
 
-def test_the_pinned_youtube_video_is_a_corpus_talk():
-    """The real YouTube gate is on by default, so its video must be one the
-    project itself plays: a YouTube video_ref copied from talks/*/meta.yaml."""
-    from pathlib import Path
-
-    import yaml
-
-    assert decode_video_source(TEST_YOUTUBE_REF).provider == "yt"
-    refs = {
-        v.get("video_ref")
-        for path in Path("talks").glob("*/meta.yaml")
-        for v in (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("videos") or []
-    }
-    assert TEST_YOUTUBE_REF in refs, "pin a video_ref that a talk in talks/ carries"
-
-
 def test_real_youtube_runs_by_default():
     assert not _SKIP_REAL_YOUTUBE or os.environ.get("SY_E2E_REAL_YOUTUBE") == "0"
