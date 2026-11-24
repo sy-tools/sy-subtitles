@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1992-07-25_Shri-Durga-Mahakali-Puja-France-is-going-down-and-down/Durga-Mahakali-Puja-Talk-Paris-France-DP/final/uk.srt
+  Transcript: talks/1992-07-25_Shri-Durga-Mahakali-Puja-France-is-going-down-and-down/transcript_uk.txt
+  EN SRT: talks/1992-07-25_Shri-Durga-Mahakali-Puja-France-is-going-down-and-down/Durga-Mahakali-Puja-Talk-Paris-France-DP/source/en.srt
+  SRT blocks: 320
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 320
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 320
+  CPS: avg=9.7, median=9.3, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=50.7, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #179: CPS=15.0 (82ch/5.5s) "Як-от той, що вчора сперечався зі Мною, – насправді тому, що..."
+    #317: CPS=15.0 (82ch/5.5s) "поводилися дуже погано, кидали до в’язниці, давали отруту то..."
+    #133: CPS=15.0 (67ch/4.5s) "Знаєте, цілий місяць нам довелося боротися з цими західними ..."
+    #84: CPS=15.0 (64ch/4.3s) "Звичайно, в Америці немає справедливості, там роблять що хоч..."
+    #252: CPS=15.0 (61ch/4.1s) "Я ніколи не знала, що вона [Франція] в такому поганому стані..."
+    #32: CPS=15.0 (58ch/3.9s) "І навіть казали, що Марія народилася з первородним гріхом,"
+    #213: CPS=15.0 (55ch/3.7s) "Лише через ваші канали Я можу здійснювати Сахаджа Йоґу."
+    #153: CPS=15.0 (52ch/3.5s) "[Шрі Матаджі усміхається] ви увійшли в Царство Боже."
+    #222: CPS=15.0 (49ch/3.3s) "Хоча минулої ночі Я лягла спати о четвертій, і Я,"
+    #227: CPS=15.0 (49ch/3.3s) "Хай французи знають, що відбувається за кордоном."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.7 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
