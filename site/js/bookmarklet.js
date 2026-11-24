@@ -102,17 +102,42 @@
     return link ? bunnyIdFromHref(link.getAttribute("href")) : "";
   }
 
-  // Drive file ids of a wrapper's "Download MP4 …" links, in page order. The
-  // "Download MPG (full quality)" links beside them are far larger files that
-  // nothing downstream wants.
-  function driveMp4IdsOfWrapper(w) {
-    var ids = [];
-    w.querySelectorAll('a[href*="drive.google.com/file/d/"]').forEach(function (a) {
-      if (String(a.getAttribute("title") || "").indexOf("Download MP4") !== 0) return;
-      var id = driveFileIdFromHref(a.getAttribute("href"));
-      if (id && ids.indexOf(id) < 0) ids.push(id);
+  // Drive file ids of a wrapper's downloadable copies, best first: its
+  // "Download MP4 …" links in page order, or — when none of those can be
+  // stored — its "Download MPG (full quality)" links, the main server before
+  // "Server 2". An MPG is the same cut several times the size, so it is the
+  // last resort for a video with no smaller copy. Same reading as
+  // tools/download.py _drive_urls_of_wrapper.
+  function driveIdsOfWrapper(w) {
+    var links = driveLinksTitled(w, "Download MP4");
+    if (!links.length) {
+      var mpg = driveLinksTitled(w, "Download MPG");
+      var isServer2 = function (l) {
+        return l.title.indexOf("Server 2") >= 0;
+      };
+      links = mpg.filter(function (l) {
+        return !isServer2(l);
+      }).concat(mpg.filter(isServer2));
+    }
+    return links.map(function (l) {
+      return l.id;
     });
-    return ids;
+  }
+
+  // {title, id} of a wrapper's storable Drive file links whose title starts
+  // with `prefix`, in page order, each id once.
+  function driveLinksTitled(w, prefix) {
+    var links = [];
+    w.querySelectorAll('a[href*="drive.google.com/file/d/"]').forEach(function (a) {
+      var title = String(a.getAttribute("title") || "");
+      if (title.indexOf(prefix) !== 0) return;
+      var id = driveFileIdFromHref(a.getAttribute("href"));
+      var seen = links.some(function (l) {
+        return l.id === id;
+      });
+      if (id && !seen) links.push({ title: title, id: id });
+    });
+    return links;
   }
 
   // Scrape a talk page's DOM into the bookmarklet payload {t,d,u,loc,v,tx}.
@@ -175,7 +200,7 @@
         v.push({ id: "", h: "", l: lb });
         return;
       }
-      var entry = { p: "yt", id: yt, gd: driveMp4IdsOfWrapper(w), l: lb };
+      var entry = { p: "yt", id: yt, gd: driveIdsOfWrapper(w), l: lb };
       var bn = bunnyIdOfWrapper(w);
       if (bn) entry.bn = bn;
       v.push(entry);

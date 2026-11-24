@@ -218,7 +218,12 @@ read both page eras: the Vimeo markup of older pages and the YouTube markup.
 On a YouTube page a video block carries its Drive download links and,
 mostly, a Bunny Stream player (with a "Watch on Bunny" link to the same
 video); a block that plays through the YouTube player has no Bunny copy. What
-is there is stored as that video's `media_refs`, Bunny first. A block's mirrors are
+is there is stored as that video's `media_refs`, Bunny first. Of the Drive
+links only the "Download MP4" ones are taken; a block with none falls back to
+its "Download MPG (full quality)" links, main server before "Server 2" — the
+last resort for a video with no smaller copy at all (an MPEG-PS file several
+times the size, which Drive's quota may still refuse; ffmpeg reads it whatever
+the `.mp4` name it is saved under). A block's mirrors are
 taken only from that block, next to the YouTube id that names the video, so a
 mirror is never attached to the wrong one. The plaintext guard
 (`tests/test_no_plaintext_vimeo.py`) refuses a YouTube, Drive or Bunny link in
@@ -313,7 +318,8 @@ download, never something the page plays.
   mirrors per video make that rare; a flow can be its own project if it turns
   out not to be.
 - *Storing the full-quality files.* Only the streaming-quality MP4 mirrors are
-  stored: a render's target is what the viewer watches on YouTube.
+  stored when a video has them: a render's target is what the viewer watches
+  on YouTube. The MPGs are stored only for a video that has nothing else.
 
 ## Workflows
 

@@ -1,11 +1,16 @@
 """tools/video_media.py — the one place a talk's video is downloaded from.
 
-No network here: every download goes through an injected ``run``. Ids are
+No network here: every download goes through an injected ``run`` (one test
+runs the real yt-dlp, against a file served on localhost). Ids are
 synthetic (a YouTube id is 11 characters, a Drive id 33, a Bunny id a numeric
 library and a UUID).
 """
 
+import functools
+import http.server
+import shutil
 import subprocess
+import threading
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -13,6 +18,7 @@ import pytest
 import yaml
 
 from tools import video_media
+from tools.serve_auth_local import SpaHTTPServer
 from tools.vimeo_codec import encode_video_ref
 
 VIMEO = "https://vimeo.com/111111111/aaaaaaaaaa"
@@ -436,3 +442,47 @@ class TestBunny:
         monkeypatch.setattr(video_media.subprocess, "run", run)
         cli("download", tmp_path, "--out", str(tmp_path / "v.mp4"), "--ci")
         assert run.urls() == [BN]
+
+
+# --- A Drive mirror can be an MPEG-PS file ---
+#
+# A video whose page offers no MP4 has only its "Download MPG (full quality)"
+# links as Drive mirrors (tools/download.py). Every caller still names the
+# output ``….mp4``: the download must keep that literal path rather than
+# append the served extension, and the bytes must stay a file ffmpeg reads.
+
+
+@pytest.mark.skipif(not (shutil.which("ffmpeg") and shutil.which("ffprobe")), reason="needs ffmpeg")
+def test_an_mpeg_ps_mirror_lands_at_the_mp4_path_and_ffmpeg_reads_it(tmp_path):
+    served = tmp_path / "served"
+    served.mkdir()
+    subprocess.run(
+        ["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc=duration=1:size=160x120:rate=25"]
+        + ["-f", "lavfi", "-i", "sine=duration=1", "-c:v", "mpeg2video", "-c:a", "mp2"]
+        + ["-f", "mpeg", str(served / "talk.mpg")],
+        check=True,
+    )
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(served))
+    server = SpaHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    local = f"http://127.0.0.1:{server.server_port}/talk.mpg"
+
+    def run(argv, **kwargs):
+        # download()'s own argv, real yt-dlp; only the Drive URL is swapped
+        # for the local copy, so nothing leaves the machine.
+        return subprocess.run([*argv[:-1], local], capture_output=True, **kwargs)
+
+    out = tmp_path / "video.mp4"
+    try:
+        assert video_media.download(yt_video(mirrors=(GD1,)), out, ci=True, run=run) == "gd"
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert [p.name for p in tmp_path.iterdir() if p.is_file()] == ["video.mp4"]
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=format_name", "-of", "csv=p=0", str(out)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert probe.stdout.strip() == "mpeg"
