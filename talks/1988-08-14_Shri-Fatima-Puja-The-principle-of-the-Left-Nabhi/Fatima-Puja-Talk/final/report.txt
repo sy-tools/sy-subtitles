@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1988-08-14_Shri-Fatima-Puja-The-principle-of-the-Left-Nabhi/Fatima-Puja-Talk/final/uk.srt
+  Transcript: talks/1988-08-14_Shri-Fatima-Puja-The-principle-of-the-Left-Nabhi/transcript_uk.txt
+  EN SRT: talks/1988-08-14_Shri-Fatima-Puja-The-principle-of-the-Left-Nabhi/Fatima-Puja-Talk/source/en.srt
+  SRT blocks: 764
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 764
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 764
+  CPS: avg=11.9, median=12.8, max=20.8
+  CPS > target: 77 (10.1%)
+  CPS > hard max: 1 (0.1%)
+  CPL: avg=50.9, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #1: CPS=20.8 (59ch/2.8s) "Пуджа Шрі Фатіми, Сен-Жорж, Швейцарія, 14 серпня 1988 року."
+    #326: CPS=20.0 (61ch/3.0s) "– а потім прийшов Мій чоловік, він також приєднався до нього..."
+    #366: CPS=20.0 (51ch/2.5s) "Так от, цей джентльмен, цей джентльмен-мусульманин,"
+    #382: CPS=20.0 (28ch/1.4s) "Тож вони пішли й сказали їй."
+    #383: CPS=20.0 (66ch/3.3s) "І вона вередувала, як акторка: «Ні, ні; скільки ви мені запл..."
+    #384: CPS=20.0 (28ch/1.4s) "Я не можу грати безкоштовно."
+    #385: CPS=20.0 (28ch/1.4s) "Усі проситимуть безкоштовно."
+    #386: CPS=20.0 (34ch/1.7s) "То як я можу вам дати безкоштовно?"
+    #387: CPS=20.0 (30ch/1.5s) "Вам доведеться дати мені сарі."
+    #388: CPS=20.0 (50ch/2.5s) "Вам доведеться дати стільки-то грошей. Таке інше»."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.9 (target ≤15.0)
+  CPS > 15.0: 77 blocks
+  CPS > 20.0: 1 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
