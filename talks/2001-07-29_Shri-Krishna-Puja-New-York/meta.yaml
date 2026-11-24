@@ -8,6 +8,7 @@ videos:
   title: Krishna Puja
   video_ref: r2NEdoVxFcTls3BSRSFQo
   media_refs:
+  - r2AwtSFUUBVBFcRQQUXktTVFZUHFVZVUVYRxdWQRVeQ1JGER0ESF9AG1dbWVIPEQ
   - r2UjAEWBAOBDRUBDAoWxkdOisnJQwgETxHZwAxGzVXLAJQUgUU
   - r2GyYFSTQLNy9HWCcGJRIYEAYNRQ1HUgYETlkFDR55CylQUgUU
   sync: primary
@@ -15,6 +16,7 @@ videos:
   title: Krishna Puja Talk
   video_ref: r2NCdfVFcOLx0FAC1SFQo
   media_refs:
+  - r2UAsEREBRVRJeFltFXk8FAQ5US1QMVUUHQRFUQUVdTVFCERpTSF9AG1dbWVIPEQ
   - r2EkY1agdXFwBMBQsOAg8AHCIIHyYhCUM8RjElHBNdAgdQUgUU
   - r2UgU8fChTAQFIEF9ZH1ApNgRYOV5NLhwaehgUGA0eUVJQUgUU
   sync: derived

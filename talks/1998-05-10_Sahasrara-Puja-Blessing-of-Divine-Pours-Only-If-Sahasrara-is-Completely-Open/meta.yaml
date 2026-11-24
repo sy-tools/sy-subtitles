@@ -8,6 +8,7 @@ videos:
   title: Sahasrara Puja Talk
   video_ref: r2PDBPEhUlFxRRGxZSFQo
   media_refs:
+  - r2V11UEkIBWkAKEQFAXk9YBFdUHVIJVUVRQxVQQUNZQlBFRx5SSF9AG1dbWVIPEQ
   - r2ExcaWVkOHjNbMSxULQIFNgYYEgsuUjolYRUEGD16OzNQUgUU
   - r2VTcXTjkUOUBCUTMXMQU6PgIUMwg7NBwqWzdVVj9gOCFQUgUU
   sync: primary
@@ -15,6 +16,7 @@ videos:
   title: Sahasrara Puja
   video_ref: r2LBxkUSAWCXRMRwlSFQo
   media_refs:
+  - r2BVxUQ0BRXkBQEVNNXh5ZUw1UFVJTVUVVEkIAQUZeEANBShVWSF9AG1dbWVIPEQ
   - r2MjBCbg0FMD1hBi4yED4QXjM6QAYcNy0CWjMsGT51BixQUgUU
   - r2O0xEaTgGLAhVAgcMXxIfO1IrBCMiTyYJZgMgBVRBWVNQUgUU
   sync: derived
