@@ -16,6 +16,7 @@ import yaml
 
 from tools import amruta_captions
 from tools.amruta_captions import fetch_en_srt, vtt_to_srt
+from tools.text_normalize import check_text, is_uk_content_path
 from tools.vimeo_codec import encode_video_ref
 
 FIXTURES = Path(__file__).parent / "fixtures" / "captions"
@@ -167,6 +168,26 @@ def test_zip_with_english_writes_the_srt(tmp_path):
     fetch = _serving({YT_ID: _zip({f"{YT_ID}.de.vtt": "WEBVTT\n", f"{YT_ID}.en.vtt": VTT})})
     assert fetch_en_srt(YT_ID, out, fetch=fetch) is True
     assert out.read_bytes() == (FIXTURES / f"{YT_ID}.en.srt").read_bytes()
+
+
+def test_written_srt_passes_the_text_hygiene_guard(tmp_path):
+    vtt = (
+        "\ufeffWEBVTT\n"
+        "\n"
+        "00:00:01.000 --> 00:00:02.500\n"
+        "\ufeffHello\u00a0world\u200b\n"
+        "\n"
+        "00:00:03.000 --> 00:00:04.000\n"
+        "Shri\u202fMataji\u00ad\u2009says\u200c so\n"
+    )
+    out = tmp_path / "talks" / TALK_ID / "talk" / "source" / "en.srt"
+    fetch = _serving({YT_ID: _zip({f"{YT_ID}.en.vtt": vtt})})
+    assert fetch_en_srt(YT_ID, out, fetch=fetch) is True
+    text = out.read_text(encoding="utf-8")
+    assert check_text(text, uk=is_uk_content_path(out.as_posix())) == []
+    assert text == (
+        "1\n00:00:01,000 --> 00:00:02,500\nHello world\n\n2\n00:00:03,000 --> 00:00:04,000\nShri Mataji says so\n\n"
+    )
 
 
 def test_english_track_with_no_cues_is_not_written(tmp_path):
