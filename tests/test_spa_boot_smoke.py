@@ -17,9 +17,11 @@ the index renders its empty state without network.
 import http.server
 import json
 import threading
+import time
 from pathlib import Path
 
 import pytest
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
 from tools.serve_auth_local import SpaHTTPServer
 
@@ -53,7 +55,13 @@ def smoke_server():
             pass
 
         def do_GET(self):
-            if self.path.split("?", 1)[0] in ("/", "/index.html"):
+            path, _, query = self.path.partition("?")
+            if path == "/__sleep":
+                time.sleep(int(query.removeprefix("ms=")) / 1000)
+                self.send_response(204)
+                self.end_headers()
+                return
+            if path in ("/", "/index.html"):
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
                 self.send_header("Content-Length", str(len(index_html)))
@@ -320,8 +328,40 @@ def test_a_catalog_that_does_not_load_says_so_and_is_tried_again(smoke_server, s
     assert page.locator("#help-sheet .help-sheet__error").count() == 0
 
 
-def _track_modes(page):
-    return page.evaluate("[...document.querySelector('#help-sheet video').textTracks].map(t => [t.language, t.mode])")
+_TRACK_MODES_JS = "[...document.querySelector('#help-sheet video').textTracks].map(t => [t.language, t.mode])"
+
+
+def _assert_track_modes_settle_to(page, expected, timeout=5000):
+    # A track is in `textTracks` before the browser has applied `default` to
+    # it, so the modes are waited for rather than read once.
+    try:
+        page.wait_for_function(
+            f"expected => JSON.stringify(Object.fromEntries({_TRACK_MODES_JS})) === JSON.stringify(expected)",
+            arg=expected,
+            timeout=timeout,
+        )
+    except PlaywrightTimeoutError:
+        pytest.fail(f"track modes stayed {dict(page.evaluate(_TRACK_MODES_JS))}, expected {expected}")
+
+
+def _defer_track_selection(page, ms=500):
+    # Chromium appends a <track> to `textTracks` at once but turns a `default`
+    # one to "showing" from a timer task later, which a loaded CI runner can
+    # delay past the test's next read. Pausing the page's virtual time holds
+    # that task until a request the server answers `ms` of real time later
+    # comes back, so the late selection happens on every run instead of on an
+    # unlucky one. The release is driven from the page, not from a Python
+    # sleep, so the test carries on in the meantime; it goes through a route,
+    # whose handler may call Playwright (an exposed function's may not).
+    cdp = page.context.new_cdp_session(page)
+
+    def release(route):
+        cdp.send("Emulation.setVirtualTimePolicy", {"policy": "advance"})
+        route.fulfill(status=204, body="")
+
+    page.route("**/__release-virtual-time", release)
+    cdp.send("Emulation.setVirtualTimePolicy", {"policy": "pause"})
+    page.evaluate(f"() => {{ fetch('/__sleep?ms={ms}').then(() => fetch('/__release-virtual-time')); }}")
 
 
 @pytest.mark.parametrize("lang, english_mode", [("en", "showing"), ("uk", "disabled")])
@@ -332,13 +372,13 @@ def test_help_videos_carry_subtitles_shown_only_for_an_english_interface(smoke_s
     page.goto(f"{smoke_server}/index.html")
     page.wait_for_function("document.title.length > 0", timeout=10000)
 
+    _defer_track_selection(page)
     _open_help(page)
 
     labels = page.eval_on_selector_all("#help-sheet video >> nth=0 >> track", "ts => ts.map(t => t.label)")
     assert labels == ["Українська", "English"]
     assert page.eval_on_selector("#help-sheet video", "v => v.getAttribute('crossorigin')") == "anonymous"
-    page.wait_for_function("document.querySelector('#help-sheet video').textTracks.length === 2")
-    assert dict(_track_modes(page)) == {"uk": "disabled", "en": english_mode}
+    _assert_track_modes_settle_to(page, {"uk": "disabled", "en": english_mode})
     assert page.locator("#help-sheet video >> nth=1 >> track").count() == 0, "a video without subtitles got tracks"
 
 
@@ -348,13 +388,13 @@ def test_switching_the_interface_language_rebuilds_the_sheet_in_it(index_page):
     page.keyboard.press("Escape")
 
     page.evaluate("SPA.toggleLang()")
+    _defer_track_selection(page)
     _open_help(page)
     assert page.evaluate("currentLang") == "en"
     titles = page.eval_on_selector_all("#help-sheet .help-video__title", "hs => hs.map(h => h.textContent)")
     assert titles[0] == "1.1 Introduction"
     assert titles[1] == "1.2 Безпека", "an empty English title falls back to Ukrainian"
-    page.wait_for_function("document.querySelector('#help-sheet video').textTracks.length === 2")
-    assert dict(_track_modes(page))["en"] == "showing"
+    _assert_track_modes_settle_to(page, {"uk": "disabled", "en": "showing"})
 
 
 def test_the_tutorials_wait_behind_the_passphrase_gate(smoke_server, smoke_page):
