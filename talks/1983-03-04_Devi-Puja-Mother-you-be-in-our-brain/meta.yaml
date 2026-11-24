@@ -6,7 +6,10 @@ language: en
 videos:
 - slug: Puja
   title: Puja
-  video_ref: r1UFsVW0UHTBcaAkheTh9SWVJbUkI
+  video_ref: r2AgJYLzA3MRwlIQVSFQo
+  media_refs:
+  - r2GhkBRwwLFh1DLRoxWz5HQR0aMBoVVwMGYwlKGQ15Cj1QUgUU
+  - r2WgcZVwVUGz0eFCA3Hy0ZORwhJw86GDoSXEwUAA4aBBpQUgUU
   sync: primary
 - slug: Devi-Puja-Talk-Mother-you-be-in-our-brain
   title: 'Devi Puja Talk: Mother you be in our brain'
