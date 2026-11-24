@@ -6,4 +6,7 @@ language: en
 videos:
 - slug: Meditation
   title: Meditation
-  video_ref: r1UwgXWhBRREcYUEheSBhTXlJfUkI
+  video_ref: r2TRd7LSQOPhtQJjhSFQo
+  media_refs:
+  - r2NBEEbiAzNRwYLwUAGlEYNS0IO1E5JzweZA4oVitZLAtQUgUU
+  - r2ETgCTDteWTpBNBA4NxAcECQBRyM_MUQYVyUdOSZOIjJQUgUU
