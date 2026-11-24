@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1986-05-24_Mahalakshmi-Puja-The-Importance-of-Puja/Mahalakshmi-Puja-Talk/final/uk.srt
+  Transcript: talks/1986-05-24_Mahalakshmi-Puja-The-Importance-of-Puja/transcript_uk.txt
+  EN SRT: talks/1986-05-24_Mahalakshmi-Puja-The-Importance-of-Puja/Mahalakshmi-Puja-Talk/source/en.srt
+  SRT blocks: 146
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 146
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 146
+  CPS: avg=6.7, median=4.8, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=54.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 2
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #104: CPS=15.0 (76ch/5.1s) "бо Він сказав, що нічого, спрямованого проти Святого Духа, В..."
+    #131: CPS=15.0 (67ch/4.5s) "Тож ми повідомляємо їм час, скажімо, одинадцяту годину чи де..."
+    #139: CPS=15.0 (67ch/4.5s) "Вам не слід перейматися, якщо ви робите якісь помилки чи щос..."
+    #119: CPS=15.0 (64ch/4.3s) "Наприклад, якщо ви даруєте комусь квітку, той хлопець відчув..."
+    #91: CPS=15.0 (46ch/3.1s) "Це так, ніби ви будуєте спочатку одну кімнату,"
+    #99: CPS=15.0 (40ch/2.7s) "Я зробила Себе точнісінько такою, як ви,"
+    #92: CPS=15.0 (41ch/2.7s) "потім другу кімнату, потім третю кімнату,"
+    #121: CPS=15.0 (54ch/3.6s) "Тож коли ви підносите Мені, скажімо, квіти чи будь-що,"
+    #115: CPS=15.0 (39ch/2.6s) "Тож Я не знаю, як утримати [їх] у Собі,"
+    #105: CPS=14.6 (78ch/5.3s) "Тож Моя чакра, Аґія, починає, розумієте, вивергати гнів [Шрі..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 6.7 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 2 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
