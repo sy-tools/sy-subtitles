@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2001-02-25_Mahashivaratri-Puja-Destructive-Power-of-Shri-Mahadeva/Mahashivaratri-Puja-Talk-Destructive-Power-Of-Shri-Mahadeva/final/uk.srt
+  Transcript: talks/2001-02-25_Mahashivaratri-Puja-Destructive-Power-of-Shri-Mahadeva/transcript_uk.txt
+  EN SRT: talks/2001-02-25_Mahashivaratri-Puja-Destructive-Power-of-Shri-Mahadeva/Mahashivaratri-Puja-Talk-Destructive-Power-Of-Shri-Mahadeva/source/en.srt
+  SRT blocks: 483
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 483
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 483
+  CPS: avg=8.5, median=8.1, max=15.0
+  CPS > target: 0 (0.0%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #375: CPS=15.0 (61ch/4.1s) "Вони думають: «О, ми великі, ми робимо цю роботу, ту роботу!..."
+    #456: CPS=15.0 (61ch/4.1s) "Як-от ми спитаємо: «Як ви?» – «Матінко, у мене болить голова..."
+    #378: CPS=15.0 (49ch/3.3s) "що робите це лише для того, щоб задовольнити свій"
+    #336: CPS=15.0 (77ch/5.1s) "що ця людина божевільна чи з ним щось не так, судячи з того,..."
+    #333: CPS=15.0 (71ch/4.7s) "Реакцій набагато більше на Заході, мушу сказати, не так бага..."
+    #29: CPS=15.0 (44ch/2.9s) "вони переймаються фондовою біржею, тим, сим,"
+    #460: CPS=15.0 (44ch/2.9s) "Матінко, чому б Вам не навести лад у світі?»"
+    #157: CPS=15.0 (41ch/2.7s) "і тому люди думають: «З нами все гаразд!»"
+    #468: CPS=15.0 (54ch/3.6s) "Справа не [в тому], що ви весь час переймаєтеся собою,"
+    #215: CPS=15.0 (48ch/3.2s) "Він каже: «Подивимося, може, вони виправляться!»"
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 8.5 (target ≤15.0)
+  CPS > 15.0: 0 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
