@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1997-11-02_Diwali-Puja-Shri-Lakshmi-and-Money/Diwali-Puja-Talk-Lakshmi-And-Money/final/uk.srt
+  Transcript: talks/1997-11-02_Diwali-Puja-Shri-Lakshmi-and-Money/transcript_uk.txt
+  EN SRT: talks/1997-11-02_Diwali-Puja-Shri-Lakshmi-and-Money/Diwali-Puja-Talk-Lakshmi-And-Money/source/en.srt
+  SRT blocks: 526
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 526
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 526
+  CPS: avg=9.3, median=9.1, max=15.0
+  CPS > target: 3 (0.6%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 1
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #197: CPS=15.0 (61ch/4.1s) "але нам доводиться ходити на стільки вечер, що ти робитимеш?..."
+    #339: CPS=15.0 (68ch/4.5s) "І Я сказала: «У вас так багато спідниць, навіщо ви купили сп..."
+    #31: CPS=15.0 (80ch/5.3s) "від якихось дизайнерів, [тож] вони про цього чоловіка надзви..."
+    #74: CPS=15.0 (70ch/4.7s) "– «О, тепер ми отримуємо все безкоштовно, бачите, банк дає н..."
+    #240: CPS=15.0 (67ch/4.5s) "Ми могли б відправити їх до Англії на продаж, це була б добр..."
+    #368: CPS=15.0 (64ch/4.3s) "Мені сказали: «Матінко, тут є дуже гарний годинниковий магаз..."
+    #47: CPS=15.0 (61ch/4.1s) "І вони спорудили великі печери, щоб зберігати там свою зброю..."
+    #367: CPS=15.0 (55ch/3.7s) "Тож Я була у Франкфурті, з пересадкою [на інший літак]."
+    #195: CPS=15.0 (46ch/3.1s) "іноді ми мусимо постити; сьогодні наш [день]»."
+    #356: CPS=15.0 (43ch/2.9s) "Там записано: стільки є тут, стільки є там."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 9.3 (target ≤15.0)
+  CPS > 15.0: 3 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 1 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
