@@ -14,5 +14,8 @@ subtitle_omit:
 videos:
 - slug: Knots-In-The-3-Channels-London-NITL-HD
   title: Knots In The 3 Channels London NITL HD
-  video_ref: r1Uw0QCExTEUtIAEhXQRpYU1hYWUQ
+  video_ref: r2TQt5Niw2PHtVJQdSFQo
+  media_refs:
+  - r2GwIsGFIdIwx3NCEMOSYHIyQORlgAMQcffwBXQixMJytQUgUU
+  - r2KDEUaDczBTQeIiMYAy8aMlYrH1FBVSwkVCsGAzNbCzBQUgUU
   sync: primary
