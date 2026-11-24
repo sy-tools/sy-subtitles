@@ -231,7 +231,7 @@ def validate_meta_yaml(path: str) -> dict:
                 if not isinstance(media_ref, str):
                     raise SchemaError("meta.yaml", path, f"{v_path}.media_refs[{j}] must be a string")
                 try:
-                    validate_video_ref(media_ref, allowed=("gd",))
+                    validate_video_ref(media_ref, allowed=("bn", "gd"))
                 except InvalidWorkflowInput as e:
                     raise SchemaError("meta.yaml", path, f"{v_path}.media_refs[{j}]: {e}") from None
                 # Compared by decoded id, so the same file cannot hide behind a

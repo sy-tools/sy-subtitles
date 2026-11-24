@@ -196,7 +196,7 @@ cut stays on Vimeo, whose links keep working.
 | Field | What it is | Who reads it |
 |---|---|---|
 | `video_ref` | What a viewer watches: a Vimeo link or a YouTube video. | The SPA player; every tool that needs to know the provider. |
-| `media_refs` | Downloadable copies of a YouTube video — Google Drive mirrors of the same file, in the order amruta's page lists them. Optional, YouTube videos only. | Media downloads only. Never played. |
+| `media_refs` | Downloadable copies of a YouTube video, all the same cut: amruta's Bunny Stream copy, and the Google Drive files in the order amruta's page lists them. Optional, YouTube videos only. | Media downloads only. Never played. |
 
 Both are written by the codec (`tools/vimeo_codec.py`, JS twin
 `site/js/vimeo_codec.js` — the name predates the second provider). A ref's
@@ -230,19 +230,34 @@ reach a consumer by default.
 YouTube: a spike on 2026-11-23 got "confirm you're not a bot" from every
 yt-dlp client, and the only way past it is account cookies in CI, which is
 ruled out (ban risk, rotation, a personal account turned into
-infrastructure). The same spike showed the runners download amruta's Drive
-MP4 of the video — the very file the YouTube video was made from, same
-timeline — in seconds and without credentials. So:
+infrastructure). amruta publishes two other copies of every YouTube video,
+both the same cut, and both reachable without credentials:
+
+- **Bunny Stream** — every video block on a talk page embeds a Bunny player
+  and links "Watch on Bunny". The stream is HLS only (the MP4 fallbacks are
+  absent, the original is refused) in 240p–480p renditions, the top one the
+  same file as Drive's. A spike on 2026-11-24 (17 videos) measured the same
+  duration as Drive within 0.05 s and a constant 21 ms offset — one AAC
+  priming frame, far below anything a subtitle can show — and runners
+  downloaded 5 of 5 at 6–10 Mbit/s.
+- **Google Drive** — amruta's MP4 of the video. It served the runners in
+  seconds at first (2026-11-23), then answered 429 to 4 of 4 runner requests
+  a day later. It stays as the second mirror.
+
+So:
 
 - CI (whisper, burn) downloads a YouTube video **only** from its `media_refs`
-  mirrors, in order, and never attempts YouTube itself. A YouTube video with
+  mirrors — Bunny first, then Drive in stored order, whatever order the refs
+  are stored in — and never attempts YouTube itself. Whisper takes the
+  smallest Bunny rendition (it needs only the audio, the same AAC track in
+  every rendition), a render the best one up to 480p. A YouTube video with
   no mirror is skipped by whisper with a warning rather than queued to fail,
   and refused by burn before the run invests in anything.
   A YouTube link added by hand is such a video — the mirrors come only from
   amruta's page at ingest — so its whisper timings have to come from
   `local_whisper`, and it cannot be burned in CI.
-- A home connection (`tools/local_whisper.py`) tries the mirrors and then
-  YouTube itself, which does answer a residential IP. A committed
+- A home connection (`tools/local_whisper.py`) tries the mirrors in the
+  same order and then YouTube itself, which does answer a residential IP. A committed
   `whisper.json` makes the pipeline skip whisper for that video.
 - Vimeo videos download from Vimeo as before, including its occasional refusal
   of data-centre IPs — `local_whisper` exists for that case too.
@@ -272,20 +287,22 @@ the preview, the sync player and fullscreen call one API. The chrome around
 the player is still per provider — the control-bar heights fullscreen
 reserves, how close to the end playback is frozen to keep the provider's end
 screen away, how a failed load is handled — and the YouTube values there were
-measured in the browser, not guessed. A Drive mirror is a download, never
-something the page plays.
+measured in the browser, not guessed. A Drive or Bunny mirror is a
+download, never something the page plays.
 
 **Decided against.**
 
-- *Bunny Stream.* Some amruta videos also play through Bunny. A runner can
-  download its stream, but the player refuses any foreign referrer — amruta
-  restricts embedding to its own domain, and it plays on our origin only by
-  suppressing the referrer, i.e. by sidestepping that restriction. We do not
-  build on that. Drive and the captions repository already cover everything
-  Bunny would; if Drive proves unreliable, a Bunny stream could be added later
-  as another download mirror — never as an embed.
+- *Bunny Stream as a player.* The Bunny player refuses any foreign
+  referrer: amruta restricts embedding to its own domain, and it would play
+  on our origin only by suppressing or forging the referrer, i.e. by
+  sidestepping that restriction. We do not build on that. A download is a
+  different request, and Bunny serves it without amruta's referrer: the
+  resolver passes none, and yt-dlp's Bunny extractor names only Bunny's own
+  player page.
+- *Bunny's captions.* Its EN track is cue-for-cue the one in amruta's
+  captions repository, which stays the one source of EN subtitles.
 - *A "refresh the videos of an existing talk" flow.* There is none. A dead
-  Drive link is replaced by hand in `meta.yaml` with the codec's CLI. Two
+  mirror is replaced by hand in `meta.yaml` with the codec's CLI. Three
   mirrors per video make that rare; a flow can be its own project if it turns
   out not to be.
 - *Storing the full-quality files.* Only the streaming-quality MP4 mirrors are
@@ -340,8 +357,8 @@ Reusable workflow. Downloads video, runs Whisper for word-level timestamps.
 Also `workflow_dispatch` callable with a `force` flag.
 The download goes through `tools/video_media.py`, and only the talk id and
 video slug travel in the job matrix — never the ref — so the link is decoded
-and masked inside the step that uses it. A YouTube video with no Drive mirror
-is not queued: a runner cannot fetch it, so discovery warns and names
+and masked inside the step that uses it. A YouTube video with no mirror
+(Bunny or Drive) is not queued: a runner cannot fetch it, so discovery warns and names
 `tools/local_whisper.py` instead of scheduling a job that can only fail (see
 "Video providers").
 
@@ -437,7 +454,7 @@ the build/sync stack without burning Claude calls.
 
 ### burn-subtitles.yml
 `workflow_dispatch` from the preview SPA: downloads the video (through
-`tools/video_media.py` — a YouTube video from its Drive mirror, checked before
+`tools/video_media.py` — a YouTube video from its Bunny or Drive mirror, checked before
 the run invests in anything; see "Video providers"), burns
 `final/uk.srt` into the picture — the whole video or a clip of it — with
 ffmpeg+libass reproducing the fullscreen subtitle look, and uploads the MP4 as a

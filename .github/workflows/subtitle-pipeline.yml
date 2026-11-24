@@ -275,7 +275,7 @@ jobs:
                       # video, and sends it back on every later run.
                       print(
                           f"::warning::{talk_id}/{slug}: no whisper.json, and a runner cannot fetch this video "
-                          "(no Drive mirror in media_refs; YouTube refuses GitHub's runners). It builds on "
+                          "(no Bunny or Drive mirror in media_refs; YouTube refuses GitHub's runners). It builds on "
                           "en.srt if it has one. For whisper timings run the step on a home connection and "
                           "commit the result through a PR: "
                           f"python -m tools.local_whisper --talk-id {talk_id} --video-slug {slug}"
@@ -884,7 +884,7 @@ jobs:
       # Missing after either means the optimizer (and, in whisper mode, the
       # builder) would work blind, so fail rather than ship a worse SRT. Only
       # a run that skipped whisper for a talk that never had it builds without.
-      # A video a runner cannot fetch (YouTube with no Drive mirror) is never
+      # A video a runner cannot fetch (YouTube with no Bunny or Drive mirror) is never
       # sent to whisper, so a whisper job that succeeded here succeeded for the
       # talk's other videos: for this one, whisper did not run.
       - name: Check whisper timings
@@ -913,7 +913,7 @@ jobs:
             if [ "${FETCHABLE}" = "true" ]; then
               echo "::error::${WHISPER} missing and whisper is the timing source"
             else
-              echo "::error::${WHISPER} missing, whisper is the timing source, and a runner cannot fetch this video (no Drive mirror in media_refs; YouTube refuses GitHub's runners)"
+              echo "::error::${WHISPER} missing, whisper is the timing source, and a runner cannot fetch this video (no Bunny or Drive mirror in media_refs; YouTube refuses GitHub's runners)"
             fi
             echo "::error::Run the whisper step on a home connection and commit the result through a PR: ${LOCAL}"
             exit 1

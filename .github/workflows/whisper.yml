@@ -121,12 +121,12 @@ jobs:
                       fetchable = bool(download_candidates(video, ci=True))
                   except (InvalidWorkflowInput, ValueError) as e:
                       die(f"{meta_path}: {e}")
-                  # A YouTube video with no Drive mirror cannot be fetched by
+                  # A YouTube video with no mirror (Bunny or Drive) cannot be fetched by
                   # a runner (YouTube refuses them); queueing it would only
                   # fail at the download.
                   if not fetchable:
                       print(
-                          f"::warning::{talk_id}/{slug}: no Drive mirror (media_refs) and YouTube refuses "
+                          f"::warning::{talk_id}/{slug}: no download mirror (media_refs) and YouTube refuses "
                           "GitHub's runners. Run the whisper step on a home connection and commit the "
                           f"result through a PR: python -m tools.local_whisper --talk-id {talk_id} --video-slug {slug}"
                       )
@@ -201,7 +201,7 @@ jobs:
           set -euo pipefail
           # The resolver masks each source before trying it and, when all
           # fail, says why and points at tools.local_whisper. --ci: YouTube
-          # refuses GitHub's runners, so a YouTube video comes from its Drive
+          # refuses GitHub's runners, so a YouTube video comes from its Bunny or Drive
           # mirrors here.
           mkdir -p /tmp/whisper_work
           python3 -m tools.video_media download --ci \

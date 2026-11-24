@@ -4,7 +4,7 @@ Vimeo and YouTube refuse some videos to datacenter IPs (Vimeo answers 401,
 YouTube asks to "confirm you're not a bot") while the very same request
 succeeds from a residential connection. So the step runs where the IP is
 accepted — trying what ``tools.video_media`` offers off CI, which for a
-YouTube video is its Drive mirrors and then YouTube itself — and its output
+YouTube video is its Bunny and Drive mirrors and then YouTube itself — and its output
 lands where the pipeline looks: with
 ``source/whisper.json`` present, the pipeline's discover step skips whisper
 for that video.
@@ -26,7 +26,7 @@ from pathlib import Path
 import yaml
 
 from tools.schemas import SchemaError, validate_whisper_json
-from tools.video_media import download_candidates, referer_args
+from tools.video_media import download_candidates, transport_args
 
 MODEL = "medium"
 
@@ -125,7 +125,7 @@ def download_audio(url: str, dest_dir) -> Path:
 def provider_flags(url: str) -> list[str]:
     """A --source-url may point anywhere; only a known provider gets its flags."""
     try:
-        return referer_args(url)
+        return transport_args(url)
     except ValueError:
         return []
 
