@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Adi-Shakti-Puja-Cabella-Italy-DP-RAW
   title: Adi Shakti Puja Cabella Italy DP-RAW
-  video_ref: r1FVAKQwpCVEJCG05TVkkYUlNQWFFC
+  video_ref: r2BjFYVD4JE3IFOCtSFQo
+  media_refs:
+  - r2AzkHbA8GXhZpUhooHSk3FCdeJwFBMB4ZYhA_DBdgIgtQUgUU
+  - r2OCc9ZxECKD5pAFsEGFA-PVQdRygEBD49GQYqHEllMD5QUgUU
   sync: primary
 - slug: Adi-Shakti-Puja-Talk-Cabella-Italy-DP-RAW
   title: Adi Shakti Puja Talk Cabella Italy DP-RAW
-  video_ref: r1QQdVQlhEBxZFTk5XWEgYUlNQWFFC
+  video_ref: r2OAZ6CQEIPnULDi9SFQo
+  media_refs:
+  - r2LgwRfwQOJCAbJjpVWBA4AzE8Bi0-VkxeRyAyCS1eNSlQUgUU
+  - r2DhI1T1Q0VzhMGSUqIg02SyAVEx9CWzA_FScqJzFeUgxQUgUU
   sync: derived

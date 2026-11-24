@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Sahasrara-Puja
   title: Sahasrara Puja
-  video_ref: r1VwgSW0IGTRUeU0hWTR5WU1VbVEI
+  video_ref: r2BkRMCxUdMmM3IVRSFQo
+  media_refs:
+  - r2CVg7YwQ3BDJsJwVUXi8WPhclOBsiESAHYlgrLjxhMjtQUgUU
+  - r2JgJCHw5QXRFLMjMTAkwAOihcRAMSEjwjGy8RCT1UCR5QUgUU
   sync: primary
 - slug: Sahasrara-Puja-Talk-Attain-That-Sahaja-State
   title: 'Sahasrara Puja Talk: Attain That Sahaja State'
-  video_ref: r1XQ8SURBaFhAZV0hWThtWU1VbVEI
+  video_ref: r2PDhXIlYwSmcgACdSFQo
+  media_refs:
+  - r2OwdKHw4-XzJ4MQsFCwckIiFfLiscGConaAMUADcVIBtQUgUU
+  - r2D1g1QikoWy5_AjJRMgI_CgsZOl0RETQwXzgoGTVFEjpQUgUU
   sync: derived
