@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/Guru-Puja/final/uk.srt
+  Transcript: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/transcript_uk.txt
+  EN SRT: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/Guru-Puja/source/en.srt
+  SRT blocks: 523
+  EN SRT blocks: 344
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:04:38,300 — 02:46:04,340
+  SRT range:       00:04:38,300 — 01:15:02,500
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 523
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 523
+  CPS: avg=7.6, median=6.8, max=15.3
+  CPS > target: 19 (3.6%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=49.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 2
+  Duration > max: 13
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #345: CPS=15.3 (22ch/1.4s) "Чому таке трапляється?"
+    #510: CPS=15.0 (71ch/4.7s) "Натомість вони думають: «Ми дружини ґуру, тож можемо робити,..."
+    #205: CPS=15.0 (83ch/5.5s) "але в них є багато ґуру, ось Папа – ще один жахливий фальшив..."
+    #298: CPS=15.0 (25ch/1.7s) "– той каже: «А що не так?"
+    #398: CPS=15.0 (28ch/1.9s) "«Ми відмовилися від усього»."
+    #367: CPS=15.0 (43ch/2.9s) "А друге – [звернутися] до їхньої Кундаліні,"
+    #505: CPS=15.0 (49ch/3.3s) "Отже, на дружинах лежить більша відповідальність,"
+    #253: CPS=15.0 (61ch/4.1s) "Якщо Мати сказала «так», Вона не зробила б цього без причини..."
+    #395: CPS=15.0 (61ch/4.1s) "Інакше ми не можемо з цим боротися, коли перебуваємо в ньому..."
+    #503: CPS=15.0 (64ch/4.3s) "можливо, сьогодні ввечері Я зможу поговорити про дружин ліде..."
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 523
+  EN SRT blocks: 344
+  Ratio UK/EN: 1.52 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 7.6 (target ≤15.0)
+  CPS > 15.0: 19 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 2 blocks
+  Duration > 21000ms: 13 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED

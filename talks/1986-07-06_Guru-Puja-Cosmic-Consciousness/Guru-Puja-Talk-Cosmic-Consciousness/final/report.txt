@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/Guru-Puja-Talk-Cosmic-Consciousness/final/uk.srt
+  Transcript: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/transcript_uk.txt
+  EN SRT: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/Guru-Puja-Talk-Cosmic-Consciousness/source/en.srt
+  SRT blocks: 523
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 523
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 523
+  CPS: avg=12.9, median=7.3, max=535.7
+  CPS > target: 74 (14.1%)
+  CPS > hard max: 64 (12.2%)
+  CPL: avg=49.6, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 9
+  Duration > max: 11
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #494: CPS=535.7 (75ch/0.1s) "Усі ті, хто працює лідерами в менших місцях, – про кожного Я..."
+    #482: CPS=69.2 (83ch/1.2s) "З’являється нове динамічне лідерство з-поміж людей, і Я враж..."
+    #461: CPS=68.9 (37ch/0.5s) "Ви – вічне блаженство й усвідомлення."
+    #486: CPS=68.3 (82ch/1.2s) "що стільки з них справді так добре працюють, що лише Божеств..."
+    #492: CPS=68.3 (82ch/1.2s) "що наша справа – старатися й робити якомога більше і йти так..."
+    #475: CPS=64.2 (77ch/1.2s) "А ще ми бачимо, що нещодавно призначили кількох лідерів у Мю..."
+    #511: CPS=64.2 (77ch/1.2s) "Можемо панувати над людьми, кричати на людей і можемо все вл..."
+    #498: CPS=63.3 (76ch/1.2s) "Тож кожен повинен намагатися виправити себе – має стати прик..."
+    #517: CPS=62.5 (75ch/1.2s) "яким можуть нехтувати через його дисциплінарну натуру, яку в..."
+    #473: CPS=61.7 (74ch/1.2s) "його призначили лише кілька місяців тому в Мілані, і він так..."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 12.9 (target ≤15.0)
+  CPS > 15.0: 74 blocks
+  CPS > 20.0: 64 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 9 blocks
+  Duration > 21000ms: 11 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
