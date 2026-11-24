@@ -355,15 +355,16 @@ def test_setup_talk_writes_obfuscated_video_ref(tmp_path):
     assert "vimeo.com" not in (talk_dir / "meta.yaml").read_text(encoding="utf-8")
 
 
-# --- YouTube-era pages: YouTube id + Google Drive MP4 mirrors ---
+# --- YouTube-era pages: YouTube id + Bunny / Google Drive mirrors ---
 #
 # amruta.org moved its talks from Vimeo to YouTube. The fixture is synthetic
 # (every id invented) but keeps the structure recorded on 2026-11-23: video 1
 # plays through a Bunny iframe and names its YouTube id only in the details
-# block; video 2 plays through a .youtube-player element and has no Bunny copy.
+# block; video 2 plays through a .youtube-player element and has no Bunny copy;
+# video 3 has neither a Bunny copy nor an MP4 link, only the two MPG ones.
 
 _FIXTURES = Path(__file__).parent / "fixtures"
-_YT_FIXTURE = _FIXTURES / "amruta_youtube_two_videos.html"
+_YT_FIXTURE = _FIXTURES / "amruta_youtube_videos.html"
 
 
 def _drive_url(n):
@@ -393,6 +394,12 @@ def test_extract_videos_youtube_page():
             "slug": "Bhoomi-Devi-Puja",
             "video_url": "https://www.youtube.com/watch?v=ZyXwVuTsRqP",
             "media_urls": [_drive_url(4), _drive_url(5)],
+        },
+        {
+            "title": "Bhoomi Devi Puja Aarti",
+            "slug": "Bhoomi-Devi-Puja-Aarti",
+            "video_url": "https://www.youtube.com/watch?v=QwErTyUiOpA",
+            "media_urls": [_drive_url(8), _drive_url(9)],
         },
     ]
 
@@ -550,7 +557,9 @@ def test_extract_videos_vimeo_iframe_keeps_the_vimeo_path():
     assert videos[0]["media_urls"] == []
 
 
-def test_extract_videos_media_urls_are_mp4_links_only_in_page_order():
+def test_extract_videos_mp4_links_leave_the_mpg_ones_out_in_page_order():
+    """An MP4 copy, when there is one, is all the Drive mirrors a video
+    needs: the MPGs beside it are the same cut, several times the size."""
     inner = (
         '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>'
         f'<a href="{_drive_url(2)}" title="Download MPG (full quality)">MPG</a>'
@@ -560,6 +569,40 @@ def test_extract_videos_media_urls_are_mp4_links_only_in_page_order():
         ' title="Download MP4 folder">folder</a>'
     )
     assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_drive_url(1), _drive_url(0)]
+
+
+def test_extract_videos_mpg_links_are_the_last_resort_main_server_first():
+    """No MP4 link at all: the MPG ones are the only Drive copy there is, so
+    they are kept — the main server first, then Server 2, whatever the page
+    order."""
+    inner = (
+        '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>'
+        f'<a href="{_drive_url(3)}" title="Download MPG (full quality) Server 2">MPG 2</a>'
+        f'<a href="{_drive_url(2)}" title="Download MPG (full quality)">MPG</a>'
+    )
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_drive_url(2), _drive_url(3)]
+
+
+def test_extract_videos_mpg_fallback_still_comes_after_bunny():
+    inner = (
+        '<a href="https://youtu.be/AbCdEfGhIjK" title="Watch on YouTube">Watch</a>'
+        f'<iframe src="https://player.mediadelivery.net/embed/{_BN_LIB}/{_BN_GUID}"></iframe>'
+        f'<a href="{_drive_url(2)}" title="Download MPG (full quality)">MPG</a>'
+    )
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_BN_PLAY, _drive_url(2)]
+
+
+def test_extract_videos_mp4_link_the_codec_rejects_does_not_count_as_an_mp4():
+    """The fallback is decided by the links that can be stored, not by titles:
+    an MP4 link the codec cannot encode leaves the video with no MP4 mirror,
+    so its MPGs are kept."""
+    bad = "https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn!/view"
+    inner = (
+        '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>'
+        f'<a href="{bad}" title="Download MP4 (streaming quality)">MP4</a>'
+        f'<a href="{_drive_url(2)}" title="Download MPG (full quality)">MPG</a>'
+    )
+    assert _find_videos(_yt_wrapper(inner))[0]["media_urls"] == [_drive_url(2)]
 
 
 def test_extract_videos_wrapper_without_any_id_is_a_linkless_video():
@@ -600,12 +643,13 @@ def _setup(tmp_path, videos):
 def test_setup_talk_writes_youtube_ref_and_media_refs(tmp_path):
     text = _setup(tmp_path, _fixture_videos())
     videos = yaml.safe_load(text)["videos"]
-    assert [list(v) for v in videos] == [["slug", "title", "video_ref", "media_refs"]] * 2
+    assert [list(v) for v in videos] == [["slug", "title", "video_ref", "media_refs"]] * 3
     first = decode_video_source(videos[0]["video_ref"])
     assert (first.provider, first.id) == ("yt", "AbCdEfGhIjK")
     assert [decode_video_source(r).provider for r in videos[0]["media_refs"]] == ["bn", "gd", "gd"]
     assert [decode_video_ref(r) for r in videos[0]["media_refs"]] == [_BN_PLAY, _drive_url(0), _drive_url(1)]
     assert [decode_video_ref(r) for r in videos[1]["media_refs"]] == [_drive_url(4), _drive_url(5)]
+    assert [decode_video_ref(r) for r in videos[2]["media_refs"]] == [_drive_url(8), _drive_url(9)]
     # Nothing plaintext reaches the file, and what is written passes the schema.
     for needle in ("youtu", "drive.google", "AbCdEfGhIjK", "Syntheticdriveid", "mediadelivery", _BN_GUID):
         assert needle not in text
@@ -655,7 +699,7 @@ def test_download_talk_all_fetches_only_vimeo_videos(monkeypatch, tmp_path):
         what="all",
         soup=BeautifulSoup(html, "html.parser"),
     )
-    assert len(result["videos"]) == 4
+    assert len(result["videos"]) == 5
     assert fetched == [("srt", "https://vimeo.com/333/abc"), ("video", "https://vimeo.com/333/abc")]
 
 

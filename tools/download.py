@@ -190,20 +190,34 @@ def _bunny_url_of_wrapper(wrapper):
     return None
 
 
-def _drive_mp4_urls_of_wrapper(wrapper):
-    """Drive URLs of a wrapper's "Download MP4 …" links, in page order.
+def _drive_urls_of_wrapper(wrapper):
+    """Drive URLs of a wrapper's downloadable copies, best first.
 
-    The "Download MPG (full quality)" links beside them are far larger files
-    that nothing downstream wants.
+    Its "Download MP4 …" links, in page order — or, when none of those can be
+    stored, its "Download MPG (full quality)" links, the main server before
+    "Server 2". An MPG is the same cut several times the size, so it is wanted
+    only as the last resort for a video with no smaller copy; Drive's quota
+    may still refuse a file that large.
     """
-    urls = []
+    mp4 = _drive_links_titled(wrapper, "Download MP4")
+    if mp4:
+        return [url for _, url in mp4]
+    mpg = _drive_links_titled(wrapper, "Download MPG")
+    return [url for _, url in sorted(mpg, key=lambda link: "Server 2" in link[0])]
+
+
+def _drive_links_titled(wrapper, prefix):
+    """``(title, url)`` of a wrapper's storable Drive file links whose title
+    starts with ``prefix``, in page order, each URL once."""
+    links = []
     for a in wrapper.find_all("a", href=re.compile(r"drive\.google\.com/file/d/")):
-        if not (a.get("title") or "").startswith("Download MP4"):
+        title = a.get("title") or ""
+        if not title.startswith(prefix):
             continue
         source = _source_of_link(a["href"], "gd")
-        if source and source.watch_url not in urls:
-            urls.append(source.watch_url)
-    return urls
+        if source and source.watch_url not in [url for _, url in links]:
+            links.append((title, source.watch_url))
+    return links
 
 
 def slugify_video_name(name):
@@ -300,7 +314,7 @@ class AmrutaDownloader:
           ``media_urls`` is empty;
         - a YouTube video: ``video_url`` is the watch URL and ``media_urls``
           its mirrors — the Bunny Stream copy, then the Google Drive MP4s in
-          page order;
+          page order (the MPGs, main server first, when it has no MP4);
         - a wrapper neither could be read from: ``video_url`` is ``""`` — the
           video is still listed, just without a link.
 
@@ -321,7 +335,7 @@ class AmrutaDownloader:
                 if youtube:
                     bunny = _bunny_url_of_wrapper(wrapper)
                     media_urls = [bunny] if bunny else []
-                    media_urls += _drive_mp4_urls_of_wrapper(wrapper)
+                    media_urls += _drive_urls_of_wrapper(wrapper)
             label = self._extract_video_meta_label(wrapper)
             if label:
                 title = label

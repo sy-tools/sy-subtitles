@@ -4806,7 +4806,7 @@ class TestBookmarkletExtraction:
         assert len(data["tx"]) > 1000, len(data["tx"])
         assert "Christ was born" in data["tx"], data["tx"][:200]
 
-    YT_FIXTURE = Path(__file__).parent / "fixtures" / "amruta_youtube_two_videos.html"
+    YT_FIXTURE = Path(__file__).parent / "fixtures" / "amruta_youtube_videos.html"
 
     def test_extracts_youtube_videos_with_drive_mirrors(self, browser):
         """amruta.org moved from Vimeo to YouTube. Video 1 of the (synthetic)
@@ -4814,7 +4814,8 @@ class TestBookmarkletExtraction:
         the details block; video 2 plays through .youtube-player and has no
         Bunny copy. Both come out as YouTube videos with their two MP4 Drive
         mirrors — the MPG links are left behind — and video 1 with its Bunny
-        id."""
+        id. Video 3 has no MP4 link, so its two MPG links are kept, the main
+        server first though the page lists Server 2 first."""
         ctx = browser.new_context()
         try:
             pg = ctx.new_page()
@@ -4836,6 +4837,12 @@ class TestBookmarkletExtraction:
                 "id": "ZyXwVuTsRqP",
                 "gd": ["1Syntheticdriveid04abcdefghijklmn", "1Syntheticdriveid05abcdefghijklmn"],
                 "l": "Bhoomi Devi Puja",
+            },
+            {
+                "p": "yt",
+                "id": "QwErTyUiOpA",
+                "gd": ["1Syntheticdriveid08abcdefghijklmn", "1Syntheticdriveid09abcdefghijklmn"],
+                "l": "Bhoomi Devi Puja Aarti",
             },
         ], data["v"]
         assert "mediadelivery" not in json.dumps(data)
@@ -4887,6 +4894,18 @@ class TestBookmarkletExtraction:
             {"id": "111", "h": "abc", "l": "Old Cut"},
             {"p": "yt", "id": "ZyXwVuTsRqP", "gd": [], "l": "New Cut"},
         ], v
+
+    def test_mp4_link_it_cannot_store_does_not_count_as_an_mp4(self, browser):
+        """Same reading as tools/download.py: the MPG fallback is decided by
+        the MP4 links that can be stored, not by their titles."""
+        body = self._wrapper(
+            '<div class="youtube-player" data-id="AbCdEfGhIjK"></div>'
+            '<a href="https://drive.google.com/file/d/1Syntheticdriveid00abcdefghijklmn!/view"'
+            ' title="Download MP4 (streaming quality)">MP4</a>'
+            '<a href="https://drive.google.com/file/d/1Syntheticdriveid02abcdefghijklmn/view"'
+            ' title="Download MPG (full quality)">MPG</a>'
+        )
+        assert self._videos_of(browser, body)[0]["gd"] == ["1Syntheticdriveid02abcdefghijklmn"]
 
     def test_wrapper_without_any_id_is_a_linkless_video(self, browser):
         """Neither a Vimeo iframe nor a YouTube id: the video is still listed,
