@@ -1,0 +1,74 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/2000-09-16_Shri-Ganesha-Puja-the-sanctity-of-marriage/Shri-Ganesha-Puja-Talk/final/uk.srt
+  Transcript: talks/2000-09-16_Shri-Ganesha-Puja-the-sanctity-of-marriage/transcript_uk.txt
+  EN SRT: talks/2000-09-16_Shri-Ganesha-Puja-the-sanctity-of-marriage/Shri-Ganesha-Puja-Talk/source/en.srt
+  SRT blocks: 493
+  (text preservation check skipped — offset video)
+  (time range check skipped — offset video)
+  (CPS hard fail skipped — builder mode)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range — SKIPPED (explicitly skipped)
+============================================================
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 493
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 493
+  CPS: avg=11.2, median=11.3, max=15.1
+  CPS > target: 29 (5.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=52.0, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #483: CPS=15.1 (70ch/4.6s) "Але не вдавайтеся до жодних хитрощів і не намагайтеся викида..."
+    #489: CPS=15.0 (65ch/4.3s) "Через те що це сахаджа шлюб, люди сприймають його як належне..."
+    #456: CPS=15.0 (37ch/2.5s) "Тобто якщо ви розлучаєтеся з людиною,"
+    #491: CPS=15.0 (37ch/2.5s) "Якщо ви хочете мати справжню радість,"
+    #470: CPS=15.0 (46ch/3.1s) "вам не потрібно йти для цього до якогось ґуру."
+    #269: CPS=15.0 (49ch/3.3s) "Мати, мабуть, сказала малому: «Він їсть як кінь»."
+    #378: CPS=15.0 (49ch/3.3s) "Є дерева, які ростуть, – вони не можуть побачити."
+    #270: CPS=15.0 (52ch/3.5s) "Тож малий подивився на нього: «Він не їсть як кінь»."
+    #477: CPS=15.0 (32ch/2.1s) "Коли ви хочете пізнати свій Дух,"
+    #490: CPS=15.0 (35ch/2.3s) "Ніколи не сприймайте це як належне."
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+
+  Avg CPS: 11.2 (target ≤15.0)
+  CPS > 15.0: 29 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
