@@ -6,9 +6,15 @@ language: en
 videos:
 - slug: Adi-Shakti-Puja
   title: Adi Shakti Puja
-  video_ref: r1Ck1fQVNNQ0sAAkBAHVVaVVxZSw
+  video_ref: r2OCldDDcuAVQWBw1SFQo
+  media_refs:
+  - r2NS8QGCs4OjYYKUczABAJO1ICIVgZNB9CVDsIPDZeESVQUgUU
+  - r2GEFBVQMmPAtcIx4iLyojKVcZQT4DFRZEGC4GOwodLjtQUgUU
   sync: primary
 - slug: Adi-Shakti-Puja-Talk-Emotional-Intelligence
   title: 'Adi Shakti Puja Talk: Emotional Intelligence'
-  video_ref: r1XUFREVFGRxhZA0BLGFJSUV1ZSw
+  video_ref: r2JB1bJhUaGnIRHFJSFQo
+  media_refs:
+  - r2BiwUeVIqWT1HFjwQJVY1MlIiGQcNN0YrQVIGOhwaFlNQUgUU
+  - r2IzcXazMjJh1KGCY5GQw8RgwOTSQ6CUMgaSwsVhYaVl1QUgUU
   sync: derived
