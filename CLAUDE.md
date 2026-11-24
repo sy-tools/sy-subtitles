@@ -115,8 +115,8 @@ have one**: run the Worker from the primary checkout rather than copying the
 secret across.
 
 See `TESTING.md` for the full guide: markers, golden corpus, property tests,
-snapshots, and the real-network gates (`SY_E2E_REAL_VIMEO`, on by default;
-`SY_E2E_REAL_YOUTUBE`, opt-in).
+snapshots, and the real-network gates (`SY_E2E_REAL_VIMEO` and
+`SY_E2E_REAL_YOUTUBE`, both on by default).
 
 ## Development (TDD required)
 
