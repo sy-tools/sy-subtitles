@@ -10,6 +10,10 @@ const {
   localized,
   orderedSections,
   formatDuration,
+  linkHash,
+  linkedFile,
+  shareUrl,
+  findLinked,
 } = require('../site/js/help_videos');
 
 const CATALOG = {
@@ -101,5 +105,46 @@ describe('formatDuration', () => {
 
   it('shows nothing for a video whose length is not known yet', () => {
     assert.strictEqual(formatDuration(undefined), '');
+  });
+});
+
+describe('links to one video', () => {
+  it('names the video in the hash, and reads it back', () => {
+    assert.strictEqual(linkHash('intro-v2'), '#/help/intro-v2');
+    assert.strictEqual(linkedFile('#/help/intro-v2'), 'intro-v2');
+  });
+
+  it('reads nothing from a hash that is not a help link', () => {
+    assert.strictEqual(linkedFile(''), null);
+    assert.strictEqual(linkedFile('#/preview/x/y'), null);
+    assert.strictEqual(linkedFile('#/help/'), null);
+    assert.strictEqual(linkedFile('#/help/Not A Slug'), null);
+  });
+
+  it('shares the page the reader is on, keeping only the repository it was pointed at', () => {
+    assert.strictEqual(
+      shareUrl('https://sy-tools.github.io', '/sy-subtitles/', '', 'intro'),
+      'https://sy-tools.github.io/sy-subtitles/#/help/intro');
+    assert.strictEqual(
+      shareUrl('http://localhost:8000', '/', '?repo=sy-tools/sy-subtitles&code=abc&branch=dev', 'intro'),
+      'http://localhost:8000/?repo=sy-tools%2Fsy-subtitles&branch=dev#/help/intro');
+  });
+
+  it('finds the linked video in the ordered sections', () => {
+    const found = findLinked(orderedSections(CATALOG), 'a');
+    assert.deepStrictEqual([found.file, found.number], ['a', '1.2']);
+  });
+
+  it('follows a link to a video that was replaced since to its newest version', () => {
+    const cat = { version: 1, sections: [{ id: 's', order: 'manual', videos: [
+      { file: 'intro-v3', title: { uk: 'Вступ' } },
+      { file: 'other', title: { uk: 'Інше' } },
+    ] }] };
+    assert.strictEqual(findLinked(orderedSections(cat), 'intro').file, 'intro-v3');
+    assert.strictEqual(findLinked(orderedSections(cat), 'intro-v2').file, 'intro-v3');
+  });
+
+  it('finds nothing for a video that is gone', () => {
+    assert.strictEqual(findLinked(orderedSections(CATALOG), 'missing'), null);
   });
 });

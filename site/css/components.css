@@ -67,7 +67,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible,
 .field-error[hidden] { display: none; }
 textarea.input { resize: vertical; font-family: monospace; font-size: 13px; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--bg4);
-  color: var(--fg); padding: 8px 20px; border-radius: 8px; font-size: 14px; z-index: 100;
+  color: var(--fg); padding: 8px 20px; border-radius: 8px; font-size: 14px; z-index: var(--z-toast);
   opacity: 0; transition: opacity 0.3s; pointer-events: none; }
 .toast.show { opacity: 1; }
 #status { text-align: center; padding: 16px; color: var(--fg5); }
@@ -2007,7 +2007,8 @@ html.help-sheet-open { overflow: hidden; }
 .help-sheet--mini .help-video__description,
 .help-sheet--mini .help-video__notes { display: none; }
 .help-sheet--mini .help-sheet__body,
-.help-sheet--mini .help-video { padding: 0; margin: 0; border: 0; border-radius: 0; background: none; }
+.help-sheet--mini .help-video { padding: 0; margin: 0; border: 0; border-radius: 0; background: none;
+  box-shadow: none; }
 .help-sheet--mini .help-video__player { border-radius: 0; }
 .help-sheet--mini .help-mini__bar { display: flex; align-items: center; gap: var(--space-1);
   height: 36px; padding: 0 var(--space-1); background: var(--bg2); border-bottom: 1px solid var(--border);
@@ -2042,6 +2043,11 @@ html.help-sheet-open { overflow: hidden; }
    dress the catalog copy differently from the app. */
 .help-video__title { margin: 0; font-family: var(--f-sans); font-size: var(--text-lg);
   font-weight: 500; letter-spacing: normal; text-transform: none; color: var(--fg2); }
+/* Length and the copy-link button, kept together on the title's right. */
+.help-video__aside { display: inline-flex; align-items: center; gap: var(--space-2); flex-shrink: 0; }
+.help-video__link { align-self: center; color: var(--fg4); }
+/* The card a shared link opened the sheet on. */
+.help-video--linked { border-color: var(--link); box-shadow: 0 0 0 1px var(--link); }
 .help-video__duration { font-family: var(--f-mono); font-size: var(--text-xs); color: var(--fg5);
   white-space: nowrap; }
 /* The box is reserved before metadata arrives, so the list does not jump as

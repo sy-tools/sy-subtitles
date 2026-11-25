@@ -80,7 +80,53 @@
     return h + ':' + (m < 10 ? '0' : '') + m + ':' + ss;
   }
 
+  // A link to one video: '#/help/<file>' on the portal itself, so it opens
+  // behind the same passphrase gate as everything else. Off GitHub Pages the
+  // portal needs ?repo= (and may carry ?branch=) to boot; nothing else of the
+  // sharer's address (an OAuth code, say) travels with the link.
+  var FILE_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+  var LINK_PREFIX = '#/help/';
+  var KEPT_PARAMS = ['repo', 'branch'];
+
+  function linkHash(file) { return LINK_PREFIX + file; }
+
+  function linkedFile(hash) {
+    if (typeof hash !== 'string' || hash.indexOf(LINK_PREFIX) !== 0) return null;
+    var file = hash.slice(LINK_PREFIX.length);
+    return FILE_RE.test(file) ? file : null;
+  }
+
+  function shareUrl(origin, pathname, search, file) {
+    var from = new URLSearchParams(search || '');
+    var kept = new URLSearchParams();
+    KEPT_PARAMS.forEach(function (k) { if (from.get(k)) kept.set(k, from.get(k)); });
+    var qs = kept.toString();
+    return origin + pathname + (qs ? '?' + qs : '') + linkHash(file);
+  }
+
+  // A replacement is published under the next version of the name (intro,
+  // intro-v2, ...), so a link shared before it still leads to the video's
+  // newest version.
+  function stem(file) { return file.replace(/-v\d+$/, ''); }
+  function version(file) { var m = /-v(\d+)$/.exec(file); return m ? +m[1] : 1; }
+
+  function findLinked(sections, file) {
+    var best = null;
+    sections.forEach(function (section) {
+      section.videos.forEach(function (v) {
+        if (best && best.file === file) return;
+        if (v.file === file) { best = v; return; }
+        if (stem(v.file) === stem(file) && (!best || version(v.file) > version(best.file))) best = v;
+      });
+    });
+    return best;
+  }
+
   var api = {
+    linkHash: linkHash,
+    linkedFile: linkedFile,
+    shareUrl: shareUrl,
+    findLinked: findLinked,
     DEFAULT_HELP_REPO: DEFAULT_HELP_REPO,
     helpRepo: helpRepo,
     pagesBase: pagesBase,

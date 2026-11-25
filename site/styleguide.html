@@ -227,7 +227,10 @@ scrolls and the page behind it does not; on a phone the panel takes the whole sc
 before anything loads, and a native <code>&lt;video&gt;</code> whose 16:9 box is reserved up front.
 The number (<code>.help-video__number</code>) is the place in the catalog, never typed; a
 short description (<code>.help-video__description</code>) may follow the title. An update lists
-what it changed (<code>.help-video__notes</code>). While the catalog loads, or when it fails, the
+what it changed (<code>.help-video__notes</code>). Beside the length, a link button
+(<code>.help-video__link</code>, in <code>.help-video__aside</code>) copies the video's own address,
+<code>#/help/&lt;file&gt;</code>; a portal opened on it shows the sheet scrolled to that card, marked
+(<code>.help-video--linked</code>). While the catalog loads, or when it fails, the
 body holds one line (<code>.help-sheet__status</code>, <code>.help-sheet__error</code>). Shown here
 without the scrim.</p>
 <div class="sg-card" style="max-width:640px">
@@ -240,10 +243,10 @@ without the scrim.</p>
       <section class="help-section">
         <h2 class="help-section__title" style="margin-top:0">2. Оновлення</h2>
         <div class="help-section__list">
-          <article class="help-video">
+          <article class="help-video help-video--linked">
             <header class="help-video__head">
               <h3 class="help-video__title"><span class="help-video__number">2.2</span> Оновлення на 22.11.2026</h3>
-              <span class="help-video__duration">9:56</span>
+              <span class="help-video__aside"><span class="help-video__duration">9:56</span><button type="button" class="btn btn--ghost btn--sm btn--icon help-video__link" aria-label="Copy a link to this video" title="Copy a link to this video"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></button></span>
             </header>
             <p class="help-video__description">Що нового в повноекранному режимі.</p>
             <video class="help-video__player" controls preload="none" playsinline></video>
