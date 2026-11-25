@@ -2532,13 +2532,35 @@ function gateExpectedHash() {
   return APP_GATE_HASH || '';
 }
 
-// Resolves true if access is allowed (gate disabled, already unlocked, or a
-// correct passphrase was just entered); false if the user cancelled.
+// Repo collaborators pass without the phrase. The grant is the last
+// authoritative permissions probe for a token ({token, push}); it lives in
+// memory only, so it is re-measured each page load and dies with the session.
+var gateRepoGrant = null;
+function recordRepoGrant(token, push) { gateRepoGrant = { token: token, push: !!push }; }
+function gateRepoAccess() {
+  return PassphraseGate.hasRepoAccess(gateRepoGrant, getAuthToken());
+}
+function gateAllowed() {
+  return PassphraseGate.isAllowed(gateExpectedHash(), localStorage, gateRepoAccess());
+}
+
+// Resolves true if access is allowed (gate disabled, already unlocked, a repo
+// collaborator, or a correct passphrase was just entered); false if the user
+// cancelled. A signed-in viewer whose access is not measured yet (boot probe
+// still in flight) is probed here first, so a collaborator never sees the
+// prompt just because they clicked faster than the probe answered.
 function ensureUnlocked() {
+  if (gateAllowed()) return Promise.resolve(true);
   var expected = gateExpectedHash();
-  if (!PassphraseGate.isGateEnabled(expected)) return Promise.resolve(true);
-  if (PassphraseGate.isUnlocked(expected, localStorage)) return Promise.resolve(true);
-  return SPA.passphrasePrompt(expected);
+  var token = getAuthToken();
+  var measured = gateRepoGrant && gateRepoGrant.token === token;
+  var probe = (token && !measured)
+    ? getRepoPermissions(API, token).then(function(p) {
+        recordRepoGrant(token, p.push);
+        return gateRepoAccess();
+      }, function() { return false; })
+    : Promise.resolve(false);
+  return probe.then(function(ok) { return ok || SPA.passphrasePrompt(expected); });
 }
 
 SPA.passphrasePrompt = function(expectedHash) {
@@ -2652,9 +2674,7 @@ document.addEventListener('click', function(e) {
   if (!a) return;
   var href = a.getAttribute('href') || '';
   if (!/^#\/(preview|review)\//.test(href)) return;
-  var expected = gateExpectedHash();
-  if (!PassphraseGate.isGateEnabled(expected)) return;          // gate off -> normal nav
-  if (PassphraseGate.isUnlocked(expected, localStorage)) return; // already unlocked
+  if (gateAllowed()) return; // gate off, unlocked, or a collaborator -> normal nav
   e.preventDefault();
   ensureUnlocked().then(function(ok) { if (ok) location.hash = href; });
 });
@@ -2756,8 +2776,7 @@ function route() {
   // deep link) redirects to the index and prompts there; only a correct
   // passphrase proceeds to the original target.
   if (hash.startsWith('/preview/') || hash.startsWith('/review/')) {
-    var gateHash = gateExpectedHash();
-    if (PassphraseGate.isGateEnabled(gateHash) && !PassphraseGate.isUnlocked(gateHash, localStorage)) {
+    if (!gateAllowed()) {
       var target = hash;
       if (previewState && previewState.player) { try { previewState.player.pause(); } catch(e) {} }
       document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
@@ -9566,6 +9585,7 @@ function checkWriteAccess() {
   var token = getAuthToken();
   if (!token) return Promise.resolve();
   return getRepoPermissions(API, token).then(function(p) {
+    recordRepoGrant(token, p.push);
     var had = hasNoWrite();
     if (p.push && had) {
       clearNoWrite();

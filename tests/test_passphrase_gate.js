@@ -71,3 +71,48 @@ describe('passphrase_gate — unlock state (stores + compares the hash)', () => 
     assert.strictEqual(Gate.isUnlocked(expected, s), true);
   });
 });
+
+// Repo access is the second key: a signed-in viewer whose token the repo
+// permissions probe confirmed as push=true needs no passphrase. The grant is
+// bound to the token it was measured for, so sign-out (or a different account)
+// re-locks without anyone having to remember to clear it.
+describe('passphrase_gate — repo-access grant', () => {
+  it('a push=true grant for the current token counts as access', () => {
+    assert.strictEqual(Gate.hasRepoAccess({ token: 'gho_a', push: true }, 'gho_a'), true);
+  });
+  it('push=false is no access', () => {
+    assert.strictEqual(Gate.hasRepoAccess({ token: 'gho_a', push: false }, 'gho_a'), false);
+  });
+  it('a grant measured for another token is no access (account switch)', () => {
+    assert.strictEqual(Gate.hasRepoAccess({ token: 'gho_a', push: true }, 'gho_b'), false);
+  });
+  it('signed out (no token) is no access even with a stale grant', () => {
+    assert.strictEqual(Gate.hasRepoAccess({ token: 'gho_a', push: true }, ''), false);
+    assert.strictEqual(Gate.hasRepoAccess({ token: 'gho_a', push: true }, null), false);
+  });
+  it('no grant yet is no access', () => {
+    assert.strictEqual(Gate.hasRepoAccess(null, 'gho_a'), false);
+  });
+});
+
+describe('passphrase_gate — isAllowed', () => {
+  const expected = data.vectors[0].hash;
+  it('gate disabled -> allowed', () => {
+    assert.strictEqual(Gate.isAllowed('', memStorage(), false), true);
+  });
+  it('locked, no repo access -> not allowed', () => {
+    assert.strictEqual(Gate.isAllowed(expected, memStorage(), false), false);
+  });
+  it('phrase already entered -> allowed', () => {
+    const s = memStorage({ [Gate.STORAGE_KEY]: expected });
+    assert.strictEqual(Gate.isAllowed(expected, s, false), true);
+  });
+  it('repo access -> allowed without the phrase', () => {
+    assert.strictEqual(Gate.isAllowed(expected, memStorage(), true), true);
+  });
+  it('repo access does NOT persist an unlock (stays bound to the session)', () => {
+    const s = memStorage();
+    Gate.isAllowed(expected, s, true);
+    assert.strictEqual(Gate.isUnlocked(expected, s), false);
+  });
+});
