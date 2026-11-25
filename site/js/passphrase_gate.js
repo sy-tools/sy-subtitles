@@ -67,6 +67,22 @@
     try { storage.setItem(STORAGE_KEY, expectedHash); } catch (e) {}
   }
 
+  // Second key: a repo collaborator needs no phrase. `grant` is the last
+  // authoritative permissions probe, {token, push}, and only counts for the
+  // token it was measured with — so signing out or switching accounts
+  // re-locks by construction. Merely being signed in is NOT access: anyone
+  // can sign in with any GitHub account.
+  function hasRepoAccess(grant, token) {
+    return !!(grant && token && grant.token === token && grant.push === true);
+  }
+
+  // The whole gate decision. Repo access is deliberately never written to
+  // storage: it belongs to the session, the phrase unlock to the browser.
+  function isAllowed(expectedHash, storage, repoAccess) {
+    if (!isGateEnabled(expectedHash)) return true;
+    return repoAccess === true || isUnlocked(expectedHash, storage);
+  }
+
   var api = {
     GATE_SALT: GATE_SALT,
     GATE_ITERATIONS: GATE_ITERATIONS,
@@ -76,6 +92,8 @@
     isGateEnabled: isGateEnabled,
     isUnlocked: isUnlocked,
     recordUnlock: recordUnlock,
+    hasRepoAccess: hasRepoAccess,
+    isAllowed: isAllowed,
   };
 
   if (typeof module !== 'undefined' && module.exports) {

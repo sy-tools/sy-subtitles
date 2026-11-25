@@ -444,3 +444,40 @@ def test_readonly_session_has_no_enlightenment_marks(auth_server, auth_page):
     page.wait_for_function("localStorage.getItem('sy_gh_no_write') === '1'", timeout=10000)
     assert not page.evaluate("document.body.classList.contains('gh-write')")
     assert page.evaluate("getComputedStyle(document.getElementById('gh-avatar')).boxShadow") == "none"
+
+
+# ---------------------------------------------------------------------------
+# Passphrase gate x sign-in: a viewer the repo permissions probe confirms as a
+# collaborator (push=true) is let through without the phrase; anyone else
+# signed in (push=false) still gets the prompt — signing in with an arbitrary
+# GitHub account must not open the gate.
+# ---------------------------------------------------------------------------
+
+GATE_TEST_HASH = "289fa9ee16cb75d517736c68cd7d9a646fde31efead2e17b59c3219bd1548f5f"
+GATED_HASH = "#/review/2001-01-01_Test-Talk"
+
+
+def _enable_gate(pg):
+    pg.add_init_script(f"window.__SY_GATE_HASH = '{GATE_TEST_HASH}';")
+
+
+def test_collaborator_deep_link_skips_passphrase(auth_server, auth_page):
+    page = auth_page  # fixture default: push=true
+    _seed_session(page)
+    _enable_gate(page)
+    page.goto(f"{auth_server}/index.html{GATED_HASH}")
+    page.wait_for_function(f"location.hash === '{GATED_HASH}'", timeout=10000)
+    page.wait_for_selector("#view-review.active", timeout=10000)
+    assert page.locator("#sy-gate-input").count() == 0
+    # Access is session-bound: it must not be written down as a phrase unlock.
+    assert page.evaluate("localStorage.getItem('sy_gate')") is None
+
+
+def test_signed_in_without_repo_access_still_prompts(auth_server, auth_page):
+    page = auth_page
+    _route_repo_permissions(page, False)
+    _seed_session(page)
+    _enable_gate(page)
+    page.goto(f"{auth_server}/index.html{GATED_HASH}")
+    page.wait_for_selector("#sy-gate-input", timeout=10000)
+    assert "active" not in page.locator("#view-review").get_attribute("class")

@@ -7112,7 +7112,7 @@ describe('burn video driver behaviour', () => {
     let noWrite = false;   // the stored flag, as save/clearNoWrite keep it
     const names = ['document', 'API', 'getAuthToken', 'getRepoPermissions', 'hasNoWrite',
       'clearNoWrite', 'saveNoWrite', 'clearAuth', 'updateAuthUI', 'showToast', 't',
-      'syncBurnFollowing', 'refreshBurnHistory'];
+      'syncBurnFollowing', 'refreshBurnHistory', 'recordRepoGrant'];
     const stubs = Object.assign({
       document: env.document,
       API: env.API,
@@ -7128,7 +7128,9 @@ describe('burn video driver behaviour', () => {
       showToast: env.showToast,
       t: env.t,
       syncBurnFollowing: env.api.syncBurnFollowing,
-      refreshBurnHistory: env.api.refreshBurnHistory
+      refreshBurnHistory: env.api.refreshBurnHistory,
+      // The passphrase gate's grant — irrelevant to the export control.
+      recordRepoGrant: function () {}
     }, over || {});
     return new Function(names.join(','),
       html.slice(s, e) + '\nreturn { checkWriteAccess: checkWriteAccess };')
