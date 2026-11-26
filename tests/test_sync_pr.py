@@ -572,6 +572,75 @@ class TestRoleAwareSync:
         assert "::warning::" in err, "a correction that stopped at the primary must be annotated, not just logged"
         assert "Video2" in err
 
+    def test_trimming_a_derived_videos_tail_leaves_the_transcript_and_primary_alone(self, repo, capsys):
+        """A derived clip that ends earlier than its caption track (#1868).
+
+        The blocks taken off its tail are text this clip does not hold, not
+        text deleted from the talk: the transcript and the primary still carry
+        it. Read as deletions, they emptied a paragraph and the run went red
+        on the paragraph-count guard.
+        """
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        before_transcript = transcript.read_text(encoding="utf-8")
+        before_v1 = v1.read_text(encoding="utf-8")
+        v2.write_text(BASE_SRT.split("\n\n3\n")[0] + "\n", encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "end the derived clip's subtitles at its own end")
+
+        assert run() == 0
+        assert transcript.read_text(encoding="utf-8") == before_transcript
+        assert v1.read_text(encoding="utf-8") == before_v1
+        assert [b["text"] for b in parse_srt(str(v2))] == [
+            "Перше речення першого абзацу.",
+            "Друге речення першого абзацу.",
+        ]
+        assert "::warning::test/Video2: 1 block(s) removed" in capsys.readouterr().err
+
+    def test_a_derived_video_left_with_no_blocks_fails(self, repo):
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        (repo_path / "talks/test/Video2/final/uk.srt").write_text("", encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "empty the derived video's subtitles")
+
+        assert run() == 1
+
+    def test_a_text_edit_still_travels_when_the_derived_tail_is_trimmed_with_it(self, repo):
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        v2 = repo_path / "talks/test/Video2/final/uk.srt"
+        v2.write_text(BASE_SRT.split("\n\n3\n")[0].replace("Перше речення", "Змінене речення") + "\n", encoding="utf-8")
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "fix a word and trim the tail on the derived clip")
+
+        assert run() == 0
+        text = transcript.read_text(encoding="utf-8")
+        assert "Змінене речення першого абзацу." in text
+        assert "Єдине речення другого абзацу." in text
+        v1_texts = [b["text"] for b in parse_srt(str(repo_path / "talks/test/Video1/final/uk.srt"))]
+        assert v1_texts == [
+            "Змінене речення першого абзацу.",
+            "Друге речення першого абзацу.",
+            "Єдине речення другого абзацу.",
+        ]
+
+    def test_a_block_removed_on_the_primary_still_leaves_the_transcript(self, repo):
+        repo_path, _base_sha = repo
+        _git(repo_path, "branch", "-f", "origin/main", "HEAD")
+        transcript = repo_path / "talks/test/transcript_uk.txt"
+        v1 = repo_path / "talks/test/Video1/final/uk.srt"
+        v1.write_text(BASE_SRT.replace("2\n00:00:03,100 --> 00:00:05,000\nДруге речення першого абзацу.\n\n", ""))
+        _git(repo_path, "add", "-A")
+        _commit(repo_path, "drop a sentence on the primary")
+
+        assert run() == 0
+        assert "Друге речення" not in transcript.read_text(encoding="utf-8")
+
     def test_an_ignored_video_is_never_written(self, repo):
         repo_path, _base_sha = repo
         meta = repo_path / "talks/test/meta.yaml"
