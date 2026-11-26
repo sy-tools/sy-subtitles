@@ -3,9 +3,9 @@
 ============================================================
   SRT: talks/1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus/Easter-Puja-London-DP-RAW/final/uk.srt
   Transcript: talks/1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus/transcript_uk.txt
-  EN SRT: talks/1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus/Easter-Puja-London-DP-RAW/source/en.srt
-  SRT blocks: 2196
-  EN SRT blocks: 2194
+  EN SRT: talks/1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus/Easter-Puja-London-DP-RAW/final/en.srt
+  SRT blocks: 2192
+  EN SRT blocks: 2190
   (text preservation check skipped — offset video)
   (duration hard fail skipped — builder mode)
 
@@ -17,24 +17,24 @@
 ============================================================
   CHECK 3: Time range (vs EN SRT)
 ============================================================
-  EN SRT range: 00:00:09,460 — 03:04:14,499
-  SRT range:       00:00:09,460 — 03:04:16,499
+  EN SRT range: 00:00:09,460 — 03:03:56,200
+  SRT range:       00:00:09,460 — 03:03:56,200
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 2196
+  Total blocks: 2192
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 2196
+  Total blocks: 2192
   CPS: avg=11.1, median=11.2, max=20.0
   CPS > target: 270 (12.3%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=46.9, max=84
+  CPL: avg=47.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -58,8 +58,8 @@
 ============================================================
   CHECK: UK block count vs EN SRT block count
 ============================================================
-  UK SRT blocks: 2196
-  EN SRT blocks: 2194
+  UK SRT blocks: 2192
+  EN SRT blocks: 2190
   Ratio UK/EN: 1.00 (max allowed 2.0)
   Block count: OK
 
