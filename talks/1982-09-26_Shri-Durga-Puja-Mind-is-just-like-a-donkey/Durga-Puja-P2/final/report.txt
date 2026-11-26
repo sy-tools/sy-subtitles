@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-P2/final/uk.srt
+  Transcript: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/transcript_uk.txt
+  EN SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-P2/source/en.srt
+  SRT blocks: 108
+  EN SRT blocks: 126
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:03:13,458 — 01:33:23,542
+  SRT range:       00:03:13,458 — 01:33:25,542
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 108
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 108
+  CPS: avg=8.8, median=8.4, max=15.0
+  CPS > target: 1 (0.9%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=45.4, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #59: CPS=15.0 (57ch/3.8s) "Сахаджа йоґ: Я прочитаю кілька імен для Вас, Шрі Матаджі."
+    #40: CPS=15.0 (49ch/3.3s) "Шрі Матаджі: Прія Бхакта; тож Прія стоїть першим,"
+    #70: CPS=15.0 (46ch/3.1s) "Тут той вид парфумів, які використовують люди,"
+    #10: CPS=15.0 (31ch/2.1s) "Заміжні жінки мають зробити це."
+    #52: CPS=15.0 (62ch/4.1s) "з невеликою зміною тут і там утворює таку річ, бо кожен, кож..."
+    #80: CPS=15.0 (84ch/5.6s) "Хоча, якщо у вас є Хіна, це найкраще, бо вона дуже добре очи..."
+    #99: CPS=15.0 (28ch/1.9s) "розумієте, це треба зробити."
+    #48: CPS=15.0 (53ch/3.5s) "це гаразд, але якщо ти поставиш «Прія» (Priyaa), тоді"
+    #27: CPS=15.0 (50ch/3.3s) "Шрі Матаджі: Залиш трішки для кожного й обнеси це,"
+    #31: CPS=15.0 (50ch/3.3s) "(Ґреґуар запитує: «Для Шрі Шіви чи Шрі Махакалі?»)"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 108
+  EN SRT blocks: 126
+  Ratio UK/EN: 0.86 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 8.8 (target ≤15.0)
+  CPS > 15.0: 1 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
