@@ -4,7 +4,7 @@
   SRT: talks/1989-07-23_Guru-Puja-Creativity/Guru-Puja-Talk-Creativity/final/uk.srt
   Transcript: talks/1989-07-23_Guru-Puja-Creativity/transcript_uk.txt
   EN SRT: talks/1989-07-23_Guru-Puja-Creativity/Guru-Puja-Talk-Creativity/source/en.srt
-  SRT blocks: 226
+  SRT blocks: 210
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,17 +22,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 226
+  Total blocks: 210
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 226
-  CPS: avg=8.0, median=7.3, max=15.0
+  Total blocks: 210
+  CPS: avg=8.0, median=7.4, max=15.0
   CPS > target: 0 (0.0%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=57.3, max=84
+  CPL: avg=58.4, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -42,7 +42,6 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #213: CPS=15.0 (58ch/3.9s) "Стопи, а після цього нам знадобляться кілька дівчат віком,"
     #185: CPS=15.0 (34ch/2.3s) "як виявляється, того самого стилю."
     #29: CPS=15.0 (62ch/4.1s) "чи гарного будинку; якщо вам бракує творчості, вам бракувати..."
     #140: CPS=15.0 (81ch/5.4s) "переймають неправильні речі, вони насамперед звертають увагу..."
@@ -52,6 +51,7 @@
     #72: CPS=14.9 (43ch/2.9s) "дітей, на нашу дружину, на наших чоловіків,"
     #170: CPS=14.4 (42ch/2.9s) "Але любов заради самої любові – це ось що:"
     #143: CPS=14.4 (74ch/5.2s) "Повна віддача на милість своєму власному Ґуру важлива; тоді ..."
+    #166: CPS=14.1 (66ch/4.7s) "Ми можемо любити наші речі, ми можемо любити наші непотрібні..."
 
 ============================================================
   SUMMARY
