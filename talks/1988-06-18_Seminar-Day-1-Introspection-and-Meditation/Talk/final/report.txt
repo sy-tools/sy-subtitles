@@ -1,0 +1,86 @@
+============================================================
+  SUBTITLE VALIDATION REPORT
+============================================================
+  SRT: talks/1988-06-18_Seminar-Day-1-Introspection-and-Meditation/Talk/final/uk.srt
+  Transcript: talks/1988-06-18_Seminar-Day-1-Introspection-and-Meditation/transcript_uk.txt
+  EN SRT: talks/1988-06-18_Seminar-Day-1-Introspection-and-Meditation/Talk/source/en.srt
+  SRT blocks: 381
+  EN SRT blocks: 513
+  (text preservation check skipped — offset video)
+  (duration hard fail skipped — builder mode)
+
+============================================================
+  CHECK 2: Timing overlaps
+============================================================
+  Overlapping blocks: 0
+
+============================================================
+  CHECK 3: Time range (vs EN SRT)
+============================================================
+  EN SRT range: 00:00:04,820 — 00:34:05,020
+  SRT range:       00:00:04,820 — 00:34:07,020
+  Time range: OK
+
+============================================================
+  CHECK 4: Sequential numbering
+============================================================
+  Total blocks: 381
+  Numbering errors: 0
+
+============================================================
+  SUBTITLE STATISTICS
+============================================================
+  Total blocks: 381
+  CPS: avg=10.7, median=10.7, max=15.1
+  CPS > target: 16 (4.2%)
+  CPS > hard max: 0 (0.0%)
+  CPL: avg=51.2, max=84
+  CPL > max: 0 (0.0%)
+  Chars > max block: 0 (0.0%)
+  Lines > max: 0
+  Duration < min: 0
+  Duration > max: 0
+  Overlaps: 0
+  Gaps < min: 0
+
+  Worst CPS blocks (top 10):
+    #203: CPS=15.1 (62ch/4.1s) "Коли вони дивилися телевізор, вони лише отримували блокуванн..."
+    #270: CPS=15.0 (31ch/2.1s) "Я нічого не можу з цим вдіяти»."
+    #184: CPS=15.0 (34ch/2.3s) "І ви маєте перейматися ними всіма."
+    #191: CPS=15.0 (43ch/2.9s) "в Сахаджа Йозі, що є напад на Сахаджа Йоґу,"
+    #186: CPS=15.0 (46ch/3.1s) "І там є хтось, хто завдає дуже багато клопоту."
+    #283: CPS=15.0 (52ch/3.5s) "«Ми з’їздили в аеропорт, ми побачили Матір – і все!»"
+    #200: CPS=15.0 (32ch/2.1s) "Ви маєте звертати увагу назовні!"
+    #315: CPS=15.0 (44ch/2.9s) "Я можу кричати, Я можу говорити що завгодно,"
+    #272: CPS=15.0 (47ch/3.1s) "Або комусь сказати: «Я зайнятий своїми дітьми»."
+    #205: CPS=15.0 (50ch/3.3s) "Ви можете все переглянути, які є світові проблеми,"
+
+============================================================
+  CHECK: UK block count vs EN SRT block count
+============================================================
+  UK SRT blocks: 381
+  EN SRT blocks: 513
+  Ratio UK/EN: 0.74 (max allowed 2.0)
+  Block count: OK
+
+============================================================
+  SUMMARY
+============================================================
+  [PASS] Text preservation
+  [PASS] No overlaps
+  [PASS] Time range
+  [PASS] Sequential numbering
+  [PASS] CPL ≤ 84
+  [PASS] Gap ≥ 80ms
+  [PASS] UK/EN block count ratio
+  [PASS] CPS ≤ 20.0
+
+  Avg CPS: 10.7 (target ≤15.0)
+  CPS > 15.0: 16 blocks
+  CPS > 20.0: 0 blocks
+  CPL > 84: 0 blocks
+  Duration < 1200ms: 0 blocks
+  Duration > 21000ms: 0 blocks
+  Gaps < 80ms: 0 blocks
+
+  Overall: PASSED
