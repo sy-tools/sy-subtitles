@@ -4,18 +4,18 @@
   SRT: talks/1987-08-09_Shri-Vishnumaya-Puja-She-has-created-a-big-maya/Vishnumaya-Puja/final/uk.srt
   Transcript: talks/1987-08-09_Shri-Vishnumaya-Puja-She-has-created-a-big-maya/transcript_uk.txt
   Whisper: talks/1987-08-09_Shri-Vishnumaya-Puja-She-has-created-a-big-maya/Vishnumaya-Puja/source/whisper.json
-  SRT blocks: 534
+  SRT blocks: 520
   Whisper segments: 836
   (duration hard fail skipped — builder mode)
 
 ============================================================
   CHECK 1: Text preservation
 ============================================================
-  Transcript chars: 28628
-  SRT chars: 28628
+  Transcript chars: 27959
+  SRT chars: 27959
   Exact normalized match: OK
-  Transcript words: 4733
-  SRT words: 4733
+  Transcript words: 4617
+  SRT words: 4617
   Word-level match: OK
 
 ============================================================
@@ -27,23 +27,23 @@
   CHECK 3: Time range (vs whisper)
 ============================================================
   whisper range: 00:01:17,421 — 01:27:59,171
-  SRT range:       00:01:17,421 — 00:47:25,929
+  SRT range:       00:01:17,421 — 00:47:24,500
   Time range: OK
 
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 534
+  Total blocks: 520
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 534
-  CPS: avg=11.6, median=11.7, max=19.2
-  CPS > target: 21 (3.9%)
+  Total blocks: 520
+  CPS: avg=11.3, median=11.3, max=17.9
+  CPS > target: 10 (1.9%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=52.6, max=84
+  CPL: avg=52.8, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -53,16 +53,16 @@
   Gaps < min: 0
 
   Worst CPS blocks (top 10):
-    #517: CPS=19.2 (44ch/2.3s) "«Я Деві сарва бхутешу, Вішнумайєті шабдіта»."
-    #507: CPS=19.2 (69ch/3.6s) "Йоґ: Чи маємо ми спершу зробити імена Шрі Вішну, а потім ман..."
-    #508: CPS=19.2 (42ch/2.2s) "Шрі Матаджі: А, гаразд, можна зробити так."
-    #509: CPS=19.2 (25ch/1.3s) "Отже, п’ятдесят одне і..."
-    #510: CPS=19.2 (56ch/2.9s) "Йоґ: Є двадцять чотири імені для Сушумни, для Шрі Вішну."
-    #511: CPS=19.2 (30ch/1.6s) "Шрі Матаджі: «Це не Вішнумайя."
-    #512: CPS=19.2 (31ch/1.6s) "Що вам потрібно зробити – це..."
-    #513: CPS=19.2 (31ch/1.6s) "Вішнумайя – це Та, Хто є Дівою."
-    #515: CPS=19.2 (25ch/1.3s) "Які імена Деві у вас є?»."
-    #516: CPS=19.2 (46ch/2.4s) "Йоґ: Так, у нас є Деві Махатм’ям, Шрі Матаджі:"
+    #514: CPS=17.9 (34ch/1.9s) "Це було сказано для сахаджа йоґів."
+    #502: CPS=16.8 (69ch/4.1s) "щоб ним слідувати, щоб привести більше людей у Сахаджа Йогу ..."
+    #213: CPS=15.1 (22ch/1.5s) "Вона сказала: «Чому?»."
+    #217: CPS=15.0 (22ch/1.5s) "Якщо ви брат і сестра,"
+    #216: CPS=15.0 (64ch/4.3s) "ви не можете залишатися разом, ви не залишаєтесь разом, навп..."
+    #496: CPS=15.0 (67ch/4.5s) "і забирати всі ваші гроші, якщо ви думаєте, що гроші такі ва..."
+    #352: CPS=15.0 (35ch/2.3s) "Він сказав: «Чому ти посміхаєшся?»."
+    #476: CPS=15.0 (35ch/2.3s) "І ось що Я маю сказати вам сьогодні"
+    #214: CPS=15.0 (82ch/5.5s) "Я маю на увазі, в Індії, якщо ви брат і сестра, ви завжди мо..."
+    #350: CPS=15.0 (41ch/2.7s) "судячи з того, як він віддавав йому шану."
 
 ============================================================
   SUMMARY
@@ -75,8 +75,8 @@
   [PASS] Gap ≥ 80ms
   [PASS] CPS ≤ 20.0
 
-  Avg CPS: 11.6 (target ≤15.0)
-  CPS > 15.0: 21 blocks
+  Avg CPS: 11.3 (target ≤15.0)
+  CPS > 15.0: 10 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
