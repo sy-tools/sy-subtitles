@@ -4,7 +4,7 @@
   SRT: talks/1986-09-07_Shri-Ganesha-Puja-Establishing-Shri-Ganesha-Principle/Ganesha-Puja-Talk/final/uk.srt
   Transcript: talks/1986-09-07_Shri-Ganesha-Puja-Establishing-Shri-Ganesha-Principle/transcript_uk.txt
   EN SRT: talks/1986-09-07_Shri-Ganesha-Puja-Establishing-Shri-Ganesha-Principle/Ganesha-Puja-Talk/source/en.srt
-  SRT blocks: 490
+  SRT blocks: 429
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,17 +22,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 490
+  Total blocks: 429
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 490
-  CPS: avg=7.6, median=7.1, max=15.0
+  Total blocks: 429
+  CPS: avg=7.6, median=7.0, max=15.0
   CPS > target: 0 (0.0%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=47.6, max=84
+  CPL: avg=50.2, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -46,12 +46,12 @@
     #251: CPS=15.0 (55ch/3.7s) "У таких місцях, як Калькутта, у нас була така проблема,"
     #329: CPS=15.0 (46ch/3.1s) "Тепер ми думаємо, що втратили свою невинність."
     #370: CPS=15.0 (40ch/2.7s) "Я не могла добре співати – так Я думала."
-    #484: CPS=15.0 (40ch/2.7s) "Шармадаяні – це дарувальниця блаженства."
     #311: CPS=15.0 (77ch/5.1s) "І коли ви питаєте цих трьох поранених, вони кажуть: «Той бик..."
     #288: CPS=15.0 (37ch/2.5s) "Жодної обумовленості будь-якого роду."
-    #441: CPS=15.0 (37ch/2.5s) "Ти велика дівчинка... чому ти плачеш?"
     #193: CPS=15.0 (34ch/2.3s) "У вас є Кундаліні, щоб це зробити."
     #416: CPS=15.0 (62ch/4.1s) "Багато людей в Індії теж поклоняються Шрі Ґанеші й повторюют..."
+    #255: CPS=15.0 (75ch/5.0s) "Він сказав: «Матінко, я дам Вам дуже велику територію, де Ви..."
+    #267: CPS=15.0 (47ch/3.1s) "Але якщо ви магніт, тоді він притягуватиме так,"
 
 ============================================================
   SUMMARY
