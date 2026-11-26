@@ -4,7 +4,7 @@
   SRT: talks/1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja/Mahalakshmi-Puja-Talk/final/uk.srt
   Transcript: talks/1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja/transcript_uk.txt
   EN SRT: talks/1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja/Mahalakshmi-Puja-Talk/source/en.srt
-  SRT blocks: 484
+  SRT blocks: 412
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,17 +22,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 484
+  Total blocks: 412
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 484
-  CPS: avg=11.3, median=12.3, max=20.0
-  CPS > target: 75 (15.5%)
+  Total blocks: 412
+  CPS: avg=12.1, median=13.2, max=20.0
+  CPS > target: 75 (18.2%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=49.4, max=84
+  CPL: avg=52.0, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -63,7 +63,7 @@
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
 
-  Avg CPS: 11.3 (target ≤15.0)
+  Avg CPS: 12.1 (target ≤15.0)
   CPS > 15.0: 75 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
