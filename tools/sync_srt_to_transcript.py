@@ -10,6 +10,9 @@ Supported edits:
     silently (placeholders are often not in the transcript)
 
 Deliberately NOT propagated:
+  - block deletions on a projection of the primary (``keep_removed``): a
+    derived video carries a stretch of the primary's text, so a block it
+    loses is text that cut does not hold, not text gone from the talk.
   - removal of a declared `subtitle_omit` phrase ("(сміх)"). Those
     remarks belong to the transcript and never to a subtitle, so an
     edit that only takes one off the screen leaves the transcript
@@ -82,7 +85,9 @@ def _match_blocks_by_similarity(old_slice: list[str], new_slice: list[str]) -> l
     return matches
 
 
-def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir: str | None = None) -> dict:
+def sync_srt_to_transcript(
+    old_srt: str, new_srt: str, transcript: str, talk_dir: str | None = None, keep_removed: bool = False
+) -> dict:
     """Apply text-level diff between old_srt and new_srt to the transcript file.
 
     `talk_dir` names the talk whose declared remarks apply. It defaults to the
@@ -96,9 +101,13 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
     occur in a file reading «A (сміх) B». Every edit is then translated back to
     a span of the real file, so the remarks stay where they belong.
 
+    `keep_removed` is for a derived video's SRT: its removed blocks leave the
+    transcript as it is and are counted in `kept`, while its text edits
+    travel as usual.
+
     Returns a dict with `changed` (number of edited blocks), `removed`
     (number of removed blocks), `skipped` (deletions of blocks not in
-    transcript), or `error`.
+    transcript), `kept` (see `keep_removed`), or `error`.
     """
     old_blocks = parse_srt(old_srt)
     new_blocks = parse_srt(new_srt)
@@ -175,6 +184,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
     changed = 0
     removed = 0
     skipped = 0
+    kept = 0
     drifted = 0
     # Raw (start, end, replacement) triples, applied once everything succeeded.
     edits: list[tuple[int, int, str]] = []
@@ -227,6 +237,16 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
             lo, hi = raw_span(offsets, frag_lo, frag_hi)
             edits.append((lo, hi, replacement))
         return None
+
+    def keep_on_transcript(old_t: str, label: str) -> None:
+        nonlocal cursor, drifted, kept
+        _, end = find_span_lenient(search_view, old_t, cursor)
+        if end == -1:
+            drifted += 1
+        else:
+            cursor = end
+        kept += 1
+        print(f"  {label}: «{old_t[:60]}» — off this cut only; transcript keeps it", file=sys.stderr)
 
     def record_delete(lo_v: int, hi_v: int) -> None:
         """Remove one block's sentence, taking any remark inside it along."""
@@ -305,6 +325,9 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
                 old_t = old_slice[local_idx]
                 src_block = old_blocks[i1 + local_idx]
                 label = f"Block {src_block['idx']}"
+                if match_idx is None and keep_removed:
+                    keep_on_transcript(old_t, label)
+                    continue
                 if match_idx is None:
                     # Treat as deletion
                     (lo_v, hi_v), ambiguous = locate(old_t, label)
@@ -371,6 +394,9 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
             for k in range(i1, i2):
                 old_t = old_texts[k]
                 label = f"Block {old_blocks[k]['idx']}"
+                if keep_removed:
+                    keep_on_transcript(old_t, label)
+                    continue
                 if omit_phrases and not strip_omitted_phrases(old_t, omit_phrases):
                     # The block was nothing but declared remarks. Dropping it
                     # from the SRT is right; the transcript still keeps them.
@@ -429,7 +455,7 @@ def sync_srt_to_transcript(old_srt: str, new_srt: str, transcript: str, talk_dir
     # indices starting at 1.
     write_srt(new_blocks, new_srt)
 
-    return {"changed": changed, "removed": removed, "skipped": skipped}
+    return {"changed": changed, "removed": removed, "skipped": skipped, "kept": kept}
 
 
 def main():

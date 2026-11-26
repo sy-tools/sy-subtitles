@@ -228,7 +228,16 @@ def _plan_talk(
             continue
 
         shadow_srt = shadow / video_slug / "final" / "uk.srt"
-        if roles.get(video_slug) == "derived":
+        # A derived SRT is a projection of the primary: a block it no longer
+        # has is a stretch its cut does not hold — a clip ending before its
+        # caption track does — not text taken out of the talk.
+        is_derived = roles.get(video_slug) == "derived"
+        if is_derived and not parse_srt(str(shadow_srt)):
+            # Keeping removals would let an emptied or mangled file through
+            # green. A video meant to carry no subtitles is `sync: ignored`.
+            plan.failures.append(f"{srt}: no subtitle blocks left on a derived video")
+            continue
+        if is_derived:
             # Step A2 below. Collected before the transcript pass because a
             # re-cut is precisely what that pass discards.
             recut_sources.append((video_slug, base_srt, shadow_srt))
@@ -239,10 +248,17 @@ def _plan_talk(
             new_srt=str(shadow_srt),
             transcript=str(transcript_path),
             talk_dir=str(shadow),
+            keep_removed=is_derived,
         )
         if "error" in result:
             plan.failures.append(f"{srt}: {result['error']}")
             continue
+        if result.get("kept"):
+            _gha_warning(
+                f"{talk_id}/{video_slug}: {result['kept']} block(s) removed on this derived video stay off this "
+                f"cut only — the transcript and the primary keep them. To take text out of the talk, edit the "
+                f"primary or the transcript"
+            )
 
         # Per-video baseline: apply this SRT's diff to a fresh copy of
         # base_transcript. The result is what the transcript would look
@@ -256,6 +272,7 @@ def _plan_talk(
             new_srt=str(shadow_srt),
             transcript=str(effective),
             talk_dir=str(shadow),
+            keep_removed=is_derived,
         )
         if "error" in baseline_result:
             # Shouldn't normally differ from the accumulate run, but bail

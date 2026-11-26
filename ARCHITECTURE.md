@@ -348,6 +348,11 @@ back into the transcript (reverse), a block boundary moved on a derived
 video is carried straight to the primary (re-cuts cannot travel through a
 transcript), then the transcript is synced out to every video's SRT
 (forward) — text-only swaps, no re-timing — and validates.
+A block removed from a derived video's SRT is not a deletion: that SRT is a
+projection of the primary, so the block is text this cut does not hold (a clip
+that ends before its caption track does), and the transcript and the primary
+keep it. The run annotates it; text leaves the talk only through the primary
+or the transcript. Its word edits still travel.
 
 The driver resolves its own baseline: the last `github-actions[bot]` commit
 carrying the `Sync-Bot: v1` trailer on this branch, else the merge-base with
