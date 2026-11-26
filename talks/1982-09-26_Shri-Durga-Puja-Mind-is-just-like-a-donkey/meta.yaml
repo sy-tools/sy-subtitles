@@ -19,7 +19,7 @@ videos:
   - r2U1sDEkJVDhIPQlFBXkxSBVZUHAcLVUVVQktRQRBdTAZBQBVXSF9AG1dbWVIPEQ
   - r2FiQCeCkEFTdaIwcMAlQsAQMbGF4VEAMddxAmQlRnUBxQUgUU
   - r2IzALVTATKgxjGTkJXgcKB1EAGhoRLlg0dBINGhZ0VFhQUgUU
-  sync: derived
+  sync: independent
 - slug: Durga-Puja-Talk-Mind-Is-Just-Like-A-Donkey
   title: 'Durga Puja Talk: Mind Is Just Like A Donkey'
   video_ref: r2Aj0ZDy4KClQbLFRSFQo
