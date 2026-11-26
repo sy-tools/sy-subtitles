@@ -4,7 +4,7 @@
   SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-Talk-Mind-Is-Just-Like-A-Donkey/final/uk.srt
   Transcript: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/transcript_uk.txt
   EN SRT: talks/1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey/Durga-Puja-Talk-Mind-Is-Just-Like-A-Donkey/source/en.srt
-  SRT blocks: 531
+  SRT blocks: 494
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
   (CPS hard fail skipped — builder mode)
@@ -22,17 +22,17 @@
 ============================================================
   CHECK 4: Sequential numbering
 ============================================================
-  Total blocks: 531
+  Total blocks: 494
   Numbering errors: 0
 
 ============================================================
   SUBTITLE STATISTICS
 ============================================================
-  Total blocks: 531
-  CPS: avg=12.0, median=13.8, max=20.0
-  CPS > target: 74 (13.9%)
+  Total blocks: 494
+  CPS: avg=12.2, median=14.4, max=20.0
+  CPS > target: 76 (15.4%)
   CPS > hard max: 0 (0.0%)
-  CPL: avg=53.2, max=84
+  CPL: avg=53.7, max=84
   CPL > max: 0 (0.0%)
   Chars > max block: 0 (0.0%)
   Lines > max: 0
@@ -48,10 +48,10 @@
     #263: CPS=19.8 (31ch/1.6s) "Ґреґуар: Я можу за дві хвилини."
     #268: CPS=18.6 (82ch/4.4s) "Гаразд, він ходить навколо, їсть траву, усілякий бруд, нечис..."
     #365: CPS=17.3 (47ch/2.7s) "І саме це ми зараз бачимо в Сахаджа Йозі також:"
+    #316: CPS=15.4 (71ch/4.6s) "Я знаю, що це довго, але іноді Я виявляю, що якщо потік не з..."
+    #374: CPS=15.4 (81ch/5.3s) "Лише тоді ви можете вийти з... Це також може діяти як спокус..."
+    #361: CPS=15.2 (55ch/3.6s) "І, бачачи це... Тож людям знадобилося так багато років,"
     #276: CPS=15.2 (31ch/2.0s) "вони ставитимуть це під сумнів."
-    #147: CPS=15.1 (47ch/3.1s) "то як ви можете ототожнюватися з однією особою?"
-    #429: CPS=15.1 (56ch/3.7s) "мабуть, побував, де жінки були правительками, а чоловіки"
-    #271: CPS=15.0 (59ch/3.9s) "Лише в Сахаджа Йозі вони приходять сюди й ставлять питання,"
 
 ============================================================
   SUMMARY
@@ -63,8 +63,8 @@
   [PASS] CPL ≤ 84
   [PASS] Gap ≥ 80ms
 
-  Avg CPS: 12.0 (target ≤15.0)
-  CPS > 15.0: 74 blocks
+  Avg CPS: 12.2 (target ≤15.0)
+  CPS > 15.0: 76 blocks
   CPS > 20.0: 0 blocks
   CPL > 84: 0 blocks
   Duration < 1200ms: 0 blocks
