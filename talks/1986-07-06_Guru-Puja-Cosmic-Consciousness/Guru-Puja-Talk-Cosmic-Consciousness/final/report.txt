@@ -3,7 +3,7 @@
 ============================================================
   SRT: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/Guru-Puja-Talk-Cosmic-Consciousness/final/uk.srt
   Transcript: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/transcript_uk.txt
-  EN SRT: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/Guru-Puja-Talk-Cosmic-Consciousness/source/en.srt
+  EN SRT: talks/1986-07-06_Guru-Puja-Cosmic-Consciousness/Guru-Puja-Talk-Cosmic-Consciousness/final/en.srt
   SRT blocks: 466
   (text preservation check skipped — offset video)
   (time range check skipped — offset video)
