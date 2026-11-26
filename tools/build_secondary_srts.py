@@ -38,18 +38,48 @@ import yaml
 
 from .offset_srt import apply_offset, detect_offset
 from .resync_srt import resync
-from .srt_utils import clamp_to_media_end, load_media_end_ms, parse_srt, timing_en_srt, write_srt
+from .srt_utils import clamp_to_media_end, load_media_end_ms, ms_to_time, parse_srt, timing_en_srt, write_srt
 from .video_roles import RoleError, resolve_roles
 from .video_roles import primary_slug as resolve_primary
 
 
 def _end_at_media_end(srt_path: Path, video_dir: Path) -> None:
-    """Cut the derived SRT at its OWN video's end — the primary's padded tail,
-    carried across the timelines, can outlast a shorter recording."""
+    """Cut the derived SRT at its OWN video's end.
+
+    A clip's caption track can run on past the clip with the rest of the
+    recording, and every primary block carried onto that stretch is text the
+    clip does not hold — so, unlike a primary build, a block that STARTS at or
+    past the end is dropped, not kept with a warning. The one straddling the
+    end is clamped to it.
+
+    The end is whisper.json's `duration` and nothing else: the clip's own
+    caption track is what overruns, the build job has no media to probe, and
+    whisper's last segment only bounds the end from below — derived blocks in
+    the corpus legitimately start up to 9 s after it, and a sung ending may
+    have no segment at all. A video without a recorded duration is warned
+    about; `python -m tools.local_whisper --duration-only` records it.
+    """
     media_end_ms = load_media_end_ms(video_dir / "source" / "whisper.json")
+    if media_end_ms is None:
+        print(
+            f"::warning::{video_dir.parent.name}/{video_dir.name}: source/whisper.json records no duration, "
+            "so the derived uk.srt is not cut at the video's end; record it with "
+            f"`python -m tools.local_whisper --talk-id {video_dir.parent.name} --video-slug {video_dir.name} "
+            "--duration-only`",
+            file=sys.stderr,
+        )
+        return
     blocks = parse_srt(str(srt_path))
-    if clamp_to_media_end(blocks, media_end_ms):
-        write_srt(blocks, str(srt_path))
+    kept = [b for b in blocks if b["start_ms"] < media_end_ms]
+    dropped = len(blocks) - len(kept)
+    if dropped:
+        print(
+            f"=== {video_dir.name}: dropped {dropped} block(s) starting at or past the video's end "
+            f"{ms_to_time(media_end_ms)}",
+            file=sys.stderr,
+        )
+    if clamp_to_media_end(kept, media_end_ms) or dropped:
+        write_srt(kept, str(srt_path))
 
 
 def _video_slugs(talk_dir: Path) -> list[str]:

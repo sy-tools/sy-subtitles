@@ -328,3 +328,69 @@ def test_missing_faster_whisper_is_reported_before_downloading(tmp_path, monkeyp
     monkeypatch.setattr(local_whisper, "download_audio", lambda *a: pytest.fail("downloaded anyway"))
     assert local_whisper.main(["--talk-id", talk.name, "--root", str(tmp_path)]) == 1
     assert "faster-whisper" in capsys.readouterr().err
+
+
+class TestDurationOnly:
+    @pytest.fixture
+    def measured(self, monkeypatch):
+        seen = {}
+
+        def fake_download(url, dest):
+            seen["url"] = url
+            p = Path(dest) / "audio.m4a"
+            p.write_bytes(b"x")
+            seen["audio"] = p
+            return p
+
+        monkeypatch.setattr(local_whisper, "check_downloader", lambda: None)
+        monkeypatch.setattr(local_whisper, "check_whisper", lambda: pytest.fail("whisper is not needed"))
+        monkeypatch.setattr(local_whisper, "transcribe", lambda *a: pytest.fail("transcribed anyway"))
+        monkeypatch.setattr(local_whisper, "download_audio", fake_download)
+        monkeypatch.setattr(local_whisper, "probe_duration", lambda audio: 2714.9234)
+        return seen
+
+    def _whisper(self, talk, slug, data):
+        path = talk / slug / "source" / "whisper.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        return path
+
+    def test_records_the_measured_duration_and_keeps_everything_else(self, tmp_path, measured):
+        talk = make_talk(tmp_path, [video("Main")])
+        path = self._whisper(talk, "Main", VALID_WHISPER)
+        rc = local_whisper.main(["--talk-id", talk.name, "--root", str(tmp_path), "--duration-only"])
+        assert rc == 0
+        expected = {"language": "en", "duration": 2714.923, "segments": VALID_WHISPER["segments"]}
+        assert path.read_text(encoding="utf-8") == json.dumps(expected, ensure_ascii=False, indent=2)
+        assert not measured["audio"].exists()
+
+    def test_targets_only_whisper_files_without_a_duration(self, tmp_path):
+        talk = make_talk(tmp_path, [video("Has"), video("Lacks"), video("None")])
+        self._whisper(talk, "Has", {**VALID_WHISPER, "duration": 10.0})
+        self._whisper(talk, "Lacks", VALID_WHISPER)
+        assert [j.slug for j in local_whisper.plan(talk, duration_only=True)] == ["Lacks"]
+
+    def test_force_remeasures_a_recorded_duration(self, tmp_path):
+        talk = make_talk(tmp_path, [video("Has")])
+        self._whisper(talk, "Has", {**VALID_WHISPER, "duration": 10.0})
+        assert [j.slug for j in local_whisper.plan(talk, force=True, duration_only=True)] == ["Has"]
+
+    def test_probe_reads_the_container_duration(self, tmp_path, monkeypatch):
+        calls = []
+
+        def fake_run(argv, **kwargs):
+            calls.append(argv)
+            return subprocess.CompletedProcess(argv, 0, stdout="2714.923400\n", stderr="")
+
+        monkeypatch.setattr(local_whisper.subprocess, "run", fake_run)
+        assert local_whisper.probe_duration(tmp_path / "audio.m4a") == pytest.approx(2714.9234)
+        assert calls[0][0] == "ffprobe"
+
+    def test_an_unreadable_probe_is_a_download_error(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            local_whisper.subprocess,
+            "run",
+            lambda argv, **k: subprocess.CompletedProcess(argv, 1, stdout="", stderr="bad"),
+        )
+        with pytest.raises(local_whisper.DownloadError, match="ffprobe"):
+            local_whisper.probe_duration(tmp_path / "audio.m4a")
