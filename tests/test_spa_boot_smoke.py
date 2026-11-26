@@ -284,6 +284,88 @@ def test_the_help_sheet_opens_over_the_index_with_the_catalog(index_page):
     assert not page_errors, "uncaught JS error(s) opening the help sheet:\n  " + "\n  ".join(page_errors)
 
 
+def test_a_shared_link_opens_the_sheet_on_that_video(smoke_server, smoke_page):
+    page = smoke_page
+    page_errors = []
+    page.on("pageerror", lambda e: page_errors.append(str(e)))
+    _serve_help(page)
+    page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
+    page.goto(f"{smoke_server}/index.html#/help/security")
+    page.wait_for_selector("#help-sheet .help-video--linked")
+
+    assert page.locator("#help-sheet").is_visible()
+    linked = page.locator("#help-sheet .help-video--linked")
+    assert linked.count() == 1
+    assert linked.get_attribute("data-file") == "security"
+    # Scrolled into view below the sheet's sticky head, not under it.
+    page.wait_for_function(
+        "document.querySelector('#help-sheet .help-video--linked').getBoundingClientRect().top"
+        " >= document.querySelector('#help-sheet .help-sheet__head').getBoundingClientRect().bottom"
+    )
+    # Dropped at once, so closing the sheet leaves a clean index.
+    assert page.evaluate("location.hash") == ""
+    assert not page_errors, "uncaught JS error(s) opening a shared link:\n  " + "\n  ".join(page_errors)
+
+
+def test_a_link_to_a_replaced_video_opens_its_newest_version(smoke_server, smoke_page):
+    page = smoke_page
+    _serve_help(page)
+    page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
+    page.goto(f"{smoke_server}/index.html#/help/intro-v1")
+    page.wait_for_selector("#help-sheet .help-video--linked")
+    assert page.locator("#help-sheet .help-video--linked").get_attribute("data-file") == "intro"
+
+
+def test_each_video_copies_its_own_link(index_page):
+    page = index_page
+    page.evaluate(
+        "() => { window.__copied = []; navigator.clipboard.writeText = (t) => { window.__copied.push(t); return Promise.resolve(); }; }"
+    )
+    _open_help(page)
+    assert page.locator("#help-sheet .help-video .help-video__link").count() == HELP_VIDEO_COUNT
+    page.click("#help-sheet .help-video[data-file='security'] .help-video__link")
+    page.wait_for_function("window.__copied.length === 1")
+    copied = page.evaluate("window.__copied[0]")
+    assert copied.endswith("/index.html?f=needs-review#/help/security"), copied
+    assert copied.startswith(page.evaluate("location.origin")), copied
+    assert page.locator("#toast.show").is_visible()
+    # Over the sheet, not hidden under its scrim.
+    assert page.evaluate(
+        """() => { const t = document.getElementById('toast'); t.style.pointerEvents = 'auto';
+        const r = t.getBoundingClientRect();
+        return t.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); }"""
+    ), "the copied-link toast is under the help sheet"
+
+
+def test_a_copied_link_carries_the_index_search_and_filter(smoke_server, smoke_page):
+    page = smoke_page
+    _serve_help(page)
+    page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
+    # No ?f= in the address: the filter on screen is the reader's saved default,
+    # which the one who opens the link may not share.
+    page.goto(f"{smoke_server}/index.html?q=puja")
+    page.wait_for_function("document.title.includes('Index')", timeout=10000)
+    page.evaluate(
+        "() => { window.__copied = []; navigator.clipboard.writeText = (t) => { window.__copied.push(t); return Promise.resolve(); }; }"
+    )
+    _open_help(page)
+    page.click("#help-sheet .help-video[data-file='security'] .help-video__link")
+    page.wait_for_function("window.__copied.length === 1")
+    copied = page.evaluate("window.__copied[0]")
+    assert copied.endswith("/index.html?q=puja&f=needs-review#/help/security"), copied
+
+
+def test_a_shared_link_opens_on_the_index_it_was_copied_from(smoke_server, smoke_page):
+    page = smoke_page
+    _serve_help(page)
+    page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
+    page.goto(f"{smoke_server}/index.html?q=puja&f=approved#/help/security")
+    page.wait_for_selector("#help-sheet .help-video--linked")
+    assert page.input_value("#search-input") == "puja"
+    assert page.evaluate("activeFilter") == "approved"
+    assert page.evaluate("location.search") == "?q=puja&f=approved"
+
+
 def test_the_help_sheet_closes_and_hands_focus_back(index_page):
     page = index_page
     for close in (
@@ -428,6 +510,22 @@ def test_the_tutorials_wait_behind_the_passphrase_gate(smoke_server, smoke_page)
     page.press("#sy-gate-input", "Enter")
     page.wait_for_selector("#help-sheet .help-video", timeout=10000)
     assert page.locator("#help-sheet .help-video").count() == HELP_VIDEO_COUNT
+
+
+def test_a_shared_link_asks_for_the_passphrase_first(smoke_server, smoke_page):
+    page = smoke_page
+    requests = []
+    _serve_help(page, requests)
+    page.add_init_script(f"window.__SY_GATE_HASH = '{GATE_TEST_HASH}';")
+    page.goto(f"{smoke_server}/index.html#/help/security")
+    page.wait_for_selector("#sy-gate-input", timeout=10000)
+    assert page.locator("#help-sheet").is_hidden()
+    assert not requests, "the catalog was fetched before the passphrase"
+
+    page.fill("#sy-gate-input", GATE_TEST_PHRASE)
+    page.press("#sy-gate-input", "Enter")
+    page.wait_for_selector("#help-sheet .help-video--linked", timeout=10000)
+    assert page.locator("#help-sheet .help-video--linked").get_attribute("data-file") == "security"
 
 
 HELP_API = "https://api.github.com/repos/sy-tools/sy-help"

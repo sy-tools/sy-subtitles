@@ -30,7 +30,20 @@
     return node;
   }
 
-  function renderVideo(repo, video, uiLang) {
+  var LINK_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>';
+
+  // The card's own link (help_videos.js linkHash), copied by the portal.
+  function linkButton(video, label) {
+    var btn = el('button', 'btn btn--ghost btn--sm btn--icon help-video__link');
+    btn.type = 'button';
+    btn.setAttribute('data-help-link', video.file);
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    btn.innerHTML = LINK_ICON;
+    return btn;
+  }
+
+  function renderVideo(repo, video, uiLang, linkLabel) {
     var card = el('article', 'help-video');
     card.setAttribute('data-file', video.file);
     var head = el('header', 'help-video__head');
@@ -38,7 +51,10 @@
     title.appendChild(el('span', 'help-video__number', video.number));
     title.appendChild(document.createTextNode(' ' + HelpVideos.localized(video.displayTitle, uiLang)));
     head.appendChild(title);
-    head.appendChild(el('span', 'help-video__duration', HelpVideos.formatDuration(video.duration)));
+    var aside = el('span', 'help-video__aside');
+    aside.appendChild(el('span', 'help-video__duration', HelpVideos.formatDuration(video.duration)));
+    aside.appendChild(linkButton(video, linkLabel || 'Copy link'));
+    head.appendChild(aside);
     card.appendChild(head);
 
     var description = HelpVideos.localized(video.description, uiLang);
@@ -72,14 +88,14 @@
     return card;
   }
 
-  function render(root, repo, catalog, uiLang) {
+  function render(root, repo, catalog, uiLang, linkLabel) {
     root.textContent = '';
     HelpVideos.orderedSections(catalog).forEach(function (section) {
       var block = el('section', 'help-section');
       block.setAttribute('data-section', section.id);
       block.appendChild(el('h2', 'help-section__title', section.number + '. ' + HelpVideos.localized(section.title, uiLang)));
       var list = el('div', 'help-section__list');
-      section.videos.forEach(function (video) { list.appendChild(renderVideo(repo, video, uiLang)); });
+      section.videos.forEach(function (video) { list.appendChild(renderVideo(repo, video, uiLang, linkLabel)); });
       block.appendChild(list);
       root.appendChild(block);
     });

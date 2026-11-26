@@ -1156,6 +1156,9 @@ var I18N = {
     'prefs.help': '\u0412\u0456\u0434\u0435\u043e-\u0456\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0456\u0457',
     'help.title': '\u0412\u0456\u0434\u0435\u043e-\u0456\u043d\u0441\u0442\u0440\u0443\u043a\u0446\u0456\u0457',
     'help.close': '\u0417\u0430\u043a\u0440\u0438\u0442\u0438',
+    'help.copyLink': 'Скопіювати посилання на це відео',
+    'help.linkCopied': 'Посилання на відео скопійовано',
+    'help.linkMissing': 'Цього відео вже немає в списку',
     'help.loading': '\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f\u2026',
     'help.error': '\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0438\u0442\u0438 \u0441\u043f\u0438\u0441\u043e\u043a \u0432\u0456\u0434\u0435\u043e. \u0421\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.',
     'help.admin.edit': 'Редагувати',
@@ -1495,6 +1498,9 @@ var I18N = {
     'prefs.help': 'Video tutorials',
     'help.title': 'Video tutorials',
     'help.close': 'Close',
+    'help.copyLink': 'Copy a link to this video',
+    'help.linkCopied': 'Link to the video copied',
+    'help.linkMissing': 'That video is no longer in the list',
     'help.loading': 'Loading\u2026',
     'help.error': 'The list of videos did not load. Try again.',
     'help.admin.edit': 'Edit',
@@ -2821,6 +2827,8 @@ function route() {
   } else if (hash.startsWith('/add')) {
     document.getElementById('view-add').classList.add('active');
     showAddTalk(hash);
+  } else if (HelpVideos.linkedFile('#' + hash)) {
+    openHelpLink(HelpVideos.linkedFile('#' + hash));
   } else {
     // Clean URL: remove #/ so index page has no hash
     if (location.hash && location.hash !== '') {
@@ -10554,8 +10562,8 @@ function renderHelpBody(body) {
   body.dataset.lang = lang;
   body.textContent = '';
   body.appendChild(Object.assign(document.createElement('p'), { className: 'help-sheet__status', textContent: t('help.loading') }));
-  loadHelpCatalog(repo).then(function(catalog) {
-    if (body.dataset.lang === lang) HelpSheet.render(body, repo, catalog, lang);
+  return loadHelpCatalog(repo).then(function(catalog) {
+    if (body.dataset.lang === lang) HelpSheet.render(body, repo, catalog, lang, t('help.copyLink'));
   }, function() {
     if (body.dataset.lang !== lang) return;
     body.dataset.lang = '';
@@ -10571,17 +10579,60 @@ SPA.openHelp = function() {
   ensureUnlocked().then(function(ok) { if (ok) showHelp(); });
 };
 
-function showHelp() {
+// `file`: the video a shared link names (#/help/<file>), scrolled to and
+// marked once the catalog is drawn.
+function showHelp(file) {
   var sheet = document.getElementById('help-sheet');
   var body = document.getElementById('help-sheet-body');
   if (!sheet || !body) return;
-  if (!helpAdmin.on && body.dataset.lang !== currentLang) renderHelpBody(body);
+  var drawn = (!helpAdmin.on && body.dataset.lang !== currentLang) ? renderHelpBody(body) : Promise.resolve();
   checkHelpAdmin();
   sheet.hidden = false;
   // The page behind must not scroll under a finger that reached the sheet's end.
   document.documentElement.classList.add('help-sheet-open');
   document.getElementById('help-sheet-close').focus();
+  if (file) drawn.then(function() { showLinkedHelpVideo(file); });
 };
+
+function showLinkedHelpVideo(file) {
+  loadHelpCatalog(HelpVideos.helpRepo(window)).then(function(catalog) {
+    var video = HelpVideos.findLinked(HelpVideos.orderedSections(catalog), file);
+    var card = video && document.querySelector('#help-sheet .help-video[data-file="' + video.file + '"]');
+    if (!card) { showToast(t('help.linkMissing'), 4000); return; }
+    document.querySelectorAll('#help-sheet .help-video--linked').forEach(function(el) { el.classList.remove('help-video--linked'); });
+    card.classList.add('help-video--linked');
+    // The sheet's head is sticky: stop below it, not under it.
+    var head = document.querySelector('#help-sheet .help-sheet__head');
+    card.style.scrollMarginTop = ((head ? head.offsetHeight : 0) + 16) + 'px';
+    card.scrollIntoView({ block: 'start' });
+  }, function() {});
+}
+
+// A pasted link opens the index with the sheet on that video. The hash is
+// dropped at once, so closing the sheet leaves a clean index and a reload
+// does not reopen it; the gate asks first, as for any other deep link.
+function openHelpLink(file) {
+  history.replaceState(null, '', location.pathname + location.search);
+  showIndex();
+  ensureUnlocked().then(function(ok) { if (ok) showHelp(file); });
+}
+
+document.getElementById('help-sheet-body').addEventListener('click', function(e) {
+  var btn = e.target && e.target.closest && e.target.closest('[data-help-link]');
+  if (!btn) return;
+  // The filter goes in even when it is this reader's saved default (which
+  // the address leaves out): the one who opens the link may have another.
+  var searchEl = document.getElementById('search-input');
+  var search = buildIndexSearch(location.search, {
+    query: searchEl ? (searchEl.value || '') : '',
+    filter: activeFilter,
+    defaultFilter: '',
+  });
+  var url = HelpVideos.shareUrl(location.origin, location.pathname, '?' + search, btn.getAttribute('data-help-link'));
+  var copied = navigator.clipboard && navigator.clipboard.writeText
+    ? navigator.clipboard.writeText(url) : Promise.reject(new Error('no clipboard'));
+  copied.then(function() { showToast(t('help.linkCopied')); }, function() { showToast(t('error.clipboard'), 4000); });
+});
 
 // ----- Help admin -----
 // Edit mode of the sheet, offered to whoever can push to the help repository:
@@ -10803,7 +10854,7 @@ SPA.toggleHelpAdmin = function() {
     // What was just saved, not what Pages still serves for another minute.
     var repo = HelpVideos.helpRepo(window);
     body.dataset.lang = currentLang;
-    HelpSheet.render(body, repo, helpAdmin.catalog, currentLang);
+    HelpSheet.render(body, repo, helpAdmin.catalog, currentLang, t('help.copyLink'));
     return;
   }
   helpAdmin.on = true;
