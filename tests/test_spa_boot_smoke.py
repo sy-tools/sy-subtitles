@@ -326,7 +326,7 @@ def test_each_video_copies_its_own_link(index_page):
     page.click("#help-sheet .help-video[data-file='security'] .help-video__link")
     page.wait_for_function("window.__copied.length === 1")
     copied = page.evaluate("window.__copied[0]")
-    assert copied.endswith("/index.html#/help/security"), copied
+    assert copied.endswith("/index.html?f=needs-review#/help/security"), copied
     assert copied.startswith(page.evaluate("location.origin")), copied
     assert page.locator("#toast.show").is_visible()
     # Over the sheet, not hidden under its scrim.
@@ -335,6 +335,35 @@ def test_each_video_copies_its_own_link(index_page):
         const r = t.getBoundingClientRect();
         return t.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); }"""
     ), "the copied-link toast is under the help sheet"
+
+
+def test_a_copied_link_carries_the_index_search_and_filter(smoke_server, smoke_page):
+    page = smoke_page
+    _serve_help(page)
+    page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
+    # No ?f= in the address: the filter on screen is the reader's saved default,
+    # which the one who opens the link may not share.
+    page.goto(f"{smoke_server}/index.html?q=puja")
+    page.wait_for_function("document.title.includes('Index')", timeout=10000)
+    page.evaluate(
+        "() => { window.__copied = []; navigator.clipboard.writeText = (t) => { window.__copied.push(t); return Promise.resolve(); }; }"
+    )
+    _open_help(page)
+    page.click("#help-sheet .help-video[data-file='security'] .help-video__link")
+    page.wait_for_function("window.__copied.length === 1")
+    copied = page.evaluate("window.__copied[0]")
+    assert copied.endswith("/index.html?q=puja&f=needs-review#/help/security"), copied
+
+
+def test_a_shared_link_opens_on_the_index_it_was_copied_from(smoke_server, smoke_page):
+    page = smoke_page
+    _serve_help(page)
+    page.add_init_script("localStorage.setItem('sy_lang', 'uk')")
+    page.goto(f"{smoke_server}/index.html?q=puja&f=approved#/help/security")
+    page.wait_for_selector("#help-sheet .help-video--linked")
+    assert page.input_value("#search-input") == "puja"
+    assert page.evaluate("activeFilter") == "approved"
+    assert page.evaluate("location.search") == "?q=puja&f=approved"
 
 
 def test_the_help_sheet_closes_and_hands_focus_back(index_page):

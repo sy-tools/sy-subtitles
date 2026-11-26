@@ -10620,7 +10620,15 @@ function openHelpLink(file) {
 document.getElementById('help-sheet-body').addEventListener('click', function(e) {
   var btn = e.target && e.target.closest && e.target.closest('[data-help-link]');
   if (!btn) return;
-  var url = HelpVideos.shareUrl(location.origin, location.pathname, location.search, btn.getAttribute('data-help-link'));
+  // The filter goes in even when it is this reader's saved default (which
+  // the address leaves out): the one who opens the link may have another.
+  var searchEl = document.getElementById('search-input');
+  var search = buildIndexSearch(location.search, {
+    query: searchEl ? (searchEl.value || '') : '',
+    filter: activeFilter,
+    defaultFilter: '',
+  });
+  var url = HelpVideos.shareUrl(location.origin, location.pathname, '?' + search, btn.getAttribute('data-help-link'));
   var copied = navigator.clipboard && navigator.clipboard.writeText
     ? navigator.clipboard.writeText(url) : Promise.reject(new Error('no clipboard'));
   copied.then(function() { showToast(t('help.linkCopied')); }, function() { showToast(t('error.clipboard'), 4000); });

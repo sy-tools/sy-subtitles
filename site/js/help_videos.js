@@ -81,12 +81,13 @@
   }
 
   // A link to one video: '#/help/<file>' on the portal itself, so it opens
-  // behind the same passphrase gate as everything else. Off GitHub Pages the
-  // portal needs ?repo= (and may carry ?branch=) to boot; nothing else of the
-  // sharer's address (an OAuth code, say) travels with the link.
+  // behind the same passphrase gate as everything else, over the index the
+  // sharer had on screen (its search ?q= and filter ?f=). Off GitHub Pages
+  // the portal needs ?repo= (and may carry ?branch=) to boot; nothing else of
+  // the sharer's address (an OAuth code, say) travels with the link.
   var FILE_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   var LINK_PREFIX = '#/help/';
-  var KEPT_PARAMS = ['repo', 'branch'];
+  var KEPT_PARAMS = ['repo', 'branch', 'q', 'f'];
 
   function linkHash(file) { return LINK_PREFIX + file; }
 

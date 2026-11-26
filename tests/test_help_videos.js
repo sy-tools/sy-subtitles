@@ -130,6 +130,12 @@ describe('links to one video', () => {
       'http://localhost:8000/?repo=sy-tools%2Fsy-subtitles&branch=dev#/help/intro');
   });
 
+  it('carries the index search and filter the reader has on screen', () => {
+    assert.strictEqual(
+      shareUrl('https://sy-tools.github.io', '/sy-subtitles/', '?q=puja&f=approved&state=x', 'intro'),
+      'https://sy-tools.github.io/sy-subtitles/?q=puja&f=approved#/help/intro');
+  });
+
   it('finds the linked video in the ordered sections', () => {
     const found = findLinked(orderedSections(CATALOG), 'a');
     assert.deepStrictEqual([found.file, found.number], ['a', '1.2']);
