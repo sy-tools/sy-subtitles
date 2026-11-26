@@ -16,6 +16,7 @@ removed afterwards. The model and the language rule are those of
 
 import argparse
 import importlib.util
+import json
 import shutil
 import subprocess
 import sys
@@ -53,7 +54,17 @@ def load_meta(talk_dir: Path) -> dict:
     return yaml.safe_load(meta_path.read_text(encoding="utf-8")) or {}
 
 
-def plan(talk_dir, video_slug=None, source_url=None, force=False) -> list[Job]:
+def _records_duration(whisper_path: Path) -> bool:
+    return bool(json.loads(whisper_path.read_text(encoding="utf-8")).get("duration"))
+
+
+def _needs_work(output: Path, force: bool, duration_only: bool) -> bool:
+    if duration_only:
+        return output.exists() and (force or not _records_duration(output))
+    return force or not output.exists()
+
+
+def plan(talk_dir, video_slug=None, source_url=None, force=False, duration_only=False) -> list[Job]:
     talk_dir = Path(talk_dir)
     videos = [v for v in load_meta(talk_dir).get("videos", []) if v.get("slug")]
     if video_slug is not None:
@@ -66,7 +77,7 @@ def plan(talk_dir, video_slug=None, source_url=None, force=False) -> list[Job]:
     jobs = []
     for v in videos:
         output = talk_dir / v["slug"] / "source" / "whisper.json"
-        if output.exists() and not force:
+        if not _needs_work(output, force, duration_only):
             continue
         urls = [source_url] if source_url else download_candidates(v, ci=False)
         if not urls:
@@ -158,6 +169,37 @@ def download_first(urls: list[str], dest_dir) -> Path:
     raise DownloadError("no source could be downloaded: " + "; ".join(failures))
 
 
+def probe_duration(audio) -> float:
+    probe = subprocess.run(
+        ["ffprobe", "-v", "quiet", "-show_entries", "format=duration", "-of", "csv=p=0", str(audio)],
+        capture_output=True,
+        text=True,
+    )
+    try:
+        return float(probe.stdout.strip())
+    except ValueError:
+        raise DownloadError(f"ffprobe could not read the duration of {audio}") from None
+
+
+def record_duration(job: Job) -> None:
+    """Add the media's length to a whisper.json written before whisper_run recorded it.
+
+    The derived build cuts a clip's subtitles at this value, and the build job
+    has no media to measure it from. Everything else in the file is kept.
+    """
+    work = Path(tempfile.mkdtemp(prefix="local_whisper_"))
+    try:
+        duration = probe_duration(download_first(job.urls, work))
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    data = json.loads(job.output.read_text(encoding="utf-8"))
+    data.pop("duration", None)
+    head = {k: data.pop(k) for k in ("language",) if k in data}
+    data = {**head, "duration": round(duration, 3), **data}
+    job.output.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    validate_whisper_json(str(job.output))
+
+
 def run_job(job: Job, language) -> None:
     work = Path(tempfile.mkdtemp(prefix="local_whisper_"))
     try:
@@ -183,23 +225,31 @@ def main(argv=None) -> int:
         "of the same recording; requires --video-slug when the talk has several videos",
     )
     parser.add_argument("--force", action="store_true", help="redo videos that already have whisper.json")
+    parser.add_argument(
+        "--duration-only",
+        action="store_true",
+        help="no transcription: add the measured media length to whisper.json files that lack `duration` "
+        "(with --force, re-measure every one)",
+    )
     parser.add_argument("--root", default=".", help="repository root (default: current directory)")
     args = parser.parse_args(argv)
 
     talk_dir = Path(args.root) / "talks" / args.talk_id
     try:
         meta = load_meta(talk_dir)
-        jobs = plan(talk_dir, args.video_slug, args.source_url, args.force)
+        jobs = plan(talk_dir, args.video_slug, args.source_url, args.force, args.duration_only)
     except PlanError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
     if not jobs:
-        print(f"{args.talk_id}: every video already has whisper.json (use --force to redo)")
+        done = "a whisper.json with a duration" if args.duration_only else "whisper.json"
+        print(f"{args.talk_id}: every video already has {done} (use --force to redo)")
         return 0
 
     try:
         check_downloader()
-        check_whisper()
+        if not args.duration_only:
+            check_whisper()
     except DownloadError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         return 1
@@ -208,7 +258,10 @@ def main(argv=None) -> int:
     for job in jobs:
         print(f"== {args.talk_id}/{job.slug}", flush=True)
         try:
-            run_job(job, language)
+            if args.duration_only:
+                record_duration(job)
+            else:
+                run_job(job, language)
         except (DownloadError, SchemaError) as e:
             print(f"ERROR: {job.slug}: {e}", file=sys.stderr)
             return 1

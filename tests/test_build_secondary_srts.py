@@ -325,3 +325,84 @@ def test_derived_srt_without_a_recorded_duration_is_unchanged(tmp_path):
     build_secondary_srts(talk, "vid1")
     built = parse_srt(str(talk / "vid2" / "final" / "uk.srt"))
     assert built[-1]["end_ms"] == 40000
+
+
+# ---------------------------------------------------------------------------
+#  A derived clip's caption track can run on past the clip with the rest of
+#  the recording (Hanumana Puja 1990 Talk: amruta's track for a 45-minute clip
+#  goes on to 2:05:00). The primary's blocks carried onto that range are text
+#  the clip does not contain.
+# ---------------------------------------------------------------------------
+
+
+def _with_duration(talk: Path, slug: str, seconds: float) -> None:
+    import json
+
+    (talk / slug / "source" / "whisper.json").write_text(
+        json.dumps({"segments": [{"start": 1.0, "end": seconds - 1.0, "text": "x"}], "duration": seconds}),
+        encoding="utf-8",
+    )
+
+
+def test_derived_blocks_starting_past_the_clip_end_are_dropped(tmp_path):
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "vid1": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT)},
+            # The clip's own track is the primary's, whole: same cues, same
+            # times. It does not stop where the clip does.
+            "vid2": {"en": _blocks(_EN_TEXT)},
+        },
+    )
+    # Blocks are 0-2s, 3-5s, ..., 33-35s; the clip is 16.5s long, so block 6
+    # (15-17s) straddles the end and blocks 7..12 start after it.
+    _with_duration(talk, "vid2", 16.5)
+    build_secondary_srts(talk, "vid1")
+    built = parse_srt(str(talk / "vid2" / "final" / "uk.srt"))
+    assert [b["text"] for b in built] == _UK_TEXT[:6]
+    assert built[-1]["start_ms"] == 15000
+    assert built[-1]["end_ms"] == 16500
+    assert [b["idx"] for b in built] == list(range(1, 7))
+
+
+def test_derived_block_starting_exactly_at_the_clip_end_is_dropped(tmp_path):
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "vid1": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT)},
+            "vid2": {"en": _blocks(_EN_TEXT)},
+        },
+    )
+    _with_duration(talk, "vid2", 15.0)  # block 6 starts at 15000ms
+    build_secondary_srts(talk, "vid1")
+    built = parse_srt(str(talk / "vid2" / "final" / "uk.srt"))
+    assert [b["text"] for b in built] == _UK_TEXT[:5]
+
+
+def test_derived_build_inside_the_clip_is_byte_identical(tmp_path):
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "vid1": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT)},
+            "vid2": {"en": _blocks(_EN_TEXT, offset_ms=5000)},
+        },
+    )
+    build_secondary_srts(talk, "vid1")
+    unbounded = (talk / "vid2" / "final" / "uk.srt").read_bytes()
+    _with_duration(talk, "vid2", 60.0)
+    build_secondary_srts(talk, "vid1")
+    assert (talk / "vid2" / "final" / "uk.srt").read_bytes() == unbounded
+
+
+def test_derived_build_without_a_media_end_warns(tmp_path, capsys):
+    talk = _setup_talk(
+        tmp_path,
+        {
+            "vid1": {"en": _blocks(_EN_TEXT), "uk": _blocks(_UK_TEXT)},
+            "vid2": {"en": _blocks(_EN_TEXT, offset_ms=5000)},
+        },
+    )
+    build_secondary_srts(talk, "vid1")
+    err = capsys.readouterr().err
+    assert "::warning::" in err
+    assert "vid2" in err and "duration" in err
