@@ -676,11 +676,12 @@ trust.
 
 **Races.** Nothing serializes a direct push but the remote, which refuses one
 whose base has moved. `push-state.sh` answers a refusal by starting over —
-the issues are read again — and never by forcing or rebasing. The script
-rebuilds every status from the issues, so the reading taken last is the right
-one, and a file computed before the commit it would land on is stale by
-construction. The job's concurrency group only spares attempts; correctness
-does not rest on it. Statuses that did not change produce no commit.
+the issues are read again — and never by forcing or rebasing. Every run reads
+every issue and takes only the entries no issue covers from the file as the
+branch holds it, so the reading taken last is the right one, and a file
+computed before the commit it would land on is stale by construction. The
+job's concurrency group only spares attempts; correctness does not rest on
+it. Statuses that did not change produce no commit.
 
 **Reading.** The SPA reads the file from `raw.githubusercontent.com` by
 branch name (`site/js/review_status_source.js`) and spends no API request on
