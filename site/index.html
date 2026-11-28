@@ -23,8 +23,11 @@
 <script src="js/typo_hints.js"></script>
 <script src="js/preview_srt_parser.js"></script>
 <script src="js/paragraph_timing.js"></script>
+<script src="js/srt_align.js"></script>
 <script src="js/preview_state.js"></script>
 <script src="js/text_sanitize.js"></script>
+<script src="js/transcript_text.js"></script>
+<script src="js/html_escape.js"></script>
 <script src="js/edit_store.js"></script>
 <script src="js/load_token.js"></script>
 <script src="js/review_source_srt.js"></script>
@@ -41,6 +44,7 @@
 <script src="js/touch_fs_chrome.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/pipeline_stages.js"></script>
+<script src="js/pipeline_view.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/boot_loader.js"></script>
 <script src="js/talk_actions.js"></script>
@@ -780,95 +784,8 @@
 // SRT Parser — timeToMs / parseSRT / findActiveSubtitle(Idx) live in
 // js/preview_srt_parser.js (loaded in <head>), the same module the Node
 // test suite exercises; matchParagraphsToSrt lives in js/paragraph_timing.js
-// the same way. The browser-only helper below (alignSubtitlesByTime) is not
-// shared, so it stays inline.
+// and alignSubtitlesByTime in js/srt_align.js the same way.
 // ============================================================
-// ALIGN_START
-function alignSubtitlesByTime(enBlocks, ukBlocks) {
-  if (!enBlocks.length && !ukBlocks.length) return [];
-  if (!enBlocks.length) return ukBlocks.map(function(b) { return { en: null, uk: b, startMs: b.startMs, endMs: b.endMs }; });
-  if (!ukBlocks.length) return enBlocks.map(function(b) { return { en: b, uk: null, startMs: b.startMs, endMs: b.endMs }; });
-
-  // Collect all unique time boundaries
-  var times = {};
-  enBlocks.forEach(function(b) { times[b.startMs] = true; times[b.endMs] = true; });
-  ukBlocks.forEach(function(b) { times[b.startMs] = true; times[b.endMs] = true; });
-  var sorted = Object.keys(times).map(Number).sort(function(a, b) { return a - b; });
-
-  // Build time slots with active EN/UK block indices via a two-pointer
-  // walk. Blocks within each column are sorted and non-overlapping in
-  // valid SRT files, and slot midpoints advance monotonically, so each
-  // block is visited at most twice (once when it becomes current, once
-  // when it expires). Total work: O(slots + enBlocks + ukBlocks).
-  var slots = [];
-  var enPtr = 0, ukPtr = 0;
-  for (var i = 0; i < sorted.length - 1; i++) {
-    var s = sorted[i], e = sorted[i + 1];
-    var mid = (s + e) / 2;
-    while (enPtr < enBlocks.length && enBlocks[enPtr].endMs <= mid) enPtr++;
-    while (ukPtr < ukBlocks.length && ukBlocks[ukPtr].endMs <= mid) ukPtr++;
-    var enIdx = (enPtr < enBlocks.length && enBlocks[enPtr].startMs <= mid) ? enPtr : -1;
-    var ukIdx = (ukPtr < ukBlocks.length && ukBlocks[ukPtr].startMs <= mid) ? ukPtr : -1;
-    if (enIdx === -1 && ukIdx === -1) continue; // gap — skip
-    slots.push({ s: s, e: e, enIdx: enIdx, ukIdx: ukIdx });
-  }
-
-  // Merge consecutive slots with same EN+UK pair
-  var merged = [];
-  for (var i = 0; i < slots.length; i++) {
-    var cur = slots[i];
-    if (merged.length > 0) {
-      var prev = merged[merged.length - 1];
-      if (prev.enIdx === cur.enIdx && prev.ukIdx === cur.ukIdx) {
-        prev.e = cur.e;
-        continue;
-      }
-    }
-    merged.push({ s: cur.s, e: cur.e, enIdx: cur.enIdx, ukIdx: cur.ukIdx });
-  }
-
-  // Determine which blocks have at least one fully-paired slot (both EN and UK present).
-  // Half-empty slots are then absorbed into the paired ones via grid spanning, so we
-  // drop those half-empty slots whose visible side is already covered by a paired slot.
-  var pairedEn = {}, pairedUk = {};
-  for (var i = 0; i < merged.length; i++) {
-    if (merged[i].enIdx >= 0 && merged[i].ukIdx >= 0) {
-      pairedEn[merged[i].enIdx] = true;
-      pairedUk[merged[i].ukIdx] = true;
-    }
-  }
-
-  var rows = [];
-  for (var i = 0; i < merged.length; i++) {
-    var m = merged[i];
-    // Drop a half-empty slot if its visible block also appears in a fully-paired slot.
-    // The paired slot will display that block (possibly via row spanning), so the
-    // half-empty slot would render as a redundant row with one orphan cell.
-    if (m.enIdx === -1 && m.ukIdx >= 0 && pairedUk[m.ukIdx]) continue;
-    if (m.ukIdx === -1 && m.enIdx >= 0 && pairedEn[m.enIdx]) continue;
-    var en = m.enIdx >= 0 ? enBlocks[m.enIdx] : null;
-    var uk = m.ukIdx >= 0 ? ukBlocks[m.ukIdx] : null;
-    if (!en && !uk) continue;
-    rows.push({ en: en, uk: uk, startMs: m.s, endMs: m.e });
-  }
-
-  // Re-merge consecutive rows with the same EN+UK pair (drops above may have made
-  // previously-separated identical pairs adjacent — this rarely matters but keeps
-  // the spanning logic in the renderer compact).
-  var compact = [];
-  for (var i = 0; i < rows.length; i++) {
-    var r = rows[i];
-    if (compact.length > 0) {
-      var prev = compact[compact.length - 1];
-      var sameEn = (prev.en === r.en) || (prev.en && r.en && prev.en.startMs === r.en.startMs && prev.en.endMs === r.en.endMs);
-      var sameUk = (prev.uk === r.uk) || (prev.uk && r.uk && prev.uk.startMs === r.uk.startMs && prev.uk.endMs === r.uk.endMs);
-      if (sameEn && sameUk) { prev.endMs = r.endMs; continue; }
-    }
-    compact.push(r);
-  }
-  return compact;
-}
-// ALIGN_END
 
 // findActiveSubtitleIdx lives in js/preview_srt_parser.js.
 // defaultPreviewState / loadPreviewState / applyEditsToSrt / msToSrtTime live
@@ -3443,7 +3360,7 @@ function renderIndex(el) {
       : ' <a href="' + safeHref('https://github.com/' + REPO + '/actions/workflows/subtitle-pipeline.yml') + '" target="_blank" class="expert-only expert-btn" style="display:none;" title="' + esc(t('expert.copy_and_run')) + '">&#x25B6; pipeline</a>';
     // A talk the operator holds shows which step it is at, in expert view too.
     var statusBadge = opStep && (opMode || (expertMode && (phase === 'operator' || phase === 'sent')))
-      ? renderOperatorBadge(opStep, st) : renderStatusBadge(reviewStatusOf, st);
+      ? renderOperatorBadge(opStep, st) : renderStatusBadge(reviewStatusOf, st, t, esc, safeHref, REPO);
     if (opMode) takeBtn = '';
     div.dataset.talkId = tk.id;
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
@@ -3489,7 +3406,7 @@ function renderIndex(el) {
           });
           if (!wasOpen) {
             div.classList.add('selected');
-            dd.innerHTML = renderPipelineDAG(tkRef, stagesRef, stRef);
+            dd.innerHTML = renderPipelineDAG(tkRef, stagesRef, stRef, t, esc, safeHref, REPO);
             dd.style.display = 'block';
             expandedTalkId = tkRef.id;
           } else {
@@ -3712,73 +3629,8 @@ function openPipelineDialog(talkId, stages) {
 // ============================================================
 // PIPELINE VIEW
 // ============================================================
-// getPipelineStages() and getOverallStatus() are provided by js/pipeline_stages.js (loaded in <head>).
-
-
-function renderStatusBadge(status, reviewSt) {
-  var labels = {
-    'approved': t('badge.approved'),
-    'in-review': t('badge.in_review'),
-    'ready-for-review': t('badge.needs_review'),
-    'in-progress': t('badge.pending')
-  };
-  var text = labels[status] || status;
-  if (status === 'in-review' && reviewSt && reviewSt.reviewer) text += ' (' + esc(reviewSt.reviewer) + ')';
-  var href = safeHref(reviewSt && reviewSt.issue_number ? 'https://github.com/' + REPO + '/issues/' + reviewSt.issue_number : '');
-  if (href) return '<a href="' + href + '" target="_blank" class="review-badge ' + status + '">' + text + '</a>';
-  return '<span class="review-badge ' + status + '">' + text + '</span>';
-}
-
-function renderPipelineDAG(tk, stages, st) {
-  function node(label, done, href, extraCls) {
-    var cls = 'pipe-node' + (done ? ' done' : '') + (extraCls ? ' ' + extraCls : '');
-    var sh = safeHref(href);
-    if (sh) return '<a href="' + sh + '" class="' + cls + '">' + esc(label) + '</a>';
-    return '<span class="' + cls + '">' + esc(label) + '</span>';
-  }
-  function arrow(done) {
-    return '<span class="pipe-arrow' + (done ? ' done' : '') + '">&rarr;</span>';
-  }
-
-  var wLabel = t('pipe.ai_transcribed') + (stages.nVideos > 1 ? ' ' + stages.whisperProgress : '');
-  var sLabel = t('pipe.srt') + (stages.nVideos > 1 ? ' ' + stages.srtProgress : '');
-  var reviewHref = st && st.issue_number ? 'https://github.com/' + REPO + '/issues/' + st.issue_number : '';
-  var reviewNode = node(t('pipe.review'), stages.review || stages.approved, '', stages.approved ? 'approved' : (stages.review ? 'in-review' : ''))
-    + arrow(stages.approved)
-    + node(t('pipe.approved'), stages.approved);
-
-  // A text-only talk has no video: no whisper, no subtitles — the translation is the
-  // whole build, and the issue follows it.
-  if (stages.textOnly) {
-    return '<div class="pipe-dag">'
-      + node(t('pipe.added'), true) + arrow(true)
-      + node(t('pipe.ai_translated'), stages.translated) + arrow(stages.translated)
-      + node(t('pipe.ai_reviewed'), stages.reviewed) + arrow(stages.translated && stages.hasIssue)
-      + node(t('pipe.issue'), stages.hasIssue, reviewHref) + arrow(stages.hasIssue)
-      + reviewNode
-      + '</div>';
-  }
-
-  var topBranch = node(wLabel, stages.whisper);
-  var bottomBranch = node(t('pipe.ai_translated'), stages.translated)
-    + arrow(stages.translated) + node(t('pipe.ai_reviewed'), stages.reviewed);
-
-  var aiFork = '<div class="pipe-fork">'
-    + '<div class="pipe-row">' + topBranch + '</div>'
-    + '<div class="pipe-row">' + bottomBranch + '</div>'
-    + '</div>';
-
-  var joinFork = '<div class="pipe-fork">'
-    + '<div class="pipe-row">' + aiFork + arrow(stages.whisper && stages.reviewed) + node(sLabel, stages.srt) + '</div>'
-    + '<div class="pipe-row">' + node(t('pipe.issue'), stages.hasIssue, reviewHref) + '</div>'
-    + '</div>';
-
-  return '<div class="pipe-dag">'
-    + node(t('pipe.added'), true) + arrow(true)
-    + joinFork + arrow(stages.srt && stages.hasIssue)
-    + reviewNode
-    + '</div>';
-}
+// getPipelineStages() and getOverallStatus() are provided by js/pipeline_stages.js,
+// renderStatusBadge() and renderPipelineDAG() by js/pipeline_view.js (both loaded in <head>).
 
 
 // ============================================================
@@ -7928,56 +7780,6 @@ SPA.switchReviewMode = function(mode, videoSlug) {
   });
 };
 
-// PARSE_TRANSCRIPT_START
-function parseTranscript(text) {
-  // Strip UTF-8 BOM if present. We never re-emit it — fetch().text() strips
-  // BOM transparently for network loads anyway, so round-tripping it isn't
-  // achievable from the SPA. This is purely defensive for pasted input.
-  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-  // Normalize CRLF → LF for parsing; track the original line ending so
-  // serializeTranscript can write the file back the same way.
-  var lineEnding = /\r\n/.test(text) ? '\r\n' : '\n';
-  if (lineEnding === '\r\n') text = text.replace(/\r\n/g, '\n');
-  var lines = text.split('\n');
-  var bodyStart = 0;
-  var header = '';
-  for (var i = 0; i < Math.min(lines.length, 10); i++) {
-    if (/^(Talk Language:|Language:|Мова промови:|Мова:|भाषण भाषा:)/i.test(lines[i].trim())) {
-      header = lines.slice(0, i + 1).join('\n');
-      bodyStart = i + 1;
-      // Consume any blank separator lines between header and body so the
-      // body's leading newlines don't confuse separator detection.
-      while (bodyStart < lines.length && lines[bodyStart].trim() === '') bodyStart++;
-      break;
-    }
-  }
-  var body = lines.slice(bodyStart).join('\n');
-  var useDouble = /\n\s*\n/.test(body);
-  var paras = useDouble ? body.split(/\n\s*\n/) : body.split('\n');
-  paras = paras.map(function(p) { return p.trim(); }).filter(Boolean);
-  return {
-    header: header, separator: useDouble ? '\n\n' : '\n', paragraphs: paras,
-    lineEnding: lineEnding
-  };
-}
-
-// Serialize a parsed transcript back to a file-identical string.
-// Accepts the same shape parseTranscript returns, plus the edited paragraphs.
-function serializeTranscript(parsed, paragraphs) {
-  var body = paragraphs.join(parsed.separator);
-  var text = parsed.header ? parsed.header + '\n\n' + body + '\n' : body + '\n';
-  if (parsed.lineEnding === '\r\n') text = text.replace(/\n/g, '\r\n');
-  return text;
-}
-// PARSE_TRANSCRIPT_END
-
-function msToTC(ms) {
-  var s = Math.floor(ms / 1000);
-  var m = Math.floor(s / 60); s = s % 60;
-  var h = Math.floor(m / 60); m = m % 60;
-  return (h ? h + ':' : '') + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-}
-
 // msToSrtTime lives in js/preview_state.js (loaded in <head>).
 
 function renderReview() {
@@ -8979,15 +8781,10 @@ SPA.openEditor = function() {
 // ============================================================
 // Helpers
 // ============================================================
-function esc(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-// Allow only http(s)/hash-route/mailto hrefs (blocks javascript:, data:,
-// protocol-relative //host), then HTML-escape so a quote/tag cannot break out
-// of the href="" attribute. Returns '' for disallowed/empty URLs.
 // The index page this SPA is served from, without query or hash.
 function spaIndexUrl() {
   return location.origin + location.pathname.replace(/\/[^/]*$/, '/');
 }
-function safeHref(u) { return /^(https?:\/\/|#|mailto:)/i.test(u || '') ? esc(u) : ''; }
 function showToast(msg, ms) {
   var el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');
