@@ -1,0 +1,11 @@
+{
+  "html": [
+    "<script src=\"https://cdn.example/lib.min.js\"></script>",
+    "<script src=\"js/first.js\"></script>",
+    "<script defer src=\"js/second.js\"></script>",
+    "<script type=\"module\" src=\"js/third.js\"></script>",
+    "<script src=\"js/vendor/typo.js\"></script>",
+    "<script>var inline = \"js/not_a_tag.js\";</script>"
+  ],
+  "loaded": ["js/first.js", "js/second.js", "js/third.js"]
+}

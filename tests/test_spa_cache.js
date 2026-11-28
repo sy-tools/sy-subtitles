@@ -1,5 +1,6 @@
 const { describe, it, beforeEach, mock } = require('node:test');
 const assert = require('node:assert');
+const { spaSources, loadedScripts, sourcesMentioning, linesInLoadOrder } = require('./spa_sources');
 
 // ============================================================
 // Extract and test SPA cache/freshness logic
@@ -552,22 +553,31 @@ describe('SPA code integrity', () => {
   var fs = require('fs');
   var html = fs.readFileSync('site/index.html', 'utf8');
   var lines = html.split('\n');
+  // A handler or a definition counts wherever it lives: index.html or a
+  // script it loads.
+  var sources = spaSources();
+  var appLines = sources.flatMap(s => s.text.split('\n'));
 
   it('var SPA = {} exists', () => {
     assert.ok(lines.some(l => l.includes('var SPA = {}')), 'var SPA = {} not found');
   });
 
   it('no SPA.xxx assignment in JS before var SPA = {}', () => {
+    // Walked in load order: a script the page loads ahead of the declaration
+    // runs ahead of it.
     var inScript = false;
     var spaDeclared = false;
     var errors = [];
-    lines.forEach((line, i) => {
+    linesInLoadOrder().forEach(({ source, n, line }) => {
       var s = line.trim();
-      if (s.includes('<script>') || s.startsWith('<script ')) inScript = true;
-      if (s.includes('</script>')) inScript = false;
+      var inModule = source !== 'index.html';
+      if (!inModule) {
+        if (s.includes('<script>') || s.startsWith('<script ')) inScript = true;
+        if (s.includes('</script>')) inScript = false;
+      }
       if (s.includes('var SPA = {}')) spaDeclared = true;
-      if (inScript && !spaDeclared && s.startsWith('SPA.')) {
-        errors.push('line ' + (i+1) + ': ' + s.substring(0, 60));
+      if ((inScript || inModule) && !spaDeclared && s.startsWith('SPA.')) {
+        errors.push(source + ' line ' + n + ': ' + s.substring(0, 60));
       }
     });
     assert.strictEqual(errors.length, 0, 'SPA used before declaration: ' + errors.join('; '));
@@ -590,7 +600,7 @@ describe('SPA code integrity', () => {
   it('all SPA.xxx in onclick handlers have matching definitions', () => {
     // Extract onclick SPA.xxx calls
     var onclickCalls = new Set();
-    lines.forEach(line => {
+    appLines.forEach(line => {
       var ms = line.match(/onclick="SPA\.(\w+)\(/g);
       if (ms) ms.forEach(m => {
         var name = m.match(/SPA\.(\w+)/)[1];
@@ -599,7 +609,7 @@ describe('SPA code integrity', () => {
     });
     // Extract SPA.xxx = function definitions
     var definitions = new Set();
-    lines.forEach(line => {
+    appLines.forEach(line => {
       var m = line.trim().match(/^SPA\.(\w+)\s*=/);
       if (m) definitions.add(m[1]);
     });
@@ -609,16 +619,17 @@ describe('SPA code integrity', () => {
 
   it('no duplicate SPA.xxx definitions', () => {
     var defs = {};
-    lines.forEach((line, i) => {
+    sources.forEach(src => src.text.split('\n').forEach((line, i) => {
       var m = line.match(/^SPA\.(\w+)\s*=\s*function/);
       if (m) {
         var name = m[1];
+        var where = src.name + ':' + (i + 1);
         if (defs[name]) {
-          assert.fail('Duplicate SPA.' + name + ' at lines ' + defs[name] + ' and ' + (i+1));
+          assert.fail('Duplicate SPA.' + name + ' at lines ' + defs[name] + ' and ' + where);
         }
-        defs[name] = i + 1;
+        defs[name] = where;
       }
-    });
+    }));
   });
 });
 
@@ -1131,10 +1142,10 @@ describe('Theme: CSS variable completeness', () => {
   });
 
   it('all var() references have matching definitions', () => {
-    // Usages span the stylesheets and any inline style="" in the HTML;
-    // definitions live in tokens.css. Check the union so an inline var()
-    // usage with no definition is still caught.
-    var src = html + '\n' + css + '\n' + components;
+    // Usages span the stylesheets, any inline style="" in the HTML and the
+    // markup the page's scripts build; definitions live in tokens.css. Check
+    // the union so an inline var() usage with no definition is still caught.
+    var src = [html, css, components].concat(loadedScripts().map(s => s.text)).join('\n');
     var varUsages = new Set();
     var varDefs = new Set();
     // Find var(--xxx)
@@ -1181,9 +1192,8 @@ describe('refresh: covers all data sources', () => {
     // A ?v= on a branch URL is cached by the service worker as immutable while
     // raw.githubusercontent may still serve the bytes from before the push;
     // only rawPin (js/manifest_fetch.js rawFileUrl) pins the commit first.
-    var fs = require('fs');
-    var html = fs.readFileSync('site/index.html', 'utf8');
-    assert.ok(!/'\?v='/.test(html), "index.html builds a '?v=' URL itself; use rawPin(path, sha)");
+    var byHand = sourcesMentioning(/'\?v='/, ['js/manifest_fetch.js']);
+    assert.deepStrictEqual(byHand, [], byHand.join(', ') + " builds a '?v=' URL itself; use rawPin(path, sha)");
   });
 
   it('review-status.json sha extracted in buildManifest', () => {
@@ -1866,8 +1876,8 @@ describe('Add Talk: i18n for dynamic video row labels', () => {
 
   it('the video link field is not labelled "Vimeo URL"', () => {
     assert.ok(html.includes("t('add.video_url')"), 'dynamic row should use t(add.video_url)');
-    assert.ok(!html.includes('add.vimeo_url'), 'stale add.vimeo_url key');
-    assert.ok(!/'add\.video_url': 'Vimeo URL'/.test(html), 'label still says Vimeo URL');
+    assert.deepStrictEqual(sourcesMentioning('add.vimeo_url'), [], 'stale add.vimeo_url key');
+    assert.deepStrictEqual(sourcesMentioning(/'add\.video_url': 'Vimeo URL'/), [], 'label still says Vimeo URL');
     assert.ok(html.includes("'add.video_url': 'Video URL'"), 'EN label should be "Video URL"');
     var guide = fs.readFileSync('site/styleguide.html', 'utf8');
     assert.ok(!guide.includes('Vimeo URL'), 'styleguide form row still says Vimeo URL');
@@ -1952,7 +1962,8 @@ describe('Add Talk: SPA code integrity', () => {
     // the index.html builder, so guard it here.
     assert.ok(html.includes('js/bookmarklet.js'), 'loader must inject js/bookmarklet.js');
     assert.ok(html.includes("'javascript:' + loader"), 'bookmarklet-link href must be the javascript: loader');
-    assert.ok(!html.includes('var bmCode'), 'inline bmCode scraper must be gone (moved to js/bookmarklet.js)');
+    assert.deepStrictEqual(sourcesMentioning('var bmCode'), [],
+      'inline bmCode scraper must be gone (moved to js/bookmarklet.js)');
   });
 
   it('add.title i18n key in both languages', () => {
@@ -2534,13 +2545,16 @@ describe('i18n: toggle cycle', () => {
 describe('i18n: data-i18n coverage in HTML', () => {
   var fs = require('fs');
   var html = fs.readFileSync('site/index.html', 'utf8');
+  // Markup carries a key whether it is written in the page or built by a
+  // script the page loads.
+  var app = spaSources().map(s => s.text).join('\n');
   var i18n = extractI18N();
 
   it('all data-i18n keys exist in I18N', () => {
     var keys = [];
     var re = /data-i18n="([^"]+)"/g;
     var m;
-    while ((m = re.exec(html)) !== null) keys.push(m[1]);
+    while ((m = re.exec(app)) !== null) keys.push(m[1]);
     var missing = keys.filter(k => !i18n.en.hasOwnProperty(k));
     assert.deepStrictEqual(missing, [], 'data-i18n keys not in I18N: ' + missing.join(', '));
   });
@@ -2549,7 +2563,7 @@ describe('i18n: data-i18n coverage in HTML', () => {
     var keys = [];
     var re = /data-i18n-placeholder="([^"]+)"/g;
     var m;
-    while ((m = re.exec(html)) !== null) keys.push(m[1]);
+    while ((m = re.exec(app)) !== null) keys.push(m[1]);
     var missing = keys.filter(k => !i18n.en.hasOwnProperty(k));
     assert.deepStrictEqual(missing, [], 'data-i18n-placeholder keys not in I18N: ' + missing.join(', '));
   });
@@ -2558,7 +2572,7 @@ describe('i18n: data-i18n coverage in HTML', () => {
     var keys = [];
     var re = /data-i18n-title="([^"]+)"/g;
     var m;
-    while ((m = re.exec(html)) !== null) keys.push(m[1]);
+    while ((m = re.exec(app)) !== null) keys.push(m[1]);
     var missing = keys.filter(k => !i18n.en.hasOwnProperty(k));
     assert.deepStrictEqual(missing, [], 'data-i18n-title keys not in I18N: ' + missing.join(', '));
   });
@@ -2583,8 +2597,11 @@ describe('i18n: data-i18n coverage in HTML', () => {
     // rest of the app drift into reading different things. This is the negative
     // half: the keys must not appear anywhere else.
     var owned = ['sy_lang', 'sy_theme', 'sy_expert_mode'];
-    var strays = owned.filter(function(key) { return html.indexOf(key) !== -1; });
-    assert.deepStrictEqual(strays, [], 'index.html spells out a key that belongs to preferences.js: ' + strays);
+    var strays = [];
+    owned.forEach(function(key) {
+      sourcesMentioning(key, ['js/preferences.js']).forEach(function(name) { strays.push(name + ' (' + key + ')'); });
+    });
+    assert.deepStrictEqual(strays, [], 'a key that belongs to preferences.js is spelled out in: ' + strays);
   });
 
   it('detectLang function exists', () => {
@@ -2988,7 +3005,7 @@ describe('Deploy stamps in HTML', () => {
   });
 
   it('the old concatenated APP_DEPLOY_SHA stamp is gone', () => {
-    assert.ok(!html.includes('APP_DEPLOY_SHA'));
+    assert.deepStrictEqual(sourcesMentioning('APP_DEPLOY_SHA'), []);
   });
 
   it('deploy-pages.yml stamps every placeholder it is given', () => {
@@ -3004,7 +3021,7 @@ describe('Deploy stamps in HTML', () => {
   });
 
   it('no APP_VERSION references remain', () => {
-    assert.ok(!html.includes('APP_VERSION'), 'APP_VERSION should be fully removed');
+    assert.deepStrictEqual(sourcesMentioning('APP_VERSION'), [], 'APP_VERSION should be fully removed');
   });
 
   it('CACHE_SCHEMA is defined as number >= 1', () => {
@@ -3281,7 +3298,7 @@ describe('Pipeline: manifest tracking', () => {
 
   it('getOverallStatus comes from js/pipeline_stages.js, with no inline copy', () => {
     assert.ok(html.includes('<script src="js/pipeline_stages.js'));
-    assert.ok(!html.includes('function getOverallStatus'));
+    assert.deepStrictEqual(sourcesMentioning('function getOverallStatus', ['js/pipeline_stages.js']), []);
   });
 });
 
@@ -3291,6 +3308,17 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
   var bodyMatch = html.match(/<body>([\s\S]*)<\/body>/);
   var body = bodyMatch ? bodyMatch[1] : '';
   var bodyNoScript = body.replace(/<script[\s\S]*?<\/script>/g, '');
+
+  // The app's JS: index.html's inline script and every script the page loads.
+  // Case-insensitive (i) so CodeQL's bad-tag-filter query is satisfied; our
+  // index.html uses a lowercase <script>, so matching is unchanged in practice.
+  function appScripts() {
+    var inline = html.match(/<script>([\s\S]*)<\/script>/i);
+    return [{ name: 'index.html', text: inline ? inline[1] : '' }].concat(loadedScripts());
+  }
+  function appScript() {
+    return appScripts().map(s => s.text).join('\n');
+  }
 
   it('no hardcoded "Loading..." without data-i18n', () => {
     var loadingMatches = bodyNoScript.match(/>Loading\.\.\.</g) || [];
@@ -3365,9 +3393,7 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
   });
 
   it('all JS t() calls use keys that exist in I18N', () => {
-    var scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
-    if (!scriptMatch) return;
-    var script = scriptMatch[1];
+    var script = appScript();
 
     // Extract all t('key') calls
     var tCalls = new Set();
@@ -3388,9 +3414,7 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
   });
 
   it('no JS showToast/toast with hardcoded strings (should use t())', () => {
-    var scriptMatch = html.match(/<script>([\s\S]*)<\/script>/);
-    if (!scriptMatch) return;
-    var script = scriptMatch[1];
+    var script = appScript();
     // Find showToast('...') or toast('...') with literal strings (not t())
     var re = /(?:showToast|toast)\(\s*'([^']+)'/g;
     var m, errors = [];
@@ -3403,23 +3427,67 @@ describe('i18n: no hardcoded UI text in HTML body', () => {
     assert.strictEqual(errors.length, 0, 'Hardcoded toast messages: ' + errors.join(', '));
   });
 
+  // Cyrillic that is data, not interface text: the exact literals, by file. A
+  // new string in the same file is therefore still caught.
+  var CYRILLIC_DATA = {
+    // The Ukrainian letters a Latin lookalike was meant to be: the table the
+    // typo hints suggest from.
+    'js/typo_hints.js': [...'АВСЕНІКМОРТХУасеіорху'],
+    // The letters the mark and fullscreen hotkeys answer to on a Ukrainian layout.
+    'js/preview_keys.js': [...'ьма'],
+    // The transliteration table that turns a title into a file name. The last
+    // entry is the regex /зг/: the quote in the character class before it makes
+    // the scan pair the wrong quotes.
+    'js/help_admin.js': [...'абвгґдеєжзиіїйклмнопрстуфхцчшщьюя', ').replace(/зг/g, '],
+    // A language's own name on a subtitle track, the same in either interface.
+    'js/help_sheet.js': ['Українська'],
+    // The Ukrainian half of a generated {uk, en} title, the shape every catalog
+    // title has; its English twin is on the same line.
+    'js/help_videos.js': ['Оновлення на '],
+    // A quoted example inside a comment, which the scan reads as code.
+    'js/burn_video.js': ['Нью-', 'Йорка'],
+  };
+
+  // { name: [literal, …] } for every app script holding a Cyrillic literal.
+  function cyrillicLiterals() {
+    var found = {};
+    appScripts().forEach(function(src) {
+      // The I18N dictionary is the one place Cyrillic literals legitimately live.
+      var i18nMatch = src.text.match(/var I18N\s*=\s*\{[\s\S]*?\n\s*\};/);
+      var scanned = i18nMatch ? src.text.replace(i18nMatch[0], '') : src.text;
+      var litRe = /(['"])((?:\\.|(?!\1).)*?)\1/g;
+      var m;
+      while ((m = litRe.exec(scanned)) !== null) {
+        if (/[Ѐ-ӿ]/.test(m[2])) (found[src.name] = found[src.name] || []).push(m[2]);
+      }
+    });
+    return found;
+  }
+
   it('no hardcoded Cyrillic string literals in JS (use t()/I18N)', () => {
     // Global guard: any user-facing Cyrillic text in the SPA's JS must go
     // through t()/I18N so it can be localized. A bare `el.textContent = '...'`
     // (as the passphrase gate originally had) is invisible to the showToast /
     // data-i18n scanners above — this catches it everywhere.
-    // Case-insensitive (i) so CodeQL's bad-tag-filter query is satisfied; our
-    // index.html uses a lowercase <script>, so matching is unchanged in practice.
-    var script = html.match(/<script>([\s\S]*)<\/script>/i)[1];
-    // The I18N dictionary is the one place Cyrillic literals legitimately live.
-    var i18nMatch = script.match(/var I18N\s*=\s*\{[\s\S]*?\n\s*\};/);
-    var scanned = i18nMatch ? script.replace(i18nMatch[0], '') : script;
-    var litRe = /(['"])((?:\\.|(?!\1).)*?)\1/g;
-    var m, offenders = [];
-    while ((m = litRe.exec(scanned)) !== null) {
-      if (/[Ѐ-ӿ]/.test(m[2])) offenders.push(m[2].slice(0, 60));
-    }
+    var found = cyrillicLiterals();
+    var offenders = [];
+    Object.keys(found).forEach(function(name) {
+      found[name].forEach(function(literal) {
+        if (!(CYRILLIC_DATA[name] || []).includes(literal)) offenders.push(name + ': ' + literal.slice(0, 60));
+      });
+    });
     assert.deepStrictEqual(offenders, [], 'Hardcoded Cyrillic JS literals (use t()): ' + offenders.join(' | '));
+  });
+
+  it('excuses no Cyrillic literal that is no longer there', () => {
+    var found = cyrillicLiterals();
+    var stale = [];
+    Object.keys(CYRILLIC_DATA).forEach(function(name) {
+      CYRILLIC_DATA[name].forEach(function(literal) {
+        if (!(found[name] || []).includes(literal)) stale.push(name + ': ' + literal);
+      });
+    });
+    assert.deepStrictEqual(stale, [], 'CYRILLIC_DATA entries nothing matches any more: ' + stale.join(' | '));
   });
 });
 
@@ -3532,9 +3600,9 @@ describe('burn video wiring', () => {
     // extrapolation, hence the soft "about N min to go" wording.
     assert.ok(html.includes('burn.estimate_soft'),
       'the item must carry the soft-worded remaining-time key');
-    assert.ok(!/burn\.estimate'/.test(html),
+    assert.deepStrictEqual(sourcesMentioning(/burn\.estimate'/), [],
       'burn.estimate is superseded by burn.estimate_soft — it must be gone');
-    assert.ok(!html.includes('burn.overrun'),
+    assert.deepStrictEqual(sourcesMentioning('burn.overrun'), [],
       'burn.overrun existed for the 97% interpolation cap, which no longer exists');
   });
 
@@ -4067,7 +4135,7 @@ describe('burn video wiring', () => {
     // to say the same thing, and it crowded a two-item head row.
     assert.ok(!/SPA\.(cancelBurnWatch|closeExportMenu)\(/.test(EXPORT_POP),
       'the menu must not carry its own Hide button');
-    assert.ok(!/'burn\.hide'/.test(html),
+    assert.deepStrictEqual(sourcesMentioning(/'burn\.hide'/), [],
       'burn.hide is no longer used — a key with no caller rots');
   });
 
@@ -8529,6 +8597,9 @@ describe('video player adapter wiring', () => {
   var html = fs.readFileSync('site/index.html', 'utf8');
   var sw = fs.readFileSync('site/sw.js', 'utf8');
   var css = fs.readFileSync('site/css/components.css', 'utf8');
+  // The one module that talks to a provider's SDK; every other source goes
+  // through it.
+  var ADAPTER = ['js/video_player.js'];
 
   it('loads js/video_player.js as a plain script before talk_actions.js, and precaches it', () => {
     var tag = '<script src="js/video_player.js"></script>';
@@ -8539,19 +8610,20 @@ describe('video player adapter wiring', () => {
   });
 
   it('builds every player through the adapter, never the Vimeo SDK directly', () => {
-    assert.ok(!/new Vimeo\.Player/.test(html), 'a call site still builds a Vimeo.Player');
-    assert.ok(!/getVideoWidth|getVideoHeight/.test(html), 'aspect comes from player.getAspect()');
+    assert.deepStrictEqual(sourcesMentioning(/new Vimeo\.Player/, ADAPTER), [], 'a call site still builds a Vimeo.Player');
+    assert.deepStrictEqual(sourcesMentioning(/getVideoWidth|getVideoHeight/, ADAPTER), [],
+      'aspect comes from player.getAspect()');
     assert.ok((html.match(/createVideoPlayer\(/g) || []).length >= 2, 'preview + sync player');
   });
 
   it('gates on the typed source, not a vimeo_url', () => {
-    assert.ok(!/vimeo_url/.test(html), 'a vimeo_url gate is left');
-    assert.ok(!/function vimeoEmbed/.test(html), 'vimeoEmbed lives in js/video_player.js');
+    assert.deepStrictEqual(sourcesMentioning(/vimeo_url/), [], 'a vimeo_url gate is left');
+    assert.deepStrictEqual(sourcesMentioning(/function vimeoEmbed/, ADAPTER), [], 'vimeoEmbed lives in js/video_player.js');
     assert.ok(/decodeVideoSource: decodeVideoSource/.test(html), 'meta is decoded into sources');
   });
 
   it('names no provider in the player-unavailable toast', () => {
-    assert.ok(!/toast\.vimeo_unavailable/.test(html));
+    assert.deepStrictEqual(sourcesMentioning(/toast\.vimeo_unavailable/), []);
     var en = html.match(/'toast\.player_unavailable': '([^']*)'/g) || [];
     assert.strictEqual(en.length, 2, 'both languages carry toast.player_unavailable');
     en.forEach(function(line) { assert.ok(!/Vimeo|YouTube/.test(line), line); });

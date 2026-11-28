@@ -22,6 +22,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.spa_sources import sources_mentioning
+
 SITE = Path(__file__).parent.parent / "site"
 INDEX = (SITE / "index.html").read_text(encoding="utf-8")
 COMPONENTS = (SITE / "css" / "components.css").read_text(encoding="utf-8")
@@ -87,7 +89,7 @@ def test_paste_dialogs_keep_the_open_github_label():
 
 def test_dead_create_pr_key_is_gone():
     """`btn.create_pr` was translated twice and referenced by nothing."""
-    assert "btn.create_pr" not in INDEX
+    assert sources_mentioning("btn.create_pr") == []
 
 
 def test_busy_button_state_exists_and_is_catalogued():
@@ -116,7 +118,7 @@ def test_pending_module_is_loaded_by_the_page():
 def test_finalize_lock_key_is_scoped_to_the_talk():
     """A bare 'sync-finalize' key is global: finalizing talk A would hide the
     Finalize item from talk B's chip until A's chain settled."""
-    assert "'sync-finalize'" not in INDEX, "the finalize key must carry the engine's branch"
+    assert sources_mentioning("'sync-finalize'") == [], "the finalize key must carry the engine's branch"
     assert INDEX.count("finalizeLockKey(") >= 2, "both the dropdown and the action use it"
 
 
@@ -126,7 +128,7 @@ def test_the_page_owns_no_copy_of_the_runner_logic():
     The paint/restore decisions are pinned by tests/test_pending_action.js; a
     second copy here would be a source the Node suite cannot see.
     """
-    assert "function withBusyButton" not in INDEX
+    assert sources_mentioning("function withBusyButton", except_=("js/pending_action.js",)) == []
     assert "createBusyRunner({" in INDEX
 
 

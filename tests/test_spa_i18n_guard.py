@@ -24,14 +24,17 @@ Scope: this catches the common *direct* form (``.title =``/``aria-label``/
 ``t(...)`` passed through a helper's arguments — those helpers must set the
 ``data-i18n-*`` attributes themselves (``makeDragHandle`` now does).
 
+It reads index.html and every script the page loads (``tests/spa_sources.py``):
+a tooltip set from a module sticks exactly as one set inline does.
+
 Runs under the normal ``python -m pytest tests/`` step in ci.yml.
 """
 
-from pathlib import Path
+from collections import Counter
 
 import pytest
 
-INDEX = Path(__file__).resolve().parent.parent / "site" / "index.html"
+from tests.spa_sources import spa_sources
 
 # `.title =`, `.placeholder =`, or setAttribute('aria-label', ...) whose RHS
 # calls t(...) on the same line.
@@ -66,6 +69,21 @@ ALLOWLIST = {
     "item.title = s.reasonKey === 'burn.wrong_lang' ? burnWrongLangText() : '';",
 }
 
+# Defects, not exceptions: (source, stripped line) of imperative translations
+# that DO stick, kept here only so the guard can watch the rest of that file.
+# The test holds this list to exactly what the scan finds, so it can only
+# shrink — fixing a line means deleting its entry, and nothing may be added.
+KNOWN_VIOLATIONS = [
+    # The help sheet's edit form is drawn by helpAdminRender() and by nothing
+    # else: showHelp() skips its redraw while edit mode is on, and
+    # SPA.toggleLang() never reaches it. Leave the sheet in edit mode, switch
+    # the language, open it again — the form is still in the old one.
+    ("js/help_admin_view.js", "where.setAttribute('aria-label', t('help.admin.section'));"),
+    ("js/help_admin_view.js", "where.setAttribute('aria-label', t('help.admin.section'));"),
+    ("js/help_admin_view.js", "input.setAttribute('aria-label', t(video ? 'help.admin.replace' : 'help.admin.file'));"),
+    ("js/help_admin_view.js", "if (model.dirty) go.title = t('help.admin.saveFirst');"),
+]
+
 
 def _is_imperative_translation(line: str) -> bool:
     if "t(" not in line:
@@ -96,13 +114,38 @@ def find_violations(text: str):
     return out
 
 
+def _new_and_fixed():
+    """Split the scan against KNOWN_VIOLATIONS, entry for entry.
+
+    Returns (new, fixed): the violations no entry accounts for, as (source,
+    line_no, stripped_line), and the entries no violation accounts for.
+    """
+    unmatched = Counter(KNOWN_VIOLATIONS)
+    new = []
+    for name, text in spa_sources():
+        for n, ln in find_violations(text):
+            if unmatched[(name, ln)] > 0:
+                unmatched[(name, ln)] -= 1
+            else:
+                new.append((name, n, ln))
+    return new, sorted(unmatched.elements())
+
+
 def test_no_unguarded_imperative_translation():
-    violations = find_violations(INDEX.read_text(encoding="utf-8"))
+    violations, _ = _new_and_fixed()
     assert not violations, (
         "Imperative t() title/label(s) that translatePage() won't refresh on a "
         "language toggle (they'd stick in the old language). Wire a matching "
         "data-i18n-* attribute, or add to ALLOWLIST with a reason:\n"
-        + "\n".join(f"  index.html:{n}: {ln}" for n, ln in violations)
+        + "\n".join(f"  {name}:{n}: {ln}" for name, n, ln in violations)
+    )
+
+
+def test_known_violations_holds_nothing_already_fixed():
+    _, fixed = _new_and_fixed()
+    assert not fixed, (
+        "KNOWN_VIOLATIONS lists a line the scan no longer flags — it was fixed "
+        "or moved, so delete its entry:\n" + "\n".join(f"  {name}: {ln}" for name, ln in fixed)
     )
 
 

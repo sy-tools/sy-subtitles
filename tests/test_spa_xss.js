@@ -11,8 +11,13 @@
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
+const { sourcesMentioning } = require('./spa_sources');
 
 const HTML = fs.readFileSync('site/index.html', 'utf8');
+
+// A sink is no safer in a module than inline, so the source guards read
+// index.html and every script it loads.
+const anywhere = (pattern) => sourcesMentioning(pattern).length > 0;
 
 // Match lazily to the first closing brace (esc/safeHref have no inner braces)
 // rather than to end-of-line, so a future multi-line reformat won't break
@@ -85,29 +90,29 @@ describe('SPA safeHref() — URL scheme allowlist + escaping', () => {
 describe('SPA index source — XSS sinks are sanitized (regression guards)', () => {
   it('the amruta date link routes amruta_url through safeHref', () => {
     assert.ok(
-      !/href="'\s*\+\s*tk\.amrutaUrl/.test(HTML),
+      !anywhere(/href="'\s*\+\s*tk\.amrutaUrl/),
       'raw tk.amrutaUrl is still concatenated straight into an href attribute'
     );
     assert.ok(
-      /safeHref\(tk\.amrutaUrl\)/.test(HTML),
+      anywhere(/safeHref\(tk\.amrutaUrl\)/),
       'tk.amrutaUrl is not routed through safeHref()'
     );
   });
 
   it('the expert pipeline button does not inject the talk id via inline onclick', () => {
     assert.ok(
-      !/expert-btn[^>]*onclick=/.test(HTML),
+      !anywhere(/expert-btn[^>]*onclick=/),
       'expert-btn still carries an inline onclick (raw tk.id sink)'
     );
     assert.ok(
-      /querySelector\('\.expert-btn'\)/.test(HTML) && /addEventListener\('click'/.test(HTML),
+      anywhere(/querySelector\('\.expert-btn'\)/) && anywhere(/addEventListener\('click'/),
       'expert-btn copy is not bound via addEventListener'
     );
   });
 
   it('the pipeline-DAG node() escapes its href', () => {
     assert.ok(
-      /safeHref\(href\)/.test(HTML),
+      anywhere(/safeHref\(href\)/),
       'renderPipelineDAG node() does not pass its href through safeHref()'
     );
   });
