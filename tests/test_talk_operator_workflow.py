@@ -119,7 +119,7 @@ def test_pr_job_ignores_fork_prs():
 def test_status_job_reuses_sync_review_status():
     job = _op()["jobs"]["status"]
     assert job["uses"] == "./.github/workflows/sync-review-status.yml"
-    assert job.get("secrets") == "inherit"
+    assert "secrets" not in job, "the sync pushes with GITHUB_TOKEN and reads no secret"
     assert set(job["needs"]) == {"added", "pr", "qa", "take", "back_to_qa", "deliver"}
     assert "needs.back_to_qa.result == 'success'" in job["if"]
     assert "needs.added.result == 'success'" in job["if"]

@@ -1,12 +1,10 @@
 """`bot-pr.sh` can hold its job until the PR it opened has actually merged.
 
-sync-review-status serializes its runs, but a run that ends the moment it
-enables auto-merge ends before the PR merges. Issue events arrive in bursts (an
-issue created with two labels fires two `labeled` events), so the next run
-would check out a `main` without the previous status and rewrite the same lines
-(`updated_at` always changes); once the first PR merged, the second would
-conflict and its auto-merge would never fire. Waiting makes the serialization
-real.
+A caller may serialize its runs, but a run that ends the moment it enables
+auto-merge ends before the PR merges. The next run would then check out a
+`main` without the previous result and rewrite the same lines; once the first
+PR merged, the second would conflict and its auto-merge would never fire.
+Waiting makes the serialization real.
 """
 
 import os

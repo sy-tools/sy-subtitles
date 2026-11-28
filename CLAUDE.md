@@ -64,7 +64,7 @@ kept in lockstep with `.github/workflows/` by `tests/test_claude_md_lockstep.py`
 - `deploy-pages.yml` — publish the SPA
 - `deploy-worker.yml` — publish the OAuth worker to Cloudflare
 - `glossary-release.yml` — cut a glossary release
-- `sync-review-status.yml` — GitHub issue labels → `review-status.json`
+- `sync-review-status.yml` — GitHub issue labels → `review-status.json` on the `state` branch
 - `new-talk.yml` — bootstrap a talk from an add-talk PR
 - `pipeline-matrix-dryrun.yml` — replay the pipeline against snapshots
 - `golden-talks.yml` — full-corpus pytest, on demand
@@ -370,4 +370,10 @@ See `ARCHITECTURE.md` at the project root for the full system architecture overv
 
 ## Review Tracking
 
-`review-status.json` tracks per-talk review state (synced from GitHub issue labels via `sync-review-status.yml`).
+`review-status.json` tracks per-talk review state, rebuilt from GitHub issue
+labels by `sync-review-status.yml`. **The live file is on the `state` branch**
+— a data branch the workflow pushes to directly — not on `main`: statuses are
+derived data nobody reviews, and a bot PR plus a `gate` run per label change
+was the price of keeping them next to the code. The copy in a checkout of
+`main` is frozen, so never read a talk's status from it. Why the read and the
+push have the shape they have: `ARCHITECTURE.md` "Review Tracking".

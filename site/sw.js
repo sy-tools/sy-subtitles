@@ -44,6 +44,7 @@ var SHELL_ASSETS = [
   'js/review_source_srt.js',
   'js/index_url_state.js',
   'js/manifest_fetch.js',
+  'js/review_status_source.js',
   'js/offline_fallback.js',
   'js/talk_slug.js',
   'js/text_sanitize.js',

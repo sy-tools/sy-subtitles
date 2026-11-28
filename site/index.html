@@ -30,6 +30,7 @@
 <script src="js/review_source_srt.js"></script>
 <script src="js/index_url_state.js"></script>
 <script src="js/manifest_fetch.js"></script>
+<script src="js/review_status_source.js"></script>
 <script src="js/offline_fallback.js"></script>
 <script src="js/talk_slug.js"></script>
 <script src="js/vimeo_codec.js"></script>
@@ -2969,7 +2970,8 @@ function buildManifest(tree) {
   result.sort(function(a, b) { return a.id < b.id ? -1 : 1; });
   result.forEach(function(t) { t.packageFiles = packageFiles(tree, t.id); });
 
-  // Extract sha for cache-busting and auto-reload
+  // The copy of the statuses this branch carries: read only when the data
+  // branch cannot be (js/review_status_source.js).
   var reviewSha = '';
   tree.forEach(function(entry) {
     if (entry.path === 'review-status.json') reviewSha = entry.sha || '';
@@ -3062,28 +3064,38 @@ function renderStats() {
 }
 
 var REVIEW_STATUS_CACHE_KEY = 'sy_review_status__' + BRANCH;
+function cachedReviewStatus() {
+  try { return JSON.parse(localStorage.getItem(REVIEW_STATUS_CACHE_KEY)); } catch (e) { return null; }
+}
+// The file just read becomes the statuses — unless this browser already holds
+// a later one (js/review_status_source.js newerStatus): the raw CDN may answer
+// with a copy minutes old, and the fallback copy is older than anything the
+// data branch has published since.
+function adoptReviewStatus(fetched) {
+  var kept = newerStatus(fetched, cachedReviewStatus());
+  reviewStatus = kept;
+  if (kept === fetched) {
+    try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(fetched)); } catch (e) {}
+  }
+  return kept;
+}
 function loadReviewStatus() {
   var sha = (manifest && manifest._reviewSha) || '';
-  var url = rawPin('review-status.json', sha);
   // On any failure (offline / rate-limited refresh / HTTP error) fall back to the
   // current or last-persisted statuses instead of an empty set — empties zero the
   // whole index (filters + stat counts key off review status). reviewStatusFallback
   // lives in js/manifest_fetch.js (Node-tested).
   function onFail(err) {
     console.warn('[SPA] review-status refresh failed, keeping cached statuses:', err);
-    var cached = null;
-    try { cached = JSON.parse(localStorage.getItem(REVIEW_STATUS_CACHE_KEY)); } catch (e) {}
-    reviewStatus = reviewStatusFallback(reviewStatus, cached);
+    reviewStatus = reviewStatusFallback(reviewStatus, cachedReviewStatus());
     return reviewStatus;
   }
-  return fetch(url)
-    .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
-    .then(function(data) {
-      reviewStatus = data;
-      try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
-      return data;
-    })
-    .catch(onFail);
+  // The data branch first; the copy the viewed branch carries only when that
+  // read fails (js/review_status_source.js).
+  return fetchReviewStatusFile({
+    stateUrl: stateStatusUrl(RAW_ROOT),
+    fallbackUrl: rawPin('review-status.json', sha),
+  }).then(adoptReviewStatus).catch(onFail);
 }
 
 // Signed in, the statuses are overlaid with what the Issues API says right now
@@ -9365,11 +9377,13 @@ function markOperatorWaiting(talkId, stage, issue) {
 function fetchFreshReviewStatus() {
   var token = getAuthToken();
   if (!token) {
-    return fetch(RAW + '/review-status.json')
-      .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); });
+    return fetchReviewStatusFile({ stateUrl: stateStatusUrl(RAW_ROOT), fallbackUrl: RAW + '/review-status.json' });
   }
-  return getFileContent(API, token, 'review-status.json', BRANCH).then(function(file) {
-    if (!file) throw new Error('review-status.json not found on ' + BRANCH);
+  // getFileContent answers null for a 404: the data branch not existing yet.
+  return getFileContent(API, token, REVIEW_STATUS_PATH, STATE_BRANCH).then(function(file) {
+    return file || getFileContent(API, token, REVIEW_STATUS_PATH, BRANCH);
+  }).then(function(file) {
+    if (!file) throw new Error('review-status.json not found on ' + STATE_BRANCH + ' or ' + BRANCH);
     return JSON.parse(file.content);
   });
 }
@@ -9379,10 +9393,7 @@ function fetchFreshReviewStatus() {
 function refreshStatusForOperatorPoll() {
   return refreshLiveReviewStatus().then(function(res) {
     if (res.ok) return;
-    return fetchFreshReviewStatus().then(function(data) {
-      reviewStatus = data;
-      try { localStorage.setItem(REVIEW_STATUS_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
-    });
+    return fetchFreshReviewStatus().then(adoptReviewStatus);
   });
 }
 
@@ -9981,8 +9992,9 @@ SPA.refreshManifest = function() {
   var cache = null;
   try { cache = JSON.parse(localStorage.getItem(CACHE_KEY)); } catch(e) {}
   if (cache) { delete cache.etag; localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); }
-  // Statuses only after the new tree: they are read pinned to its commit, and
-  // pinned to the previous one they would be that commit's bytes for good.
+  // Statuses only after the new tree: their fallback copy is read pinned to
+  // its commit, and pinned to the previous one it would be that commit's
+  // bytes for good.
   return loadManifest().then(function(m) {
     manifest = m;
     return loadReviewStatus().then(refreshLiveReviewStatus).then(function() { return m; });
@@ -10044,6 +10056,8 @@ SPA.toggleBranches = function() {
     .then(function(data) {
       dd.innerHTML = '';
       data.forEach(function(b) {
+        // The data branch holds no talks: as a view it is an empty index.
+        if (b.name === STATE_BRANCH) return;
         var d = document.createElement('div');
         d.textContent = b.name;
         if (b.name === BRANCH) d.classList.add('active');

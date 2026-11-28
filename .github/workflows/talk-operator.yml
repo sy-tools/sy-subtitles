@@ -351,4 +351,3 @@ jobs:
       needs.back_to_qa.result == 'success' ||
       needs.deliver.result == 'success')
     uses: ./.github/workflows/sync-review-status.yml
-    secrets: inherit

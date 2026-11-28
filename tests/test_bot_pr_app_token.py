@@ -43,7 +43,6 @@ TOKEN_EXPR = "steps.bot-token.outputs.token || github.token"
 BOT_PR_JOBS = [
     ("whisper.yml", "commit"),
     ("subtitle-pipeline.yml", "commit"),
-    ("sync-review-status.yml", "sync"),
     ("talk-operator.yml", "qa"),
     ("talk-operator.yml", "deliver"),
     ("wordlist-refresh.yml", "refresh"),
@@ -166,19 +165,10 @@ def test_sync_subtitles_skips_bot_branches():
     assert cond == "github.event.pull_request.draft == false && !startsWith(github.head_ref, 'bot/')"
 
 
-def test_review_status_waits_for_its_pr_to_merge_when_it_has_the_app_token():
-    """The serialized review-status runs must not branch off a main that lacks
-    the previous run's status. Without the App the PR waits for a person, so
-    waiting would only turn every run red."""
-    steps = _steps("sync-review-status.yml", "sync")
-    bot_pr = steps[_index(steps, _runs_bot_pr)]
-    assert bot_pr["env"].get("BOT_PR_WAIT_MERGE_SECONDS") == "${{ steps.bot-token.outputs.token != '' && '600' || '' }}"
-
-
 def test_label_edits_run_outside_the_serialized_sync_queue():
     """GitHub keeps one pending run per concurrency group and cancels the older
-    one. While the running sync waits for its PR to merge, a cancelled pending
-    run would drop its label edit — and labels are the source of truth."""
+    one. While another sync is running, a cancelled pending run would drop its
+    label edit — and labels are the source of truth."""
     jobs = _load("sync-review-status.yml")["jobs"]
     labels, sync = jobs["labels"], jobs["sync"]
     edits = "Auto-update labels on assign/unassign/close/reopen"
