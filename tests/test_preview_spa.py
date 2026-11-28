@@ -2405,6 +2405,25 @@ class TestBranchSelector:
         assert "fix/review-edits" in texts
         assert "feature/new-talk" in texts
 
+    def test_dropdown_does_not_offer_the_data_branch(self, server, page):
+        """`state` holds review-status.json and no talks: opened as a view it
+        is an empty index."""
+        page.route(
+            "**/api.github.com/repos/**/branches*",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps([*MOCK_BRANCHES, {"name": "state"}]),
+            ),
+        )
+        goto_spa(page, server)
+        page.wait_for_selector("#branch-btn", timeout=10000)
+        page.locator("#branch-btn").click()
+        page.wait_for_selector("#branch-dropdown.open div.active", timeout=5000)
+        texts = [el.text_content() for el in page.locator("#branch-dropdown div").all()]
+        assert "state" not in texts
+        assert len(texts) == len(MOCK_BRANCHES)
+
     def test_current_branch_marked_active(self, server, page):
         """Current branch has .active class in dropdown."""
         page.route(
@@ -8378,11 +8397,12 @@ class TestFooterBuildStamp:
 
 
 class TestRefreshReadsStatusesOfTheNewTree:
-    """↻ after a bot commit must show that commit's review statuses. The
-    statuses are read pinned to the manifest's commit, so they must be read
-    from the tree the refresh fetched, not the one the page had before it:
-    pinned to the old commit they are the old bytes for good, however often
-    ↻ is pressed."""
+    """While the `state` data branch is missing, the statuses come from the
+    copy the viewed branch carries, and ↻ after a commit must show that
+    commit's copy. It is read pinned to the manifest's commit, so it must be
+    read from the tree the refresh fetched, not the one the page had before
+    it: pinned to the old commit they are the old bytes for good, however
+    often ↻ is pressed."""
 
     OLD_COMMIT = "1" * 40
     NEW_COMMIT = "2" * 40
@@ -8416,6 +8436,10 @@ class TestRefreshReadsStatusesOfTheNewTree:
                 content_type="application/json",
                 body=json.dumps(self._status("in-progress" if self.NEW_COMMIT in route.request.url else "pending")),
             ),
+        )
+        page.route(
+            "**/raw.githubusercontent.com/*/*/state/review-status.json",
+            lambda route: route.fulfill(status=404, body="Not Found"),
         )
         goto_spa(page, server)
         page.wait_for_selector(".talk-item", timeout=10000)

@@ -141,6 +141,11 @@ describe('pickStrategy — the routing the fetch handler applies', () => {
     // a 40-hex segment that is not the ref position does not count
     assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/main/' + C1 + '/x.srt?v=ab'), 'network-first');
   });
+  it('the statuses on the data branch keep revalidating, with the last answer kept for offline', () => {
+    // Read by branch name, so the same URL holds every later publication:
+    // cache-first would pin the first one this browser ever saw.
+    assert.strictEqual(pickStrategy('https://raw.githubusercontent.com/o/r/state/review-status.json'), 'network-first');
+  });
   it('immutable assets are cache-first', () => {
     assert.strictEqual(pickStrategy('https://cdn.jsdelivr.net/npm/js-yaml@4/dist/js-yaml.min.js'), 'cache-first');
     assert.strictEqual(pickStrategy('https://player.vimeo.com/api/player.js'), 'cache-first');

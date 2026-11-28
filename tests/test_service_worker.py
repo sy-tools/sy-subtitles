@@ -79,6 +79,21 @@ class TestServiceWorker:
         assert "STALE" not in body, "index.html was served from stale cache (should be network-first)"
         assert "<" in body, f"expected the real index.html, got: {body[:80]!r}"
 
+    def test_a_read_past_the_http_cache_is_still_kept_for_offline(self, server, page):  # noqa: F811
+        """The review statuses are fetched with `cache: 'no-store'` (the raw CDN
+        answers max-age=300). That mode is about the HTTP cache; the worker's
+        own copy is the only one an offline reload can be answered from."""
+        _register_sw(page, server)
+        page.evaluate("() => fetch('styleguide.html', {cache: 'no-store'}).then(r => r.text())")
+        kept = page.evaluate(
+            "async () => { const c = await caches.open('sy-subtitles-c22');"
+            " for (let i = 0; i < 50; i++) {"
+            "   if (await c.match(location.origin + '/styleguide.html')) return true;"
+            "   await new Promise(r => setTimeout(r, 100)); }"
+            " return false; }"
+        )
+        assert kept, "the worker kept no copy of a response fetched with cache: 'no-store'"
+
     def test_activate_purges_stale_version_caches(self, server, page):  # noqa: F811
         page.goto(f"{server}/index.html")
         # Seed an OLD version cache before the worker activates.

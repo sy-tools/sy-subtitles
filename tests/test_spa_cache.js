@@ -1168,13 +1168,15 @@ describe('refresh: covers all data sources', () => {
       'refreshManifest must read statuses after the new tree, not alongside it');
   });
 
-  it('loadReviewStatus reads the file at the manifest commit, tagged by its sha', () => {
+  it('loadReviewStatus reads the data branch, and its fallback copy at the manifest commit', () => {
+    // The behaviour is exercised in test_spa_review_status_state_branch_e2e.py.
     var fs = require('fs');
     var html = fs.readFileSync('site/index.html', 'utf8');
     var fnBody = html.match(/function loadReviewStatus[\s\S]*?^}/m);
     assert.ok(fnBody, 'loadReviewStatus not found');
-    assert.ok(fnBody[0].includes('_reviewSha'), 'loadReviewStatus should use _reviewSha');
-    assert.ok(fnBody[0].includes("rawPin('review-status.json'"), 'loadReviewStatus should build its URL with rawPin');
+    assert.ok(fnBody[0].includes('stateUrl: stateStatusUrl(RAW_ROOT)'), 'loadReviewStatus should read the data branch');
+    assert.ok(fnBody[0].includes('_reviewSha'), 'the fallback copy should be tagged with _reviewSha');
+    assert.ok(fnBody[0].includes("fallbackUrl: rawPin('review-status.json'"), 'the fallback URL should be built with rawPin');
   });
 
   it('no versioned raw URL is assembled by hand', () => {
