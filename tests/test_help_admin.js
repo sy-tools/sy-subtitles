@@ -77,6 +77,12 @@ describe('validateCatalog', () => {
     dup.sections[0].videos.push({ file: 'a' });
     assert.match(A.validateCatalog(dup).join('\n'), /duplicate file 'a'/);
   });
+
+  it('refuses two videos sharing a name apart from a version suffix', () => {
+    const cat = catalog();
+    cat.sections[0].videos.push({ file: 'a-v2' });
+    assert.match(A.validateCatalog(cat).join('\n'), /'a-v2' shares the name 'a' with 'a'/);
+  });
 });
 
 describe('file names', () => {
@@ -95,13 +101,21 @@ describe('file names', () => {
     assert.ok(!slug.endsWith('-'), slug);
   });
 
-  it('name a new video after its slug, or the next free version', () => {
+  it('name a new video after its slug, or the next free number, never a version', () => {
     assert.strictEqual(A.nextFile(catalog(), 'd', null), 'd');
-    assert.strictEqual(A.nextFile(catalog(), 'a', null), 'a-v2');
+    assert.strictEqual(A.nextFile(catalog(), 'a', null), 'a-2');
+  });
+
+  it('never give a new video the name of another video\'s versions', () => {
+    const cat = catalog();
+    cat.sections[0].videos.push({ file: 'intro-v3' });
+    assert.strictEqual(A.nextFile(cat, 'intro', null), 'intro-2');
+    assert.strictEqual(A.nextFile(cat, 'intro-v2', null), 'intro-v2-2');
   });
 
   it('never reuse the name of a recording still in the release', () => {
-    assert.strictEqual(A.nextFile(catalog(), 'gone', null, ['gone']), 'gone-v2');
+    assert.strictEqual(A.nextFile(catalog(), 'gone', null, ['gone']), 'gone-2');
+    assert.strictEqual(A.nextFile(catalog(), 'gone', null, ['gone-v4']), 'gone-2');
   });
 
   it('give a replacement the next version of the file it replaces', () => {
