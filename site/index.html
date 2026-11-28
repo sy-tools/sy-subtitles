@@ -44,6 +44,7 @@
 <script src="js/touch_fs_chrome.js"></script>
 <script src="js/add_talk_data.js"></script>
 <script src="js/pipeline_stages.js"></script>
+<script src="js/pipeline_view.js"></script>
 <script src="js/shell_version.js"></script>
 <script src="js/boot_loader.js"></script>
 <script src="js/talk_actions.js"></script>
@@ -3359,7 +3360,7 @@ function renderIndex(el) {
       : ' <a href="' + safeHref('https://github.com/' + REPO + '/actions/workflows/subtitle-pipeline.yml') + '" target="_blank" class="expert-only expert-btn" style="display:none;" title="' + esc(t('expert.copy_and_run')) + '">&#x25B6; pipeline</a>';
     // A talk the operator holds shows which step it is at, in expert view too.
     var statusBadge = opStep && (opMode || (expertMode && (phase === 'operator' || phase === 'sent')))
-      ? renderOperatorBadge(opStep, st) : renderStatusBadge(reviewStatusOf, st);
+      ? renderOperatorBadge(opStep, st) : renderStatusBadge(reviewStatusOf, st, t, esc, safeHref, REPO);
     if (opMode) takeBtn = '';
     div.dataset.talkId = tk.id;
     div.innerHTML = '<div class="talk-date"><span>' + dateHtml + expertHtml + '</span>' + statusBadge + '</div>'
@@ -3405,7 +3406,7 @@ function renderIndex(el) {
           });
           if (!wasOpen) {
             div.classList.add('selected');
-            dd.innerHTML = renderPipelineDAG(tkRef, stagesRef, stRef);
+            dd.innerHTML = renderPipelineDAG(tkRef, stagesRef, stRef, t, esc, safeHref, REPO);
             dd.style.display = 'block';
             expandedTalkId = tkRef.id;
           } else {
@@ -3628,73 +3629,8 @@ function openPipelineDialog(talkId, stages) {
 // ============================================================
 // PIPELINE VIEW
 // ============================================================
-// getPipelineStages() and getOverallStatus() are provided by js/pipeline_stages.js (loaded in <head>).
-
-
-function renderStatusBadge(status, reviewSt) {
-  var labels = {
-    'approved': t('badge.approved'),
-    'in-review': t('badge.in_review'),
-    'ready-for-review': t('badge.needs_review'),
-    'in-progress': t('badge.pending')
-  };
-  var text = labels[status] || status;
-  if (status === 'in-review' && reviewSt && reviewSt.reviewer) text += ' (' + esc(reviewSt.reviewer) + ')';
-  var href = safeHref(reviewSt && reviewSt.issue_number ? 'https://github.com/' + REPO + '/issues/' + reviewSt.issue_number : '');
-  if (href) return '<a href="' + href + '" target="_blank" class="review-badge ' + status + '">' + text + '</a>';
-  return '<span class="review-badge ' + status + '">' + text + '</span>';
-}
-
-function renderPipelineDAG(tk, stages, st) {
-  function node(label, done, href, extraCls) {
-    var cls = 'pipe-node' + (done ? ' done' : '') + (extraCls ? ' ' + extraCls : '');
-    var sh = safeHref(href);
-    if (sh) return '<a href="' + sh + '" class="' + cls + '">' + esc(label) + '</a>';
-    return '<span class="' + cls + '">' + esc(label) + '</span>';
-  }
-  function arrow(done) {
-    return '<span class="pipe-arrow' + (done ? ' done' : '') + '">&rarr;</span>';
-  }
-
-  var wLabel = t('pipe.ai_transcribed') + (stages.nVideos > 1 ? ' ' + stages.whisperProgress : '');
-  var sLabel = t('pipe.srt') + (stages.nVideos > 1 ? ' ' + stages.srtProgress : '');
-  var reviewHref = st && st.issue_number ? 'https://github.com/' + REPO + '/issues/' + st.issue_number : '';
-  var reviewNode = node(t('pipe.review'), stages.review || stages.approved, '', stages.approved ? 'approved' : (stages.review ? 'in-review' : ''))
-    + arrow(stages.approved)
-    + node(t('pipe.approved'), stages.approved);
-
-  // A text-only talk has no video: no whisper, no subtitles — the translation is the
-  // whole build, and the issue follows it.
-  if (stages.textOnly) {
-    return '<div class="pipe-dag">'
-      + node(t('pipe.added'), true) + arrow(true)
-      + node(t('pipe.ai_translated'), stages.translated) + arrow(stages.translated)
-      + node(t('pipe.ai_reviewed'), stages.reviewed) + arrow(stages.translated && stages.hasIssue)
-      + node(t('pipe.issue'), stages.hasIssue, reviewHref) + arrow(stages.hasIssue)
-      + reviewNode
-      + '</div>';
-  }
-
-  var topBranch = node(wLabel, stages.whisper);
-  var bottomBranch = node(t('pipe.ai_translated'), stages.translated)
-    + arrow(stages.translated) + node(t('pipe.ai_reviewed'), stages.reviewed);
-
-  var aiFork = '<div class="pipe-fork">'
-    + '<div class="pipe-row">' + topBranch + '</div>'
-    + '<div class="pipe-row">' + bottomBranch + '</div>'
-    + '</div>';
-
-  var joinFork = '<div class="pipe-fork">'
-    + '<div class="pipe-row">' + aiFork + arrow(stages.whisper && stages.reviewed) + node(sLabel, stages.srt) + '</div>'
-    + '<div class="pipe-row">' + node(t('pipe.issue'), stages.hasIssue, reviewHref) + '</div>'
-    + '</div>';
-
-  return '<div class="pipe-dag">'
-    + node(t('pipe.added'), true) + arrow(true)
-    + joinFork + arrow(stages.srt && stages.hasIssue)
-    + reviewNode
-    + '</div>';
-}
+// getPipelineStages() and getOverallStatus() are provided by js/pipeline_stages.js,
+// renderStatusBadge() and renderPipelineDAG() by js/pipeline_view.js (both loaded in <head>).
 
 
 // ============================================================

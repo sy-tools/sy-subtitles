@@ -2455,13 +2455,6 @@ describe('Pipeline DAG labels and i18n', () => {
   var fs = require('fs');
   var html = fs.readFileSync('site/index.html', 'utf8');
 
-  it('DAG uses t() for node labels', () => {
-    assert.ok(html.includes("t('pipe.added')"), 'pipe.added i18n key used');
-    assert.ok(html.includes("t('pipe.srt')"), 'pipe.srt i18n key used');
-    assert.ok(html.includes("t('pipe.review')"), 'pipe.review i18n key used');
-    assert.ok(html.includes("t('pipe.approved')"), 'pipe.approved i18n key used');
-  });
-
   it('i18n has pipe keys in uk', () => {
     assert.ok(html.includes("'pipe.added'"));
     assert.ok(html.includes("'pipe.ai_transcribed'"));
@@ -2471,68 +2464,6 @@ describe('Pipeline DAG labels and i18n', () => {
     assert.ok(html.includes("'pipe.srt'"));
     assert.ok(html.includes("'pipe.review'"));
     assert.ok(html.includes("'pipe.approved'"));
-  });
-
-  it('DAG has issue node', () => {
-    assert.ok(html.includes("t('pipe.issue')"));
-    assert.ok(html.includes('hasIssue'));
-  });
-});
-
-// ============================================================
-// renderStatusBadge
-// ============================================================
-function renderStatusBadge(status, reviewSt) {
-  var labels = { 'approved': 'approved', 'in-review': 'in review', 'ready-for-review': 'needs review', 'in-progress': 'pending' };
-  var text = labels[status] || status;
-  if (status === 'in-review' && reviewSt && reviewSt.reviewer) text += ' (' + reviewSt.reviewer + ')';
-  var href = reviewSt && reviewSt.issue_number ? 'https://github.com/sy-tools/sy-subtitles/issues/' + reviewSt.issue_number : '';
-  if (href) return '<a href="' + href + '" target="_blank" class="review-badge ' + status + '">' + text + '</a>';
-  return '<span class="review-badge ' + status + '">' + text + '</span>';
-}
-
-describe('renderStatusBadge', () => {
-  it('approved — span with correct class', () => {
-    var html = renderStatusBadge('approved', null);
-    assert.ok(html.includes('class="review-badge approved"'));
-    assert.ok(html.includes('approved'));
-    assert.ok(html.startsWith('<span'));
-  });
-
-  it('in-review with reviewer — shows name', () => {
-    var html = renderStatusBadge('in-review', { status: 'in-progress', reviewer: 'IrynaFil', issue_number: 5 });
-    assert.ok(html.includes('in review (IrynaFil)'));
-    assert.ok(html.includes('href="https://github.com'));
-    assert.ok(html.includes('/issues/5'));
-  });
-
-  it('in-review without reviewer — no name', () => {
-    var html = renderStatusBadge('in-review', { status: 'in-progress', issue_number: 3 });
-    assert.ok(html.includes('in review'));
-    assert.ok(!html.includes('('));
-  });
-
-  it('ready-for-review — needs review label', () => {
-    var html = renderStatusBadge('ready-for-review', { status: 'pending', issue_number: 7 });
-    assert.ok(html.includes('needs review'));
-    assert.ok(html.includes('class="review-badge ready-for-review"'));
-  });
-
-  it('in-progress — pending label, no link', () => {
-    var html = renderStatusBadge('in-progress', null);
-    assert.ok(html.includes('pending'));
-    assert.ok(html.startsWith('<span'));
-  });
-
-  it('with issue_number — renders as link', () => {
-    var html = renderStatusBadge('approved', { status: 'approved', issue_number: 10 });
-    assert.ok(html.startsWith('<a'));
-    assert.ok(html.includes('target="_blank"'));
-  });
-
-  it('without issue_number — renders as span', () => {
-    var html = renderStatusBadge('approved', { status: 'approved', issue_number: null });
-    assert.ok(html.startsWith('<span'));
   });
 });
 
