@@ -82,7 +82,8 @@ var SHELL_ASSETS = [
   'js/pending_action.js',
   'js/clip_time.js',
   'js/float_panel.js',
-  'js/fs_subs_scale.js'
+  'js/fs_subs_scale.js',
+  'js/paragraph_timing.js'
 ];
 
 // Scripts that load inside the typo-hints Worker rather than through a <script>
