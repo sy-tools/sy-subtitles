@@ -9,6 +9,7 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const fs = require('node:fs');
 const path = require('node:path');
+const { sourcesMentioning } = require('./spa_sources');
 
 const {
   REVIEW_TARGET_LANG,
@@ -128,13 +129,13 @@ const INDEX = fs.readFileSync(path.join(__dirname, '..', 'site', 'index.html'), 
 
 test('index.html loads the module and no longer hard-codes source/ for the left column', () => {
   assert.ok(INDEX.includes('<script src="js/review_source_srt.js"></script>'));
-  assert.ok(!/'\/source\/' \+ leftLang/.test(INDEX),
+  assert.deepStrictEqual(sourcesMentioning(/'\/source\/' \+ leftLang/), [],
     'the left SRT URL must come from resolveReviewSourceSrt, not a literal source/ path');
-  assert.ok(!/_srcSrtLangs\[(reviewState\.)?videoSlug\]/.test(INDEX),
+  assert.deepStrictEqual(sourcesMentioning(/_srcSrtLangs\[(reviewState\.)?videoSlug\]/), [],
     'the left language list must come from reviewSourceSrtLangs');
   assert.equal((INDEX.match(/resolveReviewSourceSrt\(/g) || []).length, 3,
     'the initial load, the language switch and the column header all resolve the file');
-  assert.ok(!INDEX.includes("' (source) "),
+  assert.deepStrictEqual(sourcesMentioning("' (source) "), [],
     'the left header must name the folder resolveReviewSourceSrt picked, not a literal');
   assert.equal((INDEX.match(/reviewSourceSrtLangs\(/g) || []).length, 2,
     'the initial load and the dropdown both list the languages');

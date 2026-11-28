@@ -19,6 +19,7 @@ const {
   GATE_LABEL,
   OPERATOR_LABEL,
 } = require('../site/js/review_status_live');
+const { spaSources } = require('./spa_sources');
 
 const ROOT = path.join(__dirname, '..');
 const CASES = JSON.parse(fs.readFileSync(
@@ -126,22 +127,30 @@ describe('shared global scope', () => {
       ['K', 'm', 'n', 'o', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'p', 'q', 'r', 's', 't']);
   });
 
+  // Defects, not exceptions: names two classic scripts both declare today.
+  // The test holds this list to exactly what it finds, so it can only shrink —
+  // removing a duplicate means deleting its entry, and nothing may be added.
+  const KNOWN_CLASHES = [
+    // The same one-liner in both, kept equal by a comment ("Matches
+    // edit_sync's"). marker_sync.js loads later, so its copy is the one both
+    // modules run in the browser, while each module's Node tests see its own.
+    'markerIdentity: js/edit_sync.js, js/marker_sync.js',
+  ];
+
   it('declares no top-level name another classic script also declares', () => {
-    const topLevel = topLevelNames;
-    assert.ok(topLevel(fs.readFileSync(path.join(ROOT, 'site', 'index.html'), 'utf8')).length > 300, 'parsed index.html');
-    const jsDir = path.join(ROOT, 'site', 'js');
-    const mine = new Set(topLevel(fs.readFileSync(path.join(jsDir, 'review_status_live.js'), 'utf8')));
+    const sources = spaSources();
+    const declaredBy = new Map(sources.map((s) => [s.name, new Set(topLevelNames(s.text))]));
+    assert.ok(declaredBy.get('index.html').size > 300, 'parsed index.html');
+    const mine = declaredBy.get('js/review_status_live.js');
     assert.ok(mine.has('holdClaims') && mine.has('GATE_LABEL'), 'parsed the module');
-    const html = fs.readFileSync(path.join(ROOT, 'site', 'index.html'), 'utf8');
-    const loaded = Array.from(html.matchAll(/<script src="js\/([\w.]+)"><\/script>/g)).map((m) => m[1])
-      .filter((f) => f !== 'review_status_live.js');
-    assert.ok(loaded.length > 10, 'parsed the script tags');
-    const clashes = [];
-    loaded.forEach((f) => {
-      topLevel(fs.readFileSync(path.join(jsDir, f), 'utf8')).forEach((n) => { if (mine.has(n)) clashes.push(f + ': ' + n); });
+    assert.ok(sources.length > 10, 'parsed the script tags');
+    const owners = new Map();
+    declaredBy.forEach((names, source) => {
+      names.forEach((n) => owners.set(n, (owners.get(n) || []).concat(source)));
     });
-    topLevel(html).forEach((n) => { if (mine.has(n)) clashes.push('index.html: ' + n); });
-    assert.deepStrictEqual(clashes, []);
+    const clashes = [...owners].filter(([, files]) => files.length > 1)
+      .map(([n, files]) => n + ': ' + files.join(', ')).sort();
+    assert.deepStrictEqual(clashes, KNOWN_CLASHES);
   });
 });
 
