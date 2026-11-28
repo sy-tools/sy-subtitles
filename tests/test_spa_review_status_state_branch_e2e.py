@@ -12,6 +12,7 @@ five minutes old. Three things follow, and each is held here in a browser:
 
 import base64
 import json
+from urllib.parse import urlparse
 
 import pytest
 
@@ -97,7 +98,10 @@ def test_an_anonymous_load_spends_no_api_request_on_statuses(server, anonymous_p
     """An anonymous visitor has 60 API requests an hour, and GitHub counts a
     conditional one answered 304 against them too."""
     api_requests = []
-    anonymous_page.on("request", lambda req: api_requests.append(req.url) if "api.github.com" in req.url else None)
+    anonymous_page.on(
+        "request",
+        lambda req: api_requests.append(req.url) if urlparse(req.url).hostname == "api.github.com" else None,
+    )
     DataBranch(anonymous_page).holds(PUBLISHED_EARLIER)
 
     _open_index(anonymous_page, server)
