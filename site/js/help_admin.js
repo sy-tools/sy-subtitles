@@ -124,15 +124,27 @@
   // URL), so a replacement takes the next version of the name it replaces,
   // and a name still held by a recording in the release (`released`, the
   // asset names without .bin) is never handed out again.
+  //
+  // The name apart from its -vN suffix is the video's identity: its share
+  // link (the help repository's s/<stem>/) and its old #/help/ links follow
+  // it to the newest version. So a NEW video never takes a stem already in
+  // use, even by a recording only in the release; it is numbered -2, -3, ...
+  function stemOf(file) { return String(file).replace(/-v\d+$/, ''); }
+
   function nextFile(cat, base, replaces, released) {
     var taken = {};
-    cat.sections.forEach(function (s) { s.videos.forEach(function (v) { taken[v.file] = true; }); });
-    (released || []).forEach(function (name) { taken[name] = true; });
-    var version = /-v(\d+)$/.exec(replaces || '');
-    var stem = replaces ? replaces.replace(/-v\d+$/, '') : base;
-    var n = replaces ? (version ? +version[1] + 1 : 2) : 1;
-    var name = n === 1 ? stem : stem + '-v' + n;
-    while (taken[name]) { n++; name = stem + '-v' + n; }
+    var stems = {};
+    function take(name) { taken[name] = true; stems[stemOf(name)] = true; }
+    cat.sections.forEach(function (s) { s.videos.forEach(function (v) { take(v.file); }); });
+    (released || []).forEach(take);
+    if (replaces) {
+      var version = /-v(\d+)$/.exec(replaces);
+      var v = version ? +version[1] + 1 : 2;
+      while (taken[stemOf(replaces) + '-v' + v]) v++;
+      return stemOf(replaces) + '-v' + v;
+    }
+    var name = base;
+    for (var n = 2; stems[stemOf(name)]; n++) name = base + '-' + n;
     return name;
   }
 
@@ -144,6 +156,7 @@
   function validateCatalog(cat) {
     var errors = [];
     var seen = {};
+    var stems = {};
     var ids = {};
     if (cat.version !== 1) errors.push('version must be 1');
     (cat.sections || []).forEach(function (section) {
@@ -157,7 +170,12 @@
       section.videos.forEach(function (v) {
         if (!FILE_RE.test(String(v.file))) errors.push("file '" + v.file + "' is not a lowercase slug");
         else if (seen[v.file]) errors.push("duplicate file '" + v.file + "'");
+        else if (stems[stemOf(v.file)]) {
+          errors.push("'" + v.file + "' shares the name '" + stemOf(v.file) + "' with '" + stems[stemOf(v.file)] +
+            "'; a -vN suffix marks a replacement");
+        }
         seen[v.file] = true;
+        if (!stems[stemOf(v.file)]) stems[stemOf(v.file)] = v.file;
         if (section.order === 'chronological' && !v.date) errors.push("'" + v.file + "' has no date, which its section sorts by");
         if (v.date && !DATE_RE.test(v.date)) errors.push("'" + v.file + "' has date '" + v.date + "', not YYYY-MM-DD");
       });

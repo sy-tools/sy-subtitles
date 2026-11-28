@@ -326,8 +326,7 @@ def test_each_video_copies_its_own_link(index_page):
     page.click("#help-sheet .help-video[data-file='security'] .help-video__link")
     page.wait_for_function("window.__copied.length === 1")
     copied = page.evaluate("window.__copied[0]")
-    assert copied.endswith("/index.html?f=needs-review#/help/security"), copied
-    assert copied.startswith(page.evaluate("location.origin")), copied
+    assert copied == "https://sy-tools.github.io/sy-help/s/security/?f=needs-review", copied
     assert page.locator("#toast.show").is_visible()
     # Over the sheet, not hidden under its scrim.
     assert page.evaluate(
@@ -352,7 +351,7 @@ def test_a_copied_link_carries_the_index_search_and_filter(smoke_server, smoke_p
     page.click("#help-sheet .help-video[data-file='security'] .help-video__link")
     page.wait_for_function("window.__copied.length === 1")
     copied = page.evaluate("window.__copied[0]")
-    assert copied.endswith("/index.html?q=puja&f=needs-review#/help/security"), copied
+    assert copied == "https://sy-tools.github.io/sy-help/s/security/?q=puja&f=needs-review", copied
 
 
 def test_a_shared_link_opens_on_the_index_it_was_copied_from(smoke_server, smoke_page):

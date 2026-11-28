@@ -10564,7 +10564,7 @@ document.getElementById('help-sheet-body').addEventListener('click', function(e)
     filter: activeFilter,
     defaultFilter: '',
   });
-  var url = HelpVideos.shareUrl(location.origin, location.pathname, '?' + search, btn.getAttribute('data-help-link'));
+  var url = HelpVideos.shareUrl(location.origin, location.pathname, '?' + search, btn.getAttribute('data-help-link'), HelpVideos.helpRepo(window));
   var copied = navigator.clipboard && navigator.clipboard.writeText
     ? navigator.clipboard.writeText(url) : Promise.reject(new Error('no clipboard'));
   copied.then(function() { showToast(t('help.linkCopied')); }, function() { showToast(t('error.clipboard'), 4000); });

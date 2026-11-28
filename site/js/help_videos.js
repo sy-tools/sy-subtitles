@@ -80,14 +80,21 @@
     return h + ':' + (m < 10 ? '0' : '') + m + ':' + ss;
   }
 
-  // A link to one video: '#/help/<file>' on the portal itself, so it opens
-  // behind the same passphrase gate as everything else, over the index the
-  // sharer had on screen (its search ?q= and filter ?f=). Off GitHub Pages
-  // the portal needs ?repo= (and may carry ?branch=) to boot; nothing else of
-  // the sharer's address (an OAuth code, say) travels with the link.
+  // A link to one video opens '#/help/<file>' on the portal, behind the same
+  // passphrase gate as everything else, over the index the sharer had on
+  // screen (its search ?q= and filter ?f=); nothing else of the sharer's
+  // address (an OAuth code, say) travels with it.
+  //
+  // What is shared is the help repository's page s/<stem>/, which forwards to
+  // that route: a fragment never reaches a messenger's crawler, so only a
+  // page of its own can carry the video's title and frame for a preview.
+  // That page can lead only to the production portal on main, so an address
+  // naming ?repo= (off GitHub Pages) or ?branch= shares the portal route
+  // itself, which keeps them.
   var FILE_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   var LINK_PREFIX = '#/help/';
-  var KEPT_PARAMS = ['repo', 'branch', 'q', 'f'];
+  var PORTAL_PARAMS = ['repo', 'branch'];
+  var INDEX_PARAMS = ['q', 'f'];
 
   function linkHash(file) { return LINK_PREFIX + file; }
 
@@ -97,12 +104,18 @@
     return FILE_RE.test(file) ? file : null;
   }
 
-  function shareUrl(origin, pathname, search, file) {
-    var from = new URLSearchParams(search || '');
+  function keptQuery(from, names) {
     var kept = new URLSearchParams();
-    KEPT_PARAMS.forEach(function (k) { if (from.get(k)) kept.set(k, from.get(k)); });
+    names.forEach(function (k) { if (from.get(k)) kept.set(k, from.get(k)); });
     var qs = kept.toString();
-    return origin + pathname + (qs ? '?' + qs : '') + linkHash(file);
+    return qs ? '?' + qs : '';
+  }
+
+  function shareUrl(origin, pathname, search, file, repo) {
+    var from = new URLSearchParams(search || '');
+    var onPortal = PORTAL_PARAMS.some(function (k) { return from.get(k); });
+    if (onPortal) return origin + pathname + keptQuery(from, PORTAL_PARAMS.concat(INDEX_PARAMS)) + linkHash(file);
+    return pagesBase(repo || DEFAULT_HELP_REPO) + 's/' + stem(file) + '/' + keptQuery(from, INDEX_PARAMS);
   }
 
   // A replacement is published under the next version of the name (intro,

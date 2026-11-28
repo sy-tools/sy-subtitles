@@ -121,19 +121,37 @@ describe('links to one video', () => {
     assert.strictEqual(linkedFile('#/help/Not A Slug'), null);
   });
 
-  it('shares the page the reader is on, keeping only the repository it was pointed at', () => {
+  it('shares the help repository\'s preview page, which a messenger can render', () => {
     assert.strictEqual(
       shareUrl('https://sy-tools.github.io', '/sy-subtitles/', '', 'intro'),
-      'https://sy-tools.github.io/sy-subtitles/#/help/intro');
-    assert.strictEqual(
-      shareUrl('http://localhost:8000', '/', '?repo=sy-tools/sy-subtitles&code=abc&branch=dev', 'intro'),
-      'http://localhost:8000/?repo=sy-tools%2Fsy-subtitles&branch=dev#/help/intro');
+      'https://sy-tools.github.io/sy-help/s/intro/');
   });
 
   it('carries the index search and filter the reader has on screen', () => {
     assert.strictEqual(
       shareUrl('https://sy-tools.github.io', '/sy-subtitles/', '?q=puja&f=approved&state=x', 'intro'),
-      'https://sy-tools.github.io/sy-subtitles/?q=puja&f=approved#/help/intro');
+      'https://sy-tools.github.io/sy-help/s/intro/?q=puja&f=approved');
+  });
+
+  it('shares a replaced video under its stem, which keeps the link', () => {
+    assert.strictEqual(
+      shareUrl('https://sy-tools.github.io', '/sy-subtitles/', '', 'intro-v2'),
+      'https://sy-tools.github.io/sy-help/s/intro/');
+  });
+
+  it('shares the preview page of the help repository the portal was pointed at', () => {
+    assert.strictEqual(
+      shareUrl('https://sy-tools.github.io', '/sy-subtitles/', '', 'intro', 'me/help-test'),
+      'https://me.github.io/help-test/s/intro/');
+  });
+
+  it('keeps a portal link where the address names a repository or branch the preview page cannot', () => {
+    assert.strictEqual(
+      shareUrl('http://localhost:8000', '/', '?repo=sy-tools/sy-subtitles&code=abc&branch=dev', 'intro'),
+      'http://localhost:8000/?repo=sy-tools%2Fsy-subtitles&branch=dev#/help/intro');
+    assert.strictEqual(
+      shareUrl('https://sy-tools.github.io', '/sy-subtitles/', '?branch=dev&q=puja', 'intro-v2'),
+      'https://sy-tools.github.io/sy-subtitles/?branch=dev&q=puja#/help/intro-v2');
   });
 
   it('finds the linked video in the ordered sections', () => {
