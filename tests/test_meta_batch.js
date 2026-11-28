@@ -11,6 +11,7 @@ const {
   applyMetaText,
   hydrateTalkMeta,
 } = require('../site/js/meta_batch');
+const { sourcesMentioning } = require('./spa_sources');
 
 const SHA = 'a'.repeat(40);
 
@@ -494,7 +495,8 @@ describe('meta batch wiring', () => {
 
   it('hydrateManifestMeta delegates to the module and keeps no YAML mapping of its own', () => {
     assert.ok(fnBody('hydrateManifestMeta').includes('hydrateTalkMeta('), 'both paths share one driver');
-    assert.ok(!html.includes('meta.amruta_url'), 'field extraction lives in applyMetaText only');
+    assert.deepStrictEqual(sourcesMentioning('meta.amruta_url', ['js/meta_batch.js']), [],
+      'field extraction lives in applyMetaText only');
   });
 
   it('the token goes to the GraphQL transport only, never to the raw fetch', () => {

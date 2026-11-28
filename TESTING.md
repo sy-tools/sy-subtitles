@@ -74,6 +74,23 @@ suite alone does not prove the app renders. Open it with
 injects the auth hooks, and only port 8000 can complete a sign-in (see
 CLAUDE.md "Local Setup").
 
+### Source guards read the page and its scripts
+
+A guard that says something about the app's JavaScript as a whole — "no
+hardcoded toast", "every `t()` key exists", "no top-level name declared twice" —
+reads `site/index.html` **and every script it loads**, through
+`tests/spa_sources.js` / `tests/spa_sources.py`. The scripts come from the
+page's `<script src="js/…">` tags at test time (vendored code left out), so a
+module is covered from the day the page loads it. A guard that reads
+`index.html` alone keeps passing after the line it was written for moves into a
+module, which is the one failure a guard must not have.
+
+Two lists in those guards are not exemptions. `KNOWN_VIOLATIONS`
+(`test_spa_i18n_guard.py`) and `KNOWN_CLASHES` (`test_review_status_live.js`)
+record defects the guards found in existing modules; each is held to exactly
+what the scan finds, so the only edit they accept is deleting an entry once its
+defect is fixed.
+
 ### Golden corpus
 
 ```bash
