@@ -1,0 +1,1434 @@
+{
+  "version": 1,
+  "updated_at": "2026-11-28T13:17:27.465702+00:00",
+  "talks": {
+    "1979-02-25_Puja-In-Pune-Marathi": {
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 5,
+      "updated_at": "2026-04-15T13:10:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1392
+    },
+    "1979-12-10_Christmas-And-Its-Relationship-To-Lord-Jesus-1979-2": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 27,
+      "updated_at": "2026-04-15T13:10:18Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1395
+    },
+    "1980-03-23_Birthday-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 6,
+      "updated_at": "2026-04-15T13:10:07Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1398
+    },
+    "1981-03-21_Birthday-Puja-1981-Sydney": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": null,
+      "updated_at": "2026-04-01T20:00:00Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1271
+    },
+    "1982-07-11_From-Heart-To-Sahastrar-Derby": {
+      "status": "approved",
+      "reviewer": null,
+      "issue_number": 8,
+      "updated_at": "2026-07-10T23:02:31Z"
+    },
+    "1983-03-30_Celebration-Of-Birthday-In-Bombay": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 7,
+      "updated_at": "2026-07-10T22:33:38Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1414
+    },
+    "1983-07-24_Guru-Puja-Awakening-The-Principle-Of-Guru": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": null,
+      "updated_at": "2026-04-01T20:00:00Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1272
+    },
+    "1984-03-22_Birthday-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 9,
+      "updated_at": "2026-07-11T01:08:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1418
+    },
+    "1992-07-19_Guru-Puja": {
+      "status": "approved",
+      "reviewer": null,
+      "issue_number": 987,
+      "updated_at": "2026-08-23T04:24:05Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1266
+    },
+    "1993-09-19_Ganesha-Puja-Cabella": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": null,
+      "updated_at": "2026-04-01T20:00:00Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1276
+    },
+    "1979-09-27_Shri-Kundalini-Shakti-And-Shri-Jesus-Bombay": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 716,
+      "updated_at": "2026-07-12T16:39:24Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1263
+    },
+    "1992-02-25_Talk-To-Yogis-In-Christchurch": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 26,
+      "updated_at": "2026-07-11T01:58:18Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1455
+    },
+    "2001-07-29_Shri-Krishna-Puja-New-York": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 1,
+      "updated_at": "2026-04-15T13:10:01Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1277
+    },
+    "1988-05-08_Sahasrara-Puja-How-it-was-decided": {
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 21,
+      "updated_at": "2026-04-15T13:10:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1432
+    },
+    "1987-01-02_Talk-on-Innocence-Musical-Program-Morning": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 31,
+      "updated_at": "2026-04-15T13:10:20Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1275
+    },
+    "1987-08-09_Shri-Vishnumaya-Puja-She-has-created-a-big-maya": {
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 70,
+      "updated_at": "2026-04-15T13:20:21Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1429
+    },
+    "1982-04-22_All-is-so-Beautifully-Made": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 127,
+      "updated_at": "2026-07-11T06:53:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1402
+    },
+    "2001-04-22_Easter-Puja-You-Cannot-Resurrect-Yourself-Without-Controlling-Agnya": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 124,
+      "updated_at": "2026-07-11T10:07:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1481
+    },
+    "1979-04-22_Give-up-Misidentifications": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 118,
+      "updated_at": "2026-07-11T02:48:37Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1393
+    },
+    "1988-12-11_Adi-Shakti-Puja-The-steadiness-of-the-mind-is-very-important-for-the-marriages": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 150,
+      "updated_at": "2026-07-11T13:00:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1437
+    },
+    "1996-06-09_Adi-Shakti-Puja-The-compassion-has-to-become-active": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 137,
+      "updated_at": "2026-07-11T12:20:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1470
+    },
+    "2004-05-09_Sahasrara-Puja-Continue-To-Live-A-Life-of-Reality": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 155,
+      "updated_at": "2026-07-11T13:35:52Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1488
+    },
+    "1989-05-06_Sahasrara-Puja-Jump-Into-the-Ocean-of-Joy": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 158,
+      "updated_at": "2026-08-25T07:27:10Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1265
+    },
+    "1993-05-09_Sahasrara-Puja-Achieve-The-Perfect-State": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 171,
+      "updated_at": "2026-07-14T06:26:39Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1461
+    },
+    "1994-03-14_Mahashivaratri-Puja-Surrender": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 180,
+      "updated_at": "2026-07-14T07:03:29Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1467
+    },
+    "1988-06-18_Seminar-Day-1-Introspection-and-Meditation": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 184,
+      "updated_at": "2026-11-26T15:05:47Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1435
+    },
+    "1984-08-11_Raksha-Bandhan-and-Maryadas": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 188,
+      "updated_at": "2026-06-02T20:08:25Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1273
+    },
+    "1995-09-10_Shri-Ganesha-Puja-Project-your-innocence-to-others": {
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 197,
+      "updated_at": "2026-06-01T11:51:48Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1469
+    },
+    "1990-05-06_Sahasrara-Puja-You-Have-All-Become-Mahayogis-Now": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 205,
+      "updated_at": "2026-07-14T07:01:55Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1443
+    },
+    "1991-04-06_Bhavasagara-Puja-Meditation-will-protect-you": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 211,
+      "updated_at": "2026-07-15T04:51:50Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1449
+    },
+    "1978-10-02_Knots-On-The-Three-Channels": {
+      "status": "approved",
+      "reviewer": "anastasijka-prog",
+      "issue_number": 208,
+      "updated_at": "2026-10-02T12:00:58Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1262
+    },
+    "1992-03-01_Evening-Program-and-Talk-to-Sahaja-Yogis-The-Day-after-Mahashivaratri-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 221,
+      "updated_at": "2026-07-15T07:27:24Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1457
+    },
+    "1979-12-30_Advice-about-Chakras": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 227,
+      "updated_at": "2026-07-14T10:01:59Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1396
+    },
+    "1988-06-08_Shri-Ekadasha-Rudra-Puja-Ekadasha-Principle-is-built-in-the-Void": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 224,
+      "updated_at": "2026-07-15T03:41:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1434
+    },
+    "1991-12-29_Shri-Lakshmi-Puja-Sea-is-your-grandfather": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 235,
+      "updated_at": "2026-07-15T05:53:30Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1454
+    },
+    "2001-12-25_Christmas-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 244,
+      "updated_at": "2026-07-15T08:10:46Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1484
+    },
+    "1982-07-11_From-Heart-to-Sahasrara": {
+      "status": "in-progress",
+      "reviewer": "anastasijka-prog",
+      "issue_number": 241,
+      "updated_at": "2026-11-21T14:58:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1405
+    },
+    "1995-02-19_Arrival-Talk": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 238,
+      "updated_at": "2026-06-16T06:17:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1468
+    },
+    "1977-01-27_Seminar-Day-2-Attention-and-Joy": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 253,
+      "updated_at": "2026-07-14T09:17:23Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1385
+    },
+    "1981-05-24_Subconscious-Supraconscious-and-Our-Correct-Ideals": {
+      "status": "in-progress",
+      "reviewer": "anastasijka-prog",
+      "issue_number": 259,
+      "updated_at": "2026-08-29T08:47:13Z",
+      "operator_stage": "review",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1400
+    },
+    "1980-07-27_Guru-Puja-The-Statutes-of-the-Lord": {
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 256,
+      "updated_at": "2026-07-26T14:07:04Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1399
+    },
+    "1982-07-04_Guru-Puja-Establishing-the-Guru-Principle-and-Havan-After-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 271,
+      "updated_at": "2026-06-14T09:58:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1404
+    },
+    "1982-06-22_England-has-to-become-Jerusalem": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 263,
+      "updated_at": "2026-06-14T09:57:07Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1403
+    },
+    "1982-07-10_From-Mooladhara-to-Void": {
+      "status": "in-progress",
+      "reviewer": "anastasijka-prog",
+      "issue_number": 276,
+      "updated_at": "2026-10-01T13:18:00Z",
+      "operator_stage": "review",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1354
+    },
+    "1983-09-17_Shri-Ekadasha-Rudra-Puja-We-have-to-drop-out-many-things": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 282,
+      "updated_at": "2026-07-16T17:36:40Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1416
+    },
+    "1982-08-01_Adi-Shakti-puja-Mother-make-me-such-that-I-suck-more-of-the-Divine": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 279,
+      "updated_at": "2026-07-16T13:26:01Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1406
+    },
+    "1986-05-23_The-Spirit-is-the-light": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 285,
+      "updated_at": "2026-06-15T05:08:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1427
+    },
+    "1992-09-20_Shri-Vishnumaya-Puja-Stop-Feeling-Guilty": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 288,
+      "updated_at": "2026-06-16T07:34:07Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1459
+    },
+    "1982-08-06_The-Importance-of-Dedication-and-Devotion": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 291,
+      "updated_at": "2026-06-04T14:33:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1408
+    },
+    "1993-04-26_Shri-Pallas-Athena-Puja-You-have-to-be-sincere-and-honest": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 297,
+      "updated_at": "2026-07-17T11:03:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1460
+    },
+    "1993-07-04_Guru-Puja-Gurus-who-belong-to-the-collective": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 305,
+      "updated_at": "2026-07-17T11:09:36Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1463
+    },
+    "1998-12-14_The-Revival-of-Indian-Spirituality": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 308,
+      "updated_at": "2026-07-17T13:13:59Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1475
+    },
+    "1997-07-20_Guru-Puja-A-Guru-Should-Be-Humble-And-Wise": {
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 311,
+      "updated_at": "2026-11-18T14:47:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1472
+    },
+    "1998-12-25_Christmas-Puja-Become-Thoughtlessly-Aware": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 314,
+      "updated_at": "2026-07-17T17:00:33Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1477
+    },
+    "1999-11-07_Diwali-Puja-Remove-all-the-darkness-of-Kali-Yuga": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 317,
+      "updated_at": "2026-07-17T16:53:56Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1479
+    },
+    "1984-05-06_Questions-and-Answers-after-Maha-Sahasrara-Day": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 320,
+      "updated_at": "2026-06-14T16:32:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1419
+    },
+    "1979-01-01_Letter": {
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 325,
+      "updated_at": "2026-07-12T20:22:21Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1390
+    },
+    "2001-05-06_Sahasrara-Puja-To-Break-Sahasrara": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 338,
+      "updated_at": "2026-07-17T13:19:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1482
+    },
+    "1990-08-31_Shri-Hanumana-Puja-Electromagnetic-Force": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 341,
+      "updated_at": "2026-07-17T06:57:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1447
+    },
+    "1998-09-27_7th-Day-of-Navaratri-You-all-should-depend-on-Paramchaitanya": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 344,
+      "updated_at": "2026-07-17T18:49:22Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1474
+    },
+    "1989-08-08_Shri-Ganesha-Puja-How-Far-To-Go-With-Children": {
+      "status": "in-progress",
+      "reviewer": "Dmytro7-sys",
+      "issue_number": 347,
+      "updated_at": "2026-09-02T07:51:00Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1439
+    },
+    "1977-03-22_Advice-at-Bharatiya-Vidya-Bhavan": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 354,
+      "updated_at": "2026-07-16T08:33:15Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1387
+    },
+    "1983-01-14_Shri-Saraswati-Puja-The-basis-of-all-creativity-is-love": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 358,
+      "updated_at": "2026-07-16T17:16:41Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1412
+    },
+    "1982-08-22_Shri-Ganesha-Puja-Innocence-Joy": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 361,
+      "updated_at": "2026-07-16T13:08:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1409
+    },
+    "1987-10-16_Shri-Mahakali-Puja-The-Culture-Of-The-Spirit": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 364,
+      "updated_at": "2026-07-17T00:23:42Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1430
+    },
+    "1985-04-20_Seminar-Mahamaya-Shakti-Morning": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 368,
+      "updated_at": "2026-07-16T21:45:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1425
+    },
+    "1987-11-05_Feel-the-cool-breeze-of-the-Holy-Ghost-coming-out-of-your-head": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 371,
+      "updated_at": "2026-07-17T07:07:20Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1431
+    },
+    "2000-05-07_Sahasrara-puja-Attain-that-Sahaja-state": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 374,
+      "updated_at": "2026-07-17T21:27:53Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1480
+    },
+    "1975-03-29_Public-Program-ScienceTrigunatmika": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 385,
+      "updated_at": "2026-07-12T15:50:31Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1383
+    },
+    "1982-09-26_Shri-Durga-Puja-Mind-is-just-like-a-donkey": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 396,
+      "updated_at": "2026-11-26T19:16:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1410
+    },
+    "1983-03-04_Devi-Puja-Mother-you-be-in-our-brain": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 399,
+      "updated_at": "2026-07-16T17:47:02Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1413
+    },
+    "1978-12-09_Our-Understanding-of-Sahaja-Yoga-Seminar": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 402,
+      "updated_at": "2026-07-16T09:13:36Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1389
+    },
+    "1986-05-04_Sahasrara-Puja-Consciousness-and-Evolution": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 405,
+      "updated_at": "2026-07-16T18:15:08Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1426
+    },
+    "1984-07-10_The-Experience-of-Truth-Part-IV": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 408,
+      "updated_at": "2026-07-16T21:47:01Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1420
+    },
+    "1987-04-19_Easter-Puja-Materialism": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 411,
+      "updated_at": "2026-11-15T15:33:25Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1279
+    },
+    "1991-09-15_Shri-Ganesha-Puja-Shri-Ganesha-and-His-Qualities": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 414,
+      "updated_at": "2026-07-17T17:41:26Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1452
+    },
+    "1991-05-05_Sahasrara-Puja-Realise-Your-Own-Divinity": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 417,
+      "updated_at": "2026-07-17T14:03:03Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1451
+    },
+    "1991-02-16_Mahashivaratri-Puja-Four-Nadis-of-the-Heart": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 420,
+      "updated_at": "2026-07-17T21:35:25Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1448
+    },
+    "1997-05-04_Sahasrara-Puja-At-Sahasrara-you-stand-on-Truth-and-go-beyond-Dharma": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 423,
+      "updated_at": "2026-07-17T21:27:09Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1471
+    },
+    "2002-03-21_Birthday-Puja-You-Can-Do-A-Lot": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 426,
+      "updated_at": "2026-07-17T10:23:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1485
+    },
+    "1992-02-29_Mahashivaratri-Puja-You-are-extremely-powerful": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 429,
+      "updated_at": "2026-07-18T04:22:16Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1456
+    },
+    "1990-06-03_How-to-get-the-connection-with-the-Divine-power": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 432,
+      "updated_at": "2026-07-18T14:39:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1445
+    },
+    "2002-10-27_Navaratri-Puja-Develop-Wisdom-Through-Meditation-Bhakti-Shraddha": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 435,
+      "updated_at": "2026-07-18T04:15:49Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1486
+    },
+    "1988-07-20_How-to-become-a-realized-soul": {
+      "status": "in-progress",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 456,
+      "updated_at": "2026-06-27T06:31:23Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1436
+    },
+    "2001-06-03_Adi-Shakti-Puja-Humanity-has-to-be-saved-through-you-and-nobody-else": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 471,
+      "updated_at": "2026-07-17T17:02:48Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1483
+    },
+    "1992-05-10_Sahasrara-Puja-The-Will-of-God": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 490,
+      "updated_at": "2026-06-13T05:55:22Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1458
+    },
+    "1983-10-14_After-Self-Realization-You-Must-Master-It": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 493,
+      "updated_at": "2026-07-18T10:56:03Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1417
+    },
+    "2000-07-02_Adi-Shakti-Puja-Women-Emotional-Intelligence": {
+      "status": "approved",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 577,
+      "updated_at": "2026-06-27T06:30:12Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1267
+    },
+    "1986-07-13_Shri-Kartikeya-Puja-Woman-Is-A-Woman": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 652,
+      "updated_at": "2026-07-18T04:38:20Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1428
+    },
+    "1989-12-17_Devi-Puja-Nothing-to-discuss-in-Sahaja-Yoga": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 670,
+      "updated_at": "2026-07-04T04:12:42Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1442
+    },
+    "1999-09-05_Shri-Virata-Puja-First-of-all-you-have-to-rise-above-your-ego": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 676,
+      "updated_at": "2026-07-04T21:34:18Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1478
+    },
+    "1979-01-01_Letter-Human-Chitta-has-many-illusions": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 726,
+      "updated_at": "2026-11-17T06:14:01Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1391
+    },
+    "2000-07-23_Guru-Puja-Shraddha": {
+      "status": "approved",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 895,
+      "updated_at": "2026-08-01T13:02:46Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1268
+    },
+    "1993-05-18_Shri-Fatima-Puja-Women-are-responsible-for-the-society": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 932,
+      "updated_at": "2026-08-05T11:12:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1462
+    },
+    "1989-07-23_Guru-Puja-Creativity": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 938,
+      "updated_at": "2026-08-07T21:15:10Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1438
+    },
+    "2004-07-04_Guru-Puja-Follow-My-Message-of-Love": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 957,
+      "updated_at": "2026-08-12T21:58:15Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1270
+    },
+    "1998-05-10_Sahasrara-Puja-Blessing-of-Divine-Pours-Only-If-Sahasrara-is-Completely-Open": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 969,
+      "updated_at": "2026-08-13T08:52:35Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1473
+    },
+    "1986-09-07_Shri-Ganesha-Puja-Establishing-Shri-Ganesha-Principle": {
+      "status": "approved",
+      "reviewer": null,
+      "issue_number": 979,
+      "updated_at": "2026-08-18T04:27:15Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1274
+    },
+    "1993-10-10_Shri-Virata-and-Viratangana-Puja-I-have-to-have-16000-children": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1008,
+      "updated_at": "2026-08-28T21:39:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1464
+    },
+    "1985-03-17_Birthday-Puja-Our-maryadas": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1038,
+      "updated_at": "2026-09-05T05:05:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1423
+    },
+    "1984-01-15_Shri-Ganesha-Puja-Keep-Your-Maryadas": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 1066,
+      "updated_at": "2026-09-08T04:53:02Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1264
+    },
+    "1984-10-05_11th-Day-of-Navaratri-Put-me-in-your-Heart": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1104,
+      "updated_at": "2026-09-21T21:17:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1422
+    },
+    "1991-04-14_Shri-Ganesha-Puja-The-Innate-Maryadas": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1114,
+      "updated_at": "2026-09-25T21:19:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1450
+    },
+    "1990-06-19_Adi-Kundalini-Puja-The-Advent-Of-Primordial-Kundalini": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1128,
+      "updated_at": "2026-09-28T21:49:49Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1446
+    },
+    "1977-10-31_About-Jesus-Christ": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1196,
+      "updated_at": "2026-11-08T14:11:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1388
+    },
+    "1984-09-16_Shri-Ekadasha-Rudra-Puja-Rudra-is-the-destructive-power-of-Shiva": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1187,
+      "updated_at": "2026-11-06T23:02:06Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1421
+    },
+    "1987-10-25_Diwali-Puja-Power-of-Innocence-Meaning-of-Nine-of-The-Lakshmis": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 1182,
+      "updated_at": "2026-11-20T07:02:01Z",
+      "operator_stage": "delivered",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1362
+    },
+    "1979-11-18_How-to-go-beyond-the-ego-and-know-yourself-Meditation": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1178,
+      "updated_at": "2026-10-30T20:27:27Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1394
+    },
+    "1982-12-19_Shri-Mahakali-Puja-Desire-Within-Havan": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1170,
+      "updated_at": "2026-10-26T21:39:31Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1411
+    },
+    "1977-01-01_The-Spirit": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1165,
+      "updated_at": "2026-10-24T21:37:38Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1384
+    },
+    "1993-10-24_10th-Day-of-Navaratri-Reintrospect-Yourself": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1158,
+      "updated_at": "2026-10-19T18:05:45Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1466
+    },
+    "1989-10-08_10th-Day-of-Navaratri-Depth-and-Content": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1152,
+      "updated_at": "2026-10-12T20:18:20Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1441
+    },
+    "1989-10-06_8th-Day-of-Navaratri-Talk-to-English-Yogis-on-Style-and-Content": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1148,
+      "updated_at": "2026-10-09T22:27:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1440
+    },
+    "1981-11-01_Diwali-Puja-Powers-of-the-Gruha-Lakshmi": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1227,
+      "updated_at": "2026-11-10T00:14:39Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1401
+    },
+    "1997-05-25_Adi-Shakti-Puja-Respect-the-Mother-Earth-Why-are-we-in-Sahaja-Yoga": {
+      "status": "approved",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 1234,
+      "updated_at": "2026-11-14T19:56:12Z",
+      "operator_stage": "delivered",
+      "operator": null,
+      "operator_issue": 1278
+    },
+    "1999-05-09_Sahasrara-Puja-Our-Awareness-has-to-become-Paramchaitanya": {
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 1348,
+      "updated_at": "2026-11-18T15:05:28Z",
+      "operator_stage": "qa",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1335
+    },
+    "1977-11-01_You-all-are-Shri-Kalki": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1826,
+      "updated_at": "2026-11-24T17:44:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1293
+    },
+    "1982-04-11_Easter-Puja-and-Havan-The-Creation-of-Lord-Jesus": {
+      "status": "in-progress",
+      "reviewer": "IrynaFilSY",
+      "issue_number": 1319,
+      "updated_at": "2026-11-18T14:48:01Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1320
+    },
+    "1982-07-12_Shri-Bhoomi-Devi-Puja": {
+      "status": "approved",
+      "reviewer": "SlavaSubotskiy",
+      "issue_number": 1497,
+      "updated_at": "2026-11-22T16:55:11Z",
+      "operator_stage": "delivered",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1498
+    },
+    "1995-07-16_Guru-Puja-Watch-Your-Mind-and-Attention": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1581,
+      "updated_at": "2026-11-24T08:17:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1556
+    },
+    "1994-05-08_Sahasrara-Puja-Mahamaya-Swarupa": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1578,
+      "updated_at": "2026-11-24T08:05:39Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1555
+    },
+    "1993-03-21_Birthday-Puja-Satya-Yuga": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1572,
+      "updated_at": "2026-11-24T08:01:30Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1554
+    },
+    "1992-02-09_Shri-Ganesha-Puja-Gravity-and-Balance": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1574,
+      "updated_at": "2026-11-24T07:51:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1553
+    },
+    "1988-08-14_Shri-Fatima-Puja-The-principle-of-the-Left-Nabhi": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1584,
+      "updated_at": "2026-11-24T20:52:41Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1552
+    },
+    "1987-11-06_Shri-Ganesha-Puja-spread-love-all-over-and-remove-the-people-from-the-shackles": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1564,
+      "updated_at": "2026-11-24T07:47:08Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1551
+    },
+    "1985-06-02_Shri-Krishna-Puja-Play-the-melody-of-God": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1567,
+      "updated_at": "2026-11-24T07:45:28Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1550
+    },
+    "1984-05-05_Maha-Sahasrara-Puja-The-Start-of-a-New-Era": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1559,
+      "updated_at": "2026-11-24T06:12:14Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1549
+    },
+    "1983-01-21_Devi-Puja-Keep-Your-Mother-Pleased": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1569,
+      "updated_at": "2026-11-24T06:18:12Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1548
+    },
+    "1982-05-05_Sahasrara-Puja-Opening-the-Primordial-Sahasrar": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1561,
+      "updated_at": "2026-11-24T07:43:10Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1547
+    },
+    "1997-11-02_Diwali-Puja-Shri-Lakshmi-and-Money": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1603,
+      "updated_at": "2026-11-24T08:23:44Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1595
+    },
+    "1996-07-16_Shri-Mahalakshmi-Puja-We-have-to-live-like-one-family": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1606,
+      "updated_at": "2026-11-24T08:18:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1594
+    },
+    "1995-06-04_Adi-Shakti-Puja-the-hurdles-in-rising-the-Kundalini": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1601,
+      "updated_at": "2026-11-24T08:08:18Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1593
+    },
+    "1992-09-13_Hamsa-Chakra-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1610,
+      "updated_at": "2026-11-24T08:00:33Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1592
+    },
+    "1991-12-09_Shri-Shakti-Mahakali-Puja-I-believe-in-Shri-Mataji": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1598,
+      "updated_at": "2026-11-24T08:40:23Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1591
+    },
+    "1989-05-24_Shri-Pallas-Athena-Puja-The-Origins-and-Role-of-Greece": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1613,
+      "updated_at": "2026-11-24T08:33:42Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1590
+    },
+    "1986-07-06_Guru-Puja-Cosmic-Consciousness": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1615,
+      "updated_at": "2026-11-24T07:54:49Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1589
+    },
+    "1985-05-19_Shri-Ganesha-Puja-You-Should-be-Prepared-to-Change": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1607,
+      "updated_at": "2026-11-24T07:10:05Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1588
+    },
+    "1985-03-10_Devi-Puja-How-To-Ascend-Into-Nirvikalpa": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1618,
+      "updated_at": "2026-11-24T06:46:24Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1587
+    },
+    "1983-11-05_Eve-of-Diwali-Puja-Talk-to-Sahaja-Yogis-Money-Sleep-Bhoots-Lethargy": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1620,
+      "updated_at": "2026-11-24T06:30:53Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1586
+    },
+    "2001-02-25_Mahashivaratri-Puja-Destructive-Power-of-Shri-Mahadeva": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1694,
+      "updated_at": "2026-11-24T08:25:11Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1644
+    },
+    "2000-09-16_Shri-Ganesha-Puja-the-sanctity-of-marriage": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1691,
+      "updated_at": "2026-11-24T08:24:08Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1643
+    },
+    "1998-07-12_Guru-Puja-Humility-Complete-Obedience": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1703,
+      "updated_at": "2026-11-24T08:24:06Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1642
+    },
+    "1998-06-21_Adi-Shakti-Puja-You-Must-Develop-Humility": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1679,
+      "updated_at": "2026-11-24T08:23:42Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1641
+    },
+    "1996-07-28_Guru-Puja-Criteria-To-Introspect-Yourself": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1700,
+      "updated_at": "2026-11-24T20:48:31Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1640
+    },
+    "1996-05-05_Sahasrara-Puja-You-must-feel-responsible-but-be-humble": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1698,
+      "updated_at": "2026-11-24T08:20:16Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1639
+    },
+    "1995-05-07_Sahasrara-Puja-Achieve-Complete-Freedom": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1705,
+      "updated_at": "2026-11-24T08:07:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1638
+    },
+    "1993-08-15_Shri-Krishna-Puja-Dharma": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1683,
+      "updated_at": "2026-11-24T08:04:41Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1637
+    },
+    "1992-07-25_Shri-Durga-Mahakali-Puja-France-is-going-down-and-down": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1676,
+      "updated_at": "2026-11-24T07:56:55Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1636
+    },
+    "1991-12-11_Devi-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1675,
+      "updated_at": "2026-11-24T07:46:51Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1635
+    },
+    "1990-06-24_Shri-Lakshmi-Puja-and-Talk-before-puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1661,
+      "updated_at": "2026-11-24T08:40:30Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1634
+    },
+    "1990-03-20_Eve-of-Birthday-Puja-Talk-to-Sahaja-Yogis-Dont-create-groups": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1657,
+      "updated_at": "2026-11-24T08:40:10Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1633
+    },
+    "1989-08-14_Shri-Krishna-Puja-They-have-to-come-back-again-and-again": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1666,
+      "updated_at": "2026-11-24T08:33:16Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1632
+    },
+    "1989-06-11_Virata-Puja-We-have-to-really-examine-ourselves": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1668,
+      "updated_at": "2026-11-24T08:39:58Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1631
+    },
+    "1988-04-03_Easter-Puja-You-have-to-be-strong-like-Christ": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1662,
+      "updated_at": "2026-11-24T07:47:40Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1630
+    },
+    "1986-05-24_Mahalakshmi-Puja-The-Importance-of-Puja": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1653,
+      "updated_at": "2026-11-24T07:28:34Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1629
+    },
+    "1984-07-14_Guru-Puja-The-State-of-Guru": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1650,
+      "updated_at": "2026-11-24T07:39:56Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1628
+    },
+    "1984-02-03_Shri-Mahalakshmi-Puja-The-innermost-stream-of-Brahmanadi": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1648,
+      "updated_at": "2026-11-24T06:29:08Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1627
+    },
+    "1983-09-18_Shri-Krishna-Puja-He-has-to-be-prasanna": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1656,
+      "updated_at": "2026-11-24T20:52:36Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1626
+    },
+    "1982-08-15_Shri-Yogeshwara-Puja-God-of-Yoga": {
+      "status": "pending",
+      "reviewer": null,
+      "issue_number": 1664,
+      "updated_at": "2026-11-24T06:03:13Z",
+      "operator_stage": "translator",
+      "operator": "SlavaSubotskiy",
+      "operator_issue": 1625
+    }
+  }
+}
