@@ -1695,9 +1695,7 @@ jobs:
     # commit's always() and would skip this job even when commit succeeded.
     if: ${{ !cancelled() && needs.commit.result == 'success' }}
     uses: ./.github/workflows/sync-review-status.yml
-    # Same reason as the whisper call above: no `inherit`, no App token.
-    secrets: inherit
+    # contents: write is what the called workflow pushes the statuses with.
     permissions:
       contents: write
       issues: write
-      pull-requests: write

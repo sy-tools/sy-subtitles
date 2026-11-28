@@ -10,14 +10,21 @@ issue adds `operator_stage`, `operator` and `operator_issue` to the entry.
 
 Preserves manually-set entries for talk_ids not covered by any issue.
 
+Run from a checkout of `main`: `talks/` there says which talks exist. The file
+itself is published on a data branch (.github/scripts/push-state.sh), so
+`--status-file` names it; `--seed` is what a status file that does not exist
+yet starts from.
+
 Requires GH_TOKEN in env (for `gh issue list`).
 """
 
+import argparse
+import copy
 import json
 import subprocess
 import sys
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 STATUS_FILE = Path("review-status.json")
@@ -35,13 +42,31 @@ OPERATOR_STAGES = (
 )
 
 
-def load_existing() -> dict:
-    if not STATUS_FILE.exists():
+def read_status(path: Path | None) -> dict:
+    if path is None or not path.exists():
         return {}
     try:
-        return json.loads(STATUS_FILE.read_text()).get("talks", {})
+        document = json.loads(path.read_text())
     except json.JSONDecodeError:
         return {}
+    return document if isinstance(document, dict) else {}
+
+
+def stamp_after(previous: str | None) -> str:
+    """Now, or just past `previous` when the clock has not got there yet.
+
+    Readers keep whichever copy carries the later `updated_at`, so along the
+    branch it may only grow — also when this runner's clock trails the one
+    that wrote the commit before.
+    """
+    now = datetime.now(UTC)
+    try:
+        floor = datetime.fromisoformat(previous) if previous else None
+    except ValueError:
+        floor = None
+    if floor is not None and floor.tzinfo is not None and now <= floor:
+        now = floor + timedelta(microseconds=1)
+    return now.isoformat()
 
 
 def fetch_issues() -> list[dict]:
@@ -164,20 +189,37 @@ def apply_issues(talks: dict, issues: list[dict], talk_exists: Callable[[str], b
     return talks
 
 
-def main() -> int:
-    talks = load_existing()
+def parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Rebuild review-status.json from GitHub review-tracking issues.")
+    parser.add_argument("--status-file", type=Path, default=STATUS_FILE, help="the file to rebuild")
+    parser.add_argument("--seed", type=Path, help="statuses to start from while --status-file does not exist")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv or [])
+    published = args.status_file.exists()
+    base = read_status(args.status_file if published else args.seed)
+
+    talks = copy.deepcopy(base.get("talks", {}))
     issues = fetch_issues()
     apply_issues(talks, issues)
 
+    # Rewriting an unchanged file would only move its stamp: a commit on the
+    # data branch for nothing, and every reader's cached copy thrown away.
+    if published and talks == base.get("talks"):
+        print(f"Statuses unchanged ({len(talks)} talks, {len(issues)} issues)")
+        return 0
+
     output = {
         "version": 1,
-        "updated_at": datetime.now(UTC).isoformat(),
+        "updated_at": stamp_after(base.get("updated_at")),
         "talks": talks,
     }
-    STATUS_FILE.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n")
+    args.status_file.write_text(json.dumps(output, indent=2, ensure_ascii=False) + "\n")
     print(f"Synced {len(talks)} talk statuses ({len(issues)} from issues)")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

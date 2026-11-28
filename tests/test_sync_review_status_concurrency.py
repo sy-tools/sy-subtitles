@@ -1,18 +1,19 @@
 """Structural guard: review-status syncs are serialized, never cancelled.
 
-Claiming two talks seconds apart fires two `issues` events; the parallel
-sync runs raced bot-pr.sh from the same base and produced duplicate stuck
-"Update review status" PRs (#728/#729). A concurrency group must queue the
-second run behind the first.
+Claiming two talks seconds apart fires two `issues` events. Parallel sync runs
+would still publish the right statuses — push-state.sh regenerates a push the
+remote refuses — but they would spend their attempts on each other, and a
+burst could use them all up. A concurrency group queues the second run behind
+the first.
 
 Two properties matter:
 
 * The group must be on the JOB, not the workflow: this file also runs via
   ``workflow_call`` (subtitle-pipeline's sync-status job), and top-level
   ``concurrency`` of a called workflow is ignored in that context.
-* ``cancel-in-progress`` must stay off: an in-flight sync is a multi-step
-  sequence (label edits -> regenerate -> PR -> merge) and killing it midway
-  leaves half-applied state — the very race this guard exists to prevent.
+* ``cancel-in-progress`` must stay off: the group is shared with the syncs
+  that subtitle-pipeline.yml and talk-operator.yml call, so an unrelated label
+  change would cancel their job mid-run and leave that whole run cancelled.
 """
 
 from pathlib import Path
@@ -37,6 +38,6 @@ def test_sync_concurrency_never_cancels_in_progress() -> None:
     conc = _sync_job().get("concurrency") or {}
     cancel = conc.get("cancel-in-progress", False)
     assert cancel is False, (
-        "cancel-in-progress must be false: an in-flight sync is a multi-step "
-        f"process and must finish; queue new runs instead. Got: {cancel!r}"
+        "cancel-in-progress must be false: a newer run must queue behind the "
+        f"one in flight, not cancel it. Got: {cancel!r}"
     )
