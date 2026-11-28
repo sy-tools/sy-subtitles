@@ -4262,12 +4262,11 @@ describe('burn video wiring', () => {
 // ============================================================
 // Burn driver behaviour — the REAL functions from index.html
 //
-// The driver is inline glue (single source, no js/ mirror), so — like
-// esc()/safeHref() in test_spa_xss.js — the block is extracted from
-// index.html and evaluated against stubbed collaborators. That exercises the
-// shipped code instead of a replica, which matters here: every defect this
-// suite guards (double dispatch, leaked poll loops, a blank status line, a
-// cancelled save reported as failure) is invisible to a string grep.
+// The driver is inline glue (single source, no js/ mirror), so the block is
+// extracted from index.html and evaluated against stubbed collaborators. That
+// exercises the shipped code instead of a replica, which matters here: every
+// defect this suite guards (double dispatch, leaked poll loops, a blank status
+// line, a cancelled save reported as failure) is invisible to a string grep.
 // ============================================================
 describe('burn video driver behaviour', () => {
   const fs = require('fs');

@@ -25,6 +25,7 @@
 <script src="js/paragraph_timing.js"></script>
 <script src="js/preview_state.js"></script>
 <script src="js/text_sanitize.js"></script>
+<script src="js/html_escape.js"></script>
 <script src="js/edit_store.js"></script>
 <script src="js/load_token.js"></script>
 <script src="js/review_source_srt.js"></script>
@@ -8979,15 +8980,10 @@ SPA.openEditor = function() {
 // ============================================================
 // Helpers
 // ============================================================
-function esc(s) { return (s||'').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-// Allow only http(s)/hash-route/mailto hrefs (blocks javascript:, data:,
-// protocol-relative //host), then HTML-escape so a quote/tag cannot break out
-// of the href="" attribute. Returns '' for disallowed/empty URLs.
 // The index page this SPA is served from, without query or hash.
 function spaIndexUrl() {
   return location.origin + location.pathname.replace(/\/[^/]*$/, '/');
 }
-function safeHref(u) { return /^(https?:\/\/|#|mailto:)/i.test(u || '') ? esc(u) : ''; }
 function showToast(msg, ms) {
   var el = document.getElementById('toast');
   el.textContent = msg; el.classList.add('show');

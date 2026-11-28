@@ -1,40 +1,23 @@
-// Tests for the SPA's XSS defenses in site/index.html:
+// Tests for the SPA's XSS defenses:
 //   - esc()      — HTML escaper, must be attribute-safe (escape " and ')
 //   - safeHref()  — URL scheme allowlist + escaping for href= sinks
 //   - source guards — the talk-card / pipeline-DAG sinks must route
 //     attacker-influenceable values (amruta_url, talk id, issue_number)
 //     through esc()/safeHref() instead of raw concatenation.
-//
-// esc()/safeHref() live inline in index.html (single-source, no js/ mirror),
-// so — like extractI18N in test_spa_cache.js — we extract the real function
-// source and eval it, exercising the shipped code rather than a replica.
 const { describe, it } = require('node:test');
 const assert = require('node:assert');
-const fs = require('fs');
 const { sourcesMentioning } = require('./spa_sources');
-
-const HTML = fs.readFileSync('site/index.html', 'utf8');
 
 // A sink is no safer in a module than inline, so the source guards read
 // index.html and every script it loads.
 const anywhere = (pattern) => sourcesMentioning(pattern).length > 0;
 
-// Match lazily to the first closing brace (esc/safeHref have no inner braces)
-// rather than to end-of-line, so a future multi-line reformat won't break
-// extraction.
 function loadEsc() {
-  const escM = HTML.match(/function esc\(s\) \{[\s\S]*?\}/);
-  assert.ok(escM, 'esc() not found in index.html');
-  return eval('(' + escM[0] + ')');
+  return require('../site/js/html_escape').esc;
 }
 
 function loadEscapers() {
-  const shM = HTML.match(/function safeHref\(u\) \{[\s\S]*?\}/);
-  assert.ok(shM, 'safeHref() not found in index.html');
-  // Parenthesise so eval yields the function expression; safeHref closes over esc.
-  const esc = loadEsc();
-  const safeHref = eval('(' + shM[0] + ')');
-  return { esc, safeHref };
+  return require('../site/js/html_escape');
 }
 
 describe('SPA esc() — attribute-safe HTML escaping', () => {
