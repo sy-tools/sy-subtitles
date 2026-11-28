@@ -31,7 +31,7 @@
                             ▼
                      ┌─────────────┐
                      │ SPA (Pages) │  reads from raw.githubusercontent.com
-                     │ site/       │  review-status.json for badges
+                     │ site/       │  review-status.json (`state` branch) for badges
                      └─────────────┘
 ```
 
@@ -107,7 +107,7 @@ sy-subtitles/
 │   ├── styleguide.html             # Live design-system catalog
 │   ├── sw.js                       # Service worker (offline shell precache)
 │   └── icon.png                    # Mahayantra favicon
-├── review-status.json              # Review tracking (synced from Issues)
+├── review-status.json              # Frozen copy: the live file is on the `state` branch (Review Tracking)
 ├── templates/                      # Prompt templates
 │   └── language_review_template.md
 └── .github/workflows/
@@ -367,7 +367,9 @@ PR head, where the required `gate` must report. So the same step dispatches
 the one event that token is allowed to fire.
 
 ### sync-review-status.yml
-Triggered on Issue label/assign changes. Syncs GitHub Issues → `review-status.json`.
+Triggered on Issue label/assign changes. Syncs GitHub Issues → `review-status.json`,
+published on the `state` branch by a direct push, not on `main` — why, and
+how the push survives a race: "Review Tracking" below.
 Auto-updates labels: assign → `review:in-progress`, close → `review:approved`.
 
 ### whisper.yml
@@ -410,8 +412,10 @@ land without the list, so on a talk-only PR it would only measure how far the
 base is behind wordlist-refresh.yml.
 
 ### Bot PRs (`.github/scripts/bot-pr.sh`)
-Pipeline, whisper and review-status results reach `main` as a PR with
+Pipeline and whisper results reach `main` as a PR with
 auto-merge, never a direct push, so they pass `gate` like any other change.
+Review statuses are the exception — derived data that nobody reviews, pushed
+to a data branch instead ("Review Tracking").
 They are opened with a token minted for the bot GitHub App
 (`vars.BOT_APP_ID` + `BOT_APP_PRIVATE_KEY`), not with `GITHUB_TOKEN`:
 GitHub holds every run on a PR that `github-actions[bot]` opened until a person
@@ -426,11 +430,6 @@ branch cannot read it; reaching it takes a commit merged into `main`. The
 minting jobs run in that environment, so running them from a branch needs the
 branch admitted to `main` for the run, exactly as the pipeline's LLM jobs
 already do. The one step that sees the key runs an action pinned to a commit.
-
-`sync-review-status` also waits (`BOT_PR_WAIT_MERGE_SECONDS`) until its PR has
-merged. Its runs are serialized, but issue events come in bursts and every run
-rewrites `updated_at`: a run that branched off `main` before the previous PR
-landed would conflict with it and never auto-merge.
 
 ### wordlist-refresh.yml
 `site/dict/words_uk.txt` is one sorted file generated from every talk and the
@@ -547,7 +546,8 @@ under `site/css/` (`tokens.css` + `components.css`, catalogued live in
 Data sources (zero backend):
 - GitHub Trees API → talk discovery (1 API call, cached with ETag)
 - `raw.githubusercontent.com` → meta.yaml, SRT, transcripts
-- `review-status.json` → review badges (static file, no API cost)
+- `review-status.json` on the `state` branch → review badges (a raw read, no
+  API cost; see "Review Tracking" for what that costs in freshness)
 - GitHub Issues API → the same badges, live, for a signed-in session
   (`site/js/review_status_live.js`). The file trails a label change by the
   minutes its workflow and the raw CDN take; the issues do not. The file stays
@@ -660,6 +660,43 @@ Reviewer closes Issue ────► Action: label → review:approved
                                     JSON updated
 SPA reads review-status.json → shows badges
 ```
+
+### Where the statuses live: the `state` branch
+
+`review-status.json` is published on `state`, an orphan branch that holds the
+file and no code. `sync-review-status.yml` pushes to it directly with
+`GITHUB_TOKEN` (`.github/scripts/push-state.sh`): no pull request, no `gate`
+run, no commit on `main`.
+
+**Why not `main`.** The statuses are derived from issue labels and nobody
+reviews them. On `main` every label change cost a bot PR and a full `gate`
+run, and moved the head of the code history for a file that is not code.
+Git stays the only backend: a branch needs no service to run and none to
+trust.
+
+**Races.** Nothing serializes a direct push but the remote, which refuses one
+whose base has moved. `push-state.sh` answers a refusal by starting over —
+the issues are read again — and never by forcing or rebasing. The script
+rebuilds every status from the issues, so the reading taken last is the right
+one, and a file computed before the commit it would land on is stale by
+construction. The job's concurrency group only spares attempts; correctness
+does not rest on it. Statuses that did not change produce no commit.
+
+**Reading.** The SPA reads the file from `raw.githubusercontent.com` by
+branch name (`site/js/review_status_source.js`) and spends no API request on
+it. An anonymous visitor has 60 an hour, the tree listing takes one per load,
+and GitHub counts a conditional request answered 304 against an anonymous
+client just like a 200 — only an authorized 304 is free (measured
+2026-11-28). The price is the raw CDN, which may answer up to five minutes
+behind a push and cannot be told to look again. So freshness is kept by never
+going backwards: the writer stamps each file later than the one it replaces,
+and a browser replaces the copy it holds only with a later one. A signed-in
+session does not wait for any of this — it overlays the issues themselves
+(`site/js/review_status_live.js`).
+
+`main` still carries a copy of the file, no longer updated. The SPA falls back
+to it while `state` cannot be read, and the workflow's first run seeds the
+branch from it.
 
 ### Finalization (operator)
 
